@@ -114,18 +114,23 @@ def test_personal_model_routing_supports_section_prop():
     )
     _assert_pattern(
         PERSONAL_MODEL_ROUTING,
+        "activeSection fallback 渲染",
+        r"const\s+shouldRenderSection\s*=\s*\([^)]*section\s*:\s*RoutingSection[^)]*\)\s*:\s*boolean\s*=>\s*\([^)]*props\.activeSection\s*===\s*undefined[^)]*props\.activeSection\s*===\s*section[^)]*\)",
+    )
+    _assert_pattern(
+        PERSONAL_MODEL_ROUTING,
         "providers 分区 v-if",
-        r"v-if\s*=\s*(['\"])(?:props\.)?activeSection\s*===\s*(['\"])providers\2\1",
+        r"v-if\s*=\s*['\"]shouldRenderSection\(['\"]providers['\"]\)['\"]",
     )
     _assert_pattern(
         PERSONAL_MODEL_ROUTING,
         "models 分区 v-if",
-        r"v-if\s*=\s*(['\"])(?:props\.)?activeSection\s*===\s*(['\"])models\2\1",
+        r"v-if\s*=\s*['\"]shouldRenderSection\(['\"]models['\"]\)['\"]",
     )
     _assert_pattern(
         PERSONAL_MODEL_ROUTING,
         "routes 分区 v-if",
-        r"v-if\s*=\s*(['\"])(?:props\.)?activeSection\s*===\s*(['\"])routes\2\1",
+        r"v-if\s*=\s*['\"]shouldRenderSection\(['\"]routes['\"]\)['\"]",
     )
 
 
