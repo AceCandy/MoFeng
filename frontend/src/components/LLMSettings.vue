@@ -1,7 +1,10 @@
 <!-- AIMETA P=LLM设置_模型配置界面|R=LLM配置表单|NR=不含模型调用|E=component:LLMSettings|X=internal|A=设置组件|D=vue|S=dom,net|RD=./README.ai -->
 <template>
-  <section class="md-card md-card-elevated llm-settings">
-    <header class="llm-settings__header">
+  <section
+    class="md-card md-card-elevated llm-settings"
+    :class="props.embedded ? `llm-settings--embedded` : ''"
+  >
+    <header v-if="!props.embedded" class="llm-settings__header">
       <h2 class="md-headline-small llm-settings__title">LLM 配置</h2>
       <p class="md-body-medium llm-settings__subtitle">必须配置用户级 API URL、API Key 与 Model，系统不再读取默认 LLM 配置。</p>
     </header>
@@ -9,6 +12,8 @@
     <div v-if="saveFeedback.message" :class="['llm-feedback', `is-${saveFeedback.type}`]">
       {{ saveFeedback.message }}
     </div>
+
+    <PersonalModelRouting v-if="props.showRouting" @saved="emit('saved')" />
 
     <form @submit.prevent="handleSave" class="llm-settings__form">
       <div class="llm-settings__section md-card md-card-outlined">
@@ -227,6 +232,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, type Ref } from 'vue';
 import { getLLMConfig, createOrUpdateLLMConfig, deleteLLMConfig, getAvailableModels, type LLMConfigCreate } from '@/api/llm';
+import PersonalModelRouting from './llm-settings/PersonalModelRouting.vue';
 
 type EmbeddingProviderFormat = 'openai' | 'ollama';
 
@@ -243,6 +249,14 @@ interface LLMSettingsForm {
 const emit = defineEmits<{
   (e: 'saved'): void;
 }>();
+
+const props = withDefaults(defineProps<{
+  embedded?: boolean;
+  showRouting?: boolean;
+}>(), {
+  embedded: false,
+  showRouting: true,
+});
 
 const createEmptyConfig = (): LLMSettingsForm => ({
   llm_provider_url: '',
@@ -652,6 +666,13 @@ const selectEmbeddingModel = (model: string) => {
 .llm-settings {
   border-radius: var(--md-radius-xl);
   padding: var(--md-spacing-6);
+}
+
+.llm-settings--embedded {
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .llm-settings__header {
