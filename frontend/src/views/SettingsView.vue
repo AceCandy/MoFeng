@@ -5,7 +5,7 @@
       <section class="md-card md-card-elevated settings-overview">
         <div class="settings-overview__top">
           <div class="settings-overview__lead">
-            <router-link to="/" class="md-btn md-btn-text md-ripple">
+            <router-link to="/workspace" class="md-btn md-btn-text md-ripple">
               <span aria-hidden="true">←</span>
               返回
             </router-link>
@@ -42,7 +42,93 @@
         </p>
       </section>
 
-      <LLMSettings @saved="handleLLMConfigSaved" />
+      <section class="settings-console">
+        <nav class="settings-console__nav" aria-label="设置分区">
+          <button
+            v-for="section in settingsSections"
+            :key="section.id"
+            type="button"
+            class="settings-console__nav-item"
+            :class="{ 'is-active': activeSettingsSection === section.id }"
+            :aria-current="activeSettingsSection === section.id ? 'page' : undefined"
+            @click="selectSettingsSection(section.id)"
+          >
+            <span class="settings-console__nav-item-label">{{ section.label }}</span>
+            <span class="settings-console__nav-item-description">{{ section.description }}</span>
+          </button>
+        </nav>
+
+        <section class="md-card md-card-elevated settings-panel">
+          <div class="settings-console__mobile-tabs" aria-label="设置分区">
+            <button
+              v-for="section in settingsSections"
+              :key="section.id"
+              type="button"
+              class="settings-console__mobile-tab"
+              :class="{ 'is-active': activeSettingsSection === section.id }"
+              :aria-current="activeSettingsSection === section.id ? 'page' : undefined"
+              @click="selectSettingsSection(section.id)"
+            >
+              {{ section.label }}
+            </button>
+          </div>
+
+          <div class="settings-panel__header">
+            <div>
+              <p class="md-label-medium settings-panel__eyebrow">当前分区</p>
+              <h2 class="md-title-large settings-panel__title">{{ activeSectionMeta.label }}</h2>
+            </div>
+            <p class="md-body-small settings-panel__description">
+              {{ activeSectionMeta.description }}
+            </p>
+          </div>
+
+          <div v-if="activeSettingsSection === 'overview'" class="settings-overview-panel">
+            <div class="settings-summary-grid">
+              <article
+                v-for="section in settingsSummarySections"
+                :key="section.id"
+                class="settings-summary-card"
+              >
+                <h3 class="md-title-medium">{{ section.label }}</h3>
+                <p class="md-body-small">{{ section.description }}</p>
+                <button
+                  type="button"
+                  class="md-btn md-btn-text md-ripple settings-summary-card__action"
+                  @click="selectSettingsSection(section.id)"
+                >
+                  打开
+                </button>
+              </article>
+            </div>
+          </div>
+
+          <PersonalModelRouting
+            v-else-if="activeSettingsSection === 'providers'"
+            active-section="providers"
+            @saved="handleLLMConfigSaved"
+          />
+
+          <PersonalModelRouting
+            v-else-if="activeSettingsSection === 'models'"
+            active-section="models"
+            @saved="handleLLMConfigSaved"
+          />
+
+          <PersonalModelRouting
+            v-else-if="activeSettingsSection === 'routes'"
+            active-section="routes"
+            @saved="handleLLMConfigSaved"
+          />
+
+          <LLMSettings
+            v-else
+            :embedded="true"
+            :show-routing="false"
+            @saved="handleLLMConfigSaved"
+          />
+        </section>
+      </section>
     </div>
   </div>
 </template>
@@ -51,7 +137,16 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import LLMSettings from '@/components/LLMSettings.vue';
+import PersonalModelRouting from '@/components/llm-settings/PersonalModelRouting.vue';
 import { getRemoteVersion, normalizeComparableVersion, type RemoteVersionDebugEvent } from '@/api/version';
+
+type SettingsSectionId = 'overview' | 'providers' | 'models' | 'routes' | 'basic';
+
+interface SettingsSection {
+  id: SettingsSectionId;
+  label: string;
+  description: string;
+}
 
 const route = useRoute();
 const router = useRouter();
@@ -71,6 +166,26 @@ const hasNewVersion = computed(() => {
 const showInspirationConfigNotice = computed(() => (
   route.query.source === 'inspiration' && route.query.reason === 'missing_models'
 ));
+
+const settingsSections: SettingsSection[] = [
+  { id: 'overview', label: '概览', description: '查看版本状态与配置入口' },
+  { id: 'providers', label: '供应商与 API Key', description: '维护模型供应商、地址和认证信息' },
+  { id: 'models', label: '可用模型', description: '维护模型名称、能力和默认模型' },
+  { id: 'routes', label: 'AI 阶段路由', description: '为不同 AI 流程指定默认模型' },
+  { id: 'basic', label: '基础 LLM 配置', description: '兼容旧版主模型与向量模型配置' },
+];
+
+const activeSettingsSection = ref<SettingsSectionId>('overview');
+
+const activeSectionMeta = computed(() => (
+  settingsSections.find(section => section.id === activeSettingsSection.value) || settingsSections[0]
+));
+
+const settingsSummarySections = computed(() => settingsSections.filter(section => section.id !== 'overview'));
+
+const selectSettingsSection = (sectionId: SettingsSectionId) => {
+  activeSettingsSection.value = sectionId;
+};
 
 const versionStatusClass = computed(() => {
   if (remoteVersionCheckFailed.value) {
@@ -233,10 +348,180 @@ onMounted(async () => {
   color: var(--md-on-warning-container);
 }
 
+.settings-console {
+  display: grid;
+  grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--md-spacing-4);
+}
+
+.settings-console__nav {
+  position: sticky;
+  top: var(--md-spacing-4);
+  display: grid;
+  gap: var(--md-spacing-2);
+  align-self: start;
+}
+
+.settings-console__nav-item {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: var(--md-spacing-3);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-lg);
+  background-color: var(--md-surface-container-low);
+  color: var(--md-on-surface);
+  text-align: left;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.settings-console__nav-item:hover {
+  border-color: var(--md-outline);
+  background-color: var(--md-surface-container);
+}
+
+.settings-console__nav-item:focus-visible,
+.settings-console__mobile-tab:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
+.settings-console__nav-item.is-active,
+.settings-console__nav-item[aria-current="page"] {
+  border-color: var(--md-primary);
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.settings-console__nav-item-label {
+  font-size: var(--md-title-small);
+  font-weight: 600;
+}
+
+.settings-console__nav-item-description {
+  font-size: var(--md-body-small);
+  color: var(--md-on-surface-variant);
+}
+
+.settings-console__nav-item.is-active .settings-console__nav-item-description,
+.settings-console__nav-item[aria-current="page"] .settings-console__nav-item-description {
+  color: inherit;
+}
+
+.settings-panel {
+  min-width: 0;
+  border-radius: var(--md-radius-xl);
+  padding: var(--md-spacing-4);
+}
+
+.settings-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--md-spacing-3);
+  margin-bottom: var(--md-spacing-4);
+}
+
+.settings-panel__eyebrow {
+  margin: 0 0 4px;
+  color: var(--md-on-surface-variant);
+}
+
+.settings-panel__title {
+  margin: 0;
+  color: var(--md-on-surface);
+}
+
+.settings-panel__description {
+  max-width: 34ch;
+  margin: 4px 0 0;
+  color: var(--md-on-surface-variant);
+  text-align: right;
+}
+
+.settings-console__mobile-tabs {
+  display: none;
+  gap: var(--md-spacing-2);
+  margin-bottom: var(--md-spacing-3);
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.settings-console__mobile-tab {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-full);
+  background-color: var(--md-surface-container-low);
+  color: var(--md-on-surface);
+  white-space: nowrap;
+}
+
+.settings-console__mobile-tab.is-active,
+.settings-console__mobile-tab[aria-current="page"] {
+  border-color: var(--md-primary);
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.settings-overview-panel {
+  min-width: 0;
+}
+
+.settings-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--md-spacing-3);
+}
+
+.settings-summary-card {
+  display: grid;
+  gap: var(--md-spacing-2);
+  padding: var(--md-spacing-4);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-lg);
+  background-color: var(--md-surface-container-low);
+}
+
+.settings-summary-card h3,
+.settings-summary-card p {
+  margin: 0;
+}
+
+.settings-summary-card__action {
+  justify-self: start;
+  padding-left: 0;
+}
+
 @media (max-width: 768px) {
   .settings-overview__top {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .settings-console {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings-console__nav {
+    display: none;
+  }
+
+  .settings-console__mobile-tabs {
+    display: flex;
+  }
+
+  .settings-panel__header {
+    flex-direction: column;
+  }
+
+  .settings-panel__description {
+    max-width: none;
+    text-align: left;
   }
 }
 </style>

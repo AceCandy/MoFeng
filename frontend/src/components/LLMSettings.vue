@@ -673,6 +673,7 @@ const selectEmbeddingModel = (model: string) => {
   padding: 0;
   border-radius: 0;
   background: transparent;
+  overflow: visible;
 }
 
 .llm-settings__header {
