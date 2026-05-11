@@ -461,7 +461,7 @@ const goToWritingDesk = async () => {
   await ensureProjectLoaded()
   const project = novel.value
   if (!project) return
-  const path = project.title === '未命名灵感' ? `/inspiration?project_id=${project.id}` : `/novel/${project.id}`
+  const path = project.title === '未命名灵感' ? `/inspiration?project_id=${project.id}` : `/projects/${project.id}/write`
   router.push(path)
 }
 

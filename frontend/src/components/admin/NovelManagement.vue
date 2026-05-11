@@ -132,7 +132,7 @@ const formatProgress = (novel: Pick<AdminNovelSummary, 'completed_chapters' | 't
 }
 
 const viewDetails = (novelId: string) => {
-  router.push(`/admin/novel/${novelId}`)
+  router.push(`/admin/novels/${novelId}`)
 }
 
 const columns: DataTableColumns<AdminNovelSummary> = [

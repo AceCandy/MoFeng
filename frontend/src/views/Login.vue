@@ -99,10 +99,6 @@
       </p>
     </div>
 
-    <!-- Footer -->
-    <p class="mt-8 md-body-small" style="color: var(--md-on-surface-variant);">
-      Powered by AI · Material Design 3
-    </p>
   </div>
 </template>
 

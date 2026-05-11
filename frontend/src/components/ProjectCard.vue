@@ -1,7 +1,7 @@
 <!-- AIMETA P=项目卡片_小说项目展示|R=项目信息卡片|NR=不含编辑功能|E=component:ProjectCard|X=internal|A=卡片组件|D=vue|S=dom|RD=./README.ai -->
 <template>
   <div
-    class="md-card md-card-elevated group p-5 flex flex-col justify-between transition-all duration-300 hover:scale-[1.01]"
+    class="md-card md-card-elevated group p-5 flex flex-col justify-between transition-colors duration-200"
     style="border-radius: var(--md-radius-lg);"
   >
     <div>
@@ -75,7 +75,7 @@
     </div>
 
     <!-- Action Buttons -->
-    <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+    <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
       <button
         @click.stop="$emit('detail', project.id)"
         class="md-btn md-btn-tonal md-ripple flex-1"

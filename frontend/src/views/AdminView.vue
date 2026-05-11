@@ -169,7 +169,11 @@ watch(
 
 <style scoped>
 .admin-layout {
-  height: 100vh;
+  min-height: calc(100vh - 112px);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-xl);
+  overflow: hidden;
+  background-color: var(--md-surface);
 }
 
 .sider-header {
@@ -179,7 +183,7 @@ watch(
   justify-content: center;
   font-weight: 600;
   letter-spacing: 0.08em;
-  color: #1f2937;
+  color: var(--md-on-surface);
 }
 
 .logo {
@@ -191,8 +195,7 @@ watch(
 }
 
 .admin-header {
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(8px);
+  background-color: var(--md-surface);
   padding: 0 20px;
 }
 
@@ -204,16 +207,16 @@ watch(
 .header-title {
   font-size: 1.125rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--md-on-surface);
 }
 
 .header-subtitle {
   font-size: 0.95rem;
-  color: #6b7280;
+  color: var(--md-on-surface-variant);
 }
 
 .admin-content {
-  background: #f5f5f7;
+  background-color: var(--md-surface-dim);
 }
 
 .content-scroll {

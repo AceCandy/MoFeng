@@ -442,7 +442,7 @@ const handleConfirmBlueprint = async () => {
     await novelStore.saveBlueprint(completedBlueprint.value)
     // 跳转到写作工作台
     if (novelStore.currentProject) {
-      router.push(`/novel/${novelStore.currentProject.id}`)
+      router.push(`/projects/${novelStore.currentProject.id}/write`)
     }
   } catch (error) {
     console.error('保存蓝图失败:', error)

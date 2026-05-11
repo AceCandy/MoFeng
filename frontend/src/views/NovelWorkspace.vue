@@ -1,32 +1,31 @@
 <!-- AIMETA P=小说工作区_小说列表管理|R=小说列表_创建|NR=不含章节编辑|E=route:/workspace#component:NovelWorkspace|X=ui|A=工作区|D=vue|S=dom,net|RD=./README.ai -->
 <template>
-  <div class="flex items-center justify-center min-h-screen p-4 md-surface-dim">
-    <!-- Material 3 Snackbar for delete message -->
+  <div class="app-page workspace-page">
     <transition
-      enter-active-class="transition-all duration-300"
-      leave-active-class="transition-all duration-300"
+      enter-active-class="transition-opacity duration-200"
+      leave-active-class="transition-opacity duration-200"
       enter-from-class="opacity-0 translate-y-4"
       leave-to-class="opacity-0 translate-y-4"
     >
       <div v-if="deleteMessage" class="md-snackbar">
-        <svg 
-          v-if="deleteMessage.type === 'success'" 
-          class="w-5 h-5" 
+        <svg
+          v-if="deleteMessage.type === 'success'"
+          class="w-5 h-5"
           style="color: var(--md-success);"
-          viewBox="0 0 24 24" 
-          fill="none" 
-          stroke="currentColor" 
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
           stroke-width="2"
         >
           <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
         </svg>
-        <svg 
-          v-else 
-          class="w-5 h-5" 
+        <svg
+          v-else
+          class="w-5 h-5"
           style="color: var(--md-error);"
-          viewBox="0 0 24 24" 
-          fill="none" 
-          stroke="currentColor" 
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
           stroke-width="2"
         >
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -34,210 +33,133 @@
         <span class="md-snackbar-text">{{ deleteMessage.text }}</span>
       </div>
     </transition>
-    
-    <div class="w-full max-w-7xl mx-auto">
-      <div class="md-card md-card-elevated p-8 fade-in" style="border-radius: var(--md-radius-xl);">
-        <!-- Header -->
-        <div class="flex flex-col gap-4 mb-8 sm:flex-row sm:items-center sm:justify-between">
-          <div class="flex items-center gap-4">
-            <h2 class="md-headline-medium" style="color: var(--md-on-surface);">我的小说项目</h2>
-            <router-link 
-              v-if="authStore.user?.is_admin" 
-              to="/admin" 
-              class="md-chip md-chip-assist"
-            >
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              管理后台
-            </router-link>
-          </div>
-          <div class="flex items-center gap-2">
-            <router-link
-              to="/settings"
-              class="md-btn md-btn-text md-ripple"
-            >
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              设置
-            </router-link>
-            <button
-              @click="handleLogout"
-              class="md-btn md-btn-text md-ripple"
-            >
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-              退出登录
-            </button>
-          </div>
-        </div>
 
-        <!-- Loading State -->
-        <div v-if="novelStore.isLoading" class="flex flex-col items-center justify-center py-16">
-          <div class="md-spinner"></div>
-          <p class="mt-4 md-body-medium" style="color: var(--md-on-surface-variant);">加载中...</p>
-        </div>
-
-        <!-- Error State -->
-        <div v-else-if="novelStore.error" class="flex flex-col items-center justify-center py-16">
-          <div class="w-16 h-16 rounded-full flex items-center justify-center mb-4" style="background-color: var(--md-error-container);">
-            <svg class="w-8 h-8" style="color: var(--md-error);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <p class="md-body-large mb-4" style="color: var(--md-error);">{{ novelStore.error }}</p>
-          <button
-            @click="loadProjects"
-            class="md-btn md-btn-filled md-ripple"
-          >
-            重试
-          </button>
-        </div>
-
-        <!-- Project Grid -->
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <!-- Empty State -->
-          <div v-if="novelStore.projects.length === 0" class="col-span-full flex flex-col items-center justify-center py-16">
-            <div class="w-20 h-20 rounded-full flex items-center justify-center mb-4" style="background-color: var(--md-primary-container);">
-              <svg class="w-10 h-10" style="color: var(--md-on-primary-container);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
-            </div>
-            <p class="md-body-large mb-2" style="color: var(--md-on-surface);">还没有项目</p>
-            <p class="md-body-medium mb-6" style="color: var(--md-on-surface-variant);">创建一个新项目，或导入已有小说继续写。</p>
-            <button
-              @click="openCreateDialog"
-              class="md-btn md-btn-filled md-ripple"
-            >
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
-              创建新项目
-            </button>
-          </div>
-
-          <!-- Project Cards -->
-          <ProjectCard
-            v-for="project in novelStore.projects"
-            :key="project.id"
-            :project="project"
-            @click="enterProject(project)"
-            @detail="viewProjectDetail"
-            @continue="enterProject"
-            @delete="handleDeleteProject"
-          />
-
-          <!-- Create New Project Card -->
-          <div
-            @click="openCreateDialog"
-            class="md-card md-card-outlined flex items-center justify-center p-5 cursor-pointer group min-h-[180px] transition-all duration-300 hover:border-2"
-            style="border-radius: var(--md-radius-lg); border-style: dashed;"
-            :style="{ borderColor: 'var(--md-outline)' }"
-          >
-            <div class="text-center transition-colors" style="color: var(--md-on-surface-variant);">
-              <div class="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center transition-colors" style="background-color: var(--md-primary-container);">
-                <svg class="w-6 h-6" style="color: var(--md-on-primary-container);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-              </div>
-              <span class="md-label-large">创建新项目</span>
-            </div>
-          </div>
-          <input
-            type="file"
-            ref="fileInput"
-            accept=".txt"
-            class="hidden"
-            @change="handleFileImport"
-          />
-        </div>
+    <section v-if="!novelStore.isLoading && !novelStore.error && continueProject" class="workspace-continue">
+      <div class="workspace-continue__copy">
+        <p class="workspace-kicker">最近项目</p>
+        <h2>{{ continueProject.title }}</h2>
+        <p>
+          {{ continueProject.genre || '未设置类型' }} ·
+          {{ continueProject.completed_chapters }}/{{ continueProject.total_chapters }} 章 ·
+          {{ formatProjectDate(continueProject.last_edited) }}
+        </p>
       </div>
-    </div>
-
-    <!-- Material 3 Create Project Dialog -->
-    <transition
-      enter-active-class="transition-opacity duration-200"
-      leave-active-class="transition-opacity duration-200"
-      enter-from-class="opacity-0"
-      leave-to-class="opacity-0"
-    >
-      <div v-if="showCreateDialog" class="md-dialog-overlay" @click.self="closeCreateDialog">
-        <transition
-          enter-active-class="transition-all duration-300"
-          leave-active-class="transition-all duration-200"
-          enter-from-class="opacity-0 scale-95"
-          leave-to-class="opacity-0 scale-95"
+      <div class="workspace-continue__actions">
+        <button
+          type="button"
+          class="md-btn md-btn-filled md-ripple"
+          @click="enterProject(continueProject)"
         >
-          <div class="md-dialog max-w-2xl w-full mx-4">
-            <div class="md-dialog-header">
-              <h3 class="md-dialog-title">创建新项目</h3>
-              <p class="md-body-medium mt-2" style="color: var(--md-on-surface-variant);">
-                选择创作起点
-              </p>
-            </div>
-
-            <div class="md-dialog-content">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <button
-                  type="button"
-                  @click="goToInspiration"
-                  class="md-card md-card-outlined p-5 text-left transition-all duration-300 hover:border-2"
-                  style="border-radius: var(--md-radius-lg);"
-                >
-                  <div class="w-12 h-12 mb-4 rounded-full flex items-center justify-center" style="background-color: var(--md-primary-container);">
-                    <svg class="w-6 h-6" style="color: var(--md-on-primary-container);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                    </svg>
-                  </div>
-                  <h4 class="md-title-medium mb-2" style="color: var(--md-on-surface);">灵感模式</h4>
-                  <p class="md-body-medium" style="color: var(--md-on-surface-variant);">
-                    通过对话构思设定、角色和故事蓝图。
-                  </p>
-                </button>
-
-                <button
-                  type="button"
-                  @click="triggerImport"
-                  :disabled="isImporting"
-                  class="md-card md-card-outlined p-5 text-left transition-all duration-300 hover:border-2 disabled:cursor-not-allowed disabled:opacity-70"
-                  style="border-radius: var(--md-radius-lg);"
-                >
-                  <div v-if="isImporting" class="flex items-center gap-3 mb-4">
-                    <div class="md-spinner w-8 h-8"></div>
-                    <span class="md-label-large">正在导入并分析...</span>
-                  </div>
-                  <div v-else class="w-12 h-12 mb-4 rounded-full flex items-center justify-center" style="background-color: var(--md-success-container);">
-                    <svg class="w-6 h-6" style="color: var(--md-on-success-container);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
-                  </div>
-                  <h4 class="md-title-medium mb-2" style="color: var(--md-on-surface);">导入小说</h4>
-                  <p class="md-body-medium" style="color: var(--md-on-surface-variant);">
-                    上传 .txt 文件，自动拆解章节并分析项目。
-                  </p>
-                </button>
-              </div>
-            </div>
-
-            <div class="md-dialog-actions">
-              <button
-                @click="closeCreateDialog"
-                :disabled="isImporting"
-                class="md-btn md-btn-text md-ripple"
-              >
-                取消
-              </button>
-            </div>
-          </div>
-        </transition>
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M4 20h4l11-11a2.5 2.5 0 10-3.536-3.536L4 16.928V20z" />
+          </svg>
+          继续写作
+        </button>
+        <button
+          type="button"
+          class="md-btn md-btn-outlined md-ripple"
+          @click="viewProjectDetail(continueProject.id)"
+        >
+          小说档案
+        </button>
       </div>
-    </transition>
+    </section>
 
-    <!-- Material 3 Delete Confirmation Dialog -->
+    <section class="workspace-actions" aria-label="项目操作">
+      <button type="button" class="workspace-action" @click="goToInspiration">
+        <span class="workspace-action__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3z" />
+          </svg>
+        </span>
+        <span>
+          <strong>新灵感</strong>
+          <small>从对话开始整理故事蓝图</small>
+        </span>
+      </button>
+      <button type="button" class="workspace-action" :disabled="isImporting" @click="triggerImport">
+        <span class="workspace-action__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M8 8l4-4m0 0l4 4m-4-4v12" />
+          </svg>
+        </span>
+        <span>
+          <strong>{{ isImporting ? '正在导入' : '导入小说' }}</strong>
+          <small>上传 .txt 并进入写作台</small>
+        </span>
+      </button>
+      <router-link
+        v-if="authStore.user?.is_admin"
+        to="/admin"
+        class="workspace-action"
+      >
+        <span class="workspace-action__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M6 7v12h12V7M9 11h6M9 15h6" />
+          </svg>
+        </span>
+        <span>
+          <strong>管理</strong>
+          <small>查看平台与项目管理入口</small>
+        </span>
+      </router-link>
+      <input
+        type="file"
+        ref="fileInput"
+        accept=".txt"
+        class="hidden"
+        @change="handleFileImport"
+      />
+    </section>
+
+    <section class="workspace-panel">
+      <div class="workspace-panel__header">
+        <div>
+          <p class="workspace-kicker">项目列表</p>
+          <h2>我的小说项目</h2>
+        </div>
+        <span class="md-chip md-chip-assist">{{ sortedProjects.length }} 个项目</span>
+      </div>
+
+      <div v-if="novelStore.isLoading" class="workspace-state">
+        <div class="md-spinner"></div>
+        <p class="md-body-medium" style="color: var(--md-on-surface-variant);">加载中...</p>
+      </div>
+
+      <div v-else-if="novelStore.error" class="workspace-state">
+        <div class="workspace-state__icon is-error">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <p class="md-body-large" style="color: var(--md-error);">{{ novelStore.error }}</p>
+        <button @click="loadProjects" class="md-btn md-btn-filled md-ripple">重试</button>
+      </div>
+
+      <div v-else-if="sortedProjects.length === 0" class="workspace-state">
+        <div class="workspace-state__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          </svg>
+        </div>
+        <h3>还没有项目</h3>
+        <p>创建一个项目后，这里会显示最近写作进度。</p>
+        <button @click="goToInspiration" class="md-btn md-btn-filled md-ripple">开始新灵感</button>
+      </div>
+
+      <div v-else class="workspace-grid">
+        <ProjectCard
+          v-for="project in sortedProjects"
+          :key="project.id"
+          :project="project"
+          @click="enterProject(project)"
+          @detail="viewProjectDetail"
+          @continue="enterProject"
+          @delete="handleDeleteProject"
+        />
+      </div>
+    </section>
+
     <transition
       enter-active-class="transition-opacity duration-200"
       leave-active-class="transition-opacity duration-200"
@@ -246,8 +168,8 @@
     >
       <div v-if="showDeleteDialog" class="md-dialog-overlay">
         <transition
-          enter-active-class="transition-all duration-300"
-          leave-active-class="transition-all duration-200"
+          enter-active-class="transition-opacity duration-200"
+          leave-active-class="transition-opacity duration-200"
           enter-from-class="opacity-0 scale-95"
           leave-to-class="opacity-0 scale-95"
         >
@@ -263,20 +185,15 @@
                 <p class="md-body-small" style="color: var(--md-on-surface-variant);">此操作无法撤销</p>
               </div>
             </div>
-            
+
             <div class="md-dialog-content">
               <p class="md-body-large" style="color: var(--md-on-surface);">
                 确定要删除项目 "<strong>{{ projectToDelete?.title }}</strong>" 吗？所有相关数据将被永久删除。
               </p>
             </div>
-            
+
             <div class="md-dialog-actions">
-              <button
-                @click="cancelDelete"
-                class="md-btn md-btn-text md-ripple"
-              >
-                取消
-              </button>
+              <button @click="cancelDelete" class="md-btn md-btn-text md-ripple">取消</button>
               <button
                 @click="confirmDelete"
                 :disabled="isDeleting"
@@ -298,7 +215,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNovelStore } from '@/stores/novel'
 import { useAuthStore } from '@/stores/auth'
@@ -310,45 +227,46 @@ const router = useRouter()
 const novelStore = useNovelStore()
 const authStore = useAuthStore()
 
-// 导入相关状态
 const fileInput = ref<HTMLInputElement | null>(null)
 const isImporting = ref(false)
-const showCreateDialog = ref(false)
 
-// 删除相关状态
 const showDeleteDialog = ref(false)
 const projectToDelete = ref<NovelProjectSummary | null>(null)
 const isDeleting = ref(false)
 const deleteMessage = ref<{type: 'success' | 'error', text: string} | null>(null)
 
+// 最近编辑的项目作为工作台第一优先级，帮助作者快速恢复写作上下文。
+const sortedProjects = computed(() => {
+  return [...novelStore.projects].sort((left, right) => {
+    return new Date(right.last_edited).getTime() - new Date(left.last_edited).getTime()
+  })
+})
+
+const continueProject = computed(() => sortedProjects.value[0] ?? null)
+
+const formatProjectDate = (value: string) => {
+  if (!value) return '暂无更新时间'
+  return new Date(value).toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 const goToInspiration = () => {
-  closeCreateDialog()
   router.push('/inspiration')
 }
 
-const openCreateDialog = () => {
-  showCreateDialog.value = true
-}
-
-const closeCreateDialog = () => {
-  if (isImporting.value) return
-  showCreateDialog.value = false
-}
-
-const handleLogout = () => {
-  authStore.logout()
-  router.push('/login')
-}
-
 const viewProjectDetail = (projectId: string) => {
-  router.push(`/detail/${projectId}`)
+  router.push(`/projects/${projectId}`)
 }
 
 const enterProject = (project: NovelProjectSummary) => {
   if (project.title === '未命名灵感') {
     router.push(`/inspiration?project_id=${project.id}`)
   } else {
-    router.push(`/novel/${project.id}`)
+    router.push(`/projects/${project.id}/write`)
   }
 }
 
@@ -356,7 +274,6 @@ const loadProjects = async () => {
   await novelStore.loadProjects()
 }
 
-// 导入相关方法
 const triggerImport = () => {
   if (isImporting.value) return
   fileInput.value?.click()
@@ -373,12 +290,12 @@ const handleFileImport = async (event: Event) => {
     return
   }
 
+  // 导入成功后直接进入写作台，避免作者再从列表中寻找新项目。
   isImporting.value = true
   try {
     const response = await NovelAPI.importNovel(file)
     await loadProjects()
-    showCreateDialog.value = false
-    router.push(`/novel/${response.id}`)
+    router.push(`/projects/${response.id}/write`)
   } catch (error: any) {
     console.error('导入失败:', error)
     alert(error.message || '导入失败，请重试')
@@ -388,7 +305,6 @@ const handleFileImport = async (event: Event) => {
   }
 }
 
-// 删除相关方法
 const handleDeleteProject = (projectId: string) => {
   const project = novelStore.projects.find(p => p.id === projectId)
   if (project) {
@@ -404,21 +320,21 @@ const cancelDelete = () => {
 
 const confirmDelete = async () => {
   if (!projectToDelete.value) return
-  
+
   isDeleting.value = true
   try {
     await novelStore.deleteProjects([projectToDelete.value.id])
     deleteMessage.value = { type: 'success', text: `项目 "${projectToDelete.value.title}" 已成功删除` }
     showDeleteDialog.value = false
     projectToDelete.value = null
-    
+
     setTimeout(() => {
       deleteMessage.value = null
     }, 3000)
   } catch (error) {
     console.error('删除项目失败:', error)
     deleteMessage.value = { type: 'error', text: '删除项目失败，请重试' }
-    
+
     setTimeout(() => {
       deleteMessage.value = null
     }, 3000)
@@ -431,3 +347,195 @@ onMounted(() => {
   loadProjects()
 })
 </script>
+
+<style scoped>
+.workspace-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-6);
+}
+
+.workspace-continue,
+.workspace-panel,
+.workspace-action {
+  border: 1px solid var(--md-outline-variant);
+  background-color: var(--md-surface);
+  box-shadow: var(--md-elevation-1);
+}
+
+.workspace-continue {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-spacing-6);
+  padding: clamp(var(--md-spacing-5), 4vw, var(--md-spacing-8));
+  border-radius: var(--md-radius-xl);
+}
+
+.workspace-continue__copy {
+  min-width: 0;
+}
+
+.workspace-kicker {
+  margin: 0 0 6px;
+  color: var(--md-primary-dark);
+  font-size: var(--md-label-medium);
+  font-weight: 600;
+}
+
+.workspace-continue h2,
+.workspace-panel h2,
+.workspace-state h3 {
+  margin: 0;
+  color: var(--md-on-surface);
+  font-weight: 600;
+}
+
+.workspace-continue h2 {
+  font-size: var(--md-headline-small);
+  line-height: 1.25;
+}
+
+.workspace-continue p:last-child {
+  margin: 8px 0 0;
+  color: var(--md-on-surface-variant);
+}
+
+.workspace-continue__actions,
+.workspace-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-3);
+}
+
+.workspace-actions {
+  flex-wrap: wrap;
+}
+
+.workspace-action {
+  min-height: 76px;
+  flex: 1 1 240px;
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-3);
+  padding: var(--md-spacing-4);
+  border-radius: var(--md-radius-lg);
+  color: var(--md-on-surface);
+  text-align: left;
+  text-decoration: none;
+  transition:
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    background-color var(--md-duration-short) var(--md-easing-standard);
+}
+
+.workspace-action:hover:not(:disabled) {
+  border-color: var(--md-primary);
+  background-color: var(--md-surface-container-low);
+}
+
+.workspace-action:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.workspace-action__icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--md-radius-md);
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.workspace-action__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.workspace-action strong,
+.workspace-action small {
+  display: block;
+}
+
+.workspace-action strong {
+  font-size: var(--md-title-small);
+}
+
+.workspace-action small {
+  margin-top: 2px;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-small);
+}
+
+.workspace-panel {
+  padding: clamp(var(--md-spacing-5), 4vw, var(--md-spacing-8));
+  border-radius: var(--md-radius-xl);
+}
+
+.workspace-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-spacing-4);
+  margin-bottom: var(--md-spacing-6);
+}
+
+.workspace-panel h2 {
+  font-size: var(--md-title-large);
+}
+
+.workspace-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--md-spacing-5);
+}
+
+.workspace-state {
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--md-spacing-4);
+  text-align: center;
+}
+
+.workspace-state p {
+  margin: 0;
+  color: var(--md-on-surface-variant);
+}
+
+.workspace-state__icon {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--md-radius-full);
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.workspace-state__icon.is-error {
+  background-color: var(--md-error-container);
+  color: var(--md-error);
+}
+
+.workspace-state__icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+@media (max-width: 720px) {
+  .workspace-continue,
+  .workspace-panel__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .workspace-continue__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+</style>

@@ -102,7 +102,7 @@
           <!-- Inspiration Mode Card -->
           <div
             @click="goToInspiration"
-            class="md-card md-card-elevated group p-8 cursor-pointer transition-all duration-300 hover:scale-[1.02]"
+            class="md-card md-card-elevated group p-8 cursor-pointer transition-colors duration-200"
             style="border-radius: var(--md-radius-xl);"
           >
             <div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: var(--md-primary-container);">
@@ -119,7 +119,7 @@
           <!-- Novel Workspace Card -->
           <div
             @click="goToWorkspace"
-            class="md-card md-card-elevated group p-8 cursor-pointer transition-all duration-300 hover:scale-[1.02]"
+            class="md-card md-card-elevated group p-8 cursor-pointer transition-colors duration-200"
             style="border-radius: var(--md-radius-xl);"
           >
             <div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: var(--md-success-container);">

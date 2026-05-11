@@ -1120,6 +1120,229 @@ body {
 .md-elevation-5 { box-shadow: var(--md-elevation-5); }
 
 /* ============================================
+   Authenticated App Shell
+   ============================================ */
+.app-shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 272px minmax(0, 1fr);
+  background-color: var(--md-surface-dim);
+  color: var(--md-on-surface);
+}
+
+.app-shell__sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-6);
+  padding: var(--md-spacing-5);
+  background-color: var(--md-surface);
+  border-right: 1px solid var(--md-outline-variant);
+  z-index: 50;
+}
+
+.app-shell__brand {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-3);
+}
+
+.app-shell__brand-mark {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--md-radius-md);
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  font-size: var(--md-title-medium);
+  font-weight: 600;
+}
+
+.app-shell__brand-title,
+.app-shell__account-name {
+  margin: 0;
+  color: var(--md-on-surface);
+  font-size: var(--md-title-small);
+  font-weight: 600;
+}
+
+.app-shell__brand-subtitle,
+.app-shell__account-role,
+.app-shell__eyebrow {
+  margin: 0;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-medium);
+}
+
+.app-shell__close,
+.app-shell__menu {
+  flex-shrink: 0;
+}
+
+.app-shell__close {
+  display: none;
+  margin-left: auto;
+}
+
+.app-shell__close svg,
+.app-shell__menu svg,
+.app-shell__nav-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.app-shell__nav {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--md-spacing-2);
+}
+
+.app-shell__nav-item {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-3);
+  padding: 0 var(--md-spacing-4);
+  border-radius: var(--md-radius-full);
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-large);
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard);
+}
+
+.app-shell__nav-item:hover {
+  background-color: color-mix(in srgb, var(--md-primary-dark) 8%, transparent);
+  color: var(--md-primary-dark);
+}
+
+.app-shell__nav-item.is-active {
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.app-shell__nav-icon {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+}
+
+.app-shell__account {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-spacing-3);
+  padding-top: var(--md-spacing-4);
+  border-top: 1px solid var(--md-outline-variant);
+}
+
+.app-shell__main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-shell__topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  min-height: 88px;
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-4);
+  padding: var(--md-spacing-4) clamp(var(--md-spacing-4), 3vw, var(--md-spacing-8));
+  background-color: var(--md-surface-dim);
+  border-bottom: 1px solid var(--md-outline-variant);
+}
+
+.app-shell__title-block {
+  min-width: 0;
+}
+
+.app-shell__title-block h1 {
+  margin: 0;
+  color: var(--md-on-surface);
+  font-size: var(--md-headline-small);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.app-shell__title-block p:last-child {
+  margin: 4px 0 0;
+  max-width: 72ch;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-medium);
+}
+
+.app-shell__menu {
+  display: none;
+}
+
+.app-shell__content {
+  flex: 1;
+  min-width: 0;
+  padding: clamp(var(--md-spacing-4), 3vw, var(--md-spacing-8));
+}
+
+.app-page {
+  width: min(100%, 1440px);
+  margin: 0 auto;
+}
+
+.auth-layout {
+  min-height: 100vh;
+  background-color: var(--md-surface-dim);
+}
+
+.app-shell__mobile-backdrop {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .app-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-shell__sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(320px, calc(100vw - 48px));
+    transform: translateX(-100%);
+    transition: transform var(--md-duration-medium) var(--md-easing-emphasized);
+  }
+
+  .app-shell__sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .app-shell__close,
+  .app-shell__menu {
+    display: inline-flex;
+  }
+
+  .app-shell__mobile-backdrop {
+    position: fixed;
+    inset: 0;
+    display: block;
+    border: 0;
+    background-color: rgba(32, 33, 36, 0.32);
+    z-index: 40;
+  }
+
+  .app-shell__topbar {
+    min-height: 72px;
+  }
+}
+
+/* ============================================
    Custom Scrollbar (Google Style)
    ============================================ */
 ::-webkit-scrollbar {

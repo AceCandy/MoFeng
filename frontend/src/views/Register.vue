@@ -1,80 +1,103 @@
 <!-- AIMETA P=注册页_用户注册|R=注册表单|NR=不含登录功能|E=route:/register#component:Register|X=ui|A=注册表单|D=vue|S=dom,net|RD=./README.ai -->
 <template>
-  <div class="flex flex-col items-center justify-center min-h-screen p-4">
-    <div class="mb-12">
+  <div class="register-page">
+    <div class="register-brand">
       <TypewriterEffect text="拯救小说家" />
     </div>
-    <div v-if="allowRegistration" class="w-full max-w-md p-8 space-y-8 bg-white/70 backdrop-blur-xl rounded-2xl shadow-xl">
-      <div>
-        <h2 class="text-2xl font-bold text-center text-gray-800">
-          加入我们
-        </h2>
-        <p class="mt-2 text-sm text-center text-gray-500">
-          开启您的创作新篇章
-        </p>
+
+    <section v-if="allowRegistration" class="md-card md-card-elevated register-card">
+      <div class="register-card__header">
+        <h2>加入我们</h2>
+        <p>开启您的创作新篇章</p>
       </div>
-      <form @submit.prevent="handleRegister" class="mt-8 space-y-6">
-        <div class="space-y-4">
-          <div>
-            <label for="username" class="sr-only">用户名</label>
-            <input v-model="username" id="username" name="username" type="text" required
-              class="w-full px-4 py-3 text-gray-700 bg-gray-100 border-2 border-gray-200 rounded-lg focus:outline-none focus:bg-white focus:border-blue-500 transition-all duration-300"
-              placeholder="用户名" />
-          </div>
-          <div>
-            <label for="email" class="sr-only">邮箱</label>
-            <input v-model="email" id="email" name="email" type="email" required
-              class="w-full px-4 py-3 text-gray-700 bg-gray-100 border-2 border-gray-200 rounded-lg focus:outline-none focus:bg-white focus:border-blue-500 transition-all duration-300"
-              placeholder="邮箱" />
-          </div>
-          <div class="flex space-x-2 items-center">
-            <input v-model="verificationCode" id="verificationCode" name="verificationCode" type="text" required
-              class="flex-1 px-4 py-3 text-gray-700 bg-gray-100 border-2 border-gray-200 rounded-lg focus:outline-none focus:bg-white focus:border-blue-500 transition-all duration-300"
-              placeholder="验证码" />
-            <button type="button" @click="sendCode" :disabled="countdown > 0 || sending"
-              class="px-4 py-3 text-sm font-bold text-white bg-green-600 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 disabled:opacity-60 transition-all duration-300">
-              <span v-if="sending">发送中...</span>
-              <span v-else>{{ countdown > 0 ? countdown + '秒后重试' : '发送验证码' }}</span>
-            </button>
-          </div>
-          <div>
-            <label for="password" class="sr-only">密码</label>
-            <input v-model="password" id="password" name="password" type="password" required
-              class="w-full px-4 py-3 text-gray-700 bg-gray-100 border-2 border-gray-200 rounded-lg focus:outline-none focus:bg-white focus:border-blue-500 transition-all duration-300"
-              placeholder="密码" />
-          </div>
+
+      <form @submit.prevent="handleRegister" class="register-form">
+        <div class="md-text-field">
+          <label for="username" class="md-text-field-label">用户名</label>
+          <input
+            v-model="username"
+            id="username"
+            name="username"
+            type="text"
+            required
+            class="md-text-field-input"
+            placeholder="请输入用户名"
+          />
         </div>
 
-        <div v-if="error" class="text-sm font-medium text-center text-red-500">
+        <div class="md-text-field">
+          <label for="email" class="md-text-field-label">邮箱</label>
+          <input
+            v-model="email"
+            id="email"
+            name="email"
+            type="email"
+            required
+            class="md-text-field-input"
+            placeholder="请输入邮箱"
+          />
+        </div>
+
+        <div class="register-code-row">
+          <div class="md-text-field">
+            <label for="verificationCode" class="md-text-field-label">验证码</label>
+            <input
+              v-model="verificationCode"
+              id="verificationCode"
+              name="verificationCode"
+              type="text"
+              required
+              class="md-text-field-input"
+              placeholder="请输入验证码"
+            />
+          </div>
+          <button
+            type="button"
+            @click="sendCode"
+            :disabled="countdown > 0 || sending"
+            class="md-btn md-btn-tonal md-ripple register-code-button"
+          >
+            <span v-if="sending">发送中...</span>
+            <span v-else>{{ countdown > 0 ? countdown + '秒后重试' : '发送验证码' }}</span>
+          </button>
+        </div>
+
+        <div class="md-text-field">
+          <label for="password" class="md-text-field-label">密码</label>
+          <input
+            v-model="password"
+            id="password"
+            name="password"
+            type="password"
+            required
+            class="md-text-field-input"
+            placeholder="至少 8 个字符"
+          />
+        </div>
+
+        <div v-if="error" class="register-feedback is-error">
           {{ error }}
         </div>
-        <div v-if="success" class="text-sm font-medium text-center text-green-500">
+        <div v-if="success" class="register-feedback is-success">
           {{ success }}
         </div>
 
-        <div>
-          <button type="submit"
-            class="w-full px-4 py-3 text-sm font-bold text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:opacity-60 transition-all duration-300">
-            注册
-          </button>
-        </div>
+        <button type="submit" class="md-btn md-btn-filled md-ripple register-submit">
+          注册
+        </button>
       </form>
-      
-      <p class="mt-8 text-sm text-center text-gray-500">
-        已有账户？
-        <router-link to="/login" class="font-medium text-blue-600 hover:underline">
-          立即登录
-        </router-link>
-      </p>
-    </div>
 
-    <div v-else class="w-full max-w-md p-8 space-y-6 text-center bg-white/70 backdrop-blur-xl rounded-2xl shadow-xl">
-      <h2 class="text-xl font-bold text-gray-800">暂未开放注册</h2>
-      <p class="text-sm text-gray-500">请联系管理员或稍后再试。</p>
-      <router-link to="/login" class="inline-block px-4 py-2 text-sm font-medium text-blue-600 hover:underline">
-        返回登录
-      </router-link>
-    </div>
+      <p class="register-link">
+        已有账户？
+        <router-link to="/login">立即登录</router-link>
+      </p>
+    </section>
+
+    <section v-else class="md-card md-card-elevated register-card register-card--closed">
+      <h2>暂未开放注册</h2>
+      <p>请联系管理员或稍后再试。</p>
+      <router-link to="/login" class="md-btn md-btn-outlined md-ripple">返回登录</router-link>
+    </section>
   </div>
 </template>
 
@@ -132,7 +155,7 @@ const validateInput = () => {
   if (isAlphanumeric && !hasChinese && usernameVal.length <= 6) {
     return '用户名长度必须大于6个字母或数字';
   }
-  
+
   return null; // No validation errors
 };
 
@@ -218,3 +241,116 @@ const handleRegister = async () => {
   }
 };
 </script>
+
+<style scoped>
+.register-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--md-spacing-8);
+  padding: var(--md-spacing-4);
+}
+
+.register-brand {
+  min-height: 64px;
+}
+
+.register-card {
+  width: min(100%, 448px);
+  padding: var(--md-spacing-8);
+  border-radius: var(--md-radius-xl);
+}
+
+.register-card__header {
+  margin-bottom: var(--md-spacing-8);
+  text-align: center;
+}
+
+.register-card h2 {
+  margin: 0;
+  color: var(--md-on-surface);
+  font-size: var(--md-headline-small);
+  font-weight: 600;
+}
+
+.register-card p {
+  margin: var(--md-spacing-2) 0 0;
+  color: var(--md-on-surface-variant);
+}
+
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-4);
+}
+
+.register-code-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: var(--md-spacing-3);
+}
+
+.register-code-button {
+  min-width: 128px;
+  height: 56px;
+  white-space: nowrap;
+}
+
+.register-feedback {
+  padding: var(--md-spacing-3);
+  border-radius: var(--md-radius-md);
+  font-size: var(--md-body-medium);
+  font-weight: 500;
+  text-align: center;
+}
+
+.register-feedback.is-error {
+  background-color: var(--md-error-container);
+  color: var(--md-on-error-container);
+}
+
+.register-feedback.is-success {
+  background-color: var(--md-success-container);
+  color: var(--md-on-success-container);
+}
+
+.register-submit {
+  width: 100%;
+}
+
+.register-link {
+  margin-top: var(--md-spacing-6);
+  text-align: center;
+}
+
+.register-link a {
+  color: var(--md-primary-dark);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.register-card--closed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--md-spacing-4);
+  text-align: center;
+}
+
+@media (max-width: 520px) {
+  .register-card {
+    padding: var(--md-spacing-5);
+  }
+
+  .register-code-row {
+    grid-template-columns: 1fr;
+  }
+
+  .register-code-button {
+    width: 100%;
+  }
+}
+</style>
