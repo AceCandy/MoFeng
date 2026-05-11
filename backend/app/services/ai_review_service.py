@@ -118,6 +118,7 @@ class AIReviewService:
                 temperature=0.3,
                 user_id=user_id,
                 timeout=180.0,
+                stage="version_review",
             )
             cleaned = remove_think_tags(response)
             normalized = unwrap_markdown_json(cleaned)
@@ -156,6 +157,7 @@ class AIReviewService:
                 temperature=0.3,
                 user_id=user_id,
                 timeout=180.0,
+                stage="version_review",
             )
             return remove_think_tags(response)
         except Exception:

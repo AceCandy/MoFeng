@@ -448,7 +448,7 @@ class KnowledgeRetrievalService:
                         top_k=top_k
                     )
                 else:
-                    embedding = await self.llm_service.get_embedding(query, user_id=user_id)
+                    embedding = await self.llm_service.get_embedding(query, user_id=user_id, stage="rag_embedding")
                     if not embedding:
                         continue
                     chunks = await self.vector_store_service.query_chunks(

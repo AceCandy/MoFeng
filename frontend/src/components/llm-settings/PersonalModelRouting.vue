@@ -1,191 +1,281 @@
 <template>
   <section class="model-routing">
-    <header class="model-routing__header">
-      <div>
-        <h3 class="md-title-large model-routing__title">个人模型路由</h3>
-        <p class="md-body-medium model-routing__subtitle">{{ sectionSubtitle }}</p>
-      </div>
+    <div class="model-routing__topbar">
       <button type="button" class="md-btn md-btn-outlined md-ripple" :disabled="isLoading" @click="loadBundle">
         {{ isLoading ? '刷新中...' : '刷新' }}
       </button>
-    </header>
+      <button
+        v-if="activeSection !== 'routes'"
+        type="button"
+        class="md-btn md-btn-filled md-ripple"
+        @click="beginCreateProvider"
+      >
+        新增供应商
+      </button>
+    </div>
 
     <div v-if="feedback.message" :class="['model-routing__feedback', `is-${feedback.type}`]">
       {{ feedback.message }}
     </div>
 
-    <section v-if="shouldRenderSection('providers')" class="model-routing__panel">
-      <div class="model-routing__panel-head">
-        <h4 class="md-title-medium">供应商与 API Key</h4>
-        <button type="button" class="model-routing__link" @click="resetProviderForm">新增</button>
-      </div>
+    <template v-if="activeSection === 'routes'">
+      <section class="model-routing__panel model-routing__stages">
+        <div class="model-routing__panel-head">
+          <div>
+            <h3 class="md-title-medium">AI 阶段默认模型</h3>
+            <p class="model-routing__hint">未单独选择时使用 LLM 模型里的主模型。</p>
+          </div>
+          <button type="button" class="md-btn md-btn-filled-tonal md-ripple" :disabled="isSavingRoutes" @click="saveRoutes">
+            {{ isSavingRoutes ? '保存中...' : '保存阶段路由' }}
+          </button>
+        </div>
 
-      <div class="model-routing__list">
-        <button
-          v-for="provider in providers"
-          :key="provider.id"
-          type="button"
-          class="model-routing__item"
-          :class="{ active: editingProviderId === provider.id }"
-          @click="editProvider(provider)"
-        >
-          <span>
-            <strong>{{ provider.name }}</strong>
-            <small>{{ provider.provider_type }} · {{ provider.api_key_preview || '未显示 Key' }}</small>
-          </span>
-          <span :class="['model-routing__status', provider.is_enabled ? 'is-on' : 'is-off']">
-            {{ provider.is_enabled ? '启用' : '停用' }}
-          </span>
-        </button>
-        <p v-if="providers.length === 0" class="model-routing__empty">还没有供应商。</p>
-      </div>
+        <p v-if="enabledChatModels.length === 0" class="model-routing__empty">
+          请先在 LLM 模型中启用至少一个模型，并设置主模型。
+        </p>
 
-      <div class="model-routing__form">
-        <label class="md-text-field">
-          <span class="md-text-field-label">名称</span>
-          <input v-model="providerForm.name" class="md-text-field-input" type="text" placeholder="如 OpenAI / DeepSeek / 本地 Ollama">
-        </label>
+        <div v-else class="model-routing__stage-groups">
+          <div v-for="group in chatStageGroups" :key="group.title" class="model-routing__stage-group">
+            <h4 class="md-title-small">{{ group.title }}</h4>
+            <div class="model-routing__stage-list">
+              <label v-for="stage in group.stages" :key="stage.key" class="model-routing__stage-row">
+                <span>
+                  <strong>{{ stage.label }}</strong>
+                  <small>{{ stage.description }}</small>
+                </span>
+                <select v-model="routeSelections[stage.key]" class="md-text-field-input">
+                  <option value="">使用主模型</option>
+                  <option v-for="model in enabledChatModels" :key="model.id" :value="String(model.id)">
+                    {{ model.display_name }} · {{ providerName(model.provider_id) }}
+                  </option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+    </template>
 
-        <label class="md-text-field">
-          <span class="md-text-field-label">类型</span>
-          <select v-model="providerForm.provider_type" class="md-text-field-input">
-            <option value="openai_compatible">OpenAI 兼容</option>
-            <option value="ollama">Ollama</option>
-            <option value="custom">自定义</option>
-          </select>
-        </label>
+    <template v-else>
+      <section
+        v-if="providerFormMode"
+        class="model-routing__panel model-routing__provider-form"
+      >
+        <div class="model-routing__panel-head">
+          <h3 class="md-title-medium">
+            {{ providerFormMode === 'create' ? '新增供应商' : '编辑供应商' }}
+          </h3>
+          <button type="button" class="model-routing__link" @click="cancelProviderForm">取消</button>
+        </div>
 
-        <label class="md-text-field">
-          <span class="md-text-field-label">API URL</span>
-          <input v-model="providerForm.base_url" class="md-text-field-input" type="text" placeholder="https://api.example.com/v1">
-        </label>
+        <div class="model-routing__form">
+          <label class="md-text-field">
+            <span class="md-text-field-label">名称</span>
+            <input v-model="providerForm.name" class="md-text-field-input" type="text" placeholder="如 OpenAI / DeepSeek / 本地 Ollama">
+          </label>
 
-        <label class="md-text-field">
-          <span class="md-text-field-label">API Key</span>
-          <input
-            v-model="providerForm.api_key"
+          <label class="md-text-field">
+            <span class="md-text-field-label">类型</span>
+            <select v-model="providerForm.provider_type" class="md-text-field-input">
+              <option value="openai_compatible">OpenAI 兼容</option>
+              <option value="ollama">Ollama</option>
+              <option value="custom">自定义</option>
+            </select>
+          </label>
+
+          <label class="md-text-field">
+            <span class="md-text-field-label">API URL</span>
+            <input v-model="providerForm.base_url" class="md-text-field-input" type="text" placeholder="https://api.example.com/v1">
+          </label>
+
+          <label class="md-text-field">
+            <span class="md-text-field-label">API Key</span>
+            <input
+              v-model="providerForm.api_key"
+              class="md-text-field-input"
+              type="password"
+              :placeholder="editingProviderId ? '留空则保留已保存 Key' : '请输入 API Key，Ollama 可留空'"
+            >
+          </label>
+
+          <label class="model-routing__check">
+            <input v-model="providerForm.is_enabled" type="checkbox">
+            <span>启用供应商</span>
+          </label>
+
+          <button type="button" class="md-btn md-btn-filled md-ripple" :disabled="isSavingProvider" @click="saveProviderForm">
+            {{ isSavingProvider ? '保存中...' : '保存供应商' }}
+          </button>
+        </div>
+      </section>
+
+      <section
+        v-if="activeSection === 'llm'"
+        class="model-routing__panel model-routing__primary-panel"
+      >
+        <label class="md-text-field model-routing__primary-field">
+          <span class="md-text-field-label">主模型</span>
+          <select
             class="md-text-field-input"
-            type="password"
-            :placeholder="editingProviderId ? '留空则保留已保存 Key' : '请输入 API Key，Ollama 可留空'"
+            :value="primaryChatModel ? String(primaryChatModel.id) : ''"
+            :disabled="enabledChatModels.length === 0"
+            @change="setPrimaryChatModelById"
           >
-        </label>
-
-        <label class="model-routing__check">
-          <input v-model="providerForm.is_enabled" type="checkbox">
-          <span>启用供应商</span>
-        </label>
-
-        <button type="button" class="md-btn md-btn-filled md-ripple" :disabled="isSavingProvider" @click="saveProviderForm">
-          {{ isSavingProvider ? '保存中...' : (editingProviderId ? '保存供应商' : '新增供应商') }}
-        </button>
-      </div>
-    </section>
-
-    <section v-if="shouldRenderSection('models')" class="model-routing__panel">
-      <div class="model-routing__panel-head">
-        <h4 class="md-title-medium">可用模型</h4>
-        <button type="button" class="model-routing__link" @click="resetModelForm">新增</button>
-      </div>
-
-      <div class="model-routing__list">
-        <button
-          v-for="model in models"
-          :key="model.id"
-          type="button"
-          class="model-routing__item"
-          :class="{ active: editingModelId === model.id }"
-          @click="editModel(model)"
-        >
-          <span>
-            <strong>{{ model.display_name }}</strong>
-            <small>{{ model.model_name }} · {{ providerName(model.provider_id) }}</small>
-          </span>
-          <span class="model-routing__badges">
-            <em v-if="model.capabilities.chat">Chat</em>
-            <em v-if="model.capabilities.embedding">Embedding</em>
-          </span>
-        </button>
-        <p v-if="models.length === 0" class="model-routing__empty">还没有可用模型。</p>
-      </div>
-
-      <div class="model-routing__form">
-        <label class="md-text-field">
-          <span class="md-text-field-label">所属供应商</span>
-          <select v-model.number="modelForm.provider_id" class="md-text-field-input" :disabled="providers.length === 0">
-            <option :value="0">请选择供应商</option>
-            <option v-for="provider in providers" :key="provider.id" :value="provider.id">
-              {{ provider.name }}
+            <option value="">请先勾选一个 LLM 模型</option>
+            <option v-for="model in enabledChatModels" :key="model.id" :value="String(model.id)">
+              {{ model.display_name }} · {{ providerName(model.provider_id) }}
             </option>
           </select>
         </label>
+      </section>
 
-        <label class="md-text-field">
-          <span class="md-text-field-label">显示名称</span>
-          <input v-model="modelForm.display_name" class="md-text-field-input" type="text" placeholder="如 写作模型 / 复盘模型">
-        </label>
+      <div class="model-routing__provider-grid">
+        <article
+          v-for="provider in activeProviders"
+          :key="provider.id"
+          class="model-routing__provider-card"
+        >
+          <header class="model-routing__provider-head">
+            <div>
+              <h3 class="md-title-medium">{{ provider.name }}</h3>
+              <p>{{ provider.provider_type }} · {{ provider.api_key_preview || '未显示 Key' }}</p>
+              <p class="model-routing__provider-url">{{ provider.base_url }}</p>
+            </div>
+            <div class="model-routing__provider-card-actions">
+              <button
+                type="button"
+                :class="['model-routing__status', provider.is_enabled ? 'is-on' : 'is-off']"
+                :disabled="isSavingProvider"
+                @click="toggleProviderEnabled(provider)"
+              >
+                {{ provider.is_enabled ? '停用' : '启用' }}
+              </button>
+              <button
+                type="button"
+                class="model-routing__provider-delete"
+                :disabled="isSavingProvider"
+                @click="deleteProviderFromCard(provider)"
+              >
+                删除供应商
+              </button>
+            </div>
+          </header>
 
-        <label class="md-text-field">
-          <span class="md-text-field-label">模型名</span>
-          <input v-model="modelForm.model_name" class="md-text-field-input" type="text" placeholder="如 gpt-4o-mini">
-        </label>
-
-        <div class="model-routing__checks">
-          <label class="model-routing__check">
-            <input v-model="modelForm.capabilities.chat" type="checkbox">
-            <span>Chat</span>
-          </label>
-          <label class="model-routing__check">
-            <input v-model="modelForm.capabilities.embedding" type="checkbox">
-            <span>Embedding</span>
-          </label>
-          <label class="model-routing__check">
-            <input v-model="modelForm.is_default_chat" type="checkbox">
-            <span>默认 Chat</span>
-          </label>
-          <label class="model-routing__check">
-            <input v-model="modelForm.is_default_embedding" type="checkbox">
-            <span>默认 Embedding</span>
-          </label>
-          <label class="model-routing__check">
-            <input v-model="modelForm.is_enabled" type="checkbox">
-            <span>启用模型</span>
-          </label>
-        </div>
-
-        <button type="button" class="md-btn md-btn-filled md-ripple" :disabled="isSavingModel" @click="saveModelForm">
-          {{ isSavingModel ? '保存中...' : (editingModelId ? '保存模型' : '新增模型') }}
-        </button>
-      </div>
-    </section>
-
-    <section v-if="shouldRenderSection('routes')" class="model-routing__panel model-routing__stages">
-      <div class="model-routing__panel-head">
-        <h4 class="md-title-medium">AI 阶段默认模型</h4>
-        <button type="button" class="md-btn md-btn-filled-tonal md-ripple" :disabled="isSavingRoutes" @click="saveRoutes">
-          {{ isSavingRoutes ? '保存中...' : '保存阶段路由' }}
-        </button>
-      </div>
-
-      <div class="model-routing__stage-groups">
-        <div v-for="group in stageGroups" :key="group.title" class="model-routing__stage-group">
-          <h5 class="md-title-small">{{ group.title }}</h5>
-          <div class="model-routing__stage-list">
-            <label v-for="stage in group.stages" :key="stage.key" class="model-routing__stage-row">
-              <span>
-                <strong>{{ stage.label }}</strong>
-                <small>{{ stage.description }}</small>
-              </span>
-              <select v-model="routeSelections[stage.key]" class="md-text-field-input">
-                <option value="">使用默认 {{ stage.capability === 'embedding' ? 'Embedding' : 'Chat' }} 模型</option>
-                <option v-for="model in modelsForCapability(stage.capability)" :key="model.id" :value="String(model.id)">
-                  {{ model.display_name }} · {{ model.model_name }}
-                </option>
-              </select>
-            </label>
+          <div class="model-routing__provider-actions">
+            <button type="button" class="md-btn md-btn-text md-ripple" @click="beginEditProvider(provider)">
+              编辑供应商
+            </button>
+            <button
+              type="button"
+              class="md-btn md-btn-tonal md-ripple"
+              :disabled="!provider.is_enabled || providerFetchState(provider.id).isLoading"
+              @click="openProviderModelPicker(provider)"
+            >
+              {{ providerFetchState(provider.id).isLoading ? '拉取中...' : '拉取模型' }}
+            </button>
           </div>
-        </div>
+
+          <div
+            v-if="isModelPickerOpen(provider.id)"
+            class="model-routing__model-picker"
+            @click.stop
+          >
+            <div class="model-routing__picker-head">
+              <strong>{{ activeSection === 'llm' ? '选择 LLM 模型' : '选择向量模型' }}</strong>
+              <button type="button" class="model-routing__link" @click="closeModelPicker">关闭</button>
+            </div>
+
+            <label class="md-text-field model-routing__picker-search">
+              <span class="md-text-field-label">搜索模型</span>
+              <input
+                v-model="modelPickerQuery"
+                class="md-text-field-input"
+                type="search"
+                placeholder="输入模型名过滤"
+              >
+            </label>
+
+            <p v-if="providerFetchState(provider.id).isLoading" class="model-routing__empty">
+              正在拉取模型...
+            </p>
+            <p v-else-if="filteredModelNamesForProvider(provider.id).length === 0" class="model-routing__empty">
+              没有可选模型。
+            </p>
+            <div v-else class="model-routing__picker-list">
+              <label
+                v-for="modelName in filteredModelNamesForProvider(provider.id)"
+                :key="`${provider.id}-${modelName}`"
+                class="model-routing__picker-row"
+              >
+                <span>{{ modelName }}</span>
+                <input
+                  v-if="activeSection === 'llm'"
+                  type="checkbox"
+                  :checked="Boolean(chatModelForName(provider.id, modelName)?.is_enabled)"
+                  :disabled="!provider.is_enabled"
+                  aria-label="启用 LLM 模型"
+                  @change="toggleChatModel(provider, modelName, $event)"
+                >
+                <input
+                  v-else
+                  name="embedding-model"
+                  type="radio"
+                  :checked="Boolean(embeddingModelForName(provider.id, modelName)?.is_enabled && embeddingModelForName(provider.id, modelName)?.is_default_embedding)"
+                  :disabled="!provider.is_enabled"
+                  aria-label="选择向量模型"
+                  @change="selectEmbeddingModel(provider, modelName)"
+                >
+              </label>
+            </div>
+          </div>
+
+          <p v-if="!provider.is_enabled" class="model-routing__hint">启用供应商后才能使用里面的模型。</p>
+          <p v-if="providerFetchState(provider.id).error" class="model-routing__hint is-error">
+            {{ providerFetchState(provider.id).error }}
+          </p>
+
+          <div class="model-routing__selected-models">
+            <p class="md-label-medium model-routing__model-list-title">
+              {{ activeSection === 'llm' ? '已选 LLM 模型' : '已选向量模型' }}
+            </p>
+            <p v-if="selectedModelChipsForProvider(provider.id).length === 0" class="model-routing__empty">
+              点击“拉取模型”后勾选模型。
+            </p>
+            <div
+              v-else
+              class="model-routing__selected-chip-list"
+            >
+              <span
+                v-for="chip in selectedModelChipsForProvider(provider.id)"
+                :key="chip.id"
+                class="model-routing__selected-chip"
+              >
+                <span>{{ chip.display_name || chip.model_name }}</span>
+                <small v-if="activeSection === 'llm' && chip.is_default_chat">
+                  主模型
+                </small>
+                <small v-else-if="activeSection === 'embedding' && chip.is_default_embedding">
+                  当前使用
+                </small>
+                <button
+                  type="button"
+                  class="model-routing__delete-btn"
+                  :aria-label="`删除模型 ${chip.display_name || chip.model_name}`"
+                  :title="`删除模型 ${chip.display_name || chip.model_name}`"
+                  @click="deleteModelForActiveSection(provider, chip.model_name)"
+                >
+                  删除
+                </button>
+              </span>
+            </div>
+          </div>
+        </article>
       </div>
-    </section>
+
+      <p v-if="activeProviders.length === 0" class="model-routing__empty">
+        还没有供应商。先点击“新增供应商”，再拉取并启用模型。
+      </p>
+    </template>
   </section>
 </template>
 
@@ -194,7 +284,10 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import {
   createProvider,
   createUserModel,
+  deleteProvider,
+  deleteUserModel,
   getLLMConfigBundle,
+  getProviderModels,
   saveStageRoutes,
   updateProvider,
   updateUserModel,
@@ -206,6 +299,8 @@ import {
 } from '@/api/llm';
 
 type Capability = 'chat' | 'embedding';
+type RoutingSection = 'llm' | 'embedding' | 'routes';
+type ProviderFormMode = 'create' | 'edit' | null;
 
 interface StageDefinition {
   key: string;
@@ -219,8 +314,6 @@ interface StageGroup {
   stages: StageDefinition[];
 }
 
-type RoutingSection = 'providers' | 'models' | 'routes';
-
 interface ProviderForm {
   name: string;
   provider_type: ProviderType;
@@ -229,14 +322,10 @@ interface ProviderForm {
   is_enabled: boolean;
 }
 
-interface ModelForm {
-  provider_id: number;
-  display_name: string;
-  model_name: string;
-  capabilities: Record<Capability, boolean>;
-  is_default_chat: boolean;
-  is_default_embedding: boolean;
-  is_enabled: boolean;
+interface ProviderFetchState {
+  isLoading: boolean;
+  modelsByCapability: Record<Capability, string[]>;
+  error: string;
 }
 
 const emit = defineEmits<{
@@ -244,6 +333,8 @@ const emit = defineEmits<{
 }>();
 
 const props = defineProps<{ activeSection?: RoutingSection }>();
+
+const activeSection = computed<RoutingSection>(() => props.activeSection || 'llm');
 
 const stageGroups: StageGroup[] = [
   {
@@ -286,7 +377,6 @@ const stageGroups: StageGroup[] = [
     title: '记忆与 RAG',
     stages: [
       { key: 'summary_memory', label: '摘要记忆', capability: 'chat', description: '章节摘要、全局摘要、角色状态' },
-      { key: 'rag_embedding', label: '向量生成', capability: 'embedding', description: '章节、摘要、查询向量' },
       { key: 'rag_query', label: '检索规划', capability: 'chat', description: '检索查询生成和上下文过滤' },
       { key: 'foreshadowing', label: '伏笔处理', capability: 'chat', description: '伏笔候选、状态判断和提醒' },
     ],
@@ -296,12 +386,14 @@ const stageGroups: StageGroup[] = [
 const providers = ref<UserModelProvider[]>([]);
 const models = ref<UserAIModel[]>([]);
 const routeSelections = reactive<Record<string, string>>({});
+const providerFetchStates = reactive<Record<number, ProviderFetchState>>({});
 const isLoading = ref(false);
 const isSavingProvider = ref(false);
-const isSavingModel = ref(false);
 const isSavingRoutes = ref(false);
 const editingProviderId = ref<number | null>(null);
-const editingModelId = ref<number | null>(null);
+const providerFormMode = ref<ProviderFormMode>(null);
+const activeModelPickerProviderId = ref<number | null>(null);
+const modelPickerQuery = ref('');
 const feedback = ref<{ type: 'success' | 'error'; message: string }>({ type: 'success', message: '' });
 
 const emptyProviderForm = (): ProviderForm => ({
@@ -312,35 +404,81 @@ const emptyProviderForm = (): ProviderForm => ({
   is_enabled: true,
 });
 
-const emptyModelForm = (): ModelForm => ({
-  provider_id: providers.value[0]?.id ?? 0,
-  display_name: '',
-  model_name: '',
-  capabilities: { chat: true, embedding: false },
-  is_default_chat: false,
-  is_default_embedding: false,
-  is_enabled: true,
-});
-
 const providerForm = reactive<ProviderForm>(emptyProviderForm());
-const modelForm = reactive<ModelForm>(emptyModelForm());
 
-const allStageKeys = computed(() => stageGroups.flatMap(group => group.stages.map(stage => stage.key)));
-const sectionSubtitles: Record<RoutingSection, string> = {
-  providers: '维护供应商地址、类型与 API Key。',
-  models: '维护可用模型、能力标签和默认模型。',
-  routes: '为不同 AI 阶段指定默认模型。',
+const chatStageGroups = computed(() => stageGroups);
+const allStageKeys = computed(() => chatStageGroups.value.flatMap(group => group.stages.map(stage => stage.key)));
+const enabledChatModels = computed(() => models.value.filter(model => (
+  model.is_enabled && Boolean(model.capabilities.chat)
+)));
+const primaryChatModel = computed(() => enabledChatModels.value.find(model => model.is_default_chat));
+const chatModelsByProvider = computed(() => groupModelsByProvider('chat'));
+const embeddingModelsByProvider = computed(() => groupModelsByProvider('embedding'));
+const activeProviders = computed(() => providers.value.filter(provider => (
+  providerCapabilities(provider)[activeModelCapability()]
+)));
+
+const providerFetchState = (providerId: number): ProviderFetchState => {
+  if (!providerFetchStates[providerId]) {
+    providerFetchStates[providerId] = {
+      isLoading: false,
+      modelsByCapability: { chat: [], embedding: [] },
+      error: '',
+    };
+  }
+  return providerFetchStates[providerId];
 };
 
-const shouldRenderSection = (section: RoutingSection): boolean => (
-  props.activeSection === undefined || props.activeSection === section
+const groupModelsByProvider = (capability: Capability): Record<number, UserAIModel[]> => {
+  return models.value.reduce<Record<number, UserAIModel[]>>((result, model) => {
+    if (!model.capabilities[capability]) {
+      return result;
+    }
+    result[model.provider_id] = result[model.provider_id] || [];
+    result[model.provider_id].push(model);
+    return result;
+  }, {});
+};
+
+const modelNamesForProvider = (providerId: number): string[] => {
+  const capability = activeModelCapability();
+  const existing = capability === 'chat'
+    ? (chatModelsByProvider.value[providerId] || []).map(model => model.model_name)
+    : (embeddingModelsByProvider.value[providerId] || []).map(model => model.model_name);
+  const fetched = providerFetchState(providerId).modelsByCapability[capability];
+  return Array.from(new Set([...existing, ...fetched])).sort((a, b) => a.localeCompare(b));
+};
+
+const filteredModelNamesForProvider = (providerId: number): string[] => {
+  const query = modelPickerQuery.value.trim().toLowerCase();
+  const names = modelNamesForProvider(providerId);
+  if (!query) {
+    return names;
+  }
+  return names.filter(modelName => modelName.toLowerCase().includes(query));
+};
+
+const selectedModelChipsForProvider = (providerId: number): UserAIModel[] => {
+  const capability = activeModelCapability();
+  const source = capability === 'chat'
+    ? chatModelsByProvider.value[providerId] || []
+    : embeddingModelsByProvider.value[providerId] || [];
+  return source.filter(model => model.is_enabled);
+};
+
+const chatModelForName = (providerId: number, modelName: string): UserAIModel | undefined => (
+  models.value.find(model => model.provider_id === providerId && model.model_name === modelName && Boolean(model.capabilities.chat))
 );
 
-const sectionSubtitle = computed(() => {
-  return props.activeSection
-    ? sectionSubtitles[props.activeSection]
-    : '配置多套供应商、可用模型，并为不同 AI 阶段指定默认模型。';
-});
+const embeddingModelForName = (providerId: number, modelName: string): UserAIModel | undefined => (
+  models.value.find(model => providerId === model.provider_id && model.model_name === modelName && Boolean(model.capabilities.embedding))
+);
+
+const savedModelForActiveSection = (providerId: number, modelName: string): UserAIModel | undefined => (
+  activeSection.value === 'embedding'
+    ? embeddingModelForName(providerId, modelName)
+    : chatModelForName(providerId, modelName)
+);
 
 const setFeedback = (type: 'success' | 'error', message: string) => {
   feedback.value = { type, message };
@@ -350,8 +488,30 @@ const assignProviderForm = (next: ProviderForm) => {
   Object.assign(providerForm, next);
 };
 
-const assignModelForm = (next: ModelForm) => {
-  Object.assign(modelForm, next);
+const activeModelCapability = (): Capability => (
+  activeSection.value === 'embedding' ? 'embedding' : 'chat'
+);
+
+const createProviderCapabilities = (): Record<Capability, boolean> => {
+  const capability = activeModelCapability();
+  return {
+    chat: capability === 'chat',
+    embedding: capability === 'embedding',
+  };
+};
+
+const providerCapabilities = (provider: UserModelProvider): Record<Capability, boolean> => ({
+  chat: Boolean(provider.capabilities?.chat),
+  embedding: Boolean(provider.capabilities?.embedding),
+});
+
+const isModelPickerOpen = (providerId: number): boolean => (
+  activeModelPickerProviderId.value === providerId
+);
+
+const closeModelPicker = () => {
+  activeModelPickerProviderId.value = null;
+  modelPickerQuery.value = '';
 };
 
 const loadBundle = async () => {
@@ -364,45 +524,27 @@ const loadBundle = async () => {
       routeSelections[key] = '';
     }
     for (const route of bundle.stage_routes) {
-      routeSelections[route.stage] = String(route.model_id);
-    }
-
-    if (providers.value.length === 0 && bundle.legacy) {
-      assignProviderForm({
-        name: '默认供应商',
-        provider_type: 'openai_compatible',
-        base_url: bundle.legacy.llm_provider_url || '',
-        api_key: bundle.legacy.llm_provider_api_key || '',
-        is_enabled: true,
-      });
-      assignModelForm({
-        provider_id: 0,
-        display_name: bundle.legacy.llm_provider_model || '默认 Chat 模型',
-        model_name: bundle.legacy.llm_provider_model || '',
-        capabilities: { chat: true, embedding: false },
-        is_default_chat: true,
-        is_default_embedding: false,
-        is_enabled: true,
-      });
-    } else {
-      resetProviderForm();
-      resetModelForm();
+      if (allStageKeys.value.includes(route.stage)) {
+        routeSelections[route.stage] = String(route.model_id);
+      }
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : '未知错误';
-    setFeedback('error', `读取模型路由失败：${message}`);
+    setFeedback('error', `读取模型设置失败：${message}`);
   } finally {
     isLoading.value = false;
   }
 };
 
-const resetProviderForm = () => {
+const beginCreateProvider = () => {
   editingProviderId.value = null;
+  providerFormMode.value = 'create';
   assignProviderForm(emptyProviderForm());
 };
 
-const editProvider = (provider: UserModelProvider) => {
+const beginEditProvider = (provider: UserModelProvider) => {
   editingProviderId.value = provider.id;
+  providerFormMode.value = 'edit';
   assignProviderForm({
     name: provider.name,
     provider_type: provider.provider_type,
@@ -412,12 +554,19 @@ const editProvider = (provider: UserModelProvider) => {
   });
 };
 
+const cancelProviderForm = () => {
+  editingProviderId.value = null;
+  providerFormMode.value = null;
+  assignProviderForm(emptyProviderForm());
+};
+
 const saveProviderForm = async () => {
   const payload: ProviderCreate = {
     name: providerForm.name.trim(),
     provider_type: providerForm.provider_type,
     base_url: providerForm.base_url.trim(),
     api_key: providerForm.api_key.trim() || null,
+    capabilities: createProviderCapabilities(),
     is_enabled: providerForm.is_enabled,
   };
   if (!payload.name || !payload.base_url) {
@@ -443,11 +592,7 @@ const saveProviderForm = async () => {
     } else {
       providers.value.push(saved);
     }
-    if (!modelForm.provider_id) {
-      modelForm.provider_id = saved.id;
-    }
-    editingProviderId.value = saved.id;
-    providerForm.api_key = '';
+    cancelProviderForm();
     setFeedback('success', '供应商已保存。');
     emit('saved');
   } catch (error) {
@@ -458,67 +603,215 @@ const saveProviderForm = async () => {
   }
 };
 
-const resetModelForm = () => {
-  editingModelId.value = null;
-  assignModelForm(emptyModelForm());
-};
-
-const editModel = (model: UserAIModel) => {
-  editingModelId.value = model.id;
-  assignModelForm({
-    provider_id: model.provider_id,
-    display_name: model.display_name,
-    model_name: model.model_name,
-    capabilities: {
-      chat: Boolean(model.capabilities.chat),
-      embedding: Boolean(model.capabilities.embedding),
-    },
-    is_default_chat: model.is_default_chat,
-    is_default_embedding: model.is_default_embedding,
-    is_enabled: model.is_enabled,
-  });
-};
-
-const saveModelForm = async () => {
-  if (!modelForm.provider_id || !modelForm.display_name.trim() || !modelForm.model_name.trim()) {
-    setFeedback('error', '请先选择供应商，并填写模型显示名称和模型名。');
-    return;
-  }
-
-  const payload: UserAIModelCreate = {
-    provider_id: modelForm.provider_id,
-    display_name: modelForm.display_name.trim(),
-    model_name: modelForm.model_name.trim(),
-    capabilities: { ...modelForm.capabilities },
-    context_window: null,
-    is_default_chat: modelForm.is_default_chat,
-    is_default_embedding: modelForm.is_default_embedding,
-    is_enabled: modelForm.is_enabled,
-    sort_order: 0,
-  };
-
-  isSavingModel.value = true;
+const toggleProviderEnabled = async (provider: UserModelProvider) => {
+  isSavingProvider.value = true;
   try {
-    const saved = editingModelId.value
-      ? await updateUserModel(editingModelId.value, payload)
-      : await createUserModel(payload);
-    const index = models.value.findIndex(model => model.id === saved.id);
-    if (index >= 0) {
-      models.value[index] = saved;
-    } else {
-      models.value.push(saved);
-    }
-    if (saved.is_default_chat || saved.is_default_embedding) {
-      await loadBundle();
-    }
-    editingModelId.value = saved.id;
-    setFeedback('success', '模型已保存。');
+    await updateProvider(provider.id, { is_enabled: !provider.is_enabled });
+    await loadBundle();
+    setFeedback('success', provider.is_enabled ? '供应商已停用。' : '供应商已启用。');
     emit('saved');
   } catch (error) {
     const message = error instanceof Error ? error.message : '未知错误';
-    setFeedback('error', `模型保存失败：${message}`);
+    setFeedback('error', `供应商状态更新失败：${message}`);
   } finally {
-    isSavingModel.value = false;
+    isSavingProvider.value = false;
+  }
+};
+
+const deleteProviderFromCard = async (provider: UserModelProvider) => {
+  const confirmed = window.confirm(
+    `确定删除供应商“${provider.name}”吗？关联模型和阶段路由也会一起删除。`,
+  );
+  if (!confirmed) {
+    return;
+  }
+
+  isSavingProvider.value = true;
+  try {
+    await deleteProvider(provider.id);
+    if (editingProviderId.value === provider.id) {
+      cancelProviderForm();
+    }
+    delete providerFetchStates[provider.id];
+    await loadBundle();
+    setFeedback('success', '供应商已删除。');
+    emit('saved');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '未知错误';
+    setFeedback('error', `删除供应商失败：${message}`);
+  } finally {
+    isSavingProvider.value = false;
+  }
+};
+
+const loadProviderModels = async (provider: UserModelProvider) => {
+  const state = providerFetchState(provider.id);
+  const capability = activeModelCapability();
+  state.isLoading = true;
+  state.error = '';
+  try {
+    state.modelsByCapability[capability] = await getProviderModels(provider.id);
+    if (state.modelsByCapability[capability].length === 0) {
+      state.error = '未拉取到模型，请检查 API URL 与 API Key。';
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '未知错误';
+    state.error = `拉取模型失败：${message}`;
+  } finally {
+    state.isLoading = false;
+  }
+};
+
+const openProviderModelPicker = async (provider: UserModelProvider) => {
+  if (!provider.is_enabled) {
+    return;
+  }
+  activeModelPickerProviderId.value = provider.id;
+  modelPickerQuery.value = '';
+  await loadProviderModels(provider);
+};
+
+const createModelPayload = (
+  provider: UserModelProvider,
+  modelName: string,
+  capability: Capability,
+): UserAIModelCreate => {
+  const isChat = capability === 'chat';
+  if (isChat) {
+    return {
+      provider_id: provider.id,
+      display_name: modelName,
+      model_name: modelName,
+      capabilities: { chat: true, embedding: false },
+      context_window: null,
+      is_default_chat: !primaryChatModel.value,
+      is_default_embedding: false,
+      is_enabled: true,
+      sort_order: 0,
+    };
+  }
+
+  return {
+    provider_id: provider.id,
+    display_name: modelName,
+    model_name: modelName,
+    capabilities: { chat: false, embedding: true },
+    context_window: null,
+    is_default_chat: false,
+    is_default_embedding: true,
+    is_enabled: true,
+    sort_order: 0,
+  };
+};
+
+const upsertModelForCapability = async (
+  provider: UserModelProvider,
+  modelName: string,
+  capability: Capability,
+): Promise<UserAIModel> => {
+  const existing = capability === 'chat'
+    ? chatModelForName(provider.id, modelName)
+    : embeddingModelForName(provider.id, modelName);
+  if (!existing) {
+    return createUserModel(createModelPayload(provider, modelName, capability));
+  }
+  if (!existing.is_enabled) {
+    return updateUserModel(existing.id, { is_enabled: true });
+  }
+  return existing;
+};
+
+const toggleChatModel = async (provider: UserModelProvider, modelName: string, event: Event) => {
+  const checked = (event.target as HTMLInputElement).checked;
+  const existing = chatModelForName(provider.id, modelName);
+  try {
+    if (checked) {
+      await upsertModelForCapability(provider, modelName, 'chat');
+    } else if (existing) {
+      if (existing.is_default_chat) {
+        setFeedback('error', '主模型不能直接停用，请先选择另一个主模型。');
+        (event.target as HTMLInputElement).checked = true;
+        return;
+      }
+      await updateUserModel(existing.id, { is_enabled: false });
+    }
+    await loadBundle();
+    emit('saved');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '未知错误';
+    setFeedback('error', `更新 LLM 模型失败：${message}`);
+  }
+};
+
+const setPrimaryChatModel = async (model?: UserAIModel) => {
+  if (!model) {
+    return;
+  }
+  try {
+    await updateUserModel(model.id, { is_enabled: true, is_default_chat: true });
+    await loadBundle();
+    emit('saved');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '未知错误';
+    setFeedback('error', `设置主模型失败：${message}`);
+  }
+};
+
+const setPrimaryChatModelById = async (event: Event) => {
+  const modelId = Number((event.target as HTMLSelectElement).value);
+  if (!modelId) {
+    return;
+  }
+  await setPrimaryChatModel(models.value.find(model => model.id === modelId));
+};
+
+const selectEmbeddingModel = async (provider: UserModelProvider, modelName: string) => {
+  try {
+    const selected = await upsertModelForCapability(provider, modelName, 'embedding');
+    const embeddingModels = models.value.filter(model => model.capabilities.embedding);
+    await Promise.all(embeddingModels.map(model => updateUserModel(model.id, {
+      is_enabled: model.id === selected.id,
+      is_default_embedding: model.id === selected.id,
+    })));
+    if (!embeddingModels.some(model => model.id === selected.id)) {
+      await updateUserModel(selected.id, { is_enabled: true, is_default_embedding: true });
+    }
+    await loadBundle();
+    emit('saved');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '未知错误';
+    setFeedback('error', `设置向量模型失败：${message}`);
+  }
+};
+
+const deleteModelForActiveSection = async (provider: UserModelProvider, modelName: string) => {
+  const model = savedModelForActiveSection(provider.id, modelName);
+  if (!model) {
+    return;
+  }
+  if (model.is_default_chat) {
+    setFeedback('error', '主模型不能直接删除，请先选择另一个主模型。');
+    return;
+  }
+  if (model.is_default_embedding) {
+    setFeedback('error', '当前向量模型不能直接删除，请先选择另一个向量模型。');
+    return;
+  }
+
+  const label = model.display_name || model.model_name;
+  const confirmed = window.confirm(`确定删除模型“${label}”吗？关联的阶段路由也会一起移除。`);
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await deleteUserModel(model.id);
+    await loadBundle();
+    setFeedback('success', '模型已删除。');
+    emit('saved');
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '未知错误';
+    setFeedback('error', `删除模型失败：${message}`);
   }
 };
 
@@ -534,7 +827,9 @@ const saveRoutes = async () => {
       routeSelections[key] = '';
     }
     for (const route of savedRoutes) {
-      routeSelections[route.stage] = String(route.model_id);
+      if (allStageKeys.value.includes(route.stage)) {
+        routeSelections[route.stage] = String(route.model_id);
+      }
     }
     setFeedback('success', '阶段路由已保存。');
     emit('saved');
@@ -550,10 +845,6 @@ const providerName = (providerId: number): string => (
   providers.value.find(provider => provider.id === providerId)?.name || `供应商 ${providerId}`
 );
 
-const modelsForCapability = (capability: Capability): UserAIModel[] => (
-  models.value.filter(model => model.is_enabled && Boolean(model.capabilities[capability]))
-);
-
 onMounted(() => {
   void loadBundle();
 });
@@ -563,77 +854,206 @@ onMounted(() => {
 .model-routing {
   display: grid;
   gap: var(--md-spacing-4);
-  margin-bottom: var(--md-spacing-5);
 }
 
-.model-routing__header,
-.model-routing__panel-head {
+.model-routing__topbar,
+.model-routing__panel-head,
+.model-routing__provider-head,
+.model-routing__provider-actions,
+.model-routing__model-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--md-spacing-3);
 }
 
-.model-routing__title,
-.model-routing__panel-head h4,
-.model-routing__stage-group h5 {
-  margin: 0;
-  color: var(--md-on-surface);
+.model-routing__topbar {
+  justify-content: flex-end;
 }
 
-.model-routing__subtitle {
-  margin: var(--md-spacing-1) 0 0;
-  color: var(--md-on-surface-variant);
-}
-
-.model-routing__panel {
+.model-routing__panel,
+.model-routing__provider-card {
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-radius-lg);
   padding: var(--md-spacing-4);
   background: var(--md-surface-container-low);
 }
 
-.model-routing__list,
+.model-routing__provider-grid,
 .model-routing__form,
+.model-routing__model-list,
+.model-routing__selected-models,
 .model-routing__stage-list,
 .model-routing__stage-groups {
   display: grid;
   gap: var(--md-spacing-3);
 }
 
-.model-routing__list {
-  margin: var(--md-spacing-3) 0;
+.model-routing__provider-card {
+  position: relative;
+  display: grid;
+  gap: var(--md-spacing-3);
+  overflow: visible;
 }
 
-.model-routing__item {
+.model-routing__primary-panel {
+  background: var(--md-surface);
+}
+
+.model-routing__primary-field {
+  margin: 0;
+}
+
+.model-routing__provider-head h3,
+.model-routing__panel-head h3,
+.model-routing__stage-group h4 {
+  margin: 0;
+  color: var(--md-on-surface);
+}
+
+.model-routing__provider-head p,
+.model-routing__hint,
+.model-routing__empty {
+  margin: 4px 0 0;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-small);
+}
+
+.model-routing__provider-url {
+  word-break: break-all;
+}
+
+.model-routing__provider-card-actions {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--md-spacing-2);
+}
+
+.model-routing__model-list-title {
+  margin: 0;
+  color: var(--md-on-surface-variant);
+}
+
+.model-routing__model-picker {
+  position: absolute;
+  top: 132px;
+  right: var(--md-spacing-4);
+  z-index: 20;
+  width: min(420px, calc(100% - var(--md-spacing-8)));
+  max-height: 420px;
+  overflow: auto;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-lg);
+  padding: var(--md-spacing-3);
+  background: var(--md-surface);
+  box-shadow: var(--md-elevation-3);
+}
+
+.model-routing__picker-head,
+.model-routing__picker-row,
+.model-routing__selected-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-spacing-3);
+}
+
+.model-routing__picker-head {
+  margin-bottom: var(--md-spacing-3);
+  color: var(--md-on-surface);
+}
+
+.model-routing__picker-search {
+  margin-bottom: var(--md-spacing-3);
+}
+
+.model-routing__picker-list {
+  display: grid;
+  gap: var(--md-spacing-1);
+}
+
+.model-routing__picker-row {
+  min-height: 44px;
+  border-radius: var(--md-radius-md);
+  padding: var(--md-spacing-2) var(--md-spacing-3);
+  color: var(--md-on-surface);
+  cursor: pointer;
+}
+
+.model-routing__picker-row:hover {
+  background: var(--md-surface-container);
+}
+
+.model-routing__picker-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-routing__selected-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--md-spacing-2);
+}
+
+.model-routing__selected-chip {
+  max-width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-full);
+  padding: 4px 6px 4px 12px;
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+}
+
+.model-routing__selected-chip > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-routing__selected-chip small {
+  border-radius: var(--md-radius-full);
+  padding: 2px 6px;
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  font-size: var(--md-label-small);
+  white-space: nowrap;
+}
+
+.model-routing__model-row {
   width: 100%;
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-radius-md);
   background: var(--md-surface);
   color: var(--md-on-surface);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--md-spacing-3);
   padding: var(--md-spacing-3);
   text-align: left;
   cursor: pointer;
 }
 
-.model-routing__item.active,
-.model-routing__item:hover {
+.model-routing__model-row:hover:not(.is-disabled) {
   border-color: var(--md-primary);
   background: var(--md-primary-container);
   color: var(--md-on-primary-container);
 }
 
-.model-routing__item strong,
+.model-routing__model-row.is-disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.model-routing__model-row strong,
 .model-routing__stage-row strong {
   display: block;
   font-size: var(--md-body-medium);
 }
 
-.model-routing__item small,
+.model-routing__model-row small,
 .model-routing__stage-row small {
   display: block;
   margin-top: 2px;
@@ -641,35 +1061,78 @@ onMounted(() => {
   font-size: var(--md-body-small);
 }
 
-.model-routing__status,
-.model-routing__badges em {
+.model-routing__model-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--md-spacing-2);
+}
+
+.model-routing__delete-btn {
+  border: none;
   border-radius: var(--md-radius-full);
-  padding: 4px 8px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  background: var(--md-error-container);
+  color: var(--md-on-error-container);
+  cursor: pointer;
   font-size: var(--md-label-small);
-  font-style: normal;
+  font-weight: 600;
   white-space: nowrap;
 }
 
-.model-routing__status.is-on,
-.model-routing__badges em {
-  background: var(--md-success-container);
-  color: var(--md-on-success-container);
+.model-routing__delete-btn:hover {
+  filter: brightness(0.96);
 }
 
-.model-routing__status.is-off {
+.model-routing__status {
+  border: none;
+  border-radius: var(--md-radius-full);
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  cursor: pointer;
+  font-size: var(--md-label-small);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.model-routing__status:disabled,
+.model-routing__provider-delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.model-routing__status.is-on {
   background: var(--md-error-container);
   color: var(--md-on-error-container);
 }
 
-.model-routing__badges {
-  display: inline-flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--md-spacing-1);
+.model-routing__status.is-off {
+  background: var(--md-success-container);
+  color: var(--md-on-success-container);
 }
 
-.model-routing__check,
-.model-routing__checks {
+.model-routing__provider-delete {
+  border: none;
+  border-radius: var(--md-radius-full);
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  background: var(--md-error-container);
+  color: var(--md-error-strong);
+  cursor: pointer;
+  font-size: var(--md-label-small);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.model-routing__provider-delete:hover:not(:disabled) {
+  background: var(--md-error-container);
+  color: var(--md-on-error-container);
+}
+
+.model-routing__check {
   display: flex;
   align-items: center;
   gap: var(--md-spacing-2);
@@ -677,36 +1140,53 @@ onMounted(() => {
   font-size: var(--md-body-medium);
 }
 
-.model-routing__checks {
-  flex-wrap: wrap;
-}
-
-.model-routing__check input {
-  width: 16px;
-  height: 16px;
+.model-routing__check input,
+.model-routing__model-controls input,
+.model-routing__picker-row input {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
 }
 
 .model-routing__link {
   border: none;
   background: transparent;
-  color: var(--md-primary);
+  color: var(--md-primary-dark);
   cursor: pointer;
   font-weight: 600;
-  padding: 0;
+  min-height: 44px;
+  padding: 0 var(--md-spacing-2);
 }
 
-.model-routing__empty {
-  margin: 0;
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
+.model-routing__link:focus-visible,
+.model-routing__delete-btn:focus-visible,
+.model-routing__status:focus-visible,
+.model-routing__provider-delete:focus-visible,
+.model-routing__picker-row:focus-within {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
 }
 
-.model-routing__stages {
-  overflow: hidden;
+.model-routing__feedback {
+  border-radius: var(--md-radius-md);
+  padding: var(--md-spacing-3);
+  font-size: var(--md-body-medium);
 }
 
-.model-routing__stage-groups {
-  margin-top: var(--md-spacing-4);
+.model-routing__feedback.is-success {
+  background-color: var(--md-success-container);
+  color: var(--md-on-success-container);
+}
+
+.model-routing__feedback.is-error,
+.model-routing__hint.is-error {
+  background-color: var(--md-error-container);
+  color: var(--md-on-error-container);
+}
+
+.model-routing__hint.is-error {
+  border-radius: var(--md-radius-md);
+  padding: var(--md-spacing-2);
 }
 
 .model-routing__stage-group {
@@ -721,25 +1201,30 @@ onMounted(() => {
   align-items: center;
 }
 
-.model-routing__feedback {
-  border-radius: var(--md-radius-md);
-  padding: var(--md-spacing-3);
-  font-size: var(--md-body-medium);
-}
-
-.model-routing__feedback.is-success {
-  background-color: var(--md-success-container);
-  color: var(--md-on-success-container);
-}
-
-.model-routing__feedback.is-error {
-  background-color: var(--md-error-container);
-  color: var(--md-on-error-container);
-}
-
 @media (min-width: 960px) {
+  .model-routing__provider-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .model-routing__stage-row {
     grid-template-columns: minmax(220px, 0.8fr) minmax(240px, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .model-routing__topbar,
+  .model-routing__panel-head,
+  .model-routing__provider-head,
+  .model-routing__provider-actions,
+  .model-routing__model-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .model-routing__model-picker {
+    position: static;
+    width: 100%;
+    max-height: 360px;
   }
 }
 </style>

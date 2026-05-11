@@ -1,7 +1,7 @@
 # AIMETA P=LLM服务_大模型调用封装|R=API调用_流式生成|NR=不含业务逻辑|E=LLMService|X=internal|A=服务类|D=openai,httpx|S=net|RD=./README.ai
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional
 from urllib.parse import urlparse
 
 import httpx
@@ -9,8 +9,13 @@ from fastapi import HTTPException
 from openai import APIConnectionError, APITimeoutError, AsyncOpenAI, InternalServerError, PermissionDeniedError
 
 from ..core.config import settings
+from ..repositories.ai_model_config_repository import (
+    UserAIModelRepository,
+    UserAIStageRouteRepository,
+)
 from ..repositories.llm_config_repository import LLMConfigRepository
 from ..repositories.system_config_repository import SystemConfigRepository
+from ..services.llm_config_service import CHAT_STAGE_KEYS, EMBEDDING_STAGE_KEYS
 from ..services.prompt_service import PromptService
 from ..services.usage_service import UsageService
 from ..utils.llm_tool import ChatMessage, LLMClient
@@ -30,6 +35,8 @@ class LLMService:
         self.session = session
         self.llm_repo = LLMConfigRepository(session)
         self.system_config_repo = SystemConfigRepository(session)
+        self.ai_model_repo = UserAIModelRepository(session)
+        self.stage_route_repo = UserAIStageRouteRepository(session)
         self.usage_service = UsageService(session)
         self._embedding_dimensions: Dict[str, int] = {}
 
@@ -44,6 +51,8 @@ class LLMService:
         response_format: Optional[str] = "json_object",
         max_tokens: Optional[int] = None,
         top_p: Optional[float] = None,
+        stage: str = "chapter_writing",
+        model_id: Optional[int] = None,
     ) -> str:
         messages = [{"role": "system", "content": system_prompt}, *conversation_history]
         return await self._stream_and_collect(
@@ -54,6 +63,131 @@ class LLMService:
             response_format=response_format,
             max_tokens=max_tokens,
             top_p=top_p,
+            stage=stage,
+            model_id=model_id,
+        )
+
+    async def stream_llm_response(
+        self,
+        system_prompt: str,
+        conversation_history: List[Dict[str, str]],
+        *,
+        temperature: float = 0.7,
+        user_id: Optional[int] = None,
+        timeout: float = 300.0,
+        response_format: Optional[str] = "json_object",
+        max_tokens: Optional[int] = None,
+        top_p: Optional[float] = None,
+        stage: str = "concept_conversation",
+        model_id: Optional[int] = None,
+    ) -> AsyncGenerator[str, None]:
+        """流式输出模型文本片段，供 SSE 接口边生成边返回。"""
+        messages = [{"role": "system", "content": system_prompt}, *conversation_history]
+        config = await self._resolve_llm_config(user_id, stage=stage, model_id=model_id)
+        client = LLMClient(api_key=config["api_key"], base_url=config.get("base_url"))
+        chat_messages = [ChatMessage(role=msg["role"], content=msg["content"]) for msg in messages]
+
+        full_response = ""
+        finish_reason = None
+
+        logger.info(
+            "Streaming LLM response to client: model=%s user_id=%s messages=%d",
+            config.get("model"),
+            user_id,
+            len(messages),
+        )
+
+        try:
+            async for part in client.stream_chat(
+                messages=chat_messages,
+                model=config.get("model"),
+                temperature=temperature,
+                timeout=int(timeout),
+                response_format=response_format,
+                max_tokens=max_tokens,
+                top_p=top_p,
+            ):
+                if part.get("content"):
+                    full_response += part["content"]
+                    yield part["content"]
+                if part.get("finish_reason"):
+                    finish_reason = part["finish_reason"]
+        except InternalServerError as exc:
+            detail = "AI 服务内部错误，请稍后重试"
+            response = getattr(exc, "response", None)
+            if response is not None:
+                try:
+                    payload = response.json()
+                    error_data = payload.get("error", {}) if isinstance(payload, dict) else {}
+                    detail = error_data.get("message_zh") or error_data.get("message") or detail
+                except Exception:
+                    detail = str(exc) or detail
+            else:
+                detail = str(exc) or detail
+            logger.error(
+                "LLM stream internal error: model=%s user_id=%s detail=%s",
+                config.get("model"),
+                user_id,
+                detail,
+                exc_info=exc,
+            )
+            raise HTTPException(status_code=503, detail=detail)
+        except (httpx.RemoteProtocolError, httpx.ReadTimeout, APIConnectionError, APITimeoutError) as exc:
+            if isinstance(exc, httpx.RemoteProtocolError):
+                detail = "AI 服务连接被意外中断，请稍后重试"
+            elif isinstance(exc, (httpx.ReadTimeout, APITimeoutError)):
+                detail = "AI 服务响应超时，请稍后重试"
+            else:
+                detail = "无法连接到 AI 服务，请稍后重试"
+            logger.error(
+                "LLM stream failed: model=%s user_id=%s detail=%s",
+                config.get("model"),
+                user_id,
+                detail,
+                exc_info=exc,
+            )
+            raise HTTPException(status_code=503, detail=detail) from exc
+        except PermissionDeniedError as exc:
+            detail = "AI 服务拒绝访问（可能被上游安全策略拦截），请稍后重试或更换可用 API 地址"
+            logger.error(
+                "LLM stream permission denied: model=%s user_id=%s detail=%s",
+                config.get("model"),
+                user_id,
+                detail,
+                exc_info=exc,
+            )
+            raise HTTPException(status_code=503, detail=detail) from exc
+
+        if finish_reason == "length":
+            logger.warning(
+                "LLM response truncated: model=%s user_id=%s response_length=%d",
+                config.get("model"),
+                user_id,
+                len(full_response),
+            )
+            raise HTTPException(
+                status_code=500,
+                detail=f"AI 响应因长度限制被截断（已生成 {len(full_response)} 字符），请缩短输入内容或调整模型参数"
+            )
+
+        if not full_response:
+            logger.error(
+                "LLM returned empty response: model=%s user_id=%s finish_reason=%s",
+                config.get("model"),
+                user_id,
+                finish_reason,
+            )
+            raise HTTPException(
+                status_code=500,
+                detail=f"AI 未返回有效内容（结束原因: {finish_reason or '未知'}），请稍后重试或联系管理员"
+            )
+
+        await self.usage_service.increment("api_request_count")
+        logger.info(
+            "LLM streaming response success: model=%s user_id=%s chars=%d",
+            config.get("model"),
+            user_id,
+            len(full_response),
         )
 
     async def generate(
@@ -67,6 +201,8 @@ class LLMService:
         max_tokens: Optional[int] = None,
         response_format: Optional[str] = None,
         top_p: Optional[float] = None,
+        stage: str = "chapter_writing",
+        model_id: Optional[int] = None,
     ) -> str:
         """兼容旧版接口的文本生成入口，统一走 get_llm_response。"""
         return await self.get_llm_response(
@@ -78,6 +214,8 @@ class LLMService:
             response_format=response_format,
             max_tokens=max_tokens,
             top_p=top_p,
+            stage=stage,
+            model_id=model_id,
         )
 
     async def get_summary(
@@ -88,6 +226,8 @@ class LLMService:
         user_id: Optional[int] = None,
         timeout: float = 180.0,
         system_prompt: Optional[str] = None,
+        stage: str = "summary_memory",
+        model_id: Optional[int] = None,
     ) -> str:
         if not system_prompt:
             prompt_service = PromptService(self.session)
@@ -99,7 +239,14 @@ class LLMService:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": chapter_content},
         ]
-        return await self._stream_and_collect(messages, temperature=temperature, user_id=user_id, timeout=timeout)
+        return await self._stream_and_collect(
+            messages,
+            temperature=temperature,
+            user_id=user_id,
+            timeout=timeout,
+            stage=stage,
+            model_id=model_id,
+        )
 
     async def _get_user_llm_config_record(self, user_id: Optional[int]):
         """统一校验并读取用户级 LLM 配置，禁止回退系统默认配置。"""
@@ -130,8 +277,10 @@ class LLMService:
         response_format: Optional[str] = None,
         max_tokens: Optional[int] = None,
         top_p: Optional[float] = None,
+        stage: str = "chapter_writing",
+        model_id: Optional[int] = None,
     ) -> str:
-        config = await self._resolve_llm_config(user_id)
+        config = await self._resolve_llm_config(user_id, stage=stage, model_id=model_id)
         client = LLMClient(api_key=config["api_key"], base_url=config.get("base_url"))
 
         chat_messages = [ChatMessage(role=msg["role"], content=msg["content"]) for msg in messages]
@@ -247,37 +396,108 @@ class LLMService:
         )
         return full_response
 
-    async def _resolve_llm_config(self, user_id: Optional[int]) -> Dict[str, Optional[str]]:
-        return await self._resolve_llm_config_with_policy(user_id, require_api_key=True)
+    async def _resolve_llm_config(
+        self,
+        user_id: Optional[int],
+        *,
+        stage: str = "chapter_writing",
+        model_id: Optional[int] = None,
+    ) -> Dict[str, Optional[str]]:
+        return await self._resolve_llm_config_with_policy(
+            user_id,
+            require_api_key=True,
+            stage=stage,
+            model_id=model_id,
+        )
+
+    async def _resolve_model_route(
+        self,
+        user_id: int,
+        *,
+        stage: str,
+        capability: str,
+        model_id: Optional[int] = None,
+    ):
+        if capability == "chat" and stage not in CHAT_STAGE_KEYS:
+            raise HTTPException(status_code=400, detail=f"未知 AI 阶段：{stage}")
+        if capability == "embedding" and stage not in EMBEDDING_STAGE_KEYS:
+            raise HTTPException(status_code=400, detail=f"未知向量阶段：{stage}")
+
+        model = None
+        if model_id is not None:
+            model = await self.ai_model_repo.get_owned(model_id, user_id)
+            if not model:
+                raise HTTPException(status_code=400, detail="选择的模型不存在或不属于当前用户")
+        else:
+            route = await self.stage_route_repo.get_by_stage(user_id, stage)
+            model = route.model if route else None
+            if not model:
+                models = list(await self.ai_model_repo.list_enabled_by_capability(user_id, capability))
+                default_flag = "is_default_embedding" if capability == "embedding" else "is_default_chat"
+                model = next((item for item in models if getattr(item, default_flag, False)), None)
+                if models and not model:
+                    section_name = "向量模型" if capability == "embedding" else "LLM 模型"
+                    default_name = "当前使用模型" if capability == "embedding" else "主模型"
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"请先在模型设置的 {section_name} 中勾选{default_name}。",
+                    )
+
+        if not model:
+            return None
+        if not model.is_enabled:
+            raise HTTPException(status_code=400, detail=f"模型 {model.model_name} 已禁用")
+        if not (model.capabilities_json or {}).get(capability):
+            raise HTTPException(status_code=400, detail=f"模型 {model.model_name} 不支持 {capability}")
+
+        provider = model.provider
+        if not provider or not provider.is_enabled:
+            raise HTTPException(status_code=400, detail=f"模型 {model.model_name} 的供应商不可用")
+
+        base_url = (provider.base_url or "").strip() or None
+        api_key = (provider.api_key_encrypted or "").strip() or None
+        if not base_url:
+            raise HTTPException(status_code=400, detail=f"供应商 {provider.name} 缺少 API URL")
+        return {
+            "api_key": api_key,
+            "base_url": base_url,
+            "model": model.model_name,
+            "model_id": model.id,
+            "stage": stage,
+            "provider_type": provider.provider_type,
+        }
 
     async def _resolve_llm_config_with_policy(
         self,
         user_id: Optional[int],
         *,
         require_api_key: bool,
+        stage: str = "chapter_writing",
+        model_id: Optional[int] = None,
     ) -> Dict[str, Optional[str]]:
-        config = await self._get_user_llm_config_record(user_id)
-
-        api_key = (config.llm_provider_api_key or "").strip() or None
-        base_url = (config.llm_provider_url or "").strip() or None
-        model = (config.llm_provider_model or "").strip() or None
-
-        missing_fields: List[str] = []
-        if not base_url:
-            missing_fields.append("API URL")
-        if require_api_key and not api_key:
-            missing_fields.append("API Key")
-        if not model:
-            missing_fields.append("Model")
-
-        if missing_fields:
-            logger.warning("用户 %s 的用户级 LLM 配置不完整: missing=%s", user_id, ",".join(missing_fields))
+        if not user_id:
+            logger.warning("缺少 user_id，拒绝回退到默认 LLM 配置")
             raise HTTPException(
                 status_code=400,
-                detail=f"请先在模型设置中补全用户级 LLM 配置：{'、'.join(missing_fields)}。系统默认 LLM 配置已禁用。",
+                detail="缺少用户上下文，无法读取用户级 LLM 配置。系统默认 LLM 配置已禁用，请重新登录后在模型设置中保存用户级配置。",
             )
 
-        return {"api_key": api_key, "base_url": base_url, "model": model}
+        routed = await self._resolve_model_route(
+            user_id,
+            stage=stage,
+            capability="chat",
+            model_id=model_id,
+        )
+        if routed:
+            if require_api_key and not routed.get("api_key") and routed.get("provider_type") != "ollama":
+                raise HTTPException(status_code=400, detail=f"阶段 {stage} 使用的供应商缺少 API Key")
+            return routed
+
+        logger.warning("用户 %s 没有可用的 LLM 模型，stage=%s", user_id, stage)
+        raise HTTPException(
+            status_code=400,
+            detail="请先在模型设置的 LLM 模型中启用模型，并勾选一个主模型。",
+        )
 
     @staticmethod
     def _normalize_ollama_host(host: Optional[str]) -> Optional[str]:
@@ -391,19 +611,34 @@ class LLMService:
         *,
         user_id: Optional[int] = None,
         model: Optional[str] = None,
+        stage: str = "rag_embedding",
+        model_id: Optional[int] = None,
     ) -> List[float]:
         """生成文本向量，用于章节 RAG 检索，支持 openai 与 ollama 双提供方。"""
-        user_llm_config = await self._get_user_llm_config_record(user_id)
-        user_embedding_model = (user_llm_config.embedding_provider_model or "").strip() or None
-        user_embedding_base_url = (user_llm_config.embedding_provider_url or "").strip() or None
-        user_embedding_api_key = (user_llm_config.embedding_provider_api_key or "").strip() or None
-        user_llm_base_url = (user_llm_config.llm_provider_url or "").strip() or None
-        user_llm_api_key = (user_llm_config.llm_provider_api_key or "").strip() or None
-        user_embedding_provider_format = (
-            (user_llm_config.embedding_provider_format or "").strip().lower()
-            if user_llm_config
-            else ""
+        if not user_id:
+            raise HTTPException(
+                status_code=400,
+                detail="缺少用户上下文，无法读取向量模型配置。系统默认向量配置已禁用，请重新登录后在模型设置中选择向量模型。",
+            )
+
+        routed = await self._resolve_model_route(
+            user_id,
+            stage=stage,
+            capability="embedding",
+            model_id=model_id,
         )
+        if routed:
+            user_embedding_model = routed["model"]
+            user_embedding_base_url = routed.get("base_url")
+            user_embedding_api_key = routed.get("api_key")
+            user_llm_base_url = user_embedding_base_url
+            user_llm_api_key = user_embedding_api_key
+            user_embedding_provider_format = "ollama" if routed.get("provider_type") == "ollama" else "openai"
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="请先在模型设置的向量模型中选择当前使用模型。系统默认向量配置已禁用。",
+            )
 
         provider = user_embedding_provider_format if user_embedding_provider_format in {"openai", "ollama"} else "openai"
 

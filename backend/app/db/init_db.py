@@ -162,6 +162,18 @@ async def _ensure_schema_updates() -> None:
                         "WHERE embedding_provider_format IS NULL OR TRIM(embedding_provider_format) = ''"
                     )
                 )
+
+            if "user_model_providers" in table_names:
+                provider_columns = {col["name"] for col in inspector.get_columns("user_model_providers")}
+                if "capabilities_json" not in provider_columns:
+                    sync_conn.execute(text("ALTER TABLE user_model_providers ADD COLUMN capabilities_json JSON"))
+                sync_conn.execute(
+                    text(
+                        "UPDATE user_model_providers "
+                        "SET capabilities_json = '{\"chat\": true, \"embedding\": false}' "
+                        "WHERE capabilities_json IS NULL"
+                    )
+                )
         await conn.run_sync(_upgrade)
 
 

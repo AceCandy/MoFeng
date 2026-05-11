@@ -2,6 +2,7 @@
 """集中导出 ORM 模型，确保 SQLAlchemy 元数据在初始化时被正确加载。"""
 
 from .admin_setting import AdminSetting
+from .ai_model_config import UserAIModel, UserAIStageRoute, UserModelProvider
 from .llm_config import LLMConfig
 from .novel import (
     BlueprintCharacter,
@@ -53,6 +54,9 @@ from .foreshadowing import (
 __all__ = [
     # 基础模型
     "AdminSetting",
+    "UserModelProvider",
+    "UserAIModel",
+    "UserAIStageRoute",
     "LLMConfig",
     "NovelConversation",
     "NovelBlueprint",

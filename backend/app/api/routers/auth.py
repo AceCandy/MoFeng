@@ -99,7 +99,7 @@ async def register_with_linuxdo(code: str, service: AuthService = Depends(get_au
             }} catch (err) {{
                 console.error('无法写入本地存储', err);
             }}
-            window.location.replace('/');
+            window.location.replace('/workspace');
         }})();
     </script>
 </body>

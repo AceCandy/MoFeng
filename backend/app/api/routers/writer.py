@@ -183,6 +183,7 @@ async def _compress_chapter_to_word_limit(
             timeout=300.0,
             response_format=None,
             max_tokens=WRITER_GENERATION_MAX_TOKENS,
+            stage="chapter_compression",
         )
         compressed = unwrap_markdown_json(remove_think_tags(response)).strip()
         return compressed or content
@@ -503,6 +504,7 @@ async def _refine_foreshadowing_candidates_with_llm(
             timeout=90.0,
             response_format="json_object",
             max_tokens=1200,
+            stage="foreshadowing",
         )
         normalized = unwrap_markdown_json(remove_think_tags(response))
         data = json.loads(normalized)
@@ -613,6 +615,7 @@ async def _judge_foreshadowing_status_with_llm(
             timeout=90.0,
             response_format="json_object",
             max_tokens=1200,
+            stage="foreshadowing",
         )
         normalized = unwrap_markdown_json(remove_think_tags(response))
         data = json.loads(normalized)
@@ -915,6 +918,7 @@ async def _generate_chapter_mission(
             temperature=0.3,
             user_id=user_id,
             timeout=120.0,
+            stage="chapter_mission",
         )
         cleaned = remove_think_tags(response)
         normalized = unwrap_markdown_json(cleaned)
@@ -962,6 +966,7 @@ async def _rewrite_with_guardrails(
             timeout=300.0,
             response_format=None,
             max_tokens=WRITER_GENERATION_MAX_TOKENS,
+            stage="chapter_rewrite",
         )
         cleaned = remove_think_tags(response)
         logger.info("成功修复违规内容")
@@ -999,6 +1004,7 @@ async def _refresh_edit_summary_and_ingest(
                 content,
                 temperature=0.15,
                 user_id=user_id,
+                stage="summary_memory",
             )
             summary_text = remove_think_tags(summary)
         except Exception as exc:
@@ -1340,6 +1346,7 @@ async def generate_chapter(
                     temperature=0.15,
                     user_id=current_user.id,
                     timeout=180.0,
+                    stage="summary_memory",
                 )
             except HTTPException:
                 await _mark_generation_failed()
@@ -1581,6 +1588,7 @@ async def generate_chapter(
                 timeout=600.0,
                 response_format=None,
                 max_tokens=WRITER_GENERATION_MAX_TOKENS,
+                stage="chapter_writing",
             )
             cleaned = remove_think_tags(response)
             normalized = unwrap_markdown_json(cleaned)
@@ -2194,6 +2202,7 @@ async def generate_chapters_outline(
         conversation_history=[{"role": "user", "content": prompt_input}],
         temperature=0.7,
         user_id=current_user.id,
+        stage="chapter_outline",
     )
 
     cleaned = remove_think_tags(response)

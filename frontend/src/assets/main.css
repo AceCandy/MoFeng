@@ -56,6 +56,7 @@
   
   /* Error Colors */
   --md-error: #EA4335;
+  --md-error-strong: #A50E0E;
   --md-error-container: #FCE8E6;
   --md-on-error: #FFFFFF;
   --md-on-error-container: #5F2120;
@@ -274,7 +275,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 24px;
   border: none;
   border-radius: var(--md-radius-full);
@@ -320,32 +321,32 @@ body {
 /* Outlined Button */
 .md-btn-outlined {
   background-color: transparent;
-  color: var(--md-primary);
+  color: var(--md-primary-dark);
   border: 1px solid var(--md-outline);
 }
 
 .md-btn-outlined:hover:not(:disabled) {
-  background-color: rgba(66, 133, 244, 0.08);
+  background-color: color-mix(in srgb, var(--md-primary-dark) 8%, transparent);
   border-color: var(--md-primary);
 }
 
 .md-btn-outlined:active:not(:disabled) {
-  background-color: rgba(66, 133, 244, 0.12);
+  background-color: color-mix(in srgb, var(--md-primary-dark) 12%, transparent);
 }
 
 /* Text Button */
 .md-btn-text {
   background-color: transparent;
-  color: var(--md-primary);
+  color: var(--md-primary-dark);
   padding: 0 12px;
 }
 
 .md-btn-text:hover:not(:disabled) {
-  background-color: rgba(66, 133, 244, 0.08);
+  background-color: color-mix(in srgb, var(--md-primary-dark) 8%, transparent);
 }
 
 .md-btn-text:active:not(:disabled) {
-  background-color: rgba(66, 133, 244, 0.12);
+  background-color: color-mix(in srgb, var(--md-primary-dark) 12%, transparent);
 }
 
 /* Tonal Button */
@@ -687,12 +688,12 @@ body {
 }
 
 .md-tab:hover {
-  background-color: rgba(66, 133, 244, 0.08);
-  color: var(--md-primary);
+  background-color: color-mix(in srgb, var(--md-primary-dark) 8%, transparent);
+  color: var(--md-primary-dark);
 }
 
 .md-tab.active {
-  color: var(--md-primary);
+  color: var(--md-primary-dark);
 }
 
 .md-tab.active::after {

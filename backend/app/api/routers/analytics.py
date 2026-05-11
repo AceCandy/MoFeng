@@ -468,7 +468,8 @@ async def analyze_emotion_with_ai(
             system_prompt="你是一个专业的小说情感分析师。",
             conversation_history=[{"role": "user", "content": prompt}],
             temperature=0.3,
-            user_id=current_user.id
+            user_id=current_user.id,
+            stage="emotion_analysis",
         )
         # 解析JSON
         import json

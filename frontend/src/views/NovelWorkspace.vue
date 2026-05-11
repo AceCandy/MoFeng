@@ -38,7 +38,7 @@
     <div class="w-full max-w-7xl mx-auto">
       <div class="md-card md-card-elevated p-8 fade-in" style="border-radius: var(--md-radius-xl);">
         <!-- Header -->
-        <div class="flex justify-between items-center mb-8">
+        <div class="flex flex-col gap-4 mb-8 sm:flex-row sm:items-center sm:justify-between">
           <div class="flex items-center gap-4">
             <h2 class="md-headline-medium" style="color: var(--md-on-surface);">我的小说项目</h2>
             <router-link 
@@ -53,15 +53,27 @@
               管理后台
             </router-link>
           </div>
-          <button
-            @click="goBack"
-            class="md-btn md-btn-text md-ripple"
-          >
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            返回
-          </button>
+          <div class="flex items-center gap-2">
+            <router-link
+              to="/settings"
+              class="md-btn md-btn-text md-ripple"
+            >
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              设置
+            </router-link>
+            <button
+              @click="handleLogout"
+              class="md-btn md-btn-text md-ripple"
+            >
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              退出登录
+            </button>
+          </div>
         </div>
 
         <!-- Loading State -->
@@ -96,15 +108,15 @@
               </svg>
             </div>
             <p class="md-body-large mb-2" style="color: var(--md-on-surface);">还没有项目</p>
-            <p class="md-body-medium mb-6" style="color: var(--md-on-surface-variant);">快去开启灵感模式创建一个吧！</p>
+            <p class="md-body-medium mb-6" style="color: var(--md-on-surface-variant);">创建一个新项目，或导入已有小说继续写。</p>
             <button
-              @click="goToInspiration"
+              @click="openCreateDialog"
               class="md-btn md-btn-filled md-ripple"
             >
               <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
-              开始创作
+              创建新项目
             </button>
           </div>
 
@@ -121,7 +133,7 @@
 
           <!-- Create New Project Card -->
           <div
-            @click="goToInspiration"
+            @click="openCreateDialog"
             class="md-card md-card-outlined flex items-center justify-center p-5 cursor-pointer group min-h-[180px] transition-all duration-300 hover:border-2"
             style="border-radius: var(--md-radius-lg); border-style: dashed;"
             :style="{ borderColor: 'var(--md-outline)' }"
@@ -135,29 +147,6 @@
               <span class="md-label-large">创建新项目</span>
             </div>
           </div>
-
-          <!-- Import Project Card -->
-          <div
-            @click="triggerImport"
-            class="md-card md-card-outlined flex items-center justify-center p-5 cursor-pointer group min-h-[180px] transition-all duration-300 hover:border-2"
-            style="border-radius: var(--md-radius-lg); border-style: dashed;"
-            :style="{ borderColor: 'var(--md-outline)' }"
-          >
-            <div class="text-center transition-colors" style="color: var(--md-on-surface-variant);">
-              <div v-if="isImporting" class="flex flex-col items-center">
-                <div class="md-spinner w-8 h-8 mb-3"></div>
-                <span class="md-label-large">正在导入并分析...</span>
-              </div>
-              <div v-else>
-                <div class="w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center transition-colors" style="background-color: var(--md-success-container);">
-                  <svg class="w-6 h-6" style="color: var(--md-on-success-container);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                  </svg>
-                </div>
-                <span class="md-label-large">导入小说文件</span>
-              </div>
-            </div>
-          </div>
           <input
             type="file"
             ref="fileInput"
@@ -168,6 +157,85 @@
         </div>
       </div>
     </div>
+
+    <!-- Material 3 Create Project Dialog -->
+    <transition
+      enter-active-class="transition-opacity duration-200"
+      leave-active-class="transition-opacity duration-200"
+      enter-from-class="opacity-0"
+      leave-to-class="opacity-0"
+    >
+      <div v-if="showCreateDialog" class="md-dialog-overlay" @click.self="closeCreateDialog">
+        <transition
+          enter-active-class="transition-all duration-300"
+          leave-active-class="transition-all duration-200"
+          enter-from-class="opacity-0 scale-95"
+          leave-to-class="opacity-0 scale-95"
+        >
+          <div class="md-dialog max-w-2xl w-full mx-4">
+            <div class="md-dialog-header">
+              <h3 class="md-dialog-title">创建新项目</h3>
+              <p class="md-body-medium mt-2" style="color: var(--md-on-surface-variant);">
+                选择创作起点
+              </p>
+            </div>
+
+            <div class="md-dialog-content">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <button
+                  type="button"
+                  @click="goToInspiration"
+                  class="md-card md-card-outlined p-5 text-left transition-all duration-300 hover:border-2"
+                  style="border-radius: var(--md-radius-lg);"
+                >
+                  <div class="w-12 h-12 mb-4 rounded-full flex items-center justify-center" style="background-color: var(--md-primary-container);">
+                    <svg class="w-6 h-6" style="color: var(--md-on-primary-container);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                  </div>
+                  <h4 class="md-title-medium mb-2" style="color: var(--md-on-surface);">灵感模式</h4>
+                  <p class="md-body-medium" style="color: var(--md-on-surface-variant);">
+                    通过对话构思设定、角色和故事蓝图。
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  @click="triggerImport"
+                  :disabled="isImporting"
+                  class="md-card md-card-outlined p-5 text-left transition-all duration-300 hover:border-2 disabled:cursor-not-allowed disabled:opacity-70"
+                  style="border-radius: var(--md-radius-lg);"
+                >
+                  <div v-if="isImporting" class="flex items-center gap-3 mb-4">
+                    <div class="md-spinner w-8 h-8"></div>
+                    <span class="md-label-large">正在导入并分析...</span>
+                  </div>
+                  <div v-else class="w-12 h-12 mb-4 rounded-full flex items-center justify-center" style="background-color: var(--md-success-container);">
+                    <svg class="w-6 h-6" style="color: var(--md-on-success-container);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                  </div>
+                  <h4 class="md-title-medium mb-2" style="color: var(--md-on-surface);">导入小说</h4>
+                  <p class="md-body-medium" style="color: var(--md-on-surface-variant);">
+                    上传 .txt 文件，自动拆解章节并分析项目。
+                  </p>
+                </button>
+              </div>
+            </div>
+
+            <div class="md-dialog-actions">
+              <button
+                @click="closeCreateDialog"
+                :disabled="isImporting"
+                class="md-btn md-btn-text md-ripple"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </transition>
+      </div>
+    </transition>
 
     <!-- Material 3 Delete Confirmation Dialog -->
     <transition
@@ -235,7 +303,7 @@ import { useRouter } from 'vue-router'
 import { useNovelStore } from '@/stores/novel'
 import { useAuthStore } from '@/stores/auth'
 import ProjectCard from '@/components/ProjectCard.vue'
-import type { NovelProject, NovelProjectSummary } from '@/api/novel'
+import type { NovelProjectSummary } from '@/api/novel'
 import { NovelAPI } from '@/api/novel'
 
 const router = useRouter()
@@ -245,6 +313,7 @@ const authStore = useAuthStore()
 // 导入相关状态
 const fileInput = ref<HTMLInputElement | null>(null)
 const isImporting = ref(false)
+const showCreateDialog = ref(false)
 
 // 删除相关状态
 const showDeleteDialog = ref(false)
@@ -252,12 +321,23 @@ const projectToDelete = ref<NovelProjectSummary | null>(null)
 const isDeleting = ref(false)
 const deleteMessage = ref<{type: 'success' | 'error', text: string} | null>(null)
 
-const goBack = () => {
-  router.push('/')
+const goToInspiration = () => {
+  closeCreateDialog()
+  router.push('/inspiration')
 }
 
-const goToInspiration = () => {
-  router.push('/inspiration')
+const openCreateDialog = () => {
+  showCreateDialog.value = true
+}
+
+const closeCreateDialog = () => {
+  if (isImporting.value) return
+  showCreateDialog.value = false
+}
+
+const handleLogout = () => {
+  authStore.logout()
+  router.push('/login')
 }
 
 const viewProjectDetail = (projectId: string) => {
@@ -289,6 +369,7 @@ const handleFileImport = async (event: Event) => {
   const file = target.files[0]
   if (!file.name.endsWith('.txt')) {
     alert('请上传 .txt 格式的文件')
+    target.value = ''
     return
   }
 
@@ -296,6 +377,7 @@ const handleFileImport = async (event: Event) => {
   try {
     const response = await NovelAPI.importNovel(file)
     await loadProjects()
+    showCreateDialog.value = false
     router.push(`/novel/${response.id}`)
   } catch (error: any) {
     console.error('导入失败:', error)

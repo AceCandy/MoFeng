@@ -24,10 +24,6 @@
             <span class="md-label-medium">远程</span>
             <code class="settings-code">{{ remoteVersion || '未获取' }}</code>
           </span>
-          <span class="settings-meta-api">
-            <code class="settings-code">/api/llm-config</code>
-            <code class="settings-code">/api/updates/remote-version</code>
-          </span>
         </div>
       </section>
 
@@ -37,8 +33,7 @@
       >
         <p class="md-title-small">灵感模式需要先完成模型配置</p>
         <p class="md-body-small mt-1">
-          请先保存 <code class="settings-code">Model</code> 和
-          <code class="settings-code">向量 Model</code>，保存后会自动跳回灵感模式。
+          请先在 <strong>LLM 模型</strong> 中启用模型并勾选主模型，保存后会自动跳回灵感模式。
         </p>
       </section>
 
@@ -83,48 +78,19 @@
             </p>
           </div>
 
-          <div v-if="activeSettingsSection === 'overview'" class="settings-overview-panel">
-            <div class="settings-summary-grid">
-              <article
-                v-for="section in settingsSummarySections"
-                :key="section.id"
-                class="settings-summary-card"
-              >
-                <h3 class="md-title-medium">{{ section.label }}</h3>
-                <p class="md-body-small">{{ section.description }}</p>
-                <button
-                  type="button"
-                  class="md-btn md-btn-text md-ripple settings-summary-card__action"
-                  @click="selectSettingsSection(section.id)"
-                >
-                  打开
-                </button>
-              </article>
-            </div>
-          </div>
-
           <PersonalModelRouting
-            v-else-if="activeSettingsSection === 'providers'"
-            active-section="providers"
+            v-if="activeSettingsSection === 'llm'"
+            active-section="llm"
             @saved="handleLLMConfigSaved"
           />
-
           <PersonalModelRouting
-            v-else-if="activeSettingsSection === 'models'"
-            active-section="models"
+            v-else-if="activeSettingsSection === 'embedding'"
+            active-section="embedding"
             @saved="handleLLMConfigSaved"
           />
-
           <PersonalModelRouting
-            v-else-if="activeSettingsSection === 'routes'"
-            active-section="routes"
-            @saved="handleLLMConfigSaved"
-          />
-
-          <LLMSettings
             v-else
-            :embedded="true"
-            :show-routing="false"
+            active-section="routes"
             @saved="handleLLMConfigSaved"
           />
         </section>
@@ -136,11 +102,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import LLMSettings from '@/components/LLMSettings.vue';
 import PersonalModelRouting from '@/components/llm-settings/PersonalModelRouting.vue';
 import { getRemoteVersion, normalizeComparableVersion, type RemoteVersionDebugEvent } from '@/api/version';
 
-type SettingsSectionId = 'overview' | 'providers' | 'models' | 'routes' | 'basic';
+type SettingsSectionId = 'llm' | 'embedding' | 'routes';
 
 interface SettingsSection {
   id: SettingsSectionId;
@@ -156,6 +121,22 @@ const remoteVersionCheckFailed = ref(false);
 const isVersionDebugEnabled = import.meta.env.DEV
   || ['1', 'true', 'yes', 'on'].includes(String(import.meta.env.VITE_VERSION_DEBUG || '').trim().toLowerCase());
 
+const settingsSections: SettingsSection[] = [
+  { id: 'llm', label: 'LLM 模型', description: '启用 Chat 模型并指定主模型' },
+  { id: 'embedding', label: '向量模型', description: '为记忆检索选择唯一向量模型' },
+  { id: 'routes', label: 'AI 阶段路由', description: '按写作阶段覆盖主模型' },
+];
+
+const activeSettingsSection = ref<SettingsSectionId>('llm');
+
+const activeSectionMeta = computed(() => (
+  settingsSections.find(section => section.id === activeSettingsSection.value) || settingsSections[0]
+));
+
+const selectSettingsSection = (sectionId: SettingsSectionId) => {
+  activeSettingsSection.value = sectionId;
+};
+
 const hasNewVersion = computed(() => {
   if (!remoteVersion.value) {
     return false;
@@ -166,26 +147,6 @@ const hasNewVersion = computed(() => {
 const showInspirationConfigNotice = computed(() => (
   route.query.source === 'inspiration' && route.query.reason === 'missing_models'
 ));
-
-const settingsSections: SettingsSection[] = [
-  { id: 'overview', label: '概览', description: '查看版本状态与配置入口' },
-  { id: 'providers', label: '供应商与 API Key', description: '维护模型供应商、地址和认证信息' },
-  { id: 'models', label: '可用模型', description: '维护模型名称、能力和默认模型' },
-  { id: 'routes', label: 'AI 阶段路由', description: '为不同 AI 流程指定默认模型' },
-  { id: 'basic', label: '基础 LLM 配置', description: '兼容旧版主模型与向量模型配置' },
-];
-
-const activeSettingsSection = ref<SettingsSectionId>('overview');
-
-const activeSectionMeta = computed(() => (
-  settingsSections.find(section => section.id === activeSettingsSection.value) || settingsSections[0]
-));
-
-const settingsSummarySections = computed(() => settingsSections.filter(section => section.id !== 'overview'));
-
-const selectSettingsSection = (sectionId: SettingsSectionId) => {
-  activeSettingsSection.value = sectionId;
-};
 
 const versionStatusClass = computed(() => {
   if (remoteVersionCheckFailed.value) {
@@ -244,9 +205,7 @@ onMounted(async () => {
 
 <style scoped>
 .settings-page {
-  background:
-    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--md-primary-container) 45%, transparent) 0%, transparent 35%),
-    radial-gradient(circle at 100% 100%, color-mix(in srgb, var(--md-secondary-container) 55%, transparent) 0%, transparent 42%);
+  background-color: var(--md-surface-dim);
 }
 
 .settings-overview {
@@ -289,24 +248,6 @@ onMounted(async () => {
   border-radius: var(--md-radius-full);
   border: 1px solid var(--md-outline-variant);
   background-color: var(--md-surface-container-low);
-}
-
-.settings-meta-pill .md-label-medium {
-  color: var(--md-on-surface-variant);
-}
-
-.settings-meta-api {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.settings-meta-api .settings-code {
-  border: 1px dashed var(--md-outline-variant);
-  border-radius: var(--md-radius-full);
-  padding: 2px 8px;
-  background: color-mix(in srgb, var(--md-surface-container-low) 80%, white);
 }
 
 .settings-code {
@@ -375,8 +316,7 @@ onMounted(async () => {
   text-align: left;
   transition:
     background-color 160ms ease,
-    border-color 160ms ease,
-    transform 160ms ease;
+    border-color 160ms ease;
 }
 
 .settings-console__nav-item:hover {
@@ -416,6 +356,7 @@ onMounted(async () => {
   min-width: 0;
   border-radius: var(--md-radius-xl);
   padding: var(--md-spacing-4);
+  overflow: visible;
 }
 
 .settings-panel__header {
@@ -453,6 +394,7 @@ onMounted(async () => {
 
 .settings-console__mobile-tab {
   flex: 0 0 auto;
+  min-height: 44px;
   padding: 8px 14px;
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-radius-full);
@@ -466,35 +408,6 @@ onMounted(async () => {
   border-color: var(--md-primary);
   background-color: var(--md-primary-container);
   color: var(--md-on-primary-container);
-}
-
-.settings-overview-panel {
-  min-width: 0;
-}
-
-.settings-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--md-spacing-3);
-}
-
-.settings-summary-card {
-  display: grid;
-  gap: var(--md-spacing-2);
-  padding: var(--md-spacing-4);
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-lg);
-  background-color: var(--md-surface-container-low);
-}
-
-.settings-summary-card h3,
-.settings-summary-card p {
-  margin: 0;
-}
-
-.settings-summary-card__action {
-  justify-self: start;
-  padding-left: 0;
 }
 
 @media (max-width: 768px) {

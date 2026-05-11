@@ -1,9 +1,10 @@
 # AIMETA P=小说API_项目和章节管理|R=小说CRUD_章节管理|NR=不含内容生成|E=route:GET_POST_/api/novels/*|X=http|A=小说CRUD_章节|D=fastapi,sqlalchemy|S=db|RD=./README.ai
 import json
 import logging
-from typing import Dict, List
+from typing import AsyncGenerator, Dict, List
 
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.dependencies import get_current_user
@@ -53,6 +54,84 @@ def _ensure_prompt(prompt: str | None, name: str) -> str:
     if not prompt:
         raise HTTPException(status_code=500, detail=f"未配置名为 {name} 的提示词，请联系管理员")
     return prompt
+
+
+class StreamingJSONFieldExtractor:
+    """从流式 JSON 文本中增量提取某个字符串字段。"""
+
+    def __init__(self, field_name: str):
+        self.field_name = field_name
+        self._buffer = ""
+        self._raw_value = ""
+        self._decoded_value = ""
+        self._scan_index = 0
+        self._value_started = False
+        self._value_complete = False
+        self._escaping = False
+
+    def feed(self, chunk: str) -> str:
+        if self._value_complete or not chunk:
+            return ""
+
+        self._buffer += chunk
+        if not self._value_started and not self._start_value_scan():
+            return ""
+
+        while self._scan_index < len(self._buffer):
+            char = self._buffer[self._scan_index]
+            self._scan_index += 1
+
+            if self._escaping:
+                self._raw_value += char
+                self._escaping = False
+                continue
+
+            if char == "\\":
+                self._raw_value += char
+                self._escaping = True
+                continue
+
+            if char == '"':
+                self._value_complete = True
+                break
+
+            self._raw_value += char
+
+        return self._consume_decoded_delta()
+
+    def _start_value_scan(self) -> bool:
+        key = f'"{self.field_name}"'
+        key_index = self._buffer.find(key)
+        if key_index < 0:
+            return False
+
+        colon_index = self._buffer.find(":", key_index + len(key))
+        if colon_index < 0:
+            return False
+
+        value_index = colon_index + 1
+        while value_index < len(self._buffer) and self._buffer[value_index].isspace():
+            value_index += 1
+        if value_index >= len(self._buffer) or self._buffer[value_index] != '"':
+            return False
+
+        self._scan_index = value_index + 1
+        self._value_started = True
+        return True
+
+    def _consume_decoded_delta(self) -> str:
+        try:
+            decoded = json.loads(f'"{self._raw_value}"')
+        except json.JSONDecodeError:
+            return ""
+
+        delta = decoded[len(self._decoded_value):]
+        self._decoded_value = decoded
+        return delta
+
+
+def _sse_event(event: str, payload: Dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
 
 @router.post("", response_model=NovelProjectSchema, status_code=status.HTTP_201_CREATED)
@@ -178,6 +257,7 @@ async def converse_with_concept(
         temperature=0.8,
         user_id=current_user.id,
         timeout=240.0,
+        stage="concept_conversation",
     )
     llm_response = remove_think_tags(llm_response)
 
@@ -210,6 +290,102 @@ async def converse_with_concept(
 
     parsed.setdefault("conversation_state", parsed.get("conversation_state", {}))
     return ConverseResponse(**parsed)
+
+
+@router.post("/{project_id}/concept/converse/stream")
+async def converse_with_concept_stream(
+    project_id: str,
+    request: ConverseRequest,
+    session: AsyncSession = Depends(get_session),
+    current_user: UserInDB = Depends(get_current_user),
+) -> StreamingResponse:
+    """与概念设计师进行流式对话，边生成边返回 ai_message。"""
+    novel_service = NovelService(session)
+    prompt_service = PromptService(session)
+    llm_service = LLMService(session)
+
+    project = await novel_service.ensure_project_owner(project_id, current_user.id)
+    history_records = await novel_service.list_conversations(project_id)
+    logger.info(
+        "项目 %s 流式概念对话请求，用户 %s，历史记录 %s 条",
+        project.id,
+        current_user.id,
+        len(history_records),
+    )
+
+    conversation_history = [
+        {"role": record.role, "content": record.content}
+        for record in history_records
+    ]
+    user_content = json.dumps(request.user_input, ensure_ascii=False)
+    conversation_history.append({"role": "user", "content": user_content})
+
+    system_prompt = _ensure_prompt(await prompt_service.get_prompt("concept"), "concept")
+    system_prompt = f"{system_prompt}\n{JSON_RESPONSE_INSTRUCTION}"
+
+    async def event_stream() -> AsyncGenerator[str, None]:
+        raw_response = ""
+        extractor = StreamingJSONFieldExtractor("ai_message")
+
+        try:
+            async for chunk in llm_service.stream_llm_response(
+                system_prompt=system_prompt,
+                conversation_history=conversation_history,
+                temperature=0.8,
+                user_id=current_user.id,
+                timeout=240.0,
+                stage="concept_conversation",
+            ):
+                raw_response += chunk
+                delta = extractor.feed(chunk)
+                if delta:
+                    yield _sse_event("delta", {"delta": delta})
+
+            llm_response = remove_think_tags(raw_response)
+            normalized = unwrap_markdown_json(llm_response)
+            sanitized = sanitize_json_like_text(normalized)
+            parsed = json.loads(sanitized)
+
+            await novel_service.append_conversation(project_id, "user", user_content)
+            await novel_service.append_conversation(project_id, "assistant", normalized)
+
+            logger.info("项目 %s 流式概念对话完成，is_complete=%s", project_id, parsed.get("is_complete"))
+
+            if parsed.get("is_complete"):
+                parsed["ready_for_blueprint"] = True
+            parsed.setdefault("conversation_state", parsed.get("conversation_state", {}))
+
+            response = ConverseResponse(**parsed)
+            yield _sse_event("final", response.model_dump())
+        except json.JSONDecodeError as exc:
+            logger.exception(
+                "Failed to parse streaming concept response: project_id=%s user_id=%s error=%s raw=%s",
+                project_id,
+                current_user.id,
+                exc,
+                raw_response[:1000],
+            )
+            yield _sse_event(
+                "error",
+                {"detail": f"概念对话失败，AI 返回的内容格式不正确。错误详情: {str(exc)}"},
+            )
+        except HTTPException as exc:
+            yield _sse_event("error", {"detail": str(exc.detail)})
+        except Exception as exc:
+            logger.exception("流式概念对话失败: project_id=%s user_id=%s", project_id, current_user.id)
+            yield _sse_event(
+                "error",
+                {"detail": f"概念对话失败: {str(exc)}"},
+            )
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.post("/{project_id}/blueprint/generate", response_model=BlueprintGenerationResponse)
@@ -265,6 +441,7 @@ async def generate_blueprint(
         temperature=0.3,
         user_id=current_user.id,
         timeout=480.0,
+        stage="world_blueprint",
     )
     blueprint_raw = remove_think_tags(blueprint_raw)
 

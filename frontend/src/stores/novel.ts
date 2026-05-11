@@ -109,6 +109,32 @@ export const useNovelStore = defineStore('novel', () => {
     }
   }
 
+  async function sendConversationStream(
+    userInput: any,
+    onDelta?: (delta: string) => void
+  ): Promise<ConverseResponse> {
+    isLoading.value = true
+    error.value = null
+    try {
+      if (!currentProject.value) {
+        throw new Error('没有当前项目')
+      }
+      const response = await NovelAPI.converseConceptStream(
+        currentProject.value.id,
+        userInput,
+        currentConversationState.value,
+        onDelta
+      )
+      currentConversationState.value = response.conversation_state
+      return response
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : '对话失败'
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   async function generateBlueprint(): Promise<BlueprintGenerationResponse> {
     // Generate blueprint from conversation history
     isLoading.value = true
@@ -356,6 +382,7 @@ export const useNovelStore = defineStore('novel', () => {
     loadProject,
     loadChapter,
     sendConversation,
+    sendConversationStream,
     generateBlueprint,
     saveBlueprint,
     generateChapter,

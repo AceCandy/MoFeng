@@ -12,6 +12,27 @@ const frontendHmrHost = process.env.FRONTEND_HMR_HOST || 'localhost'
 const backendProxyHost = process.env.BACKEND_PROXY_HOST || '127.0.0.1'
 const backendPort = Number(process.env.BACKEND_PORT || '8000')
 
+const vendorChunks: Array<[string, string[]]> = [
+  ['vue-core', ['vue', 'vue-router', 'pinia', '@vue']],
+  ['naive-ui', ['naive-ui']],
+  ['naive-ui-support', ['@css-render', 'css-render', 'vueuc', 'vdirs', 'vooks', 'evtd', 'seemly', 'treemate', 'date-fns', 'async-validator']],
+  ['content-tools', ['chart.js', 'marked']],
+]
+
+const resolveVendorChunk = (id: string) => {
+  if (!id.includes('/node_modules/')) {
+    return undefined
+  }
+
+  for (const [chunkName, packages] of vendorChunks) {
+    if (packages.some(packageName => id.includes(`/node_modules/${packageName}/`))) {
+      return chunkName
+    }
+  }
+
+  return 'vendor'
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
@@ -40,5 +61,12 @@ export default defineConfig({
         changeOrigin: true,
       }
     }
-  }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: resolveVendorChunk,
+      },
+    },
+  },
 })

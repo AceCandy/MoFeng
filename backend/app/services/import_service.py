@@ -357,7 +357,8 @@ class ImportService:
                 temperature=0.1, # 极低温度，追求稳定
                 user_id=user_id,
                 timeout=60.0,
-                response_format="json_object"
+                response_format="json_object",
+                stage="import_analysis",
             )
             
             response = remove_think_tags(response)
@@ -450,7 +451,8 @@ class ImportService:
                 conversation_history=messages,
                 temperature=0.3,
                 user_id=user_id,
-                timeout=120.0
+                timeout=120.0,
+                stage="import_analysis",
             )
             
             response = remove_think_tags(response)

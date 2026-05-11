@@ -2,30 +2,9 @@
 <template>
   <div class="flex items-center justify-center min-h-screen p-4">
     <div class="w-full max-w-6xl mx-auto">
-      <!-- 灵感模式入口界面 -->
-      <div v-if="!conversationStarted" class="text-center p-8 bg-white/70 backdrop-blur-xl rounded-2xl shadow-lg fade-in">
-        <h1 class="text-4xl md:text-5xl font-bold text-gray-800">小说家的新篇章</h1>
-        <p class="text-lg text-gray-600 mt-4 mb-8">
-          准备好释放你的创造力了吗？让AI引导你，一步步构建出独一无二的故事世界。
-        </p>
-        <button
-          @click="startConversation"
-          :disabled="novelStore.isLoading"
-          class="bg-indigo-500 text-white font-bold py-3 px-8 rounded-full hover:bg-indigo-600 transition-all duration-300 transform hover:scale-105 shadow-lg focus:outline-none focus:ring-4 focus:ring-indigo-300 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {{ novelStore.isLoading ? '正在准备...' : '开启灵感模式' }}
-        </button>
-        <button
-          @click="goBack"
-          class="mt-4 block mx-auto text-gray-500 hover:text-gray-800 transition-colors"
-        >
-          返回
-        </button>
-      </div>
-
       <!-- 灵感模式交互界面 -->
       <div
-        v-else-if="!showBlueprintConfirmation && !showBlueprint"
+        v-if="!showBlueprintConfirmation && !showBlueprint"
         class="h-[90vh] max-h-[950px] flex flex-col bg-white rounded-2xl shadow-2xl overflow-hidden fade-in"
       >
         <!-- 头部 -->
@@ -82,13 +61,25 @@
             :message="message.content"
             :type="message.type"
           />
+          <div v-if="isAssistantResponding && !isInitialLoading" class="w-full flex justify-start">
+            <div class="chat-bubble-ai max-w-md lg:max-w-lg p-4 shadow-md fade-in">
+              <div class="flex items-center gap-3 text-sm text-gray-600">
+                <span>文思正在组织灵感</span>
+                <span class="flex gap-1" aria-hidden="true">
+                  <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+                  <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" style="animation-delay: 0.15s"></span>
+                  <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" style="animation-delay: 0.3s"></span>
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 输入区域 -->
         <div class="p-4 border-t border-gray-200 bg-gray-50">
           <ConversationInput
             :ui-control="currentUIControl"
-            :loading="novelStore.isLoading"
+            :loading="novelStore.isLoading || isInitialLoading || isCheckingModelConfig || !conversationStarted"
             @submit="handleUserInput"
           />
         </div>
@@ -119,7 +110,7 @@ import { ref, nextTick, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useNovelStore } from '@/stores/novel'
 import type { UIControl, Blueprint } from '@/api/novel'
-import { getLLMConfig } from '@/api/llm'
+import { getLLMConfigBundle } from '@/api/llm'
 import ChatBubble from '@/components/ChatBubble.vue'
 import ConversationInput from '@/components/ConversationInput.vue'
 import BlueprintConfirmation from '@/components/BlueprintConfirmation.vue'
@@ -132,12 +123,21 @@ interface ChatMessage {
   type: 'user' | 'ai'
 }
 
+const INSPIRATION_OPENING_MESSAGE = `灵感已经落座。
+
+告诉我，它最初是什么？一个画面、一句对白、一个人物，或者一种挥之不去的感觉都可以。`
+
+const INSPIRATION_INITIAL_UI_CONTROL: UIControl = {
+  type: 'text_input',
+  placeholder: '描述你的第一个灵感火花...',
+}
+
 const router = useRouter()
 const route = useRoute()
 const novelStore = useNovelStore()
 
 const conversationStarted = ref(false)
-const isInitialLoading = ref(false)
+const isInitialLoading = ref(true)
 const showBlueprintConfirmation = ref(false)
 const showBlueprint = ref(false)
 const chatMessages = ref<ChatMessage[]>([])
@@ -148,19 +148,14 @@ const confirmationMessage = ref('')
 const blueprintMessage = ref('')
 const chatArea = ref<HTMLElement>()
 const isCheckingModelConfig = ref(false)
-
-const goBack = () => {
-  router.push('/')
-}
+const isAssistantResponding = ref(false)
 
 const hasRequiredModelConfig = async () => {
-  const llmConfig = await getLLMConfig()
-  if (!llmConfig) {
-    return false
-  }
-
-  const hasLLMModel = Boolean(llmConfig.llm_provider_model?.trim())
-  const hasEmbeddingModel = Boolean(llmConfig.embedding_provider_model?.trim())
+  const bundle = await getLLMConfigBundle()
+  const hasLLMModel = bundle.models.some(model => model.is_enabled && Boolean(model.capabilities.chat))
+    || Boolean(bundle.legacy?.llm_provider_model?.trim())
+  const hasEmbeddingModel = bundle.models.some(model => model.is_enabled && Boolean(model.capabilities.embedding))
+    || Boolean(bundle.legacy?.embedding_provider_model?.trim())
   return hasLLMModel && hasEmbeddingModel
 }
 
@@ -213,6 +208,7 @@ const resetInspirationMode = () => {
   chatMessages.value = []
   currentUIControl.value = null
   currentTurn.value = 0
+  isAssistantResponding.value = false
   completedBlueprint.value = null
   confirmationMessage.value = ''
   blueprintMessage.value = ''
@@ -226,7 +222,7 @@ const exitConversation = async () => {
   const confirmed = await globalAlert.showConfirm('确定要退出灵感模式吗？当前进度可能会丢失。', '退出确认')
   if (confirmed) {
     resetInspirationMode()
-    router.push('/')
+    router.push('/workspace')
   }
 }
 
@@ -241,9 +237,23 @@ const backToConversation = () => {
   showBlueprintConfirmation.value = false
 }
 
+const showLocalOpeningMessage = async () => {
+  isInitialLoading.value = false
+  if (chatMessages.value.length === 0) {
+    chatMessages.value.push({
+      content: INSPIRATION_OPENING_MESSAGE,
+      type: 'ai',
+    })
+  }
+  currentUIControl.value = INSPIRATION_INITIAL_UI_CONTROL
+  await scrollToBottom()
+}
+
 const startConversation = async () => {
+  isInitialLoading.value = true
   const canStartConversation = await ensureModelConfigOrRedirect()
   if (!canStartConversation) {
+    isInitialLoading.value = false
     return
   }
 
@@ -254,17 +264,19 @@ const startConversation = async () => {
   
   try {
     await novelStore.createProject('未命名灵感', '开始灵感模式')
-    
-    // 发起第一次对话
-    await handleUserInput(null)
+
+    // 首句是固定引导语，项目创建完成后立即展示；真正的 AI 生成从用户首答开始。
+    await showLocalOpeningMessage()
   } catch (error) {
     console.error('启动灵感模式失败:', error)
     globalAlert.showError(`无法开始灵感模式: ${error instanceof Error ? error.message : '未知错误'}`, '启动失败')
-    resetInspirationMode() // 失败时重置回初始状态
+    resetInspirationMode()
+    router.push('/workspace')
   }
 }
 
 const restoreConversation = async (projectId: string) => {
+  isInitialLoading.value = true
   try {
     await novelStore.loadProject(projectId)
     const project = novelStore.currentProject
@@ -303,16 +315,22 @@ const restoreConversation = async (projectId: string) => {
       }
       // 计算当前轮次
       currentTurn.value = project.conversation_history.filter(m => m.role === 'assistant').length
+      if (currentTurn.value === 0 && chatMessages.value.length === 0) {
+        await showLocalOpeningMessage()
+      }
       await scrollToBottom()
     }
   } catch (error) {
     console.error('恢复对话失败:', error)
     globalAlert.showError(`无法恢复对话: ${error instanceof Error ? error.message : '未知错误'}`, '加载失败')
     resetInspirationMode()
+  } finally {
+    isInitialLoading.value = false
   }
 }
 
 const handleUserInput = async (userInput: any) => {
+  const isFirstAssistantTurn = currentTurn.value === 0 && chatMessages.value.length === 0
   try {
     // 如果有用户输入，添加到聊天记录
     if (userInput && userInput.value) {
@@ -323,18 +341,44 @@ const handleUserInput = async (userInput: any) => {
       await scrollToBottom()
     }
 
-    const response = await novelStore.sendConversation(userInput)
+    isAssistantResponding.value = true
+    await scrollToBottom()
+
+    let assistantMessageIndex: number | null = null
+    const appendAssistantDelta = async (delta: string) => {
+      if (!delta) {
+        return
+      }
+      if (assistantMessageIndex === null) {
+        isAssistantResponding.value = false
+        chatMessages.value.push({
+          content: '',
+          type: 'ai'
+        })
+        assistantMessageIndex = chatMessages.value.length - 1
+      }
+      chatMessages.value[assistantMessageIndex].content += delta
+      await scrollToBottom()
+    }
+
+    const response = await novelStore.sendConversationStream(userInput, (delta) => {
+      void appendAssistantDelta(delta)
+    })
 
     // 首次加载完成后，关闭加载动画
     if (isInitialLoading.value) {
       isInitialLoading.value = false
     }
 
-    // 添加AI回复到聊天记录
-    chatMessages.value.push({
-      content: response.ai_message,
-      type: 'ai'
-    })
+    // 如果模型没有提前吐出 ai_message 字段，最终结果仍然兜底展示。
+    if (assistantMessageIndex === null) {
+      chatMessages.value.push({
+        content: response.ai_message,
+        type: 'ai'
+      })
+    } else {
+      chatMessages.value[assistantMessageIndex].content = response.ai_message
+    }
     currentTurn.value++
 
     await scrollToBottom()
@@ -357,8 +401,12 @@ const handleUserInput = async (userInput: any) => {
       isInitialLoading.value = false
     }
     globalAlert.showError(`抱歉，与AI连接时遇到问题: ${error instanceof Error ? error.message : '未知错误'}`, '通信失败')
-    // 停止加载并返回初始界面
-    resetInspirationMode()
+    if (isFirstAssistantTurn) {
+      resetInspirationMode()
+      router.push('/workspace')
+    }
+  } finally {
+    isAssistantResponding.value = false
   }
 }
 
@@ -410,17 +458,17 @@ const scrollToBottom = async () => {
 }
 
 onMounted(async () => {
-  const hasRequiredConfig = await ensureModelConfigOrRedirect()
-  if (!hasRequiredConfig) {
-    return
-  }
-
   const projectId = route.query.project_id as string
   if (projectId) {
-    restoreConversation(projectId)
+    const hasRequiredConfig = await ensureModelConfigOrRedirect()
+    if (!hasRequiredConfig) {
+      isInitialLoading.value = false
+      return
+    }
+    await restoreConversation(projectId)
   } else {
-    // 每次进入灵感模式都重置状态，确保没有缓存
-    resetInspirationMode()
+    // 直接进入灵感模式，不再停留在二次确认入口页
+    await startConversation()
   }
 })
 </script>

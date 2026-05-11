@@ -1,6 +1,5 @@
 // AIMETA P=路由配置_所有页面路由定义|R=路由表_导航守卫_权限控制|NR=不含组件实现|E=router:index|X=internal|A=router实例|D=vue-router|S=none|RD=./README.ai
 import { createRouter, createWebHistory } from 'vue-router'
-import WorkspaceEntry from '../views/WorkspaceEntry.vue'
 import NovelWorkspace from '../views/NovelWorkspace.vue'
 import InspirationMode from '../views/InspirationMode.vue'
 import WritingDesk from '../views/WritingDesk.vue'
@@ -15,7 +14,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'workspace-entry',
-      component: WorkspaceEntry,
+      redirect: '/workspace',
       meta: { requiresAuth: true },
     },
     {
@@ -98,7 +97,7 @@ router.beforeEach(async (to, from, next) => {
   if (requiresAuth && !isAuthenticated) {
     next('/login')
   } else if (requiresAdmin && !isAdmin) {
-    next('/') // Redirect to a non-admin page if not an admin
+    next('/workspace') // Redirect to a non-admin page if not an admin
   } else if (isAuthenticated && mustChangePassword) {
     if (to.name !== 'admin' || to.query.tab !== 'password') {
       next({ name: 'admin', query: { tab: 'password' } })

@@ -156,9 +156,9 @@ const handleLogin = async () => {
       await router.push({ name: 'admin', query: { tab: 'password' } });
       console.log(`[${traceId}] router.push admin done`);
     } else {
-      console.log(`[${traceId}] navigating to /`);
-      await router.push('/');
-      console.log(`[${traceId}] router.push / done`);
+      console.log(`[${traceId}] navigating to /workspace`);
+      await router.push('/workspace');
+      console.log(`[${traceId}] router.push /workspace done`);
     }
   } catch (err) {
     console.error(`[${traceId}] handleLogin error`, err);

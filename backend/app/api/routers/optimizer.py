@@ -339,6 +339,7 @@ async def optimize_chapter(
             temperature=0.7,
             user_id=current_user.id,
             timeout=600.0,
+            stage="chapter_optimization",
         )
 
         optimized_content, optimization_notes = _parse_optimizer_response(response)
@@ -424,6 +425,7 @@ async def optimize_recommended_version(
             temperature=0.7,
             user_id=current_user.id,
             timeout=600.0,
+            stage="chapter_optimization",
         )
 
         optimized_content, optimization_notes = _parse_optimizer_response(response)

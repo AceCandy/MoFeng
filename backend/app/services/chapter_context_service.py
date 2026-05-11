@@ -74,7 +74,7 @@ class ChapterContextService:
             return ChapterRAGContext(query=query, chunks=[], summaries=[])
 
         # get_embedding 会自动根据配置选择正确的模型
-        embedding = await self._llm_service.get_embedding(query, user_id=user_id)
+        embedding = await self._llm_service.get_embedding(query, user_id=user_id, stage="rag_embedding")
         if not embedding:
             logger.warning("检索查询向量生成失败: project=%s chapter_query=%s", project_id, query)
             return ChapterRAGContext(query=query, chunks=[], summaries=[])

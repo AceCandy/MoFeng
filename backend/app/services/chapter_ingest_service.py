@@ -71,6 +71,7 @@ class ChapterIngestionService:
             embedding = await self._llm_service.get_embedding(
                 chunk_text,
                 user_id=user_id,
+                stage="rag_embedding",
             )
             if not embedding:
                 logger.warning(
@@ -112,6 +113,7 @@ class ChapterIngestionService:
                 summary_embedding = await self._llm_service.get_embedding(
                     cleaned_summary,
                     user_id=user_id,
+                    stage="rag_embedding",
                 )
                 if summary_embedding:
                     summary_id = f"{project_id}:{chapter_number}:summary"

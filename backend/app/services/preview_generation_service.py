@@ -95,7 +95,8 @@ class PreviewGenerationService:
                 conversation_history=[{"role": "user", "content": prompt}],
                 temperature=0.7,
                 user_id=user_id,
-                timeout=120.0
+                timeout=120.0,
+                stage="chapter_preview",
             )
             
             content = response
@@ -179,7 +180,8 @@ class PreviewGenerationService:
                 conversation_history=[{"role": "user", "content": prompt}],
                 temperature=0.3,
                 user_id=user_id,
-                timeout=90.0
+                timeout=90.0,
+                stage="chapter_preview",
             )
             
             content = response
@@ -269,7 +271,8 @@ class PreviewGenerationService:
                 conversation_history=[{"role": "user", "content": prompt}],
                 temperature=0.8,
                 user_id=user_id,
-                timeout=180.0
+                timeout=180.0,
+                stage="chapter_preview",
             )
             
             return response.strip()

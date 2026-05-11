@@ -6,13 +6,55 @@ from urllib.parse import urlparse
 from sqlalchemy.ext.asyncio import AsyncSession
 from openai import AsyncOpenAI
 
-from ..models import LLMConfig
+from ..models import LLMConfig, UserAIModel, UserAIStageRoute, UserModelProvider
+from ..repositories.ai_model_config_repository import (
+    UserAIModelRepository,
+    UserAIStageRouteRepository,
+    UserModelProviderRepository,
+)
 from ..repositories.llm_config_repository import LLMConfigRepository
 from ..repositories.system_config_repository import SystemConfigRepository
-from ..schemas.llm_config import LLMConfigCreate, LLMConfigRead
+from ..schemas.llm_config import (
+    LLMConfigBundle,
+    LLMConfigCreate,
+    LLMConfigRead,
+    ProviderCreate,
+    ProviderRead,
+    ProviderUpdate,
+    StageRouteRead,
+    StageRoutesPayload,
+    UserAIModelCreate,
+    UserAIModelRead,
+    UserAIModelUpdate,
+)
 
 
 logger = logging.getLogger(__name__)
+
+CHAT_STAGE_KEYS = {
+    "import_analysis",
+    "concept_conversation",
+    "world_blueprint",
+    "chapter_outline",
+    "chapter_blueprint",
+    "chapter_mission",
+    "chapter_preview",
+    "chapter_writing",
+    "chapter_rewrite",
+    "chapter_compression",
+    "chapter_enrichment",
+    "version_review",
+    "chapter_optimization",
+    "deep_review",
+    "emotion_analysis",
+    "consistency_check",
+    "summary_memory",
+    "rag_query",
+    "foreshadowing",
+}
+EMBEDDING_STAGE_KEYS = {"rag_embedding"}
+ALL_STAGE_KEYS = CHAT_STAGE_KEYS | EMBEDDING_STAGE_KEYS
+DEFAULT_PROVIDER_CAPABILITIES = {"chat": True, "embedding": False}
 
 
 class LLMConfigService:
@@ -22,6 +64,76 @@ class LLMConfigService:
         self.session = session
         self.repo = LLMConfigRepository(session)
         self.system_config_repo = SystemConfigRepository(session)
+        self.provider_repo = UserModelProviderRepository(session)
+        self.model_repo = UserAIModelRepository(session)
+        self.stage_route_repo = UserAIStageRouteRepository(session)
+
+    @staticmethod
+    def _mask_api_key(api_key: Optional[str]) -> Optional[str]:
+        cleaned = (api_key or "").strip()
+        if not cleaned:
+            return None
+        return f"******{cleaned[-4:]}"
+
+    @staticmethod
+    def _pick_default_model(models: list, *, capability: str):
+        for model in models:
+            capabilities = model.capabilities_json or {}
+            if model.is_enabled and capabilities.get(capability):
+                return model
+        return None
+
+    @staticmethod
+    def stage_capability(stage: str) -> str:
+        if stage in EMBEDDING_STAGE_KEYS:
+            return "embedding"
+        if stage in CHAT_STAGE_KEYS:
+            return "chat"
+        raise ValueError(f"unknown AI stage: {stage}")
+
+    @staticmethod
+    def _model_to_read(model) -> UserAIModelRead:
+        return UserAIModelRead(
+            id=model.id,
+            user_id=model.user_id,
+            provider_id=model.provider_id,
+            display_name=model.display_name,
+            model_name=model.model_name,
+            capabilities=model.capabilities_json or {},
+            context_window=model.context_window,
+            is_default_chat=model.is_default_chat,
+            is_default_embedding=model.is_default_embedding,
+            is_enabled=model.is_enabled,
+            sort_order=model.sort_order,
+        )
+
+    @staticmethod
+    def _normalize_capabilities(raw: Optional[dict], fallback: Optional[dict] = None) -> dict[str, bool]:
+        source = raw or fallback or DEFAULT_PROVIDER_CAPABILITIES
+        return {
+            "chat": bool(source.get("chat")),
+            "embedding": bool(source.get("embedding")),
+        }
+
+    @classmethod
+    def _provider_to_read(cls, provider, fallback_capabilities: Optional[dict] = None) -> ProviderRead:
+        return ProviderRead(
+            id=provider.id,
+            user_id=provider.user_id,
+            name=provider.name,
+            provider_type=provider.provider_type,
+            base_url=provider.base_url,
+            api_key_preview=provider.api_key_preview,
+            capabilities=cls._normalize_capabilities(
+                getattr(provider, "capabilities_json", None),
+                fallback_capabilities,
+            ),
+            is_enabled=provider.is_enabled,
+        )
+
+    @staticmethod
+    def _route_to_read(route) -> StageRouteRead:
+        return StageRouteRead(stage=route.stage, model_id=route.model_id)
 
     def _identify_provider(self, base_url: Optional[str]) -> str:
         """根据 base_url 识别 LLM 提供商"""
@@ -132,6 +244,219 @@ class LLMConfigService:
         await self.repo.delete(instance)
         await self.session.commit()
         return True
+
+    async def list_bundle(self, user_id: int) -> LLMConfigBundle:
+        legacy = await self.get_config(user_id)
+        provider_items = list(await self.provider_repo.list_by_user(user_id))
+        model_items = list(await self.model_repo.list_by_user(user_id))
+        provider_fallbacks = self._infer_provider_capabilities(model_items)
+        providers = [
+            self._provider_to_read(item, provider_fallbacks.get(item.id))
+            for item in provider_items
+        ]
+        models = [self._model_to_read(item) for item in model_items]
+        routes = [self._route_to_read(item) for item in await self.stage_route_repo.list_by_user(user_id)]
+        return LLMConfigBundle(legacy=legacy, providers=providers, models=models, stage_routes=routes)
+
+    @staticmethod
+    def _infer_provider_capabilities(models: list) -> dict[int, dict[str, bool]]:
+        inferred: dict[int, dict[str, bool]] = {}
+        for model in models:
+            capabilities = model.capabilities_json or {}
+            provider_caps = inferred.setdefault(model.provider_id, {"chat": False, "embedding": False})
+            provider_caps["chat"] = provider_caps["chat"] or bool(capabilities.get("chat"))
+            provider_caps["embedding"] = provider_caps["embedding"] or bool(capabilities.get("embedding"))
+        return inferred
+
+    async def create_provider(self, user_id: int, payload: ProviderCreate) -> ProviderRead:
+        provider = UserModelProvider(
+            user_id=user_id,
+            name=payload.name.strip(),
+            provider_type=payload.provider_type,
+            base_url=payload.base_url.strip().rstrip("/"),
+            api_key_encrypted=(payload.api_key or "").strip() or None,
+            api_key_preview=self._mask_api_key(payload.api_key),
+            capabilities_json=self._normalize_capabilities(payload.capabilities),
+            is_enabled=payload.is_enabled,
+        )
+        await self.provider_repo.add(provider)
+        await self.session.commit()
+        return self._provider_to_read(provider)
+
+    async def list_providers(self, user_id: int) -> list[ProviderRead]:
+        return [self._provider_to_read(item) for item in await self.provider_repo.list_by_user(user_id)]
+
+    async def get_provider_models(self, user_id: int, provider_id: int) -> List[str]:
+        provider = await self.provider_repo.get_owned(provider_id, user_id)
+        if not provider:
+            raise ValueError("provider not found")
+        if not provider.is_enabled:
+            raise ValueError("provider disabled")
+        return await self.get_available_models(
+            api_key=provider.api_key_encrypted,
+            base_url=provider.base_url,
+        )
+
+    async def update_provider(self, user_id: int, provider_id: int, payload: ProviderUpdate) -> ProviderRead:
+        provider = await self.provider_repo.get_owned(provider_id, user_id)
+        if not provider:
+            raise ValueError("provider not found")
+        data = payload.model_dump(exclude_unset=True)
+        if "name" in data and data["name"] is not None:
+            provider.name = data["name"].strip()
+        if "provider_type" in data and data["provider_type"] is not None:
+            provider.provider_type = data["provider_type"]
+        if "base_url" in data and data["base_url"] is not None:
+            provider.base_url = data["base_url"].strip().rstrip("/")
+        if "api_key" in data:
+            provider.api_key_encrypted = (data["api_key"] or "").strip() or None
+            provider.api_key_preview = self._mask_api_key(data["api_key"])
+        if "capabilities" in data and data["capabilities"] is not None:
+            provider.capabilities_json = self._normalize_capabilities(data["capabilities"])
+        if "is_enabled" in data and data["is_enabled"] is not None:
+            provider.is_enabled = data["is_enabled"]
+        await self.session.commit()
+        return self._provider_to_read(provider)
+
+    async def delete_provider(self, user_id: int, provider_id: int) -> bool:
+        provider = await self.provider_repo.get_owned(provider_id, user_id)
+        if not provider:
+            raise ValueError("provider not found")
+
+        provider_models = [
+            model
+            for model in await self.model_repo.list_by_user(user_id)
+            if model.provider_id == provider_id
+        ]
+        provider_model_ids = {model.id for model in provider_models}
+
+        # 先清理阶段路由，再删除模型和供应商，避免配置指向失效模型。
+        routes = list(await self.stage_route_repo.list_by_user(user_id))
+        for route in routes:
+            if route.model_id in provider_model_ids:
+                await self.stage_route_repo.delete(route)
+        for model in provider_models:
+            await self.model_repo.delete(model)
+
+        await self.provider_repo.delete(provider)
+        await self.session.commit()
+        return True
+
+    async def create_model(self, user_id: int, payload: UserAIModelCreate) -> UserAIModelRead:
+        provider = await self.provider_repo.get_owned(payload.provider_id, user_id)
+        if not provider:
+            raise ValueError("provider not found")
+        model = UserAIModel(
+            user_id=user_id,
+            provider_id=payload.provider_id,
+            display_name=payload.display_name.strip(),
+            model_name=payload.model_name.strip(),
+            capabilities_json=payload.capabilities,
+            context_window=payload.context_window,
+            is_default_chat=payload.is_default_chat,
+            is_default_embedding=payload.is_default_embedding,
+            is_enabled=payload.is_enabled,
+            sort_order=payload.sort_order,
+        )
+        await self.model_repo.add(model)
+        await self._normalize_default_flags(user_id, model)
+        await self.session.commit()
+        return self._model_to_read(model)
+
+    async def list_models(self, user_id: int) -> list[UserAIModelRead]:
+        return [self._model_to_read(item) for item in await self.model_repo.list_by_user(user_id)]
+
+    async def update_model(self, user_id: int, model_id: int, payload: UserAIModelUpdate) -> UserAIModelRead:
+        model = await self.model_repo.get_owned(model_id, user_id)
+        if not model:
+            raise ValueError("model not found")
+        data = payload.model_dump(exclude_unset=True)
+        if "provider_id" in data and data["provider_id"] is not None:
+            provider = await self.provider_repo.get_owned(data["provider_id"], user_id)
+            if not provider:
+                raise ValueError("provider not found")
+            model.provider_id = data["provider_id"]
+        if "display_name" in data and data["display_name"] is not None:
+            model.display_name = data["display_name"].strip()
+        if "model_name" in data and data["model_name"] is not None:
+            model.model_name = data["model_name"].strip()
+        if "capabilities" in data and data["capabilities"] is not None:
+            model.capabilities_json = data["capabilities"]
+        if "context_window" in data:
+            model.context_window = data["context_window"]
+        if "is_default_chat" in data and data["is_default_chat"] is not None:
+            model.is_default_chat = data["is_default_chat"]
+        if "is_default_embedding" in data and data["is_default_embedding"] is not None:
+            model.is_default_embedding = data["is_default_embedding"]
+        if "is_enabled" in data and data["is_enabled"] is not None:
+            model.is_enabled = data["is_enabled"]
+        if "sort_order" in data and data["sort_order"] is not None:
+            model.sort_order = data["sort_order"]
+        await self._normalize_default_flags(user_id, model)
+        await self.session.commit()
+        return self._model_to_read(model)
+
+    async def delete_model(self, user_id: int, model_id: int) -> bool:
+        model = await self.model_repo.get_owned(model_id, user_id)
+        if not model:
+            raise ValueError("model not found")
+        if model.is_default_chat:
+            raise ValueError("主模型不能直接删除，请先选择另一个主模型。")
+        if model.is_default_embedding:
+            raise ValueError("当前向量模型不能直接删除，请先选择另一个向量模型。")
+
+        # 删除模型前主动清理阶段路由，避免留下指向已删除模型的配置。
+        routes = list(await self.stage_route_repo.list_by_user(user_id))
+        for route in routes:
+            if route.model_id == model.id:
+                await self.stage_route_repo.delete(route)
+
+        await self.model_repo.delete(model)
+        await self.session.commit()
+        return True
+
+    async def _normalize_default_flags(self, user_id: int, changed_model) -> None:
+        models = list(await self.model_repo.list_by_user(user_id))
+        if changed_model.is_default_chat:
+            for model in models:
+                if model.id != changed_model.id:
+                    model.is_default_chat = False
+        if changed_model.is_default_embedding:
+            changed_model.is_enabled = True
+            for model in models:
+                if model.id != changed_model.id:
+                    model.is_default_embedding = False
+                    # 向量模型是记忆检索的唯一入口，避免多个 embedding 同时启用。
+                    if (model.capabilities_json or {}).get("embedding"):
+                        model.is_enabled = False
+
+    async def upsert_stage_routes(self, user_id: int, payload: StageRoutesPayload) -> list[StageRouteRead]:
+        incoming_stages = {item.stage for item in payload.routes}
+        for item in payload.routes:
+            capability = self.stage_capability(item.stage)
+            model = await self.model_repo.get_owned(item.model_id, user_id)
+            if not model:
+                raise ValueError(f"model not found for stage {item.stage}")
+            if not (model.capabilities_json or {}).get(capability):
+                raise ValueError(f"model {model.model_name} does not support {capability}")
+            if not model.is_enabled:
+                raise ValueError(f"model {model.model_name} disabled")
+            provider = getattr(model, "provider", None)
+            if not provider or not provider.is_enabled:
+                raise ValueError(f"provider disabled for model {model.model_name}")
+            route = await self.stage_route_repo.get_by_stage(user_id, item.stage)
+            if route:
+                route.model_id = item.model_id
+            else:
+                await self.stage_route_repo.add(
+                    UserAIStageRoute(user_id=user_id, stage=item.stage, model_id=item.model_id)
+                )
+        existing_routes = list(await self.stage_route_repo.list_by_user(user_id))
+        for route in existing_routes:
+            if route.stage in ALL_STAGE_KEYS and route.stage not in incoming_stages:
+                await self.stage_route_repo.delete(route)
+        await self.session.commit()
+        return [self._route_to_read(item) for item in await self.stage_route_repo.list_by_user(user_id)]
 
     async def get_available_models(
         self, api_key: Optional[str], base_url: Optional[str] = None

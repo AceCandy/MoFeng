@@ -37,6 +37,117 @@ const request = async (url: string, options: RequestInit = {}) => {
   return response.json()
 }
 
+const streamRequest = async (url: string, options: RequestInit = {}) => {
+  const authStore = useAuthStore()
+  const headers = new Headers({
+    'Content-Type': 'application/json',
+    ...options.headers
+  })
+
+  if (authStore.isAuthenticated && authStore.token) {
+    headers.set('Authorization', `Bearer ${authStore.token}`)
+  }
+
+  const response = await fetch(url, { ...options, headers })
+
+  if (response.status === 401) {
+    authStore.logout()
+    router.push('/login')
+    throw new Error('会话已过期，请重新登录')
+  }
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.detail || `请求失败，状态码: ${response.status}`)
+  }
+
+  if (!response.body) {
+    throw new Error('浏览器不支持流式响应')
+  }
+
+  return response
+}
+
+const parseSSEMessage = (message: string) => {
+  let event = 'message'
+  const dataLines: string[] = []
+
+  for (const line of message.split(/\r?\n/)) {
+    if (line.startsWith('event:')) {
+      event = line.slice('event:'.length).trim()
+    } else if (line.startsWith('data:')) {
+      dataLines.push(line.slice('data:'.length).trimStart())
+    }
+  }
+
+  if (!dataLines.length) {
+    return null
+  }
+
+  return {
+    event,
+    data: JSON.parse(dataLines.join('\n')),
+  }
+}
+
+const readSSEStream = async <T>(
+  response: Response,
+  handlers: {
+    onDelta?: (delta: string) => void
+    onFinal: (payload: T) => void
+  }
+): Promise<T> => {
+  const reader = response.body!.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let finalPayload: T | null = null
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) {
+      break
+    }
+
+    buffer += decoder.decode(value, { stream: true })
+    let boundaryIndex = buffer.indexOf('\n\n')
+    while (boundaryIndex >= 0) {
+      const rawMessage = buffer.slice(0, boundaryIndex).trim()
+      buffer = buffer.slice(boundaryIndex + 2)
+
+      if (rawMessage) {
+        const message = parseSSEMessage(rawMessage)
+        if (message?.event === 'delta') {
+          handlers.onDelta?.(String(message.data.delta || ''))
+        } else if (message?.event === 'final') {
+          finalPayload = message.data as T
+          handlers.onFinal(finalPayload)
+        } else if (message?.event === 'error') {
+          throw new Error(String(message.data.detail || '流式请求失败'))
+        }
+      }
+
+      boundaryIndex = buffer.indexOf('\n\n')
+    }
+  }
+
+  const trailingMessage = buffer.trim()
+  if (trailingMessage) {
+    const message = parseSSEMessage(trailingMessage)
+    if (message?.event === 'final') {
+      finalPayload = message.data as T
+      handlers.onFinal(finalPayload)
+    } else if (message?.event === 'error') {
+      throw new Error(String(message.data.detail || '流式请求失败'))
+    }
+  }
+
+  if (!finalPayload) {
+    throw new Error('流式请求未返回最终结果')
+  }
+
+  return finalPayload
+}
+
 // 类型定义
 export interface NovelProject {
   id: string
@@ -207,6 +318,27 @@ export class NovelAPI {
         user_input: formattedUserInput,
         conversation_state: conversationState
       })
+    })
+  }
+
+  static async converseConceptStream(
+    projectId: string,
+    userInput: any,
+    conversationState: any = {},
+    onDelta?: (delta: string) => void
+  ): Promise<ConverseResponse> {
+    const formattedUserInput = userInput || { id: null, value: null }
+    const response = await streamRequest(`${NOVELS_BASE}/${projectId}/concept/converse/stream`, {
+      method: 'POST',
+      body: JSON.stringify({
+        user_input: formattedUserInput,
+        conversation_state: conversationState
+      })
+    })
+
+    return readSSEStream<ConverseResponse>(response, {
+      onDelta,
+      onFinal: () => {},
     })
   }
 

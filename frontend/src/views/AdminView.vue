@@ -142,7 +142,7 @@ const currentMenuLabel = computed(() => {
 })
 
 const goBack = () => {
-  router.push('/')
+  router.push('/workspace')
 }
 
 const updateCollapsedByWidth = () => {
