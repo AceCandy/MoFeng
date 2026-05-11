@@ -12,13 +12,18 @@
           <div class="flex justify-between items-center">
             <div class="flex items-center gap-2">
               <span class="relative flex h-3 w-3">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                <span
+                  class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"
+                ></span>
                 <span class="relative inline-flex rounded-full h-3 w-3 bg-indigo-500"></span>
               </span>
               <span class="text-sm font-medium text-indigo-600">与“文思”对话中...</span>
             </div>
             <div class="flex items-center gap-4">
-              <span v-if="currentTurn > 0" class="text-sm font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+              <span
+                v-if="currentTurn > 0"
+                class="text-sm font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-md"
+              >
                 第 {{ currentTurn }} 轮
               </span>
               <button
@@ -27,7 +32,11 @@
                 class="text-gray-400 hover:text-indigo-600 transition-colors"
               >
                 <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"></path>
+                  <path
+                    fill-rule="evenodd"
+                    d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                    clip-rule="evenodd"
+                  ></path>
                 </svg>
               </button>
               <button
@@ -67,8 +76,14 @@
                 <span>文思正在组织灵感</span>
                 <span class="flex gap-1" aria-hidden="true">
                   <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
-                  <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" style="animation-delay: 0.15s"></span>
-                  <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" style="animation-delay: 0.3s"></span>
+                  <span
+                    class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"
+                    style="animation-delay: 0.15s"
+                  ></span>
+                  <span
+                    class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"
+                    style="animation-delay: 0.3s"
+                  ></span>
                 </span>
               </div>
             </div>
@@ -79,7 +94,12 @@
         <div class="p-4 border-t border-gray-200 bg-gray-50">
           <ConversationInput
             :ui-control="currentUIControl"
-            :loading="novelStore.isLoading || isInitialLoading || isCheckingModelConfig || !conversationStarted"
+            :loading="
+              novelStore.isLoading ||
+              isInitialLoading ||
+              isCheckingModelConfig ||
+              !conversationStarted
+            "
             @submit="handleUserInput"
           />
         </div>
@@ -152,10 +172,12 @@ const isAssistantResponding = ref(false)
 
 const hasRequiredModelConfig = async () => {
   const bundle = await getLLMConfigBundle()
-  const hasLLMModel = bundle.models.some(model => model.is_enabled && Boolean(model.capabilities.chat))
-    || Boolean(bundle.legacy?.llm_provider_model?.trim())
-  const hasEmbeddingModel = bundle.models.some(model => model.is_enabled && Boolean(model.capabilities.embedding))
-    || Boolean(bundle.legacy?.embedding_provider_model?.trim())
+  const hasLLMModel =
+    bundle.models.some((model) => model.is_enabled && Boolean(model.capabilities.chat)) ||
+    Boolean(bundle.legacy?.llm_provider_model?.trim())
+  const hasEmbeddingModel =
+    bundle.models.some((model) => model.is_enabled && Boolean(model.capabilities.embedding)) ||
+    Boolean(bundle.legacy?.embedding_provider_model?.trim())
   return hasLLMModel && hasEmbeddingModel
 }
 
@@ -212,14 +234,17 @@ const resetInspirationMode = () => {
   completedBlueprint.value = null
   confirmationMessage.value = ''
   blueprintMessage.value = ''
-  
+
   // 清空 store 中的当前项目和对话状态
   novelStore.setCurrentProject(null)
   novelStore.currentConversationState = {}
 }
 
 const exitConversation = async () => {
-  const confirmed = await globalAlert.showConfirm('确定要退出灵感模式吗？当前进度可能会丢失。', '退出确认')
+  const confirmed = await globalAlert.showConfirm(
+    '确定要退出灵感模式吗？当前进度可能会丢失。',
+    '退出确认',
+  )
   if (confirmed) {
     resetInspirationMode()
     router.push('/workspace')
@@ -227,7 +252,10 @@ const exitConversation = async () => {
 }
 
 const handleRestart = async () => {
-  const confirmed = await globalAlert.showConfirm('确定要重新开始吗？当前对话内容将会丢失。', '重新开始确认')
+  const confirmed = await globalAlert.showConfirm(
+    '确定要重新开始吗？当前对话内容将会丢失。',
+    '重新开始确认',
+  )
   if (confirmed) {
     await startConversation()
   }
@@ -261,7 +289,7 @@ const startConversation = async () => {
   resetInspirationMode()
   conversationStarted.value = true
   isInitialLoading.value = true
-  
+
   try {
     await novelStore.createProject('未命名灵感', '开始灵感模式')
 
@@ -269,7 +297,10 @@ const startConversation = async () => {
     await showLocalOpeningMessage()
   } catch (error) {
     console.error('启动灵感模式失败:', error)
-    globalAlert.showError(`无法开始灵感模式: ${error instanceof Error ? error.message : '未知错误'}`, '启动失败')
+    globalAlert.showError(
+      `无法开始灵感模式: ${error instanceof Error ? error.message : '未知错误'}`,
+      '启动失败',
+    )
     resetInspirationMode()
     router.push('/workspace')
   }
@@ -282,28 +313,33 @@ const restoreConversation = async (projectId: string) => {
     const project = novelStore.currentProject
     if (project && project.conversation_history) {
       conversationStarted.value = true
-      chatMessages.value = project.conversation_history.map((item): ChatMessage | null => {
-        if (item.role === 'user') {
-          try {
-            const userInput = JSON.parse(item.content)
-            return { content: userInput.value, type: 'user' }
-          } catch {
-            return { content: item.content, type: 'user' }
+      chatMessages.value = project.conversation_history
+        .map((item): ChatMessage | null => {
+          if (item.role === 'user') {
+            try {
+              const userInput = JSON.parse(item.content)
+              return { content: userInput.value, type: 'user' }
+            } catch {
+              return { content: item.content, type: 'user' }
+            }
+          } else {
+            // assistant
+            try {
+              const assistantOutput = JSON.parse(item.content)
+              return { content: assistantOutput.ai_message, type: 'ai' }
+            } catch {
+              return { content: item.content, type: 'ai' }
+            }
           }
-        } else { // assistant
-          try {
-            const assistantOutput = JSON.parse(item.content)
-            return { content: assistantOutput.ai_message, type: 'ai' }
-          } catch {
-            return { content: item.content, type: 'ai' }
-          }
-        }
-      }).filter((msg): msg is ChatMessage => msg !== null && msg.content !== null) // 过滤掉空的 user message
+        })
+        .filter((msg): msg is ChatMessage => msg !== null && msg.content !== null) // 过滤掉空的 user message
 
-      const lastAssistantMsgStr = project.conversation_history.filter(m => m.role === 'assistant').pop()?.content
+      const lastAssistantMsgStr = project.conversation_history
+        .filter((m) => m.role === 'assistant')
+        .pop()?.content
       if (lastAssistantMsgStr) {
         const lastAssistantMsg = JSON.parse(lastAssistantMsgStr)
-        
+
         if (lastAssistantMsg.is_complete) {
           // 如果对话已完成，直接显示蓝图确认界面
           confirmationMessage.value = lastAssistantMsg.ai_message
@@ -314,7 +350,7 @@ const restoreConversation = async (projectId: string) => {
         }
       }
       // 计算当前轮次
-      currentTurn.value = project.conversation_history.filter(m => m.role === 'assistant').length
+      currentTurn.value = project.conversation_history.filter((m) => m.role === 'assistant').length
       if (currentTurn.value === 0 && chatMessages.value.length === 0) {
         await showLocalOpeningMessage()
       }
@@ -322,7 +358,10 @@ const restoreConversation = async (projectId: string) => {
     }
   } catch (error) {
     console.error('恢复对话失败:', error)
-    globalAlert.showError(`无法恢复对话: ${error instanceof Error ? error.message : '未知错误'}`, '加载失败')
+    globalAlert.showError(
+      `无法恢复对话: ${error instanceof Error ? error.message : '未知错误'}`,
+      '加载失败',
+    )
     resetInspirationMode()
   } finally {
     isInitialLoading.value = false
@@ -336,7 +375,7 @@ const handleUserInput = async (userInput: any) => {
     if (userInput && userInput.value) {
       chatMessages.value.push({
         content: userInput.value,
-        type: 'user'
+        type: 'user',
       })
       await scrollToBottom()
     }
@@ -353,7 +392,7 @@ const handleUserInput = async (userInput: any) => {
         isAssistantResponding.value = false
         chatMessages.value.push({
           content: '',
-          type: 'ai'
+          type: 'ai',
         })
         assistantMessageIndex = chatMessages.value.length - 1
       }
@@ -374,7 +413,7 @@ const handleUserInput = async (userInput: any) => {
     if (assistantMessageIndex === null) {
       chatMessages.value.push({
         content: response.ai_message,
-        type: 'ai'
+        type: 'ai',
       })
     } else {
       chatMessages.value[assistantMessageIndex].content = response.ai_message
@@ -400,7 +439,10 @@ const handleUserInput = async (userInput: any) => {
     if (isInitialLoading.value) {
       isInitialLoading.value = false
     }
-    globalAlert.showError(`抱歉，与AI连接时遇到问题: ${error instanceof Error ? error.message : '未知错误'}`, '通信失败')
+    globalAlert.showError(
+      `抱歉，与AI连接时遇到问题: ${error instanceof Error ? error.message : '未知错误'}`,
+      '通信失败',
+    )
     if (isFirstAssistantTurn) {
       resetInspirationMode()
       router.push('/workspace')
@@ -416,12 +458,14 @@ const handleGenerateBlueprint = async () => {
     handleBlueprintGenerated(response)
   } catch (error) {
     console.error('生成蓝图失败:', error)
-    globalAlert.showError(`生成蓝图失败: ${error instanceof Error ? error.message : '未知错误'}`, '生成失败')
+    globalAlert.showError(
+      `生成蓝图失败: ${error instanceof Error ? error.message : '未知错误'}`,
+      '生成失败',
+    )
   }
 }
 
 const handleBlueprintGenerated = (response: any) => {
-  console.log('收到蓝图生成完成事件:', response)
   completedBlueprint.value = response.blueprint
   blueprintMessage.value = response.ai_message
   showBlueprintConfirmation.value = false
@@ -446,7 +490,10 @@ const handleConfirmBlueprint = async () => {
     }
   } catch (error) {
     console.error('保存蓝图失败:', error)
-    globalAlert.showError(`保存蓝图失败: ${error instanceof Error ? error.message : '未知错误'}`, '保存失败')
+    globalAlert.showError(
+      `保存蓝图失败: ${error instanceof Error ? error.message : '未知错误'}`,
+      '保存失败',
+    )
   }
 }
 

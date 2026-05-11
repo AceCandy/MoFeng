@@ -25,14 +25,29 @@
 
       <!-- 错误状态 -->
       <div v-else-if="novelStore.error" class="text-center py-20">
-        <div class="md-card md-card-outlined p-8 max-w-md mx-auto" style="border-radius: var(--md-radius-xl);">
-          <div class="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center" style="background-color: var(--md-error-container);">
-            <svg class="w-6 h-6" style="color: var(--md-error);" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+        <div
+          class="md-card md-card-outlined p-8 max-w-md mx-auto"
+          style="border-radius: var(--md-radius-xl)"
+        >
+          <div
+            class="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center"
+            style="background-color: var(--md-error-container)"
+          >
+            <svg
+              class="w-6 h-6"
+              style="color: var(--md-error)"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                clip-rule="evenodd"
+              ></path>
             </svg>
           </div>
-          <h3 class="md-title-large mb-2" style="color: var(--md-on-surface);">加载失败</h3>
-          <p class="md-body-medium mb-4" style="color: var(--md-error);">{{ novelStore.error }}</p>
+          <h3 class="md-title-large mb-2" style="color: var(--md-on-surface)">加载失败</h3>
+          <p class="md-body-medium mb-4" style="color: var(--md-error)">{{ novelStore.error }}</p>
           <button @click="loadProject" class="md-btn md-btn-tonal md-ripple">重新加载</button>
         </div>
       </div>
@@ -59,23 +74,23 @@
           <WDWorkspace
             :project="project"
             :selected-chapter-number="selectedChapterNumber"
-          :generating-chapter="generatingChapter"
-          :evaluating-chapter="evaluatingChapter"
-          :show-version-selector="showVersionSelector"
-          :chapter-generation-result="chapterGenerationResult"
-          :selected-version-index="selectedVersionIndex"
-          :available-versions="availableVersions"
-          :is-selecting-version="isSelectingVersion"
-          @regenerate-chapter="regenerateChapter"
-          @evaluate-chapter="evaluateChapter"
-          @hide-version-selector="hideVersionSelector"
-          @update:selected-version-index="selectedVersionIndex = $event"
-          @show-version-detail="showVersionDetail"
-          @confirm-version-selection="confirmVersionSelection"
-          @generate-chapter="generateChapter"
-          @show-evaluation-detail="showEvaluationDetailModal = true"
-          @fetch-chapter-status="fetchChapterStatus"
-          @edit-chapter="editChapterContent"
+            :generating-chapter="generatingChapter"
+            :evaluating-chapter="evaluatingChapter"
+            :show-version-selector="showVersionSelector"
+            :chapter-generation-result="chapterGenerationResult"
+            :selected-version-index="selectedVersionIndex"
+            :available-versions="availableVersions"
+            :is-selecting-version="isSelectingVersion"
+            @regenerate-chapter="regenerateChapter"
+            @evaluate-chapter="evaluateChapter"
+            @hide-version-selector="hideVersionSelector"
+            @update:selected-version-index="selectedVersionIndex = $event"
+            @show-version-detail="showVersionDetail"
+            @confirm-version-selection="confirmVersionSelection"
+            @generate-chapter="generateChapter"
+            @show-evaluation-detail="showEvaluationDetailModal = true"
+            @fetch-chapter-status="fetchChapterStatus"
+            @edit-chapter="editChapterContent"
           />
         </div>
       </div>
@@ -102,11 +117,13 @@
         @click.self="closeRecommendedOptimizeResult"
       >
         <div class="md-dialog m3-result-dialog flex flex-col">
-          <div class="p-6 border-b" style="border-bottom-color: var(--md-outline-variant);">
+          <div class="p-6 border-b" style="border-bottom-color: var(--md-outline-variant)">
             <div class="flex items-center justify-between gap-4">
               <div>
                 <h3 class="md-headline-small font-semibold">评审优化结果预览</h3>
-                <p class="md-body-small md-on-surface-variant mt-1">{{ recommendedOptimizeResultNotes }}</p>
+                <p class="md-body-small md-on-surface-variant mt-1">
+                  {{ recommendedOptimizeResultNotes }}
+                </p>
               </div>
               <button
                 @click="closeRecommendedOptimizeResult"
@@ -114,17 +131,33 @@
                 class="md-icon-btn md-ripple disabled:opacity-50"
               >
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                  <path
+                    fill-rule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clip-rule="evenodd"
+                  ></path>
                 </svg>
               </button>
             </div>
           </div>
           <div class="flex-1 overflow-y-auto p-6">
-            <div class="whitespace-pre-wrap leading-relaxed" style="color: var(--md-on-surface);">
-              <p v-for="(paragraph, index) in recommendedOptimizedParagraphs" :key="`recommended-optimized-${index}`" class="mb-4 last:mb-0">{{ paragraph }}</p>
+            <div class="whitespace-pre-wrap leading-relaxed" style="color: var(--md-on-surface)">
+              <p
+                v-for="(paragraph, index) in recommendedOptimizedParagraphs"
+                :key="`recommended-optimized-${index}`"
+                class="mb-4 last:mb-0"
+              >
+                {{ paragraph }}
+              </p>
             </div>
           </div>
-          <div class="p-6 border-t flex items-center justify-end gap-3" style="border-top-color: var(--md-outline-variant); background-color: var(--md-surface-container-low);">
+          <div
+            class="p-6 border-t flex items-center justify-end gap-3"
+            style="
+              border-top-color: var(--md-outline-variant);
+              background-color: var(--md-surface-container-low);
+            "
+          >
             <div class="md-body-small md-on-surface-variant mr-auto">
               {{ recommendedOptimizedWordCount }} 字
             </div>
@@ -139,10 +172,19 @@
               @click="applyRecommendedOptimization"
               :disabled="isApplyingRecommendedOptimization"
               class="md-btn md-btn-filled md-ripple disabled:opacity-50 flex items-center gap-2"
-              style="background-color: var(--md-success); color: var(--md-on-success);"
+              style="background-color: var(--md-success); color: var(--md-on-success)"
             >
-              <svg v-if="isApplyingRecommendedOptimization" class="w-4 h-4 animate-spin" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"></path>
+              <svg
+                v-if="isApplyingRecommendedOptimization"
+                class="w-4 h-4 animate-spin"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                  clip-rule="evenodd"
+                ></path>
               </svg>
               {{ isApplyingRecommendedOptimization ? '应用中...' : '应用优化' }}
             </button>
@@ -169,7 +211,12 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNovelStore } from '@/stores/novel'
 import { OptimizerAPI } from '@/api/novel'
-import type { Chapter, ChapterOutline, ChapterGenerationResponse, ChapterVersion } from '@/api/novel'
+import type {
+  Chapter,
+  ChapterOutline,
+  ChapterGenerationResponse,
+  ChapterVersion,
+} from '@/api/novel'
 import { globalAlert } from '@/composables/useAlert'
 import { countNonWhitespaceChars } from '@/utils/text'
 import WDHeader from '@/components/writing-desk/WDHeader.vue'
@@ -214,13 +261,20 @@ const project = computed(() => novelStore.currentProject)
 
 const selectedChapter = computed(() => {
   if (!project.value || selectedChapterNumber.value === null) return null
-  return project.value.chapters.find(ch => ch.chapter_number === selectedChapterNumber.value) || null
+  return (
+    project.value.chapters.find((ch) => ch.chapter_number === selectedChapterNumber.value) || null
+  )
 })
 
 const showVersionSelector = computed(() => {
   if (!selectedChapter.value) return false
   const status = selectedChapter.value.generation_status
-  return status === 'waiting_for_confirm' || status === 'evaluating' || status === 'evaluation_failed' || status === 'selecting'
+  return (
+    status === 'waiting_for_confirm' ||
+    status === 'evaluating' ||
+    status === 'evaluation_failed' ||
+    status === 'selecting'
+  )
 })
 
 const evaluatingChapter = computed(() => {
@@ -235,14 +289,19 @@ const isSelectingVersion = computed(() => {
 })
 
 const selectedChapterOutline = computed(() => {
-  if (!project.value?.blueprint?.chapter_outline || selectedChapterNumber.value === null) return null
-  return project.value.blueprint.chapter_outline.find(ch => ch.chapter_number === selectedChapterNumber.value) || null
+  if (!project.value?.blueprint?.chapter_outline || selectedChapterNumber.value === null)
+    return null
+  return (
+    project.value.blueprint.chapter_outline.find(
+      (ch) => ch.chapter_number === selectedChapterNumber.value,
+    ) || null
+  )
 })
 
 const progress = computed(() => {
   if (!project.value?.blueprint?.chapter_outline) return 0
   const totalChapters = project.value.blueprint.chapter_outline.length
-  const completedChapters = project.value.chapters.filter(ch => ch.content).length
+  const completedChapters = project.value.chapters.filter((ch) => ch.content).length
   return Math.round((completedChapters / totalChapters) * 100)
 })
 
@@ -251,19 +310,22 @@ const totalChapters = computed(() => {
 })
 
 const completedChapters = computed(() => {
-  return project.value?.chapters?.filter(ch => ch.content)?.length || 0
+  return project.value?.chapters?.filter((ch) => ch.content)?.length || 0
 })
 
 const hasIncompleteChapters = computed(() => {
   if (!project.value?.blueprint?.chapter_outline) return false
   return project.value.blueprint.chapter_outline.some((outline) => {
-    const chapter = project.value?.chapters.find(ch => ch.chapter_number === outline.chapter_number)
+    const chapter = project.value?.chapters.find(
+      (ch) => ch.chapter_number === outline.chapter_number,
+    )
     return chapter?.generation_status !== 'successful'
   })
 })
 
 const isCurrentVersion = (versionIndex: number) => {
-  if (!selectedChapter.value?.content || !availableVersions.value?.[versionIndex]?.content) return false
+  if (!selectedChapter.value?.content || !availableVersions.value?.[versionIndex]?.content)
+    return false
 
   // 使用cleanVersionContent函数清理内容进行比较
   const cleanCurrentContent = cleanVersionContent(selectedChapter.value.content)
@@ -311,9 +373,9 @@ const cleanVersionContent = (content: string): string => {
   let cleaned = content.replace(/^"|"$/g, '')
 
   // 处理转义字符
-  cleaned = cleaned.replace(/\\n/g, '\n')  // 换行符
-  cleaned = cleaned.replace(/\\"/g, '"')   // 引号
-  cleaned = cleaned.replace(/\\t/g, '\t')  // 制表符
+  cleaned = cleaned.replace(/\\n/g, '\n') // 换行符
+  cleaned = cleaned.replace(/\\"/g, '"') // 引号
+  cleaned = cleaned.replace(/\\t/g, '\t') // 制表符
   cleaned = cleaned.replace(/\\\\/g, '\\') // 反斜杠
 
   return cleaned
@@ -323,19 +385,23 @@ const canGenerateChapter = (chapterNumber: number) => {
   if (!project.value?.blueprint?.chapter_outline) return false
 
   // 检查前面所有章节是否都已成功生成
-  const outlines = project.value.blueprint.chapter_outline.sort((a, b) => a.chapter_number - b.chapter_number)
-  
+  const outlines = project.value.blueprint.chapter_outline.sort(
+    (a, b) => a.chapter_number - b.chapter_number,
+  )
+
   for (const outline of outlines) {
     if (outline.chapter_number >= chapterNumber) break
-    
-    const chapter = project.value?.chapters.find(ch => ch.chapter_number === outline.chapter_number)
+
+    const chapter = project.value?.chapters.find(
+      (ch) => ch.chapter_number === outline.chapter_number,
+    )
     if (!chapter || chapter.generation_status !== 'successful') {
       return false // 前面有章节未完成
     }
   }
 
   // 检查当前章节是否已经完成
-  const currentChapter = project.value?.chapters.find(ch => ch.chapter_number === chapterNumber)
+  const currentChapter = project.value?.chapters.find((ch) => ch.chapter_number === chapterNumber)
   if (currentChapter && currentChapter.generation_status === 'successful') {
     return true // 已完成的章节可以重新生成
   }
@@ -345,13 +411,13 @@ const canGenerateChapter = (chapterNumber: number) => {
 
 const isChapterFailed = (chapterNumber: number) => {
   if (!project.value?.chapters) return false
-  const chapter = project.value.chapters.find(ch => ch.chapter_number === chapterNumber)
+  const chapter = project.value.chapters.find((ch) => ch.chapter_number === chapterNumber)
   return chapter && chapter.generation_status === 'failed'
 }
 
 const hasChapterInProgress = (chapterNumber: number) => {
   if (!project.value?.chapters) return false
-  const chapter = project.value.chapters.find(ch => ch.chapter_number === chapterNumber)
+  const chapter = project.value.chapters.find((ch) => ch.chapter_number === chapterNumber)
   // waiting_for_confirm状态表示等待选择版本 = 进行中状态
   return chapter && chapter.generation_status === 'waiting_for_confirm'
 }
@@ -365,10 +431,9 @@ const extractVersionContent = (raw: unknown): string => {
     return ''
   }
 
-  const likelyJson = (
-    (trimmed.startsWith('{') && trimmed.endsWith('}'))
-    || (trimmed.startsWith('[') && trimmed.endsWith(']'))
-  )
+  const likelyJson =
+    (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+    (trimmed.startsWith('[') && trimmed.endsWith(']'))
   if (!likelyJson) {
     return raw
   }
@@ -392,7 +457,10 @@ const extractVersionContent = (raw: unknown): string => {
 
 // 可用版本列表（来源优先级：生成结果 > 章节 versions > 章节 content 兜底）
 const availableVersions = computed<ChapterVersion[]>(() => {
-  if (Array.isArray(chapterGenerationResult.value?.versions) && chapterGenerationResult.value.versions.length > 0) {
+  if (
+    Array.isArray(chapterGenerationResult.value?.versions) &&
+    chapterGenerationResult.value.versions.length > 0
+  ) {
     return chapterGenerationResult.value.versions.filter((item) => Boolean(item?.content?.trim()))
   }
 
@@ -410,7 +478,7 @@ const availableVersions = computed<ChapterVersion[]>(() => {
         }
         return {
           content,
-          style: '标准'
+          style: '标准',
         } as ChapterVersion
       })
       .filter((item): item is ChapterVersion => item !== null)
@@ -430,7 +498,7 @@ const recommendedOptimizedParagraphs = computed(() => {
   if (!recommendedOptimizedContent.value.trim()) return []
   return recommendedOptimizedContent.value
     .split(/\n{2,}/)
-    .map(paragraph => paragraph.trim())
+    .map((paragraph) => paragraph.trim())
     .filter(Boolean)
 })
 
@@ -467,14 +535,14 @@ const decodeJsonStringFragment = (fragment: string): string => {
   try {
     return JSON.parse(`"${fragment}"`) as string
   } catch {
-    return fragment
-      .replace(/\\"/g, '"')
-      .replace(/\\n/g, '\n')
-      .replace(/\\t/g, '\t')
+    return fragment.replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\t/g, '\t')
   }
 }
 
-const extractJsonField = (rawText: string, field: 'optimized_content' | 'optimization_notes'): string | null => {
+const extractJsonField = (
+  rawText: string,
+  field: 'optimized_content' | 'optimization_notes',
+): string | null => {
   const pattern = new RegExp(`"${field}"\\s*:\\s*"((?:\\\\.|[^"\\\\])*)"`, 's')
   const match = rawText.match(pattern)
   if (!match?.[1]) return null
@@ -483,7 +551,7 @@ const extractJsonField = (rawText: string, field: 'optimized_content' | 'optimiz
 
 const normalizeOptimizeResult = (
   contentRaw: string,
-  notesRaw: string
+  notesRaw: string,
 ): { content: string; notes: string } => {
   let content = (contentRaw || '').trim()
   let notes = (notesRaw || '').trim()
@@ -522,7 +590,7 @@ const normalizeOptimizeResult = (
 
   return {
     content,
-    notes: notes || '优化完成'
+    notes: notes || '优化完成',
   }
 }
 
@@ -582,7 +650,7 @@ const optimizeRecommendedVersionFromEvaluation = async () => {
       source_content: cleanVersionContent(sourceVersion.content),
       review_summary: String(evaluationPayload.reason_for_choice || '').trim(),
       version_number: bestChoice,
-      version_review: versionReview
+      version_review: versionReview,
     })
 
     const normalized = normalizeOptimizeResult(result.optimized_content, result.optimization_notes)
@@ -613,13 +681,13 @@ const applyRecommendedOptimization = async () => {
     const applyResult = await OptimizerAPI.applyOptimization(
       project.value.id,
       selectedChapter.value.chapter_number,
-      recommendedOptimizedContent.value
+      recommendedOptimizedContent.value,
     )
 
     const syncStats = applyResult.foreshadowing_sync
     if (syncStats) {
       globalAlert.showSuccess(
-        `优化内容已应用，伏笔同步：新增 ${syncStats.created}，推进 ${syncStats.developing}，回收 ${syncStats.revealed}`
+        `优化内容已应用，伏笔同步：新增 ${syncStats.created}，推进 ${syncStats.developing}，回收 ${syncStats.revealed}`,
       )
     } else {
       globalAlert.showSuccess('优化内容已应用')
@@ -637,7 +705,6 @@ const applyRecommendedOptimization = async () => {
     isApplyingRecommendedOptimization.value = false
   }
 }
-
 
 // 方法
 const goBack = () => {
@@ -678,7 +745,6 @@ const fetchChapterStatus = async () => {
   isFetchingChapterStatus.value = true
   try {
     await novelStore.loadChapter(chapterNumber)
-    console.log('Chapter status polled and updated.')
   } catch (error) {
     console.error('轮询章节状态失败:', error)
     // 在这里可以决定是否要通知用户轮询失败
@@ -686,7 +752,6 @@ const fetchChapterStatus = async () => {
     isFetchingChapterStatus.value = false
   }
 }
-
 
 // 显示版本详情
 const showVersionDetail = (versionIndex: number) => {
@@ -718,7 +783,11 @@ const selectChapter = (chapterNumber: number) => {
 
 const generateChapter = async (chapterNumber: number) => {
   // 检查是否可以生成该章节
-  if (!canGenerateChapter(chapterNumber) && !isChapterFailed(chapterNumber) && !hasChapterInProgress(chapterNumber)) {
+  if (
+    !canGenerateChapter(chapterNumber) &&
+    !isChapterFailed(chapterNumber) &&
+    !hasChapterInProgress(chapterNumber)
+  ) {
     globalAlert.showError('请按顺序生成章节，先完成前面的章节', '生成受限')
     return
   }
@@ -730,7 +799,7 @@ const generateChapter = async (chapterNumber: number) => {
 
     // 在本地更新章节状态为generating
     if (project.value?.chapters) {
-      const chapter = project.value.chapters.find(ch => ch.chapter_number === chapterNumber)
+      const chapter = project.value.chapters.find((ch) => ch.chapter_number === chapterNumber)
       if (chapter) {
         chapter.generation_status = 'generating'
         chapter.generation_progress = 0
@@ -741,7 +810,9 @@ const generateChapter = async (chapterNumber: number) => {
         chapter.status_updated_at = nowIso
       } else {
         // If chapter does not exist, create a temporary one to show generating state
-        const outline = project.value.blueprint?.chapter_outline?.find(o => o.chapter_number === chapterNumber)
+        const outline = project.value.blueprint?.chapter_outline?.find(
+          (o) => o.chapter_number === chapterNumber,
+        )
         project.value.chapters.push({
           chapter_number: chapterNumber,
           title: outline?.title || '加载中...',
@@ -755,7 +826,7 @@ const generateChapter = async (chapterNumber: number) => {
           generation_step_index: 1,
           generation_step_total: null,
           generation_started_at: nowIso,
-          status_updated_at: nowIso
+          status_updated_at: nowIso,
         } as Chapter)
       }
     }
@@ -766,12 +837,15 @@ const generateChapter = async (chapterNumber: number) => {
 
     // store 中的 project 已经被更新，所以我们不需要手动修改本地状态。
     // 单版本场景自动确认，直接进入正文视图。
-    const generatedChapter = project.value?.chapters.find(ch => ch.chapter_number === chapterNumber)
-    const generatedVersions = Array.isArray(generatedChapter?.versions) ? generatedChapter.versions : []
+    const generatedChapter = project.value?.chapters.find(
+      (ch) => ch.chapter_number === chapterNumber,
+    )
+    const generatedVersions = Array.isArray(generatedChapter?.versions)
+      ? generatedChapter.versions
+      : []
     const validVersionCount = generatedVersions
       .map((versionRaw) => extractVersionContent(versionRaw))
-      .filter((content) => Boolean(content.trim()))
-      .length
+      .filter((content) => Boolean(content.trim())).length
 
     if (generatedChapter?.generation_status === 'waiting_for_confirm' && validVersionCount === 1) {
       selectedVersionIndex.value = 0
@@ -780,7 +854,7 @@ const generateChapter = async (chapterNumber: number) => {
       await selectVersion(0, {
         chapterNumber,
         suppressSuccessToast: true,
-        skipAvailabilityCheck: true
+        skipAvailabilityCheck: true,
       })
       globalAlert.showSuccess('唯一版本已自动确认，已进入正文', '生成成功')
     } else {
@@ -793,14 +867,17 @@ const generateChapter = async (chapterNumber: number) => {
 
     // 错误状态的本地更新仍然是必要的，以立即反映UI
     if (project.value?.chapters) {
-      const chapter = project.value.chapters.find(ch => ch.chapter_number === chapterNumber)
+      const chapter = project.value.chapters.find((ch) => ch.chapter_number === chapterNumber)
       if (chapter) {
         chapter.generation_status = 'failed'
         chapter.status_updated_at = new Date().toISOString()
       }
     }
 
-    globalAlert.showError(`生成章节失败: ${error instanceof Error ? error.message : '未知错误'}`, '生成失败')
+    globalAlert.showError(
+      `生成章节失败: ${error instanceof Error ? error.message : '未知错误'}`,
+      '生成失败',
+    )
   } finally {
     generatingChapter.value = null
   }
@@ -814,7 +891,11 @@ const regenerateChapter = async () => {
 
 const selectVersion = async (
   versionIndex: number,
-  options: { chapterNumber?: number; suppressSuccessToast?: boolean; skipAvailabilityCheck?: boolean } = {}
+  options: {
+    chapterNumber?: number
+    suppressSuccessToast?: boolean
+    skipAvailabilityCheck?: boolean
+  } = {},
 ) => {
   const targetChapterNumber = options.chapterNumber ?? selectedChapterNumber.value
   if (targetChapterNumber === null) {
@@ -827,7 +908,7 @@ const selectVersion = async (
   try {
     // 在本地立即更新状态以反映UI
     if (project.value?.chapters) {
-      const chapter = project.value.chapters.find(ch => ch.chapter_number === targetChapterNumber)
+      const chapter = project.value.chapters.find((ch) => ch.chapter_number === targetChapterNumber)
       if (chapter) {
         chapter.generation_status = 'selecting'
       }
@@ -849,12 +930,15 @@ const selectVersion = async (
     console.error('选择章节版本失败:', error)
     // 错误状态下恢复章节状态
     if (project.value?.chapters) {
-      const chapter = project.value.chapters.find(ch => ch.chapter_number === targetChapterNumber)
+      const chapter = project.value.chapters.find((ch) => ch.chapter_number === targetChapterNumber)
       if (chapter) {
         chapter.generation_status = 'waiting_for_confirm' // Or the previous state
       }
     }
-    globalAlert.showError(`选择章节版本失败: ${error instanceof Error ? error.message : '未知错误'}`, '选择失败')
+    globalAlert.showError(
+      `选择章节版本失败: ${error instanceof Error ? error.message : '未知错误'}`,
+      '选择失败',
+    )
   }
 }
 
@@ -880,7 +964,10 @@ const saveChapterChanges = async (updatedChapter: ChapterOutline) => {
     globalAlert.showSuccess('章节大纲已更新', '保存成功')
   } catch (error) {
     console.error('更新章节大纲失败:', error)
-    globalAlert.showError(`更新章节大纲失败: ${error instanceof Error ? error.message : '未知错误'}`, '保存失败')
+    globalAlert.showError(
+      `更新章节大纲失败: ${error instanceof Error ? error.message : '未知错误'}`,
+      '保存失败',
+    )
   } finally {
     showEditChapterModal.value = false
   }
@@ -889,55 +976,78 @@ const saveChapterChanges = async (updatedChapter: ChapterOutline) => {
 const evaluateChapter = async () => {
   if (selectedChapterNumber.value !== null) {
     // 保存原始状态，用于失败时恢复
-    let previousStatus: "not_generated" | "generating" | "evaluating" | "selecting" | "failed" | "evaluation_failed" | "waiting_for_confirm" | "successful" | undefined
-    
+    let previousStatus:
+      | 'not_generated'
+      | 'generating'
+      | 'evaluating'
+      | 'selecting'
+      | 'failed'
+      | 'evaluation_failed'
+      | 'waiting_for_confirm'
+      | 'successful'
+      | undefined
+
     try {
       // 在本地更新章节状态为evaluating以立即反映在UI上
       if (project.value?.chapters) {
-        const chapter = project.value.chapters.find(ch => ch.chapter_number === selectedChapterNumber.value)
+        const chapter = project.value.chapters.find(
+          (ch) => ch.chapter_number === selectedChapterNumber.value,
+        )
         if (chapter) {
           previousStatus = chapter.generation_status // 保存原状态
           chapter.generation_status = 'evaluating'
         }
       }
       await novelStore.evaluateChapter(selectedChapterNumber.value)
-      
+
       // 评审完成后，状态会通过store和轮询更新，这里不需要额外操作
       globalAlert.showSuccess('章节评审结果已生成', '评审成功')
     } catch (error) {
       console.error('评审章节失败:', error)
-      
+
       // 错误状态下恢复章节状态为原始状态
       if (project.value?.chapters) {
-        const chapter = project.value.chapters.find(ch => ch.chapter_number === selectedChapterNumber.value)
+        const chapter = project.value.chapters.find(
+          (ch) => ch.chapter_number === selectedChapterNumber.value,
+        )
         if (chapter && previousStatus) {
           chapter.generation_status = previousStatus // 恢复为原状态
         }
       }
-      
-      globalAlert.showError(`评审章节失败: ${error instanceof Error ? error.message : '未知错误'}`, '评审失败')
+
+      globalAlert.showError(
+        `评审章节失败: ${error instanceof Error ? error.message : '未知错误'}`,
+        '评审失败',
+      )
     }
   }
 }
 
 const deleteChapter = async (chapterNumbers: number | number[]) => {
   const numbersToDelete = Array.isArray(chapterNumbers) ? chapterNumbers : [chapterNumbers]
-  const confirmationMessage = numbersToDelete.length > 1
-    ? `您确定要删除选中的 ${numbersToDelete.length} 个章节吗？这个操作无法撤销。`
-    : `您确定要删除第 ${numbersToDelete[0]} 章吗？这个操作无法撤销。`
+  const confirmationMessage =
+    numbersToDelete.length > 1
+      ? `您确定要删除选中的 ${numbersToDelete.length} 个章节吗？这个操作无法撤销。`
+      : `您确定要删除第 ${numbersToDelete[0]} 章吗？这个操作无法撤销。`
 
-  if (window.confirm(confirmationMessage)) {
-    try {
-      await novelStore.deleteChapter(numbersToDelete)
-      globalAlert.showSuccess('章节已删除', '操作成功')
-      // If the currently selected chapter was deleted, unselect it
-      if (selectedChapterNumber.value && numbersToDelete.includes(selectedChapterNumber.value)) {
-        selectedChapterNumber.value = null
-      }
-    } catch (error) {
-      console.error('删除章节失败:', error)
-      globalAlert.showError(`删除章节失败: ${error instanceof Error ? error.message : '未知错误'}`, '删除失败')
+  const confirmed = await globalAlert.showConfirm(confirmationMessage, '删除章节')
+  if (!confirmed) {
+    return
+  }
+
+  try {
+    await novelStore.deleteChapter(numbersToDelete)
+    globalAlert.showSuccess('章节已删除', '操作成功')
+    // If the currently selected chapter was deleted, unselect it
+    if (selectedChapterNumber.value && numbersToDelete.includes(selectedChapterNumber.value)) {
+      selectedChapterNumber.value = null
     }
+  } catch (error) {
+    console.error('删除章节失败:', error)
+    globalAlert.showError(
+      `删除章节失败: ${error instanceof Error ? error.message : '未知错误'}`,
+      '删除失败',
+    )
   }
 }
 
@@ -945,7 +1055,7 @@ const generateOutline = async () => {
   showGenerateOutlineModal.value = true
 }
 
-const editChapterContent = async (data: { chapterNumber: number, content: string }) => {
+const editChapterContent = async (data: { chapterNumber: number; content: string }) => {
   if (!project.value) return
 
   try {
@@ -953,7 +1063,10 @@ const editChapterContent = async (data: { chapterNumber: number, content: string
     globalAlert.showSuccess('章节内容已更新', '保存成功')
   } catch (error) {
     console.error('编辑章节内容失败:', error)
-    globalAlert.showError(`编辑章节内容失败: ${error instanceof Error ? error.message : '未知错误'}`, '保存失败')
+    globalAlert.showError(
+      `编辑章节内容失败: ${error instanceof Error ? error.message : '未知错误'}`,
+      '保存失败',
+    )
   }
 }
 
@@ -966,7 +1079,10 @@ const handleGenerateOutline = async (numChapters: number) => {
     globalAlert.showSuccess('新的章节大纲已生成', '操作成功')
   } catch (error) {
     console.error('生成大纲失败:', error)
-    globalAlert.showError(`生成大纲失败: ${error instanceof Error ? error.message : '未知错误'}`, '生成失败')
+    globalAlert.showError(
+      `生成大纲失败: ${error instanceof Error ? error.message : '未知错误'}`,
+      '生成失败',
+    )
   } finally {
     isGeneratingOutline.value = false
   }

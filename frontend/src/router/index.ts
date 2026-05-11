@@ -65,11 +65,11 @@ const router = createRouter({
     },
     {
       path: '/detail/:id',
-      redirect: to => `/projects/${to.params.id}`,
+      redirect: (to) => `/projects/${to.params.id}`,
     },
     {
       path: '/novel/:id',
-      redirect: to => `/projects/${to.params.id}/write`,
+      redirect: (to) => `/projects/${to.params.id}/write`,
     },
     {
       path: '/login',
@@ -110,7 +110,7 @@ const router = createRouter({
     },
     {
       path: '/admin/novel/:id',
-      redirect: to => `/admin/novels/${to.params.id}`,
+      redirect: (to) => `/admin/novels/${to.params.id}`,
     },
     {
       path: '/settings',
@@ -128,18 +128,18 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
-  
+
   // Attempt to fetch user info if token exists but user info is not loaded
   if (authStore.token && !authStore.user) {
     try {
       await authStore.fetchUser()
-    } catch (error) {
-      console.error('恢复登录状态失败', error)
+    } catch {
+      // 登录态恢复失败时交由后续守卫重定向，避免产品界面产生控制台噪声。
     }
   }
 
-  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
-  const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin)
+  const requiresAuth = to.matched.some((record) => record.meta.requiresAuth)
+  const requiresAdmin = to.matched.some((record) => record.meta.requiresAdmin)
   const isAuthenticated = authStore.isAuthenticated
   const isAdmin = authStore.user?.is_admin
 
@@ -155,8 +155,7 @@ router.beforeEach(async (to, from, next) => {
     } else {
       next()
     }
-  }
-  else {
+  } else {
     next()
   }
 })

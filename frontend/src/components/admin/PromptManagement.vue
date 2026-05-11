@@ -437,7 +437,11 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  background: linear-gradient(
+    180deg,
+    var(--md-surface) 0%,
+    var(--md-surface-container-low) 100%
+  );
   border: 1px solid #e5e7eb;
   border-radius: 14px;
   padding: 12px;
@@ -482,7 +486,7 @@ onBeforeUnmount(() => {
   width: 100%;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
-  background: #ffffff;
+  background: var(--md-surface);
   padding: 10px 12px;
   display: flex;
   align-items: center;
@@ -505,7 +509,11 @@ onBeforeUnmount(() => {
 .prompt-list-item.active {
   border-color: #2563eb;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
-  background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+  background: linear-gradient(
+    180deg,
+    var(--md-primary-container) 0%,
+    var(--md-surface) 100%
+  );
 }
 
 .prompt-item-main {

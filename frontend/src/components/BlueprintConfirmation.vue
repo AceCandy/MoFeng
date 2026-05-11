@@ -4,7 +4,7 @@
     <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">信息收集完成！</h2>
 
     <div class="text-center mb-8">
-      <div 
+      <div
         class="prose prose-lg prose-gray max-w-none mx-auto mb-4 text-gray-600"
         v-html="renderedAiMessage"
       ></div>
@@ -29,7 +29,7 @@
             progress >= 100
               ? 'border-t-green-500 border-r-green-400'
               : 'border-t-indigo-500 border-r-indigo-400',
-            progress < 100 ? 'animate-spin' : ''
+            progress < 100 ? 'animate-spin' : '',
           ]"
         ></div>
         <!-- 内部脉冲圆 -->
@@ -48,7 +48,11 @@
             fill="currentColor"
             viewBox="0 0 20 20"
           >
-            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+            <path
+              fill-rule="evenodd"
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+              clip-rule="evenodd"
+            ></path>
           </svg>
           <svg
             v-else
@@ -75,11 +79,17 @@
           <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
             <div
               class="h-2 rounded-full transition-all duration-1000 ease-out relative"
-              :class="progress >= 100 ? 'bg-gradient-to-r from-green-500 to-emerald-600' : 'bg-gradient-to-r from-indigo-500 to-purple-600'"
+              :class="
+                progress >= 100
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-600'
+                  : 'bg-gradient-to-r from-indigo-500 to-purple-600'
+              "
               :style="{ width: `${progress}%` }"
             >
               <!-- 闪光效果 -->
-              <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-shimmer"></div>
+              <div
+                class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-shimmer"
+              ></div>
             </div>
           </div>
         </div>
@@ -93,7 +103,11 @@
         <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
           <p class="text-sm text-blue-800">
             <svg class="inline w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+              <path
+                fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                clip-rule="evenodd"
+              ></path>
             </svg>
             AI正在分析您的创意偏好，生成过程需要一些时间，请耐心等待...
           </p>
@@ -116,7 +130,9 @@
       >
         <span class="flex items-center justify-center">
           <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"></path>
+            <path
+              d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+            ></path>
           </svg>
           开始创建蓝图
         </span>
@@ -133,8 +149,8 @@ import { globalAlert } from '@/composables/useAlert'
 
 // 配置 marked
 marked.setOptions({
-  gfm: true,           // 启用 GitHub 风格语法
-  breaks: true         // 将单个换行视为 <br>
+  gfm: true, // 启用 GitHub 风格语法
+  breaks: true, // 将单个换行视为 <br>
 })
 
 interface Props {
@@ -174,7 +190,7 @@ const loadingText = computed(() => {
     '生成情节发展脉络...',
     '完善世界观设定...',
     '优化章节安排...',
-    '最后润色细节...'
+    '最后润色细节...',
   ]
 
   const index = Math.floor((progress.value / 100) * messages.length)
@@ -215,10 +231,7 @@ const generateBlueprint = async () => {
   }, maxTime * 1000)
 
   try {
-    // 直接调用store中的API
-    console.log('开始调用generateBlueprint API...')
     const response = await novelStore.generateBlueprint()
-    console.log('API调用成功，收到响应:', response)
 
     // API成功后，快速完成进度条到100%
     if (progressTimer) {
@@ -230,7 +243,7 @@ const generateBlueprint = async () => {
     progress.value = 100
 
     // 等待一下让用户看到100%完成状态，然后再切换界面
-    await new Promise(resolve => setTimeout(resolve, 800))
+    await new Promise((resolve) => setTimeout(resolve, 800))
 
     // 清理并重置状态
     clearTimers()
@@ -238,12 +251,14 @@ const generateBlueprint = async () => {
 
     // 通知父组件生成完成
     emit('blueprintGenerated', response)
-
   } catch (error) {
     console.error('生成蓝图失败:', error)
     clearTimers()
     isGenerating.value = false
-    globalAlert.showError(`生成蓝图失败: ${error instanceof Error ? error.message : '未知错误'}`, '生成失败')
+    globalAlert.showError(
+      `生成蓝图失败: ${error instanceof Error ? error.message : '未知错误'}`,
+      '生成失败',
+    )
   }
 }
 
@@ -349,7 +364,8 @@ onUnmounted(() => {
   color: #1f2937;
 }
 
-.prose ul, .prose ol {
+.prose ul,
+.prose ol {
   margin-left: 1.5rem;
   margin-bottom: 0.75rem;
 }

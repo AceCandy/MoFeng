@@ -11,43 +11,70 @@
     <!-- 左侧：蓝图和章节列表 -->
     <div
       :class="[
-        'md-card md-card-elevated transition-all duration-300 h-full',
+        'md-card md-card-elevated transition-transform duration-300 h-full',
         'lg:relative lg:translate-x-0 lg:w-80 lg:flex-shrink-0',
         sidebarOpen
           ? 'fixed left-4 top-20 bottom-4 w-80 z-50 translate-x-0'
-          : 'lg:w-80 lg:flex-shrink-0 -translate-x-full absolute lg:relative'
+          : 'lg:w-80 lg:flex-shrink-0 -translate-x-full absolute lg:relative',
       ]"
-      style="border-radius: var(--md-radius-xl);"
+      style="border-radius: var(--md-radius-xl)"
     >
       <div class="h-full flex flex-col">
         <!-- 蓝图预览卡片 -->
         <div class="md-card-header flex-shrink-0">
           <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background-color: var(--md-primary-container);">
-              <svg class="w-5 h-5" style="color: var(--md-on-primary-container);" fill="currentColor" viewBox="0 0 20 20">
+            <div
+              class="w-10 h-10 rounded-full flex items-center justify-center"
+              style="background-color: var(--md-primary-container)"
+            >
+              <svg
+                class="w-5 h-5"
+                style="color: var(--md-on-primary-container)"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
                 <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
             </div>
             <div>
               <h2 class="md-title-medium font-semibold">故事蓝图</h2>
-              <p class="md-body-small md-on-surface-variant">{{ project.blueprint?.style || '未设定风格' }}</p>
+              <p class="md-body-small md-on-surface-variant">
+                {{ project.blueprint?.style || '未设定风格' }}
+              </p>
             </div>
           </div>
 
           <div class="space-y-3">
-            <div class="md-card md-card-filled p-3" style="border-radius: var(--md-radius-md);">
-              <h3 class="md-label-large font-semibold" style="color: var(--md-on-primary-container);">故事概要</h3>
+            <div class="md-card md-card-filled p-3" style="border-radius: var(--md-radius-md)">
+              <h3
+                class="md-label-large font-semibold"
+                style="color: var(--md-on-primary-container)"
+              >
+                故事概要
+              </h3>
               <Tooltip :text="project.blueprint?.one_sentence_summary">
-                <p class="md-body-small line-clamp-3" style="color: var(--md-on-surface-variant);">{{ project.blueprint?.one_sentence_summary || '暂无概要' }}</p>
+                <p class="md-body-small line-clamp-3" style="color: var(--md-on-surface-variant)">
+                  {{ project.blueprint?.one_sentence_summary || '暂无概要' }}
+                </p>
               </Tooltip>
             </div>
             <div class="grid grid-cols-2 gap-2 text-xs">
-              <div class="md-card md-card-outlined p-2 text-center" style="border-radius: var(--md-radius-md);">
-                <div class="md-title-small font-semibold" style="color: var(--md-primary);">{{ characterCount }}</div>
+              <div
+                class="md-card md-card-outlined p-2 text-center"
+                style="border-radius: var(--md-radius-md)"
+              >
+                <div class="md-title-small font-semibold" style="color: var(--md-primary)">
+                  {{ characterCount }}
+                </div>
                 <div class="md-label-small md-on-surface-variant">角色</div>
               </div>
-              <div class="md-card md-card-outlined p-2 text-center" style="border-radius: var(--md-radius-md);">
-                <div class="md-title-small font-semibold" style="color: var(--md-secondary);">{{ relationshipCount }}</div>
+              <div
+                class="md-card md-card-outlined p-2 text-center"
+                style="border-radius: var(--md-radius-md)"
+              >
+                <div class="md-title-small font-semibold" style="color: var(--md-secondary)">
+                  {{ relationshipCount }}
+                </div>
                 <div class="md-label-small md-on-surface-variant">关系</div>
               </div>
             </div>
@@ -60,9 +87,7 @@
             <div class="flex items-center justify-between mb-4">
               <h3 class="md-title-medium font-semibold">章节大纲</h3>
               <div class="flex items-center gap-2">
-                <span class="md-chip md-chip-filter selected">
-                  {{ totalChapters }} 章
-                </span>
+                <span class="md-chip md-chip-filter selected"> {{ totalChapters }} 章 </span>
               </div>
             </div>
           </div>
@@ -72,15 +97,15 @@
               <div
                 v-for="(chapter, index) in project.blueprint.chapter_outline"
                 :key="chapter.chapter_number"
-                :ref="el => setChapterRef(chapter.chapter_number, el)"
+                :ref="(el) => setChapterRef(chapter.chapter_number, el)"
                 @click="$emit('selectChapter', chapter.chapter_number)"
                 :class="[
                   'group cursor-pointer p-4 m3-chapter-card m3-stagger',
                   selectedForDeletion.includes(chapter.chapter_number)
                     ? 'm3-chapter-danger'
                     : selectedChapterNumber === chapter.chapter_number
-                    ? 'm3-chapter-selected md-elevation-1'
-                    : 'hover:md-elevation-1'
+                      ? 'm3-chapter-selected md-elevation-1'
+                      : 'hover:md-elevation-1',
                 ]"
                 :style="{ animationDelay: `${index * 40}ms` }"
               >
@@ -99,35 +124,78 @@
                       'w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0',
                       isChapterCompleted(chapter.chapter_number)
                         ? 'bg-[var(--md-success)] text-[var(--md-on-success)]'
-                        : isChapterGeneratingLike(chapter.chapter_number) || isChapterEvaluating(chapter.chapter_number) || isChapterSelecting(chapter.chapter_number)
-                        ? 'bg-[var(--md-primary)] text-[var(--md-on-primary)] animate-pulse'
-                        : isChapterFailed(chapter.chapter_number)
-                        ? 'bg-[var(--md-error)] text-[var(--md-on-error)]'
-                        : selectedChapterNumber === chapter.chapter_number
-                        ? 'bg-[var(--md-primary)] text-[var(--md-on-primary)]'
-                        : 'bg-[var(--md-surface-container-highest)] text-[var(--md-on-surface-variant)]'
+                        : isChapterGeneratingLike(chapter.chapter_number) ||
+                            isChapterEvaluating(chapter.chapter_number) ||
+                            isChapterSelecting(chapter.chapter_number)
+                          ? 'bg-[var(--md-primary)] text-[var(--md-on-primary)] animate-pulse'
+                          : isChapterFailed(chapter.chapter_number)
+                            ? 'bg-[var(--md-error)] text-[var(--md-on-error)]'
+                            : selectedChapterNumber === chapter.chapter_number
+                              ? 'bg-[var(--md-primary)] text-[var(--md-on-primary)]'
+                              : 'bg-[var(--md-surface-container-highest)] text-[var(--md-on-surface-variant)]',
                     ]"
                   >
-                    <svg v-if="isChapterCompleted(chapter.chapter_number)" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                    <svg
+                      v-if="isChapterCompleted(chapter.chapter_number)"
+                      class="w-4 h-4"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clip-rule="evenodd"
+                      ></path>
                     </svg>
-                    <svg v-else-if="isChapterGeneratingLike(chapter.chapter_number) || isChapterSelecting(chapter.chapter_number)" class="w-4 h-4 animate-spin" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"></path>
+                    <svg
+                      v-else-if="
+                        isChapterGeneratingLike(chapter.chapter_number) ||
+                        isChapterSelecting(chapter.chapter_number)
+                      "
+                      class="w-4 h-4 animate-spin"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                        clip-rule="evenodd"
+                      ></path>
                     </svg>
-                    <svg v-else-if="isChapterEvaluating(chapter.chapter_number)" class="w-4 h-4 animate-spin" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M10 2a6 6 0 00-6 6v3.586l-1.707 1.707A1 1 0 003 15v1a1 1 0 001 1h12a1 1 0 001-1v-1a1 1 0 00-.293-.707L16 11.586V8a6 6 0 00-6-6zM8.05 17a2 2 0 103.9 0H8.05z"></path>
+                    <svg
+                      v-else-if="isChapterEvaluating(chapter.chapter_number)"
+                      class="w-4 h-4 animate-spin"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        d="M10 2a6 6 0 00-6 6v3.586l-1.707 1.707A1 1 0 003 15v1a1 1 0 001 1h12a1 1 0 001-1v-1a1 1 0 00-.293-.707L16 11.586V8a6 6 0 00-6-6zM8.05 17a2 2 0 103.9 0H8.05z"
+                      ></path>
                     </svg>
-                    <svg v-else-if="isChapterFailed(chapter.chapter_number)" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                    <svg
+                      v-else-if="isChapterFailed(chapter.chapter_number)"
+                      class="w-4 h-4"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+                        clip-rule="evenodd"
+                      ></path>
                     </svg>
                     <span v-else>{{ chapter.chapter_number }}</span>
                   </div>
                   <div class="flex-1 min-w-0">
                     <Tooltip :text="chapter.title">
-                      <h4 class="md-body-large font-semibold mb-1 line-clamp-1">{{ chapter.title }}</h4>
+                      <h4 class="md-body-large font-semibold mb-1 line-clamp-1">
+                        {{ chapter.title }}
+                      </h4>
                     </Tooltip>
                     <Tooltip :text="chapter.summary">
-                      <p class="md-body-small md-on-surface-variant line-clamp-2 leading-relaxed">{{ chapter.summary }}</p>
+                      <p class="md-body-small md-on-surface-variant line-clamp-2 leading-relaxed">
+                        {{ chapter.summary }}
+                      </p>
                     </Tooltip>
 
                     <!-- 章节状态 -->
@@ -135,42 +203,60 @@
                       <span
                         v-if="isChapterCompleted(chapter.chapter_number)"
                         class="md-chip"
-                        style="background-color: var(--md-success-container); color: var(--md-on-success-container);"
+                        style="
+                          background-color: var(--md-success-container);
+                          color: var(--md-on-success-container);
+                        "
                       >
                         已完成
                       </span>
                       <span
                         v-else-if="isChapterGeneratingLike(chapter.chapter_number)"
                         class="md-chip animate-pulse"
-                        style="background-color: var(--md-primary-container); color: var(--md-on-primary-container);"
+                        style="
+                          background-color: var(--md-primary-container);
+                          color: var(--md-on-primary-container);
+                        "
                       >
                         生成中...
                       </span>
                       <span
                         v-else-if="isChapterSelecting(chapter.chapter_number)"
                         class="md-chip animate-pulse"
-                        style="background-color: var(--md-primary-container); color: var(--md-on-primary-container);"
+                        style="
+                          background-color: var(--md-primary-container);
+                          color: var(--md-on-primary-container);
+                        "
                       >
                         选择中...
                       </span>
                       <span
                         v-else-if="isChapterEvaluating(chapter.chapter_number)"
                         class="md-chip animate-pulse"
-                        style="background-color: var(--md-secondary-container); color: var(--md-on-secondary-container);"
+                        style="
+                          background-color: var(--md-secondary-container);
+                          color: var(--md-on-secondary-container);
+                        "
                       >
                         评审中...
                       </span>
                       <span
                         v-else-if="isChapterFailed(chapter.chapter_number)"
                         class="md-chip"
-                        style="background-color: var(--md-error-container); color: var(--md-on-error-container);"
+                        style="
+                          background-color: var(--md-error-container);
+                          color: var(--md-on-error-container);
+                        "
                       >
                         生成失败
                       </span>
                       <span
                         v-else-if="hasChapterInProgress(chapter.chapter_number)"
                         class="md-chip"
-                        style="background-color: var(--md-warning-container); color: var(--md-on-warning-container);"
+                        style="
+                          background-color: var(--md-warning-container);
+                          color: var(--md-on-warning-container);
+                        "
                       >
                         待选择版本
                       </span>
@@ -182,7 +268,9 @@
                   <div
                     :class="[
                       'flex flex-shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200',
-                      shouldStackActions(chapter.chapter_number) ? 'flex-col items-center gap-1' : 'items-center gap-1'
+                      shouldStackActions(chapter.chapter_number)
+                        ? 'flex-col items-center gap-1'
+                        : 'items-center gap-1',
                     ]"
                   >
                     <button
@@ -192,23 +280,54 @@
                       title="编辑大纲"
                     >
                       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z"></path>
-                        <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd"></path>
+                        <path
+                          d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z"
+                        ></path>
+                        <path
+                          fill-rule="evenodd"
+                          d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"
+                          clip-rule="evenodd"
+                        ></path>
                       </svg>
                     </button>
                     <button
                       v-if="canShowGenerateAction(chapter.chapter_number)"
                       @click.stop="confirmGenerateChapter(chapter.chapter_number)"
-                      :disabled="generatingChapter === chapter.chapter_number || isChapterGenerating(chapter.chapter_number)"
+                      :disabled="
+                        generatingChapter === chapter.chapter_number ||
+                        isChapterGenerating(chapter.chapter_number)
+                      "
                       class="md-icon-btn md-ripple disabled:opacity-50"
-                      style="color: var(--md-primary);"
-                      :title="isChapterCompleted(chapter.chapter_number) ? '重新生成' : isChapterFailed(chapter.chapter_number) ? '重试' : hasChapterInProgress(chapter.chapter_number) ? '重新生成版本' : '开始创作'"
+                      style="color: var(--md-primary)"
+                      :title="
+                        isChapterCompleted(chapter.chapter_number)
+                          ? '重新生成'
+                          : isChapterFailed(chapter.chapter_number)
+                            ? '重试'
+                            : hasChapterInProgress(chapter.chapter_number)
+                              ? '重新生成版本'
+                              : '开始创作'
+                      "
                     >
-                      <svg v-if="generatingChapter === chapter.chapter_number || isChapterGenerating(chapter.chapter_number)" class="w-4 h-4 animate-spin" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"></path>
+                      <svg
+                        v-if="
+                          generatingChapter === chapter.chapter_number ||
+                          isChapterGenerating(chapter.chapter_number)
+                        "
+                        class="w-4 h-4 animate-spin"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path
+                          fill-rule="evenodd"
+                          d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                          clip-rule="evenodd"
+                        ></path>
                       </svg>
                       <svg v-else class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"></path>
+                        <path
+                          d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+                        ></path>
                       </svg>
                     </button>
                     <!-- Batch delete replaces the single delete button -->
@@ -217,8 +336,14 @@
               </div>
             </div>
             <div v-else class="text-center py-8 md-body-medium md-on-surface-variant">
-              <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9z"></path>
+              <svg
+                class="w-12 h-12 mx-auto mb-3 opacity-50"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9z"
+                ></path>
               </svg>
               <p>暂无章节大纲</p>
             </div>
@@ -226,10 +351,14 @@
               <button
                 @click="handleDeleteSelected"
                 class="md-btn md-btn-filled md-ripple w-full flex items-center justify-center gap-2"
-                style="background-color: var(--md-error); color: var(--md-on-error);"
+                style="background-color: var(--md-error); color: var(--md-on-error)"
               >
                 <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd"></path>
+                  <path
+                    fill-rule="evenodd"
+                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z"
+                    clip-rule="evenodd"
+                  ></path>
                 </svg>
                 <span>删除选中的 {{ selectedForDeletion.length }} 章</span>
               </button>
@@ -240,11 +369,22 @@
                 :disabled="props.isGeneratingOutline"
                 class="md-btn md-btn-tonal md-ripple w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <svg v-if="props.isGeneratingOutline" class="w-5 h-5 animate-spin" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"></path>
+                <svg
+                  v-if="props.isGeneratingOutline"
+                  class="w-5 h-5 animate-spin"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                    clip-rule="evenodd"
+                  ></path>
                 </svg>
                 <svg v-else class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"></path>
+                  <path
+                    d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+                  ></path>
                 </svg>
                 <span>{{ props.isGeneratingOutline ? '生成中...' : '生成后续大纲' }}</span>
               </button>
@@ -274,7 +414,14 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const emit = defineEmits(['closeSidebar', 'selectChapter', 'generateChapter', 'editChapter', 'deleteChapter', 'generateOutline'])
+const emit = defineEmits([
+  'closeSidebar',
+  'selectChapter',
+  'generateChapter',
+  'editChapter',
+  'deleteChapter',
+  'generateOutline',
+])
 
 const selectedForDeletion = ref<number[]>([])
 const listContainer = ref<HTMLElement | null>(null)
@@ -289,10 +436,13 @@ const relationshipCount = computed(() => {
 })
 
 const lastChapterNumber = computed(() => {
-  if (!props.project?.blueprint?.chapter_outline || props.project.blueprint.chapter_outline.length === 0) {
+  if (
+    !props.project?.blueprint?.chapter_outline ||
+    props.project.blueprint.chapter_outline.length === 0
+  ) {
     return null
   }
-  return Math.max(...props.project.blueprint.chapter_outline.map(ch => ch.chapter_number))
+  return Math.max(...props.project.blueprint.chapter_outline.map((ch) => ch.chapter_number))
 })
 
 const totalChapters = computed(() => {
@@ -315,7 +465,7 @@ function handleDeleteSelected() {
   const sortedSelection = [...selectedForDeletion.value].sort((a, b) => a - b)
 
   if (!lastChapterNumber.value || !sortedSelection.includes(lastChapterNumber.value)) {
-    alert('批量删除必须包含最后一章。')
+    globalAlert.showError('批量删除必须包含最后一章。', '无法删除章节')
     return
   }
 
@@ -323,7 +473,7 @@ function handleDeleteSelected() {
     return i === 0 || num === sortedSelection[i - 1] + 1
   })
   if (!isContinuous) {
-    alert('只能删除连续的章节块。')
+    globalAlert.showError('只能删除连续的章节块。', '无法删除章节')
     return
   }
 
@@ -332,7 +482,10 @@ function handleDeleteSelected() {
 }
 
 async function confirmGenerateChapter(chapterNumber: number) {
-  const confirmed = await globalAlert.showConfirm('重新生成会覆盖当前章节的生成结果，确定继续吗？', '重新生成确认')
+  const confirmed = await globalAlert.showConfirm(
+    '重新生成会覆盖当前章节的生成结果，确定继续吗？',
+    '重新生成确认',
+  )
   if (confirmed) {
     emit('generateChapter', chapterNumber)
   }
@@ -344,7 +497,7 @@ function setChapterRef(chapterNumber: number, el: Element | ComponentPublicInsta
     return
   }
 
-  const element = el instanceof Element ? el : (el.$el instanceof Element ? el.$el : null)
+  const element = el instanceof Element ? el : el.$el instanceof Element ? el.$el : null
 
   if (element) {
     chapterRefs.value[chapterNumber] = element as HTMLElement
@@ -353,8 +506,10 @@ function setChapterRef(chapterNumber: number, el: Element | ComponentPublicInsta
 
 const scrollToFirstIncompleteChapter = async () => {
   if (!props.project?.blueprint?.chapter_outline) return
-  const sorted = [...props.project.blueprint.chapter_outline].sort((a, b) => a.chapter_number - b.chapter_number)
-  const target = sorted.find(chapter => !isChapterCompleted(chapter.chapter_number))
+  const sorted = [...props.project.blueprint.chapter_outline].sort(
+    (a, b) => a.chapter_number - b.chapter_number,
+  )
+  const target = sorted.find((chapter) => !isChapterCompleted(chapter.chapter_number))
   if (!target) return
   await nextTick()
   const element = chapterRefs.value[target.chapter_number]
@@ -374,19 +529,19 @@ defineExpose({
 // 章节状态检查
 const isChapterCompleted = (chapterNumber: number) => {
   if (!props.project?.chapters) return false
-  const chapter = props.project.chapters.find(ch => ch.chapter_number === chapterNumber)
+  const chapter = props.project.chapters.find((ch) => ch.chapter_number === chapterNumber)
   return chapter && chapter.generation_status === 'successful'
 }
 
 const hasChapterInProgress = (chapterNumber: number) => {
   if (!props.project?.chapters) return false
-  const chapter = props.project.chapters.find(ch => ch.chapter_number === chapterNumber)
+  const chapter = props.project.chapters.find((ch) => ch.chapter_number === chapterNumber)
   return chapter && chapter.generation_status === 'waiting_for_confirm'
 }
 
 const isChapterGenerating = (chapterNumber: number) => {
   if (!props.project?.chapters) return false
-  const chapter = props.project.chapters.find(ch => ch.chapter_number === chapterNumber)
+  const chapter = props.project.chapters.find((ch) => ch.chapter_number === chapterNumber)
   return chapter && chapter.generation_status === 'generating'
 }
 
@@ -396,19 +551,19 @@ const isChapterGeneratingLike = (chapterNumber: number) => {
 
 const isChapterEvaluating = (chapterNumber: number) => {
   if (!props.project?.chapters) return false
-  const chapter = props.project.chapters.find(ch => ch.chapter_number === chapterNumber)
+  const chapter = props.project.chapters.find((ch) => ch.chapter_number === chapterNumber)
   return chapter && chapter.generation_status === 'evaluating'
 }
 
 const isChapterFailed = (chapterNumber: number) => {
   if (!props.project?.chapters) return false
-  const chapter = props.project.chapters.find(ch => ch.chapter_number === chapterNumber)
+  const chapter = props.project.chapters.find((ch) => ch.chapter_number === chapterNumber)
   return chapter && chapter.generation_status === 'failed'
 }
 
 const isChapterSelecting = (chapterNumber: number) => {
   if (!props.project?.chapters) return false
-  const chapter = props.project.chapters.find(ch => ch.chapter_number === chapterNumber)
+  const chapter = props.project.chapters.find((ch) => ch.chapter_number === chapterNumber)
   return chapter && chapter.generation_status === 'selecting'
 }
 
@@ -417,7 +572,11 @@ const canEditChapter = (chapterNumber: number) => {
 }
 
 const canShowGenerateAction = (chapterNumber: number) => {
-  return canGenerateChapter(chapterNumber) || isChapterFailed(chapterNumber) || hasChapterInProgress(chapterNumber)
+  return (
+    canGenerateChapter(chapterNumber) ||
+    isChapterFailed(chapterNumber) ||
+    hasChapterInProgress(chapterNumber)
+  )
 }
 
 const shouldStackActions = (chapterNumber: number) => {
@@ -427,18 +586,22 @@ const shouldStackActions = (chapterNumber: number) => {
 const canGenerateChapter = (chapterNumber: number) => {
   if (!props.project?.blueprint?.chapter_outline) return false
 
-  const outlines = props.project.blueprint.chapter_outline.sort((a, b) => a.chapter_number - b.chapter_number)
-  
+  const outlines = props.project.blueprint.chapter_outline.sort(
+    (a, b) => a.chapter_number - b.chapter_number,
+  )
+
   for (const outline of outlines) {
     if (outline.chapter_number >= chapterNumber) break
-    
-    const chapter = props.project?.chapters.find(ch => ch.chapter_number === outline.chapter_number)
+
+    const chapter = props.project?.chapters.find(
+      (ch) => ch.chapter_number === outline.chapter_number,
+    )
     if (!chapter || chapter.generation_status !== 'successful') {
       return false
     }
   }
 
-  const currentChapter = props.project?.chapters.find(ch => ch.chapter_number === chapterNumber)
+  const currentChapter = props.project?.chapters.find((ch) => ch.chapter_number === chapterNumber)
   if (currentChapter && currentChapter.generation_status === 'successful') {
     return true
   }
@@ -452,7 +615,9 @@ const canGenerateChapter = (chapterNumber: number) => {
   border-radius: var(--md-radius-lg);
   border: 1px solid var(--md-outline-variant);
   background-color: var(--md-surface);
-  transition: all var(--md-duration-medium) var(--md-easing-standard);
+  transition:
+    background-color var(--md-duration-medium) var(--md-easing-standard),
+    border-color var(--md-duration-medium) var(--md-easing-standard);
 }
 
 .m3-chapter-card:hover {

@@ -27,10 +27,7 @@
         </div>
       </section>
 
-      <section
-        v-if="showInspirationConfigNotice"
-        class="md-card settings-notice"
-      >
+      <section v-if="showInspirationConfigNotice" class="md-card settings-notice">
         <p class="md-title-small">灵感模式需要先完成模型配置</p>
         <p class="md-body-small mt-1">
           请先在 <strong>LLM 模型</strong> 中启用模型并勾选主模型，保存后会自动跳回灵感模式。
@@ -88,11 +85,7 @@
             active-section="embedding"
             @saved="handleLLMConfigSaved"
           />
-          <PersonalModelRouting
-            v-else
-            active-section="routes"
-            @saved="handleLLMConfigSaved"
-          />
+          <PersonalModelRouting v-else active-section="routes" @saved="handleLLMConfigSaved" />
         </section>
       </section>
     </div>
@@ -100,107 +93,90 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import PersonalModelRouting from '@/components/llm-settings/PersonalModelRouting.vue';
-import { getRemoteVersion, normalizeComparableVersion, type RemoteVersionDebugEvent } from '@/api/version';
+import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import PersonalModelRouting from '@/components/llm-settings/PersonalModelRouting.vue'
+import { getRemoteVersion, normalizeComparableVersion } from '@/api/version'
 
-type SettingsSectionId = 'llm' | 'embedding' | 'routes';
+type SettingsSectionId = 'llm' | 'embedding' | 'routes'
 
 interface SettingsSection {
-  id: SettingsSectionId;
-  label: string;
-  description: string;
+  id: SettingsSectionId
+  label: string
+  description: string
 }
 
-const route = useRoute();
-const router = useRouter();
-const localVersion = ((import.meta.env.VITE_APP_VERSION as string | undefined)?.trim()) || 'dev';
-const remoteVersion = ref<string | null>(null);
-const remoteVersionCheckFailed = ref(false);
-const isVersionDebugEnabled = import.meta.env.DEV
-  || ['1', 'true', 'yes', 'on'].includes(String(import.meta.env.VITE_VERSION_DEBUG || '').trim().toLowerCase());
-
+const route = useRoute()
+const router = useRouter()
+const localVersion = (import.meta.env.VITE_APP_VERSION as string | undefined)?.trim() || 'dev'
+const remoteVersion = ref<string | null>(null)
+const remoteVersionCheckFailed = ref(false)
 const settingsSections: SettingsSection[] = [
   { id: 'llm', label: 'LLM 模型', description: '启用 Chat 模型并指定主模型' },
   { id: 'embedding', label: '向量模型', description: '为记忆检索选择唯一向量模型' },
   { id: 'routes', label: 'AI 阶段路由', description: '按写作阶段覆盖主模型' },
-];
+]
 
-const activeSettingsSection = ref<SettingsSectionId>('llm');
+const activeSettingsSection = ref<SettingsSectionId>('llm')
 
-const activeSectionMeta = computed(() => (
-  settingsSections.find(section => section.id === activeSettingsSection.value) || settingsSections[0]
-));
+const activeSectionMeta = computed(
+  () =>
+    settingsSections.find((section) => section.id === activeSettingsSection.value) ||
+    settingsSections[0],
+)
 
 const selectSettingsSection = (sectionId: SettingsSectionId) => {
-  activeSettingsSection.value = sectionId;
-};
+  activeSettingsSection.value = sectionId
+}
 
 const hasNewVersion = computed(() => {
   if (!remoteVersion.value) {
-    return false;
+    return false
   }
-  return normalizeComparableVersion(remoteVersion.value) !== normalizeComparableVersion(localVersion);
-});
+  return (
+    normalizeComparableVersion(remoteVersion.value) !== normalizeComparableVersion(localVersion)
+  )
+})
 
-const showInspirationConfigNotice = computed(() => (
-  route.query.source === 'inspiration' && route.query.reason === 'missing_models'
-));
+const showInspirationConfigNotice = computed(
+  () => route.query.source === 'inspiration' && route.query.reason === 'missing_models',
+)
 
 const versionStatusClass = computed(() => {
   if (remoteVersionCheckFailed.value) {
-    return 'is-error';
+    return 'is-error'
   }
   if (hasNewVersion.value) {
-    return 'is-warning';
+    return 'is-warning'
   }
-  return 'is-success';
-});
+  return 'is-success'
+})
 
 const versionStatusLabel = computed(() => {
   if (remoteVersionCheckFailed.value) {
-    return '版本检查失败';
+    return '版本检查失败'
   }
   if (hasNewVersion.value) {
-    return '发现新版本';
+    return '发现新版本'
   }
-  return '已是最新';
-});
+  return '已是最新'
+})
 
 const handleLLMConfigSaved = async () => {
   if (!showInspirationConfigNotice.value) {
-    return;
+    return
   }
-  await router.push('/inspiration');
-};
-
-const logVersionDebug = (event: RemoteVersionDebugEvent) => {
-  if (!isVersionDebugEnabled) {
-    return;
-  }
-  console.debug('[version-check]', event);
-};
+  await router.push('/inspiration')
+}
 
 onMounted(async () => {
   try {
-    remoteVersion.value = await getRemoteVersion(logVersionDebug);
-    remoteVersionCheckFailed.value = !remoteVersion.value;
-    if (remoteVersionCheckFailed.value) {
-      logVersionDebug({
-        stage: 'empty_version_result',
-        url: String(import.meta.env.VITE_VERSION_CHECK_URL || '/api/updates/remote-version'),
-        note: 'request succeeded but parsed version is empty',
-      });
-    }
-  } catch (error) {
-    remoteVersionCheckFailed.value = true;
-    console.error('Failed to fetch remote version:', error, {
-      configuredVersionCheckUrl: String(import.meta.env.VITE_VERSION_CHECK_URL || '').trim() || null,
-      localVersion,
-    });
+    remoteVersion.value = await getRemoteVersion()
+    remoteVersionCheckFailed.value = !remoteVersion.value
+  } catch {
+    remoteVersionCheckFailed.value = true
   }
-});
+})
 </script>
 
 <style scoped>
@@ -331,7 +307,7 @@ onMounted(async () => {
 }
 
 .settings-console__nav-item.is-active,
-.settings-console__nav-item[aria-current="page"] {
+.settings-console__nav-item[aria-current='page'] {
   border-color: var(--md-primary);
   background-color: var(--md-primary-container);
   color: var(--md-on-primary-container);
@@ -348,7 +324,7 @@ onMounted(async () => {
 }
 
 .settings-console__nav-item.is-active .settings-console__nav-item-description,
-.settings-console__nav-item[aria-current="page"] .settings-console__nav-item-description {
+.settings-console__nav-item[aria-current='page'] .settings-console__nav-item-description {
   color: inherit;
 }
 
@@ -404,7 +380,7 @@ onMounted(async () => {
 }
 
 .settings-console__mobile-tab.is-active,
-.settings-console__mobile-tab[aria-current="page"] {
+.settings-console__mobile-tab[aria-current='page'] {
   border-color: var(--md-primary);
   background-color: var(--md-primary-container);
   color: var(--md-on-primary-container);

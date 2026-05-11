@@ -7,11 +7,11 @@
       enter-from-class="opacity-0 translate-y-4"
       leave-to-class="opacity-0 translate-y-4"
     >
-      <div v-if="deleteMessage" class="md-snackbar">
+      <div v-if="workspaceMessage" class="md-snackbar" role="status">
         <svg
-          v-if="deleteMessage.type === 'success'"
+          v-if="workspaceMessage.type === 'success'"
           class="w-5 h-5"
-          style="color: var(--md-success);"
+          style="color: var(--md-success)"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -22,25 +22,34 @@
         <svg
           v-else
           class="w-5 h-5"
-          style="color: var(--md-error);"
+          style="color: var(--md-error)"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
           stroke-width="2"
         >
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
         </svg>
-        <span class="md-snackbar-text">{{ deleteMessage.text }}</span>
+        <span class="md-snackbar-text">{{ workspaceMessage.text }}</span>
       </div>
     </transition>
 
-    <section v-if="!novelStore.isLoading && !novelStore.error && continueProject" class="workspace-continue">
+    <section
+      v-if="!novelStore.isLoading && !novelStore.error && continueProject"
+      class="workspace-continue"
+    >
       <div class="workspace-continue__copy">
         <p class="workspace-kicker">最近项目</p>
         <h2>{{ continueProject.title }}</h2>
         <p>
-          {{ continueProject.genre || '未设置类型' }} ·
-          {{ continueProject.completed_chapters }}/{{ continueProject.total_chapters }} 章 ·
+          {{ continueProject.genre || '未设置类型' }} · {{ continueProject.completed_chapters }}/{{
+            continueProject.total_chapters
+          }}
+          章 ·
           {{ formatProjectDate(continueProject.last_edited) }}
         </p>
       </div>
@@ -50,8 +59,18 @@
           class="md-btn md-btn-filled md-ripple"
           @click="enterProject(continueProject)"
         >
-          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536M4 20h4l11-11a2.5 2.5 0 10-3.536-3.536L4 16.928V20z" />
+          <svg
+            class="w-5 h-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M15.232 5.232l3.536 3.536M4 20h4l11-11a2.5 2.5 0 10-3.536-3.536L4 16.928V20z"
+            />
           </svg>
           继续写作
         </button>
@@ -69,7 +88,11 @@
       <button type="button" class="workspace-action" @click="goToInspiration">
         <span class="workspace-action__icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3z" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3z"
+            />
           </svg>
         </span>
         <span>
@@ -80,7 +103,11 @@
       <button type="button" class="workspace-action" :disabled="isImporting" @click="triggerImport">
         <span class="workspace-action__icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M8 8l4-4m0 0l4 4m-4-4v12" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M8 8l4-4m0 0l4 4m-4-4v12"
+            />
           </svg>
         </span>
         <span>
@@ -88,14 +115,14 @@
           <small>上传 .txt 并进入写作台</small>
         </span>
       </button>
-      <router-link
-        v-if="authStore.user?.is_admin"
-        to="/admin"
-        class="workspace-action"
-      >
+      <router-link v-if="authStore.user?.is_admin" to="/admin" class="workspace-action">
         <span class="workspace-action__icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M6 7v12h12V7M9 11h6M9 15h6" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M4 7h16M6 7v12h12V7M9 11h6M9 15h6"
+            />
           </svg>
         </span>
         <span>
@@ -103,13 +130,7 @@
           <small>查看平台与项目管理入口</small>
         </span>
       </router-link>
-      <input
-        type="file"
-        ref="fileInput"
-        accept=".txt"
-        class="hidden"
-        @change="handleFileImport"
-      />
+      <input type="file" ref="fileInput" accept=".txt" class="hidden" @change="handleFileImport" />
     </section>
 
     <section class="workspace-panel">
@@ -121,25 +142,42 @@
         <span class="md-chip md-chip-assist">{{ sortedProjects.length }} 个项目</span>
       </div>
 
-      <div v-if="novelStore.isLoading" class="workspace-state">
-        <div class="md-spinner"></div>
-        <p class="md-body-medium" style="color: var(--md-on-surface-variant);">加载中...</p>
+      <div v-if="novelStore.isLoading" class="workspace-grid" aria-label="项目加载中">
+        <article v-for="index in 3" :key="index" class="workspace-skeleton">
+          <div class="workspace-skeleton__header">
+            <span class="workspace-skeleton__avatar"></span>
+            <span class="workspace-skeleton__lines">
+              <span></span>
+              <span></span>
+            </span>
+          </div>
+          <span class="workspace-skeleton__bar"></span>
+          <span class="workspace-skeleton__chips"></span>
+        </article>
       </div>
 
       <div v-else-if="novelStore.error" class="workspace-state">
         <div class="workspace-state__icon is-error">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
           </svg>
         </div>
-        <p class="md-body-large" style="color: var(--md-error);">{{ novelStore.error }}</p>
+        <p class="md-body-large" style="color: var(--md-error)">{{ novelStore.error }}</p>
         <button @click="loadProjects" class="md-btn md-btn-filled md-ripple">重试</button>
       </div>
 
       <div v-else-if="sortedProjects.length === 0" class="workspace-state">
         <div class="workspace-state__icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+            />
           </svg>
         </div>
         <h3>还没有项目</h3>
@@ -173,22 +211,44 @@
           enter-from-class="opacity-0 scale-95"
           leave-to-class="opacity-0 scale-95"
         >
-          <div class="md-dialog max-w-md w-full mx-4">
+          <div
+            class="md-dialog max-w-md w-full mx-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-project-title"
+          >
             <div class="md-dialog-header flex items-center gap-4">
-              <div class="w-12 h-12 rounded-full flex items-center justify-center" style="background-color: var(--md-error-container);">
-                <svg class="w-6 h-6" style="color: var(--md-error);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              <div
+                class="w-12 h-12 rounded-full flex items-center justify-center"
+                style="background-color: var(--md-error-container)"
+              >
+                <svg
+                  class="w-6 h-6"
+                  style="color: var(--md-error)"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
                 </svg>
               </div>
               <div>
-                <h3 class="md-dialog-title">确认删除</h3>
-                <p class="md-body-small" style="color: var(--md-on-surface-variant);">此操作无法撤销</p>
+                <h3 id="delete-project-title" class="md-dialog-title">确认删除</h3>
+                <p class="md-body-small" style="color: var(--md-on-surface-variant)">
+                  此操作无法撤销
+                </p>
               </div>
             </div>
 
             <div class="md-dialog-content">
-              <p class="md-body-large" style="color: var(--md-on-surface);">
-                确定要删除项目 "<strong>{{ projectToDelete?.title }}</strong>" 吗？所有相关数据将被永久删除。
+              <p class="md-body-large" style="color: var(--md-on-surface)">
+                确定要删除项目 "<strong>{{ projectToDelete?.title }}</strong
+                >" 吗？所有相关数据将被永久删除。
               </p>
             </div>
 
@@ -198,11 +258,22 @@
                 @click="confirmDelete"
                 :disabled="isDeleting"
                 class="md-btn md-btn-filled md-ripple"
-                style="background-color: var(--md-error); color: var(--md-on-error);"
+                style="background-color: var(--md-error); color: var(--md-on-error)"
               >
                 <svg v-if="isDeleting" class="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
                 </svg>
                 {{ isDeleting ? '删除中...' : '确认删除' }}
               </button>
@@ -215,7 +286,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNovelStore } from '@/stores/novel'
 import { useAuthStore } from '@/stores/auth'
@@ -233,7 +304,17 @@ const isImporting = ref(false)
 const showDeleteDialog = ref(false)
 const projectToDelete = ref<NovelProjectSummary | null>(null)
 const isDeleting = ref(false)
-const deleteMessage = ref<{type: 'success' | 'error', text: string} | null>(null)
+const workspaceMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null)
+
+let workspaceMessageTimer: number | undefined
+
+const showWorkspaceMessage = (message: { type: 'success' | 'error'; text: string }) => {
+  workspaceMessage.value = message
+  window.clearTimeout(workspaceMessageTimer)
+  workspaceMessageTimer = window.setTimeout(() => {
+    workspaceMessage.value = null
+  }, 3200)
+}
 
 // 最近编辑的项目作为工作台第一优先级，帮助作者快速恢复写作上下文。
 const sortedProjects = computed(() => {
@@ -285,7 +366,7 @@ const handleFileImport = async (event: Event) => {
 
   const file = target.files[0]
   if (!file.name.endsWith('.txt')) {
-    alert('请上传 .txt 格式的文件')
+    showWorkspaceMessage({ type: 'error', text: '请上传 .txt 格式的文件' })
     target.value = ''
     return
   }
@@ -297,8 +378,7 @@ const handleFileImport = async (event: Event) => {
     await loadProjects()
     router.push(`/projects/${response.id}/write`)
   } catch (error: any) {
-    console.error('导入失败:', error)
-    alert(error.message || '导入失败，请重试')
+    showWorkspaceMessage({ type: 'error', text: error.message || '导入失败，请重试' })
   } finally {
     isImporting.value = false
     target.value = ''
@@ -306,7 +386,7 @@ const handleFileImport = async (event: Event) => {
 }
 
 const handleDeleteProject = (projectId: string) => {
-  const project = novelStore.projects.find(p => p.id === projectId)
+  const project = novelStore.projects.find((p) => p.id === projectId)
   if (project) {
     projectToDelete.value = project
     showDeleteDialog.value = true
@@ -324,20 +404,15 @@ const confirmDelete = async () => {
   isDeleting.value = true
   try {
     await novelStore.deleteProjects([projectToDelete.value.id])
-    deleteMessage.value = { type: 'success', text: `项目 "${projectToDelete.value.title}" 已成功删除` }
+    showWorkspaceMessage({
+      type: 'success',
+      text: `项目 "${projectToDelete.value.title}" 已成功删除`,
+    })
     showDeleteDialog.value = false
     projectToDelete.value = null
-
-    setTimeout(() => {
-      deleteMessage.value = null
-    }, 3000)
   } catch (error) {
     console.error('删除项目失败:', error)
-    deleteMessage.value = { type: 'error', text: '删除项目失败，请重试' }
-
-    setTimeout(() => {
-      deleteMessage.value = null
-    }, 3000)
+    showWorkspaceMessage({ type: 'error', text: '删除项目失败，请重试' })
   } finally {
     isDeleting.value = false
   }
@@ -345,6 +420,10 @@ const confirmDelete = async () => {
 
 onMounted(() => {
   loadProjects()
+})
+
+onUnmounted(() => {
+  window.clearTimeout(workspaceMessageTimer)
 })
 </script>
 
@@ -489,6 +568,81 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: var(--md-spacing-5);
+}
+
+.workspace-skeleton {
+  min-height: 216px;
+  padding: var(--md-spacing-5);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-lg);
+  background-color: var(--md-surface);
+}
+
+.workspace-skeleton__header {
+  display: flex;
+  gap: var(--md-spacing-3);
+  margin-bottom: var(--md-spacing-6);
+}
+
+.workspace-skeleton__avatar,
+.workspace-skeleton__lines span,
+.workspace-skeleton__bar,
+.workspace-skeleton__chips {
+  display: block;
+  border-radius: var(--md-radius-full);
+  background: linear-gradient(
+    90deg,
+    var(--md-surface-container-low) 0%,
+    var(--md-surface-container-high) 48%,
+    var(--md-surface-container-low) 100%
+  );
+  background-size: 220% 100%;
+  animation: workspace-skeleton-pulse 1.4s var(--md-easing-standard) infinite;
+}
+
+.workspace-skeleton__avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--md-radius-full);
+}
+
+.workspace-skeleton__lines {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--md-spacing-2);
+  justify-content: center;
+}
+
+.workspace-skeleton__lines span:first-child {
+  width: 72%;
+  height: 18px;
+}
+
+.workspace-skeleton__lines span:last-child {
+  width: 48%;
+  height: 12px;
+}
+
+.workspace-skeleton__bar {
+  width: 100%;
+  height: 8px;
+  margin-bottom: var(--md-spacing-5);
+}
+
+.workspace-skeleton__chips {
+  width: 46%;
+  height: 32px;
+}
+
+@keyframes workspace-skeleton-pulse {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
 }
 
 .workspace-state {

@@ -22,6 +22,7 @@
             required
             class="md-text-field-input"
             placeholder="请输入用户名"
+            autocomplete="username"
           />
         </div>
 
@@ -35,6 +36,7 @@
             required
             class="md-text-field-input"
             placeholder="请输入邮箱"
+            autocomplete="email"
           />
         </div>
 
@@ -49,6 +51,8 @@
               required
               class="md-text-field-input"
               placeholder="请输入验证码"
+              inputmode="numeric"
+              autocomplete="one-time-code"
             />
           </div>
           <button
@@ -72,18 +76,23 @@
             required
             class="md-text-field-input"
             placeholder="至少 8 个字符"
+            autocomplete="new-password"
           />
         </div>
 
-        <div v-if="error" class="register-feedback is-error">
+        <div v-if="error" class="register-feedback is-error" role="alert">
           {{ error }}
         </div>
-        <div v-if="success" class="register-feedback is-success">
+        <div v-if="success" class="register-feedback is-success" role="status">
           {{ success }}
         </div>
 
-        <button type="submit" class="md-btn md-btn-filled md-ripple register-submit">
-          注册
+        <button
+          type="submit"
+          class="md-btn md-btn-filled md-ripple register-submit"
+          :disabled="isRegistering"
+        >
+          {{ isRegistering ? '注册中...' : '注册' }}
         </button>
       </form>
 
@@ -102,120 +111,118 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
-import TypewriterEffect from '@/components/TypewriterEffect.vue';
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import TypewriterEffect from '@/components/TypewriterEffect.vue'
 
-const username = ref('');
-const email = ref('');
-const verificationCode = ref('');
-const password = ref('');
-const countdown = ref(0);
-const sending = ref(false);
-const error = ref('');
-const success = ref('');
-const router = useRouter();
-const authStore = useAuthStore();
-const allowRegistration = computed(() => authStore.allowRegistration);
+const username = ref('')
+const email = ref('')
+const verificationCode = ref('')
+const password = ref('')
+const countdown = ref(0)
+const sending = ref(false)
+const isRegistering = ref(false)
+const error = ref('')
+const success = ref('')
+const router = useRouter()
+const authStore = useAuthStore()
+const allowRegistration = computed(() => authStore.allowRegistration)
 
 // 进入页面即拉取认证开关，避免展示无效注册表单
 onMounted(async () => {
-  try {
-    await authStore.fetchAuthOptions();
-  } catch (error) {
-    console.error('加载认证开关失败', error);
-  }
+  await authStore.fetchAuthOptions()
   if (!allowRegistration.value) {
-    success.value = '';
-    error.value = '当前已关闭注册，请稍后再试。';
+    success.value = ''
+    error.value = '当前已关闭注册，请稍后再试。'
   }
-});
+})
 
 const validateInput = () => {
   // Password validation
   if (password.value.length < 8) {
-    return '密码必须至少8个字符';
+    return '密码必须至少8个字符'
   }
 
   // Username validation
-  const usernameVal = username.value;
-  const hasChinese = /[\u4e00-\u9fa5]/.test(usernameVal);
-  const isNumeric = /^\d+$/.test(usernameVal);
-  const isAlphanumeric = /^[a-zA-Z0-9]+$/.test(usernameVal);
+  const usernameVal = username.value
+  const hasChinese = /[\u4e00-\u9fa5]/.test(usernameVal)
+  const isNumeric = /^\d+$/.test(usernameVal)
+  const isAlphanumeric = /^[a-zA-Z0-9]+$/.test(usernameVal)
 
   if (isNumeric) {
-    return '用户名不能是纯数字';
+    return '用户名不能是纯数字'
   }
 
   if (hasChinese && usernameVal.length <= 1) {
-    return '户名长度必须大于2个汉字';
+    return '户名长度必须大于2个汉字'
   }
 
   if (isAlphanumeric && !hasChinese && usernameVal.length <= 6) {
-    return '用户名长度必须大于6个字母或数字';
+    return '用户名长度必须大于6个字母或数字'
   }
 
-  return null; // No validation errors
-};
+  return null // No validation errors
+}
 
 const sendCode = async () => {
-  error.value = '';
-  success.value = '';
+  error.value = ''
+  success.value = ''
 
   if (!allowRegistration.value) {
-    error.value = '当前已关闭注册，请联系管理员。';
-    return;
+    error.value = '当前已关闭注册，请联系管理员。'
+    return
   }
 
   if (!email.value) {
-    error.value = '请输入邮箱';
-    return;
+    error.value = '请输入邮箱'
+    return
   }
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(email.value)) {
-    error.value = '邮箱格式不正确';
-    return;
+    error.value = '邮箱格式不正确'
+    return
   }
 
-  sending.value = true;
+  sending.value = true
   try {
     const res = await fetch(`/api/auth/send-code?email=${encodeURIComponent(email.value)}`, {
-      method: 'POST'
-    });
+      method: 'POST',
+    })
     if (!res.ok) {
-      const errMsg = await res.json();
-      throw new Error(errMsg.detail || '发送验证码失败');
+      const errMsg = await res.json()
+      throw new Error(errMsg.detail || '发送验证码失败')
     }
-    success.value = '验证码已发送，请查收邮箱';
+    success.value = '验证码已发送，请查收邮箱'
     // 等接口返回成功后再开始倒计时
-    countdown.value = 60;
+    countdown.value = 60
     const timer = setInterval(() => {
-      countdown.value--;
-      if (countdown.value <= 0) clearInterval(timer);
-    }, 1000);
+      countdown.value--
+      if (countdown.value <= 0) clearInterval(timer)
+    }, 1000)
   } catch (err: any) {
-    error.value = err.message;
+    error.value = err.message
   } finally {
-    sending.value = false;
+    sending.value = false
   }
-};
+}
 
 const handleRegister = async () => {
-  error.value = '';
-  success.value = '';
+  error.value = ''
+  success.value = ''
 
-  const validationError = validateInput();
+  const validationError = validateInput()
   if (validationError) {
-    error.value = validationError;
-    return;
+    error.value = validationError
+    return
   }
 
   if (!allowRegistration.value) {
-    error.value = '当前已关闭注册，请联系管理员。';
-    return;
+    error.value = '当前已关闭注册，请联系管理员。'
+    return
   }
 
+  isRegistering.value = true
   try {
     const res = await fetch('/api/auth/users', {
       method: 'POST',
@@ -224,22 +231,23 @@ const handleRegister = async () => {
         username: username.value,
         email: email.value,
         password: password.value,
-        verification_code: verificationCode.value
-      })
-    });
+        verification_code: verificationCode.value,
+      }),
+    })
     if (!res.ok) {
-      const errMsg = await res.json();
-      throw new Error(errMsg.detail || '注册失败');
+      const errMsg = await res.json()
+      throw new Error(errMsg.detail || '注册失败')
     }
-    success.value = '注册成功！正在跳转到登录页面...';
+    success.value = '注册成功！正在跳转到登录页面...'
     setTimeout(() => {
-      router.push('/login');
-    }, 2000);
+      router.push('/login')
+    }, 2000)
   } catch (err: any) {
-    error.value = err.message || '注册失败，请稍后再试。';
-    console.error(err);
+    error.value = err.message || '注册失败，请稍后再试。'
+  } finally {
+    isRegistering.value = false
   }
-};
+}
 </script>
 
 <style scoped>

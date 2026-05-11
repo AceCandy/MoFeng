@@ -1,7 +1,12 @@
 <template>
   <section class="model-routing">
     <div class="model-routing__topbar">
-      <button type="button" class="md-btn md-btn-outlined md-ripple" :disabled="isLoading" @click="loadBundle">
+      <button
+        type="button"
+        class="md-btn md-btn-outlined md-ripple"
+        :disabled="isLoading"
+        @click="loadBundle"
+      >
         {{ isLoading ? '刷新中...' : '刷新' }}
       </button>
       <button
@@ -25,7 +30,12 @@
             <h3 class="md-title-medium">AI 阶段默认模型</h3>
             <p class="model-routing__hint">未单独选择时使用 LLM 模型里的主模型。</p>
           </div>
-          <button type="button" class="md-btn md-btn-filled-tonal md-ripple" :disabled="isSavingRoutes" @click="saveRoutes">
+          <button
+            type="button"
+            class="md-btn md-btn-filled-tonal md-ripple"
+            :disabled="isSavingRoutes"
+            @click="saveRoutes"
+          >
             {{ isSavingRoutes ? '保存中...' : '保存阶段路由' }}
           </button>
         </div>
@@ -35,17 +45,29 @@
         </p>
 
         <div v-else class="model-routing__stage-groups">
-          <div v-for="group in chatStageGroups" :key="group.title" class="model-routing__stage-group">
+          <div
+            v-for="group in chatStageGroups"
+            :key="group.title"
+            class="model-routing__stage-group"
+          >
             <h4 class="md-title-small">{{ group.title }}</h4>
             <div class="model-routing__stage-list">
-              <label v-for="stage in group.stages" :key="stage.key" class="model-routing__stage-row">
+              <label
+                v-for="stage in group.stages"
+                :key="stage.key"
+                class="model-routing__stage-row"
+              >
                 <span>
                   <strong>{{ stage.label }}</strong>
                   <small>{{ stage.description }}</small>
                 </span>
                 <select v-model="routeSelections[stage.key]" class="md-text-field-input">
                   <option value="">使用主模型</option>
-                  <option v-for="model in enabledChatModels" :key="model.id" :value="String(model.id)">
+                  <option
+                    v-for="model in enabledChatModels"
+                    :key="model.id"
+                    :value="String(model.id)"
+                  >
                     {{ model.display_name }} · {{ providerName(model.provider_id) }}
                   </option>
                 </select>
@@ -57,21 +79,25 @@
     </template>
 
     <template v-else>
-      <section
-        v-if="providerFormMode"
-        class="model-routing__panel model-routing__provider-form"
-      >
+      <section v-if="providerFormMode" class="model-routing__panel model-routing__provider-form">
         <div class="model-routing__panel-head">
           <h3 class="md-title-medium">
             {{ providerFormMode === 'create' ? '新增供应商' : '编辑供应商' }}
           </h3>
-          <button type="button" class="model-routing__link" @click="cancelProviderForm">取消</button>
+          <button type="button" class="model-routing__link" @click="cancelProviderForm">
+            取消
+          </button>
         </div>
 
         <div class="model-routing__form">
           <label class="md-text-field">
             <span class="md-text-field-label">名称</span>
-            <input v-model="providerForm.name" class="md-text-field-input" type="text" placeholder="如 OpenAI / DeepSeek / 本地 Ollama">
+            <input
+              v-model="providerForm.name"
+              class="md-text-field-input"
+              type="text"
+              placeholder="如 OpenAI / DeepSeek / 本地 Ollama"
+            />
           </label>
 
           <label class="md-text-field">
@@ -85,7 +111,12 @@
 
           <label class="md-text-field">
             <span class="md-text-field-label">API URL</span>
-            <input v-model="providerForm.base_url" class="md-text-field-input" type="text" placeholder="https://api.example.com/v1">
+            <input
+              v-model="providerForm.base_url"
+              class="md-text-field-input"
+              type="text"
+              placeholder="https://api.example.com/v1"
+            />
           </label>
 
           <label class="md-text-field">
@@ -94,16 +125,23 @@
               v-model="providerForm.api_key"
               class="md-text-field-input"
               type="password"
-              :placeholder="editingProviderId ? '留空则保留已保存 Key' : '请输入 API Key，Ollama 可留空'"
-            >
+              :placeholder="
+                editingProviderId ? '留空则保留已保存 Key' : '请输入 API Key，Ollama 可留空'
+              "
+            />
           </label>
 
           <label class="model-routing__check">
-            <input v-model="providerForm.is_enabled" type="checkbox">
+            <input v-model="providerForm.is_enabled" type="checkbox" />
             <span>启用供应商</span>
           </label>
 
-          <button type="button" class="md-btn md-btn-filled md-ripple" :disabled="isSavingProvider" @click="saveProviderForm">
+          <button
+            type="button"
+            class="md-btn md-btn-filled md-ripple"
+            :disabled="isSavingProvider"
+            @click="saveProviderForm"
+          >
             {{ isSavingProvider ? '保存中...' : '保存供应商' }}
           </button>
         </div>
@@ -162,7 +200,11 @@
           </header>
 
           <div class="model-routing__provider-actions">
-            <button type="button" class="md-btn md-btn-text md-ripple" @click="beginEditProvider(provider)">
+            <button
+              type="button"
+              class="md-btn md-btn-text md-ripple"
+              @click="beginEditProvider(provider)"
+            >
               编辑供应商
             </button>
             <button
@@ -182,7 +224,9 @@
           >
             <div class="model-routing__picker-head">
               <strong>{{ activeSection === 'llm' ? '选择 LLM 模型' : '选择向量模型' }}</strong>
-              <button type="button" class="model-routing__link" @click="closeModelPicker">关闭</button>
+              <button type="button" class="model-routing__link" @click="closeModelPicker">
+                关闭
+              </button>
             </div>
 
             <label class="md-text-field model-routing__picker-search">
@@ -192,13 +236,16 @@
                 class="md-text-field-input"
                 type="search"
                 placeholder="输入模型名过滤"
-              >
+              />
             </label>
 
             <p v-if="providerFetchState(provider.id).isLoading" class="model-routing__empty">
               正在拉取模型...
             </p>
-            <p v-else-if="filteredModelNamesForProvider(provider.id).length === 0" class="model-routing__empty">
+            <p
+              v-else-if="filteredModelNamesForProvider(provider.id).length === 0"
+              class="model-routing__empty"
+            >
               没有可选模型。
             </p>
             <div v-else class="model-routing__picker-list">
@@ -215,21 +262,28 @@
                   :disabled="!provider.is_enabled"
                   aria-label="启用 LLM 模型"
                   @change="toggleChatModel(provider, modelName, $event)"
-                >
+                />
                 <input
                   v-else
                   name="embedding-model"
                   type="radio"
-                  :checked="Boolean(embeddingModelForName(provider.id, modelName)?.is_enabled && embeddingModelForName(provider.id, modelName)?.is_default_embedding)"
+                  :checked="
+                    Boolean(
+                      embeddingModelForName(provider.id, modelName)?.is_enabled &&
+                        embeddingModelForName(provider.id, modelName)?.is_default_embedding,
+                    )
+                  "
                   :disabled="!provider.is_enabled"
                   aria-label="选择向量模型"
                   @change="selectEmbeddingModel(provider, modelName)"
-                >
+                />
               </label>
             </div>
           </div>
 
-          <p v-if="!provider.is_enabled" class="model-routing__hint">启用供应商后才能使用里面的模型。</p>
+          <p v-if="!provider.is_enabled" class="model-routing__hint">
+            启用供应商后才能使用里面的模型。
+          </p>
           <p v-if="providerFetchState(provider.id).error" class="model-routing__hint is-error">
             {{ providerFetchState(provider.id).error }}
           </p>
@@ -238,22 +292,20 @@
             <p class="md-label-medium model-routing__model-list-title">
               {{ activeSection === 'llm' ? '已选 LLM 模型' : '已选向量模型' }}
             </p>
-            <p v-if="selectedModelChipsForProvider(provider.id).length === 0" class="model-routing__empty">
+            <p
+              v-if="selectedModelChipsForProvider(provider.id).length === 0"
+              class="model-routing__empty"
+            >
               点击“拉取模型”后勾选模型。
             </p>
-            <div
-              v-else
-              class="model-routing__selected-chip-list"
-            >
+            <div v-else class="model-routing__selected-chip-list">
               <span
                 v-for="chip in selectedModelChipsForProvider(provider.id)"
                 :key="chip.id"
                 class="model-routing__selected-chip"
               >
                 <span>{{ chip.display_name || chip.model_name }}</span>
-                <small v-if="activeSection === 'llm' && chip.is_default_chat">
-                  主模型
-                </small>
+                <small v-if="activeSection === 'llm' && chip.is_default_chat"> 主模型 </small>
                 <small v-else-if="activeSection === 'embedding' && chip.is_default_embedding">
                   当前使用
                 </small>
@@ -280,7 +332,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue'
 import {
   createProvider,
   createUserModel,
@@ -296,105 +348,204 @@ import {
   type UserAIModel,
   type UserAIModelCreate,
   type UserModelProvider,
-} from '@/api/llm';
+} from '@/api/llm'
+import { globalAlert } from '@/composables/useAlert'
 
-type Capability = 'chat' | 'embedding';
-type RoutingSection = 'llm' | 'embedding' | 'routes';
-type ProviderFormMode = 'create' | 'edit' | null;
+type Capability = 'chat' | 'embedding'
+type RoutingSection = 'llm' | 'embedding' | 'routes'
+type ProviderFormMode = 'create' | 'edit' | null
 
 interface StageDefinition {
-  key: string;
-  label: string;
-  capability: Capability;
-  description: string;
+  key: string
+  label: string
+  capability: Capability
+  description: string
 }
 
 interface StageGroup {
-  title: string;
-  stages: StageDefinition[];
+  title: string
+  stages: StageDefinition[]
 }
 
 interface ProviderForm {
-  name: string;
-  provider_type: ProviderType;
-  base_url: string;
-  api_key: string;
-  is_enabled: boolean;
+  name: string
+  provider_type: ProviderType
+  base_url: string
+  api_key: string
+  is_enabled: boolean
 }
 
 interface ProviderFetchState {
-  isLoading: boolean;
-  modelsByCapability: Record<Capability, string[]>;
-  error: string;
+  isLoading: boolean
+  modelsByCapability: Record<Capability, string[]>
+  error: string
 }
 
 const emit = defineEmits<{
-  (event: 'saved'): void;
-}>();
+  (event: 'saved'): void
+}>()
 
-const props = defineProps<{ activeSection?: RoutingSection }>();
+const props = defineProps<{ activeSection?: RoutingSection }>()
 
-const activeSection = computed<RoutingSection>(() => props.activeSection || 'llm');
+const activeSection = computed<RoutingSection>(() => props.activeSection || 'llm')
 
 const stageGroups: StageGroup[] = [
   {
     title: '导入与灵感',
     stages: [
-      { key: 'import_analysis', label: '导入分析', capability: 'chat', description: '导入小说角色筛选与结构分析' },
-      { key: 'concept_conversation', label: '灵感对话', capability: 'chat', description: '灵感模式多轮概念对话' },
-      { key: 'world_blueprint', label: '完整蓝图', capability: 'chat', description: '由灵感历史生成整本书蓝图' },
+      {
+        key: 'import_analysis',
+        label: '导入分析',
+        capability: 'chat',
+        description: '导入小说角色筛选与结构分析',
+      },
+      {
+        key: 'concept_conversation',
+        label: '灵感对话',
+        capability: 'chat',
+        description: '灵感模式多轮概念对话',
+      },
+      {
+        key: 'world_blueprint',
+        label: '完整蓝图',
+        capability: 'chat',
+        description: '由灵感历史生成整本书蓝图',
+      },
     ],
   },
   {
     title: '规划',
     stages: [
-      { key: 'chapter_outline', label: '章节大纲', capability: 'chat', description: '续写章节大纲' },
-      { key: 'chapter_blueprint', label: '章节蓝图', capability: 'chat', description: '单章或批量章节蓝图' },
-      { key: 'chapter_mission', label: '导演脚本', capability: 'chat', description: '章节写作前的执行脚本' },
+      {
+        key: 'chapter_outline',
+        label: '章节大纲',
+        capability: 'chat',
+        description: '续写章节大纲',
+      },
+      {
+        key: 'chapter_blueprint',
+        label: '章节蓝图',
+        capability: 'chat',
+        description: '单章或批量章节蓝图',
+      },
+      {
+        key: 'chapter_mission',
+        label: '导演脚本',
+        capability: 'chat',
+        description: '章节写作前的执行脚本',
+      },
     ],
   },
   {
     title: '写作',
     stages: [
-      { key: 'chapter_preview', label: '章节预览', capability: 'chat', description: '预览、评估与扩写' },
-      { key: 'chapter_writing', label: '正文生成', capability: 'chat', description: '章节正文主生成' },
-      { key: 'chapter_rewrite', label: '护栏重写', capability: 'chat', description: '一致性和护栏自动修复' },
-      { key: 'chapter_compression', label: '字数压缩', capability: 'chat', description: '超长章节压缩' },
-      { key: 'chapter_enrichment', label: '章节润色', capability: 'chat', description: '对话、场景和章节增强' },
+      {
+        key: 'chapter_preview',
+        label: '章节预览',
+        capability: 'chat',
+        description: '预览、评估与扩写',
+      },
+      {
+        key: 'chapter_writing',
+        label: '正文生成',
+        capability: 'chat',
+        description: '章节正文主生成',
+      },
+      {
+        key: 'chapter_rewrite',
+        label: '护栏重写',
+        capability: 'chat',
+        description: '一致性和护栏自动修复',
+      },
+      {
+        key: 'chapter_compression',
+        label: '字数压缩',
+        capability: 'chat',
+        description: '超长章节压缩',
+      },
+      {
+        key: 'chapter_enrichment',
+        label: '章节润色',
+        capability: 'chat',
+        description: '对话、场景和章节增强',
+      },
     ],
   },
   {
     title: '复盘与优化',
     stages: [
-      { key: 'version_review', label: '版本评审', capability: 'chat', description: '多版本评审和单版本评价' },
-      { key: 'chapter_optimization', label: '章节优化', capability: 'chat', description: '节奏、心理、环境、对白优化' },
-      { key: 'deep_review', label: '深度审稿', capability: 'chat', description: '六维复盘、读者模拟、自我批评' },
-      { key: 'emotion_analysis', label: '情绪曲线', capability: 'chat', description: '章节情绪曲线分析' },
-      { key: 'consistency_check', label: '一致性检查', capability: 'chat', description: '只诊断问题，不改正文' },
+      {
+        key: 'version_review',
+        label: '版本评审',
+        capability: 'chat',
+        description: '多版本评审和单版本评价',
+      },
+      {
+        key: 'chapter_optimization',
+        label: '章节优化',
+        capability: 'chat',
+        description: '节奏、心理、环境、对白优化',
+      },
+      {
+        key: 'deep_review',
+        label: '深度审稿',
+        capability: 'chat',
+        description: '六维复盘、读者模拟、自我批评',
+      },
+      {
+        key: 'emotion_analysis',
+        label: '情绪曲线',
+        capability: 'chat',
+        description: '章节情绪曲线分析',
+      },
+      {
+        key: 'consistency_check',
+        label: '一致性检查',
+        capability: 'chat',
+        description: '只诊断问题，不改正文',
+      },
     ],
   },
   {
     title: '记忆与 RAG',
     stages: [
-      { key: 'summary_memory', label: '摘要记忆', capability: 'chat', description: '章节摘要、全局摘要、角色状态' },
-      { key: 'rag_query', label: '检索规划', capability: 'chat', description: '检索查询生成和上下文过滤' },
-      { key: 'foreshadowing', label: '伏笔处理', capability: 'chat', description: '伏笔候选、状态判断和提醒' },
+      {
+        key: 'summary_memory',
+        label: '摘要记忆',
+        capability: 'chat',
+        description: '章节摘要、全局摘要、角色状态',
+      },
+      {
+        key: 'rag_query',
+        label: '检索规划',
+        capability: 'chat',
+        description: '检索查询生成和上下文过滤',
+      },
+      {
+        key: 'foreshadowing',
+        label: '伏笔处理',
+        capability: 'chat',
+        description: '伏笔候选、状态判断和提醒',
+      },
     ],
   },
-];
+]
 
-const providers = ref<UserModelProvider[]>([]);
-const models = ref<UserAIModel[]>([]);
-const routeSelections = reactive<Record<string, string>>({});
-const providerFetchStates = reactive<Record<number, ProviderFetchState>>({});
-const isLoading = ref(false);
-const isSavingProvider = ref(false);
-const isSavingRoutes = ref(false);
-const editingProviderId = ref<number | null>(null);
-const providerFormMode = ref<ProviderFormMode>(null);
-const activeModelPickerProviderId = ref<number | null>(null);
-const modelPickerQuery = ref('');
-const feedback = ref<{ type: 'success' | 'error'; message: string }>({ type: 'success', message: '' });
+const providers = ref<UserModelProvider[]>([])
+const models = ref<UserAIModel[]>([])
+const routeSelections = reactive<Record<string, string>>({})
+const providerFetchStates = reactive<Record<number, ProviderFetchState>>({})
+const isLoading = ref(false)
+const isSavingProvider = ref(false)
+const isSavingRoutes = ref(false)
+const editingProviderId = ref<number | null>(null)
+const providerFormMode = ref<ProviderFormMode>(null)
+const activeModelPickerProviderId = ref<number | null>(null)
+const modelPickerQuery = ref('')
+const feedback = ref<{ type: 'success' | 'error'; message: string }>({
+  type: 'success',
+  message: '',
+})
 
 const emptyProviderForm = (): ProviderForm => ({
   name: '',
@@ -402,21 +553,25 @@ const emptyProviderForm = (): ProviderForm => ({
   base_url: '',
   api_key: '',
   is_enabled: true,
-});
+})
 
-const providerForm = reactive<ProviderForm>(emptyProviderForm());
+const providerForm = reactive<ProviderForm>(emptyProviderForm())
 
-const chatStageGroups = computed(() => stageGroups);
-const allStageKeys = computed(() => chatStageGroups.value.flatMap(group => group.stages.map(stage => stage.key)));
-const enabledChatModels = computed(() => models.value.filter(model => (
-  model.is_enabled && Boolean(model.capabilities.chat)
-)));
-const primaryChatModel = computed(() => enabledChatModels.value.find(model => model.is_default_chat));
-const chatModelsByProvider = computed(() => groupModelsByProvider('chat'));
-const embeddingModelsByProvider = computed(() => groupModelsByProvider('embedding'));
-const activeProviders = computed(() => providers.value.filter(provider => (
-  providerCapabilities(provider)[activeModelCapability()]
-)));
+const chatStageGroups = computed(() => stageGroups)
+const allStageKeys = computed(() =>
+  chatStageGroups.value.flatMap((group) => group.stages.map((stage) => stage.key)),
+)
+const enabledChatModels = computed(() =>
+  models.value.filter((model) => model.is_enabled && Boolean(model.capabilities.chat)),
+)
+const primaryChatModel = computed(() =>
+  enabledChatModels.value.find((model) => model.is_default_chat),
+)
+const chatModelsByProvider = computed(() => groupModelsByProvider('chat'))
+const embeddingModelsByProvider = computed(() => groupModelsByProvider('embedding'))
+const activeProviders = computed(() =>
+  providers.value.filter((provider) => providerCapabilities(provider)[activeModelCapability()]),
+)
 
 const providerFetchState = (providerId: number): ProviderFetchState => {
   if (!providerFetchStates[providerId]) {
@@ -424,141 +579,151 @@ const providerFetchState = (providerId: number): ProviderFetchState => {
       isLoading: false,
       modelsByCapability: { chat: [], embedding: [] },
       error: '',
-    };
+    }
   }
-  return providerFetchStates[providerId];
-};
+  return providerFetchStates[providerId]
+}
 
 const groupModelsByProvider = (capability: Capability): Record<number, UserAIModel[]> => {
   return models.value.reduce<Record<number, UserAIModel[]>>((result, model) => {
     if (!model.capabilities[capability]) {
-      return result;
+      return result
     }
-    result[model.provider_id] = result[model.provider_id] || [];
-    result[model.provider_id].push(model);
-    return result;
-  }, {});
-};
+    result[model.provider_id] = result[model.provider_id] || []
+    result[model.provider_id].push(model)
+    return result
+  }, {})
+}
 
 const modelNamesForProvider = (providerId: number): string[] => {
-  const capability = activeModelCapability();
-  const existing = capability === 'chat'
-    ? (chatModelsByProvider.value[providerId] || []).map(model => model.model_name)
-    : (embeddingModelsByProvider.value[providerId] || []).map(model => model.model_name);
-  const fetched = providerFetchState(providerId).modelsByCapability[capability];
-  return Array.from(new Set([...existing, ...fetched])).sort((a, b) => a.localeCompare(b));
-};
+  const capability = activeModelCapability()
+  const existing =
+    capability === 'chat'
+      ? (chatModelsByProvider.value[providerId] || []).map((model) => model.model_name)
+      : (embeddingModelsByProvider.value[providerId] || []).map((model) => model.model_name)
+  const fetched = providerFetchState(providerId).modelsByCapability[capability]
+  return Array.from(new Set([...existing, ...fetched])).sort((a, b) => a.localeCompare(b))
+}
 
 const filteredModelNamesForProvider = (providerId: number): string[] => {
-  const query = modelPickerQuery.value.trim().toLowerCase();
-  const names = modelNamesForProvider(providerId);
+  const query = modelPickerQuery.value.trim().toLowerCase()
+  const names = modelNamesForProvider(providerId)
   if (!query) {
-    return names;
+    return names
   }
-  return names.filter(modelName => modelName.toLowerCase().includes(query));
-};
+  return names.filter((modelName) => modelName.toLowerCase().includes(query))
+}
 
 const selectedModelChipsForProvider = (providerId: number): UserAIModel[] => {
-  const capability = activeModelCapability();
-  const source = capability === 'chat'
-    ? chatModelsByProvider.value[providerId] || []
-    : embeddingModelsByProvider.value[providerId] || [];
-  return source.filter(model => model.is_enabled);
-};
+  const capability = activeModelCapability()
+  const source =
+    capability === 'chat'
+      ? chatModelsByProvider.value[providerId] || []
+      : embeddingModelsByProvider.value[providerId] || []
+  return source.filter((model) => model.is_enabled)
+}
 
-const chatModelForName = (providerId: number, modelName: string): UserAIModel | undefined => (
-  models.value.find(model => model.provider_id === providerId && model.model_name === modelName && Boolean(model.capabilities.chat))
-);
+const chatModelForName = (providerId: number, modelName: string): UserAIModel | undefined =>
+  models.value.find(
+    (model) =>
+      model.provider_id === providerId &&
+      model.model_name === modelName &&
+      Boolean(model.capabilities.chat),
+  )
 
-const embeddingModelForName = (providerId: number, modelName: string): UserAIModel | undefined => (
-  models.value.find(model => providerId === model.provider_id && model.model_name === modelName && Boolean(model.capabilities.embedding))
-);
+const embeddingModelForName = (providerId: number, modelName: string): UserAIModel | undefined =>
+  models.value.find(
+    (model) =>
+      providerId === model.provider_id &&
+      model.model_name === modelName &&
+      Boolean(model.capabilities.embedding),
+  )
 
-const savedModelForActiveSection = (providerId: number, modelName: string): UserAIModel | undefined => (
+const savedModelForActiveSection = (
+  providerId: number,
+  modelName: string,
+): UserAIModel | undefined =>
   activeSection.value === 'embedding'
     ? embeddingModelForName(providerId, modelName)
     : chatModelForName(providerId, modelName)
-);
 
 const setFeedback = (type: 'success' | 'error', message: string) => {
-  feedback.value = { type, message };
-};
+  feedback.value = { type, message }
+}
 
 const assignProviderForm = (next: ProviderForm) => {
-  Object.assign(providerForm, next);
-};
+  Object.assign(providerForm, next)
+}
 
-const activeModelCapability = (): Capability => (
+const activeModelCapability = (): Capability =>
   activeSection.value === 'embedding' ? 'embedding' : 'chat'
-);
 
 const createProviderCapabilities = (): Record<Capability, boolean> => {
-  const capability = activeModelCapability();
+  const capability = activeModelCapability()
   return {
     chat: capability === 'chat',
     embedding: capability === 'embedding',
-  };
-};
+  }
+}
 
 const providerCapabilities = (provider: UserModelProvider): Record<Capability, boolean> => ({
   chat: Boolean(provider.capabilities?.chat),
   embedding: Boolean(provider.capabilities?.embedding),
-});
+})
 
-const isModelPickerOpen = (providerId: number): boolean => (
+const isModelPickerOpen = (providerId: number): boolean =>
   activeModelPickerProviderId.value === providerId
-);
 
 const closeModelPicker = () => {
-  activeModelPickerProviderId.value = null;
-  modelPickerQuery.value = '';
-};
+  activeModelPickerProviderId.value = null
+  modelPickerQuery.value = ''
+}
 
 const loadBundle = async () => {
-  isLoading.value = true;
+  isLoading.value = true
   try {
-    const bundle = await getLLMConfigBundle();
-    providers.value = bundle.providers;
-    models.value = bundle.models;
+    const bundle = await getLLMConfigBundle()
+    providers.value = bundle.providers
+    models.value = bundle.models
     for (const key of allStageKeys.value) {
-      routeSelections[key] = '';
+      routeSelections[key] = ''
     }
     for (const route of bundle.stage_routes) {
       if (allStageKeys.value.includes(route.stage)) {
-        routeSelections[route.stage] = String(route.model_id);
+        routeSelections[route.stage] = String(route.model_id)
       }
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : '未知错误';
-    setFeedback('error', `读取模型设置失败：${message}`);
+    const message = error instanceof Error ? error.message : '未知错误'
+    setFeedback('error', `读取模型设置失败：${message}`)
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 
 const beginCreateProvider = () => {
-  editingProviderId.value = null;
-  providerFormMode.value = 'create';
-  assignProviderForm(emptyProviderForm());
-};
+  editingProviderId.value = null
+  providerFormMode.value = 'create'
+  assignProviderForm(emptyProviderForm())
+}
 
 const beginEditProvider = (provider: UserModelProvider) => {
-  editingProviderId.value = provider.id;
-  providerFormMode.value = 'edit';
+  editingProviderId.value = provider.id
+  providerFormMode.value = 'edit'
   assignProviderForm({
     name: provider.name,
     provider_type: provider.provider_type,
     base_url: provider.base_url,
     api_key: '',
     is_enabled: provider.is_enabled,
-  });
-};
+  })
+}
 
 const cancelProviderForm = () => {
-  editingProviderId.value = null;
-  providerFormMode.value = null;
-  assignProviderForm(emptyProviderForm());
-};
+  editingProviderId.value = null
+  providerFormMode.value = null
+  assignProviderForm(emptyProviderForm())
+}
 
 const saveProviderForm = async () => {
   const payload: ProviderCreate = {
@@ -568,13 +733,13 @@ const saveProviderForm = async () => {
     api_key: providerForm.api_key.trim() || null,
     capabilities: createProviderCapabilities(),
     is_enabled: providerForm.is_enabled,
-  };
+  }
   if (!payload.name || !payload.base_url) {
-    setFeedback('error', '请填写供应商名称和 API URL。');
-    return;
+    setFeedback('error', '请填写供应商名称和 API URL。')
+    return
   }
 
-  isSavingProvider.value = true;
+  isSavingProvider.value = true
   try {
     const saved = editingProviderId.value
       ? await updateProvider(editingProviderId.value, {
@@ -584,99 +749,100 @@ const saveProviderForm = async () => {
           ...(providerForm.api_key.trim() ? { api_key: payload.api_key } : {}),
           is_enabled: payload.is_enabled,
         })
-      : await createProvider(payload);
+      : await createProvider(payload)
 
-    const index = providers.value.findIndex(provider => provider.id === saved.id);
+    const index = providers.value.findIndex((provider) => provider.id === saved.id)
     if (index >= 0) {
-      providers.value[index] = saved;
+      providers.value[index] = saved
     } else {
-      providers.value.push(saved);
+      providers.value.push(saved)
     }
-    cancelProviderForm();
-    setFeedback('success', '供应商已保存。');
-    emit('saved');
+    cancelProviderForm()
+    setFeedback('success', '供应商已保存。')
+    emit('saved')
   } catch (error) {
-    const message = error instanceof Error ? error.message : '未知错误';
-    setFeedback('error', `供应商保存失败：${message}`);
+    const message = error instanceof Error ? error.message : '未知错误'
+    setFeedback('error', `供应商保存失败：${message}`)
   } finally {
-    isSavingProvider.value = false;
+    isSavingProvider.value = false
   }
-};
+}
 
 const toggleProviderEnabled = async (provider: UserModelProvider) => {
-  isSavingProvider.value = true;
+  isSavingProvider.value = true
   try {
-    await updateProvider(provider.id, { is_enabled: !provider.is_enabled });
-    await loadBundle();
-    setFeedback('success', provider.is_enabled ? '供应商已停用。' : '供应商已启用。');
-    emit('saved');
+    await updateProvider(provider.id, { is_enabled: !provider.is_enabled })
+    await loadBundle()
+    setFeedback('success', provider.is_enabled ? '供应商已停用。' : '供应商已启用。')
+    emit('saved')
   } catch (error) {
-    const message = error instanceof Error ? error.message : '未知错误';
-    setFeedback('error', `供应商状态更新失败：${message}`);
+    const message = error instanceof Error ? error.message : '未知错误'
+    setFeedback('error', `供应商状态更新失败：${message}`)
   } finally {
-    isSavingProvider.value = false;
+    isSavingProvider.value = false
   }
-};
+}
 
 const deleteProviderFromCard = async (provider: UserModelProvider) => {
-  const confirmed = window.confirm(
+  const confirmed = await globalAlert.showConfirm(
     `确定删除供应商“${provider.name}”吗？关联模型和阶段路由也会一起删除。`,
-  );
+    '删除供应商',
+  )
   if (!confirmed) {
-    return;
+    return
   }
 
-  isSavingProvider.value = true;
+  isSavingProvider.value = true
   try {
-    await deleteProvider(provider.id);
+    await deleteProvider(provider.id)
     if (editingProviderId.value === provider.id) {
-      cancelProviderForm();
+      cancelProviderForm()
     }
-    delete providerFetchStates[provider.id];
-    await loadBundle();
-    setFeedback('success', '供应商已删除。');
-    emit('saved');
+    delete providerFetchStates[provider.id]
+    await loadBundle()
+    setFeedback('success', '供应商已删除。')
+    emit('saved')
   } catch (error) {
-    const message = error instanceof Error ? error.message : '未知错误';
-    setFeedback('error', `删除供应商失败：${message}`);
+    const message = error instanceof Error ? error.message : '未知错误'
+    setFeedback('error', `删除供应商失败：${message}`)
   } finally {
-    isSavingProvider.value = false;
+    isSavingProvider.value = false
   }
-};
+}
 
 const loadProviderModels = async (provider: UserModelProvider) => {
-  const state = providerFetchState(provider.id);
-  const capability = activeModelCapability();
-  state.isLoading = true;
-  state.error = '';
+  const state = providerFetchState(provider.id)
+  const capability = activeModelCapability()
+  state.isLoading = true
+  state.error = ''
   try {
-    state.modelsByCapability[capability] = await getProviderModels(provider.id);
+    state.modelsByCapability[capability] = await getProviderModels(provider.id)
     if (state.modelsByCapability[capability].length === 0) {
-      state.error = '未拉取到模型，请检查 API URL 与 API Key。';
+      state.error = '未拉取到模型，请检查 API URL 与 API Key。'
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : '未知错误';
-    state.error = `拉取模型失败：${message}`;
+    const message = error instanceof Error ? error.message : '未知错误'
+    state.error = `拉取模型失败：${message}`
   } finally {
-    state.isLoading = false;
+    state.isLoading = false
   }
-};
+}
 
 const openProviderModelPicker = async (provider: UserModelProvider) => {
   if (!provider.is_enabled) {
-    return;
+    return
   }
-  activeModelPickerProviderId.value = provider.id;
-  modelPickerQuery.value = '';
-  await loadProviderModels(provider);
-};
+  activeModelPickerProviderId.value = provider.id
+  modelPickerQuery.value = ''
+  await loadProviderModels(provider)
+}
 
 const createModelPayload = (
   provider: UserModelProvider,
   modelName: string,
   capability: Capability,
 ): UserAIModelCreate => {
-  const isChat = capability === 'chat';
+  const isChat = capability === 'chat'
   if (isChat) {
     return {
       provider_id: provider.id,
@@ -688,7 +854,7 @@ const createModelPayload = (
       is_default_embedding: false,
       is_enabled: true,
       sort_order: 0,
-    };
+    }
   }
 
   return {
@@ -701,153 +867,160 @@ const createModelPayload = (
     is_default_embedding: true,
     is_enabled: true,
     sort_order: 0,
-  };
-};
+  }
+}
 
 const upsertModelForCapability = async (
   provider: UserModelProvider,
   modelName: string,
   capability: Capability,
 ): Promise<UserAIModel> => {
-  const existing = capability === 'chat'
-    ? chatModelForName(provider.id, modelName)
-    : embeddingModelForName(provider.id, modelName);
+  const existing =
+    capability === 'chat'
+      ? chatModelForName(provider.id, modelName)
+      : embeddingModelForName(provider.id, modelName)
   if (!existing) {
-    return createUserModel(createModelPayload(provider, modelName, capability));
+    return createUserModel(createModelPayload(provider, modelName, capability))
   }
   if (!existing.is_enabled) {
-    return updateUserModel(existing.id, { is_enabled: true });
+    return updateUserModel(existing.id, { is_enabled: true })
   }
-  return existing;
-};
+  return existing
+}
 
 const toggleChatModel = async (provider: UserModelProvider, modelName: string, event: Event) => {
-  const checked = (event.target as HTMLInputElement).checked;
-  const existing = chatModelForName(provider.id, modelName);
+  const checked = (event.target as HTMLInputElement).checked
+  const existing = chatModelForName(provider.id, modelName)
   try {
     if (checked) {
-      await upsertModelForCapability(provider, modelName, 'chat');
+      await upsertModelForCapability(provider, modelName, 'chat')
     } else if (existing) {
       if (existing.is_default_chat) {
-        setFeedback('error', '主模型不能直接停用，请先选择另一个主模型。');
-        (event.target as HTMLInputElement).checked = true;
-        return;
+        setFeedback('error', '主模型不能直接停用，请先选择另一个主模型。')
+        ;(event.target as HTMLInputElement).checked = true
+        return
       }
-      await updateUserModel(existing.id, { is_enabled: false });
+      await updateUserModel(existing.id, { is_enabled: false })
     }
-    await loadBundle();
-    emit('saved');
+    await loadBundle()
+    emit('saved')
   } catch (error) {
-    const message = error instanceof Error ? error.message : '未知错误';
-    setFeedback('error', `更新 LLM 模型失败：${message}`);
+    const message = error instanceof Error ? error.message : '未知错误'
+    setFeedback('error', `更新 LLM 模型失败：${message}`)
   }
-};
+}
 
 const setPrimaryChatModel = async (model?: UserAIModel) => {
   if (!model) {
-    return;
+    return
   }
   try {
-    await updateUserModel(model.id, { is_enabled: true, is_default_chat: true });
-    await loadBundle();
-    emit('saved');
+    await updateUserModel(model.id, { is_enabled: true, is_default_chat: true })
+    await loadBundle()
+    emit('saved')
   } catch (error) {
-    const message = error instanceof Error ? error.message : '未知错误';
-    setFeedback('error', `设置主模型失败：${message}`);
+    const message = error instanceof Error ? error.message : '未知错误'
+    setFeedback('error', `设置主模型失败：${message}`)
   }
-};
+}
 
 const setPrimaryChatModelById = async (event: Event) => {
-  const modelId = Number((event.target as HTMLSelectElement).value);
+  const modelId = Number((event.target as HTMLSelectElement).value)
   if (!modelId) {
-    return;
+    return
   }
-  await setPrimaryChatModel(models.value.find(model => model.id === modelId));
-};
+  await setPrimaryChatModel(models.value.find((model) => model.id === modelId))
+}
 
 const selectEmbeddingModel = async (provider: UserModelProvider, modelName: string) => {
   try {
-    const selected = await upsertModelForCapability(provider, modelName, 'embedding');
-    const embeddingModels = models.value.filter(model => model.capabilities.embedding);
-    await Promise.all(embeddingModels.map(model => updateUserModel(model.id, {
-      is_enabled: model.id === selected.id,
-      is_default_embedding: model.id === selected.id,
-    })));
-    if (!embeddingModels.some(model => model.id === selected.id)) {
-      await updateUserModel(selected.id, { is_enabled: true, is_default_embedding: true });
+    const selected = await upsertModelForCapability(provider, modelName, 'embedding')
+    const embeddingModels = models.value.filter((model) => model.capabilities.embedding)
+    await Promise.all(
+      embeddingModels.map((model) =>
+        updateUserModel(model.id, {
+          is_enabled: model.id === selected.id,
+          is_default_embedding: model.id === selected.id,
+        }),
+      ),
+    )
+    if (!embeddingModels.some((model) => model.id === selected.id)) {
+      await updateUserModel(selected.id, { is_enabled: true, is_default_embedding: true })
     }
-    await loadBundle();
-    emit('saved');
+    await loadBundle()
+    emit('saved')
   } catch (error) {
-    const message = error instanceof Error ? error.message : '未知错误';
-    setFeedback('error', `设置向量模型失败：${message}`);
+    const message = error instanceof Error ? error.message : '未知错误'
+    setFeedback('error', `设置向量模型失败：${message}`)
   }
-};
+}
 
 const deleteModelForActiveSection = async (provider: UserModelProvider, modelName: string) => {
-  const model = savedModelForActiveSection(provider.id, modelName);
+  const model = savedModelForActiveSection(provider.id, modelName)
   if (!model) {
-    return;
+    return
   }
   if (model.is_default_chat) {
-    setFeedback('error', '主模型不能直接删除，请先选择另一个主模型。');
-    return;
+    setFeedback('error', '主模型不能直接删除，请先选择另一个主模型。')
+    return
   }
   if (model.is_default_embedding) {
-    setFeedback('error', '当前向量模型不能直接删除，请先选择另一个向量模型。');
-    return;
+    setFeedback('error', '当前向量模型不能直接删除，请先选择另一个向量模型。')
+    return
   }
 
-  const label = model.display_name || model.model_name;
-  const confirmed = window.confirm(`确定删除模型“${label}”吗？关联的阶段路由也会一起移除。`);
+  const label = model.display_name || model.model_name
+  const confirmed = await globalAlert.showConfirm(
+    `确定删除模型“${label}”吗？关联的阶段路由也会一起移除。`,
+    '删除模型',
+  )
   if (!confirmed) {
-    return;
+    return
   }
 
   try {
-    await deleteUserModel(model.id);
-    await loadBundle();
-    setFeedback('success', '模型已删除。');
-    emit('saved');
+    await deleteUserModel(model.id)
+    await loadBundle()
+    setFeedback('success', '模型已删除。')
+    emit('saved')
   } catch (error) {
-    const message = error instanceof Error ? error.message : '未知错误';
-    setFeedback('error', `删除模型失败：${message}`);
+    const message = error instanceof Error ? error.message : '未知错误'
+    setFeedback('error', `删除模型失败：${message}`)
   }
-};
+}
 
 const saveRoutes = async () => {
   const routes = Object.entries(routeSelections)
     .filter(([, modelId]) => modelId)
-    .map(([stage, modelId]) => ({ stage, model_id: Number(modelId) }));
+    .map(([stage, modelId]) => ({ stage, model_id: Number(modelId) }))
 
-  isSavingRoutes.value = true;
+  isSavingRoutes.value = true
   try {
-    const savedRoutes = await saveStageRoutes({ routes });
+    const savedRoutes = await saveStageRoutes({ routes })
     for (const key of allStageKeys.value) {
-      routeSelections[key] = '';
+      routeSelections[key] = ''
     }
     for (const route of savedRoutes) {
       if (allStageKeys.value.includes(route.stage)) {
-        routeSelections[route.stage] = String(route.model_id);
+        routeSelections[route.stage] = String(route.model_id)
       }
     }
-    setFeedback('success', '阶段路由已保存。');
-    emit('saved');
+    setFeedback('success', '阶段路由已保存。')
+    emit('saved')
   } catch (error) {
-    const message = error instanceof Error ? error.message : '未知错误';
-    setFeedback('error', `阶段路由保存失败：${message}`);
+    const message = error instanceof Error ? error.message : '未知错误'
+    setFeedback('error', `阶段路由保存失败：${message}`)
   } finally {
-    isSavingRoutes.value = false;
+    isSavingRoutes.value = false
   }
-};
+}
 
-const providerName = (providerId: number): string => (
-  providers.value.find(provider => provider.id === providerId)?.name || `供应商 ${providerId}`
-);
+const providerName = (providerId: number): string =>
+  providers.value.find((provider) => provider.id === providerId)?.name || `供应商 ${providerId}`
 
 onMounted(() => {
-  void loadBundle();
-});
+  void loadBundle()
+})
 </script>
 
 <style scoped>

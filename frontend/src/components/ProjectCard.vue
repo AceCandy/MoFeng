@@ -1,19 +1,18 @@
 <!-- AIMETA P=项目卡片_小说项目展示|R=项目信息卡片|NR=不含编辑功能|E=component:ProjectCard|X=internal|A=卡片组件|D=vue|S=dom|RD=./README.ai -->
 <template>
-  <div
-    class="md-card md-card-elevated group p-5 flex flex-col justify-between transition-colors duration-200"
-    style="border-radius: var(--md-radius-lg);"
+  <article
+    class="md-card md-card-outlined project-card"
+    :aria-label="`${project.title}，${getStatusText}`"
   >
     <div>
-      <!-- Header: Icon + Title -->
-      <div class="flex items-center gap-4 mb-4">
-        <div 
-          class="w-12 h-12 rounded-full flex items-center justify-center"
+      <div class="project-card__header">
+        <div
+          class="project-card__mark"
           :style="{ backgroundColor: themeColors.container, color: themeColors.onContainer }"
+          aria-hidden="true"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            class="h-6 w-6"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -26,87 +25,125 @@
             />
           </svg>
         </div>
-        <div class="flex-1 cursor-pointer" @click="$emit('detail', project.id)">
-          <h3 class="md-title-medium hover:opacity-80 transition-opacity" style="color: var(--md-on-surface);">
+        <div class="project-card__summary">
+          <button
+            type="button"
+            class="project-card__title-button"
+            @click="$emit('detail', project.id)"
+          >
             {{ project.title }}
-          </h3>
-          <p class="md-body-small" style="color: var(--md-on-surface-variant);">
-            {{ project.genre || '未知类型' }} · {{ getStatusText }}
-          </p>
-          <p class="md-label-small mt-1" style="color: var(--md-on-surface-variant);">
-            最后编辑: {{ formatDateTime(project.last_edited) }}
-          </p>
+          </button>
+          <p>{{ project.genre || '未知类型' }} · {{ getStatusText }}</p>
+          <p class="project-card__meta">最后编辑: {{ formatDateTime(project.last_edited) }}</p>
         </div>
       </div>
 
-      <!-- Progress Bar -->
-      <div class="mb-4">
-        <div class="flex justify-between mb-2">
-          <span class="md-label-medium" style="color: var(--md-on-surface-variant);">完成进度</span>
-          <span class="md-label-medium" style="color: var(--md-on-surface);">{{ progress }}%</span>
+      <div class="project-card__progress">
+        <div class="project-card__progress-label">
+          <span>完成进度</span>
+          <strong>{{ progress }}%</strong>
         </div>
         <div class="md-progress-linear">
-          <div 
-            class="md-progress-linear-bar" 
+          <div
+            class="md-progress-linear-bar"
             :style="{ width: `${progress}%`, backgroundColor: themeColors.primary }"
           ></div>
         </div>
       </div>
 
-      <!-- Material 3 Chips -->
-      <div class="flex flex-wrap gap-2 mb-4">
-        <span 
+      <div class="project-card__chips">
+        <span
           v-if="project.genre"
           class="md-chip md-chip-filter selected"
           :style="{ backgroundColor: themeColors.container, color: themeColors.onContainer }"
         >
           {{ project.genre }}
         </span>
-        <span 
-          v-if="chapterCount > 0"
-          class="md-chip md-chip-assist"
-        >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        <span v-if="chapterCount > 0" class="md-chip md-chip-assist">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
           </svg>
           {{ chapterCount }} 章节
         </span>
       </div>
     </div>
 
-    <!-- Action Buttons -->
-    <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+    <div class="project-card__actions">
       <button
         @click.stop="$emit('detail', project.id)"
-        class="md-btn md-btn-tonal md-ripple flex-1"
+        class="md-btn md-btn-tonal md-ripple project-card__action"
       >
-        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+          />
         </svg>
         查看
       </button>
       <button
         @click.stop="handleDelete"
-        class="md-icon-btn md-ripple"
-        style="color: var(--md-error);"
+        class="md-icon-btn md-ripple project-card__delete"
+        :aria-label="`删除项目 ${project.title}`"
         title="删除项目"
       >
-        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+          />
         </svg>
       </button>
       <button
         @click.stop="$emit('continue', project)"
-        class="md-btn md-btn-filled md-ripple flex-1"
+        class="md-btn md-btn-filled md-ripple project-card__action"
       >
-        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+          />
         </svg>
         创作
       </button>
     </div>
-  </div>
+  </article>
 </template>
 
 <script setup lang="ts">
@@ -130,38 +167,38 @@ const emit = defineEmits<{
 // Material 3 Color Theming based on genre
 const themeColors = computed(() => {
   const genre = props.project.genre || ''
-  
+
   // Google 4-color palette mapping
   if (genre.includes('科幻') || genre.includes('悬疑')) {
     return {
       primary: 'var(--md-google-blue)',
       container: 'var(--md-primary-container)',
-      onContainer: 'var(--md-on-primary-container)'
+      onContainer: 'var(--md-on-primary-container)',
     }
   } else if (genre.includes('奇幻') || genre.includes('冒险')) {
     return {
       primary: 'var(--md-google-green)',
       container: 'var(--md-success-container)',
-      onContainer: 'var(--md-on-success-container)'
+      onContainer: 'var(--md-on-success-container)',
     }
   } else if (genre.includes('穿越') || genre.includes('言情')) {
     return {
       primary: 'var(--md-google-red)',
       container: 'var(--md-error-container)',
-      onContainer: 'var(--md-on-error-container)'
+      onContainer: 'var(--md-on-error-container)',
     }
   } else if (genre.includes('东方') || genre.includes('武侠')) {
     return {
       primary: 'var(--md-google-yellow)',
       container: 'var(--md-warning-container)',
-      onContainer: 'var(--md-on-warning-container)'
+      onContainer: 'var(--md-on-warning-container)',
     }
   }
-  
+
   return {
     primary: 'var(--md-primary)',
     container: 'var(--md-secondary-container)',
-    onContainer: 'var(--md-on-secondary-container)'
+    onContainer: 'var(--md-on-secondary-container)',
   }
 })
 
@@ -173,7 +210,7 @@ const progress = computed(() => {
 
 const getStatusText = computed(() => {
   const { completed_chapters, total_chapters } = props.project
-  
+
   if (completed_chapters > 0) {
     return `已完成 ${completed_chapters}/${total_chapters} 章`
   } else if (total_chapters > 0) {
@@ -192,3 +229,149 @@ const handleDelete = () => {
   emit('delete', props.project.id)
 }
 </script>
+
+<style scoped>
+.project-card {
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--md-spacing-5);
+  padding: var(--md-spacing-5);
+  border-radius: var(--md-radius-lg);
+  box-shadow: none;
+  transition:
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard);
+}
+
+.project-card:hover,
+.project-card:focus-within {
+  border-color: color-mix(in srgb, var(--md-primary) 42%, var(--md-outline-variant));
+  box-shadow: var(--md-elevation-1);
+}
+
+.project-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--md-spacing-4);
+  margin-bottom: var(--md-spacing-5);
+}
+
+.project-card__mark {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: var(--md-radius-full);
+}
+
+.project-card__mark svg {
+  width: 24px;
+  height: 24px;
+}
+
+.project-card__summary {
+  min-width: 0;
+  flex: 1;
+}
+
+.project-card__title-button {
+  max-width: 100%;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--md-on-surface);
+  font: inherit;
+  font-size: var(--md-title-medium);
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+}
+
+.project-card__title-button:hover {
+  color: var(--md-primary-dark);
+}
+
+.project-card__title-button:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 3px;
+  border-radius: var(--md-radius-xs);
+}
+
+.project-card__summary p {
+  margin: var(--md-spacing-1) 0 0;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-small);
+}
+
+.project-card__meta {
+  font-weight: 500;
+}
+
+.project-card__progress {
+  margin-bottom: var(--md-spacing-4);
+}
+
+.project-card__progress-label {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--md-spacing-3);
+  margin-bottom: var(--md-spacing-2);
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-medium);
+  font-weight: 600;
+}
+
+.project-card__progress-label strong {
+  color: var(--md-on-surface);
+  font-weight: 600;
+}
+
+.project-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--md-spacing-2);
+}
+
+.project-card__chips svg {
+  width: 16px;
+  height: 16px;
+}
+
+.project-card__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr);
+  gap: var(--md-spacing-2);
+  padding-top: var(--md-spacing-4);
+  border-top: 1px solid var(--md-outline-variant);
+}
+
+.project-card__action {
+  min-width: 0;
+  padding-inline: var(--md-spacing-3);
+}
+
+.project-card__action svg,
+.project-card__delete svg {
+  width: 20px;
+  height: 20px;
+}
+
+.project-card__delete {
+  color: var(--md-error);
+}
+
+@media (max-width: 420px) {
+  .project-card__actions {
+    grid-template-columns: 1fr;
+  }
+
+  .project-card__delete {
+    width: 100%;
+  }
+}
+</style>
