@@ -4,10 +4,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FRONTEND = ROOT.parent / "frontend/src"
+VITE_CONFIG = ROOT.parent / "frontend/vite.config.ts"
 
 
 def _source(path: str) -> str:
     return (FRONTEND / path).read_text(encoding="utf-8")
+
+
+def _vite_config_source() -> str:
+    return VITE_CONFIG.read_text(encoding="utf-8")
 
 
 def _assert_contains(path: str, text: str) -> None:
@@ -127,3 +132,12 @@ def test_global_shell_css_and_antipatterns_are_normalized():
 
     for banned in ["from-indigo", "to-purple", "backdrop-blur-xl"]:
         assert banned not in _source("views/Register.vue")
+
+
+def test_vite_dev_server_allows_configured_public_domain():
+    source = _vite_config_source()
+
+    assert "FRONTEND_ALLOWED_HOSTS" in source
+    assert "test.acecandy.cn" in source
+    assert "frontendAllowedHosts" in source
+    assert "allowedHosts: frontendAllowedHosts" in source
