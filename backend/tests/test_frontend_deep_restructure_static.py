@@ -171,6 +171,91 @@ def test_auth_and_admin_surfaces_remove_glass_and_hardcoded_backgrounds():
     assert "var(--md-surface-dim)" in admin
 
 
+def test_admin_console_uses_product_shell_pattern():
+    source = _source("views/AdminView.vue")
+
+    for text in [
+        "admin-console",
+        "admin-console__intro",
+        "admin-console__nav",
+        "admin-console__content",
+        "管理控制台",
+        "返回工作台",
+        "aria-current",
+        "aria-hidden=\"true\"",
+    ]:
+        assert text in source
+
+    for removed in [
+        "NLayoutSider",
+        "NLayoutHeader",
+        "NLayoutContent",
+        "NMenu",
+        "📊",
+        "👤",
+        "🗒️",
+        "📚",
+        "📝",
+        "⚙️",
+        "🔒",
+    ]:
+        assert removed not in source
+
+
+def test_admin_child_panels_use_tokens_and_remove_decorative_gradients():
+    admin_files = [
+        "components/admin/Statistics.vue",
+        "components/admin/UserManagement.vue",
+        "components/admin/PromptManagement.vue",
+        "components/admin/NovelManagement.vue",
+        "components/admin/UpdateLogManagement.vue",
+        "components/admin/SettingsManagement.vue",
+        "components/admin/PasswordManagement.vue",
+    ]
+
+    for path in admin_files:
+        source = _source(path)
+        assert "var(--md-" in source, f"{path}: admin polish should use Material tokens"
+
+        for removed in [
+            "linear-gradient",
+            "#1f2937",
+            "#111827",
+            "#6b7280",
+            "#4b5563",
+            "#374151",
+            "#0f172a",
+            "#475569",
+            "#e5e7eb",
+            "#f9fafb",
+            "#fbfdff",
+            "rgba(79, 70, 229",
+            "rgba(15, 118, 110",
+        ]:
+            assert removed not in source, f"{path}: remove one-off style {removed!r}"
+
+    statistics = _source("components/admin/Statistics.vue")
+    assert "stat-icon" in statistics
+    for emoji in ["📚", "👥", "⚡"]:
+        assert emoji not in statistics
+
+
+def test_admin_project_detail_uses_embedded_readonly_context():
+    source = _source("components/shared/NovelDetailShell.vue")
+
+    for text in [
+        "detail-shell",
+        "detail-shell--embedded",
+        "isAdmin",
+        "管理只读",
+        "router.push({ name: 'admin', query: { tab: 'novels' } })",
+    ]:
+        assert text in source
+
+    assert "h-screen flex flex-col overflow-hidden md-surface" not in source
+    assert "top-16 bottom-0" not in source
+
+
 def test_global_shell_css_and_antipatterns_are_normalized():
     source = _source("assets/main.css")
 
