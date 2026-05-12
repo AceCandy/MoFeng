@@ -1,6 +1,6 @@
 <!-- AIMETA P=应用布局_认证后共享外壳|R=全局导航_页面容器|NR=不含业务页面逻辑|E=component:AppShell|X=ui|A=布局组件|D=vue,vue-router,pinia|S=dom|RD=./README.ai -->
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -8,6 +8,13 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const isMobileNavOpen = ref(false)
+const isMobileShell = ref(false)
+
+let mobileMediaQuery: MediaQueryList | null = null
+
+const syncMobileShell = () => {
+  isMobileShell.value = Boolean(mobileMediaQuery?.matches)
+}
 
 const navigationItems = computed(() => {
   const items = [
@@ -16,12 +23,6 @@ const navigationItems = computed(() => {
       path: '/workspace',
       match: (path: string) => path === '/workspace' || path.startsWith('/projects/'),
       icon: 'desk',
-    },
-    {
-      label: '灵感',
-      path: '/inspiration',
-      match: (path: string) => path.startsWith('/inspiration'),
-      icon: 'spark',
     },
     {
       label: '模型设置',
@@ -61,13 +62,30 @@ watch(
     closeMobileNav()
   },
 )
+
+onMounted(() => {
+  mobileMediaQuery = window.matchMedia('(max-width: 1023px)')
+  syncMobileShell()
+  mobileMediaQuery.addEventListener('change', syncMobileShell)
+})
+
+onUnmounted(() => {
+  mobileMediaQuery?.removeEventListener('change', syncMobileShell)
+  mobileMediaQuery = null
+})
 </script>
 
 <template>
   <div class="app-shell">
     <a class="skip-link" href="#main-content">跳到主内容</a>
 
-    <aside class="app-shell__sidebar" :class="{ 'is-open': isMobileNavOpen }">
+    <aside
+      id="app-primary-navigation"
+      class="app-shell__sidebar"
+      :class="{ 'is-open': isMobileNavOpen }"
+      :aria-hidden="isMobileShell && !isMobileNavOpen ? 'true' : undefined"
+      :inert="isMobileShell && !isMobileNavOpen"
+    >
       <div class="app-shell__brand">
         <div class="app-shell__brand-mark" aria-hidden="true">A</div>
         <div>
@@ -87,6 +105,7 @@ watch(
       </div>
 
       <nav class="app-shell__nav" aria-label="主导航">
+        <p class="app-shell__nav-label">创作流程</p>
         <RouterLink
           v-for="item in navigationItems"
           :key="item.path"
@@ -107,19 +126,6 @@ watch(
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 d="M4 5h16v14H4zM4 10h16M9 19v-9"
-              />
-            </svg>
-            <svg
-              v-else-if="item.icon === 'spark'"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3z"
               />
             </svg>
             <svg
@@ -175,16 +181,20 @@ watch(
           type="button"
           class="md-icon-btn app-shell__menu"
           aria-label="打开导航"
+          aria-controls="app-primary-navigation"
+          :aria-expanded="isMobileNavOpen"
           @click="isMobileNavOpen = true"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <div class="app-shell__title-block">
-          <p class="app-shell__eyebrow">Arboris Novel</p>
-          <h1>{{ pageLabel }}</h1>
-          <p v-if="pageDescription">{{ pageDescription }}</p>
+        <div class="app-shell__workspace-context">
+          <div class="app-shell__title-block">
+            <p class="app-shell__eyebrow">当前区域</p>
+            <h1>{{ pageLabel }}</h1>
+            <p v-if="pageDescription">{{ pageDescription }}</p>
+          </div>
         </div>
       </header>
 

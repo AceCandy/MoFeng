@@ -25,7 +25,7 @@ export interface LLMConfigCreate {
   embedding_provider_format?: 'openai' | 'ollama' | null;
 }
 
-export type ProviderType = 'openai_compatible' | 'ollama' | 'custom';
+export type ProviderType = 'openai_compatible' | 'anthropic' | 'ollama' | 'custom';
 
 export interface UserModelProvider {
   id: number;

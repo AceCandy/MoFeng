@@ -168,6 +168,49 @@ async def test_resolve_embedding_config_rejects_chat_only_route():
 
 
 @pytest.mark.asyncio
+async def test_stream_and_collect_passes_provider_type_to_llm_client(monkeypatch):
+    class FakeLLMClient:
+        init_kwargs = {}
+
+        def __init__(self, *, api_key, base_url, provider_type):
+            self.init_kwargs = {
+                "api_key": api_key,
+                "base_url": base_url,
+                "provider_type": provider_type,
+            }
+            FakeLLMClient.init_kwargs = self.init_kwargs
+
+        async def stream_chat(self, **kwargs):
+            yield {"content": "ok", "finish_reason": "stop"}
+
+    service = LLMService(AsyncMock())
+    service._resolve_llm_config = AsyncMock(
+        return_value={
+            "api_key": "anthropic-key",
+            "base_url": "https://anthropic-proxy.example/v1",
+            "model": "claude-3-5-sonnet-20241022",
+            "provider_type": "anthropic",
+        }
+    )
+    service.usage_service = SimpleNamespace(increment=AsyncMock())
+    monkeypatch.setattr("app.services.llm_service.LLMClient", FakeLLMClient)
+
+    response = await service._stream_and_collect(
+        [{"role": "user", "content": "hello"}],
+        temperature=0.2,
+        user_id=7,
+        timeout=30.0,
+    )
+
+    assert response == "ok"
+    assert FakeLLMClient.init_kwargs == {
+        "api_key": "anthropic-key",
+        "base_url": "https://anthropic-proxy.example/v1",
+        "provider_type": "anthropic",
+    }
+
+
+@pytest.mark.asyncio
 async def test_get_embedding_does_not_fallback_to_legacy_user_level_values():
     service = LLMService(AsyncMock())
     _disable_model_routes(service)

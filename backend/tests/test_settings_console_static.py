@@ -47,13 +47,17 @@ def test_settings_view_only_declares_current_model_sections():
     for removed in ["overview", "providers", "models", "basic"]:
         assert not re.search(rf"id\s*:\s*['\"]{removed}['\"]", source)
 
-    for label in ["LLM 模型", "向量模型", "AI 阶段路由"]:
+    for label in ["文本生成", "记忆检索", "阶段路由"]:
         assert label in source
 
     assert "activeSettingsSection" in source
     assert "settings-console__nav" in source
-    assert "settings-console__mobile-tabs" in source
+    assert "settings-console__mobile-tabs" not in source
     assert "aria-current" in source
+    assert "当前分区" not in source
+    assert "settings-overview" not in source
+    assert "settings-panel__header" not in source
+    assert "settings-console__nav-item-description" not in source
 
 
 def test_settings_view_routes_sections_without_legacy_basic_config():
@@ -126,9 +130,22 @@ def test_personal_model_routing_has_provider_card_enable_and_delete_actions():
     assert "deleteProvider" in source
     assert "toggleProviderEnabled" in source
     assert "deleteProviderFromCard" in source
+    assert "providerTypeLabel" in source
+    assert "model-routing__provider-type" in source
+    assert "model-routing__toggle" in source
     assert "删除供应商" in source
     assert "确定删除供应商" in source
     assert "关联模型和阶段路由也会一起删除" in source
+    assert "model-routing__status.is-on" not in source
+
+
+def test_personal_model_routing_offers_anthropic_provider_type():
+    source = _source(PERSONAL_MODEL_ROUTING)
+    api_source = _source("api/llm.ts")
+
+    assert '<option value="anthropic">Anthropic</option>' in source
+    assert "anthropic: 'Anthropic'" in source
+    assert "'anthropic'" in api_source
 
 
 def test_personal_model_routing_filters_providers_by_active_section():
@@ -148,6 +165,8 @@ def test_personal_model_routing_uses_floating_model_picker_and_chips():
     assert "isModelPickerOpen(provider.id)" in source
     assert "filteredModelNamesForProvider(provider.id)" in source
     assert "selectedModelChipsForProvider(provider.id)" in source
+    assert "activeModelStateLabel(provider.id, modelName)" in source
+    assert "isModelSelectedForActiveSection(provider.id, modelName)" in source
     assert 'v-for="chip in selectedModelChipsForProvider(provider.id)"' in source
     assert "model-routing__selected-chip" in source
     assert "setPrimaryChatModelById" in source
@@ -169,15 +188,15 @@ def test_settings_console_uses_touch_sized_controls():
     for selector in [
         ".model-routing__picker-row",
         ".model-routing__delete-btn",
-        ".model-routing__status",
+        ".model-routing__toggle",
         ".model-routing__provider-delete",
     ]:
         block = _css_block(source, selector)
         assert "min-height: 44px" in block
 
     assert "min-width: 44px" in source
-    mobile_tab_block = _css_block(settings_source, ".settings-console__mobile-tab")
-    assert "min-height: 44px" in mobile_tab_block
+    nav_item_block = _css_block(settings_source, ".settings-console__nav-item")
+    assert "min-height: 40px" in nav_item_block
 
 
 def test_settings_console_has_accessible_destructive_model_labels():
@@ -187,6 +206,37 @@ def test_settings_console_has_accessible_destructive_model_labels():
     assert ':title="`删除模型 ${chip.display_name || chip.model_name}`"' in source
     assert 'aria-label="删除模型"' not in source
     assert 'title="删除模型"' not in source
+    assert ':role="feedback.type === \'error\' ? \'alert\' : \'status\'"' in source
+    assert 'aria-live="polite"' in source
+
+
+def test_model_settings_flagship_polish_surfaces_readiness_and_recovery_paths():
+    settings = _source(SETTINGS_VIEW)
+    routing = _source(PERSONAL_MODEL_ROUTING)
+
+    assert "settings-status-line" not in settings
+    assert "getRemoteVersion" not in settings
+    assert "normalizeComparableVersion" not in settings
+    assert "remoteVersion" not in settings
+    assert "localVersion" not in settings
+    assert "grid-template-columns: minmax(220px, 260px)" not in settings
+    assert "配置区域" not in settings
+    assert "@navigate=\"selectSettingsSection\"" in settings
+    assert "showInspirationConfigNotice" in settings
+
+    for text in [
+        "sectionReadinessCards",
+        "model-routing__readiness",
+        "model-routing__readiness-item",
+        "configuredRouteCount",
+        "defaultEmbeddingModel",
+        "去配置文本生成",
+        "尚未配置供应商",
+    ]:
+        assert text in routing
+
+    assert "model-routing__readiness-card" not in routing
+    assert "model-routing__panel-head" not in routing
 
 
 def test_settings_console_avoids_low_contrast_action_colors():

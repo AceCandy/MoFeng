@@ -52,6 +52,24 @@
           章 ·
           {{ formatProjectDate(continueProject.last_edited) }}
         </p>
+        <div class="workspace-continue__progress" aria-label="最近项目进度">
+          <div class="workspace-continue__progress-label">
+            <span>写作进度</span>
+            <strong>{{ continueProgress }}%</strong>
+          </div>
+          <div
+            class="md-progress-linear"
+            role="progressbar"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            :aria-valuenow="continueProgress"
+          >
+            <div
+              class="md-progress-linear-bar"
+              :style="{ width: `${continueProgress}%` }"
+            ></div>
+          </div>
+        </div>
       </div>
       <div class="workspace-continue__actions">
         <button
@@ -115,21 +133,6 @@
           <small>上传 .txt 并进入写作台</small>
         </span>
       </button>
-      <router-link v-if="authStore.user?.is_admin" to="/admin" class="workspace-action">
-        <span class="workspace-action__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M4 7h16M6 7v12h12V7M9 11h6M9 15h6"
-            />
-          </svg>
-        </span>
-        <span>
-          <strong>管理</strong>
-          <small>查看平台与项目管理入口</small>
-        </span>
-      </router-link>
       <input type="file" ref="fileInput" accept=".txt" class="hidden" @change="handleFileImport" />
     </section>
 
@@ -289,14 +292,12 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNovelStore } from '@/stores/novel'
-import { useAuthStore } from '@/stores/auth'
 import ProjectCard from '@/components/ProjectCard.vue'
 import type { NovelProjectSummary } from '@/api/novel'
 import { NovelAPI } from '@/api/novel'
 
 const router = useRouter()
 const novelStore = useNovelStore()
-const authStore = useAuthStore()
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const isImporting = ref(false)
@@ -324,6 +325,13 @@ const sortedProjects = computed(() => {
 })
 
 const continueProject = computed(() => sortedProjects.value[0] ?? null)
+
+const continueProgress = computed(() => {
+  const project = continueProject.value
+  if (!project || project.total_chapters <= 0) return 0
+
+  return Math.round((project.completed_chapters / project.total_chapters) * 100)
+})
 
 const formatProjectDate = (value: string) => {
   if (!value) return '暂无更新时间'
@@ -452,6 +460,7 @@ onUnmounted(() => {
 }
 
 .workspace-continue__copy {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -480,11 +489,36 @@ onUnmounted(() => {
   color: var(--md-on-surface-variant);
 }
 
+.workspace-continue__progress {
+  width: min(100%, 520px);
+  margin-top: var(--md-spacing-5);
+}
+
+.workspace-continue__progress-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-spacing-3);
+  margin-bottom: var(--md-spacing-2);
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-medium);
+  font-weight: 600;
+}
+
+.workspace-continue__progress-label strong {
+  color: var(--md-on-surface);
+  font-weight: 600;
+}
+
 .workspace-continue__actions,
 .workspace-actions {
   display: flex;
   align-items: center;
   gap: var(--md-spacing-3);
+}
+
+.workspace-continue__actions {
+  flex-shrink: 0;
 }
 
 .workspace-actions {
@@ -502,14 +536,26 @@ onUnmounted(() => {
   color: var(--md-on-surface);
   text-align: left;
   text-decoration: none;
+  box-shadow: none;
   transition:
     border-color var(--md-duration-short) var(--md-easing-standard),
-    background-color var(--md-duration-short) var(--md-easing-standard);
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard);
 }
 
 .workspace-action:hover:not(:disabled) {
   border-color: var(--md-primary);
   background-color: var(--md-surface-container-low);
+}
+
+.workspace-action:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
+.workspace-action:active:not(:disabled) {
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
 }
 
 .workspace-action:disabled {
@@ -535,6 +581,10 @@ onUnmounted(() => {
 .workspace-action strong,
 .workspace-action small {
   display: block;
+}
+
+.workspace-action > span:last-child {
+  min-width: 0;
 }
 
 .workspace-action strong {
@@ -690,6 +740,32 @@ onUnmounted(() => {
   .workspace-continue__actions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .workspace-continue__actions .md-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .workspace-page {
+    gap: var(--md-spacing-4);
+  }
+
+  .workspace-continue,
+  .workspace-panel {
+    padding: var(--md-spacing-4);
+    border-radius: var(--md-radius-lg);
+  }
+
+  .workspace-action {
+    min-height: 68px;
+    flex-basis: 100%;
+  }
+
+  .workspace-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--md-spacing-4);
   }
 }
 </style>

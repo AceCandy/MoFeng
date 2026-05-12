@@ -74,9 +74,11 @@ def test_app_uses_shared_shell_layouts():
 def test_app_shell_contains_primary_navigation_and_mobile_behavior():
     source = _source("components/shared/AppShell.vue")
 
-    for text in ["工作台", "灵感", "模型设置", "管理", "isMobileNavOpen"]:
+    for text in ["工作台", "模型设置", "管理", "isMobileNavOpen"]:
         assert text in source
 
+    assert "灵感" not in source
+    assert "path: '/inspiration'" not in source
     assert 'aria-label="打开导航"' in source
     assert 'aria-label="关闭导航"' in source
     assert "app-shell__mobile-backdrop" in source
@@ -91,6 +93,54 @@ def test_workspace_prioritizes_continue_writing_and_new_actions():
     assert "router.push(`/projects/${project.id}/write`)" in source
     assert "router.push(`/projects/${projectId}`)" in source
     assert "router.push(`/projects/${response.id}/write`)" in source
+    assert 'to="/admin"' not in source
+    assert "查看平台与项目管理入口" not in source
+
+
+def test_workspace_polish_preserves_primary_flow_and_responsive_states():
+    workspace = _source("views/NovelWorkspace.vue")
+    project_card = _source("components/ProjectCard.vue")
+    shell = _source("components/shared/AppShell.vue")
+    styles = _source("assets/main.css")
+
+    for text in [
+        "continueProgress",
+        "workspace-continue__progress",
+        "aria-label=\"最近项目进度\"",
+        "workspace-action:focus-visible",
+        "@media (max-width: 520px)",
+    ]:
+        assert text in workspace
+
+    for text in [
+        '@click="$emit(\'click\', project.id)"',
+        "@click.stop=\"$emit('detail', project.id)\"",
+        "project-card__title-row",
+        "line-clamp",
+        "touch-action: manipulation",
+    ]:
+        assert text in project_card
+
+    for text in [
+        'id="app-primary-navigation"',
+        ':aria-expanded="isMobileNavOpen"',
+        'aria-controls="app-primary-navigation"',
+        "isMobileShell",
+        "window.matchMedia",
+        "(max-width: 1023px)",
+        ':aria-hidden="isMobileShell && !isMobileNavOpen ? \'true\' : undefined"',
+        ':inert="isMobileShell && !isMobileNavOpen"',
+        "当前区域",
+    ]:
+        assert text in shell
+
+    for text in [
+        "app-shell__nav-label",
+        "app-shell__workspace-context",
+        "app-shell__topbar::after",
+        "color-mix(in srgb, var(--md-surface-dim)",
+    ]:
+        assert text in styles
 
 
 def test_writing_desk_uses_shared_surface_instead_of_local_shell_theme():

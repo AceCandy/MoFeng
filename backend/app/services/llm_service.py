@@ -84,7 +84,11 @@ class LLMService:
         """流式输出模型文本片段，供 SSE 接口边生成边返回。"""
         messages = [{"role": "system", "content": system_prompt}, *conversation_history]
         config = await self._resolve_llm_config(user_id, stage=stage, model_id=model_id)
-        client = LLMClient(api_key=config["api_key"], base_url=config.get("base_url"))
+        client = LLMClient(
+            api_key=config["api_key"],
+            base_url=config.get("base_url"),
+            provider_type=config.get("provider_type"),
+        )
         chat_messages = [ChatMessage(role=msg["role"], content=msg["content"]) for msg in messages]
 
         full_response = ""
@@ -281,7 +285,11 @@ class LLMService:
         model_id: Optional[int] = None,
     ) -> str:
         config = await self._resolve_llm_config(user_id, stage=stage, model_id=model_id)
-        client = LLMClient(api_key=config["api_key"], base_url=config.get("base_url"))
+        client = LLMClient(
+            api_key=config["api_key"],
+            base_url=config.get("base_url"),
+            provider_type=config.get("provider_type"),
+        )
 
         chat_messages = [ChatMessage(role=msg["role"], content=msg["content"]) for msg in messages]
 

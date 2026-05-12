@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
+import httpx
 import pytest
 
 from app.schemas.llm_config import ProviderCreate
@@ -49,6 +50,82 @@ def test_provider_create_defaults_to_chat_scope():
     )
 
     assert payload.capabilities == {"chat": True, "embedding": False}
+
+
+def test_provider_create_accepts_anthropic_with_custom_url():
+    payload = ProviderCreate(
+        name="Anthropic Proxy",
+        provider_type="anthropic",
+        base_url="https://anthropic-proxy.example/v1",
+    )
+
+    assert payload.provider_type == "anthropic"
+    assert payload.base_url == "https://anthropic-proxy.example/v1"
+
+
+@pytest.mark.asyncio
+async def test_get_provider_models_uses_saved_provider_type_for_custom_anthropic_url():
+    service = LLMConfigService(AsyncMock())
+    provider = SimpleNamespace(
+        is_enabled=True,
+        api_key_encrypted="anthropic-key",
+        base_url="https://anthropic-proxy.example/v1",
+        provider_type="anthropic",
+    )
+    service.provider_repo = SimpleNamespace(get_owned=AsyncMock(return_value=provider))
+    service.get_available_models = AsyncMock(return_value=["claude-3-5-sonnet-20241022"])
+
+    models = await service.get_provider_models(7, 3)
+
+    assert models == ["claude-3-5-sonnet-20241022"]
+    service.get_available_models.assert_awaited_once_with(
+        api_key="anthropic-key",
+        base_url="https://anthropic-proxy.example/v1",
+        provider_type="anthropic",
+    )
+
+
+@pytest.mark.asyncio
+async def test_get_anthropic_models_uses_custom_models_url(monkeypatch):
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"data": [{"id": "claude-custom-sonnet"}]}
+
+    class FakeAsyncClient:
+        last_request = {}
+
+        def __init__(self, *, timeout):
+            self.timeout = timeout
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, traceback):
+            return False
+
+        async def get(self, url, *, headers):
+            FakeAsyncClient.last_request = {
+                "url": url,
+                "headers": headers,
+                "timeout": self.timeout,
+            }
+            return FakeResponse()
+
+    monkeypatch.setattr(httpx, "AsyncClient", FakeAsyncClient)
+    service = LLMConfigService(AsyncMock())
+
+    models = await service._get_anthropic_models(
+        api_key="anthropic-key",
+        base_url="https://anthropic-proxy.example/v1",
+    )
+
+    assert models == ["claude-custom-sonnet"]
+    assert FakeAsyncClient.last_request["url"] == "https://anthropic-proxy.example/v1/models"
+    assert FakeAsyncClient.last_request["headers"]["x-api-key"] == "anthropic-key"
+    assert FakeAsyncClient.last_request["headers"]["anthropic-version"] == "2023-06-01"
 
 
 def test_provider_to_read_exposes_provider_scope():

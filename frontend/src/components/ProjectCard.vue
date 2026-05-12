@@ -3,6 +3,7 @@
   <article
     class="md-card md-card-outlined project-card"
     :aria-label="`${project.title}，${getStatusText}`"
+    @click="$emit('click', project.id)"
   >
     <div>
       <div class="project-card__header">
@@ -26,13 +27,15 @@
           </svg>
         </div>
         <div class="project-card__summary">
-          <button
-            type="button"
-            class="project-card__title-button"
-            @click="$emit('detail', project.id)"
-          >
-            {{ project.title }}
-          </button>
+          <div class="project-card__title-row">
+            <button
+              type="button"
+              class="project-card__title-button"
+              @click.stop="$emit('detail', project.id)"
+            >
+              {{ project.title }}
+            </button>
+          </div>
           <p>{{ project.genre || '未知类型' }} · {{ getStatusText }}</p>
           <p class="project-card__meta">最后编辑: {{ formatDateTime(project.last_edited) }}</p>
         </div>
@@ -240,9 +243,12 @@ const handleDelete = () => {
   padding: var(--md-spacing-5);
   border-radius: var(--md-radius-lg);
   box-shadow: none;
+  cursor: pointer;
+  touch-action: manipulation;
   transition:
     border-color var(--md-duration-short) var(--md-easing-standard),
-    box-shadow var(--md-duration-short) var(--md-easing-standard);
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    background-color var(--md-duration-short) var(--md-easing-standard);
 }
 
 .project-card:hover,
@@ -277,9 +283,15 @@ const handleDelete = () => {
   flex: 1;
 }
 
+.project-card__title-row {
+  min-width: 0;
+  display: flex;
+}
+
 .project-card__title-button {
   max-width: 100%;
-  display: block;
+  display: -webkit-box;
+  overflow: hidden;
   padding: 0;
   border: 0;
   background: transparent;
@@ -290,6 +302,9 @@ const handleDelete = () => {
   line-height: 1.35;
   text-align: left;
   cursor: pointer;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .project-card__title-button:hover {
@@ -353,6 +368,7 @@ const handleDelete = () => {
 .project-card__action {
   min-width: 0;
   padding-inline: var(--md-spacing-3);
+  white-space: nowrap;
 }
 
 .project-card__action svg,

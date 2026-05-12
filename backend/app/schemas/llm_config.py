@@ -4,6 +4,9 @@ from typing import Dict, List, Literal, Optional
 from pydantic import BaseModel, HttpUrl, Field
 
 
+ProviderType = Literal["openai_compatible", "anthropic", "ollama", "custom"]
+
+
 class LLMConfigBase(BaseModel):
     llm_provider_url: Optional[HttpUrl] = Field(default=None, description="自定义 LLM 服务地址")
     llm_provider_api_key: Optional[str] = Field(default=None, description="自定义 LLM API Key")
@@ -41,7 +44,7 @@ class ModelListRequest(BaseModel):
 
 class ProviderBase(BaseModel):
     name: str = Field(min_length=1, max_length=100)
-    provider_type: Literal["openai_compatible", "ollama", "custom"] = "openai_compatible"
+    provider_type: ProviderType = "openai_compatible"
     base_url: str = Field(min_length=1)
     api_key: Optional[str] = None
     capabilities: Dict[str, bool] = Field(default_factory=lambda: {"chat": True, "embedding": False})
@@ -54,7 +57,7 @@ class ProviderCreate(ProviderBase):
 
 class ProviderUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=100)
-    provider_type: Optional[Literal["openai_compatible", "ollama", "custom"]] = None
+    provider_type: Optional[ProviderType] = None
     base_url: Optional[str] = Field(default=None, min_length=1)
     api_key: Optional[str] = None
     capabilities: Optional[Dict[str, bool]] = None

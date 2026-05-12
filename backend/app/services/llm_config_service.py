@@ -171,6 +171,29 @@ class LLMConfigService:
             # 默认使用 OpenAI-like API
             return "openai-like"
 
+    def _resolve_provider_for_model_list(
+        self,
+        provider_type: Optional[str],
+        base_url: Optional[str],
+    ) -> str:
+        normalized = (provider_type or "").strip().lower()
+        if normalized == "openai_compatible":
+            return "openai-like"
+        if normalized in {"anthropic", "ollama"}:
+            return normalized
+        return self._identify_provider(base_url)
+
+    @staticmethod
+    def _anthropic_endpoint_url(base_url: Optional[str], endpoint: str) -> str:
+        trimmed = (base_url or "https://api.anthropic.com/v1").strip().rstrip("/")
+        endpoint_path = endpoint.strip("/")
+        lowered = trimmed.lower()
+        if lowered.endswith(f"/{endpoint_path}"):
+            return trimmed
+        if lowered.endswith("/v1"):
+            return f"{trimmed}/{endpoint_path}"
+        return f"{trimmed}/v1/{endpoint_path}"
+
     @staticmethod
     def _normalize_ollama_base_url(base_url: Optional[str]) -> str:
         """归一化 Ollama 地址，兼容误填 /v1、/api 等后缀。"""
@@ -295,6 +318,7 @@ class LLMConfigService:
         return await self.get_available_models(
             api_key=provider.api_key_encrypted,
             base_url=provider.base_url,
+            provider_type=provider.provider_type,
         )
 
     async def update_provider(self, user_id: int, provider_id: int, payload: ProviderUpdate) -> ProviderRead:
@@ -459,14 +483,17 @@ class LLMConfigService:
         return [self._route_to_read(item) for item in await self.stage_route_repo.list_by_user(user_id)]
 
     async def get_available_models(
-        self, api_key: Optional[str], base_url: Optional[str] = None
+        self,
+        api_key: Optional[str],
+        base_url: Optional[str] = None,
+        provider_type: Optional[str] = None,
     ) -> List[str]:
         """使用指定的凭证获取可用的模型列表"""
-        # 识别提供商
-        provider = self._identify_provider(base_url)
+        provider = self._resolve_provider_for_model_list(provider_type, base_url)
         logger.info(
-            "识别到 LLM 提供商: %s (base_url: %s, has_api_key=%s)",
+            "识别到 LLM 提供商: %s (provider_type: %s, base_url: %s, has_api_key=%s)",
             provider,
+            provider_type,
             base_url,
             bool(api_key),
         )
@@ -609,16 +636,43 @@ class LLMConfigService:
             logger.error("获取 Ollama 模型列表失败: base=%s error=%s", normalized_base, str(e), exc_info=True)
             return []
 
-    async def _get_anthropic_models(self, api_key: str, base_url: Optional[str]) -> List[str]:
-        """获取 Anthropic 的模型列表"""
-        # Anthropic 目前不提供模型列表 API，返回常用模型
-        logger.info("返回 Anthropic 预定义模型列表")
-        return [
+    async def _get_anthropic_models(self, api_key: Optional[str], base_url: Optional[str]) -> List[str]:
+        """获取 Anthropic 模型列表，失败时回退到常用 Claude 模型。"""
+        import httpx
+
+        fallback_models = [
             "claude-3-5-sonnet-20241022",
             "claude-3-5-haiku-20241022",
             "claude-3-opus-20240229",
             "claude-3-sonnet-20240229",
             "claude-3-haiku-20240307",
+        ]
+        if api_key:
+            models_url = self._anthropic_endpoint_url(base_url, "models")
+            headers = {
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+            }
+            try:
+                logger.info("请求 Anthropic 模型列表: url=%s", models_url)
+                async with httpx.AsyncClient(timeout=20.0) as client:
+                    response = await client.get(models_url, headers=headers)
+                    response.raise_for_status()
+                    payload = response.json()
+                model_ids = [
+                    item.get("id")
+                    for item in payload.get("data", [])
+                    if isinstance(item, dict) and isinstance(item.get("id"), str) and item.get("id")
+                ]
+                if model_ids:
+                    logger.info("成功获取 %d 个 Anthropic 模型", len(model_ids))
+                    return sorted(model_ids)
+            except Exception as e:
+                logger.error("获取 Anthropic 模型列表失败: base=%s error=%s", base_url, str(e), exc_info=True)
+
+        logger.info("返回 Anthropic 预定义模型列表")
+        return [
+            *fallback_models,
         ]
 
     async def _get_google_models(self, api_key: str, base_url: Optional[str]) -> List[str]:
