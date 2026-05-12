@@ -1,83 +1,48 @@
 <!-- AIMETA P=管理后台_管理员控制台|R=管理面板_子组件切换|NR=不含普通用户功能|E=route:/admin#component:AdminView|X=ui|A=管理面板|D=vue|S=dom,net|RD=./README.ai -->
 <template>
-  <n-layout has-sider class="admin-layout">
-    <n-layout-sider
-      collapse-mode="width"
-      :collapsed="collapsed"
-      :collapsed-width="64"
-      :width="240"
-      bordered
-      show-trigger
-      @collapse="collapsed = true"
-      @expand="collapsed = false"
-    >
-      <div class="sider-header">
-        <span class="logo" v-if="!collapsed">Arboris 管理台</span>
-        <span class="logo-small" v-else>管理</span>
+  <div class="app-page admin-console">
+    <section class="admin-console__intro">
+      <div class="admin-console__intro-copy">
+        <h1 class="admin-console__title">管理控制台</h1>
+        <p class="admin-console__summary">维护用户、提示词、项目、更新日志和系统配置。</p>
+        <div class="admin-console__chips" aria-label="当前控制台状态">
+          <span class="admin-console__chip">当前：{{ activeSection.label }}</span>
+          <span class="admin-console__chip admin-console__chip--quiet">管理员访问</span>
+        </div>
       </div>
-      <n-menu
-        :value="activeKey"
-        :options="menuOptions"
-        :collapsed="collapsed"
-        :collapsed-width="64"
-        :accordion="true"
-        @update:value="handleMenuSelect"
-      />
-    </n-layout-sider>
 
-    <n-layout>
-      <n-layout-header bordered class="admin-header">
-        <n-space align="center" justify="space-between" class="header-content">
-          <n-space align="center" :size="12">
-            <n-button
-              class="mobile-trigger"
-              quaternary
-              circle
-              size="small"
-              @click="collapsed = !collapsed"
-            >
-              <template #icon>
-                <span class="icon">☰</span>
-              </template>
-            </n-button>
-            <span class="header-title">{{ currentMenuLabel }}</span>
-          </n-space>
-          <n-space align="center" :size="10">
-            <span class="header-subtitle">高效掌控平台运行状态</span>
-            <n-button size="small" type="primary" ghost @click="goBack">
-              返回业务系统
-            </n-button>
-          </n-space>
-        </n-space>
-      </n-layout-header>
-      <n-layout-content class="admin-content">
-        <n-scrollbar class="content-scroll">
-          <component :is="activeComponent" />
-        </n-scrollbar>
-      </n-layout-content>
-    </n-layout>
-  </n-layout>
+      <n-button class="admin-console__back" type="primary" ghost @click="goBack">
+        返回工作台
+      </n-button>
+    </section>
+
+    <nav class="admin-console__nav" aria-label="管理模块切换">
+      <button
+        v-for="section in adminSections"
+        :key="section.key"
+        type="button"
+        class="admin-console__nav-button"
+        :class="{ 'is-active': section.key === activeSection.key }"
+        :aria-current="section.key === activeSection.key ? 'page' : undefined"
+        @click="selectSection(section.key)"
+      >
+        <span class="admin-console__nav-icon" aria-hidden="true">
+          <component :is="() => renderIcon(section.icon)" />
+        </span>
+        <span class="admin-console__nav-label">{{ section.label }}</span>
+      </button>
+    </nav>
+
+    <section class="admin-console__content">
+      <component :is="activeComponent" />
+    </section>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, h, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import {
-  NButton,
-  NLayout,
-  NLayoutContent,
-  NLayoutHeader,
-  NLayoutSider,
-  NMenu,
-  NScrollbar,
-  NSpace,
-  type MenuOption
-} from 'naive-ui'
+import { computed, defineAsyncComponent, h, ref, watch } from 'vue'
+import { NButton } from 'naive-ui'
 import { useRoute, useRouter } from 'vue-router'
-
-const collapsed = ref(false)
-const activeKey = ref<MenuKey>('statistics')
-const router = useRouter()
-const route = useRoute()
 
 type MenuKey =
   | 'statistics'
@@ -87,6 +52,12 @@ type MenuKey =
   | 'logs'
   | 'settings'
   | 'password'
+
+interface AdminSection {
+  key: MenuKey
+  label: string
+  icon: 'chart' | 'user' | 'prompt' | 'book' | 'log' | 'settings' | 'lock'
+}
 
 const components: Record<MenuKey, ReturnType<typeof defineAsyncComponent>> = {
   statistics: defineAsyncComponent(() => import('../components/admin/Statistics.vue')),
@@ -98,158 +69,296 @@ const components: Record<MenuKey, ReturnType<typeof defineAsyncComponent>> = {
   password: defineAsyncComponent(() => import('../components/admin/PasswordManagement.vue'))
 }
 
-const iconRenderers: Record<MenuKey, () => any> = {
-  statistics: () => h('span', { class: 'menu-icon' }, '📊'),
-  users: () => h('span', { class: 'menu-icon' }, '👤'),
-  prompts: () => h('span', { class: 'menu-icon' }, '🗒️'),
-  novels: () => h('span', { class: 'menu-icon' }, '📚'),
-  logs: () => h('span', { class: 'menu-icon' }, '📝'),
-  settings: () => h('span', { class: 'menu-icon' }, '⚙️'),
-  password: () => h('span', { class: 'menu-icon' }, '🔒')
+const adminSections: AdminSection[] = [
+  { key: 'statistics', label: '数据总览', icon: 'chart' },
+  { key: 'users', label: '用户管理', icon: 'user' },
+  { key: 'prompts', label: '提示词管理', icon: 'prompt' },
+  { key: 'novels', label: '小说项目', icon: 'book' },
+  { key: 'logs', label: '更新日志', icon: 'log' },
+  { key: 'settings', label: '系统配置', icon: 'settings' },
+  { key: 'password', label: '安全中心', icon: 'lock' }
+]
+
+const paths: Record<AdminSection['icon'], ReturnType<typeof h>[]> = {
+  chart: [
+    h('path', { d: 'M4 19h16' }),
+    h('path', { d: 'M7 16V9' }),
+    h('path', { d: 'M12 16V6' }),
+    h('path', { d: 'M17 16v-5' })
+  ],
+  user: [
+    h('circle', { cx: '12', cy: '8', r: '3.2' }),
+    h('path', { d: 'M5.5 19c1.7-3 4-4.5 6.5-4.5s4.8 1.5 6.5 4.5' })
+  ],
+  prompt: [
+    h('path', { d: 'M6.5 5.5h11v9h-6l-4 4v-4h-1z' }),
+    h('path', { d: 'M9 8h6' }),
+    h('path', { d: 'M9 11h4' })
+  ],
+  book: [
+    h('path', { d: 'M6 4.5h9.5A2.5 2.5 0 0 1 18 7v12H8.5A2.5 2.5 0 0 0 6 21.5z' }),
+    h('path', { d: 'M8 7h7' }),
+    h('path', { d: 'M8 10h7' })
+  ],
+  log: [
+    h('path', { d: 'M7 6h10' }),
+    h('path', { d: 'M7 11h10' }),
+    h('path', { d: 'M7 16h6' }),
+    h('path', { d: 'M18 16h.01' })
+  ],
+  settings: [
+    h('circle', { cx: '12', cy: '12', r: '2.5' }),
+    h('path', { d: 'M19 12a7.2 7.2 0 0 0-.05-.9l2-1.5-2-3.5-2.4.8a7.1 7.1 0 0 0-1.6-.9L14.5 4h-5l-.4 2a7.1 7.1 0 0 0-1.6.9l-2.4-.8-2 3.5 2 1.5A7.2 7.2 0 0 0 5 12c0 .3 0 .6.05.9l-2 1.5 2 3.5 2.4-.8c.5.4 1 .7 1.6.9l.4 2h5l.4-2c.6-.2 1.1-.5 1.6-.9l2.4.8 2-3.5-2-1.5c.03-.3.05-.6.05-.9z' })
+  ],
+  lock: [
+    h('rect', { x: '6.5', y: '11', width: '11', height: '8', rx: '2' }),
+    h('path', { d: 'M9 11V8.8A3 3 0 0 1 12 6a3 3 0 0 1 3 2.8V11' }),
+    h('circle', { cx: '12', cy: '15', r: '1.2' })
+  ]
 }
 
-const menuOptions: MenuOption[] = [
-  { key: 'statistics', label: '数据总览', icon: iconRenderers.statistics },
-  { key: 'users', label: '用户管理', icon: iconRenderers.users },
-  { key: 'prompts', label: '提示词管理', icon: iconRenderers.prompts },
-  { key: 'novels', label: '小说项目', icon: iconRenderers.novels },
-  { key: 'logs', label: '更新日志', icon: iconRenderers.logs },
-  { key: 'settings', label: '系统配置', icon: iconRenderers.settings },
-  { key: 'password', label: '安全中心', icon: iconRenderers.password }
-]
+const common = {
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  'stroke-width': 1.8,
+  'stroke-linecap': 'round',
+  'stroke-linejoin': 'round',
+  width: '1em',
+  height: '1em',
+  'aria-hidden': 'true'
+}
+
+const renderIcon = (icon: AdminSection['icon']) => h('svg', common, paths[icon])
+
+const router = useRouter()
+const route = useRoute()
 
 const isMenuKey = (key: string): key is MenuKey => key in components
 
-const syncActiveKeyWithRoute = () => {
-  const tab = route.query.tab
-  if (typeof tab === 'string' && isMenuKey(tab)) {
-    activeKey.value = tab
+const resolveMenuKey = (value: unknown): MenuKey => {
+  if (typeof value === 'string' && isMenuKey(value)) {
+    return value
   }
+
+  return 'statistics'
 }
 
-const handleMenuSelect = (key: string) => {
-  if (!isMenuKey(key)) {
-    return
-  }
+const activeKey = ref<MenuKey>(resolveMenuKey(route.query.tab))
+
+watch(
+  () => route.query.tab,
+  (tab) => {
+    activeKey.value = resolveMenuKey(tab)
+  },
+  { immediate: true }
+)
+
+const activeSection = computed(() => {
+  return adminSections.find((section) => section.key === activeKey.value) ?? adminSections[0]
+})
+
+const activeComponent = computed(() => components[activeSection.value.key])
+
+const selectSection = (key: MenuKey) => {
   activeKey.value = key
   router.replace({ name: 'admin', query: { tab: key } })
 }
 
-const activeComponent = computed(() => components[activeKey.value])
-const currentMenuLabel = computed(() => {
-  const match = menuOptions.find((option) => option.key === activeKey.value)
-  return match ? (match.label as string) : ''
-})
-
 const goBack = () => {
   router.push('/workspace')
 }
-
-const updateCollapsedByWidth = () => {
-  collapsed.value = window.innerWidth < 992
-}
-
-onMounted(() => {
-  updateCollapsedByWidth()
-  window.addEventListener('resize', updateCollapsedByWidth)
-  syncActiveKeyWithRoute()
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', updateCollapsedByWidth)
-})
-
-watch(
-  () => route.query.tab,
-  () => {
-    syncActiveKeyWithRoute()
-  }
-)
 </script>
 
 <style scoped>
-.admin-layout {
+.admin-console {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-5);
   min-height: calc(100vh - 112px);
+  color: var(--md-on-surface);
+}
+
+.admin-console__intro,
+.admin-console__nav,
+.admin-console__content {
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-radius-xl);
-  overflow: hidden;
   background-color: var(--md-surface);
 }
 
-.sider-header {
-  height: 56px;
+.admin-console__intro {
   display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--md-spacing-5);
+  padding: clamp(var(--md-spacing-5), 4vw, var(--md-spacing-8));
+  box-shadow: var(--md-elevation-1);
+}
+
+.admin-console__intro-copy {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--md-spacing-3);
+  min-width: 0;
+  max-width: 72ch;
+}
+
+.admin-console__title {
+  margin: 0;
+  font-size: var(--md-headline-small);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.admin-console__summary {
+  margin: 0;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-large);
+  line-height: 1.6;
+}
+
+.admin-console__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--md-spacing-2);
+}
+
+.admin-console__chip {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
+  min-height: 32px;
+  padding: 0 var(--md-spacing-3);
+  border-radius: var(--md-radius-full);
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  font-size: var(--md-label-medium);
   font-weight: 600;
-  letter-spacing: 0.08em;
-  color: var(--md-on-surface);
+  letter-spacing: 0.01em;
 }
 
-.logo {
-  font-size: 1.1rem;
-}
-
-.logo-small {
-  font-size: 0.9rem;
-}
-
-.admin-header {
-  background-color: var(--md-surface);
-  padding: 0 20px;
-}
-
-.header-content {
-  width: 100%;
-  height: 64px;
-}
-
-.header-title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--md-on-surface);
-}
-
-.header-subtitle {
-  font-size: 0.95rem;
+.admin-console__chip--quiet {
+  background-color: var(--md-surface-container-low);
   color: var(--md-on-surface-variant);
 }
 
-.admin-content {
-  background-color: var(--md-surface-dim);
+.admin-console__back {
+  flex: 0 0 auto;
+  align-self: flex-start;
 }
 
-.content-scroll {
-  height: calc(100vh - 64px);
-  padding: 24px;
-  box-sizing: border-box;
+.admin-console__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--md-spacing-2);
+  padding: var(--md-spacing-4);
 }
 
-.menu-icon {
-  font-size: 1.1rem;
+.admin-console__nav-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--md-spacing-2);
+  min-height: 48px;
+  padding: 0 var(--md-spacing-4);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-full);
+  background-color: var(--md-surface-container-low);
+  color: var(--md-on-surface);
+  font-size: var(--md-label-large);
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard);
 }
 
-.mobile-trigger {
-  display: none;
+.admin-console__nav-button:hover {
+  border-color: var(--md-primary);
+  background-color: var(--md-surface-container);
 }
 
-@media (max-width: 991px) {
-  .content-scroll {
-    padding: 16px;
-  }
+.admin-console__nav-button:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
 
-  .mobile-trigger {
-    display: inline-flex;
-  }
+.admin-console__nav-button.is-active,
+.admin-console__nav-button[aria-current='page'] {
+  border-color: var(--md-primary);
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
 
-  .header-content {
+.admin-console__nav-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: 0 0 auto;
+}
+
+.admin-console__nav-icon :deep(svg) {
+  width: 1rem;
+  height: 1rem;
+}
+
+.admin-console__nav-label {
+  white-space: nowrap;
+}
+
+.admin-console__content {
+  padding: clamp(var(--md-spacing-5), 4vw, var(--md-spacing-8));
+  box-shadow: var(--md-elevation-1);
+}
+
+@media (max-width: 720px) {
+  .admin-console__intro {
     flex-direction: column;
-    align-items: stretch;
-    gap: 12px !important;
   }
 
-  .header-subtitle {
-    font-size: 0.9rem;
+  .admin-console__back {
+    align-self: stretch;
+    width: 100%;
+  }
+
+  .admin-console__nav {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: var(--md-spacing-3);
+  }
+
+  .admin-console__nav-button {
+    flex: 0 0 auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .admin-console {
+    gap: var(--md-spacing-4);
+  }
+
+  .admin-console__intro,
+  .admin-console__nav,
+  .admin-console__content {
+    border-radius: var(--md-radius-lg);
+  }
+
+  .admin-console__intro,
+  .admin-console__content {
+    padding: var(--md-spacing-4);
+  }
+
+  .admin-console__nav {
+    padding: var(--md-spacing-3);
+  }
+
+  .admin-console__nav-button {
+    min-height: 44px;
+    padding: 0 var(--md-spacing-3);
   }
 }
 </style>
