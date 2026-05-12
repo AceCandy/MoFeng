@@ -19,7 +19,12 @@
         <n-grid :cols="gridCols" :x-gap="16" :y-gap="16">
           <n-gi>
             <n-card class="stat-card" :bordered="false">
-              <div class="stat-icon">📚</div>
+              <div class="stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 19.5A2.5 2.5 0 016.5 17H20" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
+                </svg>
+              </div>
               <n-statistic label="小说总数" :value="stats?.novel_count ?? 0" show-separator>
                 <template #suffix>部</template>
               </n-statistic>
@@ -27,7 +32,12 @@
           </n-gi>
           <n-gi>
             <n-card class="stat-card" :bordered="false">
-              <div class="stat-icon">👥</div>
+              <div class="stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="8" r="4" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 20a8 8 0 0116 0" />
+                </svg>
+              </div>
               <n-statistic label="用户总数" :value="stats?.user_count ?? 0" show-separator>
                 <template #suffix>人</template>
               </n-statistic>
@@ -35,7 +45,11 @@
           </n-gi>
           <n-gi>
             <n-card class="stat-card" :bordered="false">
-              <div class="stat-icon">⚡</div>
+              <div class="stat-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
               <n-statistic label="API 请求总数" :value="stats?.api_request_count ?? 0" show-separator>
                 <template #suffix>次</template>
               </n-statistic>
@@ -112,7 +126,7 @@ onBeforeUnmount(() => {
 .card-title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--md-on-surface);
 }
 
 .stat-card {
@@ -121,12 +135,25 @@ onBeforeUnmount(() => {
   gap: 16px;
   padding: 20px;
   border-radius: 18px;
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.08), rgba(79, 70, 229, 0));
+  background-color: var(--md-surface-container-low);
+  border: 1px solid var(--md-outline-variant);
 }
 
 .stat-icon {
-  font-size: 28px;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border-radius: var(--md-radius-full);
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.stat-icon svg {
+  width: 24px;
+  height: 24px;
 }
 
 @media (max-width: 767px) {
@@ -142,6 +169,11 @@ onBeforeUnmount(() => {
 
   .stat-card {
     padding: 16px;
+  }
+
+  .stat-icon {
+    width: 40px;
+    height: 40px;
   }
 }
 </style>

@@ -225,6 +225,8 @@ onBeforeUnmount(() => {
 .novel-management-card {
   width: 100%;
   box-sizing: border-box;
+  background-color: var(--md-surface);
+  color: var(--md-on-surface);
 }
 
 .card-header {
@@ -232,12 +234,14 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding-bottom: var(--md-spacing-3);
+  border-bottom: 1px solid var(--md-outline-variant);
 }
 
 .card-title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--md-on-surface);
 }
 
 .novel-table {
@@ -252,23 +256,25 @@ onBeforeUnmount(() => {
 
 .table-title {
   font-weight: 600;
-  color: #111827;
+  color: var(--md-on-surface);
 }
 
 .table-subtitle {
   font-size: 0.75rem;
-  color: #6b7280;
+  color: var(--md-on-surface-variant);
   word-break: break-all;
 }
 
 .table-owner,
 .table-progress,
 .table-date {
-  color: #374151;
+  color: var(--md-on-surface-variant);
 }
 
 .novel-card {
   border-radius: 16px;
+  background-color: var(--md-surface-container-low);
+  border: 1px solid var(--md-outline-variant);
 }
 
 .mobile-card-header {
@@ -281,7 +287,7 @@ onBeforeUnmount(() => {
 .mobile-card-title {
   font-size: 1rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--md-on-surface);
 }
 
 .mobile-meta {
@@ -290,23 +296,23 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   margin-top: 10px;
   font-size: 0.875rem;
-  color: #4b5563;
+  color: var(--md-on-surface-variant);
   word-break: break-word;
 }
 
 .mobile-label {
-  color: #6b7280;
+  color: var(--md-on-surface-variant);
 }
 
 .mobile-value {
-  color: #111827;
+  color: var(--md-on-surface);
   font-weight: 500;
   text-align: right;
   margin-left: 12px;
 }
 
 .empty-state {
-  padding: 48px 0;
+  padding: var(--md-spacing-8) 0;
 }
 
 @media (max-width: 767px) {
@@ -317,6 +323,10 @@ onBeforeUnmount(() => {
 
   .card-title {
     font-size: 1.125rem;
+  }
+
+  .mobile-card-header {
+    gap: var(--md-spacing-2);
   }
 }
 </style>

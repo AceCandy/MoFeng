@@ -128,22 +128,27 @@ const handleSubmit = async () => {
 .password-container {
   max-width: 520px;
   margin: 0 auto;
+  color: var(--md-on-surface);
 }
 
 .password-card {
   border-radius: 16px;
+  background-color: var(--md-surface);
+  color: var(--md-on-surface);
 }
 
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding-bottom: var(--md-spacing-3);
+  border-bottom: 1px solid var(--md-outline-variant);
 }
 
 .card-title {
   font-size: 1.2rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--md-on-surface);
 }
 
 .password-form {
@@ -151,6 +156,6 @@ const handleSubmit = async () => {
 }
 
 .mb-4 {
-  margin-bottom: 16px;
+  margin-bottom: var(--md-spacing-4);
 }
 </style>

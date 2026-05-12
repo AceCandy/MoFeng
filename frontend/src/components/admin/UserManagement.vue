@@ -374,6 +374,8 @@ onMounted(fetchUsers)
 <style scoped>
 .admin-card {
   width: 100%;
+  background-color: var(--md-surface);
+  color: var(--md-on-surface);
 }
 
 .card-header {
@@ -382,22 +384,35 @@ onMounted(fetchUsers)
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+  padding-bottom: var(--md-spacing-3);
+  border-bottom: 1px solid var(--md-outline-variant);
 }
 
 .card-title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--md-on-surface);
 }
 
 .search-input {
   width: min(230px, 60vw);
 }
 
+.search-input :deep(.n-input) {
+  background-color: var(--md-surface-container-low);
+  color: var(--md-on-surface);
+}
+
+.search-input :deep(.n-input__border),
+.search-input :deep(.n-input__state-border) {
+  border-color: var(--md-outline-variant);
+}
+
 @media (max-width: 767px) {
   .card-header {
     flex-direction: column;
     align-items: stretch;
+    gap: var(--md-spacing-2);
   }
 
   .card-title {
