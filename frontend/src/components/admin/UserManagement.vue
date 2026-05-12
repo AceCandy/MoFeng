@@ -398,16 +398,6 @@ onMounted(fetchUsers)
   width: min(230px, 60vw);
 }
 
-.search-input :deep(.n-input) {
-  background-color: var(--md-surface-container-low);
-  color: var(--md-on-surface);
-}
-
-.search-input :deep(.n-input__border),
-.search-input :deep(.n-input__state-border) {
-  border-color: var(--md-outline-variant);
-}
-
 @media (max-width: 767px) {
   .card-header {
     flex-direction: column;

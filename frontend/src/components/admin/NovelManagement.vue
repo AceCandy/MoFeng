@@ -282,12 +282,17 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  min-width: 0;
 }
 
 .mobile-card-title {
+  min-width: 0;
   font-size: 1rem;
   font-weight: 600;
   color: var(--md-on-surface);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mobile-meta {

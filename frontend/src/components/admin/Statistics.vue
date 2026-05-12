@@ -130,13 +130,17 @@ onBeforeUnmount(() => {
 }
 
 .stat-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 20px;
+  min-height: 100%;
   border-radius: 18px;
   background-color: var(--md-surface-container-low);
   border: 1px solid var(--md-outline-variant);
+}
+
+.stat-card :deep(.n-card__content) {
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-4);
+  padding: var(--md-spacing-5);
 }
 
 .stat-icon {
@@ -167,8 +171,8 @@ onBeforeUnmount(() => {
     font-size: 1.125rem;
   }
 
-  .stat-card {
-    padding: 16px;
+  .stat-card :deep(.n-card__content) {
+    padding: var(--md-spacing-4);
   }
 
   .stat-icon {
