@@ -5,7 +5,7 @@
       <div class="admin-console__intro-copy">
         <p class="admin-console__kicker">Admin</p>
         <h2 id="admin-console-title">管理控制台</h2>
-        <p>维护用户、提示词、项目、更新日志和系统配置。</p>
+        <p class="admin-console__summary">维护用户、提示词、项目、更新日志和系统配置。</p>
         <div class="admin-console__intro-actions" aria-label="当前控制台状态">
           <span class="md-chip md-chip-assist">当前：{{ activeSection.label }}</span>
           <span class="md-chip md-chip-assist">管理员访问</span>
@@ -149,7 +149,7 @@ const resolveMenuKey = (value: unknown): MenuKey => {
   return 'statistics'
 }
 
-const activeKey = ref<MenuKey>(resolveMenuKey(route.query.tab))
+const activeKey = ref<MenuKey>('statistics')
 
 watch(
   () => route.query.tab,
@@ -226,7 +226,7 @@ const goBack = () => {
   line-height: 1.2;
 }
 
-.admin-console__intro p:last-child {
+.admin-console__summary {
   margin: 0;
   color: var(--md-on-surface-variant);
   font-size: var(--md-body-large);
