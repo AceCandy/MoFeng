@@ -1,9 +1,9 @@
 <!-- AIMETA P=小说详情壳_详情页布局容器|R=详情页布局_导航|NR=不含具体内容|E=component:NovelDetailShell|X=internal|A=布局组件|D=vue|S=dom|RD=./README.ai -->
 <template>
-  <div class="h-screen flex flex-col overflow-hidden md-surface">
+  <div class="detail-shell" :class="{ 'detail-shell--embedded': isAdmin }">
     <!-- Material 3 Top App Bar -->
-    <header class="md-top-app-bar sticky top-0 z-40">
-      <div class="max-w-[1800px] mx-auto w-full flex items-center px-4 h-16">
+    <header class="md-top-app-bar detail-shell__topbar">
+      <div class="detail-shell__topbar-inner">
         <!-- Leading: Menu Button (Mobile) -->
         <button
           class="md-icon-btn lg:hidden mr-2"
@@ -23,9 +23,12 @@
 
         <!-- Title -->
         <div class="flex-1 min-w-0">
-          <h1 class="md-title-large truncate" style="color: var(--md-on-surface)">
-            {{ formattedTitle }}
-          </h1>
+          <div class="flex items-center gap-2 min-w-0">
+            <h1 class="md-title-large truncate" style="color: var(--md-on-surface)">
+              {{ formattedTitle }}
+            </h1>
+            <span v-if="isAdmin" class="detail-shell__mode-chip">管理只读</span>
+          </div>
           <p
             v-if="overviewMeta.updated_at"
             class="md-body-small"
@@ -76,11 +79,11 @@
     </header>
 
     <!-- Main Content -->
-    <div class="flex max-w-[1800px] mx-auto w-full flex-1 min-h-0 overflow-hidden">
+    <div class="detail-shell__body">
       <!-- Material 3 Navigation Drawer -->
       <aside
-        class="fixed left-0 top-16 bottom-0 z-30 w-80 md-surface transform transition-transform duration-300 lg:translate-x-0"
-        :class="isSidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+        class="detail-shell__drawer md-surface"
+        :class="{ 'is-open': isSidebarOpen }"
         style="border-right: 1px solid var(--md-outline-variant)"
       >
         <!-- Drawer Header -->
@@ -158,9 +161,9 @@
       </transition>
 
       <!-- Main Content Area -->
-      <div class="flex-1 lg:ml-80 min-h-0 flex flex-col h-full">
+      <div class="detail-shell__main">
         <div
-          class="flex-1 min-h-0 h-full p-4 sm:p-6 lg:p-8 flex flex-col overflow-hidden box-border"
+          class="detail-shell__content-wrap"
         >
           <div class="flex-1 flex flex-col min-h-0 h-full">
             <!-- Material 3 Card -->
@@ -539,7 +542,13 @@ const switchSection = (section: SectionKey) => {
   loadSection(section)
 }
 
-const goBack = () => router.push(props.isAdmin ? '/admin' : '/workspace')
+const goBack = () => {
+  if (props.isAdmin) {
+    router.push({ name: 'admin', query: { tab: 'novels' } })
+    return
+  }
+  router.push('/workspace')
+}
 
 const goToWritingDesk = async () => {
   await ensureProjectLoaded()
@@ -704,6 +713,117 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.detail-shell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  background-color: var(--md-surface);
+}
+
+.detail-shell--embedded {
+  position: relative;
+  overflow: hidden;
+}
+
+.detail-shell__topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.detail-shell__topbar-inner {
+  max-width: 1800px;
+  width: 100%;
+  min-height: 4rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-sizing: border-box;
+}
+
+.detail-shell__mode-chip {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 1.75rem;
+  padding: 0 0.625rem;
+  border-radius: 9999px;
+  background-color: color-mix(in srgb, var(--md-secondary-container) 78%, transparent);
+  color: var(--md-on-secondary-container);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.detail-shell__body {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: 1800px;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.detail-shell__drawer {
+  position: fixed;
+  left: 0;
+  top: 4rem;
+  bottom: 0;
+  z-index: 30;
+  width: 20rem;
+  transform: translateX(-100%);
+  transition:
+    transform 300ms cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 300ms cubic-bezier(0.2, 0, 0, 1);
+  will-change: transform;
+}
+
+.detail-shell__drawer.is-open {
+  transform: translateX(0);
+}
+
+.detail-shell__main {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  margin-left: 0;
+  box-sizing: border-box;
+}
+
+.detail-shell__content-wrap {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  padding: 1rem;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+@media (min-width: 1024px) {
+  .detail-shell__drawer {
+    transform: translateX(0);
+  }
+
+  .detail-shell__main {
+    margin-left: 20rem;
+  }
+
+  .detail-shell__content-wrap {
+    padding: 1.5rem 2rem 2rem;
+  }
+}
+
 /* Material 3 Transition Classes */
 .md-scale-enter-active,
 .md-scale-leave-active {
