@@ -268,6 +268,7 @@ onMounted(fetchLogs)
   color: var(--md-on-surface);
   line-height: 1.6;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 767px) {

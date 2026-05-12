@@ -1092,7 +1092,7 @@ onMounted(() => {
 }
 
 .config-table :deep(.row-managed td) {
-  background-color: var(--md-primary-container);
+  background-color: color-mix(in srgb, var(--md-primary) 7%, var(--md-surface));
 }
 
 .config-modal {
