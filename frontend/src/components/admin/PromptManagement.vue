@@ -418,7 +418,7 @@ onBeforeUnmount(() => {
 .card-title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--md-on-surface);
 }
 
 .prompt-layout {
@@ -437,12 +437,8 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(
-    180deg,
-    var(--md-surface) 0%,
-    var(--md-surface-container-low) 100%
-  );
-  border: 1px solid #e5e7eb;
+  background-color: var(--md-surface-container-low);
+  border: 1px solid var(--md-outline-variant);
   border-radius: 14px;
   padding: 12px;
 }
@@ -457,7 +453,7 @@ onBeforeUnmount(() => {
 
 .sidebar-title {
   font-size: 0.85rem;
-  color: #374151;
+  color: var(--md-on-surface-variant);
   font-weight: 600;
   letter-spacing: 0.02em;
 }
@@ -484,9 +480,9 @@ onBeforeUnmount(() => {
 
 .prompt-list-item {
   width: 100%;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--md-outline-variant);
   border-radius: 10px;
-  background: var(--md-surface);
+  background-color: var(--md-surface);
   padding: 10px 12px;
   display: flex;
   align-items: center;
@@ -495,25 +491,19 @@ onBeforeUnmount(() => {
   cursor: pointer;
   text-align: left;
   transition:
-    transform 0.15s ease,
     border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .prompt-list-item:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
-  transform: translateY(-1px);
+  border-color: var(--md-primary);
+  background-color: var(--md-surface-container);
 }
 
 .prompt-list-item.active {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
-  background: linear-gradient(
-    180deg,
-    var(--md-primary-container) 0%,
-    var(--md-surface) 100%
-  );
+  border-color: var(--md-primary);
+  background-color: var(--md-primary-container);
 }
 
 .prompt-item-main {
@@ -529,7 +519,7 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   font-size: 0.92rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--md-on-surface);
 }
 
 .prompt-item-key {
@@ -537,17 +527,17 @@ onBeforeUnmount(() => {
   white-space: nowrap;
   text-overflow: ellipsis;
   font-size: 0.78rem;
-  color: #64748b;
+  color: var(--md-on-surface-variant);
 }
 
 .prompt-item-meta {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--md-on-surface-variant);
   flex-shrink: 0;
 }
 
 .prompt-list-item:focus-visible {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--md-primary);
   outline-offset: 2px;
 }
 

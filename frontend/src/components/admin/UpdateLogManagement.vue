@@ -229,16 +229,19 @@ onMounted(fetchLogs)
 .card-title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--md-on-surface);
 }
 
 .form-card {
   border-radius: 16px;
+  border: 1px solid var(--md-outline-variant);
+  background-color: var(--md-surface-container-low);
 }
 
 .log-card {
   border-radius: 16px;
-  background: linear-gradient(135deg, rgba(15, 118, 110, 0.06), rgba(15, 118, 110, 0));
+  border: 1px solid var(--md-outline-variant);
+  background-color: var(--md-surface-container-low);
 }
 
 .log-header {
@@ -252,17 +255,17 @@ onMounted(fetchLogs)
 
 .log-date {
   font-size: 0.85rem;
-  color: #4b5563;
+  color: var(--md-on-surface-variant);
 }
 
 .log-author {
   font-size: 0.85rem;
-  color: #6b7280;
+  color: var(--md-on-surface-variant);
 }
 
 .log-content {
   font-size: 0.95rem;
-  color: #1f2937;
+  color: var(--md-on-surface);
   line-height: 1.6;
   white-space: pre-wrap;
 }

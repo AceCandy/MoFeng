@@ -883,7 +883,8 @@ onMounted(() => {
 }
 
 .overview-card {
-  background: linear-gradient(135deg, rgba(15, 118, 110, 0.12), rgba(255, 255, 255, 0.96));
+  background-color: var(--md-surface-container-low);
+  border: 1px solid var(--md-outline-variant);
   border-radius: 16px;
 }
 
@@ -903,12 +904,12 @@ onMounted(() => {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--md-on-surface);
 }
 
 .overview-subtitle {
   margin: 8px 0 0;
-  color: #475569;
+  color: var(--md-on-surface-variant);
   font-size: 0.95rem;
   line-height: 1.6;
 }
@@ -923,6 +924,9 @@ onMounted(() => {
   height: 100%;
   min-width: 0;
   overflow: hidden;
+  background-color: var(--md-surface-container);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 16px;
 }
 
 .health-grid {
@@ -932,22 +936,22 @@ onMounted(() => {
 }
 
 .health-item {
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--md-outline-variant);
   border-radius: 10px;
   padding: 10px 12px;
-  background: #fbfdff;
+  background-color: var(--md-surface);
   min-width: 0;
   overflow: hidden;
 }
 
 .health-label {
-  color: #475569;
+  color: var(--md-on-surface-variant);
   font-size: 0.825rem;
 }
 
 .health-value {
   margin: 4px 0 8px;
-  color: #0f172a;
+  color: var(--md-on-surface);
   font-size: 0.925rem;
   font-weight: 600;
   min-width: 0;
@@ -969,6 +973,9 @@ onMounted(() => {
 
 .top-settings-card {
   height: 100%;
+  background-color: var(--md-surface-container);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 16px;
 }
 
 .card-header {
@@ -982,12 +989,12 @@ onMounted(() => {
 .card-title {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--md-on-surface);
 }
 
 .card-subtitle {
   margin: 6px 0 0;
-  color: #6b7280;
+  color: var(--md-on-surface-variant);
   font-size: 0.875rem;
   line-height: 1.5;
 }
@@ -998,16 +1005,16 @@ onMounted(() => {
 
 .form-hint {
   margin: 2px 0 12px;
-  color: #6b7280;
+  color: var(--md-on-surface-variant);
   font-size: 0.875rem;
 }
 
 .version-compare-panel {
   margin: 4px 0 12px;
   padding: 10px 12px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--md-outline-variant);
   border-radius: 10px;
-  background: #f9fafb;
+  background-color: var(--md-surface-container-low);
 }
 
 .compare-row {
@@ -1015,18 +1022,18 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 0.875rem;
-  color: #374151;
+  color: var(--md-on-surface);
   line-height: 1.6;
 }
 
 .compare-empty {
-  color: #6b7280;
+  color: var(--md-on-surface-variant);
 }
 
 .compare-meta {
   margin-top: 4px;
   font-size: 0.8125rem;
-  color: #6b7280;
+  color: var(--md-on-surface-variant);
 }
 
 .compare-result {
@@ -1036,15 +1043,15 @@ onMounted(() => {
 }
 
 .compare-new {
-  color: #b45309;
+  color: var(--md-warning);
 }
 
 .compare-same {
-  color: #047857;
+  color: var(--md-success);
 }
 
 .compare-error {
-  color: #b91c1c;
+  color: var(--md-error);
 }
 
 .table-toolbar {
@@ -1066,8 +1073,9 @@ onMounted(() => {
 }
 
 .key-code {
-  background: #eef2ff;
-  color: #312e81;
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  border: 1px solid var(--md-outline-variant);
   border-radius: 8px;
   padding: 2px 6px;
   font-size: 0.8125rem;
@@ -1080,10 +1088,11 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: min(52vw, 560px);
+  color: var(--md-on-surface);
 }
 
 .config-table :deep(.row-managed td) {
-  background: rgba(59, 130, 246, 0.06);
+  background-color: var(--md-primary-container);
 }
 
 .config-modal {
