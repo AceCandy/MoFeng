@@ -1,11 +1,15 @@
 <!-- AIMETA P=章节内容_章节文本展示编辑|R=内容展示_编辑|NR=不含版本管理|E=component:ChapterContent|X=internal|A=内容组件|D=vue|S=dom|RD=./README.ai -->
 <template>
   <div class="space-y-6">
-    <div class="md-card md-card-filled p-4 mb-6" style="border-radius: var(--md-radius-lg); background-color: var(--md-success-container);">
+    <div class="chapter-complete-banner">
       <div class="flex items-center justify-between gap-3">
-        <div class="flex items-center gap-2 min-w-0" style="color: var(--md-on-success-container);">
+        <div class="flex items-center gap-2 min-w-0" style="color: var(--md-on-success-container)">
           <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+            <path
+              fill-rule="evenodd"
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+              clip-rule="evenodd"
+            ></path>
           </svg>
           <div class="flex items-center gap-2 flex-wrap min-w-0">
             <span class="font-medium">这个章节已经完成</span>
@@ -14,24 +18,29 @@
 
         <button
           v-if="selectedChapter.versions && selectedChapter.versions.length > 0"
+          type="button"
           @click="$emit('showVersionSelector', true)"
           class="md-btn md-btn-text md-ripple flex items-center gap-1"
         >
           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
             <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
-            <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path>
+            <path
+              fill-rule="evenodd"
+              d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+              clip-rule="evenodd"
+            ></path>
           </svg>
           查看所有版本
         </button>
       </div>
     </div>
 
-    <div class="md-card md-card-outlined p-6" style="border-radius: var(--md-radius-xl);">
-      <div class="flex items-center justify-between mb-4 gap-3">
+    <article class="chapter-paper">
+      <div class="chapter-paper__header">
         <Tooltip :text="contentTooltipText" :show-delay="150">
           <button
             type="button"
-            class="md-title-medium font-semibold p-0 bg-transparent border-0 appearance-none text-left transition-opacity hover:opacity-80 cursor-pointer"
+            class="chapter-paper__title md-title-medium font-semibold"
             :class="hasChapterContent ? '' : 'opacity-50 cursor-not-allowed'"
             :disabled="!hasChapterContent"
             @click="copyChapterContent(selectedChapter)"
@@ -43,57 +52,74 @@
         <div class="flex items-center gap-3 flex-wrap justify-end">
           <!-- 分层优化按钮 -->
           <button
+            type="button"
             class="md-btn md-btn-tonal md-ripple flex items-center gap-1"
             @click="openOptimizerPanel"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+              />
             </svg>
             分层优化
           </button>
           <button
+            type="button"
             class="md-btn md-btn-outlined md-ripple flex items-center gap-1"
             :class="selectedChapter.content ? '' : 'opacity-50 cursor-not-allowed'"
             :disabled="!selectedChapter.content"
             @click="exportChapterAsTxt(selectedChapter)"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v16h16V4m-4 4l-4-4-4 4m4-4v12" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 4v16h16V4m-4 4l-4-4-4 4m4-4v12"
+              />
             </svg>
             导出TXT
           </button>
         </div>
       </div>
       <div class="prose max-w-none">
-        <div class="chapter-prose" style="color: var(--md-on-surface);">
-          <p v-for="(paragraph, idx) in chapterDisplayParagraphs" :key="`chapter-${idx}`">{{ paragraph }}</p>
+        <div class="chapter-prose">
+          <p v-for="(paragraph, idx) in chapterDisplayParagraphs" :key="`chapter-${idx}`">
+            {{ paragraph }}
+          </p>
         </div>
       </div>
-    </div>
+    </article>
 
     <!-- 分层优化弹窗 -->
     <Teleport to="body">
-      <div
-        v-if="showOptimizer"
-        class="md-dialog-overlay"
-        @click.self="closeOptimizerModal"
-      >
+      <div v-if="showOptimizer" class="md-dialog-overlay" @click.self="closeOptimizerModal">
         <div class="md-dialog m3-optimizer-dialog">
           <div class="p-6">
             <!-- 优化面板头部 -->
             <div class="flex items-center justify-between mb-6">
               <div>
-                <h3 class="md-headline-small font-semibold">✨ 分层优化</h3>
-                <p class="md-body-small md-on-surface-variant mt-1">选择一个维度进行深度优化，让文字更有灵魂</p>
+                <h3 class="md-headline-small font-semibold">分层优化</h3>
+                <p class="md-body-small md-on-surface-variant mt-1">
+                  选择一个维度生成可预览的优化稿。
+                </p>
               </div>
               <button
+                type="button"
                 @click="closeOptimizerModal"
                 :disabled="isOptimizing"
                 class="md-icon-btn md-ripple"
                 :class="{ 'opacity-40 cursor-not-allowed': isOptimizing }"
               >
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                  <path
+                    fill-rule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clip-rule="evenodd"
+                  ></path>
                 </svg>
               </button>
             </div>
@@ -103,18 +129,17 @@
               <button
                 v-for="dim in optimizeDimensions"
                 :key="dim.key"
+                type="button"
                 @click="selectedDimension = dim.key"
                 :disabled="isOptimizing"
                 :class="[
                   'md-card md-card-outlined p-4 text-left transition-all duration-200',
-                  selectedDimension === dim.key
-                    ? 'm3-option-selected'
-                    : 'm3-option',
-                  isOptimizing ? 'opacity-70 cursor-not-allowed' : ''
+                  selectedDimension === dim.key ? 'm3-option-selected' : 'm3-option',
+                  isOptimizing ? 'opacity-70 cursor-not-allowed' : '',
                 ]"
               >
                 <div class="flex items-center gap-3 mb-2">
-                  <span class="text-2xl">{{ dim.icon }}</span>
+                  <span class="m3-option-marker">{{ dim.marker }}</span>
                   <span class="md-title-small font-semibold">{{ dim.label }}</span>
                 </div>
                 <p class="md-body-small md-on-surface-variant">{{ dim.description }}</p>
@@ -123,9 +148,7 @@
 
             <!-- 额外说明 -->
             <div class="mb-6">
-              <label class="md-text-field-label mb-2">
-                额外优化指令（可选）
-              </label>
+              <label class="md-text-field-label mb-2"> 额外优化指令（可选） </label>
               <textarea
                 v-model="additionalNotes"
                 rows="3"
@@ -141,12 +164,16 @@
                 <span class="md-body-small font-medium">
                   正在优化{{ selectedDimensionLabel ? `：${selectedDimensionLabel}` : '' }}
                 </span>
-                <span class="m3-optimizing-dots" aria-hidden="true">
-                  <i></i><i></i><i></i>
-                </span>
+                <span class="m3-optimizing-dots" aria-hidden="true"> <i></i><i></i><i></i> </span>
               </div>
               <p class="md-body-small md-on-surface-variant mb-3">{{ currentOptimizeHint }}</p>
-              <div class="m3-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="优化进行中">
+              <div
+                class="m3-progress-track"
+                role="progressbar"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-label="优化进行中"
+              >
                 <div class="m3-progress-bar"></div>
               </div>
             </div>
@@ -154,6 +181,7 @@
             <!-- 操作按钮 -->
             <div class="flex justify-end gap-3">
               <button
+                type="button"
                 @click="closeOptimizerModal"
                 :disabled="isOptimizing"
                 class="md-btn md-btn-outlined md-ripple disabled:opacity-50"
@@ -161,12 +189,22 @@
                 取消
               </button>
               <button
+                type="button"
                 @click="startOptimize"
                 :disabled="!selectedDimension || isOptimizing"
                 class="md-btn md-btn-filled md-ripple disabled:opacity-50 flex items-center gap-2"
               >
-                <svg v-if="isOptimizing" class="w-4 h-4 animate-spin" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"></path>
+                <svg
+                  v-if="isOptimizing"
+                  class="w-4 h-4 animate-spin"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                    clip-rule="evenodd"
+                  ></path>
                 </svg>
                 {{ isOptimizing ? '优化中...' : '开始优化' }}
               </button>
@@ -178,40 +216,43 @@
 
     <!-- 优化结果预览弹窗 -->
     <Teleport to="body">
-      <div
-        v-if="showOptimizeResult"
-        class="md-dialog-overlay"
-        @click.self="closeOptimizeResult"
-      >
+      <div v-if="showOptimizeResult" class="md-dialog-overlay" @click.self="closeOptimizeResult">
         <div class="md-dialog m3-result-dialog flex flex-col">
-          <div class="p-6 border-b" style="border-bottom-color: var(--md-outline-variant);">
+          <div class="p-6 border-b" style="border-bottom-color: var(--md-outline-variant)">
             <div class="flex items-center justify-between">
               <div>
                 <h3 class="md-headline-small font-semibold">优化结果预览</h3>
                 <p class="md-body-small md-on-surface-variant mt-1">{{ optimizeResultNotes }}</p>
               </div>
-              <button
-                @click="closeOptimizeResult"
-                class="md-icon-btn md-ripple"
-              >
+              <button type="button" @click="closeOptimizeResult" class="md-icon-btn md-ripple">
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                  <path
+                    fill-rule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clip-rule="evenodd"
+                  ></path>
                 </svg>
               </button>
             </div>
           </div>
           <div class="flex-1 overflow-y-auto p-6">
             <div class="prose max-w-none">
-              <div class="chapter-prose" style="color: var(--md-on-surface);">
-                <p v-for="(paragraph, idx) in optimizedDisplayParagraphs" :key="`optimized-${idx}`">{{ paragraph }}</p>
+              <div class="chapter-prose">
+                <p v-for="(paragraph, idx) in optimizedDisplayParagraphs" :key="`optimized-${idx}`">
+                  {{ paragraph }}
+                </p>
               </div>
             </div>
           </div>
-          <div class="p-6 border-t flex items-center justify-end gap-3" style="border-top-color: var(--md-outline-variant);">
+          <div
+            class="p-6 border-t flex items-center justify-end gap-3"
+            style="border-top-color: var(--md-outline-variant)"
+          >
             <div class="md-body-small md-on-surface-variant m3-preview-metric">
               {{ optimizedPreviewWordCount }} 字
             </div>
             <button
+              type="button"
               @click="reselectOptimization"
               :disabled="isApplying"
               class="md-btn md-btn-tonal md-ripple disabled:opacity-50"
@@ -219,19 +260,30 @@
               重新选择优化
             </button>
             <button
+              type="button"
               @click="closeOptimizeResult"
               class="md-btn md-btn-outlined md-ripple"
             >
               取消
             </button>
             <button
+              type="button"
               @click="applyOptimization"
               :disabled="isApplying"
               class="md-btn md-btn-filled md-ripple disabled:opacity-50 flex items-center gap-2"
-              style="background-color: var(--md-success); color: var(--md-on-success);"
+              style="background-color: var(--md-success); color: var(--md-on-success)"
             >
-              <svg v-if="isApplying" class="w-4 h-4 animate-spin" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"></path>
+              <svg
+                v-if="isApplying"
+                class="w-4 h-4 animate-spin"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                  clip-rule="evenodd"
+                ></path>
               </svg>
               {{ isApplying ? '应用中...' : '应用优化' }}
             </button>
@@ -277,35 +329,35 @@ let optimizeHintTimer: number | null = null
 const optimizeDimensions = [
   {
     key: 'dialogue',
-    icon: '💬',
+    marker: '对白',
     label: '对话优化',
-    description: '让每句对话都有独特的声音和潜台词'
+    description: '让每句对话都有独特的声音和潜台词',
   },
   {
     key: 'environment',
-    icon: '🌄',
+    marker: '场景',
     label: '环境描写',
-    description: '让场景氛围与情绪完美融合'
+    description: '让场景氛围与情绪完美融合',
   },
   {
     key: 'psychology',
-    icon: '🧠',
+    marker: '内心',
     label: '心理活动',
-    description: '深入角色内心，展现复杂情感'
+    description: '深入角色内心，展现复杂情感',
   },
   {
     key: 'rhythm',
-    icon: '🎵',
+    marker: '节奏',
     label: '节奏韵律',
-    description: '优化文字节奏，增强阅读体验'
-  }
+    description: '优化文字节奏，增强阅读体验',
+  },
 ]
 
 const optimizeHints = [
   '正在重构句式与语气，保持人物声音一致性',
   '正在增强细节密度，补充情绪与感官锚点',
   '正在检查段落节奏，确保阅读流畅且有张力',
-  '正在收敛表达，避免空泛描述并强化画面感'
+  '正在收敛表达，避免空泛描述并强化画面感',
 ]
 
 const selectedDimensionLabel = computed(() => {
@@ -314,7 +366,7 @@ const selectedDimensionLabel = computed(() => {
 })
 
 const currentOptimizeHint = computed(
-  () => optimizeHints[optimizeHintIndex.value % optimizeHints.length]
+  () => optimizeHints[optimizeHintIndex.value % optimizeHints.length],
 )
 
 const startOptimizeHintRotation = () => {
@@ -394,10 +446,7 @@ const splitChapterParagraphs = (content: string): string[] => {
 
   // 单段超长文本兜底：按句号等标点粗分段，提升可读性
   const singleParagraph = paragraphs[0]
-  const sentences = (
-    singleParagraph.match(/[^。！？!?；;]+[。！？!?；;]?/g)
-    || [singleParagraph]
-  )
+  const sentences = (singleParagraph.match(/[^。！？!?；;]+[。！？!?；;]?/g) || [singleParagraph])
     .map((sentence) => sentence.trim())
     .filter(Boolean)
 
@@ -413,18 +462,18 @@ const splitChapterParagraphs = (content: string): string[] => {
 }
 
 const chapterDisplayParagraphs = computed(() =>
-  splitChapterParagraphs(cleanVersionContent(props.selectedChapter.content || ''))
+  splitChapterParagraphs(cleanVersionContent(props.selectedChapter.content || '')),
 )
 
-const optimizedPreviewText = computed(() =>
-  cleanVersionContent(optimizedContent.value || '')
-)
+const optimizedPreviewText = computed(() => cleanVersionContent(optimizedContent.value || ''))
 
 const optimizedPreviewWordCount = computed(() =>
-  countNonWhitespaceChars(optimizedPreviewText.value)
+  countNonWhitespaceChars(optimizedPreviewText.value),
 )
 const hasOptimizedResult = computed(() => Boolean(optimizedPreviewText.value.trim()))
-const hasChapterContent = computed(() => Boolean(cleanVersionContent(props.selectedChapter.content || '').trim()))
+const hasChapterContent = computed(() =>
+  Boolean(cleanVersionContent(props.selectedChapter.content || '').trim()),
+)
 const contentTooltipText = ref('点击复制')
 
 const resetContentTooltip = () => {
@@ -432,7 +481,7 @@ const resetContentTooltip = () => {
 }
 
 const optimizedDisplayParagraphs = computed(() =>
-  splitChapterParagraphs(optimizedPreviewText.value)
+  splitChapterParagraphs(optimizedPreviewText.value),
 )
 
 const openOptimizerPanel = () => {
@@ -555,14 +604,14 @@ const decodeJsonStringFragment = (fragment: string): string => {
   try {
     return JSON.parse(`"${fragment}"`) as string
   } catch {
-    return fragment
-      .replace(/\\"/g, '"')
-      .replace(/\\n/g, '\n')
-      .replace(/\\t/g, '\t')
+    return fragment.replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\t/g, '\t')
   }
 }
 
-const extractJsonField = (rawText: string, field: 'optimized_content' | 'optimization_notes'): string | null => {
+const extractJsonField = (
+  rawText: string,
+  field: 'optimized_content' | 'optimization_notes',
+): string | null => {
   const pattern = new RegExp(`"${field}"\\s*:\\s*"((?:\\\\.|[^"\\\\])*)"`, 's')
   const match = rawText.match(pattern)
   if (!match?.[1]) return null
@@ -571,7 +620,7 @@ const extractJsonField = (rawText: string, field: 'optimized_content' | 'optimiz
 
 const normalizeOptimizeResult = (
   contentRaw: string,
-  notesRaw: string
+  notesRaw: string,
 ): { content: string; notes: string } => {
   let content = (contentRaw || '').trim()
   let notes = (notesRaw || '').trim()
@@ -612,7 +661,7 @@ const normalizeOptimizeResult = (
 
   return {
     content,
-    notes: notes || '优化完成'
+    notes: notes || '优化完成',
   }
 }
 
@@ -634,7 +683,7 @@ const startOptimize = async () => {
       project_id: props.projectId,
       chapter_number: props.selectedChapter.chapter_number,
       dimension: selectedDimension.value as 'dialogue' | 'environment' | 'psychology' | 'rhythm',
-      additional_notes: additionalNotes.value || undefined
+      additional_notes: additionalNotes.value || undefined,
     })
 
     const normalized = normalizeOptimizeResult(result.optimized_content, result.optimization_notes)
@@ -665,19 +714,19 @@ const applyOptimization = async () => {
     const applyResult = await OptimizerAPI.applyOptimization(
       props.projectId,
       props.selectedChapter.chapter_number,
-      optimizedContent.value
+      optimizedContent.value,
     )
 
     const syncStats = applyResult.foreshadowing_sync
     if (syncStats) {
       globalAlert.showSuccess(
-        `优化内容已应用，伏笔同步：新增 ${syncStats.created}，推进 ${syncStats.developing}，回收 ${syncStats.revealed}`
+        `优化内容已应用，伏笔同步：新增 ${syncStats.created}，推进 ${syncStats.developing}，回收 ${syncStats.revealed}`,
       )
     } else {
       globalAlert.showSuccess('优化内容已应用')
     }
     showOptimizeResult.value = false
-    
+
     // 重置状态
     selectedDimension.value = ''
     additionalNotes.value = ''
@@ -700,6 +749,49 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.chapter-complete-banner {
+  padding: var(--md-spacing-3) var(--md-spacing-4);
+  border: 1px solid color-mix(in srgb, var(--md-success) 24%, var(--md-outline-variant));
+  border-radius: var(--md-radius-lg);
+  background-color: var(--md-success-container);
+}
+
+.chapter-paper {
+  padding: var(--md-spacing-5);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-xl);
+  background-color: var(--md-surface);
+}
+
+.chapter-paper__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-spacing-3);
+  margin-bottom: var(--md-spacing-5);
+}
+
+.chapter-paper__title {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--md-on-surface);
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  transition: color var(--md-duration-short) var(--md-easing-standard);
+}
+
+.chapter-paper__title:hover:not(:disabled) {
+  color: var(--md-primary-dark);
+}
+
+.chapter-paper__title:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 3px;
+  border-radius: var(--md-radius-xs);
+}
+
 .m3-optimizer-dialog {
   max-width: min(720px, calc(100vw - 32px));
   max-height: calc(100vh - 32px);
@@ -718,8 +810,8 @@ onUnmounted(() => {
   border-radius: var(--md-radius-md);
   background: linear-gradient(
     120deg,
-    color-mix(in srgb, var(--md-primary-container) 70%, white) 0%,
-    color-mix(in srgb, var(--md-surface-container-low) 85%, white) 100%
+    color-mix(in srgb, var(--md-primary-container) 70%, var(--md-surface)) 0%,
+    color-mix(in srgb, var(--md-surface-container-low) 85%, var(--md-surface)) 100%
   );
   padding: 12px 14px;
 }
@@ -730,7 +822,7 @@ onUnmounted(() => {
   height: 6px;
   border-radius: 999px;
   overflow: hidden;
-  background-color: color-mix(in srgb, var(--md-primary) 16%, white);
+  background-color: color-mix(in srgb, var(--md-primary) 16%, var(--md-surface));
 }
 
 .m3-progress-bar {
@@ -739,9 +831,9 @@ onUnmounted(() => {
   border-radius: inherit;
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--md-primary) 72%, white) 0%,
+    color-mix(in srgb, var(--md-primary) 72%, var(--md-surface)) 0%,
     var(--md-primary) 55%,
-    color-mix(in srgb, var(--md-primary) 82%, white) 100%
+    color-mix(in srgb, var(--md-primary) 82%, var(--md-surface)) 100%
   );
   animation: optimizer-progress-slide 1.05s ease-in-out infinite;
 }
@@ -779,9 +871,34 @@ onUnmounted(() => {
   box-shadow: var(--md-elevation-1);
 }
 
+.m3-option-marker {
+  display: inline-flex;
+  min-width: 44px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--md-radius-full);
+  background-color: var(--md-surface-container);
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-medium);
+  font-weight: 600;
+}
+
+.m3-option-selected .m3-option-marker {
+  background-color: var(--md-primary);
+  color: var(--md-on-primary);
+}
+
+.chapter-prose {
+  max-width: 74ch;
+  margin: 0 auto;
+  color: var(--md-on-surface);
+  font-size: var(--md-body-large);
+}
+
 .chapter-prose p {
-  margin: 0 0 0.9em;
-  line-height: 1.9;
+  margin: 0 0 1.15em;
+  line-height: 2;
   text-indent: 2em;
   white-space: pre-wrap;
 }
@@ -820,6 +937,25 @@ onUnmounted(() => {
   40% {
     transform: translateY(-2px);
     opacity: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .chapter-paper {
+    padding: var(--md-spacing-4);
+  }
+
+  .chapter-paper__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .chapter-paper__header .md-btn {
+    min-width: 0;
+  }
+
+  .chapter-prose {
+    font-size: var(--md-body-medium);
   }
 }
 </style>

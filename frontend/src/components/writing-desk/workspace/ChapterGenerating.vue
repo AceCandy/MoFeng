@@ -1,24 +1,39 @@
 <!-- AIMETA P=生成中_章节生成进度|R=进度展示_流式输出|NR=不含生成逻辑|E=component:ChapterGenerating|X=internal|A=生成状态|D=vue|S=dom|RD=./README.ai -->
 <template>
   <div class="h-full flex items-center justify-center">
-    <div class="md-card md-card-outlined p-8 text-center max-w-md" style="border-radius: var(--md-radius-xl);">
-      <div class="w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-5" style="background-color: var(--md-primary-container);">
-        <div class="md-spinner" style="width: 36px; height: 36px;"></div>
+    <div
+      class="md-card md-card-outlined p-8 text-center max-w-md"
+      style="border-radius: var(--md-radius-xl)"
+    >
+      <div
+        class="w-16 h-16 rounded-full mx-auto flex items-center justify-center mb-5"
+        style="background-color: var(--md-primary-container)"
+      >
+        <div class="md-spinner" style="width: 36px; height: 36px"></div>
       </div>
       <h3 class="md-headline-small font-semibold mb-3">{{ statusText.title }}</h3>
-      <div class="space-y-2 md-body-medium md-on-surface-variant mb-6">
+      <div class="space-y-2 md-body-medium md-on-surface-variant mb-6" aria-live="polite">
         <p class="m3-pulse">{{ statusText.line1 }}</p>
         <p class="m3-pulse" style="animation-delay: 0.5s">{{ statusText.line2 }}</p>
-        <p class="m3-pulse" style="animation-delay: 1s">🎨 描绘生动场景...</p>
+        <p class="m3-pulse" style="animation-delay: 1s">打磨场景细节...</p>
       </div>
-      <div class="md-progress-linear mb-2" role="progressbar" :aria-valuemin="0" :aria-valuemax="100" :aria-valuenow="Math.round(progressPercent)">
+      <div
+        class="md-progress-linear mb-2"
+        role="progressbar"
+        :aria-valuemin="0"
+        :aria-valuemax="100"
+        :aria-valuenow="Math.round(progressPercent)"
+      >
         <div class="md-progress-linear-bar" :style="{ width: `${progressPercent}%` }"></div>
       </div>
       <div class="flex items-center justify-between mb-5">
-        <span class="md-label-small md-on-surface-variant">当前阶段：{{ stageLabel }}<template v-if="stepIndexText">（{{ stepIndexText }}）</template></span>
+        <span class="md-label-small md-on-surface-variant"
+          >当前阶段：{{ stageLabel
+          }}<template v-if="stepIndexText">（{{ stepIndexText }}）</template></span
+        >
         <span class="md-label-small md-on-surface-variant">{{ Math.round(progressPercent) }}%</span>
       </div>
-      <div class="md-card md-card-filled p-4 text-left" style="border-radius: var(--md-radius-lg);">
+      <div class="md-card md-card-filled p-4 text-left" style="border-radius: var(--md-radius-lg)">
         <p class="md-body-small md-on-surface-variant">
           {{ etaText }}，已耗时 {{ elapsedText }}。您可以随时离开此页面，生成完成后再回来查看。
         </p>
@@ -48,7 +63,10 @@ const clockNow = ref(Date.now())
 const localStartAt = ref(Date.now())
 let timer: number | null = null
 
-const STAGE_CONFIG: Record<'generating' | 'evaluating' | 'selecting', { start: number; end: number; expectedSeconds: number; label: string }> = {
+const STAGE_CONFIG: Record<
+  'generating' | 'evaluating' | 'selecting',
+  { start: number; end: number; expectedSeconds: number; label: string }
+> = {
   generating: { start: 8, end: 78, expectedSeconds: 150, label: '正文生成' },
   evaluating: { start: 78, end: 94, expectedSeconds: 40, label: '版本评审' },
   selecting: { start: 94, end: 99, expectedSeconds: 20, label: '结果收敛' },
@@ -80,9 +98,7 @@ const parseBackendTimestampToMs = (raw?: string | null): number | null => {
   // 后端返回的 DATETIME 在 SQLite 场景下可能不带时区，
   // 这里统一按北京时间（UTC+08:00）解析，避免被浏览器按其他时区解释。
   const hasExplicitTimezone = /([zZ]|[+\-]\d{2}:\d{2})$/.test(normalized)
-  const isoCandidate = normalized.includes('T')
-    ? normalized
-    : normalized.replace(' ', 'T')
+  const isoCandidate = normalized.includes('T') ? normalized : normalized.replace(' ', 'T')
   const parseTarget = hasExplicitTimezone ? isoCandidate : `${isoCandidate}+08:00`
   const ts = Date.parse(parseTarget)
   return Number.isFinite(ts) ? ts : null
@@ -96,7 +112,9 @@ const parsedStatusUpdatedAt = computed(() => {
   return parseBackendTimestampToMs(props.statusUpdatedAt)
 })
 
-const startTimestamp = computed(() => parsedGenerationStartedAt.value ?? parsedStatusUpdatedAt.value ?? localStartAt.value)
+const startTimestamp = computed(
+  () => parsedGenerationStartedAt.value ?? parsedStatusUpdatedAt.value ?? localStartAt.value,
+)
 
 const elapsedSeconds = computed(() => {
   const delta = Math.floor((clockNow.value - startTimestamp.value) / 1000)
@@ -106,12 +124,23 @@ const elapsedSeconds = computed(() => {
 const backendProgress = computed(() => {
   if (props.generationProgress === null || props.generationProgress === undefined) return null
   if (!Number.isFinite(props.generationProgress)) return null
-  if (!(props.status === 'generating' || props.status === 'evaluating' || props.status === 'selecting')) return null
+  if (
+    !(
+      props.status === 'generating' ||
+      props.status === 'evaluating' ||
+      props.status === 'selecting'
+    )
+  )
+    return null
   return clampPercent(props.generationProgress)
 })
 
 const currentStageConfig = computed(() => {
-  if (props.status === 'generating' || props.status === 'evaluating' || props.status === 'selecting') {
+  if (
+    props.status === 'generating' ||
+    props.status === 'evaluating' ||
+    props.status === 'selecting'
+  ) {
     return STAGE_CONFIG[props.status]
   }
   return null
@@ -175,26 +204,26 @@ const statusText = computed(() => {
     case 'generating':
       return {
         title: `AI 正在为您创作第${props.chapterNumber}章`,
-        line1: '✨ 构思情节发展...',
-        line2: '📝 编织精彩对话...'
+        line1: '构思情节发展...',
+        line2: '组织人物对话...',
       }
     case 'evaluating':
       return {
         title: `AI 正在评审第${props.chapterNumber}章的多个版本`,
-        line1: '🧐 分析故事结构...',
-        line2: '⚖️ 比较版本优劣...'
+        line1: '分析故事结构...',
+        line2: '比较版本优劣...',
       }
     case 'selecting':
       return {
         title: `正在确认第${props.chapterNumber}章的最终版本`,
-        line1: '💾 保存您的选择...',
-        line2: '✍️ 生成最终摘要...'
+        line1: '保存您的选择...',
+        line2: '生成最终摘要...',
       }
     default:
       return {
         title: '请稍候...',
         line1: '正在处理您的请求...',
-        line2: '...'
+        line2: '...',
       }
   }
 })
@@ -204,7 +233,7 @@ watch(
   () => {
     localStartAt.value = Date.now()
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 onMounted(() => {

@@ -12,7 +12,7 @@
     />
 
     <!-- 主要内容区域 -->
-    <div class="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 overflow-hidden">
+    <section class="writing-desk-main" aria-label="写作台内容">
       <!-- 加载状态 -->
       <div v-if="novelStore.isLoading" class="h-full flex justify-center items-center">
         <div class="text-center">
@@ -46,15 +46,14 @@
           </div>
           <h3 class="md-title-large mb-2" style="color: var(--md-on-surface)">加载失败</h3>
           <p class="md-body-medium mb-4" style="color: var(--md-error)">{{ novelStore.error }}</p>
-          <button @click="loadProject" class="md-btn md-btn-tonal md-ripple">重新加载</button>
+          <button type="button" @click="loadProject" class="md-btn md-btn-tonal md-ripple">
+            重新加载
+          </button>
         </div>
       </div>
 
       <!-- 主要内容 -->
-      <div
-        v-else-if="project"
-        class="writing-desk-layout"
-      >
+      <div v-else-if="project" class="writing-desk-layout">
         <WDSidebar
           ref="sidebarRef"
           :project="project"
@@ -71,7 +70,7 @@
           @generate-outline="generateOutline"
         />
 
-        <div class="flex-1 min-w-0">
+        <div class="writing-desk-workspace-shell">
           <WDWorkspace
             :project="project"
             :selected-chapter-number="selectedChapterNumber"
@@ -95,7 +94,7 @@
           />
         </div>
       </div>
-    </div>
+    </section>
     <WDVersionDetailModal
       :show="showVersionDetailModal"
       :detail-version-index="detailVersionIndex"
@@ -127,6 +126,7 @@
                 </p>
               </div>
               <button
+                type="button"
                 @click="closeRecommendedOptimizeResult"
                 :disabled="isApplyingRecommendedOptimization"
                 class="md-icon-btn md-ripple disabled:opacity-50"
@@ -163,6 +163,7 @@
               {{ recommendedOptimizedWordCount }} 字
             </div>
             <button
+              type="button"
               @click="closeRecommendedOptimizeResult"
               :disabled="isApplyingRecommendedOptimization"
               class="md-btn md-btn-outlined md-ripple disabled:opacity-50"
@@ -170,6 +171,7 @@
               取消
             </button>
             <button
+              type="button"
               @click="applyRecommendedOptimization"
               :disabled="isApplyingRecommendedOptimization"
               class="md-btn md-btn-filled md-ripple disabled:opacity-50 flex items-center gap-2"
@@ -1098,16 +1100,37 @@ onMounted(() => {
 
 <style scoped>
 .writing-desk-page {
-  min-height: calc(100vh - 112px);
+  height: 100vh;
+  min-height: 640px;
   background-color: var(--md-surface-dim);
   color: var(--md-on-surface);
   font-family: var(--md-font-family);
   animation: m3-fade 0.6s ease-out both;
 }
 
+.writing-desk-main {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  padding: var(--md-spacing-5) clamp(var(--md-spacing-4), 2.4vw, var(--md-spacing-8))
+    var(--md-spacing-6);
+  overflow: hidden;
+}
+
 .writing-desk-layout {
   display: flex;
-  gap: var(--md-spacing-6);
+  align-items: stretch;
+  gap: var(--md-spacing-5);
+  height: 100%;
+  min-height: 0;
+  width: min(100%, 1680px);
+  margin: 0 auto;
+}
+
+.writing-desk-workspace-shell {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
   height: 100%;
 }
 
@@ -1118,10 +1141,25 @@ onMounted(() => {
 }
 
 @media (max-width: 1023px) {
+  .writing-desk-page {
+    height: auto;
+    min-height: calc(100vh - 104px);
+  }
+
+  .writing-desk-main {
+    padding: var(--md-spacing-4);
+    overflow: visible;
+  }
+
   .writing-desk-layout {
     flex-direction: column;
     gap: var(--md-spacing-4);
-    overflow-y: auto;
+    height: auto;
+    overflow: visible;
+  }
+
+  .writing-desk-workspace-shell {
+    min-height: 560px;
   }
 }
 

@@ -1,47 +1,84 @@
 <!-- AIMETA P=写作台头部_顶部导航栏|R=导航_操作按钮|NR=不含内容区域|E=component:WDHeader|X=ui|A=头部组件|D=vue|S=dom|RD=./README.ai -->
 <template>
-  <div class="md-top-app-bar md-elevation-1 flex-shrink-0 z-30 backdrop-blur-md">
-    <div class="w-full px-4 sm:px-6 lg:px-8">
-      <div class="flex items-center justify-between h-16">
+  <header class="writing-header flex-shrink-0 z-30">
+    <div class="writing-header__inner">
+      <div class="writing-header__row">
         <!-- 左侧：项目信息 -->
-        <div class="flex items-center gap-2 sm:gap-4 min-w-0">
-          <button @click="$emit('goBack')" class="md-icon-btn md-ripple flex-shrink-0">
+        <div class="writing-header__project">
+          <button
+            type="button"
+            @click="$emit('goBack')"
+            class="md-icon-btn md-ripple writing-header__back"
+            aria-label="返回小说档案"
+            title="返回小说档案"
+          >
             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L4.414 9H17a1 1 0 110 2H4.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd"></path>
+              <path
+                fill-rule="evenodd"
+                d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L4.414 9H17a1 1 0 110 2H4.414l5.293 5.293a1 1 0 010 1.414z"
+                clip-rule="evenodd"
+              ></path>
             </svg>
           </button>
-          <div class="min-w-0">
-            <h1 class="md-title-large font-semibold truncate">{{ project?.title || '加载中...' }}</h1>
-            <div class="hidden sm:flex items-center gap-2 md:gap-4 md-body-small md-on-surface-variant">
+          <div class="writing-header__title-block">
+            <h1 class="md-title-large font-semibold truncate">
+              {{ project?.title || '加载中...' }}
+            </h1>
+            <div class="writing-header__meta md-body-small md-on-surface-variant">
               <span>{{ project?.blueprint?.genre || '--' }}</span>
-              <span class="hidden md:inline">•</span>
-              <span class="hidden md:inline">{{ progress }}% 完成</span>
-              <span class="hidden lg:inline">•</span>
-              <span class="hidden lg:inline">{{ completedChapters }}/{{ totalChapters }} 章</span>
+              <span aria-hidden="true">•</span>
+              <span>{{ progress }}% 完成</span>
+              <span aria-hidden="true" class="writing-header__desktop-meta">•</span>
+              <span class="writing-header__desktop-meta"
+                >{{ completedChapters }}/{{ totalChapters }} 章</span
+              >
             </div>
           </div>
         </div>
 
         <!-- 右侧：操作按钮 -->
-        <div class="flex items-center gap-1 sm:gap-2">
+        <div class="writing-header__actions">
           <button
             v-if="hasIncompleteChapters"
+            type="button"
             @click="$emit('locateIncomplete')"
             class="md-btn md-btn-tonal md-ripple flex items-center gap-2"
           >
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
             </svg>
             <span class="hidden sm:inline">定位到未完成</span>
             <span class="sm:hidden">未完成</span>
           </button>
         </div>
       </div>
+
+      <div
+        class="writing-header__progress"
+        role="progressbar"
+        :aria-valuenow="clampedProgress"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        :aria-label="`写作进度 ${clampedProgress}%`"
+      >
+        <span :style="{ width: `${clampedProgress}%` }"></span>
+      </div>
     </div>
-  </div>
+  </header>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { NovelProject } from '@/api/novel'
 
 interface Props {
@@ -52,7 +89,119 @@ interface Props {
   hasIncompleteChapters: boolean
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
 defineEmits(['goBack', 'locateIncomplete'])
+
+const clampedProgress = computed(() => Math.max(0, Math.min(100, props.progress || 0)))
 </script>
+
+<style scoped>
+.writing-header {
+  display: flex;
+  align-items: center;
+  min-height: 72px;
+  background-color: color-mix(in srgb, var(--md-surface) 94%, var(--md-surface-container-low));
+  border-bottom: 1px solid var(--md-outline-variant);
+}
+
+.writing-header__inner {
+  width: min(100%, 1680px);
+  margin: 0 auto;
+  padding: var(--md-spacing-3) clamp(var(--md-spacing-4), 2.4vw, var(--md-spacing-8));
+}
+
+.writing-header__row {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-spacing-4);
+}
+
+.writing-header__project {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--md-spacing-3);
+}
+
+.writing-header__back {
+  flex-shrink: 0;
+}
+
+.writing-header__title-block {
+  min-width: 0;
+}
+
+.writing-header__title-block h1 {
+  max-width: min(58vw, 760px);
+  margin: 0;
+  line-height: 1.25;
+}
+
+.writing-header__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-2);
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.writing-header__actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--md-spacing-2);
+}
+
+.writing-header__progress {
+  height: 4px;
+  margin-top: var(--md-spacing-2);
+  overflow: hidden;
+  border-radius: var(--md-radius-full);
+  background-color: var(--md-surface-container);
+}
+
+.writing-header__progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background-color: var(--md-primary);
+  transition: width var(--md-duration-medium) var(--md-easing-standard);
+}
+
+@media (max-width: 640px) {
+  .writing-header {
+    min-height: 80px;
+  }
+
+  .writing-header__inner {
+    padding: var(--md-spacing-3) var(--md-spacing-4);
+  }
+
+  .writing-header__row {
+    align-items: flex-start;
+    gap: var(--md-spacing-3);
+  }
+
+  .writing-header__desktop-meta {
+    display: none;
+  }
+
+  .writing-header__title-block h1 {
+    max-width: calc(100vw - 188px);
+    font-size: var(--md-title-medium);
+  }
+
+  .writing-header__meta {
+    gap: var(--md-spacing-1);
+    font-size: var(--md-label-medium);
+  }
+
+  .writing-header__actions .md-btn {
+    min-height: 40px;
+    padding: 0 var(--md-spacing-3);
+  }
+}
+</style>

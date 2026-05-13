@@ -1,9 +1,9 @@
 <!-- AIMETA P=写作台侧边栏_章节目录|R=章节列表_导航|NR=不含内容编辑|E=component:WDSidebar|X=ui|A=侧边栏|D=vue|S=dom|RD=./README.ai -->
 <template>
-  <div>
+  <aside class="writing-sidebar-shell" aria-label="章节目录">
     <!-- 左侧：蓝图和章节列表 -->
     <div
-      class="md-card md-card-elevated writing-sidebar"
+      class="md-card md-card-outlined writing-sidebar"
       id="writing-desk-chapter-sidebar"
       style="border-radius: var(--md-radius-xl)"
     >
@@ -13,6 +13,7 @@
           <button
             type="button"
             class="writing-sidebar__link writing-sidebar__blueprint-link md-ripple"
+            aria-label="打开故事蓝图"
             @click="emit('openProjectDetail')"
           >
             <div
@@ -41,6 +42,7 @@
               type="button"
               class="md-card md-card-filled writing-sidebar__summary-link md-ripple"
               style="border-radius: var(--md-radius-md)"
+              aria-label="查看故事概要"
               @click="emit('openProjectSection', 'overview')"
             >
               <h3
@@ -60,6 +62,7 @@
                 type="button"
                 class="md-card md-card-outlined writing-sidebar__metric-link md-ripple"
                 style="border-radius: var(--md-radius-md)"
+                aria-label="查看角色"
                 @click="emit('openProjectSection', 'characters')"
               >
                 <div class="md-title-small font-semibold" style="color: var(--md-primary)">
@@ -71,6 +74,7 @@
                 type="button"
                 class="md-card md-card-outlined writing-sidebar__metric-link md-ripple"
                 style="border-radius: var(--md-radius-md)"
+                aria-label="查看关系"
                 @click="emit('openProjectSection', 'relationships')"
               >
                 <div class="md-title-small font-semibold" style="color: var(--md-secondary)">
@@ -100,6 +104,14 @@
                 :key="chapter.chapter_number"
                 :ref="(el) => setChapterRef(chapter.chapter_number, el)"
                 @click="$emit('selectChapter', chapter.chapter_number)"
+                @keydown.enter.prevent="$emit('selectChapter', chapter.chapter_number)"
+                @keydown.space.prevent="$emit('selectChapter', chapter.chapter_number)"
+                role="button"
+                tabindex="0"
+                :aria-current="
+                  selectedChapterNumber === chapter.chapter_number ? 'true' : undefined
+                "
+                :aria-label="`打开第${chapter.chapter_number}章：${chapter.title}`"
                 :class="[
                   'group cursor-pointer p-4 m3-chapter-card m3-stagger',
                   selectedForDeletion.includes(chapter.chapter_number)
@@ -117,6 +129,7 @@
                       :disabled="isChapterCompleted(chapter.chapter_number)"
                       :checked="selectedForDeletion.includes(chapter.chapter_number)"
                       @click.stop="toggleSelection(chapter.chapter_number)"
+                      :aria-label="`选择删除第${chapter.chapter_number}章`"
                       class="h-4 w-4 rounded border-[var(--md-outline)] text-[var(--md-primary)] focus:ring-[var(--md-primary)] disabled:opacity-50 accent-[var(--md-primary)]"
                     />
                   </div>
@@ -268,7 +281,7 @@
                   <!-- 章节操作按钮 -->
                   <div
                     :class="[
-                      'flex flex-shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200',
+                      'writing-sidebar__chapter-actions flex flex-shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200',
                       shouldStackActions(chapter.chapter_number)
                         ? 'flex-col items-center gap-1'
                         : 'items-center gap-1',
@@ -276,8 +289,10 @@
                   >
                     <button
                       v-if="canEditChapter(chapter.chapter_number)"
+                      type="button"
                       @click.stop="$emit('editChapter', chapter)"
                       class="md-icon-btn md-ripple"
+                      :aria-label="`编辑第${chapter.chapter_number}章大纲`"
                       title="编辑大纲"
                     >
                       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -293,6 +308,7 @@
                     </button>
                     <button
                       v-if="canShowGenerateAction(chapter.chapter_number)"
+                      type="button"
                       @click.stop="confirmGenerateChapter(chapter.chapter_number)"
                       :disabled="
                         generatingChapter === chapter.chapter_number ||
@@ -309,6 +325,7 @@
                               ? '重新生成版本'
                               : '开始创作'
                       "
+                      :aria-label="`${isChapterCompleted(chapter.chapter_number) ? '重新生成' : isChapterFailed(chapter.chapter_number) ? '重试' : hasChapterInProgress(chapter.chapter_number) ? '重新生成版本' : '开始创作'}第${chapter.chapter_number}章`"
                     >
                       <svg
                         v-if="
@@ -350,6 +367,7 @@
             </div>
             <div v-if="selectedForDeletion.length > 0" class="mt-4">
               <button
+                type="button"
                 @click="handleDeleteSelected"
                 class="md-btn md-btn-filled md-ripple w-full flex items-center justify-center gap-2"
                 style="background-color: var(--md-error); color: var(--md-on-error)"
@@ -366,6 +384,7 @@
             </div>
             <div class="mt-4">
               <button
+                type="button"
                 @click="$emit('generateOutline')"
                 :disabled="props.isGeneratingOutline"
                 class="md-btn md-btn-tonal md-ripple w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -394,7 +413,7 @@
         </div>
       </div>
     </div>
-  </div>
+  </aside>
 </template>
 
 <script setup lang="ts">
@@ -587,7 +606,7 @@ const shouldStackActions = (chapterNumber: number) => {
 const canGenerateChapter = (chapterNumber: number) => {
   if (!props.project?.blueprint?.chapter_outline) return false
 
-  const outlines = props.project.blueprint.chapter_outline.sort(
+  const outlines = [...props.project.blueprint.chapter_outline].sort(
     (a, b) => a.chapter_number - b.chapter_number,
   )
 
@@ -612,6 +631,12 @@ const canGenerateChapter = (chapterNumber: number) => {
 </script>
 
 <style scoped>
+.writing-sidebar-shell {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+}
+
 .writing-sidebar {
   position: relative;
   z-index: auto;
@@ -651,7 +676,7 @@ const canGenerateChapter = (chapterNumber: number) => {
 .writing-sidebar__summary-link {
   display: block;
   padding: var(--md-spacing-3);
-  background-color: var(--md-primary-container);
+  background-color: color-mix(in srgb, var(--md-primary-container) 72%, var(--md-surface));
 }
 
 .writing-sidebar__metric-link {
@@ -663,6 +688,12 @@ const canGenerateChapter = (chapterNumber: number) => {
 }
 
 @media (min-width: 1024px) {
+  .writing-sidebar-shell {
+    flex: 0 0 20rem;
+    width: 20rem;
+    height: 100%;
+  }
+
   .writing-sidebar {
     flex: 0 0 20rem;
     width: 20rem;
@@ -674,18 +705,27 @@ const canGenerateChapter = (chapterNumber: number) => {
   border-radius: var(--md-radius-lg);
   border: 1px solid var(--md-outline-variant);
   background-color: var(--md-surface);
+  outline: none;
   transition:
     background-color var(--md-duration-medium) var(--md-easing-standard),
-    border-color var(--md-duration-medium) var(--md-easing-standard);
+    border-color var(--md-duration-medium) var(--md-easing-standard),
+    box-shadow var(--md-duration-medium) var(--md-easing-standard);
 }
 
 .m3-chapter-card:hover {
   background-color: var(--md-surface-container-low);
+  border-color: var(--md-outline);
+}
+
+.m3-chapter-card:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
 }
 
 .m3-chapter-selected {
   border-color: var(--md-primary);
-  background-color: var(--md-primary-container);
+  background-color: color-mix(in srgb, var(--md-primary-container) 72%, var(--md-surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--md-primary) 35%, transparent);
 }
 
 .m3-chapter-danger {
@@ -695,6 +735,18 @@ const canGenerateChapter = (chapterNumber: number) => {
 
 .m3-stagger {
   animation: m3-rise 0.45s ease-out both;
+}
+
+@media (hover: none), (max-width: 640px) {
+  .writing-sidebar__chapter-actions {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 1023px) {
+  .writing-sidebar-shell {
+    height: auto;
+  }
 }
 
 @keyframes m3-rise {

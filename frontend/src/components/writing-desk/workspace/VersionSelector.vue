@@ -180,11 +180,16 @@
         </h4>
       </div>
 
-      <div class="grid gap-3">
+      <div class="version-grid" role="radiogroup" aria-label="章节候选版本">
         <div
           v-for="(version, index) in availableVersions"
           :key="index"
           @click="$emit('update:selectedVersionIndex', index)"
+          @keydown.enter.prevent="$emit('update:selectedVersionIndex', index)"
+          @keydown.space.prevent="$emit('update:selectedVersionIndex', index)"
+          role="radio"
+          :tabindex="selectedVersionIndex === index ? 0 : -1"
+          :aria-checked="selectedVersionIndex === index"
           :class="[
             'cursor-pointer p-4 m3-version-card',
             selectedVersionIndex === index
@@ -235,6 +240,7 @@
               </div>
               <div class="mt-2">
                 <button
+                  type="button"
                   @click.stop="$emit('showVersionDetail', index)"
                   class="md-btn md-btn-text md-ripple flex items-center gap-1"
                 >
@@ -254,8 +260,9 @@
         </div>
       </div>
 
-      <div class="mt-4 flex justify-end items-center gap-4">
+      <div class="version-actions">
         <button
+          type="button"
           @click="$emit('evaluateChapter')"
           :disabled="
             evaluatingChapter === selectedChapter?.chapter_number || availableVersions.length < 2
@@ -277,6 +284,7 @@
           {{ evaluatingChapter === selectedChapter?.chapter_number ? '评审中...' : 'AI 评审' }}
         </button>
         <button
+          type="button"
           @click="$emit('confirmVersionSelection')"
           :disabled="
             !availableVersions?.[selectedVersionIndex]?.content ||
@@ -406,22 +414,59 @@ const parseMarkdown = (text: string): string => {
 </script>
 
 <style scoped>
+.version-grid {
+  display: grid;
+  gap: var(--md-spacing-3);
+}
+
+.version-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--md-spacing-3);
+  margin-top: var(--md-spacing-4);
+}
+
 .m3-version-card {
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-radius-lg);
   background-color: var(--md-surface);
+  outline: none;
   transition:
     background-color var(--md-duration-medium) var(--md-easing-standard),
-    border-color var(--md-duration-medium) var(--md-easing-standard);
+    border-color var(--md-duration-medium) var(--md-easing-standard),
+    box-shadow var(--md-duration-medium) var(--md-easing-standard);
+}
+
+.m3-version-card:hover {
+  background-color: var(--md-surface-container-low);
+  border-color: var(--md-outline);
+}
+
+.m3-version-card:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
 }
 
 .m3-version-selected {
   border-color: var(--md-primary);
-  background-color: var(--md-primary-container);
+  background-color: color-mix(in srgb, var(--md-primary-container) 72%, var(--md-surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--md-primary) 35%, transparent);
 }
 
 .m3-version-current {
   border-color: var(--md-success);
   background-color: var(--md-success-container);
+}
+
+@media (max-width: 640px) {
+  .version-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .version-actions .md-btn {
+    width: 100%;
+  }
 }
 </style>
