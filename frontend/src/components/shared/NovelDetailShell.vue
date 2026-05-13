@@ -1,17 +1,26 @@
 <!-- AIMETA P=小说详情壳_详情页布局容器|R=详情页布局_导航|NR=不含具体内容|E=component:NovelDetailShell|X=internal|A=布局组件|D=vue|S=dom|RD=./README.ai -->
 <template>
-  <div class="detail-shell" :class="{ 'detail-shell--embedded': isAdmin }">
+  <div
+    class="detail-shell"
+    :class="{
+      'detail-shell--embedded': isAdmin,
+      'detail-shell--drawer-collapsed': !isSidebarOpen,
+    }"
+  >
     <!-- Material 3 Top App Bar -->
     <header class="md-top-app-bar detail-shell__topbar">
       <div class="detail-shell__topbar-inner">
-        <!-- Leading: Menu Button (Mobile) -->
+        <!-- Leading: Blueprint navigation toggle -->
         <button
-          class="md-icon-btn lg:hidden mr-2"
+          type="button"
+          class="detail-shell__drawer-toggle md-ripple"
           @click="toggleSidebar"
-          aria-label="Toggle sidebar"
+          :aria-label="isSidebarOpen ? '收起蓝图导航' : '展开蓝图导航'"
+          aria-controls="novel-detail-blueprint-nav"
+          :aria-expanded="isSidebarOpen"
+          :title="isSidebarOpen ? '收起蓝图导航' : '展开蓝图导航'"
         >
           <svg
-            class="w-6 h-6"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -19,6 +28,7 @@
           >
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
+          <span class="detail-shell__drawer-toggle-text">蓝图导航</span>
         </button>
 
         <!-- Title -->
@@ -82,9 +92,11 @@
     <div class="detail-shell__body">
       <!-- Material 3 Navigation Drawer -->
       <aside
-        class="detail-shell__drawer md-surface"
+        id="novel-detail-blueprint-nav"
+        class="detail-shell__drawer"
         :class="{ 'is-open': isSidebarOpen }"
-        style="border-right: 1px solid var(--md-outline-variant)"
+        :aria-hidden="!isSidebarOpen ? 'true' : undefined"
+        :inert="!isSidebarOpen"
       >
         <!-- Drawer Header -->
         <div
@@ -116,26 +128,20 @@
         </div>
 
         <!-- Navigation Items -->
-        <nav class="px-3 py-4 space-y-1 overflow-y-auto h-[calc(100%-5rem)]">
+        <nav class="detail-shell__nav" aria-label="小说档案分区">
           <button
             v-for="section in sections"
             :key="section.key"
             type="button"
             @click="switchSection(section.key)"
-            class="md-nav-drawer-item w-full md-ripple"
-            :class="{ active: activeSection === section.key }"
+            class="detail-shell__nav-item md-ripple"
+            :class="{ 'is-active': activeSection === section.key }"
+            :aria-current="activeSection === section.key ? 'page' : undefined"
           >
-            <span
-              class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full transition-all duration-200"
-              :style="
-                activeSection === section.key
-                  ? 'background-color: var(--md-primary); color: var(--md-on-primary);'
-                  : 'background-color: var(--md-surface-container); color: var(--md-on-surface-variant);'
-              "
-            >
+            <span class="detail-shell__nav-icon" aria-hidden="true">
               <component :is="getSectionIcon(section.key)" class="w-5 h-5" />
             </span>
-            <span class="text-left flex-1">
+            <span class="detail-shell__nav-copy">
               <span class="block md-label-large">{{ section.label }}</span>
               <span class="md-body-small" style="color: var(--md-on-surface-variant)">{{
                 section.description
@@ -153,10 +159,10 @@
         leave-to-class="opacity-0"
       >
         <div
-          v-if="isSidebarOpen"
-          class="fixed inset-0 z-20 lg:hidden"
+          v-if="isSidebarOpen && !isDesktopViewport"
+          class="detail-shell__drawer-backdrop"
           style="background-color: rgba(0, 0, 0, 0.32)"
-          @click="toggleSidebar"
+          @click="closeSidebar"
         ></div>
       </transition>
 
@@ -165,13 +171,9 @@
         <div
           class="detail-shell__content-wrap"
         >
-          <div class="flex-1 flex flex-col min-h-0 h-full">
+          <div class="detail-shell__content-frame">
             <!-- Material 3 Card -->
-            <div
-              class="md-card md-card-elevated flex-1 h-full p-6 sm:p-8 min-h-[20rem] flex flex-col box-border"
-              :class="contentCardClass"
-              style="border-radius: var(--md-radius-lg)"
-            >
+            <section class="detail-shell__content-surface" :class="contentCardClass">
               <!-- Loading State -->
               <div
                 v-if="isSectionLoading"
@@ -227,7 +229,7 @@
                 @edit="handleSectionEdit"
                 @add="startAddChapter"
               />
-            </div>
+            </section>
           </div>
         </div>
       </div>
@@ -332,7 +334,11 @@ const router = useRouter()
 const novelStore = useNovelStore()
 
 const projectId = route.params.id as string
-const isSidebarOpen = ref(typeof window !== 'undefined' ? window.innerWidth >= 1024 : true)
+const DESKTOP_BREAKPOINT = 1024
+const isDesktopViewport = ref(
+  typeof window !== 'undefined' ? window.innerWidth >= DESKTOP_BREAKPOINT : true,
+)
+const isSidebarOpen = ref(isDesktopViewport.value)
 
 const sections: Array<{ key: SectionKey; label: string; description: string }> = [
   { key: 'overview', label: '项目概览', description: '定位与整体梗概' },
@@ -459,8 +465,6 @@ const modalField = ref('')
 const isAddChapterModalOpen = ref(false)
 const newChapterTitle = ref('')
 const newChapterSummary = ref('')
-const originalBodyOverflow = ref('')
-
 const novel = computed(() =>
   !props.isAdmin ? (novelStore.currentProject as NovelProject | null) : null,
 )
@@ -474,7 +478,7 @@ const componentContainerClass = computed(() => {
   const fillSections: SectionKey[] = ['chapters']
   return fillSections.includes(activeSection.value)
     ? 'flex-1 min-h-0 h-full flex flex-col overflow-hidden'
-    : 'overflow-y-auto'
+    : 'min-w-0'
 })
 
 const contentCardClass = computed(() => {
@@ -493,9 +497,18 @@ const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value
 }
 
+const closeSidebar = () => {
+  isSidebarOpen.value = false
+}
+
 const handleResize = () => {
   if (typeof window === 'undefined') return
-  isSidebarOpen.value = window.innerWidth >= 1024
+  const wasDesktop = isDesktopViewport.value
+  const nowDesktop = window.innerWidth >= DESKTOP_BREAKPOINT
+  isDesktopViewport.value = nowDesktop
+  if (wasDesktop !== nowDesktop) {
+    isSidebarOpen.value = nowDesktop
+  }
 }
 
 const loadSection = async (section: SectionKey, force = false) => {
@@ -536,8 +549,8 @@ const reloadSection = (section: SectionKey, force = false) => {
 
 const switchSection = (section: SectionKey) => {
   activeSection.value = section
-  if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-    isSidebarOpen.value = false
+  if (!isDesktopViewport.value) {
+    closeSidebar()
   }
   loadSection(section)
 }
@@ -691,10 +704,7 @@ const saveNewChapter = async () => {
 onMounted(async () => {
   if (typeof window !== 'undefined') {
     window.addEventListener('resize', handleResize)
-  }
-  if (typeof document !== 'undefined') {
-    originalBodyOverflow.value = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    handleResize()
   }
 
   // 只加载必要的 section 数据，不预加载完整项目
@@ -706,9 +716,6 @@ onBeforeUnmount(() => {
   if (typeof window !== 'undefined') {
     window.removeEventListener('resize', handleResize)
   }
-  if (typeof document !== 'undefined') {
-    document.body.style.overflow = originalBodyOverflow.value || ''
-  }
 })
 </script>
 
@@ -717,14 +724,14 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 0;
+  min-height: 100vh;
   width: 100%;
-  background-color: var(--md-surface);
+  background-color: var(--md-surface-dim);
 }
 
 .detail-shell--embedded {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .detail-shell__topbar {
@@ -745,6 +752,58 @@ onBeforeUnmount(() => {
   box-sizing: border-box;
 }
 
+.detail-shell__drawer-toggle {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--md-spacing-2);
+  margin-right: var(--md-spacing-2);
+  padding: 0 var(--md-spacing-3);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-full);
+  background-color: var(--md-surface);
+  color: var(--md-on-surface-variant);
+  font-family: var(--md-font-family);
+  cursor: pointer;
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard);
+}
+
+.detail-shell__drawer-toggle:hover {
+  border-color: color-mix(in srgb, var(--md-primary) 36%, var(--md-outline-variant));
+  background-color: color-mix(in srgb, var(--md-primary-dark) 8%, var(--md-surface));
+  color: var(--md-primary-dark);
+}
+
+.detail-shell__drawer-toggle:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
+.detail-shell--drawer-collapsed .detail-shell__drawer-toggle {
+  border-color: transparent;
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.detail-shell__drawer-toggle svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+
+.detail-shell__drawer-toggle-text {
+  color: currentColor;
+  font-size: var(--md-label-large);
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .detail-shell__mode-chip {
   display: inline-flex;
   align-items: center;
@@ -763,12 +822,12 @@ onBeforeUnmount(() => {
 .detail-shell__body {
   position: relative;
   display: flex;
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 1 0 auto;
+  min-height: calc(100vh - 4rem);
   width: 100%;
   max-width: 1800px;
   margin: 0 auto;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .detail-shell__drawer {
@@ -777,16 +836,96 @@ onBeforeUnmount(() => {
   top: 4rem;
   bottom: 0;
   z-index: 30;
-  width: 20rem;
+  width: 16.25rem;
+  overflow: hidden;
+  background-color: var(--md-surface);
+  border-right: 1px solid var(--md-outline-variant);
   transform: translateX(-100%);
   transition:
+    flex-basis 300ms cubic-bezier(0.2, 0, 0, 1),
+    width 300ms cubic-bezier(0.2, 0, 0, 1),
     transform 300ms cubic-bezier(0.2, 0, 0, 1),
+    opacity 200ms cubic-bezier(0.2, 0, 0, 1),
+    border-color 200ms cubic-bezier(0.2, 0, 0, 1),
     box-shadow 300ms cubic-bezier(0.2, 0, 0, 1);
   will-change: transform;
 }
 
 .detail-shell__drawer.is-open {
   transform: translateX(0);
+}
+
+.detail-shell__drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}
+
+.detail-shell__nav {
+  height: calc(100% - 5rem);
+  padding: var(--md-spacing-3);
+  overflow-y: auto;
+}
+
+.detail-shell__nav-item {
+  width: 100%;
+  min-height: 4.5rem;
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-3);
+  padding: var(--md-spacing-3);
+  border: 1px solid transparent;
+  border-radius: var(--md-radius-lg);
+  background-color: transparent;
+  color: var(--md-on-surface);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard);
+}
+
+.detail-shell__nav-item + .detail-shell__nav-item {
+  margin-top: var(--md-spacing-1);
+}
+
+.detail-shell__nav-item:hover {
+  background-color: var(--md-surface-container-low);
+}
+
+.detail-shell__nav-item:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
+.detail-shell__nav-item.is-active {
+  border-color: color-mix(in srgb, var(--md-primary) 24%, var(--md-outline-variant));
+  background-color: var(--md-primary-container);
+}
+
+.detail-shell__nav-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: var(--md-radius-full);
+  background-color: var(--md-surface-container);
+  color: var(--md-on-surface-variant);
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard);
+}
+
+.detail-shell__nav-item.is-active .detail-shell__nav-icon {
+  background-color: var(--md-surface);
+  color: var(--md-primary-dark);
+}
+
+.detail-shell__nav-copy {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .detail-shell__main {
@@ -802,25 +941,81 @@ onBeforeUnmount(() => {
 .detail-shell__content-wrap {
   display: flex;
   flex: 1 1 auto;
+  align-items: flex-start;
   min-width: 0;
   min-height: 0;
   width: 100%;
   padding: 1rem;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: visible;
+}
+
+.detail-shell__content-frame {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  width: 100%;
+}
+
+.detail-shell__content-surface {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 20rem;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  padding: var(--md-spacing-6);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-lg);
+  background-color: var(--md-surface);
+  box-sizing: border-box;
 }
 
 @media (min-width: 1024px) {
   .detail-shell__drawer {
+    position: sticky;
+    top: 4rem;
+    bottom: auto;
+    flex: 0 0 16.25rem;
+    height: calc(100vh - 4rem);
+    max-height: calc(100vh - 4rem);
     transform: translateX(0);
   }
 
-  .detail-shell__main {
-    margin-left: 20rem;
+  .detail-shell--drawer-collapsed .detail-shell__drawer {
+    flex-basis: 0;
+    width: 0;
+    opacity: 0;
+    pointer-events: none;
+    border-right-color: transparent;
+    transform: translateX(-100%);
   }
 
   .detail-shell__content-wrap {
     padding: 1.5rem 2rem 2rem;
+  }
+}
+
+@media (min-width: 640px) {
+  .detail-shell__content-surface {
+    padding: var(--md-spacing-8);
+  }
+}
+
+@media (max-width: 640px) {
+  .detail-shell__drawer-toggle {
+    width: 44px;
+    padding: 0;
+  }
+
+  .detail-shell__drawer-toggle-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
   }
 }
 

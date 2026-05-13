@@ -51,11 +51,18 @@
           </button>
           <button
             @click="$emit('toggleSidebar')"
-            class="md-icon-btn md-ripple lg:hidden"
+            class="md-btn md-btn-tonal md-ripple writing-desk-header__sidebar-toggle"
+            :aria-label="chapterSidebarOpen ? '收起章节侧栏' : '展开章节侧栏'"
+            aria-controls="writing-desk-chapter-sidebar"
+            :aria-expanded="chapterSidebarOpen"
+            :title="chapterSidebarOpen ? '收起章节侧栏' : '展开章节侧栏'"
           >
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <svg class="writing-desk-header__sidebar-toggle-icon" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
             </svg>
+            <span class="writing-desk-header__sidebar-toggle-text">
+              {{ chapterSidebarOpen ? '收起目录' : '章节目录' }}
+            </span>
           </button>
         </div>
       </div>
@@ -82,9 +89,46 @@ interface Props {
   completedChapters: number
   totalChapters: number
   hasIncompleteChapters: boolean
+  chapterSidebarOpen: boolean
 }
 
 defineProps<Props>()
 
 defineEmits(['goBack', 'viewProjectDetail', 'toggleSidebar', 'locateIncomplete'])
 </script>
+
+<style scoped>
+.writing-desk-header__sidebar-toggle {
+  min-width: 44px;
+  padding: 0 var(--md-spacing-4);
+  white-space: nowrap;
+}
+
+.writing-desk-header__sidebar-toggle-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+
+.writing-desk-header__sidebar-toggle-text {
+  font-size: var(--md-label-large);
+  font-weight: 600;
+  line-height: 1;
+}
+
+@media (max-width: 640px) {
+  .writing-desk-header__sidebar-toggle {
+    width: 44px;
+    padding: 0;
+  }
+
+  .writing-desk-header__sidebar-toggle-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+}
+</style>

@@ -1,7 +1,7 @@
 <!-- AIMETA P=设置页_用户设置|R=用户设置表单|NR=不含管理员设置|E=route:/settings#component:SettingsView|X=ui|A=设置表单|D=vue|S=dom,net|RD=./README.ai -->
 <template>
-  <div class="min-h-screen md-surface-dim settings-page">
-    <div class="settings-content mx-auto flex w-full max-w-7xl flex-col px-4 md:px-6">
+  <div class="app-page settings-page">
+    <div class="settings-content">
       <section v-if="showInspirationConfigNotice" class="md-card settings-notice">
         <p class="md-title-small">灵感模式需要先完成模型配置</p>
         <p class="md-body-small mt-1">
@@ -91,13 +91,15 @@ const handleLLMConfigSaved = async () => {
 
 <style scoped>
 .settings-page {
+  min-height: calc(100vh - 112px);
   background-color: var(--md-surface-dim);
+  color: var(--md-on-surface);
 }
 
 .settings-content {
-  gap: var(--md-spacing-3);
-  padding-top: var(--md-spacing-4);
-  padding-bottom: var(--md-spacing-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-5);
 }
 
 .settings-notice {
@@ -139,6 +141,7 @@ const handleLLMConfigSaved = async () => {
   background-color: transparent;
   color: var(--md-on-surface);
   white-space: nowrap;
+  cursor: pointer;
   transition:
     background-color 160ms ease,
     color 160ms ease;
@@ -171,10 +174,6 @@ const handleLLMConfigSaved = async () => {
 }
 
 @media (max-width: 768px) {
-  .settings-content {
-    padding-top: var(--md-spacing-4);
-  }
-
   .settings-console__nav {
     width: 100%;
   }

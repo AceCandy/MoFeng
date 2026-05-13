@@ -5,18 +5,18 @@
     <div
       v-if="sidebarOpen"
       @click="$emit('closeSidebar')"
-      class="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
+      class="writing-sidebar__backdrop"
     ></div>
 
     <!-- 左侧：蓝图和章节列表 -->
     <div
       :class="[
-        'md-card md-card-elevated transition-transform duration-300 h-full',
-        'lg:relative lg:translate-x-0 lg:w-80 lg:flex-shrink-0',
-        sidebarOpen
-          ? 'fixed left-4 top-20 bottom-4 w-80 z-50 translate-x-0'
-          : 'lg:w-80 lg:flex-shrink-0 -translate-x-full absolute lg:relative',
+        'md-card md-card-elevated writing-sidebar',
+        sidebarOpen ? 'writing-sidebar--open' : 'writing-sidebar--closed',
       ]"
+      id="writing-desk-chapter-sidebar"
+      :aria-hidden="!sidebarOpen ? 'true' : undefined"
+      :inert="!sidebarOpen"
       style="border-radius: var(--md-radius-xl)"
     >
       <div class="h-full flex flex-col">
@@ -611,6 +611,59 @@ const canGenerateChapter = (chapterNumber: number) => {
 </script>
 
 <style scoped>
+.writing-sidebar__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background-color: rgba(32, 33, 36, 0.2);
+}
+
+.writing-sidebar {
+  position: fixed;
+  left: var(--md-spacing-4);
+  top: 5rem;
+  bottom: var(--md-spacing-4);
+  z-index: 50;
+  width: min(20rem, calc(100vw - 2rem));
+  height: auto;
+  overflow: hidden;
+  transition:
+    flex-basis 250ms cubic-bezier(0.2, 0, 0, 1),
+    width 250ms cubic-bezier(0.2, 0, 0, 1),
+    opacity 180ms cubic-bezier(0.2, 0, 0, 1),
+    transform 250ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.writing-sidebar--open {
+  transform: translateX(0);
+}
+
+.writing-sidebar--closed {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(calc(-100% - var(--md-spacing-4)));
+}
+
+@media (min-width: 1024px) {
+  .writing-sidebar__backdrop {
+    display: none;
+  }
+
+  .writing-sidebar {
+    position: relative;
+    inset: auto;
+    z-index: auto;
+    flex: 0 0 20rem;
+    width: 20rem;
+    height: 100%;
+  }
+
+  .writing-sidebar--closed {
+    flex-basis: 0;
+    width: 0;
+  }
+}
+
 .m3-chapter-card {
   border-radius: var(--md-radius-lg);
   border: 1px solid var(--md-outline-variant);

@@ -1451,9 +1451,156 @@ body {
   margin: 0 auto;
 }
 
+.app-shell--project-context {
+  grid-template-columns: 72px minmax(0, 1fr);
+}
+
+.app-shell--project-context .app-shell__sidebar {
+  align-items: center;
+  gap: var(--md-spacing-4);
+  padding: var(--md-spacing-4) var(--md-spacing-2);
+}
+
+.app-shell--project-context .app-shell__brand {
+  justify-content: center;
+}
+
+.app-shell--project-context .app-shell__brand-copy,
+.app-shell--project-context .app-shell__nav-label,
+.app-shell--project-context .app-shell__nav-text,
+.app-shell--project-context .app-shell__account-copy {
+  display: none;
+}
+
+.app-shell--project-context .app-shell__nav {
+  width: 100%;
+  align-items: center;
+}
+
+.app-shell--project-context .app-shell__nav-item {
+  width: 48px;
+  height: 48px;
+  justify-content: center;
+  padding: 0;
+  border-radius: var(--md-radius-lg);
+}
+
+.app-shell--project-context .app-shell__account {
+  width: 100%;
+  justify-content: center;
+  padding-top: var(--md-spacing-3);
+}
+
+.app-shell--project-context .app-shell__logout {
+  min-width: 44px;
+  padding: 0;
+  font-size: 0;
+}
+
+.app-shell--project-context .app-shell__logout::before {
+  content: '退';
+  font-size: var(--md-label-medium);
+}
+
+.app-shell--project-context .app-shell__topbar {
+  display: none;
+}
+
+.app-shell--project-context .app-shell__content {
+  padding: 0;
+}
+
 .auth-layout {
   min-height: 100vh;
   background-color: var(--md-surface-dim);
+}
+
+/* ============================================
+   Admin Domain Panels
+   ============================================ */
+:where(.admin-panel) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-4);
+  width: 100%;
+  min-width: 0;
+  color: var(--md-on-surface);
+}
+
+:where(.admin-panel__header) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-spacing-3);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+:where(.admin-panel__header--toolbar) {
+  justify-content: flex-end;
+}
+
+:where(.admin-panel__title) {
+  margin: 0;
+  color: var(--md-on-surface);
+  font-size: var(--md-title-large);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+:where(.admin-panel__subtitle) {
+  margin: var(--md-spacing-1) 0 0;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-medium);
+  line-height: 1.5;
+}
+
+:where(.admin-panel__body) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-4);
+  min-width: 0;
+}
+
+:where(.admin-panel__actions) {
+  flex-wrap: wrap;
+}
+
+:where(.admin-table-shell) {
+  overflow: hidden;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-lg);
+  background-color: var(--md-surface);
+}
+
+:where(.admin-table-shell) :where(.n-data-table) {
+  border-radius: 0;
+}
+
+:where(.admin-table-shell) :where(.n-data-table-th) {
+  background-color: var(--md-surface-container-low);
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-medium);
+  font-weight: 600;
+}
+
+:where(.admin-table-shell) :where(.n-data-table-td) {
+  color: var(--md-on-surface);
+}
+
+@media (max-width: 520px) {
+  :where(.admin-panel__header) {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  :where(.admin-panel__actions) {
+    width: 100%;
+  }
+
+  :where(.admin-table-shell) {
+    border-radius: var(--md-radius-md);
+  }
 }
 
 .app-shell__mobile-backdrop {
@@ -1462,6 +1609,10 @@ body {
 
 @media (max-width: 1023px) {
   .app-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-shell--project-context {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -1480,6 +1631,58 @@ body {
   .app-shell__close,
   .app-shell__menu {
     display: inline-flex;
+  }
+
+  .app-shell--project-context .app-shell__brand-copy,
+  .app-shell--project-context .app-shell__nav-label,
+  .app-shell--project-context .app-shell__nav-text,
+  .app-shell--project-context .app-shell__account-copy {
+    display: block;
+  }
+
+  .app-shell--project-context .app-shell__sidebar {
+    align-items: stretch;
+    gap: var(--md-spacing-6);
+    padding: var(--md-spacing-5);
+  }
+
+  .app-shell--project-context .app-shell__brand {
+    justify-content: flex-start;
+  }
+
+  .app-shell--project-context .app-shell__nav {
+    align-items: stretch;
+  }
+
+  .app-shell--project-context .app-shell__nav-item {
+    width: auto;
+    height: auto;
+    justify-content: flex-start;
+    padding: 0 var(--md-spacing-4);
+    border-radius: var(--md-radius-full);
+  }
+
+  .app-shell--project-context .app-shell__account {
+    justify-content: space-between;
+    padding-top: var(--md-spacing-4);
+  }
+
+  .app-shell--project-context .app-shell__logout {
+    min-width: 0;
+    padding: 0 12px;
+    font-size: var(--md-label-large);
+  }
+
+  .app-shell--project-context .app-shell__logout::before {
+    content: none;
+  }
+
+  .app-shell--project-context .app-shell__topbar {
+    display: flex;
+  }
+
+  .app-shell--project-context .app-shell__content {
+    padding: clamp(var(--md-spacing-4), 3vw, var(--md-spacing-8));
   }
 
   .app-shell__mobile-backdrop {

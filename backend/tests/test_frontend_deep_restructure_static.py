@@ -143,6 +143,42 @@ def test_workspace_polish_preserves_primary_flow_and_responsive_states():
         assert text in styles
 
 
+def test_project_context_collapses_global_shell_to_icon_rail():
+    shell = _source("components/shared/AppShell.vue")
+    styles = _source("assets/main.css")
+
+    for text in [
+        "isProjectContext",
+        "app-shell--project-context",
+        "app-shell__brand-copy",
+        "app-shell__nav-text",
+        "app-shell__account-copy",
+        "app-shell__logout",
+        "'project-detail'",
+        "'project-write'",
+        "'admin-project-detail'",
+    ]:
+        assert text in shell
+
+    for text in [
+        ".app-shell--project-context",
+        "grid-template-columns: 72px minmax(0, 1fr)",
+        ".app-shell--project-context .app-shell__topbar",
+        "display: none",
+        ".app-shell--project-context .app-shell__content",
+        "padding: 0",
+    ]:
+        assert text in styles
+
+    rail_nav_block = _css_block(styles, ".app-shell--project-context .app-shell__nav-item")
+    assert "width: 48px" in rail_nav_block
+    assert "height: 48px" in rail_nav_block
+    assert "justify-content: center" in rail_nav_block
+
+    mobile_context_block = _css_block(styles, ".app-shell--project-context")
+    assert "grid-template-columns: 72px minmax(0, 1fr)" in mobile_context_block
+
+
 def test_writing_desk_uses_shared_surface_instead_of_local_shell_theme():
     source = _source("views/WritingDesk.vue")
 
@@ -153,6 +189,47 @@ def test_writing_desk_uses_shared_surface_instead_of_local_shell_theme():
     assert ".m3-shell" not in source
     assert "radial-gradient" not in source
     assert "--md-primary:" not in source
+
+
+def test_writing_desk_chapter_sidebar_toggle_is_operable_on_desktop():
+    page = _source("views/WritingDesk.vue")
+    header = _source("components/writing-desk/WDHeader.vue")
+    sidebar = _source("components/writing-desk/WDSidebar.vue")
+
+    for text in [
+        ":chapter-sidebar-open=\"sidebarOpen\"",
+        "writing-desk-layout",
+        "'writing-desk-layout--sidebar-open': sidebarOpen",
+        "const isDesktopViewport = ref",
+        "const syncSidebarForViewport = () => {",
+        "window.addEventListener('resize', syncSidebarForViewport)",
+        "window.removeEventListener('resize', syncSidebarForViewport)",
+    ]:
+        assert text in page
+
+    for text in [
+        "chapterSidebarOpen",
+        ":aria-label=\"chapterSidebarOpen ? '收起章节侧栏' : '展开章节侧栏'\"",
+        'aria-controls="writing-desk-chapter-sidebar"',
+        ':aria-expanded="chapterSidebarOpen"',
+        "writing-desk-header__sidebar-toggle",
+        "writing-desk-header__sidebar-toggle-text",
+        "章节目录",
+    ]:
+        assert text in header
+
+    assert "lg:hidden" not in header
+
+    for text in [
+        'id="writing-desk-chapter-sidebar"',
+        ":aria-hidden=\"!sidebarOpen ? 'true' : undefined\"",
+        ":inert=\"!sidebarOpen\"",
+        "writing-sidebar",
+        "writing-sidebar--closed",
+    ]:
+        assert text in sidebar
+
+    assert "lg:translate-x-0" not in sidebar
 
 
 def test_auth_and_admin_surfaces_remove_glass_and_hardcoded_backgrounds():
@@ -176,11 +253,8 @@ def test_admin_console_uses_product_shell_pattern():
 
     for text in [
         "admin-console",
-        "admin-console__intro",
         "admin-console__nav",
         "admin-console__content",
-        "管理控制台",
-        "返回工作台",
         "aria-current",
         "aria-hidden=\"true\"",
     ]:
@@ -198,8 +272,58 @@ def test_admin_console_uses_product_shell_pattern():
         "📝",
         "⚙️",
         "🔒",
+        "admin-console__intro",
+        "admin-console__workspace",
+        "admin-console__nav-panel",
+        "admin-console__content-header",
+        "返回工作台",
     ]:
         assert removed not in source
+
+
+def test_admin_console_uses_compact_top_tabs_without_redundant_headers():
+    source = _source("views/AdminView.vue")
+
+    for text in [
+        "admin-console__nav",
+        "admin-console__nav-item",
+        "admin-console__nav-icon",
+        "admin-console__nav-label",
+        "admin-console__content",
+        "grid-template-columns: repeat(7, minmax(104px, 1fr))",
+        "border-radius: var(--md-radius-full)",
+    ]:
+        assert text in source
+
+    for removed in [
+        "admin-console__intro",
+        "admin-console__workspace",
+        "admin-console__nav-panel",
+        "admin-console__nav-heading",
+        "admin-console__content-shell",
+        "admin-console__content-header",
+        "admin-section-title",
+        "模块导航",
+        "当前模块",
+        "admin-console__section-index",
+        "activeSectionIndex",
+        "goBack",
+    ]:
+        assert removed not in source
+
+    assert "admin-console__nav-item::before" not in source
+    assert "border-left" not in source
+
+
+def test_admin_console_content_does_not_wrap_child_panels_in_extra_card():
+    source = _source("views/AdminView.vue")
+    content_block = _css_block(source, ".admin-console__content")
+
+    assert "min-width: 0" in content_block
+    assert "border:" not in content_block
+    assert "border-radius:" not in content_block
+    assert "box-shadow:" not in content_block
+    assert "padding:" not in content_block
 
 
 def test_admin_child_panels_use_tokens_and_remove_decorative_gradients():
@@ -239,6 +363,95 @@ def test_admin_child_panels_use_tokens_and_remove_decorative_gradients():
     for emoji in ["📚", "👥", "⚡"]:
         assert emoji not in statistics
 
+    users = _source("components/admin/UserManagement.vue")
+    for text in [
+        "isMobile",
+        "user-mobile-list",
+        "user-mobile-card",
+        "window.innerWidth < 768",
+    ]:
+        assert text in users
+
+
+def test_admin_list_tabs_use_flat_panels_instead_of_outer_cards():
+    list_pages = [
+        "components/admin/UserManagement.vue",
+        "components/admin/NovelManagement.vue",
+        "components/admin/PromptManagement.vue",
+        "components/admin/UpdateLogManagement.vue",
+        "components/admin/SettingsManagement.vue",
+    ]
+
+    for path in list_pages:
+        source = _source(path)
+        assert "class=\"admin-panel" in source, f"{path}: 管理列表页应使用扁平 admin-panel"
+        assert "class=\"admin-table-shell" in source, f"{path}: 列表内容应收敛到单层表格区域"
+        assert "class=\"admin-card\"" not in source, f"{path}: 不应再用外层 n-card 包页面"
+        assert "class=\"novel-management-card\"" not in source, f"{path}: 不应再用外层 n-card 包页面"
+
+
+def test_admin_domain_panels_share_global_flat_treatment():
+    source = _source("assets/main.css")
+
+    for text in [
+        "Admin Domain Panels",
+        ".admin-panel",
+        ".admin-panel__header",
+        ".admin-panel__header--toolbar",
+        ".admin-table-shell",
+        ".n-data-table",
+        "var(--md-radius-lg)",
+    ]:
+        assert text in source
+
+    for removed in [
+        ".admin-card",
+        ".novel-management-card",
+        ".password-card",
+    ]:
+        assert removed not in source
+
+
+def test_admin_tabs_do_not_repeat_selected_tab_as_content_title():
+    repeated_titles = {
+        "components/admin/Statistics.vue": "数据总览",
+        "components/admin/UserManagement.vue": "用户管理",
+        "components/admin/PromptManagement.vue": "提示词管理",
+        "components/admin/NovelManagement.vue": "小说管理",
+        "components/admin/UpdateLogManagement.vue": "更新日志管理",
+        "components/admin/PasswordManagement.vue": "管理员密码修改",
+    }
+
+    for path, title in repeated_titles.items():
+        source = _source(path)
+        assert f'class="admin-panel__title">{title}' not in source
+        assert "aria-labelledby=" not in source
+
+
+def test_admin_novel_genre_column_wraps_long_multi_genres_without_overlap():
+    source = _source("components/admin/NovelManagement.vue")
+
+    for text in [
+        "genreSegments",
+        "visibleGenreSegments",
+        "overflowGenreCount",
+        "table-genre-list",
+        "table-genre-chip",
+        "table-genre-more",
+    ]:
+        assert text in source
+
+    genre_list_block = _css_block(source, ":deep(.table-genre-list)")
+    assert "max-width: 100%" in genre_list_block
+    assert "flex-wrap: wrap" in genre_list_block
+    assert "overflow: hidden" in genre_list_block
+
+    genre_chip_block = _css_block(source, ":deep(.table-genre-chip)")
+    assert "max-width:" in genre_chip_block
+    assert "overflow: hidden" in genre_chip_block
+    assert "text-overflow: ellipsis" in genre_chip_block
+    assert "white-space: nowrap" in genre_chip_block
+
 
 def test_admin_project_detail_uses_embedded_readonly_context():
     source = _source("components/shared/NovelDetailShell.vue")
@@ -254,6 +467,95 @@ def test_admin_project_detail_uses_embedded_readonly_context():
 
     assert "h-screen flex flex-col overflow-hidden md-surface" not in source
     assert "top-16 bottom-0" not in source
+
+
+def test_novel_archive_area_uses_flat_shell_and_tokenized_overview():
+    shell = _source("components/shared/NovelDetailShell.vue")
+    overview = _source("components/novel-detail/OverviewSection.vue")
+
+    for text in [
+        ":aria-label=\"isSidebarOpen ? '收起蓝图导航' : '展开蓝图导航'\"",
+        'aria-label="小说档案分区"',
+        ":aria-current=\"activeSection === section.key ? 'page' : undefined\"",
+        "detail-shell__nav-item",
+        "detail-shell__nav-icon",
+        "detail-shell__content-surface",
+        "position: sticky",
+    ]:
+        assert text in shell
+
+    for removed in [
+        "md-card md-card-elevated",
+        "detail-shell__drawer md-surface",
+        "margin-left: 20rem",
+    ]:
+        assert removed not in shell
+
+    for text in [
+        "archive-overview",
+        "archive-overview__summary",
+        "archive-overview__metadata",
+        "archive-overview__synopsis",
+        "aria-label=\"编辑核心摘要\"",
+        "color: var(--md-primary-dark)",
+        "background-color: var(--md-surface)",
+        "grid-template-columns: repeat(auto-fit, minmax(240px, 1fr))",
+        "overflow-wrap: normal",
+    ]:
+        assert text in overview
+
+    for removed in [
+        "bg-white/95",
+        "text-indigo",
+        "text-slate",
+        "text-gray",
+        "shadow-sm",
+        "rounded-2xl",
+    ]:
+        assert removed not in overview
+
+
+def test_novel_archive_drawer_toggle_and_scroll_are_operable():
+    source = _source("components/shared/NovelDetailShell.vue")
+
+    for text in [
+        "detail-shell--drawer-collapsed",
+        "detail-shell__drawer-toggle",
+        "detail-shell__drawer-toggle-text",
+        "蓝图导航",
+        "detail-shell__content-frame",
+        'id="novel-detail-blueprint-nav"',
+        'aria-controls="novel-detail-blueprint-nav"',
+        ':aria-expanded="isSidebarOpen"',
+        ":aria-label=\"isSidebarOpen ? '收起蓝图导航' : '展开蓝图导航'\"",
+        "const isDesktopViewport = ref",
+        "const closeSidebar = () => {",
+    ]:
+        assert text in source
+
+    for removed in [
+        "document.body.style.overflow = 'hidden'",
+        "originalBodyOverflow",
+        "lg:hidden",
+    ]:
+        assert removed not in source
+
+    body_block = _css_block(source, ".detail-shell__body")
+    assert "flex: 1 0 auto" in body_block
+    assert "min-height: calc(100vh - 4rem)" in body_block
+    assert "overflow: visible" in body_block
+    assert "overflow: hidden" not in body_block
+
+    content_wrap_block = _css_block(source, ".detail-shell__content-wrap")
+    assert "align-items: flex-start" in content_wrap_block
+    assert "overflow: visible" in content_wrap_block
+    assert "overflow: hidden" not in content_wrap_block
+
+    collapsed_drawer_block = _css_block(
+        source, ".detail-shell--drawer-collapsed .detail-shell__drawer"
+    )
+    for text in ["flex-basis: 0", "width: 0", "pointer-events: none"]:
+        assert text in collapsed_drawer_block
 
 
 def test_global_shell_css_and_antipatterns_are_normalized():

@@ -1,14 +1,11 @@
 <!-- AIMETA P=小说管理_管理员小说列表管理|R=小说列表_删除_统计|NR=不含普通用户功能|E=component:NovelManagement|X=ui|A=管理组件|D=vue|S=dom,net|RD=./README.ai -->
 <template>
-  <n-card class="novel-management-card" size="large" :bordered="false">
-    <template #header>
-      <div class="card-header">
-        <span class="card-title">小说管理</span>
-        <n-tag size="small" type="primary" round>共 {{ novels.length }} 项</n-tag>
-      </div>
-    </template>
+  <section class="admin-panel admin-panel--list">
+    <div class="admin-panel__header admin-panel__header--toolbar">
+      <n-tag size="small" type="primary" round>共 {{ novels.length }} 项</n-tag>
+    </div>
 
-    <n-space vertical size="large">
+    <div class="admin-panel__body">
       <n-alert v-if="error" type="error" closable @close="error = null">
         {{ error }}
       </n-alert>
@@ -20,21 +17,17 @@
             description="暂无小说项目"
             class="empty-state"
           />
-          <div v-else>
+          <div v-else class="admin-table-shell">
             <n-space v-if="isMobile" vertical size="large">
-              <n-card
+              <article
                 v-for="novel in novels"
                 :key="novel.id"
-                size="small"
-                embedded
                 class="novel-card"
               >
-                <template #header>
-                  <div class="mobile-card-header">
-                    <span class="mobile-card-title">{{ novel.title }}</span>
-                    <n-tag size="small" type="info" round>{{ novel.genre || '未分类' }}</n-tag>
-                  </div>
-                </template>
+                <div class="mobile-card-header">
+                  <span class="mobile-card-title">{{ novel.title }}</span>
+                  <n-tag size="small" type="info" round>{{ novel.genre || '未分类' }}</n-tag>
+                </div>
                 <div class="mobile-meta">
                   <span class="mobile-label">编号</span>
                   <span class="mobile-value">{{ novel.id }}</span>
@@ -51,12 +44,12 @@
                   <span class="mobile-label">最近更新</span>
                   <span class="mobile-value">{{ formatDate(novel.last_edited) }}</span>
                 </div>
-                <template #footer>
+                <div class="mobile-card-actions">
                   <n-button type="primary" size="small" block @click="viewDetails(novel.id)">
                     查看详情
                   </n-button>
-                </template>
-              </n-card>
+                </div>
+              </article>
             </n-space>
             <n-data-table
               v-else
@@ -70,8 +63,8 @@
           </div>
         </template>
       </n-spin>
-    </n-space>
-  </n-card>
+    </div>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -80,7 +73,6 @@ import { useRouter } from 'vue-router'
 import {
   NAlert,
   NButton,
-  NCard,
   NDataTable,
   NEmpty,
   NSpin,
@@ -102,6 +94,9 @@ const pagination = {
   pageSize: 8,
   showSizePicker: false
 }
+
+const MAX_VISIBLE_GENRE_SEGMENTS = 3
+const GENRE_SEPARATOR_REGEXP = /\s*[\/,，、|]\s*/
 
 const updateLayout = () => {
   isMobile.value = window.innerWidth < 768
@@ -131,6 +126,22 @@ const formatProgress = (novel: Pick<AdminNovelSummary, 'completed_chapters' | 't
   return `${completed} / ${total}`
 }
 
+const genreSegments = (genre: string | null | undefined): string[] => {
+  const segments = (genre || '')
+    .split(GENRE_SEPARATOR_REGEXP)
+    .map((item) => item.trim())
+    .filter(Boolean)
+  return segments.length ? segments : ['未分类']
+}
+
+const visibleGenreSegments = (genre: string | null | undefined): string[] => {
+  return genreSegments(genre).slice(0, MAX_VISIBLE_GENRE_SEGMENTS)
+}
+
+const overflowGenreCount = (genre: string | null | undefined): number => {
+  return Math.max(0, genreSegments(genre).length - MAX_VISIBLE_GENRE_SEGMENTS)
+}
+
 const viewDetails = (novelId: string) => {
   router.push(`/admin/novels/${novelId}`)
 }
@@ -150,11 +161,23 @@ const columns: DataTableColumns<AdminNovelSummary> = [
   {
     title: '类型',
     key: 'genre',
+    width: 300,
     render(row) {
+      const overflowCount = overflowGenreCount(row.genre)
       return h(
-        NTag,
-        { type: 'info', size: 'small', round: true, bordered: false },
-        { default: () => row.genre || '未分类' }
+        'div',
+        {
+          class: 'table-genre-list',
+          title: row.genre || '未分类'
+        },
+        [
+          ...visibleGenreSegments(row.genre).map((segment) =>
+            h('span', { class: 'table-genre-chip' }, segment)
+          ),
+          overflowCount > 0
+            ? h('span', { class: 'table-genre-more' }, `+${overflowCount}`)
+            : null
+        ]
       )
     }
   },
@@ -222,56 +245,73 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.novel-management-card {
-  width: 100%;
-  box-sizing: border-box;
-  background-color: var(--md-surface);
-  color: var(--md-on-surface);
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding-bottom: var(--md-spacing-3);
-  border-bottom: 1px solid var(--md-outline-variant);
-}
-
-.card-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--md-on-surface);
-}
-
 .novel-table {
   width: 100%;
 }
 
-.table-title-cell {
+:deep(.table-title-cell) {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.table-title {
+:deep(.table-title) {
   font-weight: 600;
   color: var(--md-on-surface);
 }
 
-.table-subtitle {
+:deep(.table-subtitle) {
   font-size: 0.75rem;
   color: var(--md-on-surface-variant);
   word-break: break-all;
 }
 
-.table-owner,
-.table-progress,
-.table-date {
+:deep(.table-owner),
+:deep(.table-progress),
+:deep(.table-date) {
   color: var(--md-on-surface-variant);
 }
 
+:deep(.table-genre-list) {
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-1);
+  max-width: 100%;
+  overflow: hidden;
+  flex-wrap: wrap;
+}
+
+:deep(.table-genre-chip),
+:deep(.table-genre-more) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border-radius: var(--md-radius-full);
+  background-color: var(--md-primary-container);
+  color: var(--md-primary);
+  font-size: var(--md-label-medium);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+:deep(.table-genre-chip) {
+  max-width: 112px;
+  padding: 0 var(--md-spacing-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:deep(.table-genre-more) {
+  padding: 0 var(--md-spacing-2);
+  flex: 0 0 auto;
+}
+
 .novel-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-3);
+  padding: var(--md-spacing-4);
   border-radius: 16px;
   background-color: var(--md-surface-container-low);
   border: 1px solid var(--md-outline-variant);
@@ -316,20 +356,15 @@ onBeforeUnmount(() => {
   margin-left: 12px;
 }
 
+.mobile-card-actions {
+  padding-top: var(--md-spacing-2);
+}
+
 .empty-state {
   padding: var(--md-spacing-8) 0;
 }
 
 @media (max-width: 767px) {
-  .card-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .card-title {
-    font-size: 1.125rem;
-  }
-
   .mobile-card-header {
     gap: var(--md-spacing-2);
   }

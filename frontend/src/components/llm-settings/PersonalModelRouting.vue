@@ -1241,7 +1241,7 @@ onMounted(() => {
 <style scoped>
 .model-routing {
   display: grid;
-  gap: var(--md-spacing-4);
+  gap: var(--md-spacing-5);
 }
 
 .model-routing__topbar,
@@ -1335,7 +1335,7 @@ onMounted(() => {
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-radius-lg);
   padding: var(--md-spacing-4);
-  background: var(--md-surface-container-low);
+  background: var(--md-surface);
 }
 
 .model-routing__provider-grid,
@@ -1360,7 +1360,7 @@ onMounted(() => {
   grid-template-columns: minmax(180px, 0.65fr) minmax(260px, 1fr);
   align-items: end;
   gap: var(--md-spacing-4);
-  background: var(--md-surface);
+  background: color-mix(in srgb, var(--md-surface) 88%, var(--md-surface-dim));
 }
 
 .model-routing__primary-copy h3 {

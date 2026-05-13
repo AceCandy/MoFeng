@@ -1,44 +1,82 @@
 <!-- AIMETA P=用户管理_用户列表管理|R=用户CRUD_权限|NR=不含认证功能|E=component:UserManagement|X=ui|A=用户组件|D=vue|S=dom,net|RD=./README.ai -->
 <template>
-  <n-card :bordered="false" class="admin-card">
-    <template #header>
-      <div class="card-header">
-        <span class="card-title">用户管理</span>
-        <n-space :size="12">
-          <n-input
-            v-model:value="keyword"
-            clearable
-            round
-            placeholder="搜索用户名或邮箱"
-            @update:value="handleSearch"
-            class="search-input"
-          />
-          <n-button type="primary" size="small" @click="handleAdd">
-            新建用户
-          </n-button>
-          <n-button quaternary size="small" @click="fetchUsers" :loading="loading">
-            刷新
-          </n-button>
-        </n-space>
-      </div>
-    </template>
+  <section class="admin-panel admin-panel--list">
+    <div class="admin-panel__header admin-panel__header--toolbar">
+      <n-space :size="12" class="admin-panel__actions">
+        <n-input
+          v-model:value="keyword"
+          clearable
+          round
+          placeholder="搜索用户名或邮箱"
+          @update:value="handleSearch"
+          class="search-input"
+        />
+        <n-button type="primary" size="small" @click="handleAdd"> 新建用户 </n-button>
+        <n-button quaternary size="small" @click="fetchUsers" :loading="loading"> 刷新 </n-button>
+      </n-space>
+    </div>
 
-    <n-space vertical size="large">
+    <div class="admin-panel__body">
       <n-alert v-if="error" type="error" closable @close="error = null">
         {{ error }}
       </n-alert>
 
       <n-spin :show="loading">
-        <n-data-table
-          :columns="columns"
-          :data="filteredUsers"
-          :bordered="false"
-          :pagination="pagination"
-          :row-key="rowKey"
-          class="user-table"
-        />
+        <div class="admin-table-shell">
+          <n-empty
+            v-if="!filteredUsers.length && !loading"
+            description="暂无匹配用户"
+            class="empty-state"
+          />
+          <div v-else-if="isMobile" class="user-mobile-list">
+            <article v-for="user in filteredUsers" :key="user.id" class="user-mobile-card">
+              <div class="user-mobile-card__header">
+                <div class="user-mobile-card__identity">
+                  <strong>{{ user.username }}</strong>
+                  <span>ID {{ user.id }}</span>
+                </div>
+                <n-space :size="6">
+                  <n-tag :type="user.is_admin ? 'success' : 'default'" :bordered="false" size="small">
+                    {{ user.is_admin ? '管理员' : '普通用户' }}
+                  </n-tag>
+                  <n-tag :type="user.is_active ? 'success' : 'error'" :bordered="false" size="small">
+                    {{ user.is_active ? '激活' : '禁用' }}
+                  </n-tag>
+                </n-space>
+              </div>
+
+              <div class="user-mobile-card__meta">
+                <span>邮箱</span>
+                <strong>{{ user.email || '未设置' }}</strong>
+              </div>
+
+              <div class="user-mobile-card__actions">
+                <n-button size="small" type="primary" secondary @click="handleEdit(user)">
+                  编辑
+                </n-button>
+                <n-popconfirm :disabled="user.is_admin" @positive-click="() => handleDelete(user.id)">
+                  <template #trigger>
+                    <n-button size="small" type="error" secondary :disabled="user.is_admin">
+                      删除
+                    </n-button>
+                  </template>
+                  确定要删除该用户吗？
+                </n-popconfirm>
+              </div>
+            </article>
+          </div>
+          <n-data-table
+            v-else
+            :columns="columns"
+            :data="filteredUsers"
+            :bordered="false"
+            :pagination="pagination"
+            :row-key="rowKey"
+            class="user-table"
+          />
+        </div>
       </n-spin>
-    </n-space>
+    </div>
 
     <!-- Create/Edit User Modal -->
     <n-modal v-model:show="showModal" preset="card" :title="modalTitle" style="width: 500px">
@@ -67,7 +105,9 @@
         <n-form-item
           label="密码"
           path="password"
-          :rule="isEditMode ? [{ min: 6, message: '密码至少 6 个字符', trigger: 'blur' }] : passwordRules"
+          :rule="
+            isEditMode ? [{ min: 6, message: '密码至少 6 个字符', trigger: 'blur' }] : passwordRules
+          "
         >
           <n-input
             v-model:value="formModel.password"
@@ -93,22 +133,20 @@
       <template #footer>
         <n-space justify="end">
           <n-button @click="showModal = false">取消</n-button>
-          <n-button type="primary" :loading="submitting" @click="handleSubmit">
-            确认
-          </n-button>
+          <n-button type="primary" :loading="submitting" @click="handleSubmit"> 确认 </n-button>
         </n-space>
       </template>
     </n-modal>
-  </n-card>
+  </section>
 </template>
 
 <script setup lang="ts">
-import { computed, h, onMounted, reactive, ref } from 'vue'
+import { computed, h, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import {
   NAlert,
   NButton,
-  NCard,
   NDataTable,
+  NEmpty,
   NForm,
   NFormItem,
   NInput,
@@ -122,7 +160,7 @@ import {
   type DataTableColumns,
   type FormInst,
   type FormRules,
-  type FormItemRule
+  type FormItemRule,
 } from 'naive-ui'
 
 import { AdminAPI, type AdminUser, type UserCreatePayload } from '@/api/admin'
@@ -132,6 +170,7 @@ const users = ref<AdminUser[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const keyword = ref('')
+const isMobile = ref(false)
 
 const showModal = ref(false)
 const submitting = ref(false)
@@ -144,42 +183,44 @@ const formModel = reactive({
   email: '',
   password: '',
   is_admin: false,
-  is_active: true
+  is_active: true,
 })
 
 const rules: FormRules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 2, message: '用户名至少 2 个字符', trigger: 'blur' }
+    { min: 2, message: '用户名至少 2 个字符', trigger: 'blur' },
   ],
-  email: [
-    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
-  ]
+  email: [{ type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }],
 }
 
 const passwordRules: FormItemRule[] = [
   { required: true, message: '请输入密码', trigger: 'blur' },
-  { min: 6, message: '密码至少 6 个字符', trigger: 'blur' }
+  { min: 6, message: '密码至少 6 个字符', trigger: 'blur' },
 ]
 
 const pagination = reactive({
   page: 1,
   pageSize: 10,
   showSizePicker: true,
-  pageSizes: [10, 20, 50]
+  pageSizes: [10, 20, 50],
 })
+
+const updateLayout = () => {
+  isMobile.value = window.innerWidth < 768
+}
 
 const columns: DataTableColumns<AdminUser> = [
   {
     title: 'ID',
     key: 'id',
     sorter: (a, b) => a.id - b.id,
-    width: 80
+    width: 80,
   },
   {
     title: '用户名',
     key: 'username',
-    ellipsis: { tooltip: true }
+    ellipsis: { tooltip: true },
   },
   {
     title: '邮箱',
@@ -187,7 +228,7 @@ const columns: DataTableColumns<AdminUser> = [
     ellipsis: { tooltip: true },
     render(row) {
       return row.email || '—'
-    }
+    },
   },
   {
     title: '权限',
@@ -199,11 +240,11 @@ const columns: DataTableColumns<AdminUser> = [
         {
           type: row.is_admin ? 'success' : 'default',
           bordered: false,
-          size: 'small'
+          size: 'small',
         },
-        { default: () => (row.is_admin ? '管理员' : '普通用户') }
+        { default: () => (row.is_admin ? '管理员' : '普通用户') },
       )
-    }
+    },
   },
   {
     title: '状态',
@@ -215,52 +256,57 @@ const columns: DataTableColumns<AdminUser> = [
         {
           type: row.is_active ? 'success' : 'error',
           bordered: false,
-          size: 'small'
+          size: 'small',
         },
-        { default: () => (row.is_active ? '激活' : '禁用') }
+        { default: () => (row.is_active ? '激活' : '禁用') },
       )
-    }
+    },
   },
   {
     title: '操作',
     key: 'actions',
     align: 'center',
     render(row) {
-      return h(NSpace, { justify: 'center', size: 'small' }, {
-        default: () => [
-          h(
-            NButton,
-            {
-              size: 'small',
-              type: 'primary',
-              secondary: true,
-              onClick: () => handleEdit(row)
-            },
-            { default: () => '编辑' }
-          ),
-          h(
-            NPopconfirm,
-            {
-              onPositiveClick: () => handleDelete(row.id)
-            },
-            {
-              trigger: () => h(
-                NButton,
-                {
-                  size: 'small',
-                  type: 'error',
-                  secondary: true,
-                  disabled: row.is_admin
-                },
-                { default: () => '删除' }
-              ),
-              default: () => '确定要删除该用户吗？'
-            }
-          )
-        ]
-      })
-    }
-  }
+      return h(
+        NSpace,
+        { justify: 'center', size: 'small' },
+        {
+          default: () => [
+            h(
+              NButton,
+              {
+                size: 'small',
+                type: 'primary',
+                secondary: true,
+                onClick: () => handleEdit(row),
+              },
+              { default: () => '编辑' },
+            ),
+            h(
+              NPopconfirm,
+              {
+                onPositiveClick: () => handleDelete(row.id),
+              },
+              {
+                trigger: () =>
+                  h(
+                    NButton,
+                    {
+                      size: 'small',
+                      type: 'error',
+                      secondary: true,
+                      disabled: row.is_admin,
+                    },
+                    { default: () => '删除' },
+                  ),
+                default: () => '确定要删除该用户吗？',
+              },
+            ),
+          ],
+        },
+      )
+    },
+  },
 ]
 
 const filteredUsers = computed(() => {
@@ -271,11 +317,11 @@ const filteredUsers = computed(() => {
   return users.value.filter(
     (user) =>
       user.username.toLowerCase().includes(q) ||
-      (user.email && user.email.toLowerCase().includes(q))
+      (user.email && user.email.toLowerCase().includes(q)),
   )
 })
 
-const modalTitle = computed(() => isEditMode.value ? '编辑用户' : '新建用户')
+const modalTitle = computed(() => (isEditMode.value ? '编辑用户' : '新建用户'))
 
 const rowKey = (row: AdminUser) => row.id
 
@@ -304,7 +350,7 @@ const handleAdd = () => {
   formModel.password = ''
   formModel.is_admin = false
   formModel.is_active = true
-  
+
   showModal.value = true
 }
 
@@ -339,11 +385,11 @@ const handleSubmit = () => {
         const payload: any = {
           username: formModel.username,
           is_admin: formModel.is_admin,
-          is_active: formModel.is_active
+          is_active: formModel.is_active,
         }
         if (formModel.email) payload.email = formModel.email
         if (formModel.password) payload.password = formModel.password
-        
+
         await AdminAPI.updateUser(editingId.value, payload)
         message.success('更新成功')
       } else {
@@ -351,10 +397,10 @@ const handleSubmit = () => {
           username: formModel.username,
           password: formModel.password,
           is_admin: formModel.is_admin,
-          is_active: formModel.is_active
+          is_active: formModel.is_active,
         }
         if (formModel.email) payload.email = formModel.email
-        
+
         await AdminAPI.createUser(payload)
         message.success('创建成功')
       }
@@ -368,49 +414,106 @@ const handleSubmit = () => {
   })
 }
 
-onMounted(fetchUsers)
+onMounted(() => {
+  updateLayout()
+  window.addEventListener('resize', updateLayout)
+  fetchUsers()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', updateLayout)
+})
 </script>
 
 <style scoped>
-.admin-card {
-  width: 100%;
-  background-color: var(--md-surface);
-  color: var(--md-on-surface);
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding-bottom: var(--md-spacing-3);
-  border-bottom: 1px solid var(--md-outline-variant);
-}
-
-.card-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--md-on-surface);
-}
-
 .search-input {
   width: min(230px, 60vw);
 }
 
+.empty-state {
+  padding: var(--md-spacing-8) 0;
+}
+
+.user-mobile-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-3);
+}
+
+.user-mobile-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-3);
+  padding: var(--md-spacing-4);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-lg);
+  background-color: var(--md-surface-container-low);
+}
+
+.user-mobile-card__header,
+.user-mobile-card__meta,
+.user-mobile-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-spacing-3);
+}
+
+.user-mobile-card__identity {
+  min-width: 0;
+}
+
+.user-mobile-card__identity strong,
+.user-mobile-card__identity span,
+.user-mobile-card__meta span,
+.user-mobile-card__meta strong {
+  display: block;
+}
+
+.user-mobile-card__identity strong {
+  overflow: hidden;
+  color: var(--md-on-surface);
+  font-size: var(--md-title-small);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-mobile-card__identity span,
+.user-mobile-card__meta span {
+  margin-top: 2px;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-small);
+}
+
+.user-mobile-card__meta {
+  align-items: flex-start;
+  padding-top: var(--md-spacing-3);
+  border-top: 1px solid var(--md-outline-variant);
+}
+
+.user-mobile-card__meta strong {
+  min-width: 0;
+  max-width: 64%;
+  color: var(--md-on-surface);
+  font-size: var(--md-body-medium);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.user-mobile-card__actions {
+  justify-content: flex-end;
+}
+
 @media (max-width: 767px) {
-  .card-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--md-spacing-2);
-  }
-
-  .card-title {
-    font-size: 1.125rem;
-  }
-
   .search-input {
     width: 100%;
+  }
+
+  .user-mobile-card__header {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>

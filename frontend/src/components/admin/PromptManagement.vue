@@ -1,27 +1,24 @@
 <!-- AIMETA P=提示词管理_AI提示模板管理|R=提示词CRUD|NR=不含模型调用|E=component:PromptManagement|X=ui|A=管理组件|D=vue|S=dom,net|RD=./README.ai -->
 <template>
-  <n-card :bordered="false" class="admin-card">
-    <template #header>
-      <div class="card-header">
-        <span class="card-title">提示词管理</span>
-        <n-space :size="12">
-          <n-button quaternary size="small" @click="fetchPrompts" :loading="loading">
-            刷新
-          </n-button>
-          <n-button type="primary" size="small" @click="openCreateModal">
-            新建 Prompt
-          </n-button>
-        </n-space>
-      </div>
-    </template>
+  <section class="admin-panel admin-panel--list">
+    <div class="admin-panel__header admin-panel__header--toolbar">
+      <n-space :size="12" class="admin-panel__actions">
+        <n-button quaternary size="small" @click="fetchPrompts" :loading="loading">
+          刷新
+        </n-button>
+        <n-button type="primary" size="small" @click="openCreateModal">
+          新建 Prompt
+        </n-button>
+      </n-space>
+    </div>
 
-    <n-space vertical size="large">
+    <div class="admin-panel__body">
       <n-alert v-if="error" type="error" closable @close="error = null">
         {{ error }}
       </n-alert>
 
       <n-spin :show="loading">
-        <div :class="['prompt-layout', { mobile: isMobile }]">
+        <div class="admin-table-shell prompt-layout" :class="{ mobile: isMobile }">
           <div class="prompt-sidebar">
             <div class="sidebar-header">
               <span class="sidebar-title">Prompt 列表</span>
@@ -111,8 +108,8 @@
           </div>
         </div>
       </n-spin>
-    </n-space>
-  </n-card>
+    </div>
+  </section>
 
   <n-modal v-model:show="createModalVisible" preset="card" title="新建 Prompt" class="prompt-modal">
     <n-form label-placement="top" :model="createForm">
@@ -152,7 +149,6 @@ import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import {
   NAlert,
   NButton,
-  NCard,
   NDynamicTags,
   NEmpty,
   NForm,
@@ -403,24 +399,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.admin-card {
-  width: 100%;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.card-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--md-on-surface);
-}
-
 .prompt-layout {
   display: flex;
   align-items: stretch;
@@ -584,9 +562,4 @@ onBeforeUnmount(() => {
   }
 }
 
-@media (max-width: 767px) {
-  .card-title {
-    font-size: 1.125rem;
-  }
-}
 </style>

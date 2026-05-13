@@ -1,21 +1,18 @@
 <!-- AIMETA P=更新日志管理_系统更新记录|R=日志CRUD|NR=不含系统更新|E=component:UpdateLogManagement|X=ui|A=日志组件|D=vue|S=dom,net|RD=./README.ai -->
 <template>
-  <n-card :bordered="false" class="admin-card">
-    <template #header>
-      <div class="card-header">
-        <span class="card-title">更新日志管理</span>
-        <n-button quaternary size="small" @click="fetchLogs" :loading="loading">
-          刷新
-        </n-button>
-      </div>
-    </template>
+  <section class="admin-panel admin-panel--list">
+    <div class="admin-panel__header admin-panel__header--toolbar">
+      <n-button quaternary size="small" @click="fetchLogs" :loading="loading">
+        刷新
+      </n-button>
+    </div>
 
-    <n-space vertical size="large">
+    <div class="admin-panel__body">
       <n-alert v-if="error" type="error" closable @close="error = null">
         {{ error }}
       </n-alert>
 
-      <n-card size="small" class="form-card">
+      <div class="form-card">
         <n-form :model="form" label-placement="top">
           <n-form-item label="更新内容">
             <n-input
@@ -34,16 +31,14 @@
             </n-button>
           </n-space>
         </n-form>
-      </n-card>
+      </div>
 
       <n-spin :show="loading">
         <n-empty v-if="!logs.length && !loading" description="目前还没有更新记录" />
-        <n-space v-else vertical size="large">
-          <n-card
+        <div v-else class="admin-table-shell log-list">
+          <article
             v-for="log in orderedLogs"
             :key="log.id"
-            :bordered="false"
-            size="small"
             class="log-card"
           >
             <div class="log-header">
@@ -81,11 +76,11 @@
             <div class="log-content">
               {{ log.content }}
             </div>
-          </n-card>
-        </n-space>
+          </article>
+        </div>
       </n-spin>
-    </n-space>
-  </n-card>
+    </div>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -93,7 +88,6 @@ import { computed, onMounted, ref } from 'vue'
 import {
   NAlert,
   NButton,
-  NCard,
   NEmpty,
   NForm,
   NFormItem,
@@ -214,34 +208,25 @@ onMounted(fetchLogs)
 </script>
 
 <style scoped>
-.admin-card {
-  width: 100%;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.card-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--md-on-surface);
-}
-
 .form-card {
   border-radius: 16px;
   border: 1px solid var(--md-outline-variant);
   background-color: var(--md-surface-container-low);
+  padding: var(--md-spacing-4);
+}
+
+.log-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-3);
+  padding: var(--md-spacing-3);
 }
 
 .log-card {
   border-radius: 16px;
   border: 1px solid var(--md-outline-variant);
   background-color: var(--md-surface-container-low);
+  padding: var(--md-spacing-4);
 }
 
 .log-header {
@@ -271,9 +256,4 @@ onMounted(fetchLogs)
   overflow-wrap: anywhere;
 }
 
-@media (max-width: 767px) {
-  .card-title {
-    font-size: 1.125rem;
-  }
-}
 </style>

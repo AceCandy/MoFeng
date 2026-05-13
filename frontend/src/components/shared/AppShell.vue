@@ -46,6 +46,9 @@ const navigationItems = computed(() => {
 
 const pageLabel = computed(() => String(route.meta.label || '工作台'))
 const pageDescription = computed(() => String(route.meta.description || ''))
+const isProjectContext = computed(() =>
+  ['project-detail', 'project-write', 'admin-project-detail'].includes(String(route.name || '')),
+)
 
 const closeMobileNav = () => {
   isMobileNavOpen.value = false
@@ -76,7 +79,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="app-shell">
+  <div class="app-shell" :class="{ 'app-shell--project-context': isProjectContext }">
     <a class="skip-link" href="#main-content">跳到主内容</a>
 
     <aside
@@ -88,7 +91,7 @@ onUnmounted(() => {
     >
       <div class="app-shell__brand">
         <div class="app-shell__brand-mark" aria-hidden="true">A</div>
-        <div>
+        <div class="app-shell__brand-copy">
           <p class="app-shell__brand-title">Arboris Novel</p>
           <p class="app-shell__brand-subtitle">安静写作台</p>
         </div>
@@ -113,6 +116,8 @@ onUnmounted(() => {
           class="app-shell__nav-item"
           :class="{ 'is-active': item.match(route.path) }"
           :aria-current="item.match(route.path) ? 'page' : undefined"
+          :aria-label="item.label"
+          :title="item.label"
         >
           <span class="app-shell__nav-icon" aria-hidden="true">
             <svg
@@ -154,16 +159,24 @@ onUnmounted(() => {
               />
             </svg>
           </span>
-          <span>{{ item.label }}</span>
+          <span class="app-shell__nav-text">{{ item.label }}</span>
         </RouterLink>
       </nav>
 
       <div class="app-shell__account">
-        <div>
+        <div class="app-shell__account-copy">
           <p class="app-shell__account-name">{{ authStore.user?.username || '当前用户' }}</p>
           <p class="app-shell__account-role">{{ authStore.user?.is_admin ? '管理员' : '作者' }}</p>
         </div>
-        <button type="button" class="md-btn md-btn-text" @click="logout">退出</button>
+        <button
+          type="button"
+          class="md-btn md-btn-text app-shell__logout"
+          aria-label="退出登录"
+          title="退出登录"
+          @click="logout"
+        >
+          退出
+        </button>
       </div>
     </aside>
 

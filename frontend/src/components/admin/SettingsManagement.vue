@@ -201,61 +201,62 @@
       </n-card>
     </div>
 
-    <n-card :bordered="false">
-      <template #header>
-        <div class="card-header">
-          <div>
-            <span class="card-title">系统配置</span>
-            <p class="card-subtitle">支持按 Key、值、描述检索；托管项已在表格中高亮。</p>
+    <section class="admin-panel settings-table-panel" aria-labelledby="system-config-title">
+      <div class="admin-panel__header">
+        <div>
+          <h3 id="system-config-title" class="admin-panel__title">系统配置</h3>
+          <p class="admin-panel__subtitle">支持按 Key、值、描述检索；托管项已在表格中高亮。</p>
+        </div>
+        <n-button type="primary" size="small" @click="openCreateModal">
+          新增配置
+        </n-button>
+      </div>
+
+      <div class="admin-panel__body">
+        <n-spin :show="configLoading">
+          <n-alert v-if="configError" type="error" closable @close="configError = null">
+            {{ configError }}
+          </n-alert>
+          <n-alert type="warning" class="risk-alert">
+            删除配置会立即影响系统行为。托管项建议通过上方快捷卡片调整，不建议在表格中直接删除。
+          </n-alert>
+
+          <div class="table-toolbar">
+            <n-input
+              v-model:value="configKeyword"
+              clearable
+              class="toolbar-search"
+              placeholder="搜索 Key / 值 / 描述"
+            />
+            <n-switch v-model:value="managedOnly">
+              <template #checked>仅托管项</template>
+              <template #unchecked>仅托管项</template>
+            </n-switch>
+            <n-switch v-model:value="managedFirst">
+              <template #checked>托管优先排序</template>
+              <template #unchecked>托管优先排序</template>
+            </n-switch>
           </div>
-          <n-button type="primary" size="small" @click="openCreateModal">
-            新增配置
-          </n-button>
-        </div>
-      </template>
 
-      <n-spin :show="configLoading">
-        <n-alert v-if="configError" type="error" closable @close="configError = null">
-          {{ configError }}
-        </n-alert>
-        <n-alert type="warning" class="risk-alert">
-          删除配置会立即影响系统行为。托管项建议通过上方快捷卡片调整，不建议在表格中直接删除。
-        </n-alert>
-
-        <div class="table-toolbar">
-          <n-input
-            v-model:value="configKeyword"
-            clearable
-            class="toolbar-search"
-            placeholder="搜索 Key / 值 / 描述"
+          <n-empty
+            v-if="!configLoading && !filteredConfigs.length"
+            :description="configKeyword || managedOnly ? '没有匹配的配置项' : '暂无配置项'"
           />
-          <n-switch v-model:value="managedOnly">
-            <template #checked>仅托管项</template>
-            <template #unchecked>仅托管项</template>
-          </n-switch>
-          <n-switch v-model:value="managedFirst">
-            <template #checked>托管优先排序</template>
-            <template #unchecked>托管优先排序</template>
-          </n-switch>
-        </div>
 
-        <n-empty
-          v-if="!configLoading && !filteredConfigs.length"
-          :description="configKeyword || managedOnly ? '没有匹配的配置项' : '暂无配置项'"
-        />
-
-        <n-data-table
-          v-else
-          :columns="columns"
-          :data="filteredConfigs"
-          :loading="configLoading"
-          :bordered="false"
-          :row-key="rowKey"
-          :row-class-name="tableRowClassName"
-          class="config-table"
-        />
-      </n-spin>
-    </n-card>
+          <div v-else class="admin-table-shell">
+            <n-data-table
+              :columns="columns"
+              :data="filteredConfigs"
+              :loading="configLoading"
+              :bordered="false"
+              :row-key="rowKey"
+              :row-class-name="tableRowClassName"
+              class="config-table"
+            />
+          </div>
+        </n-spin>
+      </div>
+    </section>
   </n-space>
 
   <n-modal

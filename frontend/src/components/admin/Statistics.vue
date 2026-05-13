@@ -1,16 +1,13 @@
 <!-- AIMETA P=统计面板_系统使用统计|R=统计图表|NR=不含数据修改|E=component:Statistics|X=ui|A=统计组件|D=vue,chart.js|S=dom,net|RD=./README.ai -->
 <template>
-  <n-card :bordered="false" class="admin-card">
-    <template #header>
-      <div class="card-header">
-        <span class="card-title">数据总览</span>
-        <n-button quaternary size="small" @click="fetchStats" :loading="loading">
-          刷新
-        </n-button>
-      </div>
-    </template>
+  <section class="admin-panel">
+    <div class="admin-panel__header admin-panel__header--toolbar">
+      <n-button quaternary size="small" @click="fetchStats" :loading="loading">
+        刷新
+      </n-button>
+    </div>
 
-    <n-space vertical size="large">
+    <div class="admin-panel__body">
       <n-alert v-if="error" type="error" closable @close="error = null">
         {{ error }}
       </n-alert>
@@ -57,8 +54,8 @@
           </n-gi>
         </n-grid>
       </n-spin>
-    </n-space>
-  </n-card>
+    </div>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -111,24 +108,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.admin-card {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.card-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--md-on-surface);
-}
-
 .stat-card {
   min-height: 100%;
   border-radius: 18px;
@@ -161,16 +140,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 767px) {
-  .card-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .card-title {
-    font-size: 1.125rem;
-  }
-
   .stat-card :deep(.n-card__content) {
     padding: var(--md-spacing-4);
   }

@@ -1,16 +1,17 @@
 <!-- AIMETA P=概览区_小说基本信息|R=基本信息展示|NR=不含编辑功能|E=component:OverviewSection|X=ui|A=概览组件|D=vue|S=dom|RD=./README.ai -->
 <template>
-  <div class="space-y-6">
-    <div class="bg-white/95 rounded-2xl shadow-sm border border-slate-200 p-6">
-      <div class="flex items-start justify-between gap-4 mb-3">
+  <div class="archive-overview">
+    <section class="archive-overview__summary">
+      <div class="archive-overview__section-head">
         <div>
-          <h3 class="text-sm font-semibold text-indigo-600 uppercase tracking-wide">核心摘要</h3>
-          <p class="text-gray-500 text-xs">快速了解项目的定位与调性</p>
+          <p class="archive-overview__kicker">核心摘要</p>
+          <h2 class="archive-overview__title">项目定位</h2>
         </div>
         <button
           v-if="editable"
           type="button"
-          class="text-gray-400 hover:text-indigo-600 transition-colors"
+          class="md-icon-btn archive-overview__edit"
+          aria-label="编辑核心摘要"
           @click="emitEdit('one_sentence_summary', '核心摘要', data?.one_sentence_summary)">
           <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
             <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
@@ -18,35 +19,41 @@
           </svg>
         </button>
       </div>
-      <p class="text-slate-800 text-lg leading-relaxed min-h-[2.5rem]">{{ data?.one_sentence_summary || '暂无' }}</p>
-    </div>
+      <p class="archive-overview__lead" :class="{ 'is-empty': !data?.one_sentence_summary }">
+        {{ data?.one_sentence_summary || '暂无核心摘要' }}
+      </p>
+    </section>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-      <div class="bg-white/95 rounded-2xl shadow-sm border border-slate-200 p-4">
-        <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">目标受众</h4>
-        <p class="text-base font-medium text-slate-800 min-h-[1.5rem]">{{ data?.target_audience || '暂无' }}</p>
+    <dl class="archive-overview__metadata" aria-label="项目元信息">
+      <div class="archive-overview__meta-item">
+        <dt>目标受众</dt>
+        <dd>{{ data?.target_audience || '暂无' }}</dd>
       </div>
-      <div class="bg-white/95 rounded-2xl shadow-sm border border-slate-200 p-4">
-        <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">类型</h4>
-        <p class="text-base font-medium text-slate-800 min-h-[1.5rem]">{{ data?.genre || '暂无' }}</p>
+      <div class="archive-overview__meta-item">
+        <dt>类型</dt>
+        <dd>{{ data?.genre || '暂无' }}</dd>
       </div>
-      <div class="bg-white/95 rounded-2xl shadow-sm border border-slate-200 p-4">
-        <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">风格</h4>
-        <p class="text-base font-medium text-slate-800 min-h-[1.5rem]">{{ data?.style || '暂无' }}</p>
+      <div class="archive-overview__meta-item">
+        <dt>风格</dt>
+        <dd>{{ data?.style || '暂无' }}</dd>
       </div>
-      <div class="bg-white/95 rounded-2xl shadow-sm border border-slate-200 p-4">
-        <h4 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">基调</h4>
-        <p class="text-base font-medium text-slate-800 min-h-[1.5rem]">{{ data?.tone || '暂无' }}</p>
+      <div class="archive-overview__meta-item">
+        <dt>基调</dt>
+        <dd>{{ data?.tone || '暂无' }}</dd>
       </div>
-    </div>
+    </dl>
 
-    <div class="bg-white/95 rounded-2xl shadow-sm border border-slate-200 p-6">
-      <div class="flex items-start justify-between gap-4 mb-4">
-        <h3 class="text-lg font-semibold text-slate-900">完整剧情梗概</h3>
+    <section class="archive-overview__synopsis">
+      <div class="archive-overview__section-head">
+        <div>
+          <p class="archive-overview__kicker">剧情材料</p>
+          <h2 class="archive-overview__title">完整剧情梗概</h2>
+        </div>
         <button
           v-if="editable"
           type="button"
-          class="text-gray-400 hover:text-indigo-600 transition-colors"
+          class="md-icon-btn archive-overview__edit"
+          aria-label="编辑完整剧情梗概"
           @click="emitEdit('full_synopsis', '完整剧情梗概', data?.full_synopsis)">
           <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
             <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
@@ -54,10 +61,10 @@
           </svg>
         </button>
       </div>
-      <div class="prose prose-sm max-w-none text-slate-600 leading-7 whitespace-pre-line">
-        <p>{{ data?.full_synopsis || '暂无' }}</p>
+      <div class="archive-overview__prose" :class="{ 'is-empty': !data?.full_synopsis }">
+        <p>{{ data?.full_synopsis || '暂无完整剧情梗概' }}</p>
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
@@ -94,3 +101,135 @@ export default defineComponent({
   name: 'OverviewSection'
 })
 </script>
+
+<style scoped>
+.archive-overview {
+  display: grid;
+  gap: var(--md-spacing-6);
+  width: 100%;
+}
+
+.archive-overview__summary,
+.archive-overview__synopsis {
+  padding: var(--md-spacing-6);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-lg);
+  background-color: var(--md-surface);
+}
+
+.archive-overview__summary {
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--md-primary-container) 34%, transparent),
+      transparent 56%
+    ),
+    var(--md-surface);
+}
+
+.archive-overview__section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--md-spacing-4);
+  margin-bottom: var(--md-spacing-4);
+}
+
+.archive-overview__kicker {
+  margin: 0 0 var(--md-spacing-1);
+  color: var(--md-primary-dark);
+  font-size: var(--md-label-medium);
+  font-weight: 600;
+}
+
+.archive-overview__title {
+  margin: 0;
+  color: var(--md-on-surface);
+  font-size: var(--md-title-large);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.archive-overview__edit {
+  flex: 0 0 auto;
+  color: var(--md-on-surface-variant);
+}
+
+.archive-overview__edit:hover {
+  color: var(--md-primary-dark);
+}
+
+.archive-overview__lead {
+  max-width: 72ch;
+  min-height: 2.5rem;
+  margin: 0;
+  color: var(--md-on-surface);
+  font-size: var(--md-body-large);
+  line-height: 1.75;
+}
+
+.archive-overview__metadata {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--md-spacing-3);
+  margin: 0;
+}
+
+.archive-overview__meta-item {
+  min-width: 0;
+  padding: var(--md-spacing-4);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-md);
+  background-color: var(--md-surface-container-low);
+}
+
+.archive-overview__meta-item dt {
+  margin: 0 0 var(--md-spacing-2);
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-medium);
+  font-weight: 600;
+}
+
+.archive-overview__meta-item dd {
+  min-height: 1.5rem;
+  margin: 0;
+  color: var(--md-on-surface);
+  font-size: var(--md-body-medium);
+  font-weight: 500;
+  line-height: 1.7;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.archive-overview__prose {
+  max-width: 75ch;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-medium);
+  line-height: 1.8;
+  white-space: pre-line;
+}
+
+.archive-overview__prose p {
+  margin: 0;
+}
+
+.archive-overview__lead.is-empty,
+.archive-overview__prose.is-empty {
+  color: var(--md-on-surface-variant);
+}
+
+@media (max-width: 560px) {
+  .archive-overview {
+    gap: var(--md-spacing-4);
+  }
+
+  .archive-overview__summary,
+  .archive-overview__synopsis {
+    padding: var(--md-spacing-4);
+  }
+
+  .archive-overview__metadata {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

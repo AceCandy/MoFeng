@@ -54,7 +54,6 @@ def test_settings_view_only_declares_current_model_sections():
     assert "settings-console__nav" in source
     assert "settings-console__mobile-tabs" not in source
     assert "aria-current" in source
-    assert "当前分区" not in source
     assert "settings-overview" not in source
     assert "settings-panel__header" not in source
     assert "settings-console__nav-item-description" not in source
@@ -71,6 +70,38 @@ def test_settings_view_routes_sections_without_legacy_basic_config():
     assert _component_tags(SETTINGS_VIEW, "LLMSettings") == []
     _assert_missing(SETTINGS_VIEW, "基础 LLM 配置", "基础 LLM 配置")
     _assert_missing(SETTINGS_VIEW, "概览分区", "settings-overview-panel")
+
+
+def test_settings_view_uses_compact_top_tabs_without_redundant_headers():
+    source = _source(SETTINGS_VIEW)
+
+    for text in [
+        "settings-console__nav",
+        "settings-console__nav-item",
+        "settings-console__nav-item-label",
+        "settings-panel",
+    ]:
+        assert text in source
+
+    for removed in [
+        "settings-console__intro",
+        "settings-console__workspace",
+        "settings-console__nav-panel",
+        "settings-console__nav-heading",
+        "settings-console__content-shell",
+        "settings-console__content-header",
+        "settings-section-title",
+        "settings-console__section-index",
+        "settings-console__content-copy",
+        "配置分区",
+        "当前分区",
+        "用户级配置",
+    ]:
+        assert removed not in source
+
+    nav_block = _css_block(source, ".settings-console__nav")
+    assert "grid-template-columns: repeat(3, minmax(0, 1fr))" in nav_block
+    assert "border-radius: var(--md-radius-full)" in nav_block
 
 
 def test_personal_model_routing_has_llm_vector_and_routes_sections():

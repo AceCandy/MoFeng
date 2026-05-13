@@ -1,13 +1,7 @@
 <!-- AIMETA P=密码管理_管理员密码修改|R=密码修改表单|NR=不含用户管理|E=component:PasswordManagement|X=ui|A=密码组件|D=vue|S=dom,net|RD=./README.ai -->
 <template>
-  <n-space vertical size="large" class="password-container">
-    <n-card :bordered="false" class="password-card">
-      <template #header>
-        <div class="card-header">
-          <span class="card-title">管理员密码修改</span>
-        </div>
-      </template>
-
+  <section class="admin-panel password-container">
+    <div class="admin-panel__body">
       <n-alert v-if="mustReset" type="warning" class="mb-4">
         为保障安全，请先更新默认密码后再继续使用管理后台。
       </n-alert>
@@ -55,13 +49,13 @@
           </n-space>
         </n-form>
       </n-spin>
-    </n-card>
-  </n-space>
+    </div>
+  </section>
 </template>
 
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
-import { NAlert, NButton, NCard, NForm, NFormItem, NInput, NSpace, NSpin } from 'naive-ui'
+import { NAlert, NButton, NForm, NFormItem, NInput, NSpace, NSpin } from 'naive-ui'
 
 import { AdminAPI } from '@/api/admin'
 import { useAlert } from '@/composables/useAlert'
@@ -128,26 +122,6 @@ const handleSubmit = async () => {
 .password-container {
   max-width: 520px;
   margin: 0 auto;
-  color: var(--md-on-surface);
-}
-
-.password-card {
-  border-radius: 16px;
-  background-color: var(--md-surface);
-  color: var(--md-on-surface);
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: var(--md-spacing-3);
-  border-bottom: 1px solid var(--md-outline-variant);
-}
-
-.card-title {
-  font-size: 1.2rem;
-  font-weight: 600;
   color: var(--md-on-surface);
 }
 
