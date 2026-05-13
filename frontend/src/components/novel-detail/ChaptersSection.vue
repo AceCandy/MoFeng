@@ -134,7 +134,7 @@
           </header>
 
           <!-- Tab Content -->
-          <article class="flex-1 h-full overflow-y-auto min-h-0 overscroll-contain">
+          <article class="flex-1 overflow-y-auto min-h-0 overscroll-contain">
             <!-- 正文 Tab -->
             <div v-show="activeTab === 'content'" class="px-2 py-3">
               <div class="max-w-full space-y-4">

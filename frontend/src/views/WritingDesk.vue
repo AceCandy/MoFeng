@@ -7,10 +7,7 @@
       :completed-chapters="completedChapters"
       :total-chapters="totalChapters"
       :has-incomplete-chapters="hasIncompleteChapters"
-      :chapter-sidebar-open="sidebarOpen"
       @go-back="goBack"
-      @view-project-detail="viewProjectDetail"
-      @toggle-sidebar="toggleSidebar"
       @locate-incomplete="locateFirstIncompleteChapter"
     />
 
@@ -57,17 +54,16 @@
       <div
         v-else-if="project"
         class="writing-desk-layout"
-        :class="{ 'writing-desk-layout--sidebar-open': sidebarOpen }"
       >
         <WDSidebar
           ref="sidebarRef"
           :project="project"
-          :sidebar-open="sidebarOpen"
           :selected-chapter-number="selectedChapterNumber"
           :generating-chapter="generatingChapter"
           :evaluating-chapter="evaluatingChapter"
           :is-generating-outline="isGeneratingOutline"
-          @close-sidebar="closeSidebar"
+          @open-project-detail="viewProjectDetail"
+          @open-project-section="openProjectSection"
           @select-chapter="selectChapter"
           @generate-chapter="generateChapter"
           @edit-chapter="openEditChapterModal"
@@ -212,7 +208,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onBeforeUnmount, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNovelStore } from '@/stores/novel'
 import { OptimizerAPI } from '@/api/novel'
@@ -232,6 +228,8 @@ import WDEvaluationDetailModal from '@/components/writing-desk/WDEvaluationDetai
 import WDEditChapterModal from '@/components/writing-desk/WDEditChapterModal.vue'
 import WDGenerateOutlineModal from '@/components/writing-desk/WDGenerateOutlineModal.vue'
 
+type NovelProjectSection = 'overview' | 'characters' | 'relationships'
+
 interface Props {
   id: string
 }
@@ -239,17 +237,12 @@ interface Props {
 const props = defineProps<Props>()
 const router = useRouter()
 const novelStore = useNovelStore()
-const DESKTOP_BREAKPOINT = 1024
 
 // 状态管理
 const selectedChapterNumber = ref<number | null>(null)
 const chapterGenerationResult = ref<ChapterGenerationResponse | null>(null)
 const selectedVersionIndex = ref<number>(0)
 const generatingChapter = ref<number | null>(null)
-const isDesktopViewport = ref(
-  typeof window !== 'undefined' ? window.innerWidth >= DESKTOP_BREAKPOINT : true,
-)
-const sidebarOpen = ref(isDesktopViewport.value)
 const sidebarRef = ref<InstanceType<typeof WDSidebar> | null>(null)
 const showVersionDetailModal = ref(false)
 const detailVersionIndex = ref<number>(0)
@@ -726,26 +719,16 @@ const viewProjectDetail = () => {
   }
 }
 
-const toggleSidebar = () => {
-  sidebarOpen.value = !sidebarOpen.value
-}
-
-const closeSidebar = () => {
-  sidebarOpen.value = false
-}
-
-const syncSidebarForViewport = () => {
-  if (typeof window === 'undefined') return
-  const wasDesktop = isDesktopViewport.value
-  const nowDesktop = window.innerWidth >= DESKTOP_BREAKPOINT
-  isDesktopViewport.value = nowDesktop
-  if (wasDesktop !== nowDesktop) {
-    sidebarOpen.value = nowDesktop
+const openProjectSection = (section: NovelProjectSection) => {
+  if (project.value) {
+    router.push({
+      path: `/projects/${project.value.id}`,
+      query: { section },
+    })
   }
 }
 
 const locateFirstIncompleteChapter = async () => {
-  sidebarOpen.value = true
   await nextTick()
   sidebarRef.value?.scrollToFirstIncompleteChapter()
 }
@@ -799,9 +782,6 @@ const selectChapter = (chapterNumber: number) => {
   selectedChapterNumber.value = chapterNumber
   chapterGenerationResult.value = null
   selectedVersionIndex.value = 0
-  if (!isDesktopViewport.value) {
-    closeSidebar()
-  }
 }
 
 const generateChapter = async (chapterNumber: number) => {
@@ -1112,17 +1092,7 @@ const handleGenerateOutline = async (numChapters: number) => {
 }
 
 onMounted(() => {
-  if (typeof window !== 'undefined') {
-    window.addEventListener('resize', syncSidebarForViewport)
-    syncSidebarForViewport()
-  }
   loadProject()
-})
-
-onBeforeUnmount(() => {
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('resize', syncSidebarForViewport)
-  }
 })
 </script>
 
@@ -1137,22 +1107,21 @@ onBeforeUnmount(() => {
 
 .writing-desk-layout {
   display: flex;
-  gap: 0;
-  height: 100%;
-  transition: gap 250ms cubic-bezier(0.2, 0, 0, 1);
-}
-
-.writing-desk-layout--sidebar-open {
   gap: var(--md-spacing-6);
+  height: 100%;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .writing-desk-page {
     animation: none;
   }
+}
 
+@media (max-width: 1023px) {
   .writing-desk-layout {
-    transition: none;
+    flex-direction: column;
+    gap: var(--md-spacing-4);
+    overflow-y: auto;
   }
 }
 

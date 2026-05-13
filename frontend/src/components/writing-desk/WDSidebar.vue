@@ -1,28 +1,20 @@
 <!-- AIMETA P=写作台侧边栏_章节目录|R=章节列表_导航|NR=不含内容编辑|E=component:WDSidebar|X=ui|A=侧边栏|D=vue|S=dom|RD=./README.ai -->
 <template>
   <div>
-    <!-- 侧边栏遮罩 (移动端) -->
-    <div
-      v-if="sidebarOpen"
-      @click="$emit('closeSidebar')"
-      class="writing-sidebar__backdrop"
-    ></div>
-
     <!-- 左侧：蓝图和章节列表 -->
     <div
-      :class="[
-        'md-card md-card-elevated writing-sidebar',
-        sidebarOpen ? 'writing-sidebar--open' : 'writing-sidebar--closed',
-      ]"
+      class="md-card md-card-elevated writing-sidebar"
       id="writing-desk-chapter-sidebar"
-      :aria-hidden="!sidebarOpen ? 'true' : undefined"
-      :inert="!sidebarOpen"
       style="border-radius: var(--md-radius-xl)"
     >
       <div class="h-full flex flex-col">
         <!-- 蓝图预览卡片 -->
         <div class="md-card-header flex-shrink-0">
-          <div class="flex items-center gap-3 mb-4">
+          <button
+            type="button"
+            class="writing-sidebar__link writing-sidebar__blueprint-link md-ripple"
+            @click="emit('openProjectDetail')"
+          >
             <div
               class="w-10 h-10 rounded-full flex items-center justify-center"
               style="background-color: var(--md-primary-container)"
@@ -36,16 +28,21 @@
                 <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
             </div>
-            <div>
+            <div class="min-w-0 text-left">
               <h2 class="md-title-medium font-semibold">故事蓝图</h2>
               <p class="md-body-small md-on-surface-variant">
                 {{ project.blueprint?.style || '未设定风格' }}
               </p>
             </div>
-          </div>
+          </button>
 
           <div class="space-y-3">
-            <div class="md-card md-card-filled p-3" style="border-radius: var(--md-radius-md)">
+            <button
+              type="button"
+              class="md-card md-card-filled writing-sidebar__summary-link md-ripple"
+              style="border-radius: var(--md-radius-md)"
+              @click="emit('openProjectSection', 'overview')"
+            >
               <h3
                 class="md-label-large font-semibold"
                 style="color: var(--md-on-primary-container)"
@@ -57,26 +54,30 @@
                   {{ project.blueprint?.one_sentence_summary || '暂无概要' }}
                 </p>
               </Tooltip>
-            </div>
+            </button>
             <div class="grid grid-cols-2 gap-2 text-xs">
-              <div
-                class="md-card md-card-outlined p-2 text-center"
+              <button
+                type="button"
+                class="md-card md-card-outlined writing-sidebar__metric-link md-ripple"
                 style="border-radius: var(--md-radius-md)"
+                @click="emit('openProjectSection', 'characters')"
               >
                 <div class="md-title-small font-semibold" style="color: var(--md-primary)">
                   {{ characterCount }}
                 </div>
                 <div class="md-label-small md-on-surface-variant">角色</div>
-              </div>
-              <div
-                class="md-card md-card-outlined p-2 text-center"
+              </button>
+              <button
+                type="button"
+                class="md-card md-card-outlined writing-sidebar__metric-link md-ripple"
                 style="border-radius: var(--md-radius-md)"
+                @click="emit('openProjectSection', 'relationships')"
               >
                 <div class="md-title-small font-semibold" style="color: var(--md-secondary)">
                   {{ relationshipCount }}
                 </div>
                 <div class="md-label-small md-on-surface-variant">关系</div>
-              </div>
+              </button>
             </div>
           </div>
         </div>
@@ -405,7 +406,6 @@ import Tooltip from '@/components/Tooltip.vue'
 
 interface Props {
   project: NovelProject
-  sidebarOpen: boolean
   selectedChapterNumber: number | null
   generatingChapter: number | null
   evaluatingChapter: number | null
@@ -415,7 +415,8 @@ interface Props {
 const props = defineProps<Props>()
 
 const emit = defineEmits([
-  'closeSidebar',
+  'openProjectDetail',
+  'openProjectSection',
   'selectChapter',
   'generateChapter',
   'editChapter',
@@ -611,56 +612,61 @@ const canGenerateChapter = (chapterNumber: number) => {
 </script>
 
 <style scoped>
-.writing-sidebar__backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 40;
-  background-color: rgba(32, 33, 36, 0.2);
-}
-
 .writing-sidebar {
-  position: fixed;
-  left: var(--md-spacing-4);
-  top: 5rem;
-  bottom: var(--md-spacing-4);
-  z-index: 50;
-  width: min(20rem, calc(100vw - 2rem));
-  height: auto;
+  position: relative;
+  z-index: auto;
+  width: 100%;
+  height: min(42rem, 48vh);
   overflow: hidden;
-  transition:
-    flex-basis 250ms cubic-bezier(0.2, 0, 0, 1),
-    width 250ms cubic-bezier(0.2, 0, 0, 1),
-    opacity 180ms cubic-bezier(0.2, 0, 0, 1),
-    transform 250ms cubic-bezier(0.2, 0, 0, 1);
 }
 
-.writing-sidebar--open {
-  transform: translateX(0);
+.writing-sidebar__link,
+.writing-sidebar__summary-link,
+.writing-sidebar__metric-link {
+  width: 100%;
+  appearance: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
 }
 
-.writing-sidebar--closed {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(calc(-100% - var(--md-spacing-4)));
+.writing-sidebar__link:focus-visible,
+.writing-sidebar__summary-link:focus-visible,
+.writing-sidebar__metric-link:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
+.writing-sidebar__blueprint-link {
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-3);
+  margin-bottom: var(--md-spacing-4);
+  padding: 0;
+  background-color: transparent;
+}
+
+.writing-sidebar__summary-link {
+  display: block;
+  padding: var(--md-spacing-3);
+  background-color: var(--md-primary-container);
+}
+
+.writing-sidebar__metric-link {
+  display: block;
+  padding: var(--md-spacing-2);
+  border: 1px solid var(--md-outline-variant);
+  text-align: center;
+  background-color: var(--md-surface);
 }
 
 @media (min-width: 1024px) {
-  .writing-sidebar__backdrop {
-    display: none;
-  }
-
   .writing-sidebar {
-    position: relative;
-    inset: auto;
-    z-index: auto;
     flex: 0 0 20rem;
     width: 20rem;
     height: 100%;
-  }
-
-  .writing-sidebar--closed {
-    flex-basis: 0;
-    width: 0;
   }
 }
 

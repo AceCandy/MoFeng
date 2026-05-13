@@ -35,35 +35,6 @@
             <span class="hidden sm:inline">定位到未完成</span>
             <span class="sm:hidden">未完成</span>
           </button>
-          <button @click="$emit('viewProjectDetail')" class="md-btn md-btn-text md-ripple flex items-center gap-2">
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
-              <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path>
-            </svg>
-            <span class="hidden md:inline">项目详情</span>
-          </button>
-          <div class="w-px h-6 hidden sm:block" style="background-color: var(--md-outline-variant);"></div>
-          <button @click="handleLogout" class="md-btn md-btn-text md-ripple flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            <span class="hidden md:inline">退出登录</span>
-          </button>
-          <button
-            @click="$emit('toggleSidebar')"
-            class="md-btn md-btn-tonal md-ripple writing-desk-header__sidebar-toggle"
-            :aria-label="chapterSidebarOpen ? '收起章节侧栏' : '展开章节侧栏'"
-            aria-controls="writing-desk-chapter-sidebar"
-            :aria-expanded="chapterSidebarOpen"
-            :title="chapterSidebarOpen ? '收起章节侧栏' : '展开章节侧栏'"
-          >
-            <svg class="writing-desk-header__sidebar-toggle-icon" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
-            </svg>
-            <span class="writing-desk-header__sidebar-toggle-text">
-              {{ chapterSidebarOpen ? '收起目录' : '章节目录' }}
-            </span>
-          </button>
         </div>
       </div>
     </div>
@@ -71,17 +42,7 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 import type { NovelProject } from '@/api/novel'
-
-const router = useRouter()
-const authStore = useAuthStore()
-
-const handleLogout = () => {
-  authStore.logout()
-  router.push('/login')
-}
 
 interface Props {
   project: NovelProject | null
@@ -89,46 +50,9 @@ interface Props {
   completedChapters: number
   totalChapters: number
   hasIncompleteChapters: boolean
-  chapterSidebarOpen: boolean
 }
 
 defineProps<Props>()
 
-defineEmits(['goBack', 'viewProjectDetail', 'toggleSidebar', 'locateIncomplete'])
+defineEmits(['goBack', 'locateIncomplete'])
 </script>
-
-<style scoped>
-.writing-desk-header__sidebar-toggle {
-  min-width: 44px;
-  padding: 0 var(--md-spacing-4);
-  white-space: nowrap;
-}
-
-.writing-desk-header__sidebar-toggle-icon {
-  width: 20px;
-  height: 20px;
-  flex: 0 0 auto;
-}
-
-.writing-desk-header__sidebar-toggle-text {
-  font-size: var(--md-label-large);
-  font-weight: 600;
-  line-height: 1;
-}
-
-@media (max-width: 640px) {
-  .writing-desk-header__sidebar-toggle {
-    width: 44px;
-    padding: 0;
-  }
-
-  .writing-desk-header__sidebar-toggle-text {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-  }
-}
-</style>

@@ -191,45 +191,80 @@ def test_writing_desk_uses_shared_surface_instead_of_local_shell_theme():
     assert "--md-primary:" not in source
 
 
-def test_writing_desk_chapter_sidebar_toggle_is_operable_on_desktop():
+def test_writing_desk_keeps_chapter_sidebar_persistent_and_removes_redundant_header_actions():
     page = _source("views/WritingDesk.vue")
     header = _source("components/writing-desk/WDHeader.vue")
     sidebar = _source("components/writing-desk/WDSidebar.vue")
 
     for text in [
-        ":chapter-sidebar-open=\"sidebarOpen\"",
         "writing-desk-layout",
-        "'writing-desk-layout--sidebar-open': sidebarOpen",
-        "const isDesktopViewport = ref",
-        "const syncSidebarForViewport = () => {",
-        "window.addEventListener('resize', syncSidebarForViewport)",
-        "window.removeEventListener('resize', syncSidebarForViewport)",
+        "@open-project-detail=\"viewProjectDetail\"",
+        "@open-project-section=\"openProjectSection\"",
+        "const openProjectSection = (section: NovelProjectSection) => {",
+        "query: { section },",
     ]:
         assert text in page
 
-    for text in [
+    for removed in [
+        "项目详情",
+        "退出登录",
+        "收起目录",
         "chapterSidebarOpen",
-        ":aria-label=\"chapterSidebarOpen ? '收起章节侧栏' : '展开章节侧栏'\"",
-        'aria-controls="writing-desk-chapter-sidebar"',
-        ':aria-expanded="chapterSidebarOpen"',
+        "toggleSidebar",
+        "handleLogout",
+        "useAuthStore",
         "writing-desk-header__sidebar-toggle",
-        "writing-desk-header__sidebar-toggle-text",
-        "章节目录",
     ]:
-        assert text in header
+        assert removed not in header
 
     assert "lg:hidden" not in header
 
     for text in [
         'id="writing-desk-chapter-sidebar"',
-        ":aria-hidden=\"!sidebarOpen ? 'true' : undefined\"",
-        ":inert=\"!sidebarOpen\"",
+        "@click=\"emit('openProjectDetail')\"",
+        "@click=\"emit('openProjectSection', 'overview')\"",
+        "@click=\"emit('openProjectSection', 'characters')\"",
+        "@click=\"emit('openProjectSection', 'relationships')\"",
         "writing-sidebar",
-        "writing-sidebar--closed",
     ]:
         assert text in sidebar
 
+    assert "writing-sidebar--closed" not in sidebar
+    assert "sidebarOpen" not in sidebar
     assert "lg:translate-x-0" not in sidebar
+
+
+def test_novel_detail_accepts_section_query_for_writing_desk_deep_links():
+    source = _source("components/shared/NovelDetailShell.vue")
+
+    for text in [
+        "const sectionKeys = sections.map((section) => section.key)",
+        "const initialSection = resolveInitialSection()",
+        "const activeSection = ref<SectionKey>(initialSection)",
+        "const resolveInitialSection = (): SectionKey => {",
+        "route.query.section",
+        "await loadSection(initialSection, true)",
+    ]:
+        assert text in source
+
+
+def test_chapters_detail_uses_bounded_scroll_container():
+    shell = _source("components/shared/NovelDetailShell.vue")
+    chapters = _source("components/novel-detail/ChaptersSection.vue")
+
+    for text in [
+        "'detail-shell__content-surface--fill overflow-hidden'",
+        ".detail-shell__content-surface--fill",
+        "height: calc(100vh - 6rem)",
+        "max-height: calc(100vh - 6rem)",
+        "height: calc(100vh - 7.5rem)",
+        "max-height: calc(100vh - 7.5rem)",
+        "min-height: 0",
+    ]:
+        assert text in shell
+
+    assert 'class="flex-1 overflow-y-auto min-h-0 overscroll-contain"' in chapters
+    assert 'class="flex-1 h-full overflow-y-auto min-h-0 overscroll-contain"' not in chapters
 
 
 def test_auth_and_admin_surfaces_remove_glass_and_hardcoded_backgrounds():

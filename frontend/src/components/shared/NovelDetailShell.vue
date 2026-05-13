@@ -359,6 +359,17 @@ const sections: Array<{ key: SectionKey; label: string; description: string }> =
   { key: 'foreshadowing', label: '伏笔管理', description: '故事线索与回收' },
 ]
 
+const sectionKeys = sections.map((section) => section.key)
+
+const resolveInitialSection = (): SectionKey => {
+  const rawSection = Array.isArray(route.query.section)
+    ? route.query.section[0]
+    : route.query.section
+  return sectionKeys.includes(rawSection as SectionKey) ? (rawSection as SectionKey) : 'overview'
+}
+
+const initialSection = resolveInitialSection()
+
 const sectionComponents: Record<SectionKey, any> = {
   overview: OverviewSection,
   world_setting: WorldSettingSection,
@@ -453,7 +464,7 @@ const overviewMeta = reactive<{ title: string; updated_at: string | null }>({
   updated_at: null,
 })
 
-const activeSection = ref<SectionKey>('overview')
+const activeSection = ref<SectionKey>(initialSection)
 
 // Modal state (user mode only)
 const isModalOpen = ref(false)
@@ -483,7 +494,9 @@ const componentContainerClass = computed(() => {
 
 const contentCardClass = computed(() => {
   const fillSections: SectionKey[] = ['chapters']
-  return fillSections.includes(activeSection.value) ? 'overflow-hidden' : 'overflow-visible'
+  return fillSections.includes(activeSection.value)
+    ? 'detail-shell__content-surface--fill overflow-hidden'
+    : 'overflow-visible'
 })
 
 // 懒加载完整项目（仅在需要编辑时）
@@ -708,8 +721,13 @@ onMounted(async () => {
   }
 
   // 只加载必要的 section 数据，不预加载完整项目
-  await loadSection('overview', true)
-  loadSection('world_setting')
+  await loadSection(initialSection, true)
+  if (initialSection !== 'overview') {
+    loadSection('overview', true)
+  }
+  if (initialSection !== 'world_setting') {
+    loadSection('world_setting')
+  }
 })
 
 onBeforeUnmount(() => {
@@ -972,6 +990,12 @@ onBeforeUnmount(() => {
   box-sizing: border-box;
 }
 
+.detail-shell__content-surface--fill {
+  min-height: 0;
+  height: calc(100vh - 6rem);
+  max-height: calc(100vh - 6rem);
+}
+
 @media (min-width: 1024px) {
   .detail-shell__drawer {
     position: sticky;
@@ -994,6 +1018,11 @@ onBeforeUnmount(() => {
 
   .detail-shell__content-wrap {
     padding: 1.5rem 2rem 2rem;
+  }
+
+  .detail-shell__content-surface--fill {
+    height: calc(100vh - 7.5rem);
+    max-height: calc(100vh - 7.5rem);
   }
 }
 
