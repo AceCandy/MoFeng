@@ -147,12 +147,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { marked } from 'marked'
 import { useRouter } from 'vue-router'
+import { useQueryClient } from '@tanstack/vue-query'
 import { useAuthStore } from '../stores/auth'
-import { getLatestUpdates } from '../api/updates'
-import type { UpdateLog } from '../api/updates'
+import { clearAuthQueryCache } from '@/queries/auth'
+import { useLatestUpdatesQuery } from '@/queries/updates'
 
 marked.setOptions({
   gfm: true,
@@ -163,9 +164,12 @@ const renderMarkdown = (md: string) => marked.parse(md)
 
 const router = useRouter()
 const authStore = useAuthStore()
+const queryClient = useQueryClient()
 
 const showModal = ref(false)
-const updateLogs = ref<UpdateLog[]>([])
+const shouldCheckUpdates = ref(false)
+const updatesQuery = useLatestUpdatesQuery(() => shouldCheckUpdates.value)
+const updateLogs = computed(() => updatesQuery.data.value ?? [])
 
 // 查找包含"交流群"的日志
 const communityLog = computed(() => {
@@ -180,17 +184,28 @@ const filteredUpdateLogs = computed(() => {
   return updateLogs.value.filter(log => log.id !== communityLog.value!.id)
 })
 
-onMounted(async () => {
-  const hideUntil = localStorage.getItem('hideAnnouncement')
-  if (hideUntil !== new Date().toDateString()) {
-    try {
-      updateLogs.value = await getLatestUpdates()
-      if (updateLogs.value.length > 0) {
-        showModal.value = true
-      }
-    } catch (error) {
+watch(
+  () => updatesQuery.data.value,
+  (logs) => {
+    if (shouldCheckUpdates.value && logs && logs.length > 0) {
+      showModal.value = true
+    }
+  },
+)
+
+watch(
+  () => updatesQuery.error.value,
+  (error) => {
+    if (error) {
       console.error('Failed to fetch update logs:', error)
     }
+  },
+)
+
+onMounted(() => {
+  const hideUntil = localStorage.getItem('hideAnnouncement')
+  if (hideUntil !== new Date().toDateString()) {
+    shouldCheckUpdates.value = true
   }
 })
 
@@ -205,6 +220,7 @@ const hideModalToday = () => {
 
 const handleLogout = () => {
   authStore.logout()
+  clearAuthQueryCache(queryClient)
   router.push('/login')
 }
 

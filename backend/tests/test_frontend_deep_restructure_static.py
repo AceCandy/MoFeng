@@ -87,7 +87,13 @@ def test_app_shell_contains_primary_navigation_and_mobile_behavior():
 def test_workspace_prioritizes_continue_writing_and_new_actions():
     source = _source("views/NovelWorkspace.vue")
 
-    for text in ["继续写作", "最近项目", "sortedProjects", "continueProject", "workspace-actions"]:
+    for text in [
+        "继续写作",
+        "最近项目",
+        "sortedProjects",
+        "continueProject",
+        "workspace-panel__actions",
+    ]:
         assert text in source
 
     assert "router.push(`/projects/${project.id}/write`)" in source
@@ -107,7 +113,7 @@ def test_workspace_polish_preserves_primary_flow_and_responsive_states():
         "continueProgress",
         "workspace-continue__progress",
         "aria-label=\"最近项目进度\"",
-        "workspace-action:focus-visible",
+        "workspace-panel__action:focus-visible",
         "@media (max-width: 520px)",
     ]:
         assert text in workspace
@@ -115,7 +121,6 @@ def test_workspace_polish_preserves_primary_flow_and_responsive_states():
     for text in [
         '@click="$emit(\'click\', project.id)"',
         "@click.stop=\"$emit('detail', project.id)\"",
-        "project-card__title-row",
         "line-clamp",
         "touch-action: manipulation",
     ]:
@@ -130,17 +135,37 @@ def test_workspace_polish_preserves_primary_flow_and_responsive_states():
         "(max-width: 1023px)",
         ':aria-hidden="isMobileShell && !isMobileNavOpen ? \'true\' : undefined"',
         ':inert="isMobileShell && !isMobileNavOpen"',
-        "当前区域",
     ]:
         assert text in shell
 
     for text in [
-        "app-shell__nav-label",
         "app-shell__workspace-context",
         "app-shell__topbar::after",
         "color-mix(in srgb, var(--md-surface-dim)",
     ]:
         assert text in styles
+
+
+def test_distill_removes_redundant_workspace_card_chrome():
+    workspace = _source("views/NovelWorkspace.vue")
+    project_card = _source("components/ProjectCard.vue")
+
+    for removed in [
+        "workspace-actions",
+        "workspace-action__icon",
+        "<small>从对话开始整理故事蓝图</small>",
+        "<small>上传 .txt 并进入写作台</small>",
+    ]:
+        assert removed not in workspace
+
+    for removed in [
+        "project-card__mark",
+        "project-card__chips",
+        "查看",
+    ]:
+        assert removed not in project_card
+
+    assert "project-card__actions--compact" in project_card
 
 
 def test_project_context_collapses_global_shell_to_icon_rail():
@@ -199,9 +224,6 @@ def test_writing_desk_keeps_chapter_sidebar_persistent_and_removes_redundant_hea
     for text in [
         "writing-desk-layout",
         "@open-project-detail=\"viewProjectDetail\"",
-        "@open-project-section=\"openProjectSection\"",
-        "const openProjectSection = (section: NovelProjectSection) => {",
-        "query: { section },",
     ]:
         assert text in page
 
@@ -222,9 +244,6 @@ def test_writing_desk_keeps_chapter_sidebar_persistent_and_removes_redundant_hea
     for text in [
         'id="writing-desk-chapter-sidebar"',
         "@click=\"emit('openProjectDetail')\"",
-        "@click=\"emit('openProjectSection', 'overview')\"",
-        "@click=\"emit('openProjectSection', 'characters')\"",
-        "@click=\"emit('openProjectSection', 'relationships')\"",
         "writing-sidebar",
     ]:
         assert text in sidebar
@@ -232,6 +251,38 @@ def test_writing_desk_keeps_chapter_sidebar_persistent_and_removes_redundant_hea
     assert "writing-sidebar--closed" not in sidebar
     assert "sidebarOpen" not in sidebar
     assert "lg:translate-x-0" not in sidebar
+
+    for removed in [
+        "openProjectSection",
+        "writing-sidebar__summary-link",
+        "writing-sidebar__metric-link",
+        "characterCount",
+        "relationshipCount",
+    ]:
+        assert removed not in sidebar
+
+
+def test_distill_simplifies_archive_nav_and_global_shell_copy():
+    shell = _source("components/shared/AppShell.vue")
+    detail = _source("components/shared/NovelDetailShell.vue")
+
+    for removed in [
+        "app-shell__brand-subtitle",
+        "app-shell__nav-label",
+        "app-shell__eyebrow",
+        "pageDescription",
+        "当前区域",
+    ]:
+        assert removed not in shell
+
+    for removed in [
+        "section.description",
+        "detail-shell__nav-copy",
+        "detail-shell__drawer-toggle-text",
+        "Drawer Header",
+        "蓝图导航</span>",
+    ]:
+        assert removed not in detail
 
 
 def test_novel_detail_accepts_section_query_for_writing_desk_deep_links():
@@ -243,7 +294,8 @@ def test_novel_detail_accepts_section_query_for_writing_desk_deep_links():
         "const activeSection = ref<SectionKey>(initialSection)",
         "const resolveInitialSection = (): SectionKey => {",
         "route.query.section",
-        "await loadSection(initialSection, true)",
+        "useNovelSectionQuery",
+        "activeNovelSection",
     ]:
         assert text in source
 
@@ -291,7 +343,6 @@ def test_admin_console_uses_product_shell_pattern():
         "admin-console__nav",
         "admin-console__content",
         "aria-current",
-        "aria-hidden=\"true\"",
     ]:
         assert text in source
 
@@ -312,6 +363,8 @@ def test_admin_console_uses_product_shell_pattern():
         "admin-console__nav-panel",
         "admin-console__content-header",
         "返回工作台",
+        "admin-console__nav-icon",
+        "renderIcon",
     ]:
         assert removed not in source
 
@@ -322,7 +375,6 @@ def test_admin_console_uses_compact_top_tabs_without_redundant_headers():
     for text in [
         "admin-console__nav",
         "admin-console__nav-item",
-        "admin-console__nav-icon",
         "admin-console__nav-label",
         "admin-console__content",
         "grid-template-columns: repeat(7, minmax(104px, 1fr))",
@@ -556,7 +608,6 @@ def test_novel_archive_drawer_toggle_and_scroll_are_operable():
     for text in [
         "detail-shell--drawer-collapsed",
         "detail-shell__drawer-toggle",
-        "detail-shell__drawer-toggle-text",
         "蓝图导航",
         "detail-shell__content-frame",
         'id="novel-detail-blueprint-nav"',

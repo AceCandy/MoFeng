@@ -257,16 +257,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, type Ref } from 'vue'
-import {
-  getLLMConfig,
-  createOrUpdateLLMConfig,
-  deleteLLMConfig,
-  getAvailableModels,
-  type LLMConfigCreate,
-} from '@/api/llm'
+import { computed, ref, watch, type Ref } from 'vue'
+import type { LLMConfigCreate } from '@/api/llm'
 import { globalAlert } from '@/composables/useAlert'
 import PersonalModelRouting from './llm-settings/PersonalModelRouting.vue'
+import {
+  useAvailableModelsMutation,
+  useDeleteLegacyLLMConfigMutation,
+  useLegacyLLMConfigQuery,
+  useSaveLegacyLLMConfigMutation,
+} from '@/queries/llm'
 
 type EmbeddingProviderFormat = 'openai' | 'ollama'
 
@@ -283,6 +283,10 @@ interface LLMSettingsForm {
 const emit = defineEmits<{
   (e: 'saved'): void
 }>()
+const legacyConfigQuery = useLegacyLLMConfigQuery()
+const saveLegacyLLMConfigMutation = useSaveLegacyLLMConfigMutation()
+const deleteLegacyLLMConfigMutation = useDeleteLegacyLLMConfigMutation()
+const availableModelsMutation = useAvailableModelsMutation()
 
 const props = withDefaults(
   defineProps<{
@@ -323,7 +327,7 @@ const showEmbeddingModelDropdown = ref(false)
 const lastEmbeddingLoadError = ref('')
 const lastEmbeddingLoadInfo = ref('')
 const hasTriedAutoLoadEmbeddingModels = ref(false)
-const isSaving = ref(false)
+const isSaving = computed(() => saveLegacyLLMConfigMutation.isPending.value)
 const saveFeedback = ref<{ type: 'success' | 'error'; message: string }>({
   type: 'success',
   message: '',
@@ -392,9 +396,9 @@ const filteredEmbeddingModels = computed(() => {
   return availableEmbeddingModels.value.filter((model) => model.toLowerCase().includes(searchTerm))
 })
 
-onMounted(async () => {
-  try {
-    const existingConfig = await getLLMConfig()
+watch(
+  () => legacyConfigQuery.data.value,
+  (existingConfig) => {
     if (!existingConfig) {
       return
     }
@@ -418,11 +422,18 @@ onMounted(async () => {
     }
     useMainUrlForEmbedding.value = !existingConfig.embedding_provider_url
     useDedicatedEmbeddingApiKey.value = !!existingConfig.embedding_provider_api_key
-  } catch (error) {
+  },
+  { immediate: true },
+)
+
+watch(
+  () => legacyConfigQuery.error.value,
+  (error) => {
+    if (!error) return
     const message = error instanceof Error ? error.message : '未知错误'
     saveFeedback.value = { type: 'error', message: `读取配置失败：${message}` }
-  }
-})
+  },
+)
 
 const buildPayload = (): LLMConfigCreate => {
   const normalizedEmbeddingUrl = normalizeEmbeddingUrlByFormat(
@@ -448,17 +459,14 @@ const handleSave = async () => {
     return
   }
 
-  isSaving.value = true
   saveFeedback.value.message = ''
   try {
-    await createOrUpdateLLMConfig(buildPayload())
+    await saveLegacyLLMConfigMutation.mutateAsync(buildPayload())
     saveFeedback.value = { type: 'success', message: '配置已保存。' }
     emit('saved')
   } catch (error) {
     const message = error instanceof Error ? error.message : '未知错误'
     saveFeedback.value = { type: 'error', message: `保存失败：${message}` }
-  } finally {
-    isSaving.value = false
   }
 }
 
@@ -472,7 +480,7 @@ const handleDelete = async () => {
   }
 
   try {
-    await deleteLLMConfig()
+    await deleteLegacyLLMConfigMutation.mutateAsync()
     config.value = createEmptyConfig()
     useMainUrlForEmbedding.value = true
     useDedicatedEmbeddingApiKey.value = false
@@ -518,7 +526,7 @@ const fetchModelsViaBackend = async (apiKey: string, apiUrl: string): Promise<st
     requestPayload.llm_provider_api_key = apiKey
   }
 
-  const models = await getAvailableModels(requestPayload)
+  const models = await availableModelsMutation.mutateAsync(requestPayload)
 
   if (!Array.isArray(models)) {
     return []

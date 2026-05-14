@@ -36,54 +36,6 @@
               </p>
             </div>
           </button>
-
-          <div class="space-y-3">
-            <button
-              type="button"
-              class="md-card md-card-filled writing-sidebar__summary-link md-ripple"
-              style="border-radius: var(--md-radius-md)"
-              aria-label="查看故事概要"
-              @click="emit('openProjectSection', 'overview')"
-            >
-              <h3
-                class="md-label-large font-semibold"
-                style="color: var(--md-on-primary-container)"
-              >
-                故事概要
-              </h3>
-              <Tooltip :text="project.blueprint?.one_sentence_summary">
-                <p class="md-body-small line-clamp-3" style="color: var(--md-on-surface-variant)">
-                  {{ project.blueprint?.one_sentence_summary || '暂无概要' }}
-                </p>
-              </Tooltip>
-            </button>
-            <div class="grid grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                class="md-card md-card-outlined writing-sidebar__metric-link md-ripple"
-                style="border-radius: var(--md-radius-md)"
-                aria-label="查看角色"
-                @click="emit('openProjectSection', 'characters')"
-              >
-                <div class="md-title-small font-semibold" style="color: var(--md-primary)">
-                  {{ characterCount }}
-                </div>
-                <div class="md-label-small md-on-surface-variant">角色</div>
-              </button>
-              <button
-                type="button"
-                class="md-card md-card-outlined writing-sidebar__metric-link md-ripple"
-                style="border-radius: var(--md-radius-md)"
-                aria-label="查看关系"
-                @click="emit('openProjectSection', 'relationships')"
-              >
-                <div class="md-title-small font-semibold" style="color: var(--md-secondary)">
-                  {{ relationshipCount }}
-                </div>
-                <div class="md-label-small md-on-surface-variant">关系</div>
-              </button>
-            </div>
-          </div>
         </div>
 
         <!-- 章节列表 -->
@@ -435,7 +387,6 @@ const props = defineProps<Props>()
 
 const emit = defineEmits([
   'openProjectDetail',
-  'openProjectSection',
   'selectChapter',
   'generateChapter',
   'editChapter',
@@ -446,14 +397,6 @@ const emit = defineEmits([
 const selectedForDeletion = ref<number[]>([])
 const listContainer = ref<HTMLElement | null>(null)
 const chapterRefs = ref<Record<number, HTMLElement | null>>({})
-
-const characterCount = computed(() => {
-  return props.project?.blueprint?.characters?.length || 0
-})
-
-const relationshipCount = computed(() => {
-  return props.project?.blueprint?.relationships?.length || 0
-})
 
 const lastChapterNumber = computed(() => {
   if (
@@ -645,9 +588,7 @@ const canGenerateChapter = (chapterNumber: number) => {
   overflow: hidden;
 }
 
-.writing-sidebar__link,
-.writing-sidebar__summary-link,
-.writing-sidebar__metric-link {
+.writing-sidebar__link {
   width: 100%;
   appearance: none;
   border: 0;
@@ -657,9 +598,7 @@ const canGenerateChapter = (chapterNumber: number) => {
   cursor: pointer;
 }
 
-.writing-sidebar__link:focus-visible,
-.writing-sidebar__summary-link:focus-visible,
-.writing-sidebar__metric-link:focus-visible {
+.writing-sidebar__link:focus-visible {
   outline: 2px solid var(--md-primary);
   outline-offset: 2px;
 }
@@ -671,20 +610,6 @@ const canGenerateChapter = (chapterNumber: number) => {
   margin-bottom: var(--md-spacing-4);
   padding: 0;
   background-color: transparent;
-}
-
-.writing-sidebar__summary-link {
-  display: block;
-  padding: var(--md-spacing-3);
-  background-color: color-mix(in srgb, var(--md-primary-container) 72%, var(--md-surface));
-}
-
-.writing-sidebar__metric-link {
-  display: block;
-  padding: var(--md-spacing-2);
-  border: 1px solid var(--md-outline-variant);
-  text-align: center;
-  background-color: var(--md-surface);
 }
 
 @media (min-width: 1024px) {

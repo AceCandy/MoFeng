@@ -111,32 +111,40 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 import TypewriterEffect from '@/components/TypewriterEffect.vue'
+import {
+  useAuthOptionsQuery,
+  useRegisterMutation,
+  useSendVerificationCodeMutation,
+} from '@/queries/auth'
 
 const username = ref('')
 const email = ref('')
 const verificationCode = ref('')
 const password = ref('')
 const countdown = ref(0)
-const sending = ref(false)
-const isRegistering = ref(false)
 const error = ref('')
 const success = ref('')
 const router = useRouter()
-const authStore = useAuthStore()
-const allowRegistration = computed(() => authStore.allowRegistration)
+const authOptionsQuery = useAuthOptionsQuery()
+const sendCodeMutation = useSendVerificationCodeMutation()
+const registerMutation = useRegisterMutation()
+const sending = computed(() => sendCodeMutation.isPending.value)
+const isRegistering = computed(() => registerMutation.isPending.value)
+const allowRegistration = computed(() => authOptionsQuery.data.value?.allow_registration ?? true)
 
-// 进入页面即拉取认证开关，避免展示无效注册表单
-onMounted(async () => {
-  await authStore.fetchAuthOptions()
-  if (!allowRegistration.value) {
+// 注册开关由 Query 缓存托管；关闭时只保留页面提示状态。
+watch(
+  allowRegistration,
+  (allowed) => {
+    if (allowed) return
     success.value = ''
     error.value = '当前已关闭注册，请稍后再试。'
-  }
-})
+  },
+  { immediate: true },
+)
 
 const validateInput = () => {
   // Password validation
@@ -184,15 +192,9 @@ const sendCode = async () => {
     return
   }
 
-  sending.value = true
+  sendCodeMutation.reset()
   try {
-    const res = await fetch(`/api/auth/send-code?email=${encodeURIComponent(email.value)}`, {
-      method: 'POST',
-    })
-    if (!res.ok) {
-      const errMsg = await res.json()
-      throw new Error(errMsg.detail || '发送验证码失败')
-    }
+    await sendCodeMutation.mutateAsync(email.value)
     success.value = '验证码已发送，请查收邮箱'
     // 等接口返回成功后再开始倒计时
     countdown.value = 60
@@ -202,8 +204,6 @@ const sendCode = async () => {
     }, 1000)
   } catch (err: any) {
     error.value = err.message
-  } finally {
-    sending.value = false
   }
 }
 
@@ -222,30 +222,20 @@ const handleRegister = async () => {
     return
   }
 
-  isRegistering.value = true
+  registerMutation.reset()
   try {
-    const res = await fetch('/api/auth/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: username.value,
-        email: email.value,
-        password: password.value,
-        verification_code: verificationCode.value,
-      }),
+    await registerMutation.mutateAsync({
+      username: username.value,
+      email: email.value,
+      password: password.value,
+      verification_code: verificationCode.value,
     })
-    if (!res.ok) {
-      const errMsg = await res.json()
-      throw new Error(errMsg.detail || '注册失败')
-    }
     success.value = '注册成功！正在跳转到登录页面...'
     setTimeout(() => {
       router.push('/login')
     }, 2000)
   } catch (err: any) {
     error.value = err.message || '注册失败，请稍后再试。'
-  } finally {
-    isRegistering.value = false
   }
 }
 </script>

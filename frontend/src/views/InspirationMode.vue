@@ -95,7 +95,7 @@
           <ConversationInput
             :ui-control="currentUIControl"
             :loading="
-              novelStore.isLoading ||
+              inspirationRequestPending ||
               isInitialLoading ||
               isCheckingModelConfig ||
               !conversationStarted
@@ -109,6 +109,7 @@
       <BlueprintConfirmation
         v-if="showBlueprintConfirmation"
         :ai-message="confirmationMessage"
+        :project-id="currentProject?.id || null"
         @blueprint-generated="handleBlueprintGenerated"
         @back="backToConversation"
       />
@@ -126,11 +127,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onMounted } from 'vue'
+import { computed, ref, nextTick, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useNovelStore } from '@/stores/novel'
-import type { UIControl, Blueprint } from '@/api/novel'
-import { getLLMConfigBundle } from '@/api/llm'
+import type { UIControl, Blueprint, NovelProject } from '@/api/novel'
+import {
+  useConverseConceptStreamMutation,
+  useCreateNovelMutation,
+  useGenerateBlueprintMutation,
+  useNovelProjectQuery,
+  useSaveBlueprintMutation,
+} from '@/queries/novel'
+import { useLLMConfigBundleQuery } from '@/queries/llm'
 import ChatBubble from '@/components/ChatBubble.vue'
 import ConversationInput from '@/components/ConversationInput.vue'
 import BlueprintConfirmation from '@/components/BlueprintConfirmation.vue'
@@ -154,7 +161,6 @@ const INSPIRATION_INITIAL_UI_CONTROL: UIControl = {
 
 const router = useRouter()
 const route = useRoute()
-const novelStore = useNovelStore()
 
 const conversationStarted = ref(false)
 const isInitialLoading = ref(true)
@@ -169,9 +175,37 @@ const blueprintMessage = ref('')
 const chatArea = ref<HTMLElement>()
 const isCheckingModelConfig = ref(false)
 const isAssistantResponding = ref(false)
+const activeProjectId = ref<string | null>(null)
+const currentProject = ref<NovelProject | null>(null)
+const currentConversationState = ref<any>({})
+
+const projectQuery = useNovelProjectQuery(activeProjectId)
+const createNovelMutation = useCreateNovelMutation()
+const converseConceptStreamMutation = useConverseConceptStreamMutation(
+  () => currentProject.value?.id,
+)
+const generateBlueprintMutation = useGenerateBlueprintMutation(() => currentProject.value?.id)
+const saveBlueprintMutation = useSaveBlueprintMutation(() => currentProject.value?.id)
+const llmConfigBundleQuery = useLLMConfigBundleQuery()
+
+const inspirationRequestPending = computed(
+  () =>
+    createNovelMutation.isPending.value ||
+    projectQuery.isFetching.value ||
+    converseConceptStreamMutation.isPending.value ||
+    generateBlueprintMutation.isPending.value ||
+    saveBlueprintMutation.isPending.value,
+)
 
 const hasRequiredModelConfig = async () => {
-  const bundle = await getLLMConfigBundle()
+  const result = await llmConfigBundleQuery.refetch()
+  if (result.error) {
+    throw result.error
+  }
+  const bundle = result.data
+  if (!bundle) {
+    return false
+  }
   const hasLLMModel =
     bundle.models.some((model) => model.is_enabled && Boolean(model.capabilities.chat)) ||
     Boolean(bundle.legacy?.llm_provider_model?.trim())
@@ -235,9 +269,9 @@ const resetInspirationMode = () => {
   confirmationMessage.value = ''
   blueprintMessage.value = ''
 
-  // 清空 store 中的当前项目和对话状态
-  novelStore.setCurrentProject(null)
-  novelStore.currentConversationState = {}
+  activeProjectId.value = null
+  currentProject.value = null
+  currentConversationState.value = {}
 }
 
 const exitConversation = async () => {
@@ -291,7 +325,13 @@ const startConversation = async () => {
   isInitialLoading.value = true
 
   try {
-    await novelStore.createProject('未命名灵感', '开始灵感模式')
+    const project = await createNovelMutation.mutateAsync({
+      title: '未命名灵感',
+      initialPrompt: '开始灵感模式',
+    })
+    currentProject.value = project
+    activeProjectId.value = project.id
+    currentConversationState.value = {}
 
     // 首句是固定引导语，项目创建完成后立即展示；真正的 AI 生成从用户首答开始。
     await showLocalOpeningMessage()
@@ -309,8 +349,12 @@ const startConversation = async () => {
 const restoreConversation = async (projectId: string) => {
   isInitialLoading.value = true
   try {
-    await novelStore.loadProject(projectId)
-    const project = novelStore.currentProject
+    activeProjectId.value = projectId
+    await nextTick()
+    const result = await projectQuery.refetch()
+    const project = result.data ?? projectQuery.data.value ?? null
+    currentProject.value = project
+    currentConversationState.value = {}
     if (project && project.conversation_history) {
       conversationStarted.value = true
       chatMessages.value = project.conversation_history
@@ -400,9 +444,18 @@ const handleUserInput = async (userInput: any) => {
       await scrollToBottom()
     }
 
-    const response = await novelStore.sendConversationStream(userInput, (delta) => {
-      void appendAssistantDelta(delta)
+    if (!currentProject.value) {
+      throw new Error('没有当前项目')
+    }
+
+    const response = await converseConceptStreamMutation.mutateAsync({
+      userInput,
+      conversationState: currentConversationState.value,
+      onDelta: (delta) => {
+        void appendAssistantDelta(delta)
+      },
     })
+    currentConversationState.value = response.conversation_state
 
     // 首次加载完成后，关闭加载动画
     if (isInitialLoading.value) {
@@ -454,7 +507,7 @@ const handleUserInput = async (userInput: any) => {
 
 const handleGenerateBlueprint = async () => {
   try {
-    const response = await novelStore.generateBlueprint()
+    const response = await generateBlueprintMutation.mutateAsync()
     handleBlueprintGenerated(response)
   } catch (error) {
     console.error('生成蓝图失败:', error)
@@ -483,11 +536,10 @@ const handleConfirmBlueprint = async () => {
     return
   }
   try {
-    await novelStore.saveBlueprint(completedBlueprint.value)
-    // 跳转到写作工作台
-    if (novelStore.currentProject) {
-      router.push(`/projects/${novelStore.currentProject.id}/write`)
-    }
+    const project = await saveBlueprintMutation.mutateAsync(completedBlueprint.value)
+    currentProject.value = project
+    activeProjectId.value = project.id
+    router.push(`/projects/${project.id}/write`)
   } catch (error) {
     console.error('保存蓝图失败:', error)
     globalAlert.showError(

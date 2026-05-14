@@ -10,10 +10,20 @@ Arboris Novel is a full-stack writing assistant for long-form fiction. It suppor
 
 Current stack:
 
-- Frontend: Vue 3 + Vite + TypeScript + Pinia + Vue Router + Naive UI
+- Frontend: Vue 3 + Vite + TypeScript + TanStack Query for Vue + Pinia + Vue Router + Naive UI
 - Backend: FastAPI + SQLAlchemy + Pydantic Settings
 - Storage: SQLite or MySQL, plus libsql for vector retrieval
 - AI: OpenAI-compatible LLM APIs, OpenAI/Ollama embeddings
+
+## Frontend state management
+
+The frontend has been migrated to TanStack Query for Vue:
+
+- API requests, server-state caching, refresh, retry, and loading/error states are handled by TanStack Query
+- Novel projects, chapters, detail materials, admin data, LLM settings, auth/register flows, and update logs are accessed through Query composables
+- Pinia only keeps client state, such as the auth token, current user, and temporary inspiration-flow conversation state
+- The shared Query Client lives in `frontend/src/lib/queryClient.ts`
+- Business Query composables live in `frontend/src/queries/`
 
 ## Core workflow
 
@@ -158,10 +168,12 @@ On first backend startup, the application automatically:
 │  └─ env.example
 ├─ frontend/                 # Vue frontend
 │  ├─ src/
-│  │  ├─ api/
+│  │  ├─ api/                # API clients and types
 │  │  ├─ components/
+│  │  ├─ lib/                # Frontend infrastructure such as Query Client
+│  │  ├─ queries/            # TanStack Query composables
 │  │  ├─ router/
-│  │  ├─ stores/
+│  │  ├─ stores/             # Pinia client state
 │  │  └─ views/
 ├─ deploy/                   # Docker, Nginx, Compose
 ├─ docs/                     # Supplementary docs

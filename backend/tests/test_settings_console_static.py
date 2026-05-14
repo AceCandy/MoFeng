@@ -130,7 +130,7 @@ def test_personal_model_routing_separates_chat_and_embedding_models():
     assert "embeddingModelsByProvider" in source
     assert "setPrimaryChatModel" in source
     assert "selectEmbeddingModel" in source
-    assert "getProviderModels" in source
+    assert "useProviderModelsQuery" in source
     assert "capabilities: { chat: true, embedding: false }" in source
     assert "capabilities: { chat: false, embedding: true }" in source
 
@@ -256,9 +256,9 @@ def test_model_settings_flagship_polish_surfaces_readiness_and_recovery_paths():
     assert "showInspirationConfigNotice" in settings
 
     for text in [
-        "sectionReadinessCards",
+        "sectionReadinessSummary",
         "model-routing__readiness",
-        "model-routing__readiness-item",
+        "model-routing__readiness-value",
         "configuredRouteCount",
         "defaultEmbeddingModel",
         "去配置文本生成",
@@ -266,6 +266,7 @@ def test_model_settings_flagship_polish_surfaces_readiness_and_recovery_paths():
     ]:
         assert text in routing
 
+    assert "model-routing__readiness-item" not in routing
     assert "model-routing__readiness-card" not in routing
     assert "model-routing__panel-head" not in routing
 

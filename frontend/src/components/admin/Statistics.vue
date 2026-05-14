@@ -59,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   NAlert,
   NButton,
@@ -68,14 +68,26 @@ import {
   NGrid,
   NSpin,
   NStatistic,
-  NSpace
 } from 'naive-ui'
 
-import { AdminAPI, type Statistics } from '@/api/admin'
+import { useAdminStatisticsQuery } from '@/queries/admin'
 
-const stats = ref<Statistics | null>(null)
-const loading = ref(false)
-const error = ref<string | null>(null)
+const statisticsQuery = useAdminStatisticsQuery()
+const stats = computed(() => statisticsQuery.data.value ?? null)
+const loading = computed(() => statisticsQuery.isLoading.value || statisticsQuery.isFetching.value)
+const isErrorDismissed = ref(false)
+const error = computed({
+  get: () => {
+    if (isErrorDismissed.value) {
+      return null
+    }
+    const queryError = statisticsQuery.error.value
+    return queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null
+  },
+  set: () => {
+    isErrorDismissed.value = true
+  },
+})
 const isMobile = ref(false)
 
 const updateLayout = () => {
@@ -84,22 +96,20 @@ const updateLayout = () => {
 
 const gridCols = computed(() => (isMobile.value ? 1 : 3))
 
-const fetchStats = async () => {
-  loading.value = true
-  error.value = null
-  try {
-    stats.value = await AdminAPI.getStatistics()
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : '获取统计数据失败'
-  } finally {
-    loading.value = false
-  }
+const fetchStats = () => {
+  statisticsQuery.refetch()
 }
+
+watch(
+  () => statisticsQuery.error.value,
+  () => {
+    isErrorDismissed.value = false
+  },
+)
 
 onMounted(() => {
   updateLayout()
   window.addEventListener('resize', updateLayout)
-  fetchStats()
 })
 
 onBeforeUnmount(() => {

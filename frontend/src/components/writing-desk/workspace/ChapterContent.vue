@@ -299,8 +299,11 @@ import { computed, onUnmounted, ref } from 'vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { globalAlert } from '@/composables/useAlert'
 import type { Chapter } from '@/api/novel'
-import { OptimizerAPI } from '@/api/novel'
-import { useNovelStore } from '@/stores/novel'
+import {
+  useApplyOptimizationMutation,
+  useNovelMutationRefresh,
+  useOptimizeChapterMutation,
+} from '@/queries/novel'
 import { countNonWhitespaceChars } from '@/utils/text'
 
 interface Props {
@@ -309,7 +312,9 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const novelStore = useNovelStore()
+const { refreshChapter, refreshProjectQueries } = useNovelMutationRefresh(() => props.projectId)
+const optimizeChapterMutation = useOptimizeChapterMutation()
+const applyOptimizationMutation = useApplyOptimizationMutation(() => props.projectId)
 
 defineEmits(['showVersionSelector'])
 
@@ -318,8 +323,8 @@ const showOptimizer = ref(false)
 const showOptimizeResult = ref(false)
 const selectedDimension = ref<string>('')
 const additionalNotes = ref('')
-const isOptimizing = ref(false)
-const isApplying = ref(false)
+const isOptimizing = computed(() => optimizeChapterMutation.isPending.value)
+const isApplying = computed(() => applyOptimizationMutation.isPending.value)
 const optimizedContent = ref('')
 const optimizeResultNotes = ref('')
 const optimizeHintIndex = ref(0)
@@ -675,11 +680,10 @@ const startOptimize = async () => {
     return
   }
 
-  isOptimizing.value = true
   startOptimizeHintRotation()
 
   try {
-    const result = await OptimizerAPI.optimizeChapter({
+    const result = await optimizeChapterMutation.mutateAsync({
       project_id: props.projectId,
       chapter_number: props.selectedChapter.chapter_number,
       dimension: selectedDimension.value as 'dialogue' | 'environment' | 'psychology' | 'rhythm',
@@ -696,7 +700,6 @@ const startOptimize = async () => {
     globalAlert.showError(error.message || '优化失败，请稍后重试')
   } finally {
     stopOptimizeHintRotation()
-    isOptimizing.value = false
   }
 }
 
@@ -708,14 +711,12 @@ const closeOptimizerModal = () => {
 const applyOptimization = async () => {
   if (!optimizedContent.value || !props.projectId) return
 
-  isApplying.value = true
-
   try {
-    const applyResult = await OptimizerAPI.applyOptimization(
-      props.projectId,
-      props.selectedChapter.chapter_number,
-      optimizedContent.value,
-    )
+    const applyResult = await applyOptimizationMutation.mutateAsync({
+      projectId: props.projectId,
+      chapterNumber: props.selectedChapter.chapter_number,
+      optimizedContent: optimizedContent.value,
+    })
 
     const syncStats = applyResult.foreshadowing_sync
     if (syncStats) {
@@ -734,12 +735,11 @@ const applyOptimization = async () => {
     optimizeResultNotes.value = ''
 
     // 仅刷新当前章节数据，避免整页刷新导致路由重载和状态丢失。
-    await novelStore.loadChapter(props.selectedChapter.chapter_number)
+    await refreshChapter(props.projectId, props.selectedChapter.chapter_number)
+    await refreshProjectQueries(props.projectId)
   } catch (error: any) {
     console.error('应用优化失败:', error)
     globalAlert.showError(error.message || '应用优化失败，请稍后重试')
-  } finally {
-    isApplying.value = false
   }
 }
 

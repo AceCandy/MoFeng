@@ -20,15 +20,9 @@
           :aria-expanded="isSidebarOpen"
           :title="isSidebarOpen ? '收起蓝图导航' : '展开蓝图导航'"
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
-          <span class="detail-shell__drawer-toggle-text">蓝图导航</span>
         </button>
 
         <!-- Title -->
@@ -98,35 +92,6 @@
         :aria-hidden="!isSidebarOpen ? 'true' : undefined"
         :inert="!isSidebarOpen"
       >
-        <!-- Drawer Header -->
-        <div
-          class="flex items-center gap-3 px-6 py-4"
-          style="border-bottom: 1px solid var(--md-outline-variant)"
-        >
-          <div
-            class="w-10 h-10 rounded-full flex items-center justify-center"
-            style="background-color: var(--md-primary-container)"
-          >
-            <svg
-              class="w-5 h-5"
-              style="color: var(--md-on-primary-container)"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-              />
-            </svg>
-          </div>
-          <span class="md-title-medium" style="color: var(--md-on-surface)">
-            {{ isAdmin ? '内容视图' : '蓝图导航' }}
-          </span>
-        </div>
-
         <!-- Navigation Items -->
         <nav class="detail-shell__nav" aria-label="小说档案分区">
           <button
@@ -141,12 +106,7 @@
             <span class="detail-shell__nav-icon" aria-hidden="true">
               <component :is="getSectionIcon(section.key)" class="w-5 h-5" />
             </span>
-            <span class="detail-shell__nav-copy">
-              <span class="block md-label-large">{{ section.label }}</span>
-              <span class="md-body-small" style="color: var(--md-on-surface-variant)">{{
-                section.description
-              }}</span>
-            </span>
+            <span class="detail-shell__nav-label">{{ section.label }}</span>
           </button>
         </nav>
       </aside>
@@ -168,9 +128,7 @@
 
       <!-- Main Content Area -->
       <div class="detail-shell__main">
-        <div
-          class="detail-shell__content-wrap"
-        >
+        <div class="detail-shell__content-wrap">
           <div class="detail-shell__content-frame">
             <!-- Material 3 Card -->
             <section class="detail-shell__content-surface" :class="contentCardClass">
@@ -296,14 +254,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, h } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useNovelStore } from '@/stores/novel'
-import { NovelAPI } from '@/api/novel'
-import { AdminAPI } from '@/api/admin'
+import {
+  useNovelProjectQuery,
+  useNovelSectionQuery,
+  useUpdateBlueprintMutation,
+} from '@/queries/novel'
 import type {
   NovelProject,
-  NovelSectionResponse,
   NovelSectionType,
   AllSectionType,
 } from '@/api/novel'
@@ -331,32 +290,25 @@ const props = withDefaults(defineProps<Props>(), {
 
 const route = useRoute()
 const router = useRouter()
-const novelStore = useNovelStore()
 
 const projectId = route.params.id as string
+const projectQuery = useNovelProjectQuery(() => (!props.isAdmin ? projectId : null))
+const updateBlueprintMutation = useUpdateBlueprintMutation(() => projectId)
 const DESKTOP_BREAKPOINT = 1024
 const isDesktopViewport = ref(
   typeof window !== 'undefined' ? window.innerWidth >= DESKTOP_BREAKPOINT : true,
 )
 const isSidebarOpen = ref(isDesktopViewport.value)
 
-const sections: Array<{ key: SectionKey; label: string; description: string }> = [
-  { key: 'overview', label: '项目概览', description: '定位与整体梗概' },
-  { key: 'world_setting', label: '世界设定', description: '规则、地点与阵营' },
-  { key: 'characters', label: '主要角色', description: '人物性格与目标' },
-  { key: 'relationships', label: '人物关系', description: '角色之间的联系' },
-  {
-    key: 'chapter_outline',
-    label: '章节大纲',
-    description: props.isAdmin ? '故事章节规划' : '故事结构规划',
-  },
-  {
-    key: 'chapters',
-    label: '章节内容',
-    description: props.isAdmin ? '生成章节与正文' : '生成状态与摘要',
-  },
-  { key: 'emotion_curve', label: '情感曲线', description: '追踪章节情感变化' },
-  { key: 'foreshadowing', label: '伏笔管理', description: '故事线索与回收' },
+const sections: Array<{ key: SectionKey; label: string }> = [
+  { key: 'overview', label: '项目概览' },
+  { key: 'world_setting', label: '世界设定' },
+  { key: 'characters', label: '主要角色' },
+  { key: 'relationships', label: '人物关系' },
+  { key: 'chapter_outline', label: '章节大纲' },
+  { key: 'chapters', label: '章节内容' },
+  { key: 'emotion_curve', label: '情感曲线' },
+  { key: 'foreshadowing', label: '伏笔管理' },
 ]
 
 const sectionKeys = sections.map((section) => section.key)
@@ -437,34 +389,19 @@ const getSectionIcon = (key: SectionKey) => {
   return icons[key]
 }
 
-const sectionData = reactive<Partial<Record<SectionKey, any>>>({})
-const sectionLoading = reactive<Record<SectionKey, boolean>>({
-  overview: false,
-  world_setting: false,
-  characters: false,
-  relationships: false,
-  chapter_outline: false,
-  chapters: false,
-  emotion_curve: false,
-  foreshadowing: false,
-})
-const sectionError = reactive<Record<SectionKey, string | null>>({
-  overview: null,
-  world_setting: null,
-  characters: null,
-  relationships: null,
-  chapter_outline: null,
-  chapters: null,
-  emotion_curve: null,
-  foreshadowing: null,
-})
-
-const overviewMeta = reactive<{ title: string; updated_at: string | null }>({
-  title: '加载中...',
-  updated_at: null,
-})
+const isNovelSectionKey = (section: SectionKey): section is NovelSectionType =>
+  !['emotion_curve', 'foreshadowing'].includes(section)
 
 const activeSection = ref<SectionKey>(initialSection)
+const activeNovelSection = computed<NovelSectionType | null>(() =>
+  isNovelSectionKey(activeSection.value) ? activeSection.value : null,
+)
+const overviewQuery = useNovelSectionQuery(() => projectId, 'overview', () => props.isAdmin)
+const sectionQuery = useNovelSectionQuery(
+  () => projectId,
+  () => activeNovelSection.value,
+  () => props.isAdmin,
+)
 
 // Modal state (user mode only)
 const isModalOpen = ref(false)
@@ -476,12 +413,28 @@ const modalField = ref('')
 const isAddChapterModalOpen = ref(false)
 const newChapterTitle = ref('')
 const newChapterSummary = ref('')
-const novel = computed(() =>
-  !props.isAdmin ? (novelStore.currentProject as NovelProject | null) : null,
+const novel = computed<NovelProject | null>(() =>
+  !props.isAdmin ? (projectQuery.data.value ?? null) : null,
 )
 
+const activeQuery = computed(() => (activeSection.value === 'overview' ? overviewQuery : sectionQuery))
+const currentSectionResponse = computed(() => {
+  if (!isNovelSectionKey(activeSection.value)) {
+    return null
+  }
+  return activeSection.value === 'overview'
+    ? overviewQuery.data.value
+    : sectionQuery.data.value
+})
+const currentSectionData = computed(() => currentSectionResponse.value?.data ?? null)
+const overviewData = computed(() => overviewQuery.data.value?.data ?? null)
+const overviewMeta = computed(() => ({
+  title: overviewData.value?.title || novel.value?.title || '加载中...',
+  updated_at: overviewData.value?.updated_at || null,
+}))
+
 const formattedTitle = computed(() => {
-  const title = overviewMeta.title || '加载中...'
+  const title = overviewMeta.value.title || '加载中...'
   return title.startsWith('《') && title.endsWith('》') ? title : `《${title}》`
 })
 
@@ -503,7 +456,7 @@ const contentCardClass = computed(() => {
 const ensureProjectLoaded = async () => {
   if (props.isAdmin || !projectId) return
   if (novel.value) return // 已加载
-  await novelStore.loadProject(projectId)
+  await projectQuery.refetch()
 }
 
 const toggleSidebar = () => {
@@ -524,35 +477,19 @@ const handleResize = () => {
   }
 }
 
-const loadSection = async (section: SectionKey, force = false) => {
+const loadSection = async (section: SectionKey, _force = false) => {
   if (!projectId) return
 
-  // 分析型Section使用独立的API，不需要在这里加载
-  const analysisSections: SectionKey[] = ['emotion_curve', 'foreshadowing']
-  if (analysisSections.includes(section)) {
+  if (!isNovelSectionKey(section)) {
     return
   }
 
-  if (!force && sectionData[section]) {
+  if (section === 'overview') {
+    await overviewQuery.refetch()
     return
   }
-
-  sectionLoading[section] = true
-  sectionError[section] = null
-  try {
-    const response: NovelSectionResponse = props.isAdmin
-      ? await AdminAPI.getNovelSection(projectId, section as NovelSectionType)
-      : await NovelAPI.getSection(projectId, section as NovelSectionType)
-    sectionData[section] = response.data
-    if (section === 'overview') {
-      overviewMeta.title = response.data?.title || overviewMeta.title
-      overviewMeta.updated_at = response.data?.updated_at || null
-    }
-  } catch (error) {
-    console.error('加载模块失败:', error)
-    sectionError[section] = error instanceof Error ? error.message : '加载失败'
-  } finally {
-    sectionLoading[section] = false
+  if (section === activeSection.value) {
+    await sectionQuery.refetch()
   }
 }
 
@@ -565,7 +502,6 @@ const switchSection = (section: SectionKey) => {
   if (!isDesktopViewport.value) {
     closeSidebar()
   }
-  loadSection(section)
 }
 
 const goBack = () => {
@@ -588,11 +524,25 @@ const goToWritingDesk = async () => {
 }
 
 const currentComponent = computed(() => sectionComponents[activeSection.value])
-const isSectionLoading = computed(() => sectionLoading[activeSection.value])
-const currentError = computed(() => sectionError[activeSection.value])
+const isSectionLoading = computed(() => {
+  if (!isNovelSectionKey(activeSection.value)) {
+    return false
+  }
+  return activeQuery.value.isLoading.value || activeQuery.value.isFetching.value
+})
+const currentError = computed(() => {
+  if (!isNovelSectionKey(activeSection.value)) {
+    return null
+  }
+  const error = activeQuery.value.error.value
+  if (!error) {
+    return null
+  }
+  return error instanceof Error ? error.message : String(error)
+})
 
 const componentProps = computed(() => {
-  const data = sectionData[activeSection.value]
+  const data = currentSectionData.value
   const editable = !props.isAdmin
 
   switch (activeSection.value) {
@@ -651,8 +601,7 @@ const handleSave = async (data: { field: string; content: any }) => {
   }
 
   try {
-    const updatedProject = await NovelAPI.updateBlueprint(project.id, payload)
-    novelStore.setCurrentProject(updatedProject)
+    await updateBlueprintMutation.mutateAsync(payload)
     const sectionToReload = resolveSectionKey(field)
     await loadSection(sectionToReload, true)
     if (sectionToReload !== 'overview') {
@@ -667,8 +616,7 @@ const handleSave = async (data: { field: string; content: any }) => {
 const startAddChapter = async () => {
   if (props.isAdmin) return
   await ensureProjectLoaded()
-  const outline =
-    sectionData.chapter_outline?.chapter_outline || novel.value?.blueprint?.chapter_outline || []
+  const outline = novel.value?.blueprint?.chapter_outline || []
   const nextNumber =
     outline.length > 0 ? Math.max(...outline.map((item: any) => item.chapter_number)) + 1 : 1
   newChapterTitle.value = `新章节 ${nextNumber}`
@@ -703,10 +651,9 @@ const saveNewChapter = async () => {
   ]
 
   try {
-    const updatedProject = await NovelAPI.updateBlueprint(project.id, {
+    await updateBlueprintMutation.mutateAsync({
       chapter_outline: newOutline,
     })
-    novelStore.setCurrentProject(updatedProject)
     await loadSection('chapter_outline', true)
     isAddChapterModalOpen.value = false
   } catch (error) {
@@ -718,15 +665,6 @@ onMounted(async () => {
   if (typeof window !== 'undefined') {
     window.addEventListener('resize', handleResize)
     handleResize()
-  }
-
-  // 只加载必要的 section 数据，不预加载完整项目
-  await loadSection(initialSection, true)
-  if (initialSection !== 'overview') {
-    loadSection('overview', true)
-  }
-  if (initialSection !== 'world_setting') {
-    loadSection('world_setting')
   }
 })
 
@@ -814,14 +752,6 @@ onBeforeUnmount(() => {
   flex: 0 0 auto;
 }
 
-.detail-shell__drawer-toggle-text {
-  color: currentColor;
-  font-size: var(--md-label-large);
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-}
-
 .detail-shell__mode-chip {
   display: inline-flex;
   align-items: center;
@@ -880,14 +810,14 @@ onBeforeUnmount(() => {
 }
 
 .detail-shell__nav {
-  height: calc(100% - 5rem);
+  height: 100%;
   padding: var(--md-spacing-3);
   overflow-y: auto;
 }
 
 .detail-shell__nav-item {
   width: 100%;
-  min-height: 4.5rem;
+  min-height: 3.25rem;
   display: flex;
   align-items: center;
   gap: var(--md-spacing-3);
@@ -941,9 +871,15 @@ onBeforeUnmount(() => {
   color: var(--md-primary-dark);
 }
 
-.detail-shell__nav-copy {
+.detail-shell__nav-label {
   flex: 1 1 auto;
   min-width: 0;
+  color: var(--md-on-surface);
+  font-size: var(--md-label-large);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .detail-shell__main {
@@ -1029,22 +965,6 @@ onBeforeUnmount(() => {
 @media (min-width: 640px) {
   .detail-shell__content-surface {
     padding: var(--md-spacing-8);
-  }
-}
-
-@media (max-width: 640px) {
-  .detail-shell__drawer-toggle {
-    width: 44px;
-    padding: 0;
-  }
-
-  .detail-shell__drawer-toggle-text {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
   }
 }
 

@@ -293,7 +293,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onMounted, reactive, ref } from 'vue'
+import { computed, h, onMounted, reactive, ref, watch } from 'vue'
 import {
   NAlert,
   NButton,
@@ -313,17 +313,27 @@ import {
   type DataTableColumns
 } from 'naive-ui'
 
-import {
-  API_BASE_URL,
-  AdminAPI,
-  type SystemConfig,
-  type SystemConfigUpdatePayload,
-  type SystemConfigUpsertPayload
+import type {
+  SystemConfig,
+  SystemConfigUpdatePayload,
+  SystemConfigUpsertPayload
 } from '@/api/admin'
 import { normalizeComparableVersion } from '@/api/version'
 import { useAlert } from '@/composables/useAlert'
+import {
+  useDeleteSystemConfigMutation,
+  usePatchSystemConfigMutation,
+  useRemoteVersionQuery,
+  useSystemConfigsQuery,
+  useUpsertSystemConfigMutation,
+} from '@/queries/admin'
 
 const { showAlert } = useAlert()
+const configsQuery = useSystemConfigsQuery()
+const upsertSystemConfigMutation = useUpsertSystemConfigMutation()
+const patchSystemConfigMutation = usePatchSystemConfigMutation()
+const deleteSystemConfigMutation = useDeleteSystemConfigMutation()
+const remoteVersionQuery = useRemoteVersionQuery(false)
 
 const WRITER_VERSION_CONFIG_KEY = 'writer.chapter_versions'
 const LEGACY_WRITER_VERSION_CONFIG_KEY = 'writer.version_count'
@@ -358,10 +368,22 @@ const remoteBuildTimeBeijing = ref<string | null>(null)
 const versionCheckLoading = ref(false)
 const versionCheckError = ref<string | null>(null)
 
-const configs = ref<SystemConfig[]>([])
-const configLoading = ref(false)
-const configSaving = ref(false)
-const configError = ref<string | null>(null)
+const configs = computed<SystemConfig[]>(() => configsQuery.data.value ?? [])
+const configLoading = computed(() => configsQuery.isLoading.value || configsQuery.isFetching.value)
+const configSaving = computed(
+  () => upsertSystemConfigMutation.isPending.value || patchSystemConfigMutation.isPending.value,
+)
+const isConfigErrorDismissed = ref(false)
+const configError = computed({
+  get: () => {
+    if (isConfigErrorDismissed.value) return null
+    const queryError = configsQuery.error.value
+    return queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null
+  },
+  set: () => {
+    isConfigErrorDismissed.value = true
+  },
+})
 
 const configModalVisible = ref(false)
 const isCreateMode = ref(true)
@@ -509,14 +531,11 @@ const checkVersionSource = async (
 
   versionCheckLoading.value = true
   try {
-    const response = await fetch(`${API_BASE_URL}/api/updates/remote-version`, {
-      method: 'GET'
-    })
-    if (!response.ok) {
-      throw new Error(`请求失败，状态码: ${response.status}`)
+    const result = await remoteVersionQuery.refetch()
+    if (result.error) {
+      throw result.error
     }
-
-    const payload = await response.json() as RemoteVersionResponse
+    const payload = (result.data ?? {}) as RemoteVersionResponse
     const parsedVersion = typeof payload?.version === 'string'
       ? normalizeConfigText(payload.version)
       : ''
@@ -573,26 +592,7 @@ const syncDerivedFormsFromConfigs = () => {
 }
 
 const fetchConfigs = async () => {
-  configLoading.value = true
-  configError.value = null
-  try {
-    configs.value = await AdminAPI.listSystemConfigs()
-    syncDerivedFormsFromConfigs()
-    void checkVersionSource({ silentIfInvalid: true })
-  } catch (err) {
-    configError.value = err instanceof Error ? err.message : '加载配置失败'
-  } finally {
-    configLoading.value = false
-  }
-}
-
-const upsertConfigInList = (updated: SystemConfig) => {
-  const index = configs.value.findIndex((item) => item.key === updated.key)
-  if (index === -1) {
-    configs.value.unshift(updated)
-  } else {
-    configs.value.splice(index, 1, updated)
-  }
+  await configsQuery.refetch()
 }
 
 const saveChapterVersionCount = async () => {
@@ -601,11 +601,15 @@ const saveChapterVersionCount = async () => {
   try {
     const normalized = normalizeChapterVersionCount(chapterVersionCount.value)
     chapterVersionCount.value = normalized
-    const updated = await AdminAPI.upsertSystemConfig(WRITER_VERSION_CONFIG_KEY, {
-      value: String(normalized),
-      description: '每次生成章节的候选版本数量（支持 1~2）。'
+    await upsertSystemConfigMutation.mutateAsync({
+      key: WRITER_VERSION_CONFIG_KEY,
+      data: {
+        value: String(normalized),
+        description: '每次生成章节的候选版本数量（支持 1~2）。'
+      },
     })
-    upsertConfigInList(updated)
+    await fetchConfigs()
+    syncDerivedFormsFromConfigs()
     showAlert('章节生成版本数已更新', 'success')
   } catch (err) {
     chapterVersionError.value = err instanceof Error ? err.message : '保存章节版本数失败'
@@ -621,11 +625,15 @@ const saveChapterWordLimit = async () => {
   try {
     const normalized = normalizeChapterWordLimit(chapterWordLimit.value)
     chapterWordLimit.value = normalized
-    const updated = await AdminAPI.upsertSystemConfig(WRITER_WORD_LIMIT_CONFIG_KEY, {
-      value: String(normalized),
-      description: '章节正文生成目标字数，建议不低于 2200。'
+    await upsertSystemConfigMutation.mutateAsync({
+      key: WRITER_WORD_LIMIT_CONFIG_KEY,
+      data: {
+        value: String(normalized),
+        description: '章节正文生成目标字数，建议不低于 2200。'
+      },
     })
-    upsertConfigInList(updated)
+    await fetchConfigs()
+    syncDerivedFormsFromConfigs()
     showAlert('章节字数限制已更新', 'success')
   } catch (err) {
     chapterWordLimitError.value = err instanceof Error ? err.message : '保存章节字数限制失败'
@@ -657,9 +665,12 @@ const saveVersionSources = async () => {
       value: normalizedVersionInfoUrl,
       description: '远程版本信息 JSON 地址，供 /api/updates/remote-version 优先读取。'
     }
-    const infoUpdated = await AdminAPI.upsertSystemConfig(VERSION_INFO_URL_CONFIG_KEY, infoConfigPayload)
-    upsertConfigInList(infoUpdated)
+    await upsertSystemConfigMutation.mutateAsync({
+      key: VERSION_INFO_URL_CONFIG_KEY,
+      data: infoConfigPayload,
+    })
 
+    await fetchConfigs()
     syncVersionSourceFromConfigs()
     await checkVersionSource()
     if (remoteVersion.value) {
@@ -696,7 +707,6 @@ const openEditModal = (config: SystemConfig) => {
 
 const closeConfigModal = () => {
   configModalVisible.value = false
-  configSaving.value = false
 }
 
 const submitConfig = async () => {
@@ -737,37 +747,38 @@ const submitConfig = async () => {
     }
   }
 
-  configSaving.value = true
   try {
-    let updated: SystemConfig
     if (isCreateMode.value) {
-      updated = await AdminAPI.upsertSystemConfig(normalizedKey, {
-        value: normalizedValue,
-        description: configForm.description || undefined
+      await upsertSystemConfigMutation.mutateAsync({
+        key: normalizedKey,
+        data: {
+          value: normalizedValue,
+          description: configForm.description || undefined
+        },
       })
-      upsertConfigInList(updated)
     } else {
-      updated = await AdminAPI.patchSystemConfig(configForm.key, {
-        value: normalizedValue,
-        description: configForm.description || undefined
-      } as SystemConfigUpdatePayload)
-      upsertConfigInList(updated)
+      await patchSystemConfigMutation.mutateAsync({
+        key: configForm.key,
+        data: {
+          value: normalizedValue,
+          description: configForm.description || undefined
+        } as SystemConfigUpdatePayload,
+      })
     }
+    await fetchConfigs()
     syncDerivedFormsFromConfigs()
     void checkVersionSource({ silentIfInvalid: true })
     showAlert('配置已保存', 'success')
     closeConfigModal()
   } catch (err) {
     showAlert(err instanceof Error ? err.message : '保存失败', 'error')
-  } finally {
-    configSaving.value = false
   }
 }
 
 const deleteConfig = async (key: string) => {
   try {
-    await AdminAPI.deleteSystemConfig(key)
-    configs.value = configs.value.filter((item) => item.key !== key)
+    await deleteSystemConfigMutation.mutateAsync(key)
+    await fetchConfigs()
     syncDerivedFormsFromConfigs()
     void checkVersionSource({ silentIfInvalid: true })
     showAlert('配置已删除', 'success')
@@ -872,6 +883,24 @@ const columns: DataTableColumns<SystemConfig> = [
     }
   }
 ]
+
+watch(
+  () => configsQuery.error.value,
+  () => {
+    isConfigErrorDismissed.value = false
+  },
+)
+
+watch(
+  configs,
+  (nextConfigs, previousConfigs) => {
+    syncDerivedFormsFromConfigs()
+    if (nextConfigs.length && nextConfigs !== previousConfigs) {
+      void checkVersionSource({ silentIfInvalid: true })
+    }
+  },
+  { immediate: true },
+)
 
 onMounted(() => {
   fetchConfigs()

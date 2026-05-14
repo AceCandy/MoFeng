@@ -263,58 +263,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-
-interface Foreshadowing {
-  id: string
-  description: string
-  planted_chapter: number
-  planted_chapter_title: string
-  expected_payoff_chapter?: number
-  actual_payoff_chapter?: number
-  status: 'planted' | 'paid_off' | 'overdue'
-  importance: 'short' | 'medium' | 'long'
-}
-
-interface ForeshadowingResponse {
-  project_id: string
-  project_title: string
-  total_foreshadowings: number
-  planted_count: number
-  paid_off_count: number
-  overdue_count: number
-  foreshadowings: Foreshadowing[]
-}
-
-interface ForeshadowingDbItem {
-  id: number | string
-  chapter_number: number
-  content?: string
-  type?: string
-  status?: string
-  resolved_chapter_number?: number | null
-  author_note?: string | null
-}
-
-interface ForeshadowingDbListResponse {
-  total: number
-  data: ForeshadowingDbItem[]
-}
+import { useForeshadowingQuery } from '@/queries/novel'
 
 const route = useRoute()
-const authStore = useAuthStore()
 const projectId = route.params.id as string
 
-const isLoading = ref(false)
-const isAutoAnalyzing = ref(false)
-const error = ref<string | null>(null)
-const foreshadowingList = ref<Foreshadowing[]>([])
-const totalForeshadowings = ref(0)
-const plantedCount = ref(0)
-const paidOffCount = ref(0)
-const overdueCount = ref(0)
+const foreshadowingQuery = useForeshadowingQuery(() => projectId)
+const isLoading = computed(
+  () => foreshadowingQuery.isLoading.value || foreshadowingQuery.isFetching.value,
+)
+const isAutoAnalyzing = computed(() => false)
+const error = computed(() => {
+  const queryError = foreshadowingQuery.error.value
+  return queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null
+})
+const foreshadowingData = computed(() => foreshadowingQuery.data.value ?? null)
+const foreshadowingList = computed(() => foreshadowingData.value?.foreshadowings ?? [])
+const totalForeshadowings = computed(() => foreshadowingData.value?.total_foreshadowings ?? 0)
+const plantedCount = computed(() => foreshadowingData.value?.planted_count ?? 0)
+const paidOffCount = computed(() => foreshadowingData.value?.paid_off_count ?? 0)
+const overdueCount = computed(() => foreshadowingData.value?.overdue_count ?? 0)
 const activeTab = ref('all')
 
 const statusTabs = [
@@ -366,180 +336,7 @@ const getImportanceLabel = (importance: string) => {
   return labels[importance] || importance
 }
 
-const setForeshadowingState = (list: Foreshadowing[]) => {
-  foreshadowingList.value = list
-  totalForeshadowings.value = list.length
-  plantedCount.value = list.filter((item) => item.status === 'planted').length
-  paidOffCount.value = list.filter((item) => item.status === 'paid_off').length
-  overdueCount.value = list.filter((item) => item.status === 'overdue').length
-}
-
-const mapDbStatusToUiStatus = (
-  status?: string,
-  resolvedChapter?: number | null,
-): Foreshadowing['status'] => {
-  if (status === 'resolved' || !!resolvedChapter) return 'paid_off'
-  if (status === 'abandoned' || status === 'overdue') return 'overdue'
-  return 'planted'
-}
-
-const mapDbTypeToImportance = (type?: string): Foreshadowing['importance'] => {
-  const normalizedType = (type || '').toLowerCase()
-  if (['long', 'long_term', 'core', 'major'].includes(normalizedType)) {
-    return 'long'
-  }
-  if (['short', 'short_term', 'hint', 'minor'].includes(normalizedType)) {
-    return 'short'
-  }
-  return 'medium'
-}
-
-const parseErrorMessage = async (response: Response, fallback: string): Promise<string> => {
-  let errorMessage = fallback
-  try {
-    const errorData = await response.json()
-    if (response.status === 422 && errorData.detail) {
-      if (Array.isArray(errorData.detail)) {
-        const errors = errorData.detail
-          .map((err: any) => `${err.loc?.join('.')} - ${err.msg}`)
-          .join('; ')
-        errorMessage = `参数校验失败: ${errors}`
-      } else if (typeof errorData.detail === 'string') {
-        errorMessage = errorData.detail
-      }
-    } else {
-      errorMessage = errorData.detail || errorData.message || JSON.stringify(errorData)
-    }
-  } catch {
-    errorMessage = `HTTP ${response.status}: ${response.statusText}`
-  }
-  return errorMessage
-}
-
-const fetchFromForeshadowingStore = async (): Promise<Foreshadowing[]> => {
-  const response = await fetch(`/api/novels/${projectId}/foreshadowings?limit=500`, {
-    headers: {
-      Authorization: `Bearer ${authStore.token}`,
-      'Content-Type': 'application/json',
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error(await parseErrorMessage(response, '获取伏笔库数据失败'))
-  }
-
-  const data: ForeshadowingDbListResponse = await response.json()
-  const dbItems = Array.isArray(data.data) ? data.data : []
-
-  return dbItems.map((item) => {
-    const chapterNumber = Number(item.chapter_number || 0)
-    return {
-      id: String(item.id),
-      description: item.content || item.author_note || '未命名伏笔',
-      planted_chapter: chapterNumber,
-      planted_chapter_title: `第${chapterNumber}章`,
-      expected_payoff_chapter: undefined,
-      actual_payoff_chapter: item.resolved_chapter_number ?? undefined,
-      status: mapDbStatusToUiStatus(item.status, item.resolved_chapter_number),
-      importance: mapDbTypeToImportance(item.type),
-    }
-  })
-}
-
-const fetchFromAnalytics = async (): Promise<ForeshadowingResponse> => {
-  const response = await fetch(`/api/analytics/${projectId}/foreshadowing`, {
-    headers: {
-      Authorization: `Bearer ${authStore.token}`,
-      'Content-Type': 'application/json',
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error(await parseErrorMessage(response, '获取自动识别伏笔数据失败'))
-  }
-
-  return (await response.json()) as ForeshadowingResponse
-}
-
-const fetchAnalyticsFallbackInBackground = async () => {
-  isAutoAnalyzing.value = true
-  try {
-    const analyticsData = await fetchFromAnalytics()
-    const nextList = analyticsData.foreshadowings || []
-    // 仅在当前仍为空时回填，避免覆盖用户刚刚拿到的伏笔库结果
-    if (foreshadowingList.value.length === 0 && nextList.length > 0) {
-      setForeshadowingState(nextList)
-    }
-  } catch {
-    // 后台回填失败不阻断详情页，主错误状态由 fetchData 统一处理。
-  } finally {
-    isAutoAnalyzing.value = false
-  }
-}
-
-const fetchData = async (mode: 'full' | 'quick' = 'full') => {
-  isLoading.value = true
-  error.value = null
-
-  try {
-    let storeForeshadowings: Foreshadowing[] | null = null
-    let storeError: string | null = null
-
-    try {
-      storeForeshadowings = await fetchFromForeshadowingStore()
-    } catch (storeErr: any) {
-      storeError = storeErr instanceof Error ? storeErr.message : String(storeErr)
-    }
-
-    if (storeForeshadowings && storeForeshadowings.length > 0) {
-      setForeshadowingState(storeForeshadowings)
-      return
-    }
-
-    // 快速刷新模式：不阻塞等待自动识别，先立即返回空态，再后台回填
-    if (mode === 'quick') {
-      setForeshadowingState([])
-      void fetchAnalyticsFallbackInBackground()
-      return
-    }
-
-    try {
-      const analyticsData = await fetchFromAnalytics()
-      setForeshadowingState(analyticsData.foreshadowings || [])
-      return
-    } catch (analyticsErr: any) {
-      // 伏笔库请求成功但为空时，自动识别失败不视为页面错误，直接展示空态
-      if (storeForeshadowings) {
-        setForeshadowingState([])
-        return
-      }
-
-      const analyticsMessage =
-        analyticsErr instanceof Error ? analyticsErr.message : String(analyticsErr)
-      if (storeError) {
-        throw new Error(`${storeError}；自动识别接口也失败：${analyticsMessage}`)
-      }
-      throw analyticsErr
-    }
-  } catch (e: any) {
-    console.error('伏笔管理加载错误:', e)
-    if (e instanceof Error) {
-      error.value = e.message
-    } else if (typeof e === 'string') {
-      error.value = e
-    } else {
-      error.value = '加载失败，请稍后重试'
-    }
-  } finally {
-    isLoading.value = false
-  }
-}
-
 const refreshData = () => {
-  fetchData('quick')
+  foreshadowingQuery.refetch()
 }
-
-onMounted(() => {
-  fetchData('full')
-})
 </script>

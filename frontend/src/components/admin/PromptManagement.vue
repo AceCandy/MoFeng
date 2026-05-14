@@ -145,7 +145,7 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import {
   NAlert,
   NButton,
@@ -162,18 +162,38 @@ import {
   NTag
 } from 'naive-ui'
 
-import { AdminAPI, type PromptCreatePayload, type PromptItem } from '@/api/admin'
+import type { PromptCreatePayload, PromptItem } from '@/api/admin'
 import { useAlert } from '@/composables/useAlert'
+import {
+  useAdminPromptsQuery,
+  useCreateAdminPromptMutation,
+  useDeleteAdminPromptMutation,
+  useUpdateAdminPromptMutation,
+} from '@/queries/admin'
 
 const { showAlert } = useAlert()
 
-const prompts = ref<PromptItem[]>([])
+const promptsQuery = useAdminPromptsQuery()
+const createPromptMutation = useCreateAdminPromptMutation()
+const updatePromptMutation = useUpdateAdminPromptMutation()
+const deletePromptMutation = useDeleteAdminPromptMutation()
+const prompts = computed<PromptItem[]>(() => promptsQuery.data.value ?? [])
 const selectedPrompt = ref<PromptItem | null>(null)
-const loading = ref(false)
-const saving = ref(false)
-const deleting = ref(false)
-const creating = ref(false)
-const error = ref<string | null>(null)
+const loading = computed(() => promptsQuery.isLoading.value || promptsQuery.isFetching.value)
+const saving = computed(() => updatePromptMutation.isPending.value)
+const deleting = computed(() => deletePromptMutation.isPending.value)
+const creating = computed(() => createPromptMutation.isPending.value)
+const isErrorDismissed = ref(false)
+const error = computed({
+  get: () => {
+    if (isErrorDismissed.value) return null
+    const queryError = promptsQuery.error.value
+    return queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null
+  },
+  set: () => {
+    isErrorDismissed.value = true
+  },
+})
 const editForm = reactive({
   name: '',
   title: '',
@@ -245,27 +265,35 @@ const validatePromptPayload = (payload: { title?: string; content: string; tags:
   return null
 }
 
-const fetchPrompts = async () => {
-  loading.value = true
-  error.value = null
-  try {
-    prompts.value = await AdminAPI.listPrompts()
+const fetchPrompts = () => {
+  promptsQuery.refetch()
+}
+
+watch(
+  () => promptsQuery.error.value,
+  () => {
+    isErrorDismissed.value = false
+  },
+)
+
+watch(
+  prompts,
+  (list) => {
     if (selectedPrompt.value) {
-      const refreshed = prompts.value.find((item) => item.id === selectedPrompt.value?.id)
+      const refreshed = list.find((item) => item.id === selectedPrompt.value?.id)
       if (refreshed) {
         selectPrompt(refreshed)
-      } else {
-        resetSelection()
+        return
       }
-    } else if (prompts.value.length) {
-      selectPrompt(prompts.value[0])
+      resetSelection()
+      return
     }
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : '获取提示词列表失败'
-  } finally {
-    loading.value = false
-  }
-}
+    if (list.length) {
+      selectPrompt(list[0])
+    }
+  },
+  { immediate: true },
+)
 
 const resetSelection = () => {
   selectedPrompt.value = null
@@ -297,38 +325,30 @@ const savePrompt = async () => {
   }
   editForm.tags = normalizedTags
   const normalizedTitle = editForm.title.trim()
-  saving.value = true
   try {
-    const updated = await AdminAPI.updatePrompt(selectedPrompt.value.id, {
-      title: normalizedTitle || undefined,
-      content: editForm.content,
-      tags: normalizedTags
+    const updated = await updatePromptMutation.mutateAsync({
+      id: selectedPrompt.value.id,
+      data: {
+        title: normalizedTitle || undefined,
+        content: editForm.content,
+        tags: normalizedTags
+      },
     })
     selectPrompt(updated)
-    const index = prompts.value.findIndex((item) => item.id === updated.id)
-    if (index !== -1) {
-      prompts.value.splice(index, 1, updated)
-    }
     showAlert('保存成功', 'success')
   } catch (err) {
     showAlert(err instanceof Error ? err.message : '保存失败', 'error')
-  } finally {
-    saving.value = false
   }
 }
 
 const deletePrompt = async () => {
   if (!selectedPrompt.value) return
-  deleting.value = true
   try {
-    await AdminAPI.deletePrompt(selectedPrompt.value.id)
+    await deletePromptMutation.mutateAsync(selectedPrompt.value.id)
     showAlert('删除成功', 'success')
-    prompts.value = prompts.value.filter((item) => item.id !== selectedPrompt.value?.id)
     resetSelection()
   } catch (err) {
     showAlert(err instanceof Error ? err.message : '删除失败', 'error')
-  } finally {
-    deleting.value = false
   }
 }
 
@@ -368,9 +388,8 @@ const createPrompt = async () => {
   }
 
   createForm.tags = normalizedTags
-  creating.value = true
   try {
-    const created = await AdminAPI.createPrompt({
+    const created = await createPromptMutation.mutateAsync({
       name: normalizedName,
       title: createForm.title?.trim() || undefined,
       content: createForm.content,
@@ -382,15 +401,12 @@ const createPrompt = async () => {
     closeCreateModal()
   } catch (err) {
     showAlert(err instanceof Error ? err.message : '创建失败', 'error')
-  } finally {
-    creating.value = false
   }
 }
 
 onMounted(() => {
   updateLayout()
   window.addEventListener('resize', updateLayout)
-  fetchPrompts()
 })
 
 onBeforeUnmount(() => {

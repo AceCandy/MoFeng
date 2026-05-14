@@ -32,8 +32,11 @@
                   </span>
                   <span class="truncate">{{ chapter.title || `第${chapter.chapter_number}章` }}</span>
                 </div>
-                <span v-if="chapterCache.has(chapter.chapter_number)" class="text-xs text-slate-400">
-                  {{ calculateWordCount(chapterCache.get(chapter.chapter_number)?.content) }} 字
+                <span
+                  v-if="selectedChapter?.chapter_number === chapter.chapter_number"
+                  class="text-xs text-slate-400"
+                >
+                  {{ calculateWordCount(selectedChapter.content) }} 字
                 </span>
                 <span v-else class="text-xs text-slate-400">-</span>
               </div>
@@ -405,11 +408,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { NovelAPI } from '@/api/novel'
-import { AdminAPI } from '@/api/admin'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { marked } from 'marked'
+import { useNovelChapterDetailQuery } from '@/queries/novel'
 
 interface ChapterItem {
   chapter_number: number
@@ -434,9 +436,26 @@ const props = defineProps<{
 const route = useRoute()
 const projectId = route.params.id as string
 
-const selectedChapter = ref<ChapterDetail | null>(null)
-const isLoading = ref(false)
-const error = ref<string | null>(null)
+const selectedChapterNumber = ref<number | null>(null)
+const chapterQuery = useNovelChapterDetailQuery(
+  () => projectId,
+  () => selectedChapterNumber.value,
+  () => props.isAdmin,
+)
+const selectedChapter = computed<ChapterDetail | null>(() => {
+  if (chapterQuery.data.value) {
+    return chapterQuery.data.value as ChapterDetail
+  }
+  return (
+    chapters.value.find((chapter) => chapter.chapter_number === selectedChapterNumber.value) ??
+    null
+  )
+})
+const isLoading = computed(() => chapterQuery.isLoading.value || chapterQuery.isFetching.value)
+const error = computed(() => {
+  const queryError = chapterQuery.error.value
+  return queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null
+})
 const activeTab = ref<'content' | 'versions' | 'evaluation'>('content')
 
 // 移动端章节列表显示状态
@@ -448,9 +467,6 @@ const versionModal = ref({
   content: '',
   index: 0
 })
-
-// 缓存已加载的章节详情
-const chapterCache = new Map<number, ChapterDetail>()
 
 const chapters = computed(() => props.chapters || [])
 
@@ -621,43 +637,16 @@ const renderMarkdown = (text: string | null | undefined): string => {
   }
 }
 
-// 加载章节详情
-const loadChapterDetail = async (chapterNumber: number) => {
-  // 检查缓存
-  if (chapterCache.has(chapterNumber)) {
-    selectedChapter.value = chapterCache.get(chapterNumber)!
-    return
-  }
-
-  isLoading.value = true
-  error.value = null
-
-  try {
-    const detail: ChapterDetail = props.isAdmin
-      ? await AdminAPI.getNovelChapter(projectId, chapterNumber)
-      : await NovelAPI.getChapter(projectId, chapterNumber)
-
-    // 存入缓存
-    chapterCache.set(chapterNumber, detail)
-    selectedChapter.value = detail
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : '加载失败'
-    console.error('加载章节详情失败:', err)
-  } finally {
-    isLoading.value = false
-  }
-}
-
 watch(
   chapters,
-  async (list) => {
+  (list) => {
     if (list.length === 0) {
-      selectedChapter.value = null
+      selectedChapterNumber.value = null
       return
     }
-    // 自动选中第一个章节（但不加载详情，等用户点击）
-    if (!selectedChapter.value && list.length > 0) {
-      await loadChapterDetail(list[0].chapter_number)
+    const stillExists = list.some((chapter) => chapter.chapter_number === selectedChapterNumber.value)
+    if (!selectedChapterNumber.value || !stillExists) {
+      selectedChapterNumber.value = list[0].chapter_number
     }
   },
   { immediate: true }
@@ -665,7 +654,7 @@ watch(
 
 const selectChapter = async (chapterNumber: number) => {
   activeTab.value = 'content' // 切换章节时重置到正文标签
-  await loadChapterDetail(chapterNumber)
+  selectedChapterNumber.value = chapterNumber
   // 移动端选择章节后关闭章节列表
   showChapterList.value = false
 }
@@ -676,7 +665,9 @@ defineExpose({
   focusChapter: async (chapterNumber: number) => {
     const target = chapters.value.find(ch => ch.chapter_number === chapterNumber)
     if (target) {
-      await loadChapterDetail(chapterNumber)
+      selectedChapterNumber.value = chapterNumber
+      await nextTick()
+      await chapterQuery.refetch()
     }
   }
 })

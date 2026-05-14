@@ -14,7 +14,7 @@
     <!-- 主要内容区域 -->
     <section class="writing-desk-main" aria-label="写作台内容">
       <!-- 加载状态 -->
-      <div v-if="novelStore.isLoading" class="h-full flex justify-center items-center">
+      <div v-if="projectLoading" class="h-full flex justify-center items-center">
         <div class="text-center">
           <div class="md-spinner mx-auto mb-4"></div>
           <p class="md-body-medium md-on-surface-variant">正在加载项目数据...</p>
@@ -22,7 +22,7 @@
       </div>
 
       <!-- 错误状态 -->
-      <div v-else-if="novelStore.error" class="text-center py-20">
+      <div v-else-if="projectError" class="text-center py-20">
         <div
           class="md-card md-card-outlined p-8 max-w-md mx-auto"
           style="border-radius: var(--md-radius-xl)"
@@ -45,7 +45,7 @@
             </svg>
           </div>
           <h3 class="md-title-large mb-2" style="color: var(--md-on-surface)">加载失败</h3>
-          <p class="md-body-medium mb-4" style="color: var(--md-error)">{{ novelStore.error }}</p>
+          <p class="md-body-medium mb-4" style="color: var(--md-error)">{{ projectError }}</p>
           <button type="button" @click="loadProject" class="md-btn md-btn-tonal md-ripple">
             重新加载
           </button>
@@ -62,7 +62,6 @@
           :evaluating-chapter="evaluatingChapter"
           :is-generating-outline="isGeneratingOutline"
           @open-project-detail="viewProjectDetail"
-          @open-project-section="openProjectSection"
           @select-chapter="selectChapter"
           @generate-chapter="generateChapter"
           @edit-chapter="openEditChapterModal"
@@ -210,16 +209,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { useNovelStore } from '@/stores/novel'
-import { OptimizerAPI } from '@/api/novel'
 import type {
   Chapter,
   ChapterOutline,
   ChapterGenerationResponse,
   ChapterVersion,
 } from '@/api/novel'
+import {
+  useDeleteChapterMutation,
+  useEditChapterContentMutation,
+  useEvaluateChapterMutation,
+  useApplyOptimizationMutation,
+  useGenerateChapterMutation,
+  useGenerateChapterOutlineMutation,
+  useNovelChapterQuery,
+  useNovelMutationRefresh,
+  useNovelProjectQuery,
+  useOptimizeRecommendedVersionMutation,
+  useSelectChapterVersionMutation,
+  useUpdateChapterOutlineMutation,
+} from '@/queries/novel'
 import { globalAlert } from '@/composables/useAlert'
 import { countNonWhitespaceChars } from '@/utils/text'
 import WDHeader from '@/components/writing-desk/WDHeader.vue'
@@ -230,15 +241,13 @@ import WDEvaluationDetailModal from '@/components/writing-desk/WDEvaluationDetai
 import WDEditChapterModal from '@/components/writing-desk/WDEditChapterModal.vue'
 import WDGenerateOutlineModal from '@/components/writing-desk/WDGenerateOutlineModal.vue'
 
-type NovelProjectSection = 'overview' | 'characters' | 'relationships'
-
 interface Props {
   id: string
 }
 
 const props = defineProps<Props>()
 const router = useRouter()
-const novelStore = useNovelStore()
+const projectQuery = useNovelProjectQuery(() => props.id)
 
 // 状态管理
 const selectedChapterNumber = ref<number | null>(null)
@@ -254,17 +263,41 @@ const editingChapter = ref<ChapterOutline | null>(null)
 const isGeneratingOutline = ref(false)
 const showGenerateOutlineModal = ref(false)
 const isFetchingChapterStatus = ref(false)
-const isOptimizingRecommendedVersion = ref(false)
+const optimizeRecommendedVersionMutation = useOptimizeRecommendedVersionMutation()
 const showRecommendedOptimizeResultModal = ref(false)
-const isApplyingRecommendedOptimization = ref(false)
+const applyOptimizationMutation = useApplyOptimizationMutation(() => props.id)
+const isOptimizingRecommendedVersion = computed(
+  () => optimizeRecommendedVersionMutation.isPending.value,
+)
+const isApplyingRecommendedOptimization = computed(() => applyOptimizationMutation.isPending.value)
 const recommendedOptimizedContent = ref('')
 const recommendedOptimizeResultNotes = ref('')
 
+const chapterQuery = useNovelChapterQuery(() => props.id, selectedChapterNumber)
+const { refreshProjectQueries, upsertChapterInProjectCache } = useNovelMutationRefresh(
+  () => props.id,
+)
+const generateChapterMutation = useGenerateChapterMutation(() => props.id)
+const evaluateChapterMutation = useEvaluateChapterMutation(() => props.id)
+const selectChapterVersionMutation = useSelectChapterVersionMutation(() => props.id)
+const updateChapterOutlineMutation = useUpdateChapterOutlineMutation(() => props.id)
+const deleteChapterMutation = useDeleteChapterMutation(() => props.id)
+const generateChapterOutlineMutation = useGenerateChapterOutlineMutation(() => props.id)
+const editChapterContentMutation = useEditChapterContentMutation(() => props.id)
+
 // 计算属性
-const project = computed(() => novelStore.currentProject)
+const project = computed(() => projectQuery.data.value ?? null)
+const projectLoading = computed(() => projectQuery.isPending.value)
+const projectError = computed(() => {
+  const error = projectQuery.error.value
+  return error instanceof Error ? error.message : error ? '加载项目失败' : null
+})
 
 const selectedChapter = computed(() => {
   if (!project.value || selectedChapterNumber.value === null) return null
+  if (chapterQuery.data.value?.chapter_number === selectedChapterNumber.value) {
+    return chapterQuery.data.value
+  }
   return (
     project.value.chapters.find((ch) => ch.chapter_number === selectedChapterNumber.value) || null
   )
@@ -645,10 +678,8 @@ const optimizeRecommendedVersionFromEvaluation = async () => {
   }
 
   const versionReview = evaluationPayload.evaluation?.[`version${bestChoice}`] || {}
-  isOptimizingRecommendedVersion.value = true
-
   try {
-    const result = await OptimizerAPI.optimizeRecommendedVersion({
+    const result = await optimizeRecommendedVersionMutation.mutateAsync({
       project_id: project.value.id,
       chapter_number: selectedChapter.value.chapter_number,
       source_content: cleanVersionContent(sourceVersion.content),
@@ -669,8 +700,6 @@ const optimizeRecommendedVersionFromEvaluation = async () => {
   } catch (error: any) {
     console.error('评审优化失败:', error)
     globalAlert.showError(error.message || '评审优化失败，请稍后重试')
-  } finally {
-    isOptimizingRecommendedVersion.value = false
   }
 }
 
@@ -679,14 +708,12 @@ const applyRecommendedOptimization = async () => {
     return
   }
 
-  isApplyingRecommendedOptimization.value = true
-
   try {
-    const applyResult = await OptimizerAPI.applyOptimization(
-      project.value.id,
-      selectedChapter.value.chapter_number,
-      recommendedOptimizedContent.value,
-    )
+    const applyResult = await applyOptimizationMutation.mutateAsync({
+      projectId: project.value.id,
+      chapterNumber: selectedChapter.value.chapter_number,
+      optimizedContent: recommendedOptimizedContent.value,
+    })
 
     const syncStats = applyResult.foreshadowing_sync
     if (syncStats) {
@@ -701,12 +728,10 @@ const applyRecommendedOptimization = async () => {
     showEvaluationDetailModal.value = false
     recommendedOptimizedContent.value = ''
     recommendedOptimizeResultNotes.value = ''
-    await novelStore.loadChapter(selectedChapter.value.chapter_number)
+    await refetchChapterIntoProject(selectedChapter.value.chapter_number)
   } catch (error: any) {
     console.error('应用评审优化失败:', error)
     globalAlert.showError(error.message || '应用优化失败，请稍后重试')
-  } finally {
-    isApplyingRecommendedOptimization.value = false
   }
 }
 
@@ -721,15 +746,6 @@ const viewProjectDetail = () => {
   }
 }
 
-const openProjectSection = (section: NovelProjectSection) => {
-  if (project.value) {
-    router.push({
-      path: `/projects/${project.value.id}`,
-      query: { section },
-    })
-  }
-}
-
 const locateFirstIncompleteChapter = async () => {
   await nextTick()
   sidebarRef.value?.scrollToFirstIncompleteChapter()
@@ -737,10 +753,23 @@ const locateFirstIncompleteChapter = async () => {
 
 const loadProject = async () => {
   try {
-    await novelStore.loadProject(props.id)
+    await projectQuery.refetch()
   } catch (error) {
     console.error('加载项目失败:', error)
   }
+}
+
+const refetchChapterIntoProject = async (chapterNumber: number) => {
+  if (selectedChapterNumber.value !== chapterNumber) {
+    selectedChapterNumber.value = chapterNumber
+    await nextTick()
+  }
+
+  const result = await chapterQuery.refetch()
+  if (result.data) {
+    upsertChapterInProjectCache(props.id, result.data)
+  }
+  await refreshProjectQueries()
 }
 
 const fetchChapterStatus = async () => {
@@ -750,7 +779,7 @@ const fetchChapterStatus = async () => {
   const chapterNumber = selectedChapterNumber.value
   isFetchingChapterStatus.value = true
   try {
-    await novelStore.loadChapter(chapterNumber)
+    await refetchChapterIntoProject(chapterNumber)
   } catch (error) {
     console.error('轮询章节状态失败:', error)
     // 在这里可以决定是否要通知用户轮询失败
@@ -836,9 +865,9 @@ const generateChapter = async (chapterNumber: number) => {
       }
     }
 
-    await novelStore.generateChapter(chapterNumber)
+    await generateChapterMutation.mutateAsync(chapterNumber)
     // 关键兜底：生成接口在极少数情况下可能返回旧快照，这里强制拉取当前章最新状态。
-    await novelStore.loadChapter(chapterNumber)
+    await refetchChapterIntoProject(chapterNumber)
 
     // store 中的 project 已经被更新，所以我们不需要手动修改本地状态。
     // 单版本场景自动确认，直接进入正文视图。
@@ -920,9 +949,12 @@ const selectVersion = async (
     }
 
     selectedVersionIndex.value = versionIndex
-    await novelStore.selectChapterVersion(targetChapterNumber, versionIndex)
+    await selectChapterVersionMutation.mutateAsync({
+      chapterNumber: targetChapterNumber,
+      versionIndex,
+    })
     // 兜底同步：避免后端响应中正文字段短暂滞后导致界面需手动刷新。
-    await novelStore.loadChapter(targetChapterNumber)
+    await refetchChapterIntoProject(targetChapterNumber)
 
     // 状态更新将由 store 自动触发，本地无需手动更新
     // 轮询机制会处理状态变更，成功后会自动隐藏选择器
@@ -965,7 +997,7 @@ const openEditChapterModal = (chapter: ChapterOutline) => {
 
 const saveChapterChanges = async (updatedChapter: ChapterOutline) => {
   try {
-    await novelStore.updateChapterOutline(updatedChapter)
+    await updateChapterOutlineMutation.mutateAsync(updatedChapter)
     globalAlert.showSuccess('章节大纲已更新', '保存成功')
   } catch (error) {
     console.error('更新章节大纲失败:', error)
@@ -1003,7 +1035,7 @@ const evaluateChapter = async () => {
           chapter.generation_status = 'evaluating'
         }
       }
-      await novelStore.evaluateChapter(selectedChapterNumber.value)
+      await evaluateChapterMutation.mutateAsync(selectedChapterNumber.value)
 
       // 评审完成后，状态会通过store和轮询更新，这里不需要额外操作
       globalAlert.showSuccess('章节评审结果已生成', '评审成功')
@@ -1041,7 +1073,7 @@ const deleteChapter = async (chapterNumbers: number | number[]) => {
   }
 
   try {
-    await novelStore.deleteChapter(numbersToDelete)
+    await deleteChapterMutation.mutateAsync(numbersToDelete)
     globalAlert.showSuccess('章节已删除', '操作成功')
     // If the currently selected chapter was deleted, unselect it
     if (selectedChapterNumber.value && numbersToDelete.includes(selectedChapterNumber.value)) {
@@ -1064,7 +1096,10 @@ const editChapterContent = async (data: { chapterNumber: number; content: string
   if (!project.value) return
 
   try {
-    await novelStore.editChapterContent(project.value.id, data.chapterNumber, data.content)
+    await editChapterContentMutation.mutateAsync({
+      chapterNumber: data.chapterNumber,
+      content: data.content,
+    })
     globalAlert.showSuccess('章节内容已更新', '保存成功')
   } catch (error) {
     console.error('编辑章节内容失败:', error)
@@ -1080,7 +1115,7 @@ const handleGenerateOutline = async (numChapters: number) => {
   isGeneratingOutline.value = true
   try {
     const startChapter = (project.value.blueprint?.chapter_outline?.length || 0) + 1
-    await novelStore.generateChapterOutline(startChapter, numChapters)
+    await generateChapterOutlineMutation.mutateAsync({ startChapter, numChapters })
     globalAlert.showSuccess('新的章节大纲已生成', '操作成功')
   } catch (error) {
     console.error('生成大纲失败:', error)
@@ -1092,10 +1127,6 @@ const handleGenerateOutline = async (numChapters: number) => {
     isGeneratingOutline.value = false
   }
 }
-
-onMounted(() => {
-  loadProject()
-})
 </script>
 
 <style scoped>

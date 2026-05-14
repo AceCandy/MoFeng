@@ -39,7 +39,7 @@
     </transition>
 
     <section
-      v-if="!novelStore.isLoading && !novelStore.error && continueProject"
+      v-if="!projectsLoading && !projectsError && continueProject"
       class="workspace-continue"
     >
       <div class="workspace-continue__copy">
@@ -64,10 +64,7 @@
             aria-valuemax="100"
             :aria-valuenow="continueProgress"
           >
-            <div
-              class="md-progress-linear-bar"
-              :style="{ width: `${continueProgress}%` }"
-            ></div>
+            <div class="md-progress-linear-bar" :style="{ width: `${continueProgress}%` }"></div>
           </div>
         </div>
       </div>
@@ -102,50 +99,40 @@
       </div>
     </section>
 
-    <section class="workspace-actions" aria-label="项目操作">
-      <button type="button" class="workspace-action" @click="goToInspiration">
-        <span class="workspace-action__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3z"
-            />
-          </svg>
-        </span>
-        <span>
-          <strong>新灵感</strong>
-          <small>从对话开始整理故事蓝图</small>
-        </span>
-      </button>
-      <button type="button" class="workspace-action" :disabled="isImporting" @click="triggerImport">
-        <span class="workspace-action__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M8 8l4-4m0 0l4 4m-4-4v12"
-            />
-          </svg>
-        </span>
-        <span>
-          <strong>{{ isImporting ? '正在导入' : '导入小说' }}</strong>
-          <small>上传 .txt 并进入写作台</small>
-        </span>
-      </button>
-      <input type="file" ref="fileInput" accept=".txt" class="hidden" @change="handleFileImport" />
-    </section>
-
     <section class="workspace-panel">
       <div class="workspace-panel__header">
-        <div>
+        <div class="workspace-panel__heading">
           <p class="workspace-kicker">项目列表</p>
           <h2>我的小说项目</h2>
+          <span class="md-chip md-chip-assist">{{ sortedProjects.length }} 个项目</span>
         </div>
-        <span class="md-chip md-chip-assist">{{ sortedProjects.length }} 个项目</span>
+        <div class="workspace-panel__actions" aria-label="项目操作">
+          <button
+            type="button"
+            class="md-btn md-btn-tonal md-ripple workspace-panel__action"
+            @click="goToInspiration"
+          >
+            新灵感
+          </button>
+          <button
+            type="button"
+            class="md-btn md-btn-outlined md-ripple workspace-panel__action"
+            :disabled="isImporting"
+            @click="triggerImport"
+          >
+            {{ isImporting ? '导入中' : '导入 .txt' }}
+          </button>
+          <input
+            type="file"
+            ref="fileInput"
+            accept=".txt"
+            class="hidden"
+            @change="handleFileImport"
+          />
+        </div>
       </div>
 
-      <div v-if="novelStore.isLoading" class="workspace-grid" aria-label="项目加载中">
+      <div v-if="projectsLoading" class="workspace-grid" aria-label="项目加载中">
         <article v-for="index in 3" :key="index" class="workspace-skeleton">
           <div class="workspace-skeleton__header">
             <span class="workspace-skeleton__avatar"></span>
@@ -159,7 +146,7 @@
         </article>
       </div>
 
-      <div v-else-if="novelStore.error" class="workspace-state">
+      <div v-else-if="projectsError" class="workspace-state">
         <div class="workspace-state__icon is-error">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path
@@ -169,7 +156,7 @@
             />
           </svg>
         </div>
-        <p class="md-body-large" style="color: var(--md-error)">{{ novelStore.error }}</p>
+        <p class="md-body-large" style="color: var(--md-error)">{{ projectsError }}</p>
         <button @click="loadProjects" class="md-btn md-btn-filled md-ripple">重试</button>
       </div>
 
@@ -289,22 +276,25 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useNovelStore } from '@/stores/novel'
 import ProjectCard from '@/components/ProjectCard.vue'
 import type { NovelProjectSummary } from '@/api/novel'
-import { NovelAPI } from '@/api/novel'
+import {
+  useDeleteNovelsMutation,
+  useImportNovelMutation,
+  useNovelProjectsQuery,
+} from '@/queries/novel'
 
 const router = useRouter()
-const novelStore = useNovelStore()
+const projectsQuery = useNovelProjectsQuery()
+const importNovelMutation = useImportNovelMutation()
+const deleteNovelsMutation = useDeleteNovelsMutation()
 
 const fileInput = ref<HTMLInputElement | null>(null)
-const isImporting = ref(false)
 
 const showDeleteDialog = ref(false)
 const projectToDelete = ref<NovelProjectSummary | null>(null)
-const isDeleting = ref(false)
 const workspaceMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null)
 
 let workspaceMessageTimer: number | undefined
@@ -317,9 +307,18 @@ const showWorkspaceMessage = (message: { type: 'success' | 'error'; text: string
   }, 3200)
 }
 
+const projects = computed(() => projectsQuery.data.value ?? [])
+const projectsLoading = computed(() => projectsQuery.isPending.value)
+const projectsError = computed(() => {
+  const error = projectsQuery.error.value
+  return error instanceof Error ? error.message : error ? '加载项目失败' : null
+})
+const isImporting = computed(() => importNovelMutation.isPending.value)
+const isDeleting = computed(() => deleteNovelsMutation.isPending.value)
+
 // 最近编辑的项目作为工作台第一优先级，帮助作者快速恢复写作上下文。
 const sortedProjects = computed(() => {
-  return [...novelStore.projects].sort((left, right) => {
+  return [...projects.value].sort((left, right) => {
     return new Date(right.last_edited).getTime() - new Date(left.last_edited).getTime()
   })
 })
@@ -360,7 +359,7 @@ const enterProject = (project: NovelProjectSummary) => {
 }
 
 const loadProjects = async () => {
-  await novelStore.loadProjects()
+  await projectsQuery.refetch()
 }
 
 const triggerImport = () => {
@@ -380,21 +379,18 @@ const handleFileImport = async (event: Event) => {
   }
 
   // 导入成功后直接进入写作台，避免作者再从列表中寻找新项目。
-  isImporting.value = true
   try {
-    const response = await NovelAPI.importNovel(file)
-    await loadProjects()
+    const response = await importNovelMutation.mutateAsync(file)
     router.push(`/projects/${response.id}/write`)
   } catch (error: any) {
     showWorkspaceMessage({ type: 'error', text: error.message || '导入失败，请重试' })
   } finally {
-    isImporting.value = false
     target.value = ''
   }
 }
 
 const handleDeleteProject = (projectId: string) => {
-  const project = novelStore.projects.find((p) => p.id === projectId)
+  const project = projects.value.find((p) => p.id === projectId)
   if (project) {
     projectToDelete.value = project
     showDeleteDialog.value = true
@@ -409,26 +405,20 @@ const cancelDelete = () => {
 const confirmDelete = async () => {
   if (!projectToDelete.value) return
 
-  isDeleting.value = true
+  const deletingProject = projectToDelete.value
   try {
-    await novelStore.deleteProjects([projectToDelete.value.id])
+    await deleteNovelsMutation.mutateAsync([deletingProject.id])
     showWorkspaceMessage({
       type: 'success',
-      text: `项目 "${projectToDelete.value.title}" 已成功删除`,
+      text: `项目 "${deletingProject.title}" 已成功删除`,
     })
     showDeleteDialog.value = false
     projectToDelete.value = null
   } catch (error) {
     console.error('删除项目失败:', error)
     showWorkspaceMessage({ type: 'error', text: '删除项目失败，请重试' })
-  } finally {
-    isDeleting.value = false
   }
 }
-
-onMounted(() => {
-  loadProjects()
-})
 
 onUnmounted(() => {
   window.clearTimeout(workspaceMessageTimer)
@@ -443,8 +433,7 @@ onUnmounted(() => {
 }
 
 .workspace-continue,
-.workspace-panel,
-.workspace-action {
+.workspace-panel {
   border: 1px solid var(--md-outline-variant);
   background-color: var(--md-surface);
   box-shadow: var(--md-elevation-1);
@@ -510,8 +499,7 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-.workspace-continue__actions,
-.workspace-actions {
+.workspace-continue__actions {
   display: flex;
   align-items: center;
   gap: var(--md-spacing-3);
@@ -521,80 +509,17 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.workspace-actions {
-  flex-wrap: wrap;
-}
-
-.workspace-action {
-  min-height: 76px;
-  flex: 1 1 240px;
+.workspace-panel__actions {
   display: flex;
   align-items: center;
-  gap: var(--md-spacing-3);
-  padding: var(--md-spacing-4);
-  border-radius: var(--md-radius-lg);
-  color: var(--md-on-surface);
-  text-align: left;
-  text-decoration: none;
-  box-shadow: none;
-  transition:
-    border-color var(--md-duration-short) var(--md-easing-standard),
-    background-color var(--md-duration-short) var(--md-easing-standard),
-    color var(--md-duration-short) var(--md-easing-standard);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--md-spacing-2);
 }
 
-.workspace-action:hover:not(:disabled) {
-  border-color: var(--md-primary);
-  background-color: var(--md-surface-container-low);
-}
-
-.workspace-action:focus-visible {
+.workspace-panel__action:focus-visible {
   outline: 2px solid var(--md-primary);
   outline-offset: 2px;
-}
-
-.workspace-action:active:not(:disabled) {
-  background-color: var(--md-primary-container);
-  color: var(--md-on-primary-container);
-}
-
-.workspace-action:disabled {
-  opacity: 0.62;
-  cursor: not-allowed;
-}
-
-.workspace-action__icon {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  border-radius: var(--md-radius-md);
-  background-color: var(--md-primary-container);
-  color: var(--md-on-primary-container);
-}
-
-.workspace-action__icon svg {
-  width: 22px;
-  height: 22px;
-}
-
-.workspace-action strong,
-.workspace-action small {
-  display: block;
-}
-
-.workspace-action > span:last-child {
-  min-width: 0;
-}
-
-.workspace-action strong {
-  font-size: var(--md-title-small);
-}
-
-.workspace-action small {
-  margin-top: 2px;
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
 }
 
 .workspace-panel {
@@ -608,6 +533,14 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: var(--md-spacing-4);
   margin-bottom: var(--md-spacing-6);
+}
+
+.workspace-panel__heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--md-spacing-2) var(--md-spacing-3);
 }
 
 .workspace-panel h2 {
@@ -758,9 +691,13 @@ onUnmounted(() => {
     border-radius: var(--md-radius-lg);
   }
 
-  .workspace-action {
-    min-height: 68px;
-    flex-basis: 100%;
+  .workspace-panel__actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .workspace-panel__action {
+    flex: 1 1 128px;
   }
 
   .workspace-grid {

@@ -84,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import {
   NAlert,
   NButton,
@@ -99,17 +99,37 @@ import {
   NTag
 } from 'naive-ui'
 
-import { AdminAPI, type UpdateLog } from '@/api/admin'
+import type { UpdateLog } from '@/api/admin'
 import { useAlert } from '@/composables/useAlert'
+import {
+  useAdminUpdateLogsQuery,
+  useCreateAdminUpdateLogMutation,
+  useDeleteAdminUpdateLogMutation,
+  useUpdateAdminUpdateLogMutation,
+} from '@/queries/admin'
 
 const { showAlert } = useAlert()
 
-const logs = ref<UpdateLog[]>([])
-const loading = ref(false)
-const submitting = ref(false)
+const logsQuery = useAdminUpdateLogsQuery()
+const createLogMutation = useCreateAdminUpdateLogMutation()
+const updateLogMutation = useUpdateAdminUpdateLogMutation()
+const deleteLogMutation = useDeleteAdminUpdateLogMutation()
+const logs = computed<UpdateLog[]>(() => logsQuery.data.value ?? [])
+const loading = computed(() => logsQuery.isLoading.value || logsQuery.isFetching.value)
+const submitting = computed(() => createLogMutation.isPending.value)
 const deletingId = ref<number | null>(null)
 const togglingId = ref<number | null>(null)
-const error = ref<string | null>(null)
+const isErrorDismissed = ref(false)
+const error = computed({
+  get: () => {
+    if (isErrorDismissed.value) return null
+    const queryError = logsQuery.error.value
+    return queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null
+  },
+  set: () => {
+    isErrorDismissed.value = true
+  },
+})
 
 const form = ref({
   content: '',
@@ -124,17 +144,16 @@ const orderedLogs = computed(() => {
   })
 })
 
-const fetchLogs = async () => {
-  loading.value = true
-  error.value = null
-  try {
-    logs.value = await AdminAPI.listUpdateLogs()
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : '获取更新日志失败'
-  } finally {
-    loading.value = false
-  }
+const fetchLogs = () => {
+  logsQuery.refetch()
 }
+
+watch(
+  () => logsQuery.error.value,
+  () => {
+    isErrorDismissed.value = false
+  },
+)
 
 const resetForm = () => {
   form.value.content = ''
@@ -143,27 +162,22 @@ const resetForm = () => {
 
 const addLog = async () => {
   if (!form.value.content.trim()) return
-  submitting.value = true
   try {
-    const created = await AdminAPI.createUpdateLog({
+    await createLogMutation.mutateAsync({
       content: form.value.content.trim(),
       is_pinned: form.value.isPinned
     })
-    logs.value.unshift(created)
     resetForm()
     showAlert('更新日志发布成功', 'success')
   } catch (err) {
     showAlert(err instanceof Error ? err.message : '发布失败', 'error')
-  } finally {
-    submitting.value = false
   }
 }
 
 const deleteLog = async (id: number) => {
   deletingId.value = id
   try {
-    await AdminAPI.deleteUpdateLog(id)
-    logs.value = logs.value.filter((item) => item.id !== id)
+    await deleteLogMutation.mutateAsync(id)
     showAlert('删除成功', 'success')
   } catch (err) {
     showAlert(err instanceof Error ? err.message : '删除失败', 'error')
@@ -175,11 +189,7 @@ const deleteLog = async (id: number) => {
 const togglePin = async (log: UpdateLog, value: boolean) => {
   togglingId.value = log.id
   try {
-    const updated = await AdminAPI.updateUpdateLog(log.id, { is_pinned: value })
-    const index = logs.value.findIndex((item) => item.id === log.id)
-    if (index !== -1) {
-      logs.value.splice(index, 1, updated)
-    }
+    await updateLogMutation.mutateAsync({ id: log.id, data: { is_pinned: value } })
   } catch (err) {
     showAlert(err instanceof Error ? err.message : '更新失败', 'error')
   } finally {
@@ -203,8 +213,6 @@ const formatDate = (date: string) => {
     return date
   }
 }
-
-onMounted(fetchLogs)
 </script>
 
 <style scoped>

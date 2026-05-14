@@ -55,14 +55,18 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
+import { useQueryClient } from '@tanstack/vue-query'
 import { NAlert, NButton, NForm, NFormItem, NInput, NSpace, NSpin } from 'naive-ui'
 
-import { AdminAPI } from '@/api/admin'
 import { useAlert } from '@/composables/useAlert'
 import { useAuthStore } from '@/stores/auth'
+import { useChangePasswordMutation } from '@/queries/admin'
+import { currentUserQueryOptions } from '@/queries/auth'
 
 const authStore = useAuthStore()
+const queryClient = useQueryClient()
 const { showAlert } = useAlert()
+const changePasswordMutation = useChangePasswordMutation()
 
 const form = reactive({
   oldPassword: '',
@@ -70,8 +74,18 @@ const form = reactive({
   confirmPassword: ''
 })
 
-const submitting = ref(false)
-const error = ref<string | null>(null)
+const submitting = computed(() => changePasswordMutation.isPending.value)
+const formError = ref<string | null>(null)
+const error = computed({
+  get: () => {
+    if (formError.value) return formError.value
+    const mutationError = changePasswordMutation.error.value
+    return mutationError instanceof Error ? mutationError.message : mutationError ? String(mutationError) : null
+  },
+  set: (value) => {
+    formError.value = value
+  },
+})
 
 const mustReset = computed(() => authStore.mustChangePassword && authStore.user?.is_admin)
 
@@ -82,38 +96,40 @@ const resetForm = () => {
 }
 
 const handleSubmit = async () => {
-  error.value = null
+  formError.value = null
+  changePasswordMutation.reset()
 
   if (!form.oldPassword.trim() || !form.newPassword.trim()) {
-    error.value = '请填写完整的密码信息'
+    formError.value = '请填写完整的密码信息'
     return
   }
 
   if (form.newPassword.length < 8) {
-    error.value = '新密码长度需至少 8 位'
+    formError.value = '新密码长度需至少 8 位'
     return
   }
 
   if (form.newPassword === form.oldPassword) {
-    error.value = '新密码不能与当前密码相同'
+    formError.value = '新密码不能与当前密码相同'
     return
   }
 
   if (form.newPassword !== form.confirmPassword) {
-    error.value = '两次输入的新密码不一致'
+    formError.value = '两次输入的新密码不一致'
     return
   }
 
-  submitting.value = true
   try {
-    await AdminAPI.changePassword(form.oldPassword, form.newPassword)
-    await authStore.fetchUser()
+    await changePasswordMutation.mutateAsync({
+      oldPassword: form.oldPassword,
+      newPassword: form.newPassword,
+    })
+    const user = await queryClient.fetchQuery(currentUserQueryOptions(authStore.token))
+    authStore.setUser(user)
     resetForm()
     await showAlert('密码已更新，请使用新密码继续操作', 'success')
   } catch (err) {
-    error.value = err instanceof Error ? err.message : '密码更新失败'
-  } finally {
-    submitting.value = false
+    formError.value = err instanceof Error ? err.message : '密码更新失败'
   }
 }
 </script>

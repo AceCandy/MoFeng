@@ -141,7 +141,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, h, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import {
   NAlert,
   NButton,
@@ -163,20 +163,42 @@ import {
   type FormItemRule,
 } from 'naive-ui'
 
-import { AdminAPI, type AdminUser, type UserCreatePayload } from '@/api/admin'
+import type { AdminUser, UserCreatePayload, UserUpdatePayload } from '@/api/admin'
+import {
+  useAdminUsersQuery,
+  useCreateAdminUserMutation,
+  useDeleteAdminUserMutation,
+  useUpdateAdminUserMutation,
+} from '@/queries/admin'
 
 const message = useMessage()
-const users = ref<AdminUser[]>([])
-const loading = ref(false)
-const error = ref<string | null>(null)
+const usersQuery = useAdminUsersQuery()
+const createUserMutation = useCreateAdminUserMutation()
+const updateUserMutation = useUpdateAdminUserMutation()
+const deleteUserMutation = useDeleteAdminUserMutation()
+const users = computed<AdminUser[]>(() => usersQuery.data.value ?? [])
+const loading = computed(() => usersQuery.isLoading.value || usersQuery.isFetching.value)
+const isErrorDismissed = ref(false)
+const error = computed({
+  get: () => {
+    if (isErrorDismissed.value) return null
+    const queryError = usersQuery.error.value
+    return queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null
+  },
+  set: () => {
+    isErrorDismissed.value = true
+  },
+})
 const keyword = ref('')
 const isMobile = ref(false)
 
 const showModal = ref(false)
-const submitting = ref(false)
 const isEditMode = ref(false)
 const editingId = ref<number | null>(null)
 const formRef = ref<FormInst | null>(null)
+const submitting = computed(
+  () => createUserMutation.isPending.value || updateUserMutation.isPending.value,
+)
 
 const formModel = reactive({
   username: '',
@@ -325,17 +347,16 @@ const modalTitle = computed(() => (isEditMode.value ? '编辑用户' : '新建�
 
 const rowKey = (row: AdminUser) => row.id
 
-const fetchUsers = async () => {
-  loading.value = true
-  error.value = null
-  try {
-    users.value = await AdminAPI.listUsers()
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : '获取用户数据失败'
-  } finally {
-    loading.value = false
-  }
+const fetchUsers = () => {
+  usersQuery.refetch()
 }
+
+watch(
+  () => usersQuery.error.value,
+  () => {
+    isErrorDismissed.value = false
+  },
+)
 
 const handleSearch = () => {
   pagination.page = 1
@@ -367,9 +388,8 @@ const handleEdit = (row: AdminUser) => {
 
 const handleDelete = async (id: number) => {
   try {
-    await AdminAPI.deleteUser(id)
+    await deleteUserMutation.mutateAsync(id)
     message.success('删除成功')
-    await fetchUsers()
   } catch (err) {
     message.error(err instanceof Error ? err.message : '删除失败')
   }
@@ -379,10 +399,9 @@ const handleSubmit = () => {
   formRef.value?.validate(async (errors) => {
     if (errors) return
 
-    submitting.value = true
     try {
       if (isEditMode.value && editingId.value) {
-        const payload: any = {
+        const payload: UserUpdatePayload = {
           username: formModel.username,
           is_admin: formModel.is_admin,
           is_active: formModel.is_active,
@@ -390,7 +409,7 @@ const handleSubmit = () => {
         if (formModel.email) payload.email = formModel.email
         if (formModel.password) payload.password = formModel.password
 
-        await AdminAPI.updateUser(editingId.value, payload)
+        await updateUserMutation.mutateAsync({ id: editingId.value, data: payload })
         message.success('更新成功')
       } else {
         const payload: UserCreatePayload = {
@@ -401,15 +420,12 @@ const handleSubmit = () => {
         }
         if (formModel.email) payload.email = formModel.email
 
-        await AdminAPI.createUser(payload)
+        await createUserMutation.mutateAsync(payload)
         message.success('创建成功')
       }
       showModal.value = false
-      await fetchUsers()
     } catch (err) {
       message.error(err instanceof Error ? err.message : '操作失败')
-    } finally {
-      submitting.value = false
     }
   })
 }
@@ -417,7 +433,6 @@ const handleSubmit = () => {
 onMounted(() => {
   updateLayout()
   window.addEventListener('resize', updateLayout)
-  fetchUsers()
 })
 
 onBeforeUnmount(() => {

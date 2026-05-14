@@ -2,7 +2,10 @@
 <template>
   <section class="admin-panel admin-panel--list">
     <div class="admin-panel__header admin-panel__header--toolbar">
-      <n-tag size="small" type="primary" round>共 {{ novels.length }} 项</n-tag>
+      <n-space :size="8" align="center">
+        <n-tag size="small" type="primary" round>共 {{ novels.length }} 项</n-tag>
+        <n-button quaternary size="small" @click="fetchNovels" :loading="loading">刷新</n-button>
+      </n-space>
     </div>
 
     <div class="admin-panel__body">
@@ -68,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { h, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, h, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   NAlert,
@@ -81,12 +84,23 @@ import {
   type DataTableColumns
 } from 'naive-ui'
 
-import { AdminAPI } from '@/api/admin'
 import type { AdminNovelSummary } from '@/api/admin'
+import { useAdminNovelsQuery } from '@/queries/admin'
 
-const novels = ref<AdminNovelSummary[]>([])
-const loading = ref(true)
-const error = ref<string | null>(null)
+const novelsQuery = useAdminNovelsQuery()
+const novels = computed<AdminNovelSummary[]>(() => novelsQuery.data.value ?? [])
+const loading = computed(() => novelsQuery.isLoading.value || novelsQuery.isFetching.value)
+const isErrorDismissed = ref(false)
+const error = computed({
+  get: () => {
+    if (isErrorDismissed.value) return null
+    const queryError = novelsQuery.error.value
+    return queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null
+  },
+  set: () => {
+    isErrorDismissed.value = true
+  },
+})
 const isMobile = ref(false)
 const router = useRouter()
 
@@ -221,22 +235,20 @@ const columns: DataTableColumns<AdminNovelSummary> = [
   }
 ]
 
-const fetchNovels = async () => {
-  loading.value = true
-  error.value = null
-  try {
-    novels.value = await AdminAPI.listNovels()
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '获取小说数据失败'
-  } finally {
-    loading.value = false
-  }
+const fetchNovels = () => {
+  novelsQuery.refetch()
 }
+
+watch(
+  () => novelsQuery.error.value,
+  () => {
+    isErrorDismissed.value = false
+  },
+)
 
 onMounted(() => {
   updateLayout()
   window.addEventListener('resize', updateLayout)
-  fetchNovels()
 })
 
 onBeforeUnmount(() => {

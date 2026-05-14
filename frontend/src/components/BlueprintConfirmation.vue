@@ -142,9 +142,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onUnmounted, inject } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { marked } from 'marked'
-import { useNovelStore } from '@/stores/novel'
+import { useGenerateBlueprintMutation } from '@/queries/novel'
 import { globalAlert } from '@/composables/useAlert'
 
 // 配置 marked
@@ -155,6 +155,7 @@ marked.setOptions({
 
 interface Props {
   aiMessage: string
+  projectId?: string | null
 }
 
 const props = defineProps<Props>()
@@ -164,7 +165,7 @@ const emit = defineEmits<{
   back: []
 }>()
 
-const novelStore = useNovelStore()
+const generateBlueprintMutation = useGenerateBlueprintMutation(() => props.projectId)
 const isGenerating = ref(false)
 const progress = ref(0)
 const timeElapsed = ref(0)
@@ -231,7 +232,7 @@ const generateBlueprint = async () => {
   }, maxTime * 1000)
 
   try {
-    const response = await novelStore.generateBlueprint()
+    const response = await generateBlueprintMutation.mutateAsync()
 
     // API成功后，快速完成进度条到100%
     if (progressTimer) {

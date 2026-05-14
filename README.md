@@ -10,10 +10,20 @@ Arboris Novel 是一个用于长篇小说创作的全栈应用，支持从概念
 
 当前技术栈：
 
-- 前端：Vue 3 + Vite + TypeScript + Pinia + Vue Router + Naive UI
+- 前端：Vue 3 + Vite + TypeScript + TanStack Query for Vue + Pinia + Vue Router + Naive UI
 - 后端：FastAPI + SQLAlchemy + Pydantic Settings
 - 存储：SQLite / MySQL + libsql 向量检索
 - AI：OpenAI 兼容接口 + OpenAI / Ollama Embedding
+
+## 前端状态管理
+
+前端已经完成 TanStack Query for Vue 改造：
+
+- 接口请求、服务端缓存、刷新、重试、loading / error 状态由 TanStack Query 管理
+- 小说项目、章节、详情页材料、管理后台、LLM 设置、登录注册与更新日志均通过 Query 组合函数访问
+- Pinia 只保留客户端状态，例如登录令牌、当前用户、灵感流程临时会话状态
+- 全局 Query 策略位于 `frontend/src/lib/queryClient.ts`
+- 业务 Query 组合函数位于 `frontend/src/queries/`
 
 ## 核心创作流程
 
@@ -161,10 +171,12 @@ Docker 部署使用 `deploy/.env.example` 作为 `deploy/.env` 模板。
 │  └─ env.example
 ├─ frontend/                 # Vue 前端
 │  ├─ src/
-│  │  ├─ api/
+│  │  ├─ api/                # API 客户端与类型
 │  │  ├─ components/
+│  │  ├─ lib/                # Query Client 等前端基础设施
+│  │  ├─ queries/            # TanStack Query 组合函数
 │  │  ├─ router/
-│  │  ├─ stores/
+│  │  ├─ stores/             # Pinia 客户端状态
 │  │  └─ views/
 ├─ deploy/                   # Docker / Nginx / Compose
 ├─ docs/                     # 补充文档

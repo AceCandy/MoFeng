@@ -44,16 +44,14 @@
       {{ feedback.message }}
     </div>
 
-    <div class="model-routing__readiness" aria-label="模型配置状态">
-      <div
-        v-for="card in sectionReadinessCards"
-        :key="card.label"
-        :class="['model-routing__readiness-item', `is-${card.tone}`]"
-        :title="card.description"
-      >
-        <span class="model-routing__readiness-label">{{ card.label }}</span>
-        <strong>{{ card.value }}</strong>
-      </div>
+    <div
+      :class="['model-routing__readiness', `is-${sectionReadinessSummary.tone}`]"
+      :title="sectionReadinessSummary.description"
+      aria-label="模型配置状态"
+    >
+      <span class="model-routing__readiness-label">{{ sectionReadinessSummary.label }}</span>
+      <strong class="model-routing__readiness-value">{{ sectionReadinessSummary.value }}</strong>
+      <span class="model-routing__readiness-detail">{{ sectionReadinessSummary.description }}</span>
     </div>
 
     <template v-if="activeSection === 'routes'">
@@ -407,24 +405,26 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import {
-  createProvider,
-  createUserModel,
-  deleteProvider,
-  deleteUserModel,
-  getLLMConfigBundle,
-  getProviderModels,
-  saveStageRoutes,
-  updateProvider,
-  updateUserModel,
-  type ProviderCreate,
-  type ProviderType,
-  type UserAIModel,
-  type UserAIModelCreate,
-  type UserModelProvider,
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import type {
+  ProviderCreate,
+  ProviderType,
+  UserAIModel,
+  UserAIModelCreate,
+  UserModelProvider,
 } from '@/api/llm'
 import { globalAlert } from '@/composables/useAlert'
+import {
+  useDeleteProviderMutation,
+  useDeleteUserModelMutation,
+  useLLMConfigBundleQuery,
+  useProviderModelsQuery,
+  useSaveProviderMutation,
+  useSaveStageRoutesMutation,
+  useSaveUserModelMutation,
+  useToggleProviderMutation,
+  useUpdateUserModelMutation,
+} from '@/queries/llm'
 
 type Capability = 'chat' | 'embedding'
 type RoutingSection = 'llm' | 'embedding' | 'routes'
@@ -457,7 +457,7 @@ interface ProviderFetchState {
   error: string
 }
 
-interface ReadinessCard {
+interface ReadinessSummary {
   label: string
   value: string
   description: string
@@ -615,13 +615,26 @@ const stageGroups: StageGroup[] = [
   },
 ]
 
-const providers = ref<UserModelProvider[]>([])
-const models = ref<UserAIModel[]>([])
+const bundleQuery = useLLMConfigBundleQuery()
+const saveProviderMutation = useSaveProviderMutation()
+const toggleProviderMutation = useToggleProviderMutation()
+const deleteProviderMutation = useDeleteProviderMutation()
+const saveUserModelMutation = useSaveUserModelMutation()
+const updateUserModelMutation = useUpdateUserModelMutation()
+const deleteUserModelMutation = useDeleteUserModelMutation()
+const saveStageRoutesMutation = useSaveStageRoutesMutation()
+const providers = computed<UserModelProvider[]>(() => bundleQuery.data.value?.providers ?? [])
+const models = computed<UserAIModel[]>(() => bundleQuery.data.value?.models ?? [])
 const routeSelections = reactive<Record<string, string>>({})
 const providerFetchStates = reactive<Record<number, ProviderFetchState>>({})
-const isLoading = ref(false)
-const isSavingProvider = ref(false)
-const isSavingRoutes = ref(false)
+const isLoading = computed(() => bundleQuery.isLoading.value || bundleQuery.isFetching.value)
+const isSavingProvider = computed(
+  () =>
+    saveProviderMutation.isPending.value ||
+    toggleProviderMutation.isPending.value ||
+    deleteProviderMutation.isPending.value,
+)
+const isSavingRoutes = computed(() => saveStageRoutesMutation.isPending.value)
 const editingProviderId = ref<number | null>(null)
 const providerFormMode = ref<ProviderFormMode>(null)
 const activeModelPickerProviderId = ref<number | null>(null)
@@ -693,73 +706,33 @@ const sectionDescription = computed(() => {
   }
   return '先保存供应商，再拉取模型并指定主模型，写作流程才能稳定生成正文。'
 })
-const sectionReadinessCards = computed<ReadinessCard[]>(() => {
+const sectionReadinessSummary = computed<ReadinessSummary>(() => {
   if (activeSection.value === 'routes') {
-    return [
-      {
-        label: '已覆盖阶段',
-        value: `${configuredRouteCount.value}/${allStageKeys.value.length}`,
-        description: configuredRouteCount.value > 0 ? '其余阶段使用主模型' : '当前全部使用主模型',
-        tone: configuredRouteCount.value > 0 ? 'success' : 'neutral',
-      },
-      {
-        label: '可用文本模型',
-        value: String(enabledChatModels.value.length),
-        description: primaryChatModel.value ? '可用于阶段覆盖' : '先设置主模型',
-        tone: enabledChatModels.value.length > 0 ? 'success' : 'warning',
-      },
-      {
-        label: '主模型',
-        value: modelDisplayName(primaryChatModel.value),
-        description: primaryChatModel.value ? '未覆盖阶段的默认选择' : '阶段路由暂不可用',
-        tone: primaryChatModel.value ? 'success' : 'warning',
-      },
-    ]
+    return {
+      label: '阶段覆盖',
+      value: `${configuredRouteCount.value}/${allStageKeys.value.length}`,
+      description: primaryChatModel.value
+        ? `未覆盖阶段使用 ${modelDisplayName(primaryChatModel.value)}`
+        : '先设置主模型，阶段路由才可用',
+      tone: primaryChatModel.value ? 'success' : 'warning',
+    }
   }
 
   if (activeSection.value === 'embedding') {
-    return [
-      {
-        label: '当前检索模型',
-        value: modelDisplayName(defaultEmbeddingModel.value),
-        description: defaultEmbeddingModel.value ? '记忆检索会使用它' : '尚未选择向量模型',
-        tone: defaultEmbeddingModel.value ? 'success' : 'warning',
-      },
-      {
-        label: '可用向量模型',
-        value: String(enabledEmbeddingModels.value.length),
-        description: enabledEmbeddingModels.value.length > 0 ? '已进入模型池' : '需要先拉取并选择',
-        tone: enabledEmbeddingModels.value.length > 0 ? 'success' : 'warning',
-      },
-      {
-        label: '供应商',
-        value: String(activeProviders.value.length),
-        description: activeProviders.value.length > 0 ? '可维护 API Key' : '尚未配置',
-        tone: activeProviders.value.length > 0 ? 'success' : 'warning',
-      },
-    ]
+    return {
+      label: '当前检索模型',
+      value: modelDisplayName(defaultEmbeddingModel.value),
+      description: `${enabledEmbeddingModels.value.length} 个可用向量模型 · ${activeProviders.value.length} 个供应商`,
+      tone: defaultEmbeddingModel.value ? 'success' : 'warning',
+    }
   }
 
-  return [
-    {
-      label: '主模型',
-      value: modelDisplayName(primaryChatModel.value),
-      description: primaryChatModel.value ? '默认文本生成模型' : '生成任务会被阻塞',
-      tone: primaryChatModel.value ? 'success' : 'warning',
-    },
-    {
-      label: '可用文本模型',
-      value: String(enabledChatModels.value.length),
-      description: enabledChatModels.value.length > 0 ? '可被阶段路由使用' : '需要先拉取并勾选',
-      tone: enabledChatModels.value.length > 0 ? 'success' : 'warning',
-    },
-    {
-      label: '供应商',
-      value: String(activeProviders.value.length),
-      description: activeProviders.value.length > 0 ? '可维护 API Key' : '尚未配置',
-      tone: activeProviders.value.length > 0 ? 'success' : 'warning',
-    },
-  ]
+  return {
+    label: '主模型',
+    value: modelDisplayName(primaryChatModel.value),
+    description: `${enabledChatModels.value.length} 个可用文本模型 · ${activeProviders.value.length} 个供应商`,
+    tone: primaryChatModel.value ? 'success' : 'warning',
+  }
 })
 
 const providerFetchState = (providerId: number): ProviderFetchState => {
@@ -873,6 +846,12 @@ const assignProviderForm = (next: ProviderForm) => {
 const activeModelCapability = (): Capability =>
   activeSection.value === 'embedding' ? 'embedding' : 'chat'
 
+const providerModelsQuery = useProviderModelsQuery(
+  () => activeModelPickerProviderId.value,
+  () => activeModelCapability(),
+  false,
+)
+
 const createProviderCapabilities = (): Record<Capability, boolean> => {
   const capability = activeModelCapability()
   return {
@@ -894,26 +873,26 @@ const closeModelPicker = () => {
   modelPickerQuery.value = ''
 }
 
-const loadBundle = async () => {
-  isLoading.value = true
-  try {
-    const bundle = await getLLMConfigBundle()
-    providers.value = bundle.providers
-    models.value = bundle.models
-    for (const key of allStageKeys.value) {
-      routeSelections[key] = ''
-    }
-    for (const route of bundle.stage_routes) {
-      if (allStageKeys.value.includes(route.stage)) {
-        routeSelections[route.stage] = String(route.model_id)
-      }
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : '未知错误'
-    setFeedback('error', `读取模型设置失败：${message}`)
-  } finally {
-    isLoading.value = false
+const syncRouteSelectionsFromBundle = () => {
+  const bundle = bundleQuery.data.value
+  for (const key of allStageKeys.value) {
+    routeSelections[key] = ''
   }
+  for (const route of bundle?.stage_routes ?? []) {
+    if (allStageKeys.value.includes(route.stage)) {
+      routeSelections[route.stage] = String(route.model_id)
+    }
+  }
+}
+
+const loadBundle = async () => {
+  const result = await bundleQuery.refetch()
+  if (result.error) {
+    const message = result.error instanceof Error ? result.error.message : '未知错误'
+    setFeedback('error', `读取模型设置失败：${message}`)
+    return
+  }
+  syncRouteSelectionsFromBundle()
 }
 
 const beginCreateProvider = () => {
@@ -954,47 +933,41 @@ const saveProviderForm = async () => {
     return
   }
 
-  isSavingProvider.value = true
   try {
-    const saved = editingProviderId.value
-      ? await updateProvider(editingProviderId.value, {
+    await saveProviderMutation.mutateAsync({
+      id: editingProviderId.value,
+      data: editingProviderId.value
+        ? {
           name: payload.name,
           provider_type: payload.provider_type,
           base_url: payload.base_url,
           ...(providerForm.api_key.trim() ? { api_key: payload.api_key } : {}),
           is_enabled: payload.is_enabled,
-        })
-      : await createProvider(payload)
-
-    const index = providers.value.findIndex((provider) => provider.id === saved.id)
-    if (index >= 0) {
-      providers.value[index] = saved
-    } else {
-      providers.value.push(saved)
-    }
+        }
+        : payload,
+    })
+    await loadBundle()
     cancelProviderForm()
     setFeedback('success', '供应商已保存。')
     emit('saved')
   } catch (error) {
     const message = error instanceof Error ? error.message : '未知错误'
     setFeedback('error', `供应商保存失败：${message}`)
-  } finally {
-    isSavingProvider.value = false
   }
 }
 
 const toggleProviderEnabled = async (provider: UserModelProvider) => {
-  isSavingProvider.value = true
   try {
-    await updateProvider(provider.id, { is_enabled: !provider.is_enabled })
+    await toggleProviderMutation.mutateAsync({
+      id: provider.id,
+      is_enabled: !provider.is_enabled,
+    })
     await loadBundle()
     setFeedback('success', provider.is_enabled ? '供应商已停用。' : '供应商已启用。')
     emit('saved')
   } catch (error) {
     const message = error instanceof Error ? error.message : '未知错误'
     setFeedback('error', `供应商状态更新失败：${message}`)
-  } finally {
-    isSavingProvider.value = false
   }
 }
 
@@ -1007,9 +980,8 @@ const deleteProviderFromCard = async (provider: UserModelProvider) => {
     return
   }
 
-  isSavingProvider.value = true
   try {
-    await deleteProvider(provider.id)
+    await deleteProviderMutation.mutateAsync(provider.id)
     if (editingProviderId.value === provider.id) {
       cancelProviderForm()
     }
@@ -1020,8 +992,6 @@ const deleteProviderFromCard = async (provider: UserModelProvider) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : '未知错误'
     setFeedback('error', `删除供应商失败：${message}`)
-  } finally {
-    isSavingProvider.value = false
   }
 }
 
@@ -1031,7 +1001,12 @@ const loadProviderModels = async (provider: UserModelProvider) => {
   state.isLoading = true
   state.error = ''
   try {
-    state.modelsByCapability[capability] = await getProviderModels(provider.id)
+    activeModelPickerProviderId.value = provider.id
+    const result = await providerModelsQuery.refetch()
+    if (result.error) {
+      throw result.error
+    }
+    state.modelsByCapability[capability] = result.data ?? []
     if (state.modelsByCapability[capability].length === 0) {
       state.error = '未拉取到模型，请检查 API URL 与 API Key。'
     }
@@ -1095,10 +1070,13 @@ const upsertModelForCapability = async (
       ? chatModelForName(provider.id, modelName)
       : embeddingModelForName(provider.id, modelName)
   if (!existing) {
-    return createUserModel(createModelPayload(provider, modelName, capability))
+    return saveUserModelMutation.mutateAsync(createModelPayload(provider, modelName, capability))
   }
   if (!existing.is_enabled) {
-    return updateUserModel(existing.id, { is_enabled: true })
+    return updateUserModelMutation.mutateAsync({
+      id: existing.id,
+      data: { is_enabled: true },
+    })
   }
   return existing
 }
@@ -1115,7 +1093,10 @@ const toggleChatModel = async (provider: UserModelProvider, modelName: string, e
         ;(event.target as HTMLInputElement).checked = true
         return
       }
-      await updateUserModel(existing.id, { is_enabled: false })
+      await updateUserModelMutation.mutateAsync({
+        id: existing.id,
+        data: { is_enabled: false },
+      })
     }
     await loadBundle()
     emit('saved')
@@ -1130,7 +1111,10 @@ const setPrimaryChatModel = async (model?: UserAIModel) => {
     return
   }
   try {
-    await updateUserModel(model.id, { is_enabled: true, is_default_chat: true })
+    await updateUserModelMutation.mutateAsync({
+      id: model.id,
+      data: { is_enabled: true, is_default_chat: true },
+    })
     await loadBundle()
     emit('saved')
   } catch (error) {
@@ -1153,14 +1137,20 @@ const selectEmbeddingModel = async (provider: UserModelProvider, modelName: stri
     const embeddingModels = models.value.filter((model) => model.capabilities.embedding)
     await Promise.all(
       embeddingModels.map((model) =>
-        updateUserModel(model.id, {
-          is_enabled: model.id === selected.id,
-          is_default_embedding: model.id === selected.id,
+        updateUserModelMutation.mutateAsync({
+          id: model.id,
+          data: {
+            is_enabled: model.id === selected.id,
+            is_default_embedding: model.id === selected.id,
+          },
         }),
       ),
     )
     if (!embeddingModels.some((model) => model.id === selected.id)) {
-      await updateUserModel(selected.id, { is_enabled: true, is_default_embedding: true })
+      await updateUserModelMutation.mutateAsync({
+        id: selected.id,
+        data: { is_enabled: true, is_default_embedding: true },
+      })
     }
     await loadBundle()
     emit('saved')
@@ -1194,7 +1184,7 @@ const deleteModelForActiveSection = async (provider: UserModelProvider, modelNam
   }
 
   try {
-    await deleteUserModel(model.id)
+    await deleteUserModelMutation.mutateAsync(model.id)
     await loadBundle()
     setFeedback('success', '模型已删除。')
     emit('saved')
@@ -1209,9 +1199,8 @@ const saveRoutes = async () => {
     .filter(([, modelId]) => modelId)
     .map(([stage, modelId]) => ({ stage, model_id: Number(modelId) }))
 
-  isSavingRoutes.value = true
   try {
-    const savedRoutes = await saveStageRoutes({ routes })
+    const savedRoutes = await saveStageRoutesMutation.mutateAsync({ routes })
     for (const key of allStageKeys.value) {
       routeSelections[key] = ''
     }
@@ -1225,13 +1214,28 @@ const saveRoutes = async () => {
   } catch (error) {
     const message = error instanceof Error ? error.message : '未知错误'
     setFeedback('error', `阶段路由保存失败：${message}`)
-  } finally {
-    isSavingRoutes.value = false
   }
 }
 
 const providerName = (providerId: number): string =>
   providers.value.find((provider) => provider.id === providerId)?.name || `供应商 ${providerId}`
+
+watch(
+  () => bundleQuery.data.value,
+  () => {
+    syncRouteSelectionsFromBundle()
+  },
+  { immediate: true },
+)
+
+watch(
+  () => bundleQuery.error.value,
+  (error) => {
+    if (!error) return
+    const message = error instanceof Error ? error.message : '未知错误'
+    setFeedback('error', `读取模型设置失败：${message}`)
+  },
+)
 
 onMounted(() => {
   void loadBundle()
@@ -1286,31 +1290,21 @@ onMounted(() => {
 }
 
 .model-routing__readiness {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--md-spacing-3);
-  padding-bottom: var(--md-spacing-4);
-  border-bottom: 1px solid var(--md-outline-variant);
-}
-
-.model-routing__readiness-item {
-  display: grid;
-  align-content: start;
+  display: flex;
   min-width: 0;
-  gap: var(--md-spacing-1);
-  min-height: 76px;
-  padding: var(--md-spacing-3) var(--md-spacing-4);
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-md);
-  background: var(--md-surface);
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--md-spacing-2) var(--md-spacing-4);
+  padding: var(--md-spacing-3) var(--md-spacing-4) var(--md-spacing-4);
+  border-bottom: 1px solid var(--md-outline-variant);
   color: var(--md-on-surface-variant);
 }
 
-.model-routing__readiness-item.is-success strong {
+.model-routing__readiness.is-success .model-routing__readiness-value {
   color: var(--md-success);
 }
 
-.model-routing__readiness-item.is-warning strong {
+.model-routing__readiness.is-warning .model-routing__readiness-value {
   color: var(--md-on-warning-container);
 }
 
@@ -1320,7 +1314,7 @@ onMounted(() => {
   font-weight: 600;
 }
 
-.model-routing__readiness-item strong {
+.model-routing__readiness-value {
   min-width: 0;
   overflow: hidden;
   color: var(--md-on-surface);
@@ -1328,6 +1322,12 @@ onMounted(() => {
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.model-routing__readiness-detail {
+  min-width: min(100%, 240px);
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-small);
 }
 
 .model-routing__panel,
@@ -1787,9 +1787,6 @@ onMounted(() => {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .model-routing__readiness {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 @media (max-width: 640px) {

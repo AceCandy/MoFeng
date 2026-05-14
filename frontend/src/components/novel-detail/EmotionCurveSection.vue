@@ -242,40 +242,36 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 import Chart from 'chart.js/auto'
-
-interface EmotionPoint {
-  chapter_number: number
-  title: string
-  emotion_type: string
-  intensity: number
-  narrative_phase?: string
-  description: string
-}
-
-interface EmotionCurveResponse {
-  project_id: string
-  project_title: string
-  total_chapters: number
-  emotion_points: EmotionPoint[]
-  average_intensity: number
-  emotion_distribution: Record<string, number>
-}
+import { useAnalyzeEmotionMutation, useEmotionCurveQuery } from '@/queries/novel'
 
 const route = useRoute()
-const authStore = useAuthStore()
 const projectId = route.params.id as string
 
 const chartCanvas = ref<HTMLCanvasElement | null>(null)
-const isLoading = ref(false)
-const error = ref<string | null>(null)
-const emotionPoints = ref<EmotionPoint[]>([])
-const totalChapters = ref(0)
-const averageIntensity = ref(0)
-const emotionDistribution = ref<Record<string, number>>({})
+const emotionQuery = useEmotionCurveQuery(() => projectId)
+const analyzeEmotionMutation = useAnalyzeEmotionMutation(() => projectId)
+const isLoading = computed(
+  () =>
+    emotionQuery.isLoading.value ||
+    emotionQuery.isFetching.value ||
+    analyzeEmotionMutation.isPending.value,
+)
+const error = computed(() => {
+  const queryError = analyzeEmotionMutation.error.value || emotionQuery.error.value
+  return queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null
+})
+const emotionData = computed(() => emotionQuery.data.value ?? null)
+const emotionPoints = computed(() => emotionData.value?.emotion_points ?? [])
+const totalChapters = computed(() => emotionData.value?.total_chapters ?? 0)
+const averageIntensity = computed(() =>
+  emotionData.value ? Number.parseFloat(emotionData.value.average_intensity.toFixed(2)) : 0,
+)
+const emotionDistribution = computed<Record<string, number>>(
+  () => emotionData.value?.emotion_distribution ?? {},
+)
 let chartInstance: any = null
 
 const EMOTION_KEY_MAP: { [key: string]: string } = {
@@ -330,67 +326,6 @@ const toggleEmotion = (key: string) => {
     selectedEmotions.value.push(key)
   }
   updateChart()
-}
-
-const fetchEmotionData = async (useAI = false) => {
-  isLoading.value = true
-  error.value = null
-
-  try {
-    const endpoint = useAI
-      ? `/api/analytics/${projectId}/analyze-emotion-ai`
-      : `/api/analytics/${projectId}/emotion-curve`
-
-    const method = useAI ? 'POST' : 'GET'
-
-    const response = await fetch(endpoint, {
-      method,
-      headers: {
-        Authorization: `Bearer ${authStore.token}`,
-        'Content-Type': 'application/json',
-      },
-    })
-
-    if (!response.ok) {
-      let errorMessage = '获取情感数据失败'
-      try {
-        const errorData = await response.json()
-        // 处理422错误（参数校验失败）
-        if (response.status === 422 && errorData.detail) {
-          if (Array.isArray(errorData.detail)) {
-            errorMessage = errorData.detail.map((d: any) => d.msg).join('; ')
-          } else if (typeof errorData.detail === 'string') {
-            errorMessage = errorData.detail
-          }
-        } else if (errorData.detail) {
-          errorMessage = errorData.detail
-        }
-      } catch (e) {
-        console.error('Error parsing error response:', e)
-      }
-      throw new Error(errorMessage)
-    }
-
-    const data: EmotionCurveResponse = await response.json()
-    emotionPoints.value = data.emotion_points
-    totalChapters.value = data.total_chapters
-    averageIntensity.value = parseFloat(data.average_intensity.toFixed(2))
-    emotionDistribution.value = data.emotion_distribution
-
-    // 确保在数据加载后更新图表
-    nextTick(() => {
-      if (chartInstance) {
-        updateChart()
-      } else {
-        initChart()
-      }
-    })
-  } catch (err: any) {
-    error.value = err.message || '加载情感数据时发生错误'
-    console.error('Failed to fetch emotion data:', err)
-  } finally {
-    isLoading.value = false
-  }
 }
 
 const updateChart = () => {
@@ -514,16 +449,12 @@ const initChart = () => {
 }
 
 const refreshData = () => {
-  fetchEmotionData(false)
+  emotionQuery.refetch()
 }
 
 const useAIAnalysis = () => {
-  fetchEmotionData(true)
+  analyzeEmotionMutation.mutate()
 }
-
-onMounted(() => {
-  fetchEmotionData()
-})
 
 watch(
   emotionPoints,

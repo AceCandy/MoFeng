@@ -7,6 +7,8 @@ import NovelDetail from '../views/NovelDetail.vue'
 import Login from '../views/Login.vue'
 import Register from '../views/Register.vue'
 import { useAuthStore } from '@/stores/auth'
+import { queryClient } from '@/lib/queryClient'
+import { currentUserQueryOptions } from '@/queries/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -129,12 +131,14 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
-  // Attempt to fetch user info if token exists but user info is not loaded
+  // 有 token 但缺少用户信息时，通过 Query 缓存恢复会话。
   if (authStore.token && !authStore.user) {
     try {
-      await authStore.fetchUser()
+      const user = await queryClient.fetchQuery(currentUserQueryOptions(authStore.token))
+      authStore.setUser(user)
     } catch {
       // 登录态恢复失败时交由后续守卫重定向，避免产品界面产生控制台噪声。
+      authStore.logout()
     }
   }
 

@@ -2,11 +2,14 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { useQueryClient } from '@tanstack/vue-query'
 import { useAuthStore } from '@/stores/auth'
+import { clearAuthQueryCache } from '@/queries/auth'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const queryClient = useQueryClient()
 const isMobileNavOpen = ref(false)
 const isMobileShell = ref(false)
 
@@ -45,7 +48,6 @@ const navigationItems = computed(() => {
 })
 
 const pageLabel = computed(() => String(route.meta.label || '工作台'))
-const pageDescription = computed(() => String(route.meta.description || ''))
 const isProjectContext = computed(() =>
   ['project-detail', 'project-write', 'admin-project-detail'].includes(String(route.name || '')),
 )
@@ -56,6 +58,7 @@ const closeMobileNav = () => {
 
 const logout = () => {
   authStore.logout()
+  clearAuthQueryCache(queryClient)
   router.push('/login')
 }
 
@@ -93,7 +96,6 @@ onUnmounted(() => {
         <div class="app-shell__brand-mark" aria-hidden="true">A</div>
         <div class="app-shell__brand-copy">
           <p class="app-shell__brand-title">Arboris Novel</p>
-          <p class="app-shell__brand-subtitle">安静写作台</p>
         </div>
         <button
           type="button"
@@ -108,7 +110,6 @@ onUnmounted(() => {
       </div>
 
       <nav class="app-shell__nav" aria-label="主导航">
-        <p class="app-shell__nav-label">创作流程</p>
         <RouterLink
           v-for="item in navigationItems"
           :key="item.path"
@@ -204,9 +205,7 @@ onUnmounted(() => {
         </button>
         <div class="app-shell__workspace-context">
           <div class="app-shell__title-block">
-            <p class="app-shell__eyebrow">当前区域</p>
             <h1>{{ pageLabel }}</h1>
-            <p v-if="pageDescription">{{ pageDescription }}</p>
           </div>
         </div>
       </header>

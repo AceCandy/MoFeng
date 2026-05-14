@@ -255,6 +255,60 @@ export interface DeleteNovelsResponse {
   message: string
 }
 
+export interface EmotionPoint {
+  chapter_number: number
+  title: string
+  emotion_type: string
+  intensity: number
+  narrative_phase?: string
+  description: string
+}
+
+export interface EmotionCurveResponse {
+  project_id: string
+  project_title: string
+  total_chapters: number
+  emotion_points: EmotionPoint[]
+  average_intensity: number
+  emotion_distribution: Record<string, number>
+}
+
+export interface Foreshadowing {
+  id: string
+  description: string
+  planted_chapter: number
+  planted_chapter_title: string
+  expected_payoff_chapter?: number
+  actual_payoff_chapter?: number
+  status: 'planted' | 'paid_off' | 'overdue'
+  importance: 'short' | 'medium' | 'long'
+}
+
+export interface ForeshadowingResponse {
+  project_id: string
+  project_title: string
+  total_foreshadowings: number
+  planted_count: number
+  paid_off_count: number
+  overdue_count: number
+  foreshadowings: Foreshadowing[]
+}
+
+export interface ForeshadowingDbItem {
+  id: number | string
+  chapter_number: number
+  content?: string
+  type?: string
+  status?: string
+  resolved_chapter_number?: number | null
+  author_note?: string | null
+}
+
+export interface ForeshadowingDbListResponse {
+  total: number
+  data: ForeshadowingDbItem[]
+}
+
 // 内容型Section（对应后端NovelSectionType枚举）
 export type NovelSectionType = 'overview' | 'world_setting' | 'characters' | 'relationships' | 'chapter_outline' | 'chapters'
 
@@ -273,6 +327,7 @@ export interface NovelSectionResponse {
 const NOVELS_BASE = `${API_BASE_URL}${API_PREFIX}/novels`
 const WRITER_PREFIX = '/api/writer'
 const WRITER_BASE = `${API_BASE_URL}${WRITER_PREFIX}/novels`
+const ANALYTICS_BASE = `${API_BASE_URL}${API_PREFIX}/analytics`
 
 export class NovelAPI {
   static async createNovel(title: string, initialPrompt: string): Promise<NovelProject> {
@@ -447,6 +502,24 @@ export class NovelAPI {
         content: content
       })
     })
+  }
+
+  static async getEmotionCurve(projectId: string): Promise<EmotionCurveResponse> {
+    return request(`${ANALYTICS_BASE}/${projectId}/emotion-curve`)
+  }
+
+  static async analyzeEmotionAI(projectId: string): Promise<EmotionCurveResponse> {
+    return request(`${ANALYTICS_BASE}/${projectId}/analyze-emotion-ai`, {
+      method: 'POST'
+    })
+  }
+
+  static async getForeshadowings(projectId: string): Promise<ForeshadowingDbListResponse> {
+    return request(`${NOVELS_BASE}/${projectId}/foreshadowings?limit=500`)
+  }
+
+  static async getForeshadowingAnalytics(projectId: string): Promise<ForeshadowingResponse> {
+    return request(`${ANALYTICS_BASE}/${projectId}/foreshadowing`)
   }
 }
 

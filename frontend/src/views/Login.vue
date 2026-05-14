@@ -114,32 +114,32 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
 import TypewriterEffect from '@/components/TypewriterEffect.vue'
+import { useAuthOptionsQuery, useLoginMutation } from '@/queries/auth'
 
 const username = ref('')
 const password = ref('')
 const error = ref('')
-const isLoading = ref(false)
 const router = useRouter()
-const authStore = useAuthStore()
-const allowRegistration = computed(() => authStore.allowRegistration)
-const enableLinuxdoLogin = computed(() => authStore.enableLinuxdoLogin)
-
-// 首屏自动拉取认证配置，确保登录页动态展示开关
-onMounted(() => {
-  authStore.fetchAuthOptions()
-})
+const authOptionsQuery = useAuthOptionsQuery()
+const loginMutation = useLoginMutation()
+const isLoading = computed(() => loginMutation.isPending.value)
+const allowRegistration = computed(() => authOptionsQuery.data.value?.allow_registration ?? true)
+const enableLinuxdoLogin = computed(
+  () => authOptionsQuery.data.value?.enable_linuxdo_login ?? false,
+)
 
 const handleLogin = async () => {
   error.value = ''
-  isLoading.value = true
+  loginMutation.reset()
   try {
-    const mustChange = await authStore.login(username.value, password.value)
-    const user = authStore.user
-    if (user?.is_admin && (authStore.mustChangePassword || mustChange)) {
+    const result = await loginMutation.mutateAsync({
+      username: username.value,
+      password: password.value,
+    })
+    if (result.user.is_admin && result.mustChangePassword) {
       await router.push({ name: 'admin', query: { tab: 'password' } })
     } else {
       await router.push('/workspace')
@@ -152,8 +152,6 @@ const handleLogin = async () => {
     } else {
       error.value = '登录失败，请检查您的用户名和密码。'
     }
-  } finally {
-    isLoading.value = false
   }
 }
 </script>

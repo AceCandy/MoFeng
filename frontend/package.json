@@ -17,6 +17,7 @@
   "dependencies": {
     "@fontsource/noto-sans-sc": "^5.2.8",
     "@headlessui/vue": "^1.7.23",
+    "@tanstack/vue-query": "^5.100.10",
     "@types/marked": "^5.0.2",
     "chart.js": "^4.5.1",
     "marked": "^16.3.0",
