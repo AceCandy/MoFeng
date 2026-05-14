@@ -4,7 +4,7 @@
 set -e
 
 echo "========================================="
-echo "AI-Novel Docker 部署脚本"
+echo "MoFeng Docker 部署脚本"
 echo "========================================="
 
 # 颜色定义
@@ -87,7 +87,7 @@ if [ "$DB_PROVIDER" = "mysql" ]; then
     COMPOSE_PROFILES="--profile mysql"
     echo "  MySQL 主机: ${MYSQL_HOST:-db}"
     echo "  MySQL 端口: ${MYSQL_PORT:-3306}"
-    echo "  MySQL 数据库: ${MYSQL_DATABASE:-arboris}"
+    echo "  MySQL 数据库: ${MYSQL_DATABASE:-mofeng}"
 else
     COMPOSE_PROFILES=""
     echo "  使用 SQLite（开发模式）"

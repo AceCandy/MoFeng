@@ -34,7 +34,7 @@ ALTER TABLE chapter_outlines ADD COLUMN metadata JSON NULL;
 
 ```bash
 # 1. 拉取最新代码
-cd /path/to/AI-novel
+cd /path/to/MoFeng
 git pull origin main
 
 # 2. 重新构建并启动容器
@@ -124,7 +124,7 @@ docker-compose logs -f backend
 如果新版本出现问题，可以回滚到上一个版本：
 
 ```bash
-cd /path/to/AI-novel
+cd /path/to/MoFeng
 git checkout 794a304  # 上一个稳定版本
 docker-compose down
 docker-compose build --no-cache

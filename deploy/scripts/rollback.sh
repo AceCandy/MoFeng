@@ -4,7 +4,7 @@
 set -e
 
 echo "========================================="
-echo "AI-Novel 回滚脚本"
+echo "MoFeng 回滚脚本"
 echo "========================================="
 
 # 颜色定义
@@ -71,9 +71,9 @@ source .env
 # 数据库连接信息
 DB_HOST="${MYSQL_HOST:-localhost}"
 DB_PORT="${MYSQL_PORT:-3306}"
-DB_USER="${MYSQL_USER:-arboris}"
+DB_USER="${MYSQL_USER:-mofeng}"
 DB_PASSWORD="${MYSQL_PASSWORD}"
-DB_NAME="${MYSQL_DATABASE:-arboris}"
+DB_NAME="${MYSQL_DATABASE:-mofeng}"
 
 if [ -z "$DB_PASSWORD" ]; then
     echo -e "${RED}错误：未设置 MYSQL_PASSWORD 环境变量${NC}"

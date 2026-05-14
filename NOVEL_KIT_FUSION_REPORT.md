@@ -1,12 +1,12 @@
 # Novel-Kit 功能融合报告
 
-> 本报告记录了从 [novel-kit](https://github.com/t59688/novel-kit) 项目中提取并融合到 AI-Novel 系统的全部优势功能。
+> 本报告记录了从 [novel-kit](https://github.com/t59688/novel-kit) 项目中提取并融合到 MoFeng 系统的全部优势功能。
 
 ---
 
 ## 一、融合概览
 
-| 功能模块 | 原 AI-Novel | Novel-Kit 优势 | 融合后状态 |
+| 功能模块 | 原 MoFeng | Novel-Kit 优势 | 融合后状态 |
 |----------|-------------|----------------|------------|
 | 创作规则 | 无 | 小说宪法系统 | ✅ 已实现 |
 | 文本风格 | 基础提示词 | Writer 人格系统 | ✅ 已实现 |

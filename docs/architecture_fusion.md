@@ -1,8 +1,8 @@
-# AI-Novel 架构融合文档
+# MoFeng 架构融合文档
 
 ## 概述
 
-本文档描述了从 [AI_NovelGenerator](https://github.com/YILING0013/AI_NovelGenerator) 项目融合的核心功能和设计理念。
+本文档描述了从 [上游融合仓库](https://github.com/YILING0013/上游融合仓库) 项目融合的核心功能和设计理念。
 
 ## 融合内容
 
@@ -10,7 +10,7 @@
 
 #### 1. 章节蓝图元数据 (ChapterBlueprint)
 
-**来源**: `AI_NovelGenerator/novel_generator/blueprint.py`
+**来源**: `上游融合仓库/novel_generator/blueprint.py`
 
 **新增模型**: `backend/app/models/chapter_blueprint.py`
 
@@ -26,7 +26,7 @@
 
 #### 2. 项目记忆 (ProjectMemory)
 
-**来源**: `AI_NovelGenerator/novel_generator/finalization.py`
+**来源**: `上游融合仓库/novel_generator/finalization.py`
 
 **新增模型**: `backend/app/models/project_memory.py`
 
@@ -41,7 +41,7 @@
 
 #### 3. 知识检索服务 (KnowledgeRetrievalService)
 
-**来源**: `AI_NovelGenerator/novel_generator/knowledge.py`
+**来源**: `上游融合仓库/novel_generator/knowledge.py`
 
 **新增服务**: `backend/app/services/knowledge_retrieval_service.py`
 
@@ -66,7 +66,7 @@ FilteredContext(
 
 #### 4. 一致性检查服务 (ConsistencyService)
 
-**来源**: `AI_NovelGenerator/consistency_checker.py`
+**来源**: `上游融合仓库/consistency_checker.py`
 
 **新增服务**: `backend/app/services/consistency_service.py`
 
@@ -87,7 +87,7 @@ FilteredContext(
 
 #### 5. 章节扩写服务 (EnrichmentService)
 
-**来源**: `AI_NovelGenerator/novel_generator/enrich_chapter_text`
+**来源**: `上游融合仓库/novel_generator/enrich_chapter_text`
 
 **新增服务**: `backend/app/services/enrichment_service.py`
 
@@ -106,7 +106,7 @@ FilteredContext(
 
 #### 6. 定稿服务 (FinalizeService)
 
-**来源**: `AI_NovelGenerator/novel_generator/finalization.py`
+**来源**: `上游融合仓库/novel_generator/finalization.py`
 
 **新增服务**: `backend/app/services/finalize_service.py`
 

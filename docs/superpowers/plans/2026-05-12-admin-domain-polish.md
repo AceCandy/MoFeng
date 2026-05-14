@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Polish the full `/admin` domain so it matches the Arboris Novel workspace and settings experience at flagship quality.
+**Goal:** Polish the full `/admin` domain so it matches the MoFeng workspace and settings experience at flagship quality.
 
 **Architecture:** Keep the existing Vue 3, Vue Router, Naive UI, and Material-token stack. Replace the nested admin app shell with a product-console layout inside `AppShell.vue`, then normalize admin child panels around shared `--md-*` tokens and existing Naive data controls. Preserve backend contracts and reuse `NovelDetailShell.vue` for admin project detail with an embedded admin-safe layout mode.
 

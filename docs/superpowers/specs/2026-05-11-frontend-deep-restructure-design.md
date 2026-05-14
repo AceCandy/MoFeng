@@ -2,7 +2,7 @@
 
 ## 1. Feature Summary
 
-This design restructures the Arboris Novel frontend from a set of mostly independent route pages into a coherent writing workspace. The target user is a long-form fiction writer returning to the product repeatedly to continue projects, inspect story material, configure AI routes, and draft chapters without losing context.
+This design restructures the MoFeng frontend from a set of mostly independent route pages into a coherent writing workspace. The target user is a long-form fiction writer returning to the product repeatedly to continue projects, inspect story material, configure AI routes, and draft chapters without losing context.
 
 The work should make the product feel like a calm writing desk: visible project state, predictable navigation, restrained visual hierarchy, and explicit model/configuration surfaces.
 
@@ -95,7 +95,7 @@ Settings remains a console-style product page:
 
 ### Admin
 
-Admin can keep Naive UI for dense management tables, but the surrounding shell should match Arboris Novel:
+Admin can keep Naive UI for dense management tables, but the surrounding shell should match MoFeng:
 
 - No blurred/glass header treatment.
 - No unrelated teal/indigo gradients.

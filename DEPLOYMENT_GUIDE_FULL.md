@@ -1,4 +1,4 @@
-# AI-Novel 完整部署指南
+# MoFeng 完整部署指南
 
 ## 目录
 
@@ -41,8 +41,8 @@
 
 ```bash
 # 1. 克隆项目（如果还没有）
-git clone https://github.com/all666666all/AI-novel.git
-cd AI-novel
+git clone https://github.com/all666666all/MoFeng.git
+cd MoFeng
 
 # 2. 配置 SSH 密钥（确保可以免密登录服务器）
 ssh-copy-id root@45.15.185.52
@@ -61,8 +61,8 @@ ssh root@45.15.185.52
 
 # 2. 克隆项目
 cd /root
-git clone https://github.com/all666666all/AI-novel.git
-cd AI-novel
+git clone https://github.com/all666666all/MoFeng.git
+cd MoFeng
 
 # 3. 创建 .env 文件
 cp .env.example .env
@@ -99,8 +99,8 @@ docker compose version
 
 ```bash
 cd /root
-git clone https://github.com/all666666all/AI-novel.git
-cd AI-novel
+git clone https://github.com/all666666all/MoFeng.git
+cd MoFeng
 ```
 
 ### 3. 配置环境变量
@@ -123,9 +123,9 @@ SECRET_KEY=your_random_secret_key_here
 DB_PROVIDER=mysql  # 或 sqlite
 MYSQL_HOST=db
 MYSQL_PORT=3306
-MYSQL_USER=arboris
+MYSQL_USER=mofeng
 MYSQL_PASSWORD=your_strong_password_here
-MYSQL_DATABASE=arboris
+MYSQL_DATABASE=mofeng
 MYSQL_ROOT_PASSWORD=your_root_password_here
 
 # OpenAI API
@@ -193,7 +193,7 @@ bash deploy/scripts/run_migrations.sh
 
 ```bash
 # 1. 连接到数据库
-mysql -h localhost -u arboris -p arboris
+mysql -h localhost -u mofeng -p mofeng
 
 # 2. 执行迁移脚本
 source backend/db/migrations/add_novel_kit_features.sql
@@ -230,9 +230,9 @@ bash deploy/scripts/verify_migration.sh
 | `DB_PROVIDER` | 数据库类型 | `sqlite` |
 | `MYSQL_HOST` | MySQL 主机 | `db` |
 | `MYSQL_PORT` | MySQL 端口 | `3306` |
-| `MYSQL_USER` | MySQL 用户 | `arboris` |
+| `MYSQL_USER` | MySQL 用户 | `mofeng` |
 | `MYSQL_PASSWORD` | MySQL 密码（必需） | - |
-| `MYSQL_DATABASE` | MySQL 数据库名 | `arboris` |
+| `MYSQL_DATABASE` | MySQL 数据库名 | `mofeng` |
 
 ### AI 配置
 
@@ -349,7 +349,7 @@ cd deploy
 docker-compose down
 
 # 2. 恢复数据库
-mysql -h localhost -u arboris -p arboris < backups/backup_20260113_120000.sql
+mysql -h localhost -u mofeng -p mofeng < backups/backup_20260113_120000.sql
 
 # 3. 重启服务
 docker-compose --profile mysql up -d
@@ -400,7 +400,7 @@ cat .env | grep MYSQL
 docker ps
 
 # 检查端口映射
-docker port arboris-app
+docker port mofeng-app
 
 # 检查应用日志
 docker-compose logs --tail=50 app
@@ -413,7 +413,7 @@ docker-compose logs --tail=50 app
 **解决方案**：
 ```bash
 # 检查表是否已存在
-mysql -h localhost -u arboris -p arboris -e "SHOW TABLES;"
+mysql -h localhost -u mofeng -p mofeng -e "SHOW TABLES;"
 
 # 如果表已存在，可以跳过迁移
 # 或者手动删除表后重新执行
@@ -443,7 +443,7 @@ docker-compose exec app supervisorctl restart nginx
 ### 更新代码
 
 ```bash
-cd /root/AI-novel
+cd /root/MoFeng
 git pull origin main
 bash deploy/scripts/deploy_docker.sh
 ```
@@ -452,10 +452,10 @@ bash deploy/scripts/deploy_docker.sh
 
 ```bash
 # 手动备份
-mysqldump -h localhost -u arboris -p arboris > backups/manual_backup_$(date +%Y%m%d_%H%M%S).sql
+mysqldump -h localhost -u mofeng -p mofeng > backups/manual_backup_$(date +%Y%m%d_%H%M%S).sql
 
 # 定时备份（crontab）
-0 2 * * * cd /root/AI-novel && mysqldump -h localhost -u arboris -p'your_password' arboris > backups/auto_backup_$(date +\%Y\%m\%d_\%H\%M\%S).sql
+0 2 * * * cd /root/MoFeng && mysqldump -h localhost -u mofeng -p'your_password' mofeng > backups/auto_backup_$(date +\%Y\%m\%d_\%H\%M\%S).sql
 ```
 
 ### 清理旧容器和镜像

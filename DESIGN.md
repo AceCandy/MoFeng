@@ -1,5 +1,5 @@
 ---
-name: Arboris Novel
+name: MoFeng
 description: Quiet professional writing workspace for long-form AI-assisted fiction.
 colors:
   clear-blue: "#4285F4"
@@ -94,13 +94,13 @@ components:
     padding: "4px 12px"
 ---
 
-# Design System: Arboris Novel
+# Design System: MoFeng
 
 ## 1. Overview
 
 **Creative North Star: "安静写作台"**
 
-Arboris Novel is a product interface for sustained long-form writing. The system should feel calm, professional, and dependable: a working desk where drafts, models, project state, and review results are always close at hand without competing for attention.
+MoFeng is a product interface for sustained long-form writing. The system should feel calm, professional, and dependable: a working desk where drafts, models, project state, and review results are always close at hand without competing for attention.
 
 The visual language is Material 3 inspired, but tuned for creative productivity rather than brand performance. It uses clear blue as a rare action color, paper-white surfaces for long reading and editing sessions, and ink-gray text that supports scanning. The interface rejects SaaS landing-page drama, purple-blue AI spectacle, glassmorphism, novelty demo styling, and decorative card grids that slow operational work.
 

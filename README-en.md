@@ -1,4 +1,4 @@
-# Arboris Novel
+# MoFeng (墨风)
 
 > AI-assisted long-form novel creation system for ideation, blueprint generation, chapter writing, review, and admin management.
 
@@ -6,7 +6,7 @@
 
 ## Overview
 
-Arboris Novel is a full-stack writing assistant for long-form fiction. It supports the end-to-end workflow from concept conversation to blueprint confirmation, chapter drafting, version review, foreshadowing analysis, and project management.
+MoFeng (墨风) is a full-stack writing assistant for long-form fiction. It supports the end-to-end workflow from concept conversation to blueprint confirmation, chapter drafting, version review, foreshadowing analysis, and project management.
 
 Current stack:
 

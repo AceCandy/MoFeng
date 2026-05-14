@@ -2,7 +2,7 @@
 """
 定稿服务 (FinalizeService)
 
-融合自 AI_NovelGenerator 的 finalization.py 设计理念，提供章节定稿后的一系列处理：
+融合自 上游融合仓库 的 finalization.py 设计理念，提供章节定稿后的一系列处理：
 1. 更新全局摘要 (global_summary)
 2. 更新角色状态 (character_state)
 3. 更新剧情线追踪 (plot_arcs)

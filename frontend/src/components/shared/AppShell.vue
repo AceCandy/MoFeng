@@ -95,7 +95,7 @@ onUnmounted(() => {
       <div class="app-shell__brand">
         <div class="app-shell__brand-mark" aria-hidden="true">A</div>
         <div class="app-shell__brand-copy">
-          <p class="app-shell__brand-title">Arboris Novel</p>
+          <p class="app-shell__brand-title">MoFeng 墨风</p>
         </div>
         <button
           type="button"

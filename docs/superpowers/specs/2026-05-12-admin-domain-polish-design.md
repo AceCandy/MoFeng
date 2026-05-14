@@ -3,7 +3,7 @@
 ## Goal
 
 Polish the full admin domain to flagship quality while keeping it visually and
-behaviorally consistent with the rest of Arboris Novel.
+behaviorally consistent with the rest of MoFeng.
 
 Scope includes:
 
@@ -17,7 +17,7 @@ quiet writing workspace, not a separate enterprise dashboard.
 
 ## Product Context
 
-Arboris Novel is a quiet, professional writing workspace for long-form fiction.
+MoFeng is a quiet, professional writing workspace for long-form fiction.
 Admin users maintain users, prompts, projects, logs, and system configuration so
 writers can keep creative momentum.
 

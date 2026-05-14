@@ -2,12 +2,12 @@
 # 服务器端一键部署脚本
 # 使用方法：
 # 1. SSH 登录服务器: ssh root@45.15.185.52
-# 2. 下载并执行: curl -fsSL https://raw.githubusercontent.com/all666666all/AI-novel/main/deploy/scripts/server_deploy.sh | bash
+# 2. 下载并执行: curl -fsSL https://raw.githubusercontent.com/all666666all/MoFeng/main/deploy/scripts/server_deploy.sh | bash
 
 set -e
 
 echo "========================================="
-echo "AI-Novel 服务器端一键部署脚本"
+echo "MoFeng 服务器端一键部署脚本"
 echo "========================================="
 
 # 颜色定义
@@ -71,17 +71,17 @@ echo ""
 echo -e "${BLUE}3. 获取项目代码...${NC}"
 cd /root
 
-if [ -d "AI-novel" ]; then
+if [ -d "MoFeng" ]; then
     echo "项目目录已存在，更新代码..."
-    cd AI-novel
+    cd MoFeng
     git fetch origin
     git reset --hard origin/main
     git pull origin main
     echo -e "${GREEN}✓ 代码已更新到最新版本${NC}"
 else
     echo "克隆项目..."
-    git clone https://github.com/all666666all/AI-novel.git
-    cd AI-novel
+    git clone https://github.com/all666666all/MoFeng.git
+    cd MoFeng
     echo -e "${GREEN}✓ 项目已克隆${NC}"
 fi
 
@@ -110,15 +110,15 @@ SQLITE_STORAGE_SOURCE=sqlite-data
 # MySQL 配置（如果需要切换到 MySQL，修改 DB_PROVIDER=mysql 并启用 profile）
 MYSQL_HOST=db
 MYSQL_PORT=3306
-MYSQL_USER=arboris
-MYSQL_PASSWORD=AI-Novel-MySQL-$(openssl rand -hex 16)
-MYSQL_DATABASE=arboris
-MYSQL_ROOT_PASSWORD=AI-Novel-Root-$(openssl rand -hex 16)
+MYSQL_USER=mofeng
+MYSQL_PASSWORD=MoFeng-MySQL-$(openssl rand -hex 16)
+MYSQL_DATABASE=mofeng
+MYSQL_ROOT_PASSWORD=MoFeng-Root-$(openssl rand -hex 16)
 
 # 管理员账号
 ADMIN_DEFAULT_USERNAME=admin
 ADMIN_DEFAULT_PASSWORD=Admin123456!
-ADMIN_DEFAULT_EMAIL=admin@ai-novel.com
+ADMIN_DEFAULT_EMAIL=admin@mofeng.com
 
 # OpenAI API（请手动配置）
 OPENAI_API_KEY=sk-placeholder-please-replace-with-real-key
@@ -150,12 +150,12 @@ SMTP_SERVER=smtp.example.com
 SMTP_PORT=465
 SMTP_USERNAME=no-reply@example.com
 SMTP_PASSWORD=
-EMAIL_FROM=AI-Novel
+EMAIL_FROM=MoFeng
 ENVEOF
 
     echo -e "${GREEN}✓ .env 文件已创建${NC}"
     echo -e "${YELLOW}⚠ 请编辑 .env 文件，配置你的 OPENAI_API_KEY${NC}"
-    echo -e "${YELLOW}   执行: nano /root/AI-novel/.env${NC}"
+    echo -e "${YELLOW}   执行: nano /root/MoFeng/.env${NC}"
 else
     echo -e "${GREEN}✓ .env 文件已存在${NC}"
 fi
@@ -238,13 +238,13 @@ echo ""
 echo -e "${YELLOW}重要提示：${NC}"
 echo "1. 请立即修改管理员密码"
 echo "2. 配置 OPENAI_API_KEY（如果还没有）："
-echo "   nano /root/AI-novel/.env"
-echo "   然后重启服务: cd /root/AI-novel/deploy && docker compose restart"
+echo "   nano /root/MoFeng/.env"
+echo "   然后重启服务: cd /root/MoFeng/deploy && docker compose restart"
 echo ""
 echo "常用命令："
-echo "  查看日志: cd /root/AI-novel/deploy && docker compose logs -f app"
-echo "  重启服务: cd /root/AI-novel/deploy && docker compose restart"
-echo "  停止服务: cd /root/AI-novel/deploy && docker compose down"
+echo "  查看日志: cd /root/MoFeng/deploy && docker compose logs -f app"
+echo "  重启服务: cd /root/MoFeng/deploy && docker compose restart"
+echo "  停止服务: cd /root/MoFeng/deploy && docker compose down"
 echo ""
-echo "如需帮助，请查看: /root/AI-novel/DEPLOYMENT_GUIDE_FULL.md"
+echo "如需帮助，请查看: /root/MoFeng/DEPLOYMENT_GUIDE_FULL.md"
 echo ""

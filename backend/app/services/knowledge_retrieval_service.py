@@ -2,7 +2,7 @@
 """
 知识检索服务 (KnowledgeRetrievalService)
 
-融合自 AI_NovelGenerator 的知识检索设计，实现"检索→过滤→注入"的两层RAG：
+融合自 上游融合仓库 的知识检索设计，实现"检索→过滤→注入"的两层RAG：
 1. 生成检索关键词 (query generation)
 2. 向量检索 topK 相关内容
 3. 知识过滤 (冲突检测/价值分级/结构化整理)

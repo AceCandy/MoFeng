@@ -6,7 +6,7 @@ product
 
 ## Users
 
-Arboris Novel serves long-form fiction writers, especially individual authors and online novel creators who need to move from early inspiration to structured blueprints, chapter drafting, review, and revision. They work in extended writing sessions, often returning to the same project repeatedly, so the product must support continuity, memory, and low-friction progress rather than one-off generation.
+MoFeng serves long-form fiction writers, especially individual authors and online novel creators who need to move from early inspiration to structured blueprints, chapter drafting, review, and revision. They work in extended writing sessions, often returning to the same project repeatedly, so the product must support continuity, memory, and low-friction progress rather than one-off generation.
 
 ## Product Purpose
 

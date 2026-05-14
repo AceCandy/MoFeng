@@ -26,7 +26,7 @@ class Settings(BaseSettings):
         description="应用日志级别",
     )
     version_info_url: Optional[AnyUrl] = Field(
-        default="https://raw.githubusercontent.com/2754026865/2arboris_novel/refs/heads/main/release-metadata/version-info.json",
+        default="https://raw.githubusercontent.com/2754026865/mofeng/refs/heads/main/release-metadata/version-info.json",
         env="VERSION_INFO_URL",
         description="GitHub 版本信息 JSON 地址",
     )
@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     mysql_port: int = Field(default=3306, env="MYSQL_PORT", description="MySQL 端口")
     mysql_user: str = Field(default="root", env="MYSQL_USER", description="MySQL 用户名")
     mysql_password: str = Field(default="", env="MYSQL_PASSWORD", description="MySQL 密码")
-    mysql_database: str = Field(default="arboris", env="MYSQL_DATABASE", description="MySQL 数据库名称")
+    mysql_database: str = Field(default="mofeng", env="MYSQL_DATABASE", description="MySQL 数据库名称")
     sqlite_db_path: Optional[str] = Field(
         default=None,
         env="SQLITE_DB_PATH",
@@ -250,8 +250,8 @@ class Settings(BaseSettings):
                 if not db_path.is_absolute():
                     db_path = (project_root / db_path).resolve()
             else:
-                # SQLite 默认使用 storage/arboris.db，并转换为绝对路径以避免运行目录差异
-                db_path = (project_root / "storage" / "arboris.db").resolve()
+                # SQLite 默认使用 storage/mofeng.db，并转换为绝对路径以避免运行目录差异
+                db_path = (project_root / "storage" / "mofeng.db").resolve()
             return f"sqlite+aiosqlite:///{db_path}"
 
         # MySQL 分支：统一对密码进行 URL 编码，避免特殊字符破坏连接串

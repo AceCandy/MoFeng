@@ -2,7 +2,7 @@
 """
 一致性检查服务 (ConsistencyService)
 
-融合自 AI_NovelGenerator 的 consistency_checker.py 设计理念，提供：
+融合自 上游融合仓库 的 consistency_checker.py 设计理念，提供：
 1. 设定一致性检查（世界观、规则）
 2. 角色状态一致性检查（位置、能力、知识）
 3. 剧情逻辑一致性检查（因果关系、时间线）

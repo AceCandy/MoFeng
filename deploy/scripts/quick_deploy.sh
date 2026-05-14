@@ -4,7 +4,7 @@
 set -e
 
 echo "========================================="
-echo "AI-Novel 一键部署脚本"
+echo "MoFeng 一键部署脚本"
 echo "========================================="
 
 # 颜色定义
@@ -17,7 +17,7 @@ NC='\033[0m' # No Color
 # 服务器信息
 SERVER_IP="45.15.185.52"
 SERVER_USER="root"
-PROJECT_DIR="/root/AI-novel"
+PROJECT_DIR="/root/MoFeng"
 
 echo ""
 echo "目标服务器："
@@ -63,7 +63,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-PROJECT_DIR="/root/AI-novel"
+PROJECT_DIR="/root/MoFeng"
 
 echo "========================================="
 echo "远程服务器部署流程"
@@ -75,8 +75,8 @@ echo "1. 检查项目目录..."
 if [ ! -d "$PROJECT_DIR" ]; then
     echo -e "${YELLOW}项目目录不存在，正在克隆仓库...${NC}"
     cd /root
-    git clone https://github.com/all666666all/AI-novel.git
-    cd AI-novel
+    git clone https://github.com/all666666all/MoFeng.git
+    cd MoFeng
 else
     echo -e "${GREEN}✓ 项目目录存在${NC}"
     cd $PROJECT_DIR

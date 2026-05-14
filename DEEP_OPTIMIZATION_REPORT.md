@@ -1,4 +1,4 @@
-# AI-Novel 深度优化功能报告
+# MoFeng 深度优化功能报告
 
 ## 概述
 
@@ -233,7 +233,7 @@ mysql -u root -p your_database < backend/db/migrations/add_deep_optimization_fea
 
 1. **拉取最新代码**
    ```bash
-   cd /path/to/AI-novel
+   cd /path/to/MoFeng
    git pull origin main
    ```
 

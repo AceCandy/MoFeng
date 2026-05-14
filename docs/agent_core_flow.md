@@ -1,6 +1,6 @@
 # Agent 核心流程
 
-本文整理 Arboris Novel 当前项目里的 AI Agent 核心执行链路。这里的 “Agent” 不是单独的 `Agent` 类，也不是 LangChain Agent，而是由 API 入口、提示词、上下文构建、模型阶段路由、生成/评审/定稿服务共同组成的小说创作智能体流水线。
+本文整理 MoFeng（墨风）当前项目里的 AI Agent 核心执行链路。这里的 “Agent” 不是单独的 `Agent` 类，也不是 LangChain Agent，而是由 API 入口、提示词、上下文构建、模型阶段路由、生成/评审/定稿服务共同组成的小说创作智能体流水线。
 
 整理日期：2026-05-11
 
@@ -487,4 +487,3 @@ KnowledgeRetrievalService.retrieve_and_filter
 - 改评审和选优：看 `ai_review_service.py`。
 - 改定稿后的长期记忆：看 `finalize_service.py`。
 - 改伏笔抽取/推进：看 `writer.py` 中 `_sync_foreshadowings_for_chapter` 相关函数。
-

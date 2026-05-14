@@ -2,7 +2,7 @@
 """
 章节扩写服务 (EnrichmentService)
 
-融合自 AI_NovelGenerator 的 enrich_chapter_text 设计，提供：
+融合自 上游融合仓库 的 enrich_chapter_text 设计，提供：
 1. 字数检测：检查是否低于目标字数的70%
 2. 智能扩写：加戏不加线（只扩写感官、对话潜台词、余波Sequel，不推进主线）
 3. 质量控制：确保扩写后的内容与原文风格一致

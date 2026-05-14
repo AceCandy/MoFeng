@@ -7,7 +7,7 @@
 
     <section class="md-card md-card-elevated login-card" aria-labelledby="login-title">
       <div class="login-card__header">
-        <p>Arboris Novel</p>
+        <p>MoFeng 墨风</p>
         <h2 id="login-title">欢迎回来</h2>
         <span>登录以继续您的创作之旅</span>
       </div>

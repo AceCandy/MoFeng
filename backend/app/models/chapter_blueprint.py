@@ -2,7 +2,7 @@
 """
 章节蓝图数据模型
 
-融合自 AI_NovelGenerator 的章节蓝图设计，提供：
+融合自 上游融合仓库 的章节蓝图设计，提供：
 - 悬念密度 (suspense_density)
 - 伏笔操作 (foreshadowing_ops)
 - 认知颠覆等级 (cognitive_twist_level)
