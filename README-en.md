@@ -1,55 +1,155 @@
 # MoFeng (墨风)
 
-> AI-assisted long-form novel creation system for ideation, blueprint generation, chapter writing, review, and admin management.
+> An end-to-end AI novel creation platform, from first idea to final draft.  
+> Make creative workflows visible, controllable, and continuously improvable.
 
 [中文](./README.md) | English
 
-## Overview
+---
 
-MoFeng (墨风) is a full-stack writing assistant for long-form fiction. It supports the end-to-end workflow from concept conversation to blueprint confirmation, chapter drafting, version review, foreshadowing analysis, and project management.
+## Product Positioning
 
-Current stack:
+MoFeng is designed for long-form fiction writers and small creative teams, covering the full pipeline:
+idea generation, blueprint confirmation, chapter production, review/version selection, and administration.
+
+It is not just a "writing helper". It is a production-ready writing workflow system:
+
+- Supports both content creation and creative asset management
+- Works for both quick setup and long-term secondary development
+- Focuses on both writing quality and production efficiency
+
+---
+
+## Core Capabilities
+
+### 1) Idea Incubation and Project Kickoff
+
+- Rapidly converge on genre, main arc, style, and audience through multi-turn conversations
+- Turn scattered ideas into an actionable project baseline
+- Move directly from Inspiration Mode to blueprint and writing workflows without context loss
+
+### 2) Blueprint-Driven Story System
+
+- Organize worldbuilding, characters, factions, relationships, locations, and chapter missions in a structured blueprint
+- Support blueprint generation, confirmation, editing, and continuous maintenance for long-form stability
+- Reuse blueprint context in generation and review to reduce narrative drift
+
+### 3) Industrialized Chapter Production
+
+- Writing Desk supports generation, review, version comparison, selection, and second-pass editing
+- Combine chapter outlines and project materials for context-aware drafting
+- Upgrade from one-shot generation to a controllable loop: generate -> compare -> iterate -> finalize
+
+### 4) Quality Guardrails and Consistency Control
+
+- Provide six-dimension review, consistency checks, and auto-fix suggestions
+- Track foreshadowing and state transitions to reduce long-arc continuity breaks
+- Offer emotion-curve analytics to optimize pacing and reader experience
+
+### 5) Memory and Knowledge Enhancement
+
+- Inject project history into generation via memory layers and RAG retrieval
+- Feed chapter summaries, character states, and key events back into future writing
+- Keep earlier narrative assets continuously useful for later chapters
+
+### 6) Admin and Operational Governance
+
+- Built-in management for users, prompts, update logs, and system configuration
+- Support ongoing tuning of writing strategy, prompts, and runtime parameters
+- Fit solo creators, small teams, and private/self-hosted long-term operation
+
+---
+
+## What You Get
+
+- **Faster project starts**: convert vague ideas into actionable story foundations
+- **More stable long-form storytelling**: blueprint + memory + RAG + consistency checks working together
+- **Higher first-draft usability**: chapters are not one-shot outputs but reviewable and iterable assets
+- **Lower rewrite cost**: foreshadowing tracking, summary feedback, and character-state continuity reduce patchwork edits
+- **Stronger collaboration**: unify creative assets, prompt strategy, and admin controls in one workspace
+
+---
+
+## Typical Use Cases
+
+### Use Case 1: Launch a New Novel from Scratch
+
+- Explore genre and main plot direction in Inspiration Mode
+- Generate and confirm a structured blueprint
+- Produce the first batch of usable chapter drafts quickly
+
+### Use Case 2: Stabilize Quality in Mid/Late Serialization
+
+- Use chapter review + consistency checks to identify structural issues
+- Calibrate pacing with foreshadowing tracking and emotion curves
+- Select stronger versions through side-by-side comparison before finalization
+
+### Use Case 3: Team-Based Creation and Operations
+
+- Centrally manage prompts, users, and system parameters
+- Accumulate operational writing standards through update logs and config policies
+- Run content production and quality governance in the same platform
+
+---
+
+## Product Interface Overview
+
+- `InspirationMode`: idea co-creation and project kickoff
+- `NovelWorkspace`: project list and progress management
+- `NovelDetail`: aggregated settings, characters, outlines, chapters, and analytics
+- `WritingDesk`: generation, review, version selection, and chapter editing workbench
+- `AdminView`: users, prompts, statistics, and system configuration management
+
+---
+
+## Creation Workflow
+
+1. Sign in or register  
+2. Configure personal LLM and embedding models  
+3. Start multi-turn concept conversations in Inspiration Mode  
+4. Generate and confirm a structured blueprint  
+5. Manage projects in Workspace  
+6. Review project assets and analytics in Detail  
+7. Generate, review, select, and edit chapter versions in Writing Desk  
+8. Govern users, prompts, and system settings in Admin
+
+---
+
+## Technology Stack
 
 - Frontend: Vue 3 + Vite + TypeScript + TanStack Query for Vue + Pinia + Vue Router + Naive UI
 - Backend: FastAPI + SQLAlchemy + Pydantic Settings
-- Storage: SQLite or MySQL, plus libsql for vector retrieval
+- Storage: SQLite / MySQL + libsql vector retrieval
 - AI: OpenAI-compatible LLM APIs, OpenAI/Ollama embeddings
 
-## Frontend state management
+### Frontend State Model
 
-The frontend has been migrated to TanStack Query for Vue:
+- TanStack Query handles server state: requests, caching, refresh, retry, loading/error
+- Pinia keeps client state: auth token, current user, temporary inspiration-session state
+- Global Query strategy: `frontend/src/lib/queryClient.ts`
+- Business Query composables: `frontend/src/queries/`
 
-- API requests, server-state caching, refresh, retry, and loading/error states are handled by TanStack Query
-- Novel projects, chapters, detail materials, admin data, LLM settings, auth/register flows, and update logs are accessed through Query composables
-- Pinia only keeps client state, such as the auth token, current user, and temporary inspiration-flow conversation state
-- The shared Query Client lives in `frontend/src/lib/queryClient.ts`
-- Business Query composables live in `frontend/src/queries/`
+---
 
-## Core workflow
+## Quick Start
 
-1. Sign in or register
-2. Configure personal LLM and embedding models in Settings
-3. Start a project in Inspiration Mode through multi-turn idea conversation
-4. Generate and confirm a structured blueprint
-5. Manage projects in Workspace
-6. Review worldbuilding, characters, outlines, chapters, and analysis in Detail
-7. Generate, review, select, and edit chapter content in Writing Desk
-8. Manage users, prompts, updates, and system configuration in Admin
+### Option A: One-Command Bootstrap (Recommended)
 
-## Features
+Run from repository root:
 
-- Multi-turn inspiration chat for project creation
-- Blueprint generation and persistence
-- Chapter drafting, evaluation, version selection, and editing
-- Outline generation and maintenance
-- Foreshadowing tracking and status sync
-- Emotion curve and analytics views
-- `.txt` novel import
-- User, prompt, update log, and system configuration management
+- Windows CMD: `dev.bat`
+- PowerShell: `powershell -ExecutionPolicy Bypass -File .\dev.ps1`
+- Bash: `bash ./dev.sh`
 
-## Quick start
+The launcher script will:
 
-### Local development
+- Auto-install frontend dependencies (if `frontend/node_modules` is missing)
+- Auto-create backend virtual environment (if `backend/.venv` is missing)
+- Auto-install `uvicorn` and backend requirements when needed
+- Auto-switch to available ports if default ports are occupied
+- Print actual access URLs and effective API proxy target
+
+### Option B: Manual Startup
 
 Backend:
 
@@ -62,8 +162,11 @@ python -m venv .venv
 # source .venv/bin/activate
 
 pip install -r requirements.txt
-copy env.example .env   # Windows
-# cp env.example .env   # macOS / Linux
+# Windows
+copy env.example .env
+# macOS / Linux
+# cp env.example .env
+
 uvicorn app.main:app --reload
 ```
 
@@ -75,28 +178,15 @@ npm install
 npm run dev
 ```
 
-Default access URLs:
+Default URLs:
 
 - Frontend: `http://127.0.0.1:5173`
 - API: `http://127.0.0.1:8000`
 - Swagger: `http://127.0.0.1:8000/docs`
 
-Optional launcher scripts from repo root:
+---
 
-- Windows CMD: `dev.bat`
-- PowerShell: `powershell -ExecutionPolicy Bypass -File .\dev.ps1`
-- Bash: `bash ./dev.sh`
-
-Launcher script behavior:
-
-- If `frontend/node_modules` is missing, dependencies are installed automatically
-- If `backend/.venv` is missing, the virtual environment is created automatically
-- If `uvicorn` is missing from the selected Python environment, `backend/requirements.txt` is installed automatically
-- If default ports `8000` or `5173` are occupied, the script switches to the next available port
-- Frontend and backend dev servers listen on `0.0.0.0`, so they can be reached from other devices on the local network
-- The script prints the local access URL and the effective API proxy target after startup
-
-### Docker (local)
+## Docker Local Deployment
 
 ```bash
 # Windows
@@ -107,27 +197,28 @@ copy deploy\.env.example deploy\.env
 docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build
 ```
 
-Default access URL:
+Default URL: `http://127.0.0.1:8088`
 
-- `http://127.0.0.1:8088`
-
-To start with the bundled MySQL profile:
+To enable bundled MySQL profile:
 
 ```bash
 docker compose --env-file deploy/.env -f deploy/docker-compose.yml --profile mysql up -d --build
 ```
 
+---
+
 ## Configuration
 
-For local development, use `backend/env.example` as the template for `backend/.env`.
+For local development: use `backend/env.example` as the template for `backend/.env`.  
+For Docker deployment: use `deploy/.env.example` as the template for `deploy/.env`.
 
 Minimum required settings:
 
 - `SECRET_KEY`
 - `DB_PROVIDER`
-- `SQLITE_DB_PATH` when using SQLite
+- `SQLITE_DB_PATH` (when `DB_PROVIDER=sqlite`)
 
-Recommended for writing features:
+Recommended settings for full writing capabilities:
 
 - `OPENAI_API_KEY`
 - `OPENAI_API_BASE_URL`
@@ -138,18 +229,20 @@ Recommended for writing features:
 - `ADMIN_DEFAULT_USERNAME`
 - `ADMIN_DEFAULT_PASSWORD`
 
-For Docker deployment, use `deploy/.env.example` as the template for `deploy/.env`.
+---
 
-## Initialization behavior
+## First-Run Auto Initialization
 
-On first backend startup, the application automatically:
+On first backend startup, the application will automatically:
 
-1. Ensures the database exists
-2. Creates missing tables
-3. Backfills missing legacy fields
-4. Creates the default admin account if none exists
-5. Imports `backend/prompts/*.md` into the database if missing
-6. Syncs default system configuration
+1. Ensure the database exists
+2. Create missing tables
+3. Backfill missing legacy fields
+4. Create the default admin account if none exists
+5. Import `backend/prompts/*.md` into the database if missing
+6. Sync default system configuration
+
+---
 
 ## Project structure
 
@@ -182,17 +275,7 @@ On first backend startup, the application automatically:
 └─ dev.sh
 ```
 
-## Secondary development notes
-
-This repository has already been adapted for secondary development. Before publishing your own fork or deployment, review at least the following:
-
-- `VERSION_INFO_URL`
-- `IMAGE_REPO`
-- `EMAIL_FROM`
-- Linux.do OAuth settings if enabled
-- Default admin credentials
-
-A more detailed deployment guide is available in [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md).
+---
 
 ## License
 
