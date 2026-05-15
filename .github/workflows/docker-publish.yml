@@ -1,11 +1,9 @@
-name: 构建并发布 Docker 镜像 (自动补丁号 +1)
+name: 每日检查并按需发布 Docker 镜像
 
 on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - release-metadata/**
+  schedule:
+    # GitHub Actions 的 cron 使用 UTC，这里是北京时间每天 01:30
+    - cron: "30 17 * * *"
   workflow_dispatch: {}
 
 concurrency:
@@ -16,7 +14,74 @@ permissions:
   contents: write
 
 jobs:
+  check-new-commits:
+    runs-on: ubuntu-latest
+    outputs:
+      should_publish: ${{ steps.check.outputs.should_publish }}
+      latest_tag: ${{ steps.check.outputs.latest_tag }}
+      commit_count: ${{ steps.check.outputs.commit_count }}
+      check_reason: ${{ steps.check.outputs.check_reason }}
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: 检查是否有新提交（排除 release-metadata）
+        id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch --tags origin
+
+          latest_tag="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)"
+          if [[ -z "${latest_tag}" ]]; then
+            latest_tag="$(git tag -l '[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)"
+          fi
+
+          should_publish="false"
+          commit_count="0"
+          check_reason=""
+
+          if [[ -z "${latest_tag}" ]]; then
+            should_publish="true"
+            check_reason="未发现历史版本标签，按首次发布处理。"
+          else
+            # 仅统计相对最新发布标签之后，且不只修改 release-metadata 的提交
+            commit_count="$(git rev-list --count "${latest_tag}..HEAD" -- . ':(exclude)release-metadata/**')"
+            if [[ "${commit_count}" -gt 0 ]]; then
+              should_publish="true"
+              check_reason="检测到 ${commit_count} 个有效新提交，执行自动发布。"
+            else
+              check_reason="未检测到有效新提交（仅有 release-metadata 变更或无变更），跳过发布。"
+            fi
+          fi
+
+          {
+            echo "should_publish=${should_publish}"
+            echo "latest_tag=${latest_tag}"
+            echo "commit_count=${commit_count}"
+            echo "check_reason=${check_reason}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: 输出检查摘要
+        shell: bash
+        run: |
+          {
+            echo "## 发布前检查摘要"
+            echo ""
+            echo "- 最新标签: \`${{ steps.check.outputs.latest_tag || '无' }}\`"
+            echo "- 有效新提交数: \`${{ steps.check.outputs.commit_count }}\`"
+            echo "- 是否发布: \`${{ steps.check.outputs.should_publish }}\`"
+            echo "- 说明: ${{ steps.check.outputs.check_reason }}"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
   publish:
+    needs: check-new-commits
+    if: ${{ needs.check-new-commits.outputs.should_publish == 'true' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -208,4 +273,20 @@ jobs:
             echo "说明:"
             echo "- 上面这段是本工作流生成的中文摘要。"
             echo "- docker/build-push-action 的构建摘要通常为英文，无法在工作流内完全替换为中文。"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  publish-skipped:
+    needs: check-new-commits
+    if: ${{ needs.check-new-commits.outputs.should_publish != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 输出跳过发布摘要
+        shell: bash
+        run: |
+          {
+            echo "## 发布已跳过"
+            echo ""
+            echo "- 最新标签: \`${{ needs.check-new-commits.outputs.latest_tag || '无' }}\`"
+            echo "- 有效新提交数: \`${{ needs.check-new-commits.outputs.commit_count }}\`"
+            echo "- 说明: ${{ needs.check-new-commits.outputs.check_reason }}"
           } >> "${GITHUB_STEP_SUMMARY}"
