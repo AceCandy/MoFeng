@@ -15,7 +15,7 @@ idea generation, blueprint confirmation, chapter production, review/version sele
 It is not just a "writing helper". It is a production-ready writing workflow system:
 
 - Supports both content creation and creative asset management
-- Works for both quick setup and long-term secondary development
+- Supports both local startup and Docker deployment
 - Focuses on both writing quality and production efficiency
 
 ---
