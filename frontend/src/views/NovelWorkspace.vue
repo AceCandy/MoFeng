@@ -55,16 +55,20 @@
           <span class="workspace-chip">{{ continueProject.completed_chapters }}/{{ continueProject.total_chapters }} 章</span>
         </div>
 
-        <div class="workspace-hero__actions">
+        <div class="workspace-hero__actions workspace-panel__actions">
           <button
             v-if="continueProject"
             type="button"
-            class="md-btn md-btn-filled md-ripple"
+            class="md-btn md-btn-filled md-ripple workspace-panel__action"
             @click="enterProject(continueProject)"
           >
-            继续创作
+            继续写作
           </button>
-          <button type="button" class="md-btn md-btn-tonal md-ripple" @click="goToInspiration">
+          <button
+            type="button"
+            class="md-btn md-btn-tonal md-ripple workspace-panel__action"
+            @click="goToInspiration"
+          >
             新建灵感项目
           </button>
         </div>
@@ -76,7 +80,7 @@
           <strong>{{ todayGoal.title }}</strong>
         </div>
         <p class="workspace-hero__goal-desc">{{ todayGoal.description }}</p>
-        <div class="workspace-hero__progress">
+        <div class="workspace-hero__progress workspace-continue__progress">
           <div class="workspace-hero__progress-label">
             <span>项目推进度</span>
             <strong>{{ continueProgress }}%</strong>
@@ -84,6 +88,7 @@
           <div
             class="md-progress-linear"
             role="progressbar"
+            aria-label="最近项目进度"
             aria-valuemin="0"
             aria-valuemax="100"
             :aria-valuenow="continueProgress"
@@ -111,12 +116,16 @@
     <section class="workspace-canvas" aria-label="创作工作区">
       <article class="workspace-module">
         <header class="workspace-module__head">
-          <h3>最近编辑</h3>
+          <h3>最近项目</h3>
           <p>快速回到你刚刚推进过的章节上下文</p>
         </header>
         <ul v-if="recentEditedProjects.length > 0" class="workspace-activity">
           <li v-for="project in recentEditedProjects" :key="project.id">
-            <button type="button" class="workspace-activity__item" @click="enterProject(project)">
+            <button
+              type="button"
+              class="workspace-activity__item"
+              @click="openProjectFromActivity(project)"
+            >
               <div>
                 <strong>{{ project.title }}</strong>
                 <span>{{ project.genre || '未设定题材' }}</span>
@@ -223,7 +232,6 @@
           v-for="project in sortedProjects"
           :key="project.id"
           :project="project"
-          @click="enterProject(project)"
           @detail="viewProjectDetail"
           @continue="enterProject"
           @delete="handleDeleteProject"
@@ -491,6 +499,10 @@ const enterProject = (project: NovelProjectSummary) => {
   }
 }
 
+const openProjectFromActivity = (project: NovelProjectSummary) => {
+  enterProject(project)
+}
+
 const loadProjects = async () => {
   await projectsQuery.refetch()
 }
@@ -636,6 +648,11 @@ onUnmounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: var(--md-spacing-3);
+}
+
+.workspace-panel__action:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
 }
 
 .workspace-hero__panel {

@@ -9,7 +9,7 @@
       <div v-if="editable" class="flex items-center gap-2">
         <button
           type="button"
-          class="flex items-center gap-1 px-3 py-2 text-sm font-medium text-[var(--md-primary)] bg-[var(--md-primary-container)] hover:bg-[var(--md-primary-container)] rounded-lg"
+          class="flex items-center gap-1 min-h-[44px] px-3.5 py-2 text-sm font-medium text-[var(--md-on-primary-container)] bg-[var(--md-primary-container)] border border-[var(--md-primary-container)] hover:bg-[var(--md-tint-focus)] rounded-lg"
           @click="$emit('add')"
         >
           <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">

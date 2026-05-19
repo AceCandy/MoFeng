@@ -48,7 +48,6 @@ const navigationItems = computed(() => {
 })
 
 const pageLabel = computed(() => String(route.meta.label || '工作台'))
-const pageDescription = computed(() => String(route.meta.description || ''))
 const isProjectContext = computed(() =>
   ['project-detail', 'project-write', 'admin-project-detail'].includes(String(route.name || '')),
 )
@@ -208,7 +207,6 @@ onUnmounted(() => {
         <div class="app-shell__workspace-context">
           <div class="app-shell__title-block">
             <h1>{{ pageLabel }}</h1>
-            <p v-if="pageDescription" class="app-shell__title-description">{{ pageDescription }}</p>
           </div>
         </div>
       </header>

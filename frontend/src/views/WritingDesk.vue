@@ -111,7 +111,7 @@
               @show-version-detail="showVersionDetail"
               @confirm-version-selection="confirmVersionSelection"
               @generate-chapter="generateChapter"
-              @show-evaluation-detail="showEvaluationDetailModal = true"
+              @show-evaluation-detail="openEvaluationDetailModal"
               @fetch-chapter-status="fetchChapterStatus"
               @edit-chapter="editChapterContent"
             />
@@ -270,7 +270,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import type {
   Chapter,
@@ -298,11 +298,18 @@ import { countNonWhitespaceChars } from '@/utils/text'
 import WDHeader from '@/components/writing-desk/WDHeader.vue'
 import WDSidebar from '@/components/writing-desk/WDSidebar.vue'
 import WDWorkspace from '@/components/writing-desk/WDWorkspace.vue'
-import WDVersionDetailModal from '@/components/writing-desk/WDVersionDetailModal.vue'
-import WDEvaluationDetailModal from '@/components/writing-desk/WDEvaluationDetailModal.vue'
-import WDEditChapterModal from '@/components/writing-desk/WDEditChapterModal.vue'
-import WDGenerateOutlineModal from '@/components/writing-desk/WDGenerateOutlineModal.vue'
-import WDAssistantPanel from '@/components/writing-desk/WDAssistantPanel.vue'
+
+const loadWDVersionDetailModal = () => import('@/components/writing-desk/WDVersionDetailModal.vue')
+const loadWDEvaluationDetailModal = () => import('@/components/writing-desk/WDEvaluationDetailModal.vue')
+const loadWDEditChapterModal = () => import('@/components/writing-desk/WDEditChapterModal.vue')
+const loadWDGenerateOutlineModal = () => import('@/components/writing-desk/WDGenerateOutlineModal.vue')
+const loadWDAssistantPanel = () => import('@/components/writing-desk/WDAssistantPanel.vue')
+
+const WDVersionDetailModal = defineAsyncComponent(loadWDVersionDetailModal)
+const WDEvaluationDetailModal = defineAsyncComponent(loadWDEvaluationDetailModal)
+const WDEditChapterModal = defineAsyncComponent(loadWDEditChapterModal)
+const WDGenerateOutlineModal = defineAsyncComponent(loadWDGenerateOutlineModal)
+const WDAssistantPanel = defineAsyncComponent(loadWDAssistantPanel)
 
 interface Props {
   id: string
@@ -418,6 +425,7 @@ const toggleSidebarDrawer = () => {
 
 const toggleAssistantDrawer = () => {
   if (!useAssistantDrawer.value) return
+  void loadWDAssistantPanel()
   isAssistantDrawerOpen.value = !isAssistantDrawerOpen.value
   if (isAssistantDrawerOpen.value && useSidebarDrawer.value) {
     isSidebarDrawerOpen.value = false
@@ -429,6 +437,7 @@ const toggleAssistantVisibility = () => {
     toggleAssistantDrawer()
     return
   }
+  void loadWDAssistantPanel()
   isAssistantPanelVisible.value = !isAssistantPanelVisible.value
   persistAssistantPanelVisibility(isAssistantPanelVisible.value)
 }
@@ -888,7 +897,7 @@ onMounted(() => {
   window.addEventListener('resize', syncLayoutMode)
 })
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
   window.removeEventListener('resize', syncLayoutMode)
 })
 
@@ -945,6 +954,7 @@ const showVersionDetail = (versionIndex: number) => {
   if (versionIndex < 0 || versionIndex >= availableVersions.value.length) {
     return
   }
+  void loadWDVersionDetailModal()
   detailVersionIndex.value = versionIndex
   showVersionDetailModal.value = true
 }
@@ -1144,8 +1154,14 @@ const confirmVersionSelection = async () => {
 }
 
 const openEditChapterModal = (chapter: ChapterOutline) => {
+  void loadWDEditChapterModal()
   editingChapter.value = chapter
   showEditChapterModal.value = true
+}
+
+const openEvaluationDetailModal = () => {
+  void loadWDEvaluationDetailModal()
+  showEvaluationDetailModal.value = true
 }
 
 const saveChapterChanges = async (updatedChapter: ChapterOutline) => {
@@ -1242,6 +1258,7 @@ const deleteChapter = async (chapterNumbers: number | number[]) => {
 }
 
 const generateOutline = async () => {
+  void loadWDGenerateOutlineModal()
   showGenerateOutlineModal.value = true
 }
 
@@ -1357,7 +1374,7 @@ const handleGenerateOutline = async (numChapters: number) => {
   position: absolute;
   inset: 0;
   border: 0;
-  background-color: rgba(32, 33, 36, 0.28);
+  background-color: var(--md-scrim-soft);
   z-index: 34;
 }
 

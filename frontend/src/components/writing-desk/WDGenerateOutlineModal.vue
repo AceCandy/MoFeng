@@ -3,7 +3,7 @@
   <TransitionRoot as="template" :show="show">
     <Dialog as="div" class="relative z-50" @close="$emit('close')">
       <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100" leave="ease-in duration-200" leave-from="opacity-100" leave-to="opacity-0">
-        <div class="fixed inset-0" style="background-color: rgba(0, 0, 0, 0.32);" />
+        <div class="fixed inset-0" style="background-color: var(--md-scrim);" />
       </TransitionChild>
 
       <div class="fixed inset-0 z-10 overflow-y-auto">
@@ -28,7 +28,8 @@
                   <label for="numChapters" class="md-text-field-label">生成数量</label>
                   <input type="number" name="numChapters" id="numChapters" v-model.number="numChapters" class="md-text-field-input w-full mt-2" min="1" max="20">
                   <div class="mt-5 flex flex-wrap justify-center gap-3">
-                    <button v-for="count in [1, 2, 5, 10]" :key="count" @click="setNumChapters(count)"
+                    <button type="button" v-for="count in [1, 2, 5, 10]" :key="count" @click="setNumChapters(count)"
+                      :aria-pressed="numChapters === count"
                       :class="['md-btn md-btn-outlined md-ripple', numChapters === count ? 'm3-count-selected' : '']">
                       {{ count }} 章
                     </button>

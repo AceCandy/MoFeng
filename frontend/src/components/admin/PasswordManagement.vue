@@ -56,7 +56,12 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import { useQueryClient } from '@tanstack/vue-query'
-import { NAlert, NButton, NForm, NFormItem, NInput, NSpace, NSpin } from 'naive-ui'
+import { NAlert } from 'naive-ui/es/alert'
+import { NButton } from 'naive-ui/es/button'
+import { NForm, NFormItem } from 'naive-ui/es/form'
+import { NInput } from 'naive-ui/es/input'
+import { NSpace } from 'naive-ui/es/space'
+import { NSpin } from 'naive-ui/es/spin'
 
 import { useAlert } from '@/composables/useAlert'
 import { useAuthStore } from '@/stores/auth'

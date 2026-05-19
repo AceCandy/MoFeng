@@ -73,16 +73,14 @@
 <script setup lang="ts">
 import { computed, h, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import {
-  NAlert,
-  NButton,
-  NDataTable,
-  NEmpty,
-  NSpin,
-  NTag,
-  NSpace,
-  type DataTableColumns
-} from 'naive-ui'
+import { NAlert } from 'naive-ui/es/alert'
+import { NButton } from 'naive-ui/es/button'
+import { NDataTable } from 'naive-ui/es/data-table'
+import { NEmpty } from 'naive-ui/es/empty'
+import { NSpace } from 'naive-ui/es/space'
+import { NSpin } from 'naive-ui/es/spin'
+import { NTag } from 'naive-ui/es/tag'
+import type { DataTableColumns } from 'naive-ui'
 
 import type { AdminNovelSummary } from '@/api/admin'
 import { useAdminNovelsQuery } from '@/queries/admin'

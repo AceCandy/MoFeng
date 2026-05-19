@@ -294,24 +294,21 @@
 
 <script setup lang="ts">
 import { computed, h, onMounted, reactive, ref, watch } from 'vue'
-import {
-  NAlert,
-  NButton,
-  NCard,
-  NDataTable,
-  NEmpty,
-  NForm,
-  NFormItem,
-  NInput,
-  NInputNumber,
-  NModal,
-  NPopconfirm,
-  NSpace,
-  NSpin,
-  NSwitch,
-  NTag,
-  type DataTableColumns
-} from 'naive-ui'
+import { NAlert } from 'naive-ui/es/alert'
+import { NButton } from 'naive-ui/es/button'
+import { NCard } from 'naive-ui/es/card'
+import { NDataTable } from 'naive-ui/es/data-table'
+import { NEmpty } from 'naive-ui/es/empty'
+import { NForm, NFormItem } from 'naive-ui/es/form'
+import { NInput } from 'naive-ui/es/input'
+import { NInputNumber } from 'naive-ui/es/input-number'
+import { NModal } from 'naive-ui/es/modal'
+import { NPopconfirm } from 'naive-ui/es/popconfirm'
+import { NSpace } from 'naive-ui/es/space'
+import { NSpin } from 'naive-ui/es/spin'
+import { NSwitch } from 'naive-ui/es/switch'
+import { NTag } from 'naive-ui/es/tag'
+import type { DataTableColumns } from 'naive-ui'
 
 import type {
   SystemConfig,

@@ -90,15 +90,19 @@
       </div>
     </section>
 
-    <section class="admin-console__workspace">
-      <nav class="admin-console__nav" aria-label="管理模块切换">
+    <section class="admin-console__tabs">
+      <nav class="admin-console__nav" aria-label="管理模块切换" role="tablist">
         <button
           v-for="section in adminSections"
           :key="section.key"
           type="button"
           class="admin-console__nav-item"
           :class="{ 'is-active': section.key === activeSection.key }"
+          :id="`admin-tab-${section.key}`"
+          role="tab"
+          :aria-selected="section.key === activeSection.key"
           :aria-current="section.key === activeSection.key ? 'page' : undefined"
+          aria-controls="admin-panel"
           :title="section.description"
           @click="selectSection(section.key)"
         >
@@ -106,16 +110,26 @@
         </button>
       </nav>
 
-      <section class="admin-console__content">
-        <component :is="activeComponent" />
+      <section
+        id="admin-panel"
+        class="admin-console__content"
+        role="tabpanel"
+        :aria-labelledby="activeAdminTabId"
+      >
+        <n-message-provider>
+          <keep-alive>
+            <component :is="activeComponent" />
+          </keep-alive>
+        </n-message-provider>
       </section>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, ref, watch, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { NMessageProvider } from 'naive-ui/es/message'
 import {
   useAdminNovelsQuery,
   useAdminStatisticsQuery,
@@ -130,14 +144,34 @@ interface AdminSection {
   description: string
 }
 
+type AsyncViewModule = { default: Component }
+
+const createAsyncSection = (loader: () => Promise<AsyncViewModule>) => {
+  return defineAsyncComponent({
+    loader,
+    delay: 120,
+    timeout: 15_000,
+    // 异步模块偶发加载失败时允许短重试，避免切换 tab 后出现白屏空面板。
+    onError: (error, retry, fail, attempts) => {
+      const message = error instanceof Error ? error.message : String(error)
+      const isLoadIssue = /(fetch|import|chunk)/i.test(message)
+      if (isLoadIssue && attempts <= 2) {
+        retry()
+        return
+      }
+      fail()
+    },
+  })
+}
+
 const components: Record<MenuKey, ReturnType<typeof defineAsyncComponent>> = {
-  statistics: defineAsyncComponent(() => import('../components/admin/Statistics.vue')),
-  users: defineAsyncComponent(() => import('../components/admin/UserManagement.vue')),
-  prompts: defineAsyncComponent(() => import('../components/admin/PromptManagement.vue')),
-  novels: defineAsyncComponent(() => import('../components/admin/NovelManagement.vue')),
-  logs: defineAsyncComponent(() => import('../components/admin/UpdateLogManagement.vue')),
-  settings: defineAsyncComponent(() => import('../components/admin/SettingsManagement.vue')),
-  password: defineAsyncComponent(() => import('../components/admin/PasswordManagement.vue')),
+  statistics: createAsyncSection(() => import('../components/admin/Statistics.vue')),
+  users: createAsyncSection(() => import('../components/admin/UserManagement.vue')),
+  prompts: createAsyncSection(() => import('../components/admin/PromptManagement.vue')),
+  novels: createAsyncSection(() => import('../components/admin/NovelManagement.vue')),
+  logs: createAsyncSection(() => import('../components/admin/UpdateLogManagement.vue')),
+  settings: createAsyncSection(() => import('../components/admin/SettingsManagement.vue')),
+  password: createAsyncSection(() => import('../components/admin/PasswordManagement.vue')),
 }
 
 const adminSections: AdminSection[] = [
@@ -256,6 +290,8 @@ const activeSection = computed(() => {
   return adminSections.find((section) => section.key === activeKey.value) ?? adminSections[0]
 })
 
+const activeAdminTabId = computed(() => `admin-tab-${activeSection.value.key}`)
+
 const activeComponent = computed(() => components[activeSection.value.key])
 
 const selectSection = (key: MenuKey) => {
@@ -270,6 +306,7 @@ const selectSection = (key: MenuKey) => {
   flex-direction: column;
   gap: var(--md-spacing-6);
   min-height: calc(var(--app-viewport-unit) - 112px);
+  background-color: var(--md-surface-dim);
   color: var(--md-on-surface);
 }
 
@@ -463,14 +500,13 @@ const selectSection = (key: MenuKey) => {
   font-size: 11px;
 }
 
-.admin-console__workspace {
+.admin-console__tabs {
   display: flex;
   flex-direction: column;
   gap: var(--md-spacing-4);
 }
 
-.admin-console__nav,
-.admin-console__content {
+.admin-console__nav {
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-radius-xl);
   background-color: color-mix(in srgb, var(--md-surface) 96%, transparent);
@@ -520,7 +556,7 @@ const selectSection = (key: MenuKey) => {
 }
 
 .admin-console__nav-item.is-active,
-.admin-console__nav-item[aria-current='page'] {
+.admin-console__nav-item[aria-selected='true'] {
   border-color: color-mix(in srgb, var(--md-primary) 28%, var(--md-outline-variant));
   background-color: var(--md-primary-container);
   color: var(--md-on-primary-container);
@@ -536,7 +572,6 @@ const selectSection = (key: MenuKey) => {
 
 .admin-console__content {
   min-width: 0;
-  padding: var(--md-spacing-4);
 }
 
 @media (max-width: 1120px) {
@@ -591,9 +626,6 @@ const selectSection = (key: MenuKey) => {
     text-overflow: clip;
   }
 
-  .admin-console__content {
-    padding: var(--md-spacing-3);
-  }
 }
 
 @media (max-width: 480px) {

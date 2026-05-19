@@ -85,19 +85,16 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import {
-  NAlert,
-  NButton,
-  NEmpty,
-  NForm,
-  NFormItem,
-  NInput,
-  NPopconfirm,
-  NSpace,
-  NSpin,
-  NSwitch,
-  NTag
-} from 'naive-ui'
+import { NAlert } from 'naive-ui/es/alert'
+import { NButton } from 'naive-ui/es/button'
+import { NEmpty } from 'naive-ui/es/empty'
+import { NForm, NFormItem } from 'naive-ui/es/form'
+import { NInput } from 'naive-ui/es/input'
+import { NPopconfirm } from 'naive-ui/es/popconfirm'
+import { NSpace } from 'naive-ui/es/space'
+import { NSpin } from 'naive-ui/es/spin'
+import { NSwitch } from 'naive-ui/es/switch'
+import { NTag } from 'naive-ui/es/tag'
 
 import type { UpdateLog } from '@/api/admin'
 import { useAlert } from '@/composables/useAlert'

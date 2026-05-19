@@ -60,15 +60,12 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import {
-  NAlert,
-  NButton,
-  NCard,
-  NGi,
-  NGrid,
-  NSpin,
-  NStatistic,
-} from 'naive-ui'
+import { NAlert } from 'naive-ui/es/alert'
+import { NButton } from 'naive-ui/es/button'
+import { NCard } from 'naive-ui/es/card'
+import { NGi, NGrid } from 'naive-ui/es/grid'
+import { NSpin } from 'naive-ui/es/spin'
+import { NStatistic } from 'naive-ui/es/statistic'
 
 import { useAdminStatisticsQuery } from '@/queries/admin'
 

@@ -3,6 +3,40 @@
  * 日期时间格式化工具函数
  */
 
+const ZH_DATE_TIME_FORMATTER = new Intl.DateTimeFormat('zh-CN', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+})
+
+const ZH_DATE_FORMATTER = new Intl.DateTimeFormat('zh-CN', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
+const readDatePart = (parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes) => {
+  return parts.find((part) => part.type === type)?.value ?? ''
+}
+
+const formatChineseDate = (date: Date): string => {
+  const parts = ZH_DATE_FORMATTER.formatToParts(date)
+  const year = readDatePart(parts, 'year')
+  const month = readDatePart(parts, 'month')
+  const day = readDatePart(parts, 'day')
+  return `${year}年${month}月${day}日`
+}
+
+const formatChineseDateTime = (date: Date): string => {
+  const parts = ZH_DATE_TIME_FORMATTER.formatToParts(date)
+  const hour = readDatePart(parts, 'hour')
+  const minute = readDatePart(parts, 'minute')
+  return `${formatChineseDate(date)} ${hour}:${minute}`
+}
+
 /**
  * 将 ISO 8601 格式的时间字符串转换为友好的中文格式
  * @param isoString ISO 8601 格式的时间字符串，如 "2026-01-11T09:42:54.539359"
@@ -19,13 +53,7 @@ export function formatDateTime(isoString: string | null | undefined): string {
       return isoString
     }
     
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    const hours = String(date.getHours()).padStart(2, '0')
-    const minutes = String(date.getMinutes()).padStart(2, '0')
-    
-    return `${year}年${month}月${day}日 ${hours}:${minutes}`
+    return formatChineseDateTime(date)
   } catch (error) {
     console.error('日期格式化错误:', error)
     return isoString
@@ -47,11 +75,7 @@ export function formatDate(isoString: string | null | undefined): string {
       return isoString
     }
     
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    
-    return `${year}年${month}月${day}日`
+    return formatChineseDate(date)
   } catch (error) {
     console.error('日期格式化错误:', error)
     return isoString

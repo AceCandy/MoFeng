@@ -146,21 +146,18 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import {
-  NAlert,
-  NButton,
-  NDynamicTags,
-  NEmpty,
-  NForm,
-  NFormItem,
-  NInput,
-  NModal,
-  NPopconfirm,
-  NScrollbar,
-  NSpace,
-  NSpin,
-  NTag
-} from 'naive-ui'
+import { NAlert } from 'naive-ui/es/alert'
+import { NButton } from 'naive-ui/es/button'
+import { NDynamicTags } from 'naive-ui/es/dynamic-tags'
+import { NEmpty } from 'naive-ui/es/empty'
+import { NForm, NFormItem } from 'naive-ui/es/form'
+import { NInput } from 'naive-ui/es/input'
+import { NModal } from 'naive-ui/es/modal'
+import { NPopconfirm } from 'naive-ui/es/popconfirm'
+import { NScrollbar } from 'naive-ui/es/scrollbar'
+import { NSpace } from 'naive-ui/es/space'
+import { NSpin } from 'naive-ui/es/spin'
+import { NTag } from 'naive-ui/es/tag'
 
 import type { PromptCreatePayload, PromptItem } from '@/api/admin'
 import { useAlert } from '@/composables/useAlert'

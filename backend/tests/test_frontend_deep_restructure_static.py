@@ -119,12 +119,14 @@ def test_workspace_polish_preserves_primary_flow_and_responsive_states():
         assert text in workspace
 
     for text in [
-        '@click="$emit(\'click\', project.id)"',
         "@click.stop=\"$emit('detail', project.id)\"",
         "line-clamp",
         "touch-action: manipulation",
     ]:
         assert text in project_card
+
+    assert '@click="$emit(\'click\', project.id)"' not in project_card
+    assert "(e: 'click'" not in project_card
 
     for text in [
         'id="app-primary-navigation"',

@@ -15,17 +15,64 @@ const frontendAllowedHosts = (process.env.FRONTEND_ALLOWED_HOSTS || 'test.acecan
   .filter(Boolean)
 const backendProxyHost = process.env.BACKEND_PROXY_HOST || '127.0.0.1'
 const backendPort = Number(process.env.BACKEND_PORT || '8000')
+const isProduction = process.env.NODE_ENV === 'production'
+
+const naiveUiCoreModuleNames = new Set([
+  '_internal',
+  '_mixins',
+  '_utils',
+  '_styles',
+  '_locales',
+  'styles',
+  'config-provider',
+])
 
 const vendorChunks: Array<[string, string[]]> = [
   ['vue-core', ['vue', 'vue-router', 'pinia', '@vue']],
-  ['naive-ui', ['naive-ui']],
   ['naive-ui-support', ['@css-render', 'css-render', 'vueuc', 'vdirs', 'vooks', 'evtd', 'seemly', 'treemate', 'date-fns', 'async-validator']],
-  ['content-tools', ['chart.js', 'marked']],
+  ['chart-tools', ['chart.js']],
+  ['markdown-tools', ['marked', 'dompurify']],
 ]
+
+const normalizeChunkName = (name: string): string =>
+  name.replace(/[^a-z0-9-_]/gi, '-')
+
+const resolveNaiveUiChunk = (id: string): string | undefined => {
+  const naiveUiPathMarker = '/node_modules/naive-ui/es/'
+  if (!id.includes(naiveUiPathMarker)) {
+    return undefined
+  }
+
+  const naiveUiPath = id.split(naiveUiPathMarker)[1]
+  if (!naiveUiPath) {
+    return 'naive-ui-core'
+  }
+
+  const moduleName = naiveUiPath.split('/')[0]
+  if (!moduleName) {
+    return 'naive-ui-core'
+  }
+
+  // Naive UI 内部能力聚合到 core，其余按组件目录拆分。
+  if (moduleName.startsWith('_') || naiveUiCoreModuleNames.has(moduleName)) {
+    return 'naive-ui-core'
+  }
+
+  if (moduleName === 'legacy-grid') {
+    return 'naive-ui-grid'
+  }
+
+  return `naive-ui-${normalizeChunkName(moduleName)}`
+}
 
 const resolveVendorChunk = (id: string) => {
   if (!id.includes('/node_modules/')) {
     return undefined
+  }
+
+  const naiveUiChunk = resolveNaiveUiChunk(id)
+  if (naiveUiChunk) {
+    return naiveUiChunk
   }
 
   for (const [chunkName, packages] of vendorChunks) {
@@ -42,7 +89,7 @@ export default defineConfig({
   plugins: [
     vue(),
     vueJsx(),
-    vueDevTools(),
+    !isProduction && vueDevTools(),
   ],
   resolve: {
     alias: {

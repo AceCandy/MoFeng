@@ -1,6 +1,14 @@
 <!-- AIMETA P=工具提示_悬浮提示组件|R=提示信息|NR=不含业务逻辑|E=component:Tooltip|X=internal|A=提示组件|D=vue|S=dom|RD=./README.ai -->
 <template>
-  <div ref="triggerRef" class="inline-block" @mouseenter="onMouseEnter" @mouseleave="onMouseLeave">
+  <div
+    ref="triggerRef"
+    class="inline-block"
+    @mouseenter="onMouseEnter"
+    @mouseleave="onMouseLeave"
+    @focusin="onFocusIn"
+    @focusout="onFocusOut"
+    @touchstart.passive="onTouchStart"
+  >
     <slot></slot>
     <Teleport to="body">
       <transition
@@ -14,6 +22,8 @@
         <div
           v-if="showTooltip && text"
           ref="tooltipRef"
+          :id="tooltipId"
+          role="tooltip"
           :style="tooltipStyle"
           class="fixed z-50 p-3 text-sm leading-tight text-[var(--md-on-primary)] bg-[var(--md-on-surface)] rounded-lg shadow-lg max-w-xs"
           @mouseenter="onTooltipEnter"
@@ -27,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, computed } from 'vue'
+import { ref, nextTick, computed, onBeforeUnmount } from 'vue'
 
 interface Props {
   text?: string
@@ -40,6 +50,8 @@ const showTooltip = ref(false)
 const triggerRef = ref<HTMLElement | null>(null)
 const tooltipRef = ref<HTMLElement | null>(null)
 const tooltipPosition = ref({ top: 0, left: 0 })
+const tooltipId = `tooltip-${Math.random().toString(36).slice(2, 10)}`
+const describedTarget = ref<HTMLElement | null>(null)
 
 const tooltipStyle = computed(() => ({
   top: `${tooltipPosition.value.top}px`,
@@ -48,21 +60,96 @@ const tooltipStyle = computed(() => ({
 
 let leaveTimeout: NodeJS.Timeout
 let enterTimeout: NodeJS.Timeout
+let touchHideTimeout: NodeJS.Timeout
+
+const clearTimers = () => {
+  clearTimeout(leaveTimeout)
+  clearTimeout(enterTimeout)
+  clearTimeout(touchHideTimeout)
+}
+
+const bindDescribedBy = (target: HTMLElement | null) => {
+  if (!target || !props.text) return
+  describedTarget.value = target
+  const current = target.getAttribute('aria-describedby')
+  if (!current) {
+    target.setAttribute('aria-describedby', tooltipId)
+    return
+  }
+  const ids = new Set(current.split(/\s+/).filter(Boolean))
+  ids.add(tooltipId)
+  target.setAttribute('aria-describedby', Array.from(ids).join(' '))
+}
+
+const unbindDescribedBy = () => {
+  const target = describedTarget.value
+  if (!target) return
+  const current = target.getAttribute('aria-describedby')
+  if (!current) {
+    describedTarget.value = null
+    return
+  }
+  const next = current
+    .split(/\s+/)
+    .filter(Boolean)
+    .filter((id) => id !== tooltipId)
+  if (next.length > 0) {
+    target.setAttribute('aria-describedby', next.join(' '))
+  } else {
+    target.removeAttribute('aria-describedby')
+  }
+  describedTarget.value = null
+}
+
+const openTooltip = async () => {
+  showTooltip.value = true
+  await nextTick()
+  updatePosition()
+}
 
 const onMouseEnter = () => {
   clearTimeout(leaveTimeout)
   enterTimeout = setTimeout(async () => {
-    showTooltip.value = true
-    await nextTick()
-    updatePosition()
+    await openTooltip()
   }, props.showDelay ?? 1000)
 }
 
 const onMouseLeave = () => {
-  clearTimeout(enterTimeout) // 清除进入的计时器
+  clearTimeout(enterTimeout)
   leaveTimeout = setTimeout(() => {
     showTooltip.value = false
-  }, 200) // 增加延时以便鼠标可以移动到 tooltip 上
+  }, 200)
+}
+
+const onFocusIn = (event: FocusEvent) => {
+  const target = event.target instanceof HTMLElement ? event.target : null
+  clearTimeout(leaveTimeout)
+  clearTimeout(enterTimeout)
+  bindDescribedBy(target)
+  enterTimeout = setTimeout(() => {
+    void openTooltip()
+  }, 120)
+}
+
+const onFocusOut = (event: FocusEvent) => {
+  const next = event.relatedTarget
+  if (next instanceof Node && triggerRef.value?.contains(next)) {
+    return
+  }
+  clearTimeout(enterTimeout)
+  leaveTimeout = setTimeout(() => {
+    showTooltip.value = false
+    unbindDescribedBy()
+  }, 80)
+}
+
+const onTouchStart = () => {
+  clearTimers()
+  void openTooltip()
+  touchHideTimeout = setTimeout(() => {
+    showTooltip.value = false
+    unbindDescribedBy()
+  }, 1500)
 }
 
 const onTooltipEnter = () => {
@@ -71,6 +158,7 @@ const onTooltipEnter = () => {
 
 const onTooltipLeave = () => {
   showTooltip.value = false
+  unbindDescribedBy()
 }
 
 const updatePosition = () => {
@@ -99,4 +187,9 @@ const updatePosition = () => {
 
   tooltipPosition.value = { top, left }
 }
+
+onBeforeUnmount(() => {
+  clearTimers()
+  unbindDescribedBy()
+})
 </script>

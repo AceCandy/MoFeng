@@ -56,14 +56,17 @@
     </section>
 
     <section class="settings-center" aria-label="能力配置面板">
-      <nav class="settings-center__nav" aria-label="设置分区">
+      <nav class="settings-center__nav" aria-label="设置分区" role="tablist">
         <button
           v-for="section in settingsSections"
           :key="section.id"
           type="button"
           class="settings-center__nav-item"
           :class="{ 'is-active': activeSettingsSection === section.id }"
-          :aria-current="activeSettingsSection === section.id ? 'page' : undefined"
+          :id="`settings-tab-${section.id}`"
+          role="tab"
+          :aria-selected="activeSettingsSection === section.id"
+          aria-controls="settings-panel"
           :title="section.description"
           @click="selectSettingsSection(section.id)"
         >
@@ -72,7 +75,12 @@
         </button>
       </nav>
 
-      <section class="settings-center__panel">
+      <section
+        id="settings-panel"
+        class="settings-center__panel"
+        role="tabpanel"
+        :aria-labelledby="activeSettingsTabId"
+      >
         <PersonalModelRouting
           v-if="activeSettingsSection === 'llm'"
           active-section="llm"
@@ -121,6 +129,8 @@ const settingsSections: SettingsSection[] = [
 ]
 
 const activeSettingsSection = ref<SettingsSectionId>('llm')
+
+const activeSettingsTabId = computed(() => `settings-tab-${activeSettingsSection.value}`)
 
 const selectSettingsSection = (sectionId: SettingsSectionId) => {
   activeSettingsSection.value = sectionId
@@ -477,7 +487,7 @@ const handleLLMConfigSaved = async () => {
 }
 
 .settings-center__nav-item.is-active,
-.settings-center__nav-item[aria-current='page'] {
+.settings-center__nav-item[aria-selected='true'] {
   border-color: color-mix(in srgb, var(--md-primary) 28%, var(--md-outline-variant));
   background-color: var(--md-primary-container);
   color: var(--md-on-primary-container);

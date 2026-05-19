@@ -11,7 +11,13 @@
       </p>
     </header>
 
-    <div v-if="saveFeedback.message" :class="['llm-feedback', `is-${saveFeedback.type}`]">
+    <div
+      v-if="saveFeedback.message"
+      :class="['llm-feedback', `is-${saveFeedback.type}`]"
+      :role="saveFeedback.type === 'error' ? 'alert' : 'status'"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       {{ saveFeedback.message }}
     </div>
 
@@ -104,11 +110,13 @@
 
         <div class="llm-format-switch">
           <span class="md-label-medium">请求格式</span>
-          <div class="llm-format-switch__group">
+          <div class="llm-format-switch__group" role="group" aria-label="向量模型请求格式">
             <button
               type="button"
               class="llm-format-switch__item"
               :class="{ active: config.embedding_provider_format === 'openai' }"
+              :aria-pressed="config.embedding_provider_format === 'openai'"
+              aria-label="切换为 OpenAI 兼容请求格式"
               @click="setEmbeddingProviderFormat('openai')"
             >
               OpenAI 兼容
@@ -117,6 +125,8 @@
               type="button"
               class="llm-format-switch__item"
               :class="{ active: config.embedding_provider_format === 'ollama' }"
+              :aria-pressed="config.embedding_provider_format === 'ollama'"
+              aria-label="切换为 Ollama 请求格式"
               @click="setEmbeddingProviderFormat('ollama')"
             >
               Ollama
@@ -799,10 +809,12 @@ const selectEmbeddingModel = (model: string) => {
 }
 
 .llm-inline-action:hover {
-  color: color-mix(in srgb, var(--md-primary) 80%, black);
+  color: var(--md-primary-dark);
 }
 
 .llm-panel-action {
+  display: inline-flex;
+  align-items: center;
   border: none;
   background: transparent;
   color: var(--md-primary);
@@ -810,10 +822,11 @@ const selectEmbeddingModel = (model: string) => {
   font-weight: 600;
   cursor: pointer;
   padding: 0;
+  min-height: 44px;
 }
 
 .llm-panel-action:hover {
-  color: color-mix(in srgb, var(--md-primary) 80%, black);
+  color: var(--md-primary-dark);
   text-decoration: underline;
 }
 
@@ -857,11 +870,15 @@ const selectEmbeddingModel = (model: string) => {
 }
 
 .llm-suggestion-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-radius-full);
   background-color: var(--md-surface);
   color: var(--md-on-surface);
-  padding: 6px 12px;
+  min-height: 44px;
+  padding: 0 14px;
   font-size: var(--md-body-small);
   cursor: pointer;
   transition:
@@ -895,9 +912,13 @@ const selectEmbeddingModel = (model: string) => {
 }
 
 .llm-format-switch__item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: transparent;
-  padding: 8px 14px;
+  min-height: 44px;
+  padding: 10px 16px;
   color: var(--md-on-surface-variant);
   cursor: pointer;
   transition:
@@ -910,8 +931,13 @@ const selectEmbeddingModel = (model: string) => {
   color: var(--md-on-primary);
 }
 
+.llm-format-switch__item:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: -2px;
+}
+
 .llm-format-switch__item:not(.active):hover {
-  background-color: color-mix(in srgb, var(--md-primary-container) 45%, white);
+  background-color: color-mix(in srgb, var(--md-primary-container) 62%, var(--md-surface));
 }
 
 .llm-checkbox-row {

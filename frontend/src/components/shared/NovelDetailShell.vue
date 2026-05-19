@@ -135,6 +135,9 @@
             :key="section.key"
             type="button"
             @click="switchSection(section.key)"
+            @mouseenter="prefetchSectionComponent(section.key)"
+            @focus="prefetchSectionComponent(section.key)"
+            @touchstart.passive="prefetchSectionComponent(section.key)"
             class="detail-shell__nav-item md-ripple"
             :class="{ 'is-active': activeSection === section.key }"
             :aria-current="activeSection === section.key ? 'page' : undefined"
@@ -157,7 +160,7 @@
         <div
           v-if="isSidebarOpen && !isDesktopViewport"
           class="detail-shell__drawer-backdrop"
-          style="background-color: rgba(31, 37, 48, 0.32)"
+          style="background-color: var(--md-scrim)"
           @click="closeSidebar"
         ></div>
       </transition>
@@ -305,7 +308,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, h } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, h, type Component } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   useForeshadowingQuery,
@@ -322,14 +325,6 @@ import { formatDateTime } from '@/utils/date'
 import { globalAlert } from '@/composables/useAlert'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import BlueprintEditModal from '@/components/BlueprintEditModal.vue'
-import OverviewSection from '@/components/novel-detail/OverviewSection.vue'
-import WorldSettingSection from '@/components/novel-detail/WorldSettingSection.vue'
-import CharactersSection from '@/components/novel-detail/CharactersSection.vue'
-import RelationshipsSection from '@/components/novel-detail/RelationshipsSection.vue'
-import ChapterOutlineSection from '@/components/novel-detail/ChapterOutlineSection.vue'
-import ChaptersSection from '@/components/novel-detail/ChaptersSection.vue'
-import EmotionCurveSection from '@/components/novel-detail/EmotionCurveSection.vue'
-import ForeshadowingSection from '@/components/novel-detail/ForeshadowingSection.vue'
 
 interface Props {
   isAdmin?: boolean
@@ -376,15 +371,48 @@ const resolveInitialSection = (): SectionKey => {
 
 const initialSection = resolveInitialSection()
 
-const sectionComponents: Record<SectionKey, any> = {
-  overview: OverviewSection,
-  world_setting: WorldSettingSection,
-  characters: CharactersSection,
-  relationships: RelationshipsSection,
-  chapter_outline: ChapterOutlineSection,
-  chapters: ChaptersSection,
-  emotion_curve: EmotionCurveSection,
-  foreshadowing: ForeshadowingSection,
+type AsyncSectionModule = { default: Component }
+
+const sectionLoaders: Record<SectionKey, () => Promise<AsyncSectionModule>> = {
+  overview: () => import('@/components/novel-detail/OverviewSection.vue'),
+  world_setting: () => import('@/components/novel-detail/WorldSettingSection.vue'),
+  characters: () => import('@/components/novel-detail/CharactersSection.vue'),
+  relationships: () => import('@/components/novel-detail/RelationshipsSection.vue'),
+  chapter_outline: () => import('@/components/novel-detail/ChapterOutlineSection.vue'),
+  chapters: () => import('@/components/novel-detail/ChaptersSection.vue'),
+  emotion_curve: () => import('@/components/novel-detail/EmotionCurveSection.vue'),
+  foreshadowing: () => import('@/components/novel-detail/ForeshadowingSection.vue'),
+}
+
+const sectionComponents = Object.fromEntries(
+  Object.entries(sectionLoaders).map(([key, loader]) => [key, defineAsyncComponent(loader)]),
+) as Record<SectionKey, ReturnType<typeof defineAsyncComponent>>
+
+const prefetchedSections = new Set<SectionKey>()
+const prefetchInFlight = new Map<SectionKey, Promise<void>>()
+
+const prefetchSectionComponent = (key: SectionKey) => {
+  if (prefetchedSections.has(key)) {
+    return
+  }
+
+  const existingRequest = prefetchInFlight.get(key)
+  if (existingRequest) {
+    return
+  }
+
+  const request = sectionLoaders[key]()
+    .then(() => {
+      prefetchedSections.add(key)
+    })
+    .catch(() => {
+      // 预取失败不阻塞切换，点击分区后会自动重试。
+    })
+    .finally(() => {
+      prefetchInFlight.delete(key)
+    })
+
+  prefetchInFlight.set(key, request)
 }
 
 // Section icons as functional components
@@ -594,6 +622,7 @@ const reloadSection = (section: SectionKey, force = false) => {
 
 const switchSection = (section: SectionKey) => {
   activeSection.value = section
+  prefetchSectionComponent(section)
   if (!isDesktopViewport.value) {
     closeSidebar()
   }
@@ -764,6 +793,7 @@ const saveNewChapter = async () => {
 }
 
 onMounted(async () => {
+  prefetchSectionComponent(activeSection.value)
   if (typeof window !== 'undefined') {
     window.addEventListener('resize', handleResize)
     handleResize()
@@ -873,6 +903,7 @@ onBeforeUnmount(() => {
   position: relative;
   display: flex;
   flex: 1 0 auto;
+  min-height: calc(100vh - 4rem);
   min-height: calc(var(--app-viewport-unit) - 4rem);
   width: 100%;
   max-width: 1800px;
@@ -1139,7 +1170,9 @@ onBeforeUnmount(() => {
 
 .detail-shell__content-surface--fill {
   min-height: 0;
+  height: calc(100vh - 6rem);
   height: calc(var(--app-viewport-unit) - 6rem);
+  max-height: calc(100vh - 6rem);
   max-height: calc(var(--app-viewport-unit) - 6rem);
 }
 
@@ -1168,7 +1201,9 @@ onBeforeUnmount(() => {
   }
 
   .detail-shell__content-surface--fill {
+    height: calc(100vh - 7.5rem);
     height: calc(var(--app-viewport-unit) - 7.5rem);
+    max-height: calc(100vh - 7.5rem);
     max-height: calc(var(--app-viewport-unit) - 7.5rem);
   }
 }

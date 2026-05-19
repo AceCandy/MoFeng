@@ -37,18 +37,8 @@ onMounted(() => {
   overflow: hidden;
   white-space: nowrap;
   border-right: 0.1em solid var(--md-on-surface);
-  animation: typing 2s steps(var(--char-count, 10), end), blink-caret 0.75s step-end infinite;
+  animation: blink-caret 0.75s step-end infinite;
   width: 100%;
-}
-
-/* Typing effect */
-@keyframes typing {
-  from {
-    width: 0;
-  }
-  to {
-    width: 100%;
-  }
 }
 
 /* Cursor blinking effect */

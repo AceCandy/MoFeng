@@ -3,7 +3,6 @@
   <article
     class="md-card md-card-outlined project-card"
     :aria-label="`${project.title}，${getStatusText}`"
-    @click="$emit('click', project.id)"
   >
     <div>
       <div class="project-card__header">
@@ -33,6 +32,7 @@
 
     <div class="project-card__actions project-card__actions--compact">
       <button
+        type="button"
         @click.stop="$emit('continue', project)"
         class="md-btn md-btn-filled md-ripple project-card__action"
       >
@@ -52,6 +52,7 @@
         创作
       </button>
       <button
+        type="button"
         @click.stop="handleDelete"
         class="md-icon-btn md-ripple project-card__delete"
         :aria-label="`删除项目 ${project.title}`"
@@ -87,7 +88,6 @@ interface Props {
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  (e: 'click', id: string): void
   (e: 'detail', id: string): void
   (e: 'continue', project: NovelProjectSummary): void
   (e: 'delete', id: string): void
@@ -126,7 +126,6 @@ const handleDelete = () => {
   padding: var(--md-spacing-5);
   border-radius: var(--md-radius-lg);
   box-shadow: none;
-  cursor: pointer;
   touch-action: manipulation;
   transition:
     border-color var(--md-duration-short) var(--md-easing-standard),
@@ -165,7 +164,6 @@ const handleDelete = () => {
   font-weight: 600;
   line-height: 1.35;
   text-align: left;
-  cursor: pointer;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-clamp: 2;

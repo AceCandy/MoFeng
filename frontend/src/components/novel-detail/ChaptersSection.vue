@@ -5,7 +5,7 @@
       <!-- 移动端遮罩层 -->
       <div
         v-if="showChapterList"
-        class="fixed inset-0 bg-black/50 z-40 lg:hidden"
+        class="fixed inset-0 bg-[var(--md-scrim)] z-40 lg:hidden"
         @click="showChapterList = false"
       ></div>
 
@@ -97,8 +97,8 @@
               </div>
               <div class="flex items-center gap-2 flex-wrap justify-end">
                 <button
-                  class="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors duration-200"
-                  :class="selectedChapter?.content ? 'border-[var(--md-primary-container)] text-[var(--md-primary)] hover:bg-[var(--md-primary-container)]' : 'border-[var(--md-outline-variant)] text-[var(--md-on-surface-variant)] cursor-not-allowed'"
+                  class="inline-flex items-center gap-1 min-h-[44px] px-3.5 py-2 text-sm font-medium rounded-lg border transition-colors duration-200"
+                  :class="selectedChapter?.content ? 'border-[var(--md-primary-container)] text-[var(--md-on-primary-container)] hover:bg-[var(--md-primary-container)]' : 'border-[var(--md-outline-variant)] text-[var(--md-on-surface-variant)] cursor-not-allowed'"
                   :disabled="!selectedChapter?.content"
                   @click="exportChapterAsTxt"
                 >
@@ -370,7 +370,7 @@
       enter-from-class="opacity-0"
       leave-to-class="opacity-0"
     >
-      <div v-if="versionModal.show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+      <div v-if="versionModal.show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--md-scrim)]"
         @click="closeVersionModal">
         <div class="bg-[var(--md-surface)] rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden"
           @click.stop>

@@ -166,12 +166,14 @@
       </div>
 
       <!-- Emotion Type Filter Chips -->
-      <div class="flex flex-wrap gap-2 mb-6">
+      <div class="flex flex-wrap gap-2 mb-6" role="group" aria-label="情感类型筛选">
         <button
           v-for="emotion in emotionTypes"
           :key="emotion.key"
           @click="toggleEmotion(emotion.key)"
           class="md-chip md-chip-filter md-ripple"
+          :aria-pressed="selectedEmotions.includes(emotion.key)"
+          :aria-label="`切换${emotion.label}情感曲线`"
           :class="{ selected: selectedEmotions.includes(emotion.key) }"
           :style="
             selectedEmotions.includes(emotion.key)
@@ -193,7 +195,14 @@
 
       <!-- Chart -->
       <div class="md-card md-card-outlined p-4" style="border-radius: var(--md-radius-md)">
-        <canvas ref="chartCanvas" height="300"></canvas>
+        <p :id="chartSummaryId" class="sr-only">{{ chartA11ySummary }}</p>
+        <canvas
+          ref="chartCanvas"
+          height="300"
+          role="img"
+          :aria-label="`章节情感曲线图`"
+          :aria-describedby="chartSummaryId"
+        ></canvas>
       </div>
 
       <!-- Chapter Details List -->
@@ -242,9 +251,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import { useRoute } from 'vue-router'
-import Chart from 'chart.js/auto'
 import { useAnalyzeEmotionMutation, useEmotionCurveQuery } from '@/queries/novel'
 
 const route = useRoute()
@@ -273,6 +281,7 @@ const emotionDistribution = computed<Record<string, number>>(
   () => emotionData.value?.emotion_distribution ?? {},
 )
 let chartInstance: any = null
+let chartModulePromise: Promise<typeof import('@/lib/chartLine')> | null = null
 
 const EMOTION_KEY_MAP: { [key: string]: string } = {
   joy: '喜悦',
@@ -292,7 +301,7 @@ const EMOTION_COLOR_TOKEN_MAP: Record<string, string> = {
   calm: '--md-on-surface-variant',
 }
 
-const DEFAULT_EMOTION_COLOR_FALLBACK = '#5e6674'
+const DEFAULT_EMOTION_COLOR_FALLBACK = 'currentColor'
 
 const resolveCssVarColor = (tokenName: string, fallback: string) => {
   if (typeof window === 'undefined') return fallback
@@ -302,7 +311,7 @@ const resolveCssVarColor = (tokenName: string, fallback: string) => {
 
 const getEmotionColorByKey = (emotionKey: string) => {
   const tokenName = EMOTION_COLOR_TOKEN_MAP[emotionKey] || '--md-on-surface-variant'
-  const fallback = DEFAULT_EMOTION_COLOR_FALLBACK
+  const fallback = resolveCssVarColor('--md-on-surface-variant', DEFAULT_EMOTION_COLOR_FALLBACK)
   return resolveCssVarColor(tokenName, fallback)
 }
 
@@ -326,6 +335,24 @@ const emotionTypeCount = computed(() => {
   return Object.keys(emotionDistribution.value).length
 })
 
+const chartSummaryId = 'emotion-curve-chart-summary'
+
+const selectedEmotionLabels = computed(() =>
+  emotionTypes.value
+    .filter((emotionType) => selectedEmotions.value.includes(emotionType.key))
+    .map((emotionType) => emotionType.label),
+)
+
+const chartA11ySummary = computed(() => {
+  if (!emotionPoints.value.length) {
+    return '暂无可视化情感数据。'
+  }
+  const selectedLabels = selectedEmotionLabels.value.length
+    ? selectedEmotionLabels.value.join('、')
+    : '无'
+  return `共 ${totalChapters.value} 章。当前显示 ${selectedLabels} 情感曲线，主导情感为 ${dominantEmotion.value}，平均强度 ${averageIntensity.value}。`
+})
+
 const getEmotionColor = (emotionType: string) => {
   const emotionKey = Object.keys(EMOTION_KEY_MAP).find((key) => EMOTION_KEY_MAP[key] === emotionType)
   return emotionKey ? getEmotionColorByKey(emotionKey) : getEmotionColorByKey('calm')
@@ -340,12 +367,19 @@ const toggleEmotion = (key: string) => {
   } else {
     selectedEmotions.value.push(key)
   }
-  updateChart()
+  void updateChart()
 }
 
-const updateChart = () => {
+const loadChartModule = async () => {
+  if (!chartModulePromise) {
+    chartModulePromise = import('@/lib/chartLine')
+  }
+  return chartModulePromise
+}
+
+const updateChart = async () => {
   if (!chartInstance) {
-    initChart()
+    await initChart()
     return
   }
 
@@ -373,7 +407,7 @@ const updateChart = () => {
   chartInstance.update()
 }
 
-const initChart = () => {
+const initChart = async () => {
   if (!chartCanvas.value) {
     return
   }
@@ -387,6 +421,8 @@ const initChart = () => {
     console.error('Failed to get 2D context for canvas.')
     return
   }
+
+  const { Chart } = await loadChartModule()
 
   const labels = emotionPoints.value.map((p) => `第${p.chapter_number}章`)
   const datasets = emotionTypes.value
@@ -435,10 +471,10 @@ const initChart = () => {
       plugins: {
         tooltip: {
           callbacks: {
-            title: function (context) {
+            title: function (context: any[]) {
               return context[0].label
             },
-            label: function (context) {
+            label: function (context: any) {
               const emotionType = emotionTypes.value.find((et) => et.label === context.dataset.label)
               const point = emotionPoints.value[context.dataIndex]
               if (
@@ -477,9 +513,9 @@ watch(
     if (newPoints && newPoints.length > 0) {
       nextTick(() => {
         if (chartInstance) {
-          updateChart()
+          void updateChart()
         } else {
-          initChart()
+          void initChart()
         }
       })
     } else if (chartInstance) {
@@ -493,10 +529,17 @@ watch(
 watch(
   selectedEmotions,
   () => {
-    updateChart()
+    void updateChart()
   },
   { deep: true },
 )
+
+onBeforeUnmount(() => {
+  if (chartInstance) {
+    chartInstance.destroy()
+    chartInstance = null
+  }
+})
 </script>
 
 <style scoped>
@@ -568,7 +611,7 @@ watch(
 .md-chip {
   display: inline-flex;
   align-items: center;
-  height: 32px;
+  min-height: 32px;
   padding: 0 12px;
   border-radius: 8px;
   font-size: 0.875rem;
@@ -579,6 +622,10 @@ watch(
   transition:
     background-color 0.2s,
     border-color 0.2s;
+}
+
+button.md-chip {
+  min-height: 44px;
 }
 
 .md-chip.selected {
@@ -616,6 +663,12 @@ watch(
 .md-headline-small {
   font-size: 1.5rem;
   font-weight: 400;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-spinner {
+    animation: none;
+  }
 }
 
 .md-title-small {

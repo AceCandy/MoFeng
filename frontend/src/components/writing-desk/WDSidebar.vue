@@ -14,7 +14,7 @@
             type="button"
             class="writing-sidebar__link writing-sidebar__blueprint-link md-ripple"
             aria-label="打开故事蓝图"
-            @click="$emit('openProjectDetail')"
+            @click="emit('openProjectDetail')"
           >
             <div
               class="w-10 h-10 rounded-full flex items-center justify-center"
@@ -79,10 +79,8 @@
                   @keydown.space.prevent="$emit('selectChapter', chapter.chapter_number)"
                   role="button"
                   tabindex="0"
-                  :aria-current="
-                    selectedChapterNumber === chapter.chapter_number ? 'true' : undefined
-                  "
-                  :aria-label="`打开第${chapter.chapter_number}章：${chapter.title}`"
+                  :aria-pressed="selectedChapterNumber === chapter.chapter_number"
+                  :aria-label="getChapterA11yLabel(chapter.chapter_number, chapter.title)"
                   :class="[
                     'cursor-pointer writing-sidebar__chapter-row m3-stagger',
                     selectedChapterNumber === chapter.chapter_number
@@ -114,6 +112,9 @@
                           第{{ chapter.chapter_number }}章
                         </span>
                       </Tooltip>
+                      <span class="sr-only">
+                        状态：{{ getChapterTag(chapter.chapter_number) }}
+                      </span>
                     </div>
                     <div class="writing-sidebar__chapter-title-row">
                       <Tooltip :text="chapter.title">
@@ -196,7 +197,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
-defineEmits([
+const emit = defineEmits([
   'openProjectDetail',
   'selectChapter',
   'generateChapter',
@@ -242,10 +243,11 @@ const scrollToFirstIncompleteChapter = async () => {
   const element = chapterRefs.value[target.chapter_number]
   if (!element) return
   const container = listContainer.value
+  const scrollBehavior: ScrollBehavior = shouldReduceMotion() ? 'auto' : 'smooth'
   if (container) {
-    element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })
+    element.scrollIntoView({ behavior: scrollBehavior, block: 'center', inline: 'nearest' })
   } else {
-    element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    element.scrollIntoView({ behavior: scrollBehavior, block: 'center' })
   }
 }
 
@@ -308,6 +310,18 @@ const getChapterTag = (chapterNumber: number): string => {
   if (isChapterSelecting(chapterNumber) || hasChapterInProgress(chapterNumber)) return '待选择'
   if (isChapterFailed(chapterNumber)) return '待修复'
   return '待开始'
+}
+
+// 为屏幕阅读器补充章节状态，避免仅依赖颜色或悬浮提示传达关键信息。
+const getChapterA11yLabel = (chapterNumber: number, title?: string | null): string => {
+  const stateText = getChapterTag(chapterNumber)
+  const safeTitle = title?.trim() || `第${chapterNumber}章`
+  return `打开第${chapterNumber}章：${safeTitle}，状态${stateText}`
+}
+
+const shouldReduceMotion = (): boolean => {
+  if (typeof window === 'undefined') return false
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 </script>
 
@@ -557,6 +571,13 @@ const getChapterTag = (chapterNumber: number): string => {
 
   100% {
     box-shadow: 0 0 0 8px color-mix(in srgb, var(--md-primary) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m3-stagger,
+  .writing-sidebar__status-dot.is-progress {
+    animation: none !important;
   }
 }
 </style>

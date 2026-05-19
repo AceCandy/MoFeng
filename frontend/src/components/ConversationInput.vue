@@ -2,8 +2,9 @@
 <template>
   <div class="fade-in">
     <!-- 加载状态 -->
-    <div v-if="loading || !uiControl" class="flex justify-center items-center p-4">
+    <div v-if="loading || !uiControl" class="flex justify-center items-center p-4" role="status" aria-live="polite">
       <div class="loader"></div>
+      <span class="sr-only">正在加载输入控件</span>
     </div>
 
     <!-- 单选题 -->
@@ -12,12 +13,14 @@
         <button
           v-for="option in uiControl.options"
           :key="option.id"
+          type="button"
           @click="handleOptionSelect(option.id, option.label)"
           class="conv-input__option conv-input__option--primary"
         >
           {{ option.label }}
         </button>
         <button
+          type="button"
           @click="isManualInput = true"
           class="conv-input__option conv-input__option--neutral"
         >
@@ -214,6 +217,11 @@ watch(isManualInput, async (newValue) => {
   color: var(--md-on-surface);
 }
 
+.conv-input__option:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
 .conv-input__textarea {
   flex: 1;
   padding: var(--md-spacing-3) var(--md-spacing-4);
@@ -253,7 +261,12 @@ watch(isManualInput, async (newValue) => {
 }
 
 .conv-input__send:hover {
-  background-color: color-mix(in oklch, var(--md-primary) 85%, black);
+  background-color: color-mix(in oklch, var(--md-primary) 82%, var(--md-primary-dark));
+}
+
+.conv-input__send:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
 }
 
 .conv-input__send:disabled {

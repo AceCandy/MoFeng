@@ -147,26 +147,20 @@
 
 <script setup lang="ts">
 import { computed, h, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import {
-  NAlert,
-  NButton,
-  NDataTable,
-  NEmpty,
-  NForm,
-  NFormItem,
-  NInput,
-  NModal,
-  NPopconfirm,
-  NSpin,
-  NSwitch,
-  NTag,
-  NSpace,
-  useMessage,
-  type DataTableColumns,
-  type FormInst,
-  type FormRules,
-  type FormItemRule,
-} from 'naive-ui'
+import { NAlert } from 'naive-ui/es/alert'
+import { NButton } from 'naive-ui/es/button'
+import { NDataTable } from 'naive-ui/es/data-table'
+import { NEmpty } from 'naive-ui/es/empty'
+import { NForm, NFormItem } from 'naive-ui/es/form'
+import { NInput } from 'naive-ui/es/input'
+import { useMessage } from 'naive-ui/es/message'
+import { NModal } from 'naive-ui/es/modal'
+import { NPopconfirm } from 'naive-ui/es/popconfirm'
+import { NSpace } from 'naive-ui/es/space'
+import { NSpin } from 'naive-ui/es/spin'
+import { NSwitch } from 'naive-ui/es/switch'
+import { NTag } from 'naive-ui/es/tag'
+import type { DataTableColumns, FormInst, FormRules, FormItemRule } from 'naive-ui'
 
 import type { AdminUser, UserCreatePayload, UserUpdatePayload } from '@/api/admin'
 import {

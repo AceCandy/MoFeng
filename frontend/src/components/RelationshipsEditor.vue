@@ -33,7 +33,7 @@
         ></textarea>
       </div>
     </div>
-    <button type="button" @click="addRelationship" class="w-full mt-4 px-4 py-2 text-sm font-medium text-[var(--md-primary)] bg-[var(--md-primary-container)] border border-[var(--md-primary-container)] rounded-md hover:bg-[var(--md-primary-dark)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--md-primary-light)]">
+    <button type="button" @click="addRelationship" class="w-full mt-4 min-h-[44px] px-4 py-2 text-sm font-medium text-[var(--md-on-primary-container)] bg-[var(--md-primary-container)] border border-[var(--md-primary-container)] rounded-md hover:bg-[var(--md-tint-focus)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--md-primary-light)]">
       + 添加新关系
     </button>
   </div>

@@ -2,7 +2,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
-import { NMessageProvider } from 'naive-ui'
 import CustomAlert from '@/components/CustomAlert.vue'
 import AppShell from '@/components/shared/AppShell.vue'
 import AuthLayout from '@/components/shared/AuthLayout.vue'
@@ -13,29 +12,27 @@ const layoutComponent = computed(() => route.meta.layout === 'auth' ? AuthLayout
 </script>
 
 <template>
-  <n-message-provider>
-    <RouterView v-slot="{ Component }">
-      <component :is="layoutComponent">
-        <component :is="Component" />
-      </component>
-    </RouterView>
+  <RouterView v-slot="{ Component }">
+    <component :is="layoutComponent">
+      <component :is="Component" />
+    </component>
+  </RouterView>
 
-    <!-- 全局提示框 -->
-    <CustomAlert
-      v-for="alert in globalAlert.alerts.value"
-      :key="alert.id"
-      :visible="alert.visible"
-      :type="alert.type"
-      :title="alert.title"
-      :message="alert.message"
-      :show-cancel="alert.showCancel"
-      :confirm-text="alert.confirmText"
-      :cancel-text="alert.cancelText"
-      @confirm="globalAlert.closeAlert(alert.id, true)"
-      @cancel="globalAlert.closeAlert(alert.id, false)"
-      @close="globalAlert.closeAlert(alert.id, false)"
-    />
-  </n-message-provider>
+  <!-- 全局提示框 -->
+  <CustomAlert
+    v-for="alert in globalAlert.alerts.value"
+    :key="alert.id"
+    :visible="alert.visible"
+    :type="alert.type"
+    :title="alert.title"
+    :message="alert.message"
+    :show-cancel="alert.showCancel"
+    :confirm-text="alert.confirmText"
+    :cancel-text="alert.cancelText"
+    @confirm="globalAlert.closeAlert(alert.id, true)"
+    @cancel="globalAlert.closeAlert(alert.id, false)"
+    @close="globalAlert.closeAlert(alert.id, false)"
+  />
 </template>
 
 <style scoped>

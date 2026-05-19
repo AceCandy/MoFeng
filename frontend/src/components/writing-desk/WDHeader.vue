@@ -209,4 +209,10 @@ const assistantButtonLabel = computed(() => {
   }
 
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .writing-header__progress span {
+    transition: none;
+  }
+}
 </style>
