@@ -112,6 +112,43 @@ MoFeng（墨风）面向长篇小说创作者与小型创作团队，提供“�
 7. 在写作台生成、评审、选版、编辑章节  
 8. 在后台完成用户、Prompt、配置治理
 
+### 写作台章节生成阶段流程图
+
+```mermaid
+flowchart TD
+  A["点击 开始创作"] --> B["前端置为 generating / context_prep"]
+  B --> C["POST /api/writer/:project_id/chapters/generate"]
+  C --> D1["步骤1 context_prep: 收集历史上下文"]
+  D1 --> D2["步骤2 director_mission: 生成导演脚本"]
+  D2 --> D3["步骤3 rag_retrieval: 检索剧情上下文"]
+  D3 --> D4["步骤4 draft_generation: 按配置生成 N 个版本"]
+  D4 --> D5["步骤5 quality_review: 多版本自动评审"]
+  D5 --> D6["步骤6 persist_versions: 版本落库"]
+  D6 --> D7["步骤7 waiting_for_confirm: 等待确认版本"]
+
+  D4 -. 任一步骤异常 .-> F[failed]
+  D5 -. 任一步骤异常 .-> F
+  D6 -. 任一步骤异常 .-> F
+
+  D7 --> E1{"候选版本数"}
+  E1 -->|1 个| E2["前端自动确认"]
+  E1 -->|2 个| E3["用户手动选择版本"]
+  E2 --> E4[selecting]
+  E3 --> E4
+  E4 --> E5[successful]
+
+  D7 --> R1["可选: 手动触发评审"]
+  R1 --> R2[evaluating]
+  R2 -->|成功| R3[evaluation_done]
+  R3 --> D7
+  R2 -->|失败| R4[evaluation_failed]
+```
+
+说明：
+- `N` 由配置决定，范围 `1~2`（`writer.chapter_versions`）。
+- 当 `N=2` 时，进入 `waiting_for_confirm` 即表示两个版本都已生成并写入。
+- 字数约束目前是“超上限压缩”，不是“低字数自动补全”。
+
 ---
 
 ## 技术架构

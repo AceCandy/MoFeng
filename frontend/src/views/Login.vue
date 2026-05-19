@@ -2,12 +2,12 @@
 <template>
   <div class="login-page">
     <div class="login-brand">
-      <TypewriterEffect text="拯救小说家" />
+      <TypewriterEffect text="墨风" />
     </div>
 
     <section class="md-card md-card-elevated login-card" aria-labelledby="login-title">
       <div class="login-card__header">
-        <p>MoFeng 墨风</p>
+        <p>墨风</p>
         <h2 id="login-title">欢迎回来</h2>
         <span>登录以继续您的创作之旅</span>
       </div>
@@ -24,6 +24,9 @@
             class="md-text-field-input"
             placeholder="请输入用户名"
             autocomplete="username"
+            maxlength="64"
+            spellcheck="false"
+            autocapitalize="none"
           />
         </div>
 
@@ -38,6 +41,7 @@
             class="md-text-field-input"
             placeholder="请输入密码"
             autocomplete="current-password"
+            maxlength="256"
           />
         </div>
 
@@ -134,9 +138,15 @@ const enableLinuxdoLogin = computed(
 const handleLogin = async () => {
   error.value = ''
   loginMutation.reset()
+  const normalizedUsername = username.value.trim()
+  if (!normalizedUsername) {
+    error.value = '请输入用户名'
+    return
+  }
+
   try {
     const result = await loginMutation.mutateAsync({
-      username: username.value,
+      username: normalizedUsername,
       password: password.value,
     })
     if (result.user.is_admin && result.mustChangePassword) {
@@ -158,14 +168,33 @@ const handleLogin = async () => {
 
 <style scoped>
 .login-page {
-  min-height: 100vh;
+  min-height: var(--app-viewport-unit);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: var(--md-spacing-8);
-  padding: var(--md-spacing-4);
-  background-color: var(--md-surface-dim);
+  padding:
+    max(var(--md-spacing-4), env(safe-area-inset-top))
+    max(var(--md-spacing-4), env(safe-area-inset-right))
+    max(var(--md-spacing-4), env(safe-area-inset-bottom))
+    max(var(--md-spacing-4), env(safe-area-inset-left));
+  background:
+    radial-gradient(
+      circle at 0% 0%,
+      color-mix(in oklch, var(--md-primary-container) 54%, transparent),
+      transparent 36%
+    ),
+    radial-gradient(
+      circle at 100% 0%,
+      color-mix(in oklch, var(--md-warning-container) 58%, transparent),
+      transparent 42%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--md-surface-dim) 84%, var(--md-tint-cool)),
+      color-mix(in oklch, var(--md-surface-container-low) 88%, var(--md-tint-warm))
+    );
 }
 
 .login-brand {
@@ -176,6 +205,13 @@ const handleLogin = async () => {
   width: min(100%, 448px);
   padding: var(--md-spacing-8);
   border-radius: var(--md-radius-xl);
+  border: 1px solid color-mix(in oklch, var(--md-primary) 20%, var(--md-outline-variant));
+  background:
+    linear-gradient(
+      150deg,
+      color-mix(in oklch, var(--md-surface) 90%, var(--md-tint-cool)),
+      color-mix(in oklch, var(--md-surface) 94%, var(--md-tint-warm))
+    );
 }
 
 .login-card__header {
@@ -222,6 +258,10 @@ const handleLogin = async () => {
   font-weight: 500;
 }
 
+.login-feedback span {
+  overflow-wrap: anywhere;
+}
+
 .login-feedback svg,
 .login-oauth-icon,
 .login-spinner {
@@ -263,7 +303,7 @@ const handleLogin = async () => {
 .login-divider span {
   position: absolute;
   padding: 0 var(--md-spacing-4);
-  background-color: var(--md-surface);
+  background-color: color-mix(in oklch, var(--md-surface) 92%, var(--md-tint-cool));
 }
 
 .login-link {
@@ -284,6 +324,10 @@ const handleLogin = async () => {
 }
 
 @media (max-width: 520px) {
+  .login-page {
+    gap: var(--md-spacing-5);
+  }
+
   .login-card {
     padding: var(--md-spacing-5);
   }

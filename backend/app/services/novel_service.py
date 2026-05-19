@@ -504,7 +504,7 @@ class NovelService:
             versions.append(version)
         chapter.status = ChapterGenerationStatus.WAITING_FOR_CONFIRM.value
         chapter.generation_progress = 100
-        chapter.generation_step = "waiting_for_confirm"
+        chapter.generation_step = f"waiting_for_confirm|v={len(versions)}"
         chapter.generation_step_index = 7
         chapter.generation_step_total = 7
         await self.session.commit()

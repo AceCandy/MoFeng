@@ -20,6 +20,7 @@
     "@tanstack/vue-query": "^5.100.10",
     "@types/marked": "^5.0.2",
     "chart.js": "^4.5.1",
+    "dompurify": "^3.4.5",
     "marked": "^16.3.0",
     "naive-ui": "^2.39.0",
     "pinia": "^3.0.3",

@@ -2,9 +2,10 @@
 import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
 import { API_BASE_URL, API_PREFIX } from './base'
+import { HttpRequestError, requestJson, requestRaw } from './http'
 
 // 统一的请求处理函数
-const request = async (url: string, options: RequestInit = {}) => {
+const request = async <T = any>(url: string, options: RequestInit = {}) => {
   const authStore = useAuthStore()
   const headers = new Headers({
     'Content-Type': 'application/json',
@@ -20,21 +21,22 @@ const request = async (url: string, options: RequestInit = {}) => {
     headers.set('Authorization', `Bearer ${authStore.token}`)
   }
 
-  const response = await fetch(url, { ...options, headers })
-
-  if (response.status === 401) {
-    // Token 失效或未授权
-    authStore.logout()
-    router.push('/login')
-    throw new Error('会话已过期，请重新登录')
+  try {
+    return await requestJson<T>(url, {
+      ...options,
+      headers,
+      timeoutMs: 60_000,
+      fallbackErrorMessage: '小说接口请求失败',
+    })
+  } catch (error) {
+    if (error instanceof HttpRequestError && error.status === 401) {
+      // Token 失效或未授权
+      authStore.logout()
+      router.push('/login')
+      throw new Error('会话已过期，请重新登录')
+    }
+    throw error
   }
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.detail || `请求失败，状态码: ${response.status}`)
-  }
-
-  return response.json()
 }
 
 const streamRequest = async (url: string, options: RequestInit = {}) => {
@@ -48,24 +50,35 @@ const streamRequest = async (url: string, options: RequestInit = {}) => {
     headers.set('Authorization', `Bearer ${authStore.token}`)
   }
 
-  const response = await fetch(url, { ...options, headers })
+  try {
+    const response = await requestRaw(url, {
+      ...options,
+      headers,
+      timeoutMs: 60_000,
+      fallbackErrorMessage: '流式请求失败',
+    })
 
-  if (response.status === 401) {
-    authStore.logout()
-    router.push('/login')
-    throw new Error('会话已过期，请重新登录')
+    if (!response.body) {
+      throw new Error('浏览器不支持流式响应')
+    }
+
+    return response
+  } catch (error) {
+    if (error instanceof HttpRequestError && error.status === 401) {
+      authStore.logout()
+      router.push('/login')
+      throw new Error('会话已过期，请重新登录')
+    }
+    throw error
   }
+}
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.detail || `请求失败，状态码: ${response.status}`)
+const parseSSEData = (rawData: string): unknown => {
+  try {
+    return JSON.parse(rawData)
+  } catch {
+    return rawData
   }
-
-  if (!response.body) {
-    throw new Error('浏览器不支持流式响应')
-  }
-
-  return response
 }
 
 const parseSSEMessage = (message: string) => {
@@ -86,8 +99,47 @@ const parseSSEMessage = (message: string) => {
 
   return {
     event,
-    data: JSON.parse(dataLines.join('\n')),
+    data: parseSSEData(dataLines.join('\n')),
   }
+}
+
+const findSSEBoundary = (buffer: string): number => {
+  const lfBoundary = buffer.indexOf('\n\n')
+  const crlfBoundary = buffer.indexOf('\r\n\r\n')
+
+  if (lfBoundary === -1) {
+    return crlfBoundary
+  }
+  if (crlfBoundary === -1) {
+    return lfBoundary
+  }
+  return Math.min(lfBoundary, crlfBoundary)
+}
+
+const getBoundaryLength = (buffer: string, startIndex: number) =>
+  buffer.startsWith('\r\n\r\n', startIndex) ? 4 : 2
+
+const getSSEErrorDetail = (payload: unknown): string => {
+  if (typeof payload === 'string' && payload.trim()) {
+    return payload.trim()
+  }
+  if (payload && typeof payload === 'object') {
+    const detail = (payload as Record<string, unknown>).detail
+    if (typeof detail === 'string' && detail.trim()) {
+      return detail.trim()
+    }
+  }
+  return '流式请求失败'
+}
+
+const readDelta = (payload: unknown): string => {
+  if (payload && typeof payload === 'object') {
+    const delta = (payload as Record<string, unknown>).delta
+    if (typeof delta === 'string') {
+      return delta
+    }
+  }
+  return typeof payload === 'string' ? payload : ''
 }
 
 const readSSEStream = async <T>(
@@ -105,28 +157,30 @@ const readSSEStream = async <T>(
   while (true) {
     const { done, value } = await reader.read()
     if (done) {
+      buffer += decoder.decode()
       break
     }
 
     buffer += decoder.decode(value, { stream: true })
-    let boundaryIndex = buffer.indexOf('\n\n')
+    let boundaryIndex = findSSEBoundary(buffer)
     while (boundaryIndex >= 0) {
       const rawMessage = buffer.slice(0, boundaryIndex).trim()
-      buffer = buffer.slice(boundaryIndex + 2)
+      const boundaryLength = getBoundaryLength(buffer, boundaryIndex)
+      buffer = buffer.slice(boundaryIndex + boundaryLength)
 
       if (rawMessage) {
         const message = parseSSEMessage(rawMessage)
         if (message?.event === 'delta') {
-          handlers.onDelta?.(String(message.data.delta || ''))
+          handlers.onDelta?.(readDelta(message.data))
         } else if (message?.event === 'final') {
           finalPayload = message.data as T
           handlers.onFinal(finalPayload)
         } else if (message?.event === 'error') {
-          throw new Error(String(message.data.detail || '流式请求失败'))
+          throw new Error(getSSEErrorDetail(message.data))
         }
       }
 
-      boundaryIndex = buffer.indexOf('\n\n')
+      boundaryIndex = findSSEBoundary(buffer)
     }
   }
 
@@ -137,7 +191,7 @@ const readSSEStream = async <T>(
       finalPayload = message.data as T
       handlers.onFinal(finalPayload)
     } else if (message?.event === 'error') {
-      throw new Error(String(message.data.detail || '流式请求失败'))
+      throw new Error(getSSEErrorDetail(message.data))
     }
   }
 

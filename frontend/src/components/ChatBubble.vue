@@ -16,6 +16,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import DOMPurify from 'dompurify'
 
 interface Props {
   message: string
@@ -42,7 +43,7 @@ const parseMarkdown = (text: string): string => {
   parsed = parsed.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
   
   // 处理选项列表 A) text
-  parsed = parsed.replace(/^([A-Z])\)\s*\*\*(.*?)\*\*(.*)/gm, '<div class="mb-2"><span class="inline-flex items-center justify-center w-6 h-6 bg-indigo-100 text-indigo-600 text-sm font-bold rounded-full mr-2">$1</span><strong>$2</strong>$3</div>')
+  parsed = parsed.replace(/^([A-Z])\)\s*\*\*(.*?)\*\*(.*)/gm, '<div class="mb-2"><span class="chat-bubble__option-marker">$1</span><strong>$2</strong>$3</div>')
   
   // 处理普通换行
   parsed = parsed.replace(/\n/g, '<br>')
@@ -54,8 +55,10 @@ const parseMarkdown = (text: string): string => {
   if (!parsed.includes('<p>')) {
     parsed = `<p>${parsed}</p>`
   }
-  
-  return parsed
+
+  return DOMPurify.sanitize(parsed, {
+    USE_PROFILES: { html: true },
+  })
 }
 
 const renderedMessage = computed(() => {
@@ -70,8 +73,24 @@ const wrapperClass = computed(() => {
 })
 
 const bubbleClass = computed(() => {
-  const baseClass = 'max-w-md lg:max-w-lg p-4 rounded-lg shadow-md fade-in'
+  const baseClass = 'max-w-md lg:max-w-lg p-4 fade-in'
   const typeClass = props.type === 'ai' ? 'chat-bubble-ai' : 'chat-bubble-user'
   return `${baseClass} ${typeClass}`
 })
 </script>
+
+<style scoped>
+.chat-bubble__option-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  font-size: var(--md-label-small);
+  font-weight: 700;
+  border-radius: var(--md-radius-full);
+  margin-right: 0.5rem;
+}
+</style>

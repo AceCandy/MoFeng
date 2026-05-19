@@ -82,6 +82,42 @@
       </div>
     </header>
 
+    <section v-if="!isAdmin" class="detail-shell__overview-strip" aria-label="小说宇宙总览">
+      <article class="detail-shell__overview-main">
+        <p class="detail-shell__kicker">小说宇宙总览</p>
+        <h2>{{ formattedTitle }}</h2>
+        <p>
+          你可以在这里统一查看世界观、角色关系、章节推进与伏笔状态，再进入正文写作台。
+        </p>
+        <div class="detail-shell__status-line">
+          <span :class="['detail-shell__status-pill', `is-${projectStatus.tone}`]">
+            {{ projectStatus.label }}
+          </span>
+          <span class="detail-shell__status-meta">
+            {{ chapterCompleted }}/{{ chapterTotal }} 章已完成
+          </span>
+        </div>
+      </article>
+
+      <div class="detail-shell__overview-metrics">
+        <article class="detail-shell__metric">
+          <p>角色数量</p>
+          <strong>{{ characterCount }}</strong>
+          <span>主要角色卡</span>
+        </article>
+        <article class="detail-shell__metric">
+          <p>当前章节</p>
+          <strong>{{ currentChapterLabel }}</strong>
+          <span>下一步创作焦点</span>
+        </article>
+        <article class="detail-shell__metric">
+          <p>伏笔提醒</p>
+          <strong>{{ foreshadowingOverview.overdue }}</strong>
+          <span>待回收 · {{ foreshadowingOverview.pending }}</span>
+        </article>
+      </div>
+    </section>
+
     <!-- Main Content -->
     <div class="detail-shell__body">
       <!-- Material 3 Navigation Drawer -->
@@ -121,7 +157,7 @@
         <div
           v-if="isSidebarOpen && !isDesktopViewport"
           class="detail-shell__drawer-backdrop"
-          style="background-color: rgba(0, 0, 0, 0.32)"
+          style="background-color: rgba(31, 37, 48, 0.32)"
           @click="closeSidebar"
         ></div>
       </transition>
@@ -211,11 +247,20 @@
       enter-from-class="md-scale-enter-from"
       leave-to-class="md-scale-leave-to"
     >
-      <div v-if="isAddChapterModalOpen && !isAdmin" class="md-dialog-overlay">
-        <div class="absolute inset-0" @click="cancelNewChapter"></div>
-        <div class="md-dialog relative w-full max-w-lg mx-4" @click.stop>
+      <div
+        v-if="isAddChapterModalOpen && !isAdmin"
+        class="md-dialog-overlay"
+        @click.self="cancelNewChapter"
+      >
+        <div
+          ref="addChapterDialogRef"
+          class="md-dialog relative w-full max-w-lg mx-4"
+          role="dialog"
+          aria-modal="true"
+          :aria-labelledby="addChapterDialogTitleId"
+        >
           <div class="md-dialog-header">
-            <h3 class="md-dialog-title">新增章节大纲</h3>
+            <h3 :id="addChapterDialogTitleId" class="md-dialog-title">新增章节大纲</h3>
           </div>
           <div class="md-dialog-content space-y-6">
             <div class="md-text-field">
@@ -240,7 +285,13 @@
             </div>
           </div>
           <div class="md-dialog-actions">
-            <button type="button" class="md-btn md-btn-text md-ripple" @click="cancelNewChapter">
+            <button
+              ref="addChapterCancelButtonRef"
+              data-dialog-initial-focus
+              type="button"
+              class="md-btn md-btn-text md-ripple"
+              @click="cancelNewChapter"
+            >
               取消
             </button>
             <button type="button" class="md-btn md-btn-filled md-ripple" @click="saveNewChapter">
@@ -257,6 +308,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
+  useForeshadowingQuery,
   useNovelProjectQuery,
   useNovelSectionQuery,
   useUpdateBlueprintMutation,
@@ -268,6 +320,7 @@ import type {
 } from '@/api/novel'
 import { formatDateTime } from '@/utils/date'
 import { globalAlert } from '@/composables/useAlert'
+import { useDialogA11y } from '@/composables/useDialogA11y'
 import BlueprintEditModal from '@/components/BlueprintEditModal.vue'
 import OverviewSection from '@/components/novel-detail/OverviewSection.vue'
 import WorldSettingSection from '@/components/novel-detail/WorldSettingSection.vue'
@@ -294,6 +347,7 @@ const router = useRouter()
 const projectId = route.params.id as string
 const projectQuery = useNovelProjectQuery(() => (!props.isAdmin ? projectId : null))
 const updateBlueprintMutation = useUpdateBlueprintMutation(() => projectId)
+const foreshadowingQuery = useForeshadowingQuery(() => (!props.isAdmin ? projectId : null))
 const DESKTOP_BREAKPOINT = 1024
 const isDesktopViewport = ref(
   typeof window !== 'undefined' ? window.innerWidth >= DESKTOP_BREAKPOINT : true,
@@ -411,11 +465,52 @@ const modalField = ref('')
 
 // Add chapter modal state (user mode only)
 const isAddChapterModalOpen = ref(false)
+const addChapterDialogRef = ref<HTMLElement | null>(null)
+const addChapterCancelButtonRef = ref<HTMLElement | null>(null)
+const addChapterDialogTitleId = 'novel-detail-add-chapter-title'
 const newChapterTitle = ref('')
 const newChapterSummary = ref('')
 const novel = computed<NovelProject | null>(() =>
   !props.isAdmin ? (projectQuery.data.value ?? null) : null,
 )
+const projectStatus = computed(() => {
+  const total = novel.value?.blueprint?.chapter_outline?.length ?? 0
+  const completed =
+    novel.value?.chapters?.filter((chapter) => chapter.generation_status === 'successful').length ?? 0
+  if (total > 0 && completed >= total) {
+    return { label: '已完稿', tone: 'done' as const }
+  }
+  if (completed > 0) {
+    return { label: '创作中', tone: 'active' as const }
+  }
+  return { label: '筹备中', tone: 'draft' as const }
+})
+const characterCount = computed(() => novel.value?.blueprint?.characters?.length ?? 0)
+const chapterTotal = computed(() => novel.value?.blueprint?.chapter_outline?.length ?? 0)
+const chapterCompleted = computed(
+  () => novel.value?.chapters?.filter((chapter) => chapter.generation_status === 'successful').length ?? 0,
+)
+const currentChapterLabel = computed(() => {
+  if (!chapterTotal.value) return '未开始'
+  const outlines = novel.value?.blueprint?.chapter_outline ?? []
+  const nextChapter = outlines.find((outline) => {
+    const chapter = novel.value?.chapters?.find((item) => item.chapter_number === outline.chapter_number)
+    return chapter?.generation_status !== 'successful'
+  })
+  if (!nextChapter) return `已完成 ${chapterTotal.value} 章`
+  return `第 ${nextChapter.chapter_number} 章`
+})
+const foreshadowingOverview = computed(() => {
+  const payload = foreshadowingQuery.data.value
+  if (!payload) {
+    return { overdue: 0, pending: 0, paidOff: 0 }
+  }
+  return {
+    overdue: payload.overdue_count,
+    pending: payload.planted_count,
+    paidOff: payload.paid_off_count,
+  }
+})
 
 const activeQuery = computed(() => (activeSection.value === 'overview' ? overviewQuery : sectionQuery))
 const currentSectionResponse = computed(() => {
@@ -628,6 +723,13 @@ const cancelNewChapter = () => {
   isAddChapterModalOpen.value = false
 }
 
+useDialogA11y({
+  active: isAddChapterModalOpen,
+  dialogRef: addChapterDialogRef,
+  onClose: cancelNewChapter,
+  initialFocusRef: addChapterCancelButtonRef,
+})
+
 const saveNewChapter = async () => {
   if (props.isAdmin) return
   await ensureProjectLoaded()
@@ -680,7 +782,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 100vh;
+  min-height: var(--app-viewport-unit);
   width: 100%;
   background-color: var(--md-surface-dim);
 }
@@ -771,11 +873,120 @@ onBeforeUnmount(() => {
   position: relative;
   display: flex;
   flex: 1 0 auto;
-  min-height: calc(100vh - 4rem);
+  min-height: calc(var(--app-viewport-unit) - 4rem);
   width: 100%;
   max-width: 1800px;
   margin: 0 auto;
   overflow: visible;
+}
+
+.detail-shell__overview-strip {
+  max-width: 1800px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1rem 1rem 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: var(--md-spacing-4);
+}
+
+.detail-shell__overview-main,
+.detail-shell__overview-metrics {
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-xl);
+  background-color: color-mix(in srgb, var(--md-surface) 95%, transparent);
+  box-shadow: var(--md-elevation-1);
+}
+
+.detail-shell__overview-main {
+  padding: clamp(var(--md-spacing-4), 3vw, var(--md-spacing-6));
+}
+
+.detail-shell__kicker {
+  margin: 0;
+  color: var(--md-primary-dark);
+  font-size: var(--md-label-medium);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.detail-shell__overview-main h2 {
+  margin: var(--md-spacing-2) 0 0;
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
+  color: var(--md-on-surface);
+}
+
+.detail-shell__overview-main p {
+  margin: var(--md-spacing-3) 0 0;
+  color: var(--md-on-surface-variant);
+  line-height: 1.7;
+}
+
+.detail-shell__status-line {
+  margin-top: var(--md-spacing-4);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--md-spacing-2);
+}
+
+.detail-shell__status-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--md-radius-full);
+  font-size: var(--md-label-medium);
+  font-weight: 700;
+}
+
+.detail-shell__status-pill.is-active {
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.detail-shell__status-pill.is-done {
+  background-color: var(--md-success-container);
+  color: var(--md-on-success-container);
+}
+
+.detail-shell__status-pill.is-draft {
+  background-color: var(--md-surface-container);
+  color: var(--md-on-surface-variant);
+}
+
+.detail-shell__status-meta {
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-small);
+}
+
+.detail-shell__overview-metrics {
+  padding: var(--md-spacing-4);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--md-spacing-3);
+}
+
+.detail-shell__metric {
+  padding: var(--md-spacing-3);
+  border-radius: var(--md-radius-md);
+  border: 1px solid var(--md-outline-variant);
+  background-color: var(--md-surface-container-low);
+}
+
+.detail-shell__metric p,
+.detail-shell__metric span {
+  margin: 0;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-small);
+}
+
+.detail-shell__metric strong {
+  margin: var(--md-spacing-2) 0 4px;
+  display: block;
+  color: var(--md-on-surface);
+  font-size: var(--md-title-medium);
 }
 
 .detail-shell__drawer {
@@ -928,8 +1139,8 @@ onBeforeUnmount(() => {
 
 .detail-shell__content-surface--fill {
   min-height: 0;
-  height: calc(100vh - 6rem);
-  max-height: calc(100vh - 6rem);
+  height: calc(var(--app-viewport-unit) - 6rem);
+  max-height: calc(var(--app-viewport-unit) - 6rem);
 }
 
 @media (min-width: 1024px) {
@@ -938,8 +1149,8 @@ onBeforeUnmount(() => {
     top: 4rem;
     bottom: auto;
     flex: 0 0 16.25rem;
-    height: calc(100vh - 4rem);
-    max-height: calc(100vh - 4rem);
+    height: calc(var(--app-viewport-unit) - 4rem);
+    max-height: calc(var(--app-viewport-unit) - 4rem);
     transform: translateX(0);
   }
 
@@ -957,14 +1168,31 @@ onBeforeUnmount(() => {
   }
 
   .detail-shell__content-surface--fill {
-    height: calc(100vh - 7.5rem);
-    max-height: calc(100vh - 7.5rem);
+    height: calc(var(--app-viewport-unit) - 7.5rem);
+    max-height: calc(var(--app-viewport-unit) - 7.5rem);
   }
 }
 
 @media (min-width: 640px) {
   .detail-shell__content-surface {
     padding: var(--md-spacing-8);
+  }
+}
+
+@media (max-width: 1023px) {
+  .detail-shell__overview-strip {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--md-spacing-4) var(--md-spacing-4) 0;
+  }
+
+  .detail-shell__overview-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .detail-shell__overview-metrics {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -982,22 +1210,4 @@ onBeforeUnmount(() => {
   transform: scale(0.95);
 }
 
-/* Smooth scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--md-outline);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--md-on-surface-variant);
-}
 </style>

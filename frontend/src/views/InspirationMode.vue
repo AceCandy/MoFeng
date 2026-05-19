@@ -1,35 +1,34 @@
 <!-- AIMETA P=灵感模式_AI对话创作|R=对话创作界面|NR=不含写作台功能|E=route:/inspiration#component:InspirationMode|X=ui|A=对话界面|D=vue|S=dom,net|RD=./README.ai -->
 <template>
-  <div class="flex items-center justify-center min-h-screen p-4">
-    <div class="w-full max-w-6xl mx-auto">
+  <div class="inspiration-page">
+    <div class="inspiration-page__container">
       <!-- 灵感模式交互界面 -->
       <div
         v-if="!showBlueprintConfirmation && !showBlueprint"
-        class="h-[90vh] max-h-[950px] flex flex-col bg-white rounded-2xl shadow-2xl overflow-hidden fade-in"
+        class="inspiration-chat"
       >
         <!-- 头部 -->
-        <div class="p-4 border-b border-gray-200">
+        <header class="inspiration-chat__header">
           <div class="flex justify-between items-center">
             <div class="flex items-center gap-2">
-              <span class="relative flex h-3 w-3">
-                <span
-                  class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"
-                ></span>
-                <span class="relative inline-flex rounded-full h-3 w-3 bg-indigo-500"></span>
-              </span>
-              <span class="text-sm font-medium text-indigo-600">与“文思”对话中...</span>
+              <span
+                class="inspiration-chat__status-dot"
+                aria-hidden="true"
+              ></span>
+              <span class="md-label-large" style="color: var(--md-primary)">与"文思"对话中...</span>
             </div>
             <div class="flex items-center gap-4">
               <span
                 v-if="currentTurn > 0"
-                class="text-sm font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-md"
+                class="inspiration-chat__turn-badge"
               >
                 第 {{ currentTurn }} 轮
               </span>
               <button
                 @click="handleRestart"
                 title="重新开始"
-                class="text-gray-400 hover:text-indigo-600 transition-colors"
+                class="md-icon-btn"
+                aria-label="重新开始对话"
               >
                 <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                   <path
@@ -42,11 +41,11 @@
               <button
                 @click="exitConversation"
                 title="返回首页"
-                class="text-gray-400 hover:text-gray-600 transition-colors"
+                class="md-icon-btn"
+                aria-label="退出灵感模式"
               >
                 <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-6 w-6"
+                  class="w-5 h-5"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -57,11 +56,11 @@
               </button>
             </div>
           </div>
-        </div>
+        </header>
 
         <!-- 聊天区域 -->
-        <div class="flex-1 p-6 overflow-y-auto space-y-6 relative" ref="chatArea">
-          <transition name="fade">
+        <div class="inspiration-chat__messages" ref="chatArea">
+          <transition name="md-fade">
             <InspirationLoading v-if="isInitialLoading" />
           </transition>
           <ChatBubble
@@ -71,19 +70,13 @@
             :type="message.type"
           />
           <div v-if="isAssistantResponding && !isInitialLoading" class="w-full flex justify-start">
-            <div class="chat-bubble-ai max-w-md lg:max-w-lg p-4 shadow-md fade-in">
-              <div class="flex items-center gap-3 text-sm text-gray-600">
+            <div class="chat-bubble-ai max-w-md lg:max-w-lg p-4 fade-in" style="box-shadow: var(--md-elevation-1)">
+              <div class="flex items-center gap-3 md-body-small" style="color: var(--md-on-surface-variant)">
                 <span>文思正在组织灵感</span>
-                <span class="flex gap-1" aria-hidden="true">
-                  <span class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
-                  <span
-                    class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"
-                    style="animation-delay: 0.15s"
-                  ></span>
-                  <span
-                    class="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"
-                    style="animation-delay: 0.3s"
-                  ></span>
+                <span class="inspiration-chat__typing-dots" aria-hidden="true">
+                  <span></span>
+                  <span></span>
+                  <span></span>
                 </span>
               </div>
             </div>
@@ -91,7 +84,7 @@
         </div>
 
         <!-- 输入区域 -->
-        <div class="p-4 border-t border-gray-200 bg-gray-50">
+        <div class="inspiration-chat__input">
           <ConversationInput
             :ui-control="currentUIControl"
             :loading="
@@ -566,8 +559,147 @@ onMounted(async () => {
     }
     await restoreConversation(projectId)
   } else {
-    // 直接进入灵感模式，不再停留在二次确认入口页
     await startConversation()
   }
 })
 </script>
+
+<style scoped>
+.inspiration-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--app-viewport-unit);
+  padding:
+    max(var(--md-spacing-4), env(safe-area-inset-top))
+    max(var(--md-spacing-4), env(safe-area-inset-right))
+    max(var(--md-spacing-4), env(safe-area-inset-bottom))
+    max(var(--md-spacing-4), env(safe-area-inset-left));
+  background-color: var(--md-surface-dim);
+}
+
+.inspiration-page__container {
+  width: 100%;
+  max-width: 1152px;
+  margin: 0 auto;
+}
+
+.inspiration-chat {
+  height: min(
+    950px,
+    calc(
+      var(--app-viewport-unit) - max(var(--md-spacing-8), env(safe-area-inset-top)) -
+        max(var(--md-spacing-8), env(safe-area-inset-bottom))
+    )
+  );
+  min-height: 560px;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--md-surface);
+  border-radius: var(--md-radius-xl);
+  border: 1px solid var(--md-outline-variant);
+  box-shadow: var(--md-elevation-2);
+  overflow: hidden;
+}
+
+.inspiration-chat__header {
+  padding: var(--md-spacing-4);
+  border-bottom: 1px solid var(--md-outline-variant);
+}
+
+.inspiration-chat__status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--md-radius-full);
+  background-color: var(--md-primary);
+}
+
+.inspiration-chat__turn-badge {
+  font-size: var(--md-label-medium);
+  font-weight: 500;
+  color: var(--md-on-surface-variant);
+  background-color: var(--md-surface-container);
+  padding: 4px 8px;
+  border-radius: var(--md-radius-xs);
+}
+
+.inspiration-chat__messages {
+  flex: 1;
+  padding: var(--md-spacing-6);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-6);
+  position: relative;
+}
+
+.inspiration-chat__input {
+  padding: var(--md-spacing-4);
+  border-top: 1px solid var(--md-outline-variant);
+  background-color: var(--md-surface-container-low);
+}
+
+.inspiration-chat__typing-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.inspiration-chat__typing-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--md-radius-full);
+  background-color: var(--md-primary-light);
+  animation: inspiration-dot-pulse 1.2s ease-in-out infinite;
+}
+
+.inspiration-chat__typing-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.inspiration-chat__typing-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes inspiration-dot-pulse {
+  0%, 80%, 100% { opacity: 0.3; }
+  40% { opacity: 1; }
+}
+
+@media (max-width: 900px) {
+  .inspiration-chat {
+    height: calc(
+      var(--app-viewport-unit) - max(var(--md-spacing-6), env(safe-area-inset-top)) -
+        max(var(--md-spacing-6), env(safe-area-inset-bottom))
+    );
+    min-height: 0;
+    border-radius: var(--md-radius-lg);
+  }
+
+  .inspiration-chat__messages {
+    padding: var(--md-spacing-4);
+    gap: var(--md-spacing-4);
+  }
+}
+
+@media (max-width: 640px) {
+  .inspiration-page {
+    padding:
+      max(var(--md-spacing-2), env(safe-area-inset-top))
+      max(var(--md-spacing-2), env(safe-area-inset-right))
+      max(var(--md-spacing-2), env(safe-area-inset-bottom))
+      max(var(--md-spacing-2), env(safe-area-inset-left));
+  }
+
+  .inspiration-chat__header,
+  .inspiration-chat__input {
+    padding: var(--md-spacing-3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inspiration-chat__typing-dots span {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+</style>

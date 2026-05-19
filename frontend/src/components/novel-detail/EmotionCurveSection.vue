@@ -283,14 +283,36 @@ const EMOTION_KEY_MAP: { [key: string]: string } = {
   calm: '平静',
 }
 
-const emotionTypes = [
-  { key: 'joy', label: '喜悦', color: '#34A853' },
-  { key: 'sadness', label: '悲伤', color: '#4285F4' },
-  { key: 'anger', label: '愤怒', color: '#EA4335' },
-  { key: 'fear', label: '恐惧', color: '#9334E6' },
-  { key: 'surprise', label: '惊讶', color: '#FBBC04' },
-  { key: 'calm', label: '平静', color: '#5F6368' },
-]
+const EMOTION_COLOR_TOKEN_MAP: Record<string, string> = {
+  joy: '--md-success',
+  sadness: '--md-primary',
+  anger: '--md-error',
+  fear: '--md-secondary',
+  surprise: '--md-warning',
+  calm: '--md-on-surface-variant',
+}
+
+const DEFAULT_EMOTION_COLOR_FALLBACK = '#5e6674'
+
+const resolveCssVarColor = (tokenName: string, fallback: string) => {
+  if (typeof window === 'undefined') return fallback
+  const value = window.getComputedStyle(document.documentElement).getPropertyValue(tokenName).trim()
+  return value || fallback
+}
+
+const getEmotionColorByKey = (emotionKey: string) => {
+  const tokenName = EMOTION_COLOR_TOKEN_MAP[emotionKey] || '--md-on-surface-variant'
+  const fallback = DEFAULT_EMOTION_COLOR_FALLBACK
+  return resolveCssVarColor(tokenName, fallback)
+}
+
+const emotionTypes = computed(() =>
+  Object.entries(EMOTION_KEY_MAP).map(([key, label]) => ({
+    key,
+    label,
+    color: getEmotionColorByKey(key),
+  })),
+)
 
 const selectedEmotions = ref(['joy', 'sadness', 'anger'])
 
@@ -305,15 +327,8 @@ const emotionTypeCount = computed(() => {
 })
 
 const getEmotionColor = (emotionType: string) => {
-  const emotionMap: Record<string, string> = {
-    喜悦: '#34A853',
-    悲伤: '#4285F4',
-    愤怒: '#EA4335',
-    恐惧: '#9334E6',
-    惊讶: '#FBBC04',
-    平静: '#5F6368',
-  }
-  return emotionMap[emotionType] || '#5F6368'
+  const emotionKey = Object.keys(EMOTION_KEY_MAP).find((key) => EMOTION_KEY_MAP[key] === emotionType)
+  return emotionKey ? getEmotionColorByKey(emotionKey) : getEmotionColorByKey('calm')
 }
 
 const toggleEmotion = (key: string) => {
@@ -335,7 +350,7 @@ const updateChart = () => {
   }
 
   const labels = emotionPoints.value.map((p) => `第${p.chapter_number}章`)
-  const datasets = emotionTypes
+  const datasets = emotionTypes.value
     .filter((et) => selectedEmotions.value.includes(et.key))
     .map((emotionType) => {
       const data = emotionPoints.value.map((p) => {
@@ -374,7 +389,7 @@ const initChart = () => {
   }
 
   const labels = emotionPoints.value.map((p) => `第${p.chapter_number}章`)
-  const datasets = emotionTypes
+  const datasets = emotionTypes.value
     .filter((et) => selectedEmotions.value.includes(et.key))
     .map((emotionType) => {
       const data = emotionPoints.value.map((p) => {
@@ -424,7 +439,7 @@ const initChart = () => {
               return context[0].label
             },
             label: function (context) {
-              const emotionType = emotionTypes.find((et) => et.label === context.dataset.label)
+              const emotionType = emotionTypes.value.find((et) => et.label === context.dataset.label)
               const point = emotionPoints.value[context.dataIndex]
               if (
                 point &&

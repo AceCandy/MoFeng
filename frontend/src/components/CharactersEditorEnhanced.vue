@@ -4,11 +4,13 @@
     <div
       v-for="(character, index) in localCharacters"
       :key="index"
-      class="p-4 border border-gray-200 rounded-lg bg-gray-50 relative"
+      class="p-4 border border-[var(--md-outline-variant)] rounded-lg bg-[var(--md-surface-container-low)] relative"
     >
       <button
+        type="button"
         @click="removeCharacter(index)"
-        class="absolute top-2 right-2 text-red-400 hover:text-red-600 transition-colors p-1"
+        class="absolute top-2 right-2 text-[var(--md-error)] hover:text-[var(--md-error)] transition-colors p-1"
+        :aria-label="`删除角色 ${character.name || index + 1}`"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -27,60 +29,69 @@
       <!-- 基础信息 -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-medium text-gray-600 mb-1">姓名</label>
+          <label class="block text-sm font-medium text-[var(--md-on-surface-variant)] mb-1">姓名</label>
           <input
             type="text"
             v-model="character.name"
-            class="w-full p-1 border-b-2 border-gray-300 focus:border-indigo-500 outline-none transition bg-transparent"
+            :aria-label="`角色 ${index + 1} 姓名`"
+            class="w-full p-1 border-b-2 border-[var(--md-outline-variant)] focus:border-[var(--md-primary)] outline-none transition bg-transparent"
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-600 mb-1">身份</label>
+          <label class="block text-sm font-medium text-[var(--md-on-surface-variant)] mb-1">身份</label>
           <input
             type="text"
             v-model="character.identity"
-            class="w-full p-1 border-b-2 border-gray-300 focus:border-indigo-500 outline-none transition bg-transparent"
+            :aria-label="`角色 ${index + 1} 身份`"
+            class="w-full p-1 border-b-2 border-[var(--md-outline-variant)] focus:border-[var(--md-primary)] outline-none transition bg-transparent"
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-600 mb-1">性格</label>
+          <label class="block text-sm font-medium text-[var(--md-on-surface-variant)] mb-1">性格</label>
           <input
             type="text"
             v-model="character.personality"
-            class="w-full p-1 border-b-2 border-gray-300 focus:border-indigo-500 outline-none transition bg-transparent"
+            :aria-label="`角色 ${index + 1} 性格`"
+            class="w-full p-1 border-b-2 border-[var(--md-outline-variant)] focus:border-[var(--md-primary)] outline-none transition bg-transparent"
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-600 mb-1">目标</label>
+          <label class="block text-sm font-medium text-[var(--md-on-surface-variant)] mb-1">目标</label>
           <input
             type="text"
             v-model="character.goals"
-            class="w-full p-1 border-b-2 border-gray-300 focus:border-indigo-500 outline-none transition bg-transparent"
+            :aria-label="`角色 ${index + 1} 目标`"
+            class="w-full p-1 border-b-2 border-[var(--md-outline-variant)] focus:border-[var(--md-primary)] outline-none transition bg-transparent"
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-600 mb-1">能力</label>
+          <label class="block text-sm font-medium text-[var(--md-on-surface-variant)] mb-1">能力</label>
           <input
             type="text"
             v-model="character.abilities"
-            class="w-full p-1 border-b-2 border-gray-300 focus:border-indigo-500 outline-none transition bg-transparent"
+            :aria-label="`角色 ${index + 1} 能力`"
+            class="w-full p-1 border-b-2 border-[var(--md-outline-variant)] focus:border-[var(--md-primary)] outline-none transition bg-transparent"
           />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-600 mb-1">与主角关系</label>
+          <label class="block text-sm font-medium text-[var(--md-on-surface-variant)] mb-1">与主角关系</label>
           <input
             type="text"
             v-model="character.relationship_to_protagonist"
-            class="w-full p-1 border-b-2 border-gray-300 focus:border-indigo-500 outline-none transition bg-transparent"
+            :aria-label="`角色 ${index + 1} 与主角关系`"
+            class="w-full p-1 border-b-2 border-[var(--md-outline-variant)] focus:border-[var(--md-primary)] outline-none transition bg-transparent"
           />
         </div>
       </div>
 
       <!-- DNA档案展开按钮 -->
-      <div class="mt-4 border-t border-gray-200 pt-3">
+      <div class="mt-4 border-t border-[var(--md-outline-variant)] pt-3">
         <button
+          type="button"
           @click="toggleDNA(index)"
-          class="flex items-center gap-2 text-sm font-medium text-purple-600 hover:text-purple-800 transition-colors"
+          class="flex items-center gap-2 text-sm font-medium text-[var(--md-primary)] hover:text-[var(--md-primary)] transition-colors"
+          :aria-expanded="expandedDNA[index] ? 'true' : 'false'"
+          :aria-label="`切换角色 ${character.name || index + 1} DNA 档案`"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -98,7 +109,7 @@
             />
           </svg>
           <span>🧬 角色DNA档案</span>
-          <span class="text-xs text-gray-400">(让角色更立体)</span>
+          <span class="text-xs text-[var(--md-on-surface-variant)]">(让角色更立体)</span>
         </button>
       </div>
 
@@ -106,14 +117,14 @@
       <transition name="slide">
         <div
           v-if="expandedDNA[index]"
-          class="mt-3 p-4 bg-purple-50 rounded-lg border border-purple-200"
+          class="mt-3 p-4 bg-[var(--md-primary-container)] rounded-lg border border-[var(--md-primary-container)]"
         >
           <div class="grid grid-cols-1 gap-4">
             <!-- 童年经历 -->
             <div>
-              <label class="block text-sm font-medium text-purple-700 mb-1">
+              <label class="block text-sm font-medium text-[var(--md-primary)] mb-1">
                 童年经历/创伤
-                <span class="text-xs text-gray-500 font-normal ml-1"
+                <span class="text-xs text-[var(--md-on-surface-variant)] font-normal ml-1"
                   >影响角色的防御机制和情感触发点</span
                 >
               </label>
@@ -127,16 +138,17 @@
                   )
                 "
                 placeholder="例如：父母离异后由祖母抚养，从小学会察言观色，害怕被抛弃"
-                class="w-full p-2 border border-purple-200 rounded-md focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition bg-white text-sm"
+                :aria-label="`角色 ${character.name || index + 1} 童年经历创伤`"
+                class="w-full p-2 border border-[var(--md-primary-container)] rounded-md focus:border-[var(--md-primary)] focus:ring-1 focus:ring-[var(--md-primary-light)] outline-none transition bg-[var(--md-surface)] text-sm"
                 rows="2"
               ></textarea>
             </div>
 
             <!-- 核心恐惧 -->
             <div>
-              <label class="block text-sm font-medium text-purple-700 mb-1">
+              <label class="block text-sm font-medium text-[var(--md-primary)] mb-1">
                 核心恐惧
-                <span class="text-xs text-gray-500 font-normal ml-1">驱动角色行为的深层恐惧</span>
+                <span class="text-xs text-[var(--md-on-surface-variant)] font-normal ml-1">驱动角色行为的深层恐惧</span>
               </label>
               <input
                 type="text"
@@ -145,15 +157,16 @@
                   updateDNA(character, 'core_fear', ($event.target as HTMLInputElement).value)
                 "
                 placeholder="例如：害怕被抛弃、害怕失控、害怕不被爱"
-                class="w-full p-2 border border-purple-200 rounded-md focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition bg-white text-sm"
+                :aria-label="`角色 ${character.name || index + 1} 核心恐惧`"
+                class="w-full p-2 border border-[var(--md-primary-container)] rounded-md focus:border-[var(--md-primary)] focus:ring-1 focus:ring-[var(--md-primary-light)] outline-none transition bg-[var(--md-surface)] text-sm"
               />
             </div>
 
             <!-- 内心渴望 -->
             <div>
-              <label class="block text-sm font-medium text-purple-700 mb-1">
+              <label class="block text-sm font-medium text-[var(--md-primary)] mb-1">
                 内心渴望
-                <span class="text-xs text-gray-500 font-normal ml-1"
+                <span class="text-xs text-[var(--md-on-surface-variant)] font-normal ml-1"
                   >角色真正想要的，可能连自己都不清楚</span
                 >
               </label>
@@ -164,15 +177,16 @@
                   updateDNA(character, 'inner_desire', ($event.target as HTMLInputElement).value)
                 "
                 placeholder="例如：渴望被认可、渴望归属感、渴望证明自己"
-                class="w-full p-2 border border-purple-200 rounded-md focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition bg-white text-sm"
+                :aria-label="`角色 ${character.name || index + 1} 内心渴望`"
+                class="w-full p-2 border border-[var(--md-primary-container)] rounded-md focus:border-[var(--md-primary)] focus:ring-1 focus:ring-[var(--md-primary-light)] outline-none transition bg-[var(--md-surface)] text-sm"
               />
             </div>
 
             <!-- 说话习惯 -->
             <div>
-              <label class="block text-sm font-medium text-purple-700 mb-1">
+              <label class="block text-sm font-medium text-[var(--md-primary)] mb-1">
                 说话习惯
-                <span class="text-xs text-gray-500 font-normal ml-1"
+                <span class="text-xs text-[var(--md-on-surface-variant)] font-normal ml-1"
                   >口头禅、语气词、紧张时的变化</span
                 >
               </label>
@@ -186,16 +200,17 @@
                   )
                 "
                 placeholder="例如：喜欢用反问句，紧张时语速加快，常说'怎么说呢...'"
-                class="w-full p-2 border border-purple-200 rounded-md focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition bg-white text-sm"
+                :aria-label="`角色 ${character.name || index + 1} 说话习惯`"
+                class="w-full p-2 border border-[var(--md-primary-container)] rounded-md focus:border-[var(--md-primary)] focus:ring-1 focus:ring-[var(--md-primary-light)] outline-none transition bg-[var(--md-surface)] text-sm"
                 rows="2"
               ></textarea>
             </div>
 
             <!-- 身体语言 -->
             <div>
-              <label class="block text-sm font-medium text-purple-700 mb-1">
+              <label class="block text-sm font-medium text-[var(--md-primary)] mb-1">
                 身体语言
-                <span class="text-xs text-gray-500 font-normal ml-1"
+                <span class="text-xs text-[var(--md-on-surface-variant)] font-normal ml-1"
                   >紧张时的小动作、特有的姿态</span
                 >
               </label>
@@ -209,16 +224,17 @@
                   )
                 "
                 placeholder="例如：紧张时会摸耳朵，思考时喜欢转笔，说谎时不敢直视对方"
-                class="w-full p-2 border border-purple-200 rounded-md focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition bg-white text-sm"
+                :aria-label="`角色 ${character.name || index + 1} 身体语言`"
+                class="w-full p-2 border border-[var(--md-primary-container)] rounded-md focus:border-[var(--md-primary)] focus:ring-1 focus:ring-[var(--md-primary-light)] outline-none transition bg-[var(--md-surface)] text-sm"
                 rows="2"
               ></textarea>
             </div>
 
             <!-- 思维模式 -->
             <div>
-              <label class="block text-sm font-medium text-purple-700 mb-1">
+              <label class="block text-sm font-medium text-[var(--md-primary)] mb-1">
                 思维模式
-                <span class="text-xs text-gray-500 font-normal ml-1">理性/感性、乐观/悲观</span>
+                <span class="text-xs text-[var(--md-on-surface-variant)] font-normal ml-1">理性/感性、乐观/悲观</span>
               </label>
               <select
                 v-model="getDNAProfile(character).thinking_pattern"
@@ -229,7 +245,8 @@
                     ($event.target as HTMLSelectElement).value,
                   )
                 "
-                class="w-full p-2 border border-purple-200 rounded-md focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition bg-white text-sm"
+                :aria-label="`角色 ${character.name || index + 1} 思维模式`"
+                class="w-full p-2 border border-[var(--md-primary-container)] rounded-md focus:border-[var(--md-primary)] focus:ring-1 focus:ring-[var(--md-primary-light)] outline-none transition bg-[var(--md-surface)] text-sm"
               >
                 <option value="">请选择...</option>
                 <option value="理性分析型，遇事先冷静思考">理性分析型</option>
@@ -243,16 +260,17 @@
 
             <!-- 决策方式 -->
             <div>
-              <label class="block text-sm font-medium text-purple-700 mb-1">
+              <label class="block text-sm font-medium text-[var(--md-primary)] mb-1">
                 决策方式
-                <span class="text-xs text-gray-500 font-normal ml-1">如何做出选择</span>
+                <span class="text-xs text-[var(--md-on-surface-variant)] font-normal ml-1">如何做出选择</span>
               </label>
               <select
                 v-model="getDNAProfile(character).decision_style"
                 @change="
                   updateDNA(character, 'decision_style', ($event.target as HTMLSelectElement).value)
                 "
-                class="w-full p-2 border border-purple-200 rounded-md focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition bg-white text-sm"
+                :aria-label="`角色 ${character.name || index + 1} 决策方式`"
+                class="w-full p-2 border border-[var(--md-primary-container)] rounded-md focus:border-[var(--md-primary)] focus:ring-1 focus:ring-[var(--md-primary-light)] outline-none transition bg-[var(--md-surface)] text-sm"
               >
                 <option value="">请选择...</option>
                 <option value="快速决断，不喜欢犹豫">快速决断型</option>
@@ -266,9 +284,9 @@
 
             <!-- 隐藏的秘密 -->
             <div>
-              <label class="block text-sm font-medium text-purple-700 mb-1">
+              <label class="block text-sm font-medium text-[var(--md-primary)] mb-1">
                 隐藏的秘密
-                <span class="text-xs text-gray-500 font-normal ml-1">不愿让人知道的事</span>
+                <span class="text-xs text-[var(--md-on-surface-variant)] font-normal ml-1">不愿让人知道的事</span>
               </label>
               <textarea
                 v-model="getDNAProfile(character).hidden_secret"
@@ -280,7 +298,8 @@
                   )
                 "
                 placeholder="例如：曾经因为自己的失误导致好友受伤，一直心怀愧疚"
-                class="w-full p-2 border border-purple-200 rounded-md focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition bg-white text-sm"
+                :aria-label="`角色 ${character.name || index + 1} 隐藏秘密`"
+                class="w-full p-2 border border-[var(--md-primary-container)] rounded-md focus:border-[var(--md-primary)] focus:ring-1 focus:ring-[var(--md-primary-light)] outline-none transition bg-[var(--md-surface)] text-sm"
                 rows="2"
               ></textarea>
             </div>
@@ -288,15 +307,15 @@
 
           <!-- DNA完成度提示 -->
           <div class="mt-4 flex items-center gap-2">
-            <div class="flex-1 bg-gray-200 rounded-full h-2">
+            <div class="flex-1 bg-[var(--md-surface-container-high)] rounded-full h-2">
               <div
-                class="bg-purple-500 h-2 rounded-full transition-all duration-300"
+                class="bg-[var(--md-primary)] h-2 rounded-full transition-all duration-300"
                 :style="{ width: getDNACompleteness(character) + '%' }"
               ></div>
             </div>
-            <span class="text-xs text-gray-500">{{ getDNACompleteness(character) }}% 完成</span>
+            <span class="text-xs text-[var(--md-on-surface-variant)]">{{ getDNACompleteness(character) }}% 完成</span>
           </div>
-          <p class="mt-2 text-xs text-gray-500">
+          <p class="mt-2 text-xs text-[var(--md-on-surface-variant)]">
             💡 提示：DNA档案越完整，AI生成的角色行为和对话就越真实立体
           </p>
         </div>
@@ -304,8 +323,9 @@
     </div>
 
     <button
+      type="button"
       @click="addCharacter"
-      class="w-full mt-4 px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-md hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+      class="w-full mt-4 px-4 py-2 text-sm font-medium text-[var(--md-primary)] bg-[var(--md-primary-container)] border border-[var(--md-primary-container)] rounded-md hover:bg-[var(--md-primary-container)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--md-primary-light)]"
     >
       + 添加新角色
     </button>
@@ -352,6 +372,13 @@ const localCharacters = ref<Character[]>([])
 const expandedDNA = reactive<Record<number, boolean>>({})
 let syncing = false
 
+const cloneCharacters = <T>(value: T): T => {
+  if (typeof structuredClone === 'function') {
+    return structuredClone(value)
+  }
+  return JSON.parse(JSON.stringify(value))
+}
+
 // 初始化DNA档案
 const initDNAProfile = (): DNAProfile => ({
   childhood_trauma: '',
@@ -380,7 +407,7 @@ const updateDNA = (character: Character, field: keyof DNAProfile, value: string)
   const profile = getDNAProfile(character)
   profile[field] = value
   // 触发更新
-  emit('update:modelValue', JSON.parse(JSON.stringify(localCharacters.value)))
+  emit('update:modelValue', cloneCharacters(localCharacters.value))
 }
 
 // 计算DNA完成度
@@ -400,7 +427,7 @@ watch(
   () => props.modelValue,
   (newVal) => {
     syncing = true
-    localCharacters.value = JSON.parse(JSON.stringify(newVal || []))
+    localCharacters.value = cloneCharacters(newVal || [])
     nextTick(() => {
       syncing = false
     })
@@ -412,7 +439,7 @@ watch(
   localCharacters,
   (newVal) => {
     if (syncing) return
-    emit('update:modelValue', JSON.parse(JSON.stringify(newVal)))
+    emit('update:modelValue', cloneCharacters(newVal))
   },
   { deep: true },
 )

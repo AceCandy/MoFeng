@@ -3,13 +3,14 @@ import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
 import type { NovelSectionResponse, NovelSectionType } from '@/api/novel'
 import { API_BASE_URL } from './base'
+import { HttpRequestError, requestJson } from './http'
 export { API_BASE_URL } from './base'
 
 // API 配置
 export const ADMIN_API_PREFIX = '/api/admin'
 
 // 统一请求封装
-const request = async (url: string, options: RequestInit = {}) => {
+const request = async <T = any>(url: string, options: RequestInit = {}) => {
   const authStore = useAuthStore()
   const headers = new Headers({
     'Content-Type': 'application/json',
@@ -20,28 +21,25 @@ const request = async (url: string, options: RequestInit = {}) => {
     headers.set('Authorization', `Bearer ${authStore.token}`)
   }
 
-  const response = await fetch(url, { ...options, headers })
-
-  if (response.status === 401) {
-    authStore.logout()
-    router.push('/login')
-    throw new Error('会话已过期，请重新登录')
+  try {
+    return await requestJson<T>(url, {
+      ...options,
+      headers,
+      timeoutMs: 20_000,
+      fallbackErrorMessage: '管理接口请求失败',
+    })
+  } catch (error) {
+    if (error instanceof HttpRequestError && error.status === 401) {
+      authStore.logout()
+      router.push('/login')
+      throw new Error('会话已过期，请重新登录')
+    }
+    throw error
   }
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.detail || `请求失败，状态码: ${response.status}`)
-  }
-
-  if (response.status === 204) {
-    return
-  }
-
-  return response.json()
 }
 
-const adminRequest = (path: string, options: RequestInit = {}) =>
-  request(`${API_BASE_URL}${ADMIN_API_PREFIX}${path}`, options)
+const adminRequest = <T = any>(path: string, options: RequestInit = {}) =>
+  request<T>(`${API_BASE_URL}${ADMIN_API_PREFIX}${path}`, options)
 
 // 类型定义
 export interface Statistics {
@@ -153,8 +151,8 @@ export interface SystemConfigUpsertPayload {
 export type SystemConfigUpdatePayload = Partial<SystemConfigUpsertPayload>
 
 export class AdminAPI {
-  private static request(path: string, options: RequestInit = {}) {
-    return adminRequest(path, options)
+  private static request<T = any>(path: string, options: RequestInit = {}) {
+    return adminRequest<T>(path, options)
   }
 
   // Overview

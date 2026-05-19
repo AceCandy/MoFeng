@@ -113,6 +113,43 @@ It is not just a "writing helper". It is a production-ready writing workflow sys
 7. Generate, review, select, and edit chapter versions in Writing Desk  
 8. Govern users, prompts, and system settings in Admin
 
+### Writing Desk Chapter Generation Flow
+
+```mermaid
+flowchart TD
+  A["Click Start Writing"] --> B["Frontend sets generating / context_prep"]
+  B --> C["POST /api/writer/:project_id/chapters/generate"]
+  C --> D1["Step 1 context_prep: collect history context"]
+  D1 --> D2["Step 2 director_mission: build chapter mission"]
+  D2 --> D3["Step 3 rag_retrieval: retrieve story context"]
+  D3 --> D4["Step 4 draft_generation: generate N candidate versions"]
+  D4 --> D5["Step 5 quality_review: auto-review multiple versions"]
+  D5 --> D6["Step 6 persist_versions: persist generated versions"]
+  D6 --> D7["Step 7 waiting_for_confirm: wait for version confirmation"]
+
+  D4 -. Any step fails .-> F[failed]
+  D5 -. Any step fails .-> F
+  D6 -. Any step fails .-> F
+
+  D7 --> E1{"Candidate version count"}
+  E1 -->|1| E2["Frontend auto-confirms"]
+  E1 -->|2| E3["User manually selects a version"]
+  E2 --> E4[selecting]
+  E3 --> E4
+  E4 --> E5[successful]
+
+  D7 --> R1["Optional: manual evaluate action"]
+  R1 --> R2[evaluating]
+  R2 -->|success| R3[evaluation_done]
+  R3 --> D7
+  R2 -->|failure| R4[evaluation_failed]
+```
+
+Notes:
+- `N` comes from config `writer.chapter_versions`, constrained to `1~2`.
+- When `N=2`, reaching `waiting_for_confirm` means both versions are already generated and persisted.
+- Current word-count control enforces over-limit compression, not under-limit auto-expansion.
+
 ---
 
 ## Technology Stack

@@ -1,7 +1,13 @@
 <!-- AIMETA P=评审详情弹窗_章节评审展示|R=评审结果展示|NR=不含评审逻辑|E=component:WDEvaluationDetailModal|X=ui|A=评审弹窗|D=vue|S=dom|RD=./README.ai -->
 <template>
-  <div v-if="show" class="md-dialog-overlay">
-    <div class="md-dialog w-full max-w-4xl m3-eval-dialog flex flex-col">
+  <div v-if="show" class="md-dialog-overlay" @click.self="handleClose">
+    <div
+      ref="dialogRef"
+      class="md-dialog w-full max-w-4xl m3-eval-dialog flex flex-col"
+      role="dialog"
+      aria-modal="true"
+      :aria-labelledby="dialogTitleId"
+    >
       <!-- 弹窗头部 -->
       <div class="flex items-center justify-between p-6 border-b" style="border-bottom-color: var(--md-outline-variant);">
         <div class="flex items-center gap-3">
@@ -10,11 +16,14 @@
                     <path d="M10 2a6 6 0 00-6 6v3.586l-1.707 1.707A1 1 0 003 15v1a1 1 0 001 1h12a1 1 0 001-1v-1a1 1 0 00-.293-.707L16 11.586V8a6 6 0 00-6-6zM8.05 17a2 2 0 103.9 0H8.05z"></path>
                 </svg>
             </div>
-            <h3 class="md-headline-small font-semibold">AI 评审详情</h3>
+            <h3 :id="dialogTitleId" class="md-headline-small font-semibold">AI 评审详情</h3>
         </div>
         <button
-          @click="$emit('close')"
+          ref="closeButtonRef"
+          data-dialog-initial-focus
+          @click="handleClose"
           class="md-icon-btn md-ripple"
+          aria-label="关闭 AI 评审详情弹窗"
         >
           <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
             <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
@@ -74,7 +83,7 @@
           {{ isOptimizingRecommendedVersion ? '优化中...' : '优化建议采用版本' }}
         </button>
         <button
-            @click="$emit('close')"
+            @click="handleClose"
             class="md-btn md-btn-filled md-ripple"
         >
             关闭
@@ -85,7 +94,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, toRef } from 'vue'
+import DOMPurify from 'dompurify'
+import { useDialogA11y } from '@/composables/useDialogA11y'
 
 interface Props {
   show: boolean
@@ -95,7 +106,15 @@ interface Props {
 
 const props = defineProps<Props>()
 
-defineEmits(['close', 'optimizeRecommendedVersion'])
+const emit = defineEmits(['close', 'optimizeRecommendedVersion'])
+const dialogRef = ref<HTMLElement | null>(null)
+const closeButtonRef = ref<HTMLElement | null>(null)
+const dialogInstanceId = `evaluation-detail-${Math.random().toString(36).slice(2, 10)}`
+const dialogTitleId = `${dialogInstanceId}-title`
+
+const handleClose = () => {
+  emit('close')
+}
 
 const parsedEvaluation = computed(() => {
   if (!props.evaluation) return null
@@ -134,14 +153,23 @@ const parseMarkdown = (text: string | null): string => {
   if (!parsed.includes('<p>')) {
     parsed = `<p>${parsed}</p>`
   }
-  return parsed
+  return DOMPurify.sanitize(parsed, {
+    USE_PROFILES: { html: true },
+  })
 }
+
+useDialogA11y({
+  active: toRef(props, 'show'),
+  dialogRef,
+  onClose: handleClose,
+  initialFocusRef: closeButtonRef,
+})
 </script>
 
 <style scoped>
 .m3-eval-dialog {
   max-width: min(960px, calc(100vw - 32px));
-  max-height: calc(100vh - 32px);
+  max-height: calc(var(--app-viewport-unit) - 32px);
   border-radius: var(--md-radius-xl);
 }
 </style>

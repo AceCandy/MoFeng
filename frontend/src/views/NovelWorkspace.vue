@@ -38,23 +38,47 @@
       </div>
     </transition>
 
-    <section
-      v-if="!projectsLoading && !projectsError && continueProject"
-      class="workspace-continue"
-    >
-      <div class="workspace-continue__copy">
-        <p class="workspace-kicker">最近项目</p>
-        <h2>{{ continueProject.title }}</h2>
-        <p>
-          {{ continueProject.genre || '未设置类型' }} · {{ continueProject.completed_chapters }}/{{
-            continueProject.total_chapters
+    <section class="workspace-hero" aria-label="今日创作总览">
+      <div class="workspace-hero__intro">
+        <p class="workspace-eyebrow">今日创作</p>
+        <h2>{{ continueProject ? continueProject.title : '开始一段新的长篇创作' }}</h2>
+        <p class="workspace-hero__summary">
+          {{
+            continueProject
+              ? `继续推进《${continueProject.title}》，把设定、节奏和伏笔收束到同一条叙事线上。`
+              : '你还没有创作中的项目，可以从灵感模式启动一个世界观草案。'
           }}
-          章 ·
-          {{ formatProjectDate(continueProject.last_edited) }}
         </p>
-        <div class="workspace-continue__progress" aria-label="最近项目进度">
-          <div class="workspace-continue__progress-label">
-            <span>写作进度</span>
+
+        <div v-if="continueProject" class="workspace-hero__meta">
+          <span class="workspace-chip">{{ continueProject.genre || '未设定题材' }}</span>
+          <span class="workspace-chip">{{ continueProject.completed_chapters }}/{{ continueProject.total_chapters }} 章</span>
+        </div>
+
+        <div class="workspace-hero__actions">
+          <button
+            v-if="continueProject"
+            type="button"
+            class="md-btn md-btn-filled md-ripple"
+            @click="enterProject(continueProject)"
+          >
+            继续创作
+          </button>
+          <button type="button" class="md-btn md-btn-tonal md-ripple" @click="goToInspiration">
+            新建灵感项目
+          </button>
+        </div>
+      </div>
+
+      <div class="workspace-hero__panel">
+        <div class="workspace-hero__panel-head">
+          <p>今日目标</p>
+          <strong>{{ todayGoal.title }}</strong>
+        </div>
+        <p class="workspace-hero__goal-desc">{{ todayGoal.description }}</p>
+        <div class="workspace-hero__progress">
+          <div class="workspace-hero__progress-label">
+            <span>项目推进度</span>
             <strong>{{ continueProgress }}%</strong>
           </div>
           <div
@@ -67,69 +91,88 @@
             <div class="md-progress-linear-bar" :style="{ width: `${continueProgress}%` }"></div>
           </div>
         </div>
-      </div>
-      <div class="workspace-continue__actions">
-        <button
-          type="button"
-          class="md-btn md-btn-filled md-ripple"
-          @click="enterProject(continueProject)"
-        >
-          <svg
-            class="w-5 h-5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M15.232 5.232l3.536 3.536M4 20h4l11-11a2.5 2.5 0 10-3.536-3.536L4 16.928V20z"
-            />
-          </svg>
-          继续写作
-        </button>
-        <button
-          type="button"
-          class="md-btn md-btn-outlined md-ripple"
-          @click="viewProjectDetail(continueProject.id)"
-        >
-          小说档案
-        </button>
+        <div class="workspace-hero__stats">
+          <div>
+            <span>创作中项目</span>
+            <strong>{{ sortedProjects.length }}</strong>
+          </div>
+          <div>
+            <span>待推进章节</span>
+            <strong>{{ pendingChapters }}</strong>
+          </div>
+          <div>
+            <span>最近编辑</span>
+            <strong>{{ recentEditedProjects.length }}</strong>
+          </div>
+        </div>
       </div>
     </section>
 
-    <section class="workspace-panel">
-      <div class="workspace-panel__header">
-        <div class="workspace-panel__heading">
-          <p class="workspace-kicker">项目列表</p>
-          <h2>我的小说项目</h2>
-          <span class="md-chip md-chip-assist">{{ sortedProjects.length }} 个项目</span>
-        </div>
-        <div class="workspace-panel__actions" aria-label="项目操作">
-          <button
-            type="button"
-            class="md-btn md-btn-tonal md-ripple workspace-panel__action"
-            @click="goToInspiration"
-          >
-            新灵感
+    <section class="workspace-canvas" aria-label="创作工作区">
+      <article class="workspace-module">
+        <header class="workspace-module__head">
+          <h3>最近编辑</h3>
+          <p>快速回到你刚刚推进过的章节上下文</p>
+        </header>
+        <ul v-if="recentEditedProjects.length > 0" class="workspace-activity">
+          <li v-for="project in recentEditedProjects" :key="project.id">
+            <button type="button" class="workspace-activity__item" @click="enterProject(project)">
+              <div>
+                <strong>{{ project.title }}</strong>
+                <span>{{ project.genre || '未设定题材' }}</span>
+              </div>
+              <em>{{ formatProjectDate(project.last_edited) }}</em>
+            </button>
+          </li>
+        </ul>
+        <p v-else class="workspace-empty-hint">暂无最近编辑记录</p>
+      </article>
+
+      <article class="workspace-module workspace-module--insights">
+        <details class="workspace-insights">
+          <summary class="workspace-insights__summary">
+            <span>AI 创作建议</span>
+            <em>{{ aiSuggestions.length }} 条</em>
+          </summary>
+          <ul class="workspace-ai-list">
+            <li v-for="suggestion in aiSuggestions" :key="suggestion.title">
+              <p class="workspace-ai-list__title">{{ suggestion.title }}</p>
+              <p class="workspace-ai-list__desc">{{ suggestion.description }}</p>
+              <span :class="['workspace-ai-list__tag', `is-${suggestion.tone}`]">
+                {{ suggestion.tag }}
+              </span>
+            </li>
+          </ul>
+        </details>
+      </article>
+
+      <article class="workspace-module workspace-module--tools">
+        <header class="workspace-module__head">
+          <h3>工作台工具</h3>
+          <p>围绕创作节奏的辅助操作</p>
+        </header>
+        <div class="workspace-tools">
+          <button type="button" class="md-btn md-btn-outlined md-ripple" :disabled="isImporting" @click="triggerImport">
+            {{ isImporting ? '导入中' : '导入 TXT 稿件' }}
           </button>
-          <button
-            type="button"
-            class="md-btn md-btn-outlined md-ripple workspace-panel__action"
-            :disabled="isImporting"
-            @click="triggerImport"
-          >
-            {{ isImporting ? '导入中' : '导入 .txt' }}
+          <button type="button" class="md-btn md-btn-outlined md-ripple" @click="loadProjects">
+            刷新项目状态
           </button>
-          <input
-            type="file"
-            ref="fileInput"
-            accept=".txt"
-            class="hidden"
-            @change="handleFileImport"
-          />
+          <button type="button" class="md-btn md-btn-tonal md-ripple" @click="goToInspiration">
+            进入灵感模式
+          </button>
         </div>
+        <input type="file" ref="fileInput" accept=".txt" class="hidden" @change="handleFileImport" />
+      </article>
+    </section>
+
+    <section class="workspace-archive" aria-label="项目档案库">
+      <div class="workspace-archive__head">
+        <div>
+          <p class="workspace-eyebrow">项目档案</p>
+          <h3>小说项目库</h3>
+        </div>
+        <span class="workspace-chip">{{ sortedProjects.length }} 个项目</span>
       </div>
 
       <div v-if="projectsLoading" class="workspace-grid" aria-label="项目加载中">
@@ -194,7 +237,7 @@
       enter-from-class="opacity-0"
       leave-to-class="opacity-0"
     >
-      <div v-if="showDeleteDialog" class="md-dialog-overlay">
+      <div v-if="showDeleteDialog" class="md-dialog-overlay" @click.self="cancelDelete">
         <transition
           enter-active-class="transition-opacity duration-200"
           leave-active-class="transition-opacity duration-200"
@@ -202,10 +245,11 @@
           leave-to-class="opacity-0 scale-95"
         >
           <div
+            ref="deleteDialogRef"
             class="md-dialog max-w-md w-full mx-4"
             role="dialog"
             aria-modal="true"
-            aria-labelledby="delete-project-title"
+            :aria-labelledby="deleteDialogTitleId"
           >
             <div class="md-dialog-header flex items-center gap-4">
               <div
@@ -228,7 +272,7 @@
                 </svg>
               </div>
               <div>
-                <h3 id="delete-project-title" class="md-dialog-title">确认删除</h3>
+                <h3 :id="deleteDialogTitleId" class="md-dialog-title">确认删除</h3>
                 <p class="md-body-small" style="color: var(--md-on-surface-variant)">
                   此操作无法撤销
                 </p>
@@ -243,7 +287,14 @@
             </div>
 
             <div class="md-dialog-actions">
-              <button @click="cancelDelete" class="md-btn md-btn-text md-ripple">取消</button>
+              <button
+                ref="cancelDeleteButtonRef"
+                data-dialog-initial-focus
+                @click="cancelDelete"
+                class="md-btn md-btn-text md-ripple"
+              >
+                取消
+              </button>
               <button
                 @click="confirmDelete"
                 :disabled="isDeleting"
@@ -285,6 +336,7 @@ import {
   useImportNovelMutation,
   useNovelProjectsQuery,
 } from '@/queries/novel'
+import { useDialogA11y } from '@/composables/useDialogA11y'
 
 const router = useRouter()
 const projectsQuery = useNovelProjectsQuery()
@@ -294,6 +346,9 @@ const deleteNovelsMutation = useDeleteNovelsMutation()
 const fileInput = ref<HTMLInputElement | null>(null)
 
 const showDeleteDialog = ref(false)
+const deleteDialogRef = ref<HTMLElement | null>(null)
+const cancelDeleteButtonRef = ref<HTMLElement | null>(null)
+const deleteDialogTitleId = 'workspace-delete-project-title'
 const projectToDelete = ref<NovelProjectSummary | null>(null)
 const workspaceMessage = ref<{ type: 'success' | 'error'; text: string } | null>(null)
 
@@ -330,6 +385,84 @@ const continueProgress = computed(() => {
   if (!project || project.total_chapters <= 0) return 0
 
   return Math.round((project.completed_chapters / project.total_chapters) * 100)
+})
+
+const recentEditedProjects = computed(() => sortedProjects.value.slice(0, 5))
+
+const pendingChapters = computed(() => {
+  return sortedProjects.value.reduce((sum, project) => {
+    const remaining = Math.max(project.total_chapters - project.completed_chapters, 0)
+    return sum + remaining
+  }, 0)
+})
+
+const todayGoal = computed(() => {
+  if (!continueProject.value) {
+    return {
+      title: '建立小说蓝图',
+      description: '先完成世界观、角色核心关系与章节骨架，再进入正文生成。',
+    }
+  }
+
+  const remaining = Math.max(
+    continueProject.value.total_chapters - continueProject.value.completed_chapters,
+    0,
+  )
+
+  if (remaining === 0) {
+    return {
+      title: '进入收尾润色',
+      description: '正文已齐备，建议逐章做节奏和伏笔回收检查。',
+    }
+  }
+
+  return {
+    title: '推进下一章初稿',
+    description: `当前还剩 ${remaining} 章待完成，建议先推进最近卡住的一章。`,
+  }
+})
+
+const aiSuggestions = computed(() => {
+  const suggestions: Array<{
+    title: string
+    description: string
+    tag: string
+    tone: 'focus' | 'warning' | 'calm'
+  }> = []
+
+  if (continueProject.value) {
+    if (continueProgress.value < 35) {
+      suggestions.push({
+        title: '补全章节骨架',
+        description: '先确保前三章节奏递进清晰，再让 AI 生成正文会更稳定。',
+        tag: '节奏偏慢',
+        tone: 'warning',
+      })
+    } else {
+      suggestions.push({
+        title: '开始正文冲刺',
+        description: '你的蓝图已具备连贯性，可以把 AI 主要用于出初稿与局部润色。',
+        tag: '创作中',
+        tone: 'focus',
+      })
+    }
+  }
+
+  suggestions.push({
+    title: '检查伏笔回收路径',
+    description: '在章节交界处补一轮伏笔追踪，避免后期出现剧情断层。',
+    tag: '伏笔待回收',
+    tone: 'calm',
+  })
+
+  suggestions.push({
+    title: '做一次语气统一',
+    description: '选两章相邻正文做风格比对，统一叙述视角与句式密度。',
+    tag: '待润色',
+    tone: 'focus',
+  })
+
+  return suggestions.slice(0, 3)
 })
 
 const formatProjectDate = (value: string) => {
@@ -402,6 +535,13 @@ const cancelDelete = () => {
   projectToDelete.value = null
 }
 
+useDialogA11y({
+  active: showDeleteDialog,
+  dialogRef: deleteDialogRef,
+  onClose: cancelDelete,
+  initialFocusRef: cancelDeleteButtonRef,
+})
+
 const confirmDelete = async () => {
   if (!projectToDelete.value) return
 
@@ -432,118 +572,379 @@ onUnmounted(() => {
   gap: var(--md-spacing-6);
 }
 
-.workspace-continue,
-.workspace-panel {
+.workspace-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: var(--md-spacing-5);
+  padding: clamp(var(--md-spacing-5), 4vw, var(--md-spacing-8));
   border: 1px solid var(--md-outline-variant);
-  background-color: var(--md-surface);
+  border-radius: var(--md-radius-xl);
+  background:
+    linear-gradient(
+      140deg,
+      color-mix(in srgb, var(--md-surface) 92%, transparent),
+      color-mix(in srgb, var(--md-primary-container) 32%, var(--md-surface-container-low))
+    );
   box-shadow: var(--md-elevation-1);
 }
 
-.workspace-continue {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--md-spacing-6);
-  padding: clamp(var(--md-spacing-5), 4vw, var(--md-spacing-8));
-  border-radius: var(--md-radius-xl);
-}
-
-.workspace-continue__copy {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.workspace-kicker {
-  margin: 0 0 6px;
+.workspace-eyebrow {
+  margin: 0;
   color: var(--md-primary-dark);
+  font-size: var(--md-label-medium);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.workspace-hero h2 {
+  margin: 10px 0 0;
+  color: var(--md-on-surface);
+  font-size: clamp(1.45rem, 2vw, 2rem);
+  line-height: 1.35;
+}
+
+.workspace-hero__summary {
+  margin: var(--md-spacing-3) 0 0;
+  color: var(--md-on-surface-variant);
+  line-height: 1.7;
+  max-width: 64ch;
+}
+
+.workspace-hero__meta {
+  margin-top: var(--md-spacing-4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--md-spacing-2);
+}
+
+.workspace-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 11px;
+  border-radius: var(--md-radius-full);
+  border: 1px solid var(--md-outline-variant);
+  background-color: color-mix(in srgb, var(--md-surface-container-low) 70%, transparent);
+  color: var(--md-on-surface-variant);
   font-size: var(--md-label-medium);
   font-weight: 600;
 }
 
-.workspace-continue h2,
-.workspace-panel h2,
-.workspace-state h3 {
+.workspace-hero__actions {
+  margin-top: var(--md-spacing-5);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--md-spacing-3);
+}
+
+.workspace-hero__panel {
+  border: 1px solid color-mix(in srgb, var(--md-primary) 20%, var(--md-outline-variant));
+  border-radius: var(--md-radius-lg);
+  background: color-mix(in srgb, var(--md-surface) 92%, transparent);
+  padding: var(--md-spacing-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-4);
+}
+
+.workspace-hero__panel-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.workspace-hero__panel-head p {
+  margin: 0;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-medium);
+}
+
+.workspace-hero__panel-head strong {
+  color: var(--md-on-surface);
+  font-size: var(--md-title-large);
+}
+
+.workspace-hero__goal-desc {
+  margin: 0;
+  color: var(--md-on-surface-variant);
+  line-height: 1.6;
+}
+
+.workspace-hero__progress-label {
+  margin-bottom: var(--md-spacing-2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-medium);
+}
+
+.workspace-hero__progress-label strong {
+  color: var(--md-on-surface);
+}
+
+.workspace-hero__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--md-spacing-3);
+}
+
+.workspace-hero__stats div {
+  padding: var(--md-spacing-3);
+  border-radius: var(--md-radius-md);
+  border: 1px solid var(--md-outline-variant);
+  background-color: var(--md-surface-container-low);
+}
+
+.workspace-hero__stats span {
+  display: block;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-small);
+}
+
+.workspace-hero__stats strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--md-on-surface);
+  font-size: var(--md-title-medium);
+}
+
+.workspace-canvas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--md-spacing-4);
+}
+
+.workspace-module,
+.workspace-archive {
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-lg);
+  background-color: color-mix(in srgb, var(--md-surface) 95%, transparent);
+}
+
+.workspace-module {
+  padding: var(--md-spacing-5);
+}
+
+.workspace-module--tools {
+  grid-column: span 2;
+}
+
+.workspace-module__head h3 {
+  margin: 0;
+  color: var(--md-on-surface);
+  font-size: var(--md-title-large);
+}
+
+.workspace-module__head p {
+  margin: 8px 0 0;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-small);
+}
+
+.workspace-activity {
+  list-style: none;
+  margin: var(--md-spacing-4) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-2);
+}
+
+.workspace-activity__item {
+  width: 100%;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-md);
+  background-color: var(--md-surface-container-low);
+  padding: var(--md-spacing-3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-spacing-3);
+  text-align: left;
+  cursor: pointer;
+}
+
+.workspace-activity__item:hover {
+  border-color: color-mix(in srgb, var(--md-primary) 28%, var(--md-outline-variant));
+}
+
+.workspace-activity__item strong,
+.workspace-activity__item span,
+.workspace-activity__item em {
+  display: block;
+}
+
+.workspace-activity__item strong {
+  color: var(--md-on-surface);
+  font-size: var(--md-label-large);
+  font-style: normal;
+}
+
+.workspace-activity__item span {
+  margin-top: 3px;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-small);
+}
+
+.workspace-activity__item em {
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-small);
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.workspace-ai-list {
+  list-style: none;
+  margin: var(--md-spacing-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-3);
+}
+
+.workspace-insights[open] {
+  display: block;
+}
+
+.workspace-insights__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-spacing-2);
+  min-height: 44px;
+  padding: var(--md-spacing-2) 0;
+  cursor: pointer;
+  list-style: none;
+  color: var(--md-on-surface);
+  font-size: var(--md-title-medium);
+  font-weight: 600;
+  transition:
+    color var(--md-duration-short) var(--md-easing-standard),
+    opacity var(--md-duration-short) var(--md-easing-standard);
+}
+
+.workspace-insights__summary::-webkit-details-marker {
+  display: none;
+}
+
+.workspace-insights__summary::after {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transform-origin: center;
+  transition: transform var(--md-duration-short) var(--md-easing-standard);
+}
+
+.workspace-insights[open] .workspace-insights__summary::after {
+  transform: rotate(-135deg) translate(-1px, -1px);
+}
+
+.workspace-insights__summary:hover {
+  color: var(--md-primary-dark);
+}
+
+.workspace-insights__summary:active {
+  opacity: 0.78;
+}
+
+.workspace-insights__summary:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+  border-radius: var(--md-radius-xs);
+}
+
+.workspace-insights__summary em {
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-medium);
+  font-style: normal;
+  font-weight: 500;
+}
+
+.workspace-insights[open] .workspace-ai-list {
+  padding-top: var(--md-spacing-3);
+  border-top: 1px solid var(--md-outline-variant);
+}
+
+.workspace-ai-list li {
+  padding: var(--md-spacing-3);
+  border-radius: var(--md-radius-md);
+  border: 1px solid var(--md-outline-variant);
+  background-color: var(--md-surface-container-low);
+}
+
+.workspace-ai-list__title {
   margin: 0;
   color: var(--md-on-surface);
   font-weight: 600;
 }
 
-.workspace-continue h2 {
-  font-size: var(--md-headline-small);
-  line-height: 1.25;
-}
-
-.workspace-continue p:last-child {
-  margin: 8px 0 0;
+.workspace-ai-list__desc {
+  margin: 6px 0 0;
   color: var(--md-on-surface-variant);
+  font-size: var(--md-body-small);
+  line-height: 1.6;
 }
 
-.workspace-continue__progress {
-  width: min(100%, 520px);
-  margin-top: var(--md-spacing-5);
-}
-
-.workspace-continue__progress-label {
-  display: flex;
+.workspace-ai-list__tag {
+  margin-top: var(--md-spacing-2);
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--md-spacing-3);
-  margin-bottom: var(--md-spacing-2);
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-label-medium);
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--md-radius-full);
+  font-size: var(--md-label-small);
   font-weight: 600;
 }
 
-.workspace-continue__progress-label strong {
-  color: var(--md-on-surface);
-  font-weight: 600;
+.workspace-ai-list__tag.is-focus {
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
 }
 
-.workspace-continue__actions {
+.workspace-ai-list__tag.is-warning {
+  background-color: var(--md-warning-container);
+  color: var(--md-on-warning-container);
+}
+
+.workspace-ai-list__tag.is-calm {
+  background-color: var(--md-success-container);
+  color: var(--md-on-success-container);
+}
+
+.workspace-tools {
+  margin-top: var(--md-spacing-4);
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: var(--md-spacing-3);
 }
 
-.workspace-continue__actions {
-  flex-shrink: 0;
+.workspace-empty-hint {
+  margin: var(--md-spacing-5) 0 0;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-small);
 }
 
-.workspace-panel__actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: var(--md-spacing-2);
-}
-
-.workspace-panel__action:focus-visible {
-  outline: 2px solid var(--md-primary);
-  outline-offset: 2px;
-}
-
-.workspace-panel {
+.workspace-archive {
   padding: clamp(var(--md-spacing-5), 4vw, var(--md-spacing-8));
-  border-radius: var(--md-radius-xl);
 }
 
-.workspace-panel__header {
+.workspace-archive__head {
+  margin-bottom: var(--md-spacing-5);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--md-spacing-4);
-  margin-bottom: var(--md-spacing-6);
+  gap: var(--md-spacing-3);
 }
 
-.workspace-panel__heading {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--md-spacing-2) var(--md-spacing-3);
-}
-
-.workspace-panel h2 {
+.workspace-archive__head h3,
+.workspace-state h3 {
+  margin: 8px 0 0;
+  color: var(--md-on-surface);
   font-size: var(--md-title-large);
 }
 
@@ -663,46 +1064,50 @@ onUnmounted(() => {
   height: 32px;
 }
 
-@media (max-width: 720px) {
-  .workspace-continue,
-  .workspace-panel__header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .workspace-continue__actions {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .workspace-continue__actions .md-btn {
-    width: 100%;
+@media (max-width: 1120px) {
+  .workspace-hero {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 768px) {
   .workspace-page {
     gap: var(--md-spacing-4);
   }
 
-  .workspace-continue,
-  .workspace-panel {
+  .workspace-hero,
+  .workspace-module,
+  .workspace-archive {
     padding: var(--md-spacing-4);
     border-radius: var(--md-radius-lg);
   }
 
-  .workspace-panel__actions {
-    width: 100%;
-    justify-content: stretch;
+  .workspace-canvas {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .workspace-panel__action {
-    flex: 1 1 128px;
+  .workspace-module--tools {
+    grid-column: span 1;
   }
 
+  .workspace-hero__actions .md-btn {
+    flex: 1 1 100%;
+  }
+
+  .workspace-hero__stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
   .workspace-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--md-spacing-4);
+  }
+
+  .workspace-activity__item {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>

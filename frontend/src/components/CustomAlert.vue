@@ -18,7 +18,14 @@
           enter-from-class="opacity-0 scale-95"
           leave-to-class="opacity-0 scale-95"
         >
-          <div class="md-dialog max-w-md w-full mx-4">
+          <div
+            ref="dialogRef"
+            class="md-dialog max-w-md w-full mx-4"
+            role="dialog"
+            aria-modal="true"
+            :aria-labelledby="dialogTitleId"
+            :aria-describedby="dialogMessageId"
+          >
             <!-- Material 3 Dialog Header -->
             <div class="md-dialog-header flex items-center gap-4">
               <!-- Icon -->
@@ -88,13 +95,13 @@
                 </svg>
               </div>
               <div>
-                <h3 class="md-dialog-title">{{ titleText }}</h3>
+                <h3 :id="dialogTitleId" class="md-dialog-title">{{ titleText }}</h3>
               </div>
             </div>
 
             <!-- Content -->
             <div class="md-dialog-content">
-              <p class="md-body-large" style="color: var(--md-on-surface-variant);">{{ message }}</p>
+              <p :id="dialogMessageId" class="md-body-large" style="color: var(--md-on-surface-variant);">{{ message }}</p>
             </div>
 
             <!-- Material 3 Dialog Actions -->
@@ -107,6 +114,8 @@
                 {{ cancelText }}
               </button>
               <button
+                ref="confirmButtonRef"
+                data-dialog-initial-focus
                 @click="handleConfirm"
                 class="md-btn md-ripple"
                 :class="confirmButtonClass"
@@ -122,7 +131,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, toRef } from 'vue'
+import { useDialogA11y } from '@/composables/useDialogA11y'
 
 interface Props {
   visible: boolean
@@ -147,6 +157,12 @@ const emit = defineEmits<{
   cancel: []
   close: []
 }>()
+
+const dialogRef = ref<HTMLElement | null>(null)
+const confirmButtonRef = ref<HTMLElement | null>(null)
+const dialogInstanceId = `custom-alert-${Math.random().toString(36).slice(2, 10)}`
+const dialogTitleId = `${dialogInstanceId}-title`
+const dialogMessageId = `${dialogInstanceId}-message`
 
 const titleText = computed(() => {
   if (props.title) return props.title
@@ -208,4 +224,11 @@ const handleCancel = () => {
 const handleClose = () => {
   emit('close')
 }
+
+useDialogA11y({
+  active: toRef(props, 'visible'),
+  dialogRef,
+  onClose: handleClose,
+  initialFocusRef: confirmButtonRef,
+})
 </script>

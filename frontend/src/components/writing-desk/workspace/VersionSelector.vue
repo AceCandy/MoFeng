@@ -1,21 +1,42 @@
 <!-- AIMETA P=版本选择器_章节版本切换|R=版本列表_切换|NR=不含版本管理|E=component:VersionSelector|X=internal|A=选择器|D=vue|S=dom|RD=./README.ai -->
 <template>
   <div class="space-y-6">
-    <!-- AI 评审提示 -->
+    <div v-if="showGeneratedBanner" class="md-card md-card-filled p-4 version-ready" style="border-radius: var(--md-radius-lg)">
+      <p class="version-ready__title">第{{ selectedChapter?.chapter_number }}章已生成新版本 {{ latestVersionLabel }}，原版本已保留。</p>
+      <div class="version-ready__actions">
+        <button type="button" class="md-btn md-btn-outlined md-ripple" @click="$emit('showVersionDetail', selectedVersionIndex)">查看正文</button>
+        <button
+          type="button"
+          class="md-btn md-btn-outlined md-ripple"
+          :disabled="availableVersions.length < 2"
+          @click="compareWithPreviousVersion"
+        >
+          与上一版对比
+        </button>
+        <button
+          type="button"
+          class="md-btn md-btn-filled md-ripple"
+          :disabled="!availableVersions?.[selectedVersionIndex]?.content || isSelectingVersion"
+          @click="$emit('confirmVersionSelection')"
+        >
+          采纳为正式版本
+        </button>
+        <button type="button" class="md-btn md-btn-tonal md-ripple" @click="$emit('regenerateChapter')">重新生成</button>
+        <button type="button" class="md-btn md-btn-text md-ripple" @click="$emit('showEvaluationDetail')">继续润色</button>
+      </div>
+    </div>
+
     <div
-      v-if="isEvaluationFailed"
-      class="md-card md-card-filled p-4"
-      style="border-radius: var(--md-radius-lg); background-color: var(--md-error-container)"
+      v-if="versionNotice"
+      :class="['md-card md-card-filled p-4 version-notice', `version-notice--${versionNotice.tone}`]"
+      style="border-radius: var(--md-radius-lg)"
     >
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div
-            class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-            style="background-color: var(--md-error)"
-          >
+      <div class="version-notice__row">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="version-notice__icon">
             <svg
+              v-if="versionNotice.icon === 'error'"
               class="w-5 h-5"
-              style="color: var(--md-on-error)"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -25,52 +46,9 @@
                 clip-rule="evenodd"
               />
             </svg>
-          </div>
-          <div>
-            <h4 class="md-title-small font-semibold" style="color: var(--md-on-error-container)">
-              AI 评审失败
-            </h4>
-            <p class="md-body-small" style="color: var(--md-on-error-container)">
-              AI 评审时遇到问题，请重试。
-            </p>
-          </div>
-        </div>
-        <button
-          @click="$emit('evaluateChapter')"
-          :disabled="evaluatingChapter === selectedChapter?.chapter_number"
-          class="md-btn md-btn-filled md-ripple disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
-          style="background-color: var(--md-error); color: var(--md-on-error)"
-        >
-          <svg
-            v-if="evaluatingChapter === selectedChapter?.chapter_number"
-            class="w-4 h-4 animate-spin"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-              clip-rule="evenodd"
-            ></path>
-          </svg>
-          {{ evaluatingChapter === selectedChapter?.chapter_number ? '重试中...' : '重新评审' }}
-        </button>
-      </div>
-    </div>
-    <div
-      v-else-if="selectedChapter?.evaluation"
-      class="md-card md-card-filled p-4"
-      style="border-radius: var(--md-radius-lg); background-color: var(--md-secondary-container)"
-    >
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <div
-            class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-            style="background-color: var(--md-secondary)"
-          >
             <svg
+              v-else-if="versionNotice.icon === 'evaluation'"
               class="w-5 h-5"
-              style="color: var(--md-on-secondary)"
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -78,95 +56,40 @@
                 d="M10 2a6 6 0 00-6 6v3.586l-1.707 1.707A1 1 0 003 15v1a1 1 0 001 1h12a1 1 0 001-1v-1a1 1 0 00-.293-.707L16 11.586V8a6 6 0 00-6-6zM8.05 17a2 2 0 103.9 0H8.05z"
               ></path>
             </svg>
+            <svg v-else class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fill-rule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                clip-rule="evenodd"
+              ></path>
+            </svg>
           </div>
-          <div>
-            <h4
-              class="md-title-small font-semibold"
-              style="color: var(--md-on-secondary-container)"
-            >
-              AI 评审已完成
+          <div class="min-w-0">
+            <h4 class="md-title-small font-semibold">
+              {{ versionNotice.title }}
             </h4>
-            <p class="md-body-small" style="color: var(--md-on-secondary-container)">
-              AI 已对所有版本进行评估，点击查看详细结果。
+            <p class="md-body-small">
+              {{ versionNotice.description }}
             </p>
           </div>
         </div>
         <button
-          @click="$emit('showEvaluationDetail')"
-          class="md-btn md-btn-filled md-ripple flex items-center gap-2 whitespace-nowrap"
+          v-if="versionNotice.action"
+          type="button"
+          @click="handleVersionNoticeAction(versionNotice.action)"
+          :disabled="isEvaluatingCurrentChapter && versionNotice.action === 'retry-evaluate'"
+          class="md-btn md-btn-filled md-ripple disabled:opacity-50 whitespace-nowrap"
         >
-          查看 AI 评审
+          {{ isEvaluatingCurrentChapter && versionNotice.action === 'retry-evaluate' ? '重试中...' : versionNotice.actionLabel }}
         </button>
       </div>
-    </div>
-
-    <!-- AI消息 (仅对新生成的内容显示) -->
-    <div
-      v-if="chapterGenerationResult?.ai_message"
-      class="md-card md-card-filled p-4"
-      style="border-radius: var(--md-radius-lg); background-color: var(--md-primary-container)"
-    >
-      <div class="flex items-start gap-3">
+      <details v-if="chapterGenerationResult?.ai_message" class="version-notice__details">
+        <summary class="md-label-large">查看 AI 说明</summary>
         <div
-          class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-          style="background-color: var(--md-primary)"
-        >
-          <svg
-            class="w-4 h-4"
-            style="color: var(--md-on-primary)"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-              clip-rule="evenodd"
-            ></path>
-          </svg>
-        </div>
-        <div class="flex-1">
-          <div
-            class="prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0"
-            style="color: var(--md-on-primary-container)"
-            v-html="parseMarkdown(chapterGenerationResult.ai_message)"
-          ></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 状态提示 -->
-    <div
-      v-if="selectedChapter?.content"
-      class="md-card md-card-filled p-4"
-      style="border-radius: var(--md-radius-lg); background-color: var(--md-warning-container)"
-    >
-      <div class="flex items-center gap-2" style="color: var(--md-on-warning-container)">
-        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-          <path
-            fill-rule="evenodd"
-            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-            clip-rule="evenodd"
-          ></path>
-        </svg>
-        <span class="font-medium">您可以查看所有版本并选择不同的版本</span>
-      </div>
-    </div>
-
-    <div
-      v-else
-      class="md-card md-card-filled p-4"
-      style="border-radius: var(--md-radius-lg); background-color: var(--md-primary-container)"
-    >
-      <div class="flex items-center gap-2" style="color: var(--md-on-primary-container)">
-        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-          <path
-            fill-rule="evenodd"
-            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-            clip-rule="evenodd"
-          ></path>
-        </svg>
-        <span class="font-medium">请选择一个版本来完成这个章节</span>
-      </div>
+          class="prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0"
+          v-html="parseMarkdown(chapterGenerationResult.ai_message)"
+        ></div>
+      </details>
     </div>
 
     <!-- 版本选择器 -->
@@ -184,12 +107,17 @@
         <div
           v-for="(version, index) in availableVersions"
           :key="index"
+          :ref="(el) => registerVersionCardRef(el, index)"
           @click="$emit('update:selectedVersionIndex', index)"
           @keydown.enter.prevent="$emit('update:selectedVersionIndex', index)"
           @keydown.space.prevent="$emit('update:selectedVersionIndex', index)"
+          @keydown="handleVersionRadioKeydown($event, index)"
           role="radio"
           :tabindex="selectedVersionIndex === index ? 0 : -1"
           :aria-checked="selectedVersionIndex === index"
+          :aria-label="`候选版本 ${index + 1}`"
+          :aria-posinset="index + 1"
+          :aria-setsize="availableVersions.length"
           :class="[
             'cursor-pointer p-4 m3-version-card',
             selectedVersionIndex === index
@@ -315,7 +243,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, ref } from 'vue'
+import DOMPurify from 'dompurify'
 import type { Chapter, ChapterGenerationResponse, ChapterVersion } from '@/api/novel'
 import { countNonWhitespaceChars } from '@/utils/text'
 
@@ -330,15 +259,144 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const versionCardRefs = ref<Array<HTMLElement | null>>([])
 
-defineEmits([
+type VersionNoticeAction = 'retry-evaluate' | 'show-evaluation'
+
+const emit = defineEmits([
   'hideVersionSelector',
   'update:selectedVersionIndex',
   'showVersionDetail',
   'confirmVersionSelection',
   'evaluateChapter',
   'showEvaluationDetail',
+  'regenerateChapter',
 ])
+
+const isEvaluatingCurrentChapter = computed(
+  () => props.evaluatingChapter === props.selectedChapter?.chapter_number,
+)
+
+const showGeneratedBanner = computed(() => {
+  return props.selectedChapter?.generation_status === 'waiting_for_confirm'
+})
+
+const latestVersionLabel = computed(() => {
+  const length = props.availableVersions.length
+  if (!length) return 'V1'
+  return `V${length}`
+})
+
+const versionNotice = computed(() => {
+  if (props.isEvaluationFailed) {
+    return {
+      tone: 'error',
+      icon: 'error',
+      title: 'AI 评审失败',
+      description: '评审遇到问题，可以直接重试。',
+      action: 'retry-evaluate' as VersionNoticeAction,
+      actionLabel: '重新评审',
+    }
+  }
+
+  if (props.selectedChapter?.evaluation) {
+    return {
+      tone: 'secondary',
+      icon: 'evaluation',
+      title: 'AI 评审已完成',
+      description: '已完成多版本评估，可以直接查看详情。',
+      action: 'show-evaluation' as VersionNoticeAction,
+      actionLabel: '查看 AI 评审',
+    }
+  }
+
+  if (props.selectedChapter?.content) {
+    return {
+      tone: 'warning',
+      icon: 'info',
+      title: '当前章节已有正文',
+      description: '可横向对比候选版本，再决定是否替换当前正文。',
+      action: null,
+      actionLabel: '',
+    }
+  }
+
+  return {
+    tone: 'primary',
+    icon: 'info',
+    title: '请选择候选版本',
+    description: '先选择一个版本确认，章节才会进入完成状态。',
+    action: null,
+    actionLabel: '',
+  }
+})
+
+const handleVersionNoticeAction = (action: VersionNoticeAction) => {
+  if (action === 'retry-evaluate') {
+    emit('evaluateChapter')
+    return
+  }
+  emit('showEvaluationDetail')
+}
+
+const resolveVersionCardElement = (element: unknown) => {
+  if (element instanceof HTMLElement) {
+    return element
+  }
+  if (element && typeof element === 'object' && '$el' in element) {
+    const componentElement = (element as { $el?: unknown }).$el
+    if (componentElement instanceof HTMLElement) {
+      return componentElement
+    }
+  }
+  return null
+}
+
+const registerVersionCardRef = (element: unknown, index: number) => {
+  versionCardRefs.value[index] = resolveVersionCardElement(element)
+}
+
+const focusAndSelectVersion = async (index: number) => {
+  if (index < 0 || index >= props.availableVersions.length) {
+    return
+  }
+  emit('update:selectedVersionIndex', index)
+  await nextTick()
+  versionCardRefs.value[index]?.focus()
+}
+
+const handleVersionRadioKeydown = (event: KeyboardEvent, index: number) => {
+  if (props.availableVersions.length === 0) {
+    return
+  }
+  if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+    event.preventDefault()
+    const nextIndex = (index + 1) % props.availableVersions.length
+    void focusAndSelectVersion(nextIndex)
+    return
+  }
+  if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+    event.preventDefault()
+    const prevIndex = (index - 1 + props.availableVersions.length) % props.availableVersions.length
+    void focusAndSelectVersion(prevIndex)
+    return
+  }
+  if (event.key === 'Home') {
+    event.preventDefault()
+    void focusAndSelectVersion(0)
+    return
+  }
+  if (event.key === 'End') {
+    event.preventDefault()
+    void focusAndSelectVersion(props.availableVersions.length - 1)
+  }
+}
+
+const compareWithPreviousVersion = () => {
+  if (props.availableVersions.length < 2) return
+  const previousIndex = Math.max(0, props.selectedVersionIndex - 1)
+  emit('showVersionDetail', previousIndex)
+}
 
 const isCurrentVersion = (versionIndex: number) => {
   if (!props.selectedChapter?.content || !props.availableVersions?.[versionIndex]?.content)
@@ -409,13 +467,116 @@ const parseMarkdown = (text: string): string => {
   if (!parsed.includes('<p>')) {
     parsed = `<p>${parsed}</p>`
   }
-  return parsed
+  return DOMPurify.sanitize(parsed, {
+    USE_PROFILES: { html: true },
+  })
 }
 </script>
 
 <style scoped>
+.version-ready {
+  border: 1px solid color-mix(in srgb, var(--md-success) 28%, var(--md-outline-variant));
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--md-success-container) 70%, var(--md-surface)),
+      color-mix(in srgb, var(--md-surface) 94%, transparent)
+    );
+}
+
+.version-ready__title {
+  margin: 0;
+  color: var(--md-on-surface);
+  font-size: var(--md-body-medium);
+  font-weight: 600;
+}
+
+.version-ready__actions {
+  margin-top: var(--md-spacing-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--md-spacing-2);
+}
+
+.version-notice {
+  border: 1px solid var(--md-outline-variant);
+}
+
+.version-notice__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-spacing-4);
+}
+
+.version-notice__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.version-notice__details {
+  margin-top: var(--md-spacing-3);
+}
+
+.version-notice__details summary {
+  cursor: pointer;
+  user-select: none;
+  color: inherit;
+}
+
+.version-notice__details .prose {
+  margin-top: var(--md-spacing-2);
+  color: inherit;
+}
+
+.version-notice--error {
+  background-color: var(--md-error-container);
+  color: var(--md-on-error-container);
+}
+
+.version-notice--error .version-notice__icon {
+  background-color: var(--md-error);
+  color: var(--md-on-error);
+}
+
+.version-notice--secondary {
+  background-color: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+}
+
+.version-notice--secondary .version-notice__icon {
+  background-color: var(--md-secondary);
+  color: var(--md-on-secondary);
+}
+
+.version-notice--warning {
+  background-color: var(--md-warning-container);
+  color: var(--md-on-warning-container);
+}
+
+.version-notice--warning .version-notice__icon {
+  background-color: color-mix(in srgb, var(--md-warning) 70%, var(--md-surface));
+  color: var(--md-on-warning-container);
+}
+
+.version-notice--primary {
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.version-notice--primary .version-notice__icon {
+  background-color: var(--md-primary);
+  color: var(--md-on-primary);
+}
+
 .version-grid {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--md-spacing-3);
 }
 
@@ -460,6 +621,23 @@ const parseMarkdown = (text: string): string => {
 }
 
 @media (max-width: 640px) {
+  .version-ready__actions {
+    flex-direction: column;
+  }
+
+  .version-ready__actions .md-btn {
+    width: 100%;
+  }
+
+  .version-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .version-notice__row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .version-actions {
     align-items: stretch;
     flex-direction: column;

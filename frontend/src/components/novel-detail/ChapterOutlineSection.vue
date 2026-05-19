@@ -3,13 +3,13 @@
   <div class="space-y-6">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
-        <h2 class="text-2xl font-bold text-slate-900">章节大纲</h2>
-        <p class="text-sm text-slate-500">故事结构与章节节奏一目了然</p>
+        <h2 class="text-2xl font-bold text-[var(--md-on-surface)]">章节大纲</h2>
+        <p class="text-sm text-[var(--md-on-surface-variant)]">故事结构与章节节奏一目了然</p>
       </div>
       <div v-if="editable" class="flex items-center gap-2">
         <button
           type="button"
-          class="flex items-center gap-1 px-3 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg"
+          class="flex items-center gap-1 px-3 py-2 text-sm font-medium text-[var(--md-primary)] bg-[var(--md-primary-container)] hover:bg-[var(--md-primary-container)] rounded-lg"
           @click="$emit('add')"
         >
           <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -19,7 +19,7 @@
         </button>
         <button
           type="button"
-          class="flex items-center gap-1 px-3 py-2 text-sm text-gray-500 hover:text-indigo-600 transition-colors"
+          class="flex items-center gap-1 px-3 py-2 text-sm text-[var(--md-on-surface-variant)] hover:text-[var(--md-primary)] transition-colors"
           @click="emitEdit('chapter_outline', '章节大纲', outline)"
         >
           <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -31,24 +31,24 @@
       </div>
     </div>
 
-    <ol class="relative border-l border-slate-200 ml-3 space-y-8">
+    <ol class="relative border-l border-[var(--md-outline-variant)] ml-3 space-y-8">
       <li
         v-for="chapter in outline"
         :key="chapter.chapter_number"
         class="ml-6"
       >
-        <span class="absolute -left-3 mt-1 flex h-6 w-6 items-center justify-center rounded-full bg-indigo-500 text-white text-xs font-semibold">
+        <span class="absolute -left-3 mt-1 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--md-primary)] text-[var(--md-on-primary)] text-xs font-semibold">
           {{ chapter.chapter_number }}
         </span>
-        <div class="bg-white/95 rounded-2xl border border-slate-200 shadow-sm p-5">
+        <div class="bg-[var(--md-surface)] rounded-2xl border border-[var(--md-outline-variant)] shadow-sm p-5">
           <div class="flex items-center justify-between gap-4">
-            <h3 class="text-lg font-semibold text-slate-900">{{ chapter.title || `第${chapter.chapter_number}章` }}</h3>
-            <span class="text-xs text-slate-400">#{{ chapter.chapter_number }}</span>
+            <h3 class="text-lg font-semibold text-[var(--md-on-surface)]">{{ chapter.title || `第${chapter.chapter_number}章` }}</h3>
+            <span class="text-xs text-[var(--md-on-surface-variant)]">#{{ chapter.chapter_number }}</span>
           </div>
-          <p class="mt-3 text-sm text-slate-600 leading-6 whitespace-pre-line">{{ chapter.summary || '暂无摘要' }}</p>
+          <p class="mt-3 text-sm text-[var(--md-on-surface-variant)] leading-6 whitespace-pre-line">{{ chapter.summary || '暂无摘要' }}</p>
         </div>
       </li>
-      <li v-if="!outline.length" class="ml-6 text-slate-400 text-sm">暂无章节大纲</li>
+      <li v-if="!outline.length" class="ml-6 text-[var(--md-on-surface-variant)] text-sm">暂无章节大纲</li>
     </ol>
   </div>
 </template>

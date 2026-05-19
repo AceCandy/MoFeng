@@ -361,7 +361,7 @@
               v-if="selectedModelChipsForProvider(provider.id).length === 0"
               class="model-routing__empty"
             >
-              点击“拉取模型”后勾选模型。
+              点击"拉取模型"后勾选模型。
             </p>
             <div v-else class="model-routing__selected-chip-list">
               <span
@@ -973,7 +973,7 @@ const toggleProviderEnabled = async (provider: UserModelProvider) => {
 
 const deleteProviderFromCard = async (provider: UserModelProvider) => {
   const confirmed = await globalAlert.showConfirm(
-    `确定删除供应商“${provider.name}”吗？关联模型和阶段路由也会一起删除。`,
+    `确定删除供应商"${provider.name}"吗？关联模型和阶段路由也会一起删除。`,
     '删除供应商',
   )
   if (!confirmed) {
@@ -1176,7 +1176,7 @@ const deleteModelForActiveSection = async (provider: UserModelProvider, modelNam
 
   const label = model.display_name || model.model_name
   const confirmed = await globalAlert.showConfirm(
-    `确定删除模型“${label}”吗？关联的阶段路由也会一起移除。`,
+    `确定删除模型"${label}"吗？关联的阶段路由也会一起移除。`,
     '删除模型',
   )
   if (!confirmed) {

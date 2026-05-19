@@ -6,19 +6,27 @@
     enter-from-class="opacity-0"
     leave-to-class="opacity-0"
   >
-    <div v-if="show" class="md-dialog-overlay" @click.self="$emit('close')">
+    <div v-if="show" class="md-dialog-overlay" @click.self="handleClose">
       <transition
         enter-active-class="transition-all duration-300"
         leave-active-class="transition-all duration-200"
         enter-from-class="opacity-0 scale-95"
         leave-to-class="opacity-0 scale-95"
       >
-        <div class="md-dialog w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col">
+        <div
+          ref="dialogRef"
+          class="md-dialog w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col"
+          role="dialog"
+          aria-modal="true"
+          :aria-labelledby="dialogTitleId"
+        >
           <!-- Material 3 Dialog Header -->
           <div class="md-dialog-header flex items-center justify-between">
-            <h3 class="md-dialog-title">编辑 {{ title }}</h3>
+            <h3 :id="dialogTitleId" class="md-dialog-title">编辑 {{ title }}</h3>
             <button 
-              @click="$emit('close')" 
+              ref="closeButtonRef"
+              data-dialog-initial-focus
+              @click="handleClose" 
               class="md-icon-btn md-ripple"
               aria-label="关闭"
             >
@@ -48,7 +56,7 @@
           <!-- Material 3 Dialog Actions -->
           <div class="md-dialog-actions" style="border-top: 1px solid var(--md-outline-variant);">
             <button 
-              @click="$emit('close')" 
+              @click="handleClose" 
               class="md-btn md-btn-text md-ripple"
             >
               取消
@@ -70,13 +78,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, toRef } from 'vue';
 import ChapterOutlineEditor from './ChapterOutlineEditor.vue';
 import KeyLocationsEditor from './KeyLocationsEditor.vue';
 import CharactersEditor from './CharactersEditorEnhanced.vue';
 import RelationshipsEditor from './RelationshipsEditor.vue';
 import FactionsEditor from './FactionsEditor.vue';
 import type { ChapterOutline } from '@/api/novel';
+import { useDialogA11y } from '@/composables/useDialogA11y'
 
 const props = defineProps({
   show: Boolean,
@@ -91,11 +100,22 @@ const props = defineProps({
 const emit = defineEmits(['close', 'save']);
 
 const editableContent = ref<any>('');
+const dialogRef = ref<HTMLElement | null>(null)
+const closeButtonRef = ref<HTMLElement | null>(null)
+const dialogInstanceId = `blueprint-edit-${Math.random().toString(36).slice(2, 10)}`
+const dialogTitleId = `${dialogInstanceId}-title`
+
+const handleClose = () => {
+  emit('close')
+}
 
 watch(() => props.show, (isVisible) => {
   if (isVisible) {
     try {
-      editableContent.value = JSON.parse(JSON.stringify(props.content || ''));
+      editableContent.value =
+        typeof structuredClone === 'function'
+          ? structuredClone(props.content || '')
+          : JSON.parse(JSON.stringify(props.content || ''));
     } catch (e) {
       editableContent.value = props.content || '';
     }
@@ -105,4 +125,11 @@ watch(() => props.show, (isVisible) => {
 const saveChanges = () => {
   emit('save', { field: props.field, content: editableContent.value });
 };
+
+useDialogA11y({
+  active: toRef(props, 'show'),
+  dialogRef,
+  onClose: handleClose,
+  initialFocusRef: closeButtonRef,
+})
 </script>

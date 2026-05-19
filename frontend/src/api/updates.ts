@@ -1,22 +1,14 @@
 // AIMETA P=更新API客户端_更新日志接口|R=更新日志查询|NR=不含UI逻辑|E=api:updates|X=internal|A=updatesApi对象|D=axios|S=net|RD=./README.ai
 import { API_BASE_URL } from './base'
+import { requestJson } from './http'
 
 // A simplified request function for public endpoints that don't require authentication.
-const publicRequest = async (url: string, options: RequestInit = {}) => {
-  const response = await fetch(url, { ...options })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.detail || `Request failed, status code: ${response.status}`)
-  }
-
-  // For DELETE requests which might not have a body
-  if (response.status === 204) {
-    return
-  }
-
-  return response.json()
-}
+const publicRequest = <T>(url: string, options: RequestInit = {}) =>
+  requestJson<T>(url, {
+    ...options,
+    timeoutMs: 15_000,
+    fallbackErrorMessage: '更新日志请求失败',
+  })
 
 export interface UpdateLog {
   id: number
@@ -25,5 +17,5 @@ export interface UpdateLog {
 }
 
 export const getLatestUpdates = (): Promise<UpdateLog[]> => {
-  return publicRequest(`${API_BASE_URL}/api/updates/latest`)
+  return publicRequest<UpdateLog[]>(`${API_BASE_URL}/api/updates/latest`)
 }

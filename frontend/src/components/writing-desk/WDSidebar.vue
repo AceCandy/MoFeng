@@ -14,7 +14,7 @@
             type="button"
             class="writing-sidebar__link writing-sidebar__blueprint-link md-ripple"
             aria-label="打开故事蓝图"
-            @click="emit('openProjectDetail')"
+            @click="$emit('openProjectDetail')"
           >
             <div
               class="w-10 h-10 rounded-full flex items-center justify-center"
@@ -40,267 +40,96 @@
 
         <!-- 章节列表 -->
         <div ref="listContainer" class="flex-1 overflow-y-auto">
-          <div class="p-6 pb-4">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="md-title-medium font-semibold">章节大纲</h3>
-              <div class="flex items-center gap-2">
-                <span class="md-chip md-chip-filter selected"> {{ totalChapters }} 章 </span>
+          <div class="writing-sidebar__outline-header">
+            <div class="writing-sidebar__outline-header-row">
+              <div class="writing-sidebar__outline-heading">
+                <h3 class="md-title-medium font-semibold">章节大纲</h3>
+                <span class="writing-sidebar__outline-count">{{ totalChapters }} 章</span>
+              </div>
+              <div class="writing-sidebar__outline-toolbar">
+                <button
+                  type="button"
+                  class="md-icon-btn md-ripple writing-sidebar__outline-action"
+                  @click="scrollToFirstIncompleteChapter"
+                  :disabled="!hasIncompleteChapter"
+                  aria-label="定位第一个未完成章节"
+                  title="定位第一个未完成章节"
+                >
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="7.5" stroke="currentColor" />
+                    <circle cx="12" cy="12" r="2.2" fill="currentColor" />
+                    <path d="M12 2.8v2.2M12 19v2.2M2.8 12H5M19 12h2.2" stroke="currentColor" />
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
 
-          <div class="px-6 pb-6">
-            <div v-if="project.blueprint?.chapter_outline?.length" class="space-y-3">
+          <div class="px-6 pb-6 pt-3">
+            <div v-if="project.blueprint?.chapter_outline?.length" class="writing-sidebar__tree">
               <div
                 v-for="(chapter, index) in project.blueprint.chapter_outline"
                 :key="chapter.chapter_number"
-                :ref="(el) => setChapterRef(chapter.chapter_number, el)"
-                @click="$emit('selectChapter', chapter.chapter_number)"
-                @keydown.enter.prevent="$emit('selectChapter', chapter.chapter_number)"
-                @keydown.space.prevent="$emit('selectChapter', chapter.chapter_number)"
-                role="button"
-                tabindex="0"
-                :aria-current="
-                  selectedChapterNumber === chapter.chapter_number ? 'true' : undefined
-                "
-                :aria-label="`打开第${chapter.chapter_number}章：${chapter.title}`"
-                :class="[
-                  'group cursor-pointer p-4 m3-chapter-card m3-stagger',
-                  selectedForDeletion.includes(chapter.chapter_number)
-                    ? 'm3-chapter-danger'
-                    : selectedChapterNumber === chapter.chapter_number
-                      ? 'm3-chapter-selected md-elevation-1'
-                      : 'hover:md-elevation-1',
-                ]"
-                :style="{ animationDelay: `${index * 40}ms` }"
+                class="writing-sidebar__tree-item"
               >
-                <div class="flex items-start gap-3">
-                  <div class="flex-shrink-0 pt-1">
-                    <input
-                      type="checkbox"
-                      :disabled="isChapterCompleted(chapter.chapter_number)"
-                      :checked="selectedForDeletion.includes(chapter.chapter_number)"
-                      @click.stop="toggleSelection(chapter.chapter_number)"
-                      :aria-label="`选择删除第${chapter.chapter_number}章`"
-                      class="h-4 w-4 rounded border-[var(--md-outline)] text-[var(--md-primary)] focus:ring-[var(--md-primary)] disabled:opacity-50 accent-[var(--md-primary)]"
-                    />
-                  </div>
-                  <div
-                    :class="[
-                      'w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0',
-                      isChapterCompleted(chapter.chapter_number)
-                        ? 'bg-[var(--md-success)] text-[var(--md-on-success)]'
-                        : isChapterGeneratingLike(chapter.chapter_number) ||
-                            isChapterEvaluating(chapter.chapter_number) ||
-                            isChapterSelecting(chapter.chapter_number)
-                          ? 'bg-[var(--md-primary)] text-[var(--md-on-primary)] animate-pulse'
-                          : isChapterFailed(chapter.chapter_number)
-                            ? 'bg-[var(--md-error)] text-[var(--md-on-error)]'
-                            : selectedChapterNumber === chapter.chapter_number
-                              ? 'bg-[var(--md-primary)] text-[var(--md-on-primary)]'
-                              : 'bg-[var(--md-surface-container-highest)] text-[var(--md-on-surface-variant)]',
-                    ]"
-                  >
-                    <svg
-                      v-if="isChapterCompleted(chapter.chapter_number)"
-                      class="w-4 h-4"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fill-rule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clip-rule="evenodd"
-                      ></path>
-                    </svg>
-                    <svg
-                      v-else-if="
-                        isChapterGeneratingLike(chapter.chapter_number) ||
-                        isChapterSelecting(chapter.chapter_number)
-                      "
-                      class="w-4 h-4 animate-spin"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fill-rule="evenodd"
-                        d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                        clip-rule="evenodd"
-                      ></path>
-                    </svg>
-                    <svg
-                      v-else-if="isChapterEvaluating(chapter.chapter_number)"
-                      class="w-4 h-4 animate-spin"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        d="M10 2a6 6 0 00-6 6v3.586l-1.707 1.707A1 1 0 003 15v1a1 1 0 001 1h12a1 1 0 001-1v-1a1 1 0 00-.293-.707L16 11.586V8a6 6 0 00-6-6zM8.05 17a2 2 0 103.9 0H8.05z"
-                      ></path>
-                    </svg>
-                    <svg
-                      v-else-if="isChapterFailed(chapter.chapter_number)"
-                      class="w-4 h-4"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fill-rule="evenodd"
-                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-                        clip-rule="evenodd"
-                      ></path>
-                    </svg>
-                    <span v-else>{{ chapter.chapter_number }}</span>
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <Tooltip :text="chapter.title">
-                      <h4 class="md-body-large font-semibold mb-1 line-clamp-1">
-                        {{ chapter.title }}
-                      </h4>
-                    </Tooltip>
-                    <Tooltip :text="chapter.summary">
-                      <p class="md-body-small md-on-surface-variant line-clamp-2 leading-relaxed">
-                        {{ chapter.summary }}
-                      </p>
-                    </Tooltip>
-
-                    <!-- 章节状态 -->
-                    <div class="mt-2 flex items-center gap-2">
+                <div
+                  :ref="(el) => setChapterRef(chapter.chapter_number, el)"
+                  @click="$emit('selectChapter', chapter.chapter_number)"
+                  @keydown.enter.prevent="$emit('selectChapter', chapter.chapter_number)"
+                  @keydown.space.prevent="$emit('selectChapter', chapter.chapter_number)"
+                  role="button"
+                  tabindex="0"
+                  :aria-current="
+                    selectedChapterNumber === chapter.chapter_number ? 'true' : undefined
+                  "
+                  :aria-label="`打开第${chapter.chapter_number}章：${chapter.title}`"
+                  :class="[
+                    'cursor-pointer writing-sidebar__chapter-row m3-stagger',
+                    selectedChapterNumber === chapter.chapter_number
+                      ? 'writing-sidebar__chapter-row--compact-selected'
+                      : 'writing-sidebar__chapter-row--compact-idle',
+                  ]"
+                  :style="{ animationDelay: `${index * 40}ms` }"
+                >
+                  <div class="writing-sidebar__chapter-main">
+                    <div class="writing-sidebar__chapter-index">
+                      <Tooltip :text="getChapterTag(chapter.chapter_number)">
+                        <span
+                          :class="[
+                            'writing-sidebar__status-dot',
+                            isChapterCompleted(chapter.chapter_number)
+                              ? 'is-completed'
+                              : isChapterGeneratingLike(chapter.chapter_number) ||
+                                  isChapterEvaluating(chapter.chapter_number) ||
+                                  isChapterSelecting(chapter.chapter_number)
+                                ? 'is-progress'
+                                : isChapterFailed(chapter.chapter_number)
+                                  ? 'is-failed'
+                                  : 'is-idle',
+                          ]"
+                        ></span>
+                      </Tooltip>
+                      <Tooltip :text="getChapterTag(chapter.chapter_number)">
+                        <span class="writing-sidebar__chapter-no">
+                          第{{ chapter.chapter_number }}章
+                        </span>
+                      </Tooltip>
+                    </div>
+                    <div class="writing-sidebar__chapter-title-row">
+                      <Tooltip :text="chapter.title">
+                        <h4
+                          class="writing-sidebar__chapter-title md-body-medium font-semibold line-clamp-1"
+                        >
+                          {{ chapter.title }}
+                        </h4>
+                      </Tooltip>
                       <span
                         v-if="isChapterCompleted(chapter.chapter_number)"
-                        class="md-chip"
-                        style="
-                          background-color: var(--md-success-container);
-                          color: var(--md-on-success-container);
-                        "
+                        class="writing-sidebar__chapter-word-count"
                       >
-                        已完成
+                        {{ getChapterWordCount(chapter.chapter_number) }} 字
                       </span>
-                      <span
-                        v-else-if="isChapterGeneratingLike(chapter.chapter_number)"
-                        class="md-chip animate-pulse"
-                        style="
-                          background-color: var(--md-primary-container);
-                          color: var(--md-on-primary-container);
-                        "
-                      >
-                        生成中...
-                      </span>
-                      <span
-                        v-else-if="isChapterSelecting(chapter.chapter_number)"
-                        class="md-chip animate-pulse"
-                        style="
-                          background-color: var(--md-primary-container);
-                          color: var(--md-on-primary-container);
-                        "
-                      >
-                        选择中...
-                      </span>
-                      <span
-                        v-else-if="isChapterEvaluating(chapter.chapter_number)"
-                        class="md-chip animate-pulse"
-                        style="
-                          background-color: var(--md-secondary-container);
-                          color: var(--md-on-secondary-container);
-                        "
-                      >
-                        评审中...
-                      </span>
-                      <span
-                        v-else-if="isChapterFailed(chapter.chapter_number)"
-                        class="md-chip"
-                        style="
-                          background-color: var(--md-error-container);
-                          color: var(--md-on-error-container);
-                        "
-                      >
-                        生成失败
-                      </span>
-                      <span
-                        v-else-if="hasChapterInProgress(chapter.chapter_number)"
-                        class="md-chip"
-                        style="
-                          background-color: var(--md-warning-container);
-                          color: var(--md-on-warning-container);
-                        "
-                      >
-                        待选择版本
-                      </span>
-                      <span v-else class="md-chip md-chip-assist">未开始</span>
                     </div>
-                  </div>
-
-                  <!-- 章节操作按钮 -->
-                  <div
-                    :class="[
-                      'writing-sidebar__chapter-actions flex flex-shrink-0 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200',
-                      shouldStackActions(chapter.chapter_number)
-                        ? 'flex-col items-center gap-1'
-                        : 'items-center gap-1',
-                    ]"
-                  >
-                    <button
-                      v-if="canEditChapter(chapter.chapter_number)"
-                      type="button"
-                      @click.stop="$emit('editChapter', chapter)"
-                      class="md-icon-btn md-ripple"
-                      :aria-label="`编辑第${chapter.chapter_number}章大纲`"
-                      title="编辑大纲"
-                    >
-                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path
-                          d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z"
-                        ></path>
-                        <path
-                          fill-rule="evenodd"
-                          d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"
-                          clip-rule="evenodd"
-                        ></path>
-                      </svg>
-                    </button>
-                    <button
-                      v-if="canShowGenerateAction(chapter.chapter_number)"
-                      type="button"
-                      @click.stop="confirmGenerateChapter(chapter.chapter_number)"
-                      :disabled="
-                        generatingChapter === chapter.chapter_number ||
-                        isChapterGenerating(chapter.chapter_number)
-                      "
-                      class="md-icon-btn md-ripple disabled:opacity-50"
-                      style="color: var(--md-primary)"
-                      :title="
-                        isChapterCompleted(chapter.chapter_number)
-                          ? '重新生成'
-                          : isChapterFailed(chapter.chapter_number)
-                            ? '重试'
-                            : hasChapterInProgress(chapter.chapter_number)
-                              ? '重新生成版本'
-                              : '开始创作'
-                      "
-                      :aria-label="`${isChapterCompleted(chapter.chapter_number) ? '重新生成' : isChapterFailed(chapter.chapter_number) ? '重试' : hasChapterInProgress(chapter.chapter_number) ? '重新生成版本' : '开始创作'}第${chapter.chapter_number}章`"
-                    >
-                      <svg
-                        v-if="
-                          generatingChapter === chapter.chapter_number ||
-                          isChapterGenerating(chapter.chapter_number)
-                        "
-                        class="w-4 h-4 animate-spin"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fill-rule="evenodd"
-                          d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                          clip-rule="evenodd"
-                        ></path>
-                      </svg>
-                      <svg v-else class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path
-                          d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
-                        ></path>
-                      </svg>
-                    </button>
-                    <!-- Batch delete replaces the single delete button -->
                   </div>
                 </div>
               </div>
@@ -316,23 +145,6 @@
                 ></path>
               </svg>
               <p>暂无章节大纲</p>
-            </div>
-            <div v-if="selectedForDeletion.length > 0" class="mt-4">
-              <button
-                type="button"
-                @click="handleDeleteSelected"
-                class="md-btn md-btn-filled md-ripple w-full flex items-center justify-center gap-2"
-                style="background-color: var(--md-error); color: var(--md-on-error)"
-              >
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fill-rule="evenodd"
-                    d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z"
-                    clip-rule="evenodd"
-                  ></path>
-                </svg>
-                <span>删除选中的 {{ selectedForDeletion.length }} 章</span>
-              </button>
             </div>
             <div class="mt-4">
               <button
@@ -371,7 +183,6 @@
 <script setup lang="ts">
 import { computed, ref, nextTick } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
-import { globalAlert } from '@/composables/useAlert'
 import type { NovelProject } from '@/api/novel'
 import Tooltip from '@/components/Tooltip.vue'
 
@@ -385,74 +196,27 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const emit = defineEmits([
+defineEmits([
   'openProjectDetail',
   'selectChapter',
   'generateChapter',
   'editChapter',
-  'deleteChapter',
   'generateOutline',
 ])
 
-const selectedForDeletion = ref<number[]>([])
 const listContainer = ref<HTMLElement | null>(null)
 const chapterRefs = ref<Record<number, HTMLElement | null>>({})
-
-const lastChapterNumber = computed(() => {
-  if (
-    !props.project?.blueprint?.chapter_outline ||
-    props.project.blueprint.chapter_outline.length === 0
-  ) {
-    return null
-  }
-  return Math.max(...props.project.blueprint.chapter_outline.map((ch) => ch.chapter_number))
-})
 
 const totalChapters = computed(() => {
   return props.project?.blueprint?.chapter_outline?.length || 0
 })
 
-function toggleSelection(chapterNumber: number) {
-  if (isChapterCompleted(chapterNumber)) return
-  const index = selectedForDeletion.value.indexOf(chapterNumber)
-  if (index > -1) {
-    selectedForDeletion.value.splice(index, 1)
-  } else {
-    selectedForDeletion.value.push(chapterNumber)
-  }
-}
-
-function handleDeleteSelected() {
-  if (selectedForDeletion.value.length === 0) return
-
-  const sortedSelection = [...selectedForDeletion.value].sort((a, b) => a - b)
-
-  if (!lastChapterNumber.value || !sortedSelection.includes(lastChapterNumber.value)) {
-    globalAlert.showError('批量删除必须包含最后一章。', '无法删除章节')
-    return
-  }
-
-  const isContinuous = sortedSelection.every((num, i) => {
-    return i === 0 || num === sortedSelection[i - 1] + 1
-  })
-  if (!isContinuous) {
-    globalAlert.showError('只能删除连续的章节块。', '无法删除章节')
-    return
-  }
-
-  emit('deleteChapter', sortedSelection)
-  selectedForDeletion.value = []
-}
-
-async function confirmGenerateChapter(chapterNumber: number) {
-  const confirmed = await globalAlert.showConfirm(
-    '重新生成会覆盖当前章节的生成结果，确定继续吗？',
-    '重新生成确认',
+const hasIncompleteChapter = computed(() => {
+  if (!props.project?.blueprint?.chapter_outline?.length) return false
+  return props.project.blueprint.chapter_outline.some(
+    (chapter) => !isChapterCompleted(chapter.chapter_number),
   )
-  if (confirmed) {
-    emit('generateChapter', chapterNumber)
-  }
-}
+})
 
 function setChapterRef(chapterNumber: number, el: Element | ComponentPublicInstance | null) {
   if (!el) {
@@ -530,46 +294,20 @@ const isChapterSelecting = (chapterNumber: number) => {
   return chapter && chapter.generation_status === 'selecting'
 }
 
-const canEditChapter = (chapterNumber: number) => {
-  return !isChapterCompleted(chapterNumber)
+const getChapterWordCount = (chapterNumber: number): number => {
+  const chapter = props.project?.chapters?.find((item) => item.chapter_number === chapterNumber)
+  if (!chapter) return 0
+  if (typeof chapter.word_count === 'number' && chapter.word_count >= 0) return chapter.word_count
+  return (chapter.content || '').replace(/\s+/g, '').length
 }
 
-const canShowGenerateAction = (chapterNumber: number) => {
-  return (
-    canGenerateChapter(chapterNumber) ||
-    isChapterFailed(chapterNumber) ||
-    hasChapterInProgress(chapterNumber)
-  )
-}
-
-const shouldStackActions = (chapterNumber: number) => {
-  return canEditChapter(chapterNumber) && canShowGenerateAction(chapterNumber)
-}
-
-const canGenerateChapter = (chapterNumber: number) => {
-  if (!props.project?.blueprint?.chapter_outline) return false
-
-  const outlines = [...props.project.blueprint.chapter_outline].sort(
-    (a, b) => a.chapter_number - b.chapter_number,
-  )
-
-  for (const outline of outlines) {
-    if (outline.chapter_number >= chapterNumber) break
-
-    const chapter = props.project?.chapters.find(
-      (ch) => ch.chapter_number === outline.chapter_number,
-    )
-    if (!chapter || chapter.generation_status !== 'successful') {
-      return false
-    }
-  }
-
-  const currentChapter = props.project?.chapters.find((ch) => ch.chapter_number === chapterNumber)
-  if (currentChapter && currentChapter.generation_status === 'successful') {
-    return true
-  }
-
-  return true
+const getChapterTag = (chapterNumber: number): string => {
+  if (isChapterCompleted(chapterNumber)) return '已完成'
+  if (isChapterGeneratingLike(chapterNumber)) return '创作中'
+  if (isChapterEvaluating(chapterNumber)) return '待润色'
+  if (isChapterSelecting(chapterNumber) || hasChapterInProgress(chapterNumber)) return '待选择'
+  if (isChapterFailed(chapterNumber)) return '待修复'
+  return '待开始'
 }
 </script>
 
@@ -584,8 +322,11 @@ const canGenerateChapter = (chapterNumber: number) => {
   position: relative;
   z-index: auto;
   width: 100%;
-  height: min(42rem, 48vh);
+  min-height: 0;
+  height: 100%;
   overflow: hidden;
+  background-color: color-mix(in srgb, var(--md-surface) 95%, var(--md-surface-container-low));
+  border-color: color-mix(in srgb, var(--md-outline-variant) 86%, transparent);
 }
 
 .writing-sidebar__link {
@@ -612,60 +353,184 @@ const canGenerateChapter = (chapterNumber: number) => {
   background-color: transparent;
 }
 
-@media (min-width: 1024px) {
-  .writing-sidebar-shell {
-    flex: 0 0 20rem;
-    width: 20rem;
-    height: 100%;
-  }
-
-  .writing-sidebar {
-    flex: 0 0 20rem;
-    width: 20rem;
-    height: 100%;
-  }
+.writing-sidebar__outline-header {
+  position: sticky;
+  top: 0;
+  z-index: 24;
+  padding: var(--md-spacing-5) var(--md-spacing-6) var(--md-spacing-3);
+  background-color: color-mix(in srgb, var(--md-surface) 96%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--md-outline-variant) 58%, transparent);
 }
 
-.m3-chapter-card {
-  border-radius: var(--md-radius-lg);
-  border: 1px solid var(--md-outline-variant);
-  background-color: var(--md-surface);
+.writing-sidebar__outline-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-spacing-2);
+}
+
+.writing-sidebar__outline-heading {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.writing-sidebar__outline-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.writing-sidebar__outline-count {
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-medium);
+  font-weight: 600;
+}
+
+.writing-sidebar__outline-action {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--md-radius-full);
+  border: 1px solid color-mix(in srgb, var(--md-outline-variant) 84%, transparent);
+  color: var(--md-on-surface-variant);
+  background-color: color-mix(in srgb, var(--md-surface-container-low) 66%, var(--md-surface));
+}
+
+.writing-sidebar__outline-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.writing-sidebar__tree {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.writing-sidebar__tree-item {
+  position: relative;
+  padding-left: 11px;
+}
+
+.writing-sidebar__tree-item::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 0;
+  bottom: -10px;
+  width: 1px;
+  background-color: color-mix(in srgb, var(--md-primary) 16%, var(--md-outline-variant));
+}
+
+.writing-sidebar__tree-item:last-child::before {
+  bottom: 40%;
+}
+
+.writing-sidebar__tree-item::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 19px;
+  width: 7px;
+  height: 1px;
+  background-color: color-mix(in srgb, var(--md-primary) 16%, var(--md-outline-variant));
+}
+
+.writing-sidebar__chapter-row {
+  padding: 9px 4px 9px 5px;
+  border-radius: var(--md-radius-md);
+  border: 1px solid transparent;
+  background-color: transparent;
   outline: none;
   transition:
     background-color var(--md-duration-medium) var(--md-easing-standard),
-    border-color var(--md-duration-medium) var(--md-easing-standard),
-    box-shadow var(--md-duration-medium) var(--md-easing-standard);
+    border-color var(--md-duration-medium) var(--md-easing-standard);
 }
 
-.m3-chapter-card:hover {
-  background-color: var(--md-surface-container-low);
-  border-color: var(--md-outline);
+.writing-sidebar__chapter-row--compact-idle:hover,
+.writing-sidebar__chapter-row:focus-visible {
+  border-color: color-mix(in srgb, var(--md-outline-variant) 66%, transparent);
+  background-color: color-mix(in srgb, var(--md-surface-container-low) 62%, transparent);
 }
 
-.m3-chapter-card:focus-visible {
-  outline: 2px solid var(--md-primary);
-  outline-offset: 2px;
+.writing-sidebar__chapter-row--compact-selected {
+  border-color: color-mix(in srgb, var(--md-primary) 38%, transparent);
+  background-color: color-mix(in srgb, var(--md-primary-container) 48%, var(--md-surface));
 }
 
-.m3-chapter-selected {
-  border-color: var(--md-primary);
-  background-color: color-mix(in srgb, var(--md-primary-container) 72%, var(--md-surface));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--md-primary) 35%, transparent);
+.writing-sidebar__chapter-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.m3-chapter-danger {
-  border-color: var(--md-error);
-  background-color: var(--md-error-container);
+.writing-sidebar__chapter-index {
+  min-width: 72px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 0;
+}
+
+.writing-sidebar__status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--md-outline);
+}
+
+.writing-sidebar__status-dot.is-completed {
+  background-color: var(--md-success);
+}
+
+.writing-sidebar__status-dot.is-progress {
+  background-color: var(--md-primary);
+  animation: dot-pulse 1.2s ease-out infinite;
+}
+
+.writing-sidebar__status-dot.is-failed {
+  background-color: var(--md-error);
+}
+
+.writing-sidebar__status-dot.is-idle {
+  background-color: color-mix(in srgb, var(--md-outline) 76%, var(--md-surface-container-highest));
+}
+
+.writing-sidebar__chapter-no {
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-medium);
+  font-weight: 600;
+}
+
+.writing-sidebar__chapter-title-row {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-1);
+}
+
+.writing-sidebar__chapter-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.writing-sidebar__chapter-word-count {
+  margin-left: auto;
+  flex-shrink: 0;
+  min-width: 56px;
+  text-align: right;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-small);
 }
 
 .m3-stagger {
   animation: m3-rise 0.45s ease-out both;
-}
-
-@media (hover: none), (max-width: 640px) {
-  .writing-sidebar__chapter-actions {
-    opacity: 1;
-  }
 }
 
 @media (max-width: 1023px) {
@@ -682,6 +547,16 @@ const canGenerateChapter = (chapterNumber: number) => {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes dot-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--md-primary) 30%, transparent);
+  }
+
+  100% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--md-primary) 0%, transparent);
   }
 }
 </style>

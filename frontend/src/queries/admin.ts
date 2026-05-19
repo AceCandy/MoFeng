@@ -18,6 +18,7 @@ import {
   type UserCreatePayload,
   type UserUpdatePayload,
 } from '@/api/admin'
+import { requestJson } from '@/api/http'
 
 type EnabledSource = MaybeRefOrGetter<boolean | undefined>
 
@@ -39,22 +40,12 @@ export const adminQueryKeys = {
   remoteVersion: () => [...adminQueryKeys.all, 'remote-version'] as const,
 }
 
-const readRemoteVersionError = async (response: Response) => {
-  const payload = await response.json().catch(() => null)
-  if (payload && typeof payload.detail === 'string') {
-    return payload.detail
-  }
-  return `请求失败，状态码: ${response.status}`
-}
-
 const getRemoteVersionInfo = async (): Promise<RemoteVersionResponse> => {
-  const response = await fetch(`${API_BASE_URL}/api/updates/remote-version`, {
+  return requestJson<RemoteVersionResponse>(`${API_BASE_URL}/api/updates/remote-version`, {
     method: 'GET',
+    timeoutMs: 15_000,
+    fallbackErrorMessage: '获取远程版本信息失败',
   })
-  if (!response.ok) {
-    throw new Error(await readRemoteVersionError(response))
-  }
-  return response.json()
 }
 
 export function useAdminStatisticsQuery() {

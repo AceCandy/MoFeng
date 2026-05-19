@@ -26,7 +26,13 @@
           </p>
         </div>
       </div>
-      <button @click="refreshData" class="md-icon-btn md-ripple" :disabled="isLoading">
+      <button
+        @click="refreshData"
+        class="md-icon-btn md-ripple"
+        :disabled="isLoading"
+        aria-label="刷新伏笔数据"
+        title="刷新伏笔数据"
+      >
         <svg
           class="w-5 h-5 transition-transform"
           :class="{ 'animate-spin': isLoading }"
@@ -288,10 +294,10 @@ const overdueCount = computed(() => foreshadowingData.value?.overdue_count ?? 0)
 const activeTab = ref('all')
 
 const statusTabs = [
-  { key: 'all', label: '全部', color: '#5F6368' },
-  { key: 'planted', label: '已埋设', color: '#FBBC04' },
-  { key: 'paid_off', label: '已回收', color: '#34A853' },
-  { key: 'overdue', label: '待回收', color: '#EA4335' },
+  { key: 'all', label: '全部', color: 'var(--md-on-surface-variant)' },
+  { key: 'planted', label: '已埋设', color: 'var(--md-warning)' },
+  { key: 'paid_off', label: '已回收', color: 'var(--md-success)' },
+  { key: 'overdue', label: '待回收', color: 'var(--md-error)' },
 ]
 
 const filteredForeshadowing = computed(() => {
@@ -311,11 +317,11 @@ const getCountByStatus = (status: string) => {
 
 const getStatusColor = (status: string) => {
   const colors: Record<string, string> = {
-    planted: '#FBBC04',
-    paid_off: '#34A853',
-    overdue: '#EA4335',
+    planted: 'var(--md-warning)',
+    paid_off: 'var(--md-success)',
+    overdue: 'var(--md-error)',
   }
-  return colors[status] || '#5F6368'
+  return colors[status] || 'var(--md-on-surface-variant)'
 }
 
 const getStatusLabel = (status: string) => {

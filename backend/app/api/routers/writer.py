@@ -139,6 +139,130 @@ def _extract_tail_excerpt(text: Optional[str], limit: int = 500) -> str:
     return stripped[-limit:]
 
 
+async def _expand_chapter_to_minimum_word_count(
+    *,
+    llm_service: LLMService,
+    content: str,
+    minimum_word_count: int,
+    target_word_count: int,
+    user_id: int,
+    project_id: str,
+    chapter_number: int,
+    version_index: int,
+) -> str:
+    """
+    当版本正文明显偏短时，做循环补写兜底，避免出现异常短稿。
+    """
+    max_attempts = 3
+    best_content = (content or "").strip()
+    best_word_count = count_chapter_words(best_content)
+    if best_word_count >= minimum_word_count:
+        return best_content
+
+    logger.info(
+        "项目 %s 第 %s 章版本 %s 低于最小字数，开始循环补写: current=%s minimum=%s target=%s attempts=%s",
+        project_id,
+        chapter_number,
+        version_index,
+        best_word_count,
+        minimum_word_count,
+        target_word_count,
+        max_attempts,
+    )
+
+    current_content = best_content
+    current_word_count = best_word_count
+
+    for attempt in range(1, max_attempts + 1):
+        prompt = f"""
+请在不改变主线剧情与关键事件的前提下，对下面章节做补写扩展。
+
+目标要求：
+- 扩展后字数目标约 {target_word_count} 字，至少不少于 {minimum_word_count} 字。
+- 补充环境、动作、心理和过渡细节，但不得新增与主线冲突的新设定。
+- 保持人物关系、时间顺序和结尾钩子不变。
+- 直接输出补写后的完整章节正文，不要解释，不要输出 JSON。
+
+当前正文（约 {current_word_count} 字）：
+{current_content}
+""".strip()
+
+        try:
+            response = await llm_service.get_llm_response(
+                system_prompt="你是网文章节润色编辑，负责在不改剧情主线的前提下补写细节。",
+                conversation_history=[{"role": "user", "content": prompt}],
+                temperature=0.4,
+                user_id=user_id,
+                timeout=300.0,
+                response_format=None,
+                max_tokens=WRITER_GENERATION_MAX_TOKENS,
+                stage="chapter_enrichment",
+            )
+            enriched = unwrap_markdown_json(remove_think_tags(response)).strip()
+            if not enriched:
+                logger.warning(
+                    "项目 %s 第 %s 章版本 %s 第 %s 次补写返回空内容，沿用当前文本",
+                    project_id,
+                    chapter_number,
+                    version_index,
+                    attempt,
+                )
+                continue
+
+            enriched_word_count = count_chapter_words(enriched)
+            if enriched_word_count > best_word_count:
+                best_content = enriched
+                best_word_count = enriched_word_count
+
+            if enriched_word_count <= current_word_count:
+                logger.warning(
+                    "项目 %s 第 %s 章版本 %s 第 %s 次补写未增量: before=%s after=%s",
+                    project_id,
+                    chapter_number,
+                    version_index,
+                    attempt,
+                    current_word_count,
+                    enriched_word_count,
+                )
+                continue
+
+            current_content = enriched
+            current_word_count = enriched_word_count
+
+            if current_word_count >= minimum_word_count:
+                logger.info(
+                    "项目 %s 第 %s 章版本 %s 第 %s 次补写达标: after=%s minimum=%s",
+                    project_id,
+                    chapter_number,
+                    version_index,
+                    attempt,
+                    current_word_count,
+                    minimum_word_count,
+                )
+                return current_content
+        except Exception as exc:
+            logger.warning(
+                "项目 %s 第 %s 章版本 %s 第 %s 次补写失败，继续尝试: %s",
+                project_id,
+                chapter_number,
+                version_index,
+                attempt,
+                exc,
+            )
+
+    if best_word_count < minimum_word_count:
+        logger.warning(
+            "项目 %s 第 %s 章版本 %s 多轮补写后仍低于最小字数: final=%s minimum=%s",
+            project_id,
+            chapter_number,
+            version_index,
+            best_word_count,
+            minimum_word_count,
+        )
+
+    return best_content
+
+
 async def _compress_chapter_to_word_limit(
     *,
     llm_service: LLMService,
@@ -1278,15 +1402,38 @@ async def generate_chapter(
     chapter = await novel_service.get_or_create_chapter(project_id, request.chapter_number)
     generation_step_total = 7
 
+    def _format_generation_step(step: str, meta: Optional[Dict[str, object]] = None) -> str:
+        """将阶段信息编码到 generation_step，便于前端展示更细粒度执行状态。"""
+        if not meta:
+            return step
+        tokens: List[str] = []
+        for key, value in meta.items():
+            if value is None:
+                continue
+            text = str(value).strip()
+            if not text:
+                continue
+            # 避免分隔符污染，保证前端可稳定解析。
+            safe_key = str(key).replace("|", "").replace("=", "").strip()
+            safe_value = text.replace("|", "").replace("=", "").strip()
+            if safe_key and safe_value:
+                tokens.append(f"{safe_key}={safe_value}")
+        if not tokens:
+            return step
+        encoded = f"{step}|{'|'.join(tokens)}"
+        # generation_step 字段长度上限为 64，超长时兜底截断。
+        return encoded[:64]
+
     async def _update_generation_progress(
         *,
         progress: int,
         step: str,
         step_index: int,
+        step_meta: Optional[Dict[str, object]] = None,
         status: Optional[str] = None,
     ) -> None:
         chapter.generation_progress = max(0, min(100, int(progress)))
-        chapter.generation_step = step
+        chapter.generation_step = _format_generation_step(step, step_meta)
         chapter.generation_step_index = max(0, step_index)
         chapter.generation_step_total = generation_step_total
         if status:
@@ -1320,7 +1467,7 @@ async def generate_chapter(
     chapter.status = "generating"
     chapter.generation_started_at = datetime.now(CN_TIMEZONE)
     chapter.generation_progress = 3
-    chapter.generation_step = "context_prep"
+    chapter.generation_step = _format_generation_step("context_prep")
     chapter.generation_step_index = 1
     chapter.generation_step_total = generation_step_total
     await session.commit()
@@ -1548,7 +1695,7 @@ async def generate_chapter(
     # 构建禁止角色列表
     forbidden_text = json.dumps(forbidden_characters, ensure_ascii=False) if forbidden_characters else "无"
 
-    target_word_count, _minimum_word_count = await resolve_word_count_requirements(
+    target_word_count, minimum_word_count = await resolve_word_count_requirements(
         SystemConfigRepository(session)
     )
 
@@ -1569,7 +1716,12 @@ async def generate_chapter(
     ]
     prompt_input = "\n\n".join(f"{title}\n{content}" for title, content in prompt_sections if content)
     logger.debug("章节写作提示词长度: %s 字符", len(prompt_input))
-    await _update_generation_progress(progress=55, step="draft_generation", step_index=4)
+    await _update_generation_progress(
+        progress=55,
+        step="draft_generation",
+        step_index=4,
+        step_meta={"v": "0/?"},
+    )
 
     # ========== 6. L3 Writer: 生成正文 ==========
     async def _generate_single_version(idx: int, version_style_hint: Optional[str] = None) -> Dict:
@@ -1659,10 +1811,13 @@ async def generate_chapter(
                                 return nested
                     return None
                 if isinstance(value, list):
+                    parts: List[str] = []
                     for item in value:
                         nested = _extract_text(item)
-                        if nested:
-                            return nested
+                        if nested and nested.strip():
+                            parts.append(nested.strip())
+                    if parts:
+                        return "\n\n".join(parts)
                 return None
 
             parsed_json = None
@@ -1722,6 +1877,12 @@ async def generate_chapter(
         request.chapter_number,
         version_count,
     )
+    await _update_generation_progress(
+        progress=55,
+        step="draft_generation",
+        step_index=4,
+        step_meta={"v": f"0/{version_count}"},
+    )
 
     # 版本差异化风格提示
     version_style_hints = [
@@ -1731,14 +1892,34 @@ async def generate_chapter(
     ]
 
     raw_versions = []
+    total_guardrail_violations = 0
     try:
         for idx in range(version_count):
             style_hint = version_style_hints[idx] if idx < len(version_style_hints) else None
             before_progress = 55 + int((idx / max(version_count, 1)) * 25)
-            await _update_generation_progress(progress=before_progress, step="draft_generation", step_index=4)
-            raw_versions.append(await _generate_single_version(idx, style_hint))
+            await _update_generation_progress(
+                progress=before_progress,
+                step="draft_generation",
+                step_index=4,
+                step_meta={"v": f"{idx + 1}/{version_count}", "p": "gen"},
+            )
+            version_payload = await _generate_single_version(idx, style_hint)
+            raw_versions.append(version_payload)
+            guardrail_count = 0
+            if isinstance(version_payload, dict):
+                guardrail_meta = version_payload.get("guardrail")
+                if isinstance(guardrail_meta, dict):
+                    violations = guardrail_meta.get("violations")
+                    if isinstance(violations, list):
+                        guardrail_count = len(violations)
+            total_guardrail_violations += guardrail_count
             after_progress = 55 + int(((idx + 1) / max(version_count, 1)) * 25)
-            await _update_generation_progress(progress=after_progress, step="draft_generation", step_index=4)
+            await _update_generation_progress(
+                progress=after_progress,
+                step="draft_generation",
+                step_index=4,
+                step_meta={"v": f"{idx + 1}/{version_count}", "g": guardrail_count},
+            )
     except Exception as exc:
         logger.exception("项目 %s 生成第 %s 章时发生异常: %s", project_id, request.chapter_number, exc)
         chapter.status = "failed"
@@ -1754,10 +1935,16 @@ async def generate_chapter(
             detail=f"生成章节失败: {str(exc)[:200]}"
         )
 
-    await _update_generation_progress(progress=82, step="draft_generation", step_index=4)
+    await _update_generation_progress(
+        progress=82,
+        step="draft_generation",
+        step_index=4,
+        step_meta={"v": f"{version_count}/{version_count}", "g": total_guardrail_violations},
+    )
 
     contents: List[str] = []
     metadata: List[Dict] = []
+    minimum_acceptable_word_count = int(minimum_word_count * 0.85)
     for version_idx, variant in enumerate(raw_versions, start=1):
         if isinstance(variant, dict):
             candidate = variant.get("content")
@@ -1783,6 +1970,16 @@ async def generate_chapter(
                     status_code=502,
                     detail=f"生成章节第 {version_idx} 个版本失败：模型未返回有效正文，请重试。",
                 )
+            candidate = await _expand_chapter_to_minimum_word_count(
+                llm_service=llm_service,
+                content=candidate,
+                minimum_word_count=minimum_word_count,
+                target_word_count=target_word_count,
+                user_id=current_user.id,
+                project_id=project_id,
+                chapter_number=request.chapter_number,
+                version_index=version_idx,
+            )
             candidate = await _compress_chapter_to_word_limit(
                 llm_service=llm_service,
                 content=candidate,
@@ -1792,10 +1989,36 @@ async def generate_chapter(
                 chapter_number=request.chapter_number,
                 version_index=version_idx,
             )
+            candidate_word_count = count_chapter_words(candidate)
+            if candidate_word_count < minimum_acceptable_word_count:
+                logger.error(
+                    "项目 %s 第 %s 章版本 %s 字数严重不足，终止入库: actual=%s minimum=%s acceptable=%s target=%s",
+                    project_id,
+                    request.chapter_number,
+                    version_idx,
+                    candidate_word_count,
+                    minimum_word_count,
+                    minimum_acceptable_word_count,
+                    target_word_count,
+                )
+                chapter.status = "failed"
+                chapter.generation_progress = 0
+                chapter.generation_step = "failed"
+                chapter.generation_step_index = 0
+                chapter.generation_step_total = generation_step_total
+                await session.commit()
+                raise HTTPException(
+                    status_code=502,
+                    detail=(
+                        f"生成章节第 {version_idx} 个版本失败：字数仅 {candidate_word_count}，"
+                        f"低于最低要求 {minimum_word_count}（容错阈值 {minimum_acceptable_word_count}）。请重试。"
+                    ),
+                )
             contents.append(candidate)
             variant["word_limit"] = {
                 "target": target_word_count,
-                "actual": count_chapter_words(candidate),
+                "minimum": minimum_word_count,
+                "actual": candidate_word_count,
             }
             metadata.append(variant)
         else:
@@ -1811,6 +2034,16 @@ async def generate_chapter(
                     status_code=502,
                     detail=f"生成章节第 {version_idx} 个版本失败：模型返回空内容，请重试。",
                 )
+            text = await _expand_chapter_to_minimum_word_count(
+                llm_service=llm_service,
+                content=text,
+                minimum_word_count=minimum_word_count,
+                target_word_count=target_word_count,
+                user_id=current_user.id,
+                project_id=project_id,
+                chapter_number=request.chapter_number,
+                version_index=version_idx,
+            )
             text = await _compress_chapter_to_word_limit(
                 llm_service=llm_service,
                 content=text,
@@ -1820,17 +2053,48 @@ async def generate_chapter(
                 chapter_number=request.chapter_number,
                 version_index=version_idx,
             )
+            text_word_count = count_chapter_words(text)
+            if text_word_count < minimum_acceptable_word_count:
+                logger.error(
+                    "项目 %s 第 %s 章版本 %s 字数严重不足，终止入库: actual=%s minimum=%s acceptable=%s target=%s",
+                    project_id,
+                    request.chapter_number,
+                    version_idx,
+                    text_word_count,
+                    minimum_word_count,
+                    minimum_acceptable_word_count,
+                    target_word_count,
+                )
+                chapter.status = "failed"
+                chapter.generation_progress = 0
+                chapter.generation_step = "failed"
+                chapter.generation_step_index = 0
+                chapter.generation_step_total = generation_step_total
+                await session.commit()
+                raise HTTPException(
+                    status_code=502,
+                    detail=(
+                        f"生成章节第 {version_idx} 个版本失败：字数仅 {text_word_count}，"
+                        f"低于最低要求 {minimum_word_count}（容错阈值 {minimum_acceptable_word_count}）。请重试。"
+                    ),
+                )
             contents.append(text)
             metadata.append({
                 "raw": variant,
                 "word_limit": {
                     "target": target_word_count,
-                    "actual": count_chapter_words(text),
+                    "minimum": minimum_word_count,
+                    "actual": text_word_count,
                 },
             })
 
     # ========== 8. AI Review: 自动评审多版本 ==========
-    await _update_generation_progress(progress=86, step="quality_review", step_index=5)
+    await _update_generation_progress(
+        progress=86,
+        step="quality_review",
+        step_index=5,
+        step_meta={"v": len(contents)},
+    )
     ai_review_result = None
     if len(contents) > 1:
         try:
@@ -1859,7 +2123,12 @@ async def generate_chapter(
         except Exception as exc:
             logger.warning("AI 评审失败，跳过: %s", exc)
 
-    await _update_generation_progress(progress=96, step="persist_versions", step_index=6)
+    await _update_generation_progress(
+        progress=96,
+        step="persist_versions",
+        step_index=6,
+        step_meta={"v": len(contents)},
+    )
     try:
         await novel_service.replace_chapter_versions(chapter, contents, metadata)
     except Exception as exc:

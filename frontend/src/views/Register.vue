@@ -2,7 +2,7 @@
 <template>
   <div class="register-page">
     <div class="register-brand">
-      <TypewriterEffect text="拯救小说家" />
+      <TypewriterEffect text="墨风" />
     </div>
 
     <section v-if="allowRegistration" class="md-card md-card-elevated register-card">
@@ -23,6 +23,9 @@
             class="md-text-field-input"
             placeholder="请输入用户名"
             autocomplete="username"
+            maxlength="64"
+            spellcheck="false"
+            autocapitalize="none"
           />
         </div>
 
@@ -37,6 +40,9 @@
             class="md-text-field-input"
             placeholder="请输入邮箱"
             autocomplete="email"
+            maxlength="254"
+            spellcheck="false"
+            autocapitalize="none"
           />
         </div>
 
@@ -53,6 +59,9 @@
               placeholder="请输入验证码"
               inputmode="numeric"
               autocomplete="one-time-code"
+              maxlength="12"
+              spellcheck="false"
+              autocapitalize="none"
             />
           </div>
           <button
@@ -77,6 +86,8 @@
             class="md-text-field-input"
             placeholder="至少 8 个字符"
             autocomplete="new-password"
+            minlength="8"
+            maxlength="256"
           />
         </div>
 
@@ -111,7 +122,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import TypewriterEffect from '@/components/TypewriterEffect.vue'
 import {
@@ -134,6 +145,7 @@ const registerMutation = useRegisterMutation()
 const sending = computed(() => sendCodeMutation.isPending.value)
 const isRegistering = computed(() => registerMutation.isPending.value)
 const allowRegistration = computed(() => authOptionsQuery.data.value?.allow_registration ?? true)
+let countdownTimer: number | null = null
 
 // 注册开关由 Query 缓存托管；关闭时只保留页面提示状态。
 watch(
@@ -147,6 +159,18 @@ watch(
 )
 
 const validateInput = () => {
+  if (!username.value.trim()) {
+    return '请输入用户名'
+  }
+
+  if (!email.value.trim()) {
+    return '请输入邮箱'
+  }
+
+  if (!verificationCode.value.trim()) {
+    return '请输入验证码'
+  }
+
   // Password validation
   if (password.value.length < 8) {
     return '密码必须至少8个字符'
@@ -176,31 +200,39 @@ const validateInput = () => {
 const sendCode = async () => {
   error.value = ''
   success.value = ''
+  const normalizedEmail = email.value.trim()
 
   if (!allowRegistration.value) {
     error.value = '当前已关闭注册，请联系管理员。'
     return
   }
 
-  if (!email.value) {
+  if (!normalizedEmail) {
     error.value = '请输入邮箱'
     return
   }
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!emailRegex.test(email.value)) {
+  if (!emailRegex.test(normalizedEmail)) {
     error.value = '邮箱格式不正确'
     return
   }
 
   sendCodeMutation.reset()
   try {
-    await sendCodeMutation.mutateAsync(email.value)
+    await sendCodeMutation.mutateAsync(normalizedEmail)
     success.value = '验证码已发送，请查收邮箱'
+    email.value = normalizedEmail
     // 等接口返回成功后再开始倒计时
     countdown.value = 60
-    const timer = setInterval(() => {
+    if (countdownTimer !== null) {
+      window.clearInterval(countdownTimer)
+    }
+    countdownTimer = window.setInterval(() => {
       countdown.value--
-      if (countdown.value <= 0) clearInterval(timer)
+      if (countdown.value <= 0 && countdownTimer !== null) {
+        window.clearInterval(countdownTimer)
+        countdownTimer = null
+      }
     }, 1000)
   } catch (err: any) {
     error.value = err.message
@@ -224,12 +256,18 @@ const handleRegister = async () => {
 
   registerMutation.reset()
   try {
+    const normalizedUsername = username.value.trim()
+    const normalizedEmail = email.value.trim()
+    const normalizedCode = verificationCode.value.trim()
     await registerMutation.mutateAsync({
-      username: username.value,
-      email: email.value,
+      username: normalizedUsername,
+      email: normalizedEmail,
       password: password.value,
-      verification_code: verificationCode.value,
+      verification_code: normalizedCode,
     })
+    username.value = normalizedUsername
+    email.value = normalizedEmail
+    verificationCode.value = normalizedCode
     success.value = '注册成功！正在跳转到登录页面...'
     setTimeout(() => {
       router.push('/login')
@@ -238,17 +276,44 @@ const handleRegister = async () => {
     error.value = err.message || '注册失败，请稍后再试。'
   }
 }
+
+onUnmounted(() => {
+  if (countdownTimer !== null) {
+    window.clearInterval(countdownTimer)
+    countdownTimer = null
+  }
+})
 </script>
 
 <style scoped>
 .register-page {
-  min-height: 100vh;
+  min-height: var(--app-viewport-unit);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: var(--md-spacing-8);
-  padding: var(--md-spacing-4);
+  padding:
+    max(var(--md-spacing-4), env(safe-area-inset-top))
+    max(var(--md-spacing-4), env(safe-area-inset-right))
+    max(var(--md-spacing-4), env(safe-area-inset-bottom))
+    max(var(--md-spacing-4), env(safe-area-inset-left));
+  background:
+    radial-gradient(
+      circle at 0% 0%,
+      color-mix(in oklch, var(--md-primary-container) 50%, transparent),
+      transparent 36%
+    ),
+    radial-gradient(
+      circle at 100% 10%,
+      color-mix(in oklch, var(--md-success-container) 54%, transparent),
+      transparent 40%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in oklch, var(--md-surface-dim) 84%, var(--md-tint-cool)),
+      color-mix(in oklch, var(--md-surface-container-low) 90%, var(--md-tint-success))
+    );
 }
 
 .register-brand {
@@ -259,6 +324,13 @@ const handleRegister = async () => {
   width: min(100%, 448px);
   padding: var(--md-spacing-8);
   border-radius: var(--md-radius-xl);
+  border: 1px solid color-mix(in oklch, var(--md-primary) 20%, var(--md-outline-variant));
+  background:
+    linear-gradient(
+      150deg,
+      color-mix(in oklch, var(--md-surface) 90%, var(--md-tint-cool)),
+      color-mix(in oklch, var(--md-surface) 92%, var(--md-tint-success))
+    );
 }
 
 .register-card__header {
@@ -305,6 +377,10 @@ const handleRegister = async () => {
   text-align: center;
 }
 
+.register-feedback {
+  overflow-wrap: anywhere;
+}
+
 .register-feedback.is-error {
   background-color: var(--md-error-container);
   color: var(--md-on-error-container);
@@ -339,6 +415,10 @@ const handleRegister = async () => {
 }
 
 @media (max-width: 520px) {
+  .register-page {
+    gap: var(--md-spacing-5);
+  }
+
   .register-card {
     padding: var(--md-spacing-5);
   }

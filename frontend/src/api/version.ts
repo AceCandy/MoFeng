@@ -1,4 +1,5 @@
 import { API_BASE_URL } from './admin';
+import { HttpRequestError, requestRaw } from './http';
 
 const configuredVersionCheckUrl = String(import.meta.env.VITE_VERSION_CHECK_URL || '').trim();
 const defaultVersionCheckUrl = `${API_BASE_URL}/api/updates/remote-version`;
@@ -88,15 +89,21 @@ export const getRemoteVersion = async (
     note: configuredVersionCheckUrl ? 'using VITE_VERSION_CHECK_URL' : 'using backend proxy endpoint',
   });
 
-  const response = await fetch(url, { method: 'GET' });
-  if (!response.ok) {
+  let response: Response
+  try {
+    response = await requestRaw(url, {
+      method: 'GET',
+      timeoutMs: 15_000,
+      fallbackErrorMessage: '版本检查失败',
+    })
+  } catch (error) {
     onDebugEvent?.({
       stage: 'request_failed',
       url,
-      status: response.status,
-      note: 'non-2xx response',
-    });
-    throw new Error(`Version check failed, status code: ${response.status}`);
+      status: error instanceof HttpRequestError ? error.status ?? undefined : undefined,
+      note: error instanceof Error ? error.message : 'unknown request error',
+    })
+    throw error
   }
 
   const contentType = (response.headers.get('content-type') || '').toLowerCase();

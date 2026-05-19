@@ -3,10 +3,16 @@
   <div class="flex items-center justify-center min-h-screen p-4 relative md-surface-dim">
     <!-- Material 3 Update Log Modal -->
     <div v-if="showModal" class="md-dialog-overlay" @click.self="closeModal">
-      <div class="md-dialog w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col">
+      <div
+        ref="updatesDialogRef"
+        class="md-dialog w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col"
+        role="dialog"
+        aria-modal="true"
+        :aria-labelledby="updatesDialogTitleId"
+      >
         <!-- Header -->
         <div class="md-dialog-header border-b" style="border-color: var(--md-outline-variant);">
-          <h1 class="md-headline-medium text-center" style="color: var(--md-on-surface);">更新日志</h1>
+          <h1 :id="updatesDialogTitleId" class="md-headline-medium text-center" style="color: var(--md-on-surface);">更新日志</h1>
         </div>
         
         <!-- Community Section -->
@@ -56,7 +62,12 @@
           <button @click="hideModalToday" class="md-btn md-btn-text md-ripple">
             今日不再显示
           </button>
-          <button @click="closeModal" class="md-btn md-btn-filled md-ripple">
+          <button
+            ref="updatesCloseButtonRef"
+            data-dialog-initial-focus
+            @click="closeModal"
+            class="md-btn md-btn-filled md-ripple"
+          >
             关闭
           </button>
         </div>
@@ -91,55 +102,31 @@
       <div class="text-center p-8 fade-in">
         <!-- Title -->
         <h1 class="md-display-small mb-4" style="color: var(--md-on-surface);">
-          拯救小说家：创作中心
+          墨风：创作中心
         </h1>
         <p class="md-body-large mb-12" style="color: var(--md-on-surface-variant);">
           从一个新灵感开始，或继续打磨你的世界。
         </p>
 
-        <!-- Mode Selection Cards -->
-        <div class="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-          <!-- Inspiration Mode Card -->
-          <div
-            @click="goToInspiration"
-            class="md-card md-card-elevated group p-8 cursor-pointer transition-colors duration-200"
-            style="border-radius: var(--md-radius-xl);"
-          >
-            <div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: var(--md-primary-container);">
-              <svg class="w-8 h-8" style="color: var(--md-on-primary-container);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
-            </div>
-            <h2 class="md-title-large mb-2" style="color: var(--md-primary);">灵感模式</h2>
-            <p class="md-body-medium" style="color: var(--md-on-surface-variant);">
-              没有头绪？让AI通过对话式引导，帮你构建故事的雏形。
-            </p>
-          </div>
-
-          <!-- Novel Workspace Card -->
-          <div
+        <!-- Entry Actions -->
+        <div class="entry-actions max-w-xl mx-auto">
+          <button
+            type="button"
             @click="goToWorkspace"
-            class="md-card md-card-elevated group p-8 cursor-pointer transition-colors duration-200"
-            style="border-radius: var(--md-radius-xl);"
+            class="md-btn md-btn-filled md-ripple entry-actions__primary"
           >
-            <div class="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style="background-color: var(--md-success-container);">
-              <svg class="w-8 h-8" style="color: var(--md-on-success-container);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-            </div>
-            <h2 class="md-title-large mb-2" style="color: var(--md-success);">小说工作台</h2>
-            <p class="md-body-medium" style="color: var(--md-on-surface-variant);">
-              查看、编辑和管理你所有的小说项目工程。
-            </p>
-          </div>
-        </div>
-
-        <!-- Google Colors Accent Bar -->
-        <div class="flex justify-center gap-2 mt-12">
-          <div class="w-12 h-1 rounded-full" style="background-color: var(--md-google-blue);"></div>
-          <div class="w-12 h-1 rounded-full" style="background-color: var(--md-google-red);"></div>
-          <div class="w-12 h-1 rounded-full" style="background-color: var(--md-google-yellow);"></div>
-          <div class="w-12 h-1 rounded-full" style="background-color: var(--md-google-green);"></div>
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            进入小说工作台
+          </button>
+          <button
+            type="button"
+            @click="goToInspiration"
+            class="md-btn md-btn-outlined md-ripple entry-actions__secondary"
+          >
+            从零开始，用灵感模式构建故事雏形
+          </button>
         </div>
       </div>
     </div>
@@ -149,24 +136,35 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import { useRouter } from 'vue-router'
 import { useQueryClient } from '@tanstack/vue-query'
 import { useAuthStore } from '../stores/auth'
 import { clearAuthQueryCache } from '@/queries/auth'
 import { useLatestUpdatesQuery } from '@/queries/updates'
+import { useDialogA11y } from '@/composables/useDialogA11y'
 
 marked.setOptions({
   gfm: true,
-  breaks: true
+  breaks: true,
 })
 
-const renderMarkdown = (md: string) => marked.parse(md)
+const renderMarkdown = (md: string) => {
+  const parsed = marked.parse(md)
+  const html = typeof parsed === 'string' ? parsed : ''
+  return DOMPurify.sanitize(html, {
+    USE_PROFILES: { html: true },
+  })
+}
 
 const router = useRouter()
 const authStore = useAuthStore()
 const queryClient = useQueryClient()
 
 const showModal = ref(false)
+const updatesDialogRef = ref<HTMLElement | null>(null)
+const updatesCloseButtonRef = ref<HTMLElement | null>(null)
+const updatesDialogTitleId = 'workspace-entry-updates-title'
 const shouldCheckUpdates = ref(false)
 const updatesQuery = useLatestUpdatesQuery(() => shouldCheckUpdates.value)
 const updateLogs = computed(() => updatesQuery.data.value ?? [])
@@ -218,6 +216,13 @@ const hideModalToday = () => {
   closeModal()
 }
 
+useDialogA11y({
+  active: showModal,
+  dialogRef: updatesDialogRef,
+  onClose: closeModal,
+  initialFocusRef: updatesCloseButtonRef,
+})
+
 const handleLogout = () => {
   authStore.logout()
   clearAuthQueryCache(queryClient)
@@ -232,3 +237,32 @@ const goToWorkspace = () => {
   router.push('/workspace')
 }
 </script>
+
+<style scoped>
+.entry-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--md-spacing-4);
+}
+
+.entry-actions__primary {
+  min-height: 52px;
+  padding: 0 var(--md-spacing-8);
+  font-size: var(--md-body-large);
+  gap: var(--md-spacing-3);
+}
+
+.entry-actions__secondary {
+  min-height: 44px;
+  padding: 0 var(--md-spacing-6);
+  font-size: var(--md-body-medium);
+  color: var(--md-on-surface-variant);
+  border-color: var(--md-outline-variant);
+}
+
+.entry-actions__secondary:hover {
+  color: var(--md-primary-dark);
+  border-color: var(--md-primary);
+}
+</style>

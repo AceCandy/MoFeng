@@ -1,50 +1,34 @@
 <!-- AIMETA P=蓝图确认_蓝图确认对话框|R=确认操作|NR=不含编辑功能|E=component:BlueprintConfirmation|X=internal|A=确认对话框|D=vue|S=dom|RD=./README.ai -->
 <template>
-  <div class="p-8 bg-white rounded-2xl shadow-2xl fade-in">
-    <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">信息收集完成！</h2>
+  <div class="blueprint-confirm fade-in">
+    <h2 class="blueprint-confirm__title">信息收集完成！</h2>
 
-    <div class="text-center mb-8">
+    <div class="blueprint-confirm__body">
       <div
-        class="prose prose-lg prose-gray max-w-none mx-auto mb-4 text-gray-600"
+        class="prose prose-lg max-w-none mx-auto mb-4"
+        style="color: var(--md-on-surface-variant)"
         v-html="renderedAiMessage"
       ></div>
-      <p class="text-sm text-gray-500">
+      <p class="blueprint-confirm__hint">
         我们已经收集了足够的信息来为您创建详细的小说蓝图。点击下方按钮开始生成您的专属故事大纲。
       </p>
     </div>
 
-    <!-- 高级加载状态 -->
-    <div v-if="isGenerating" class="text-center py-12">
-      <!-- 主加载动画 -->
-      <div class="relative mx-auto mb-8 w-24 h-24">
-        <!-- 外圆环 -->
+    <!-- 加载状态 -->
+    <div v-if="isGenerating" class="blueprint-confirm__loading">
+      <div class="blueprint-confirm__spinner">
+        <div class="blueprint-confirm__spinner-track"></div>
         <div
-          class="absolute inset-0 border-4 rounded-full transition-colors duration-500"
-          :class="progress >= 100 ? 'border-green-100' : 'border-indigo-100'"
+          class="blueprint-confirm__spinner-fill"
+          :class="{ 'blueprint-confirm__spinner-fill--done': progress >= 100 }"
         ></div>
-        <!-- 旋转的渐变圆环 -->
         <div
-          class="absolute inset-0 border-4 border-transparent rounded-full transition-colors duration-500"
-          :class="[
-            progress >= 100
-              ? 'border-t-green-500 border-r-green-400'
-              : 'border-t-indigo-500 border-r-indigo-400',
-            progress < 100 ? 'animate-spin' : '',
-          ]"
-        ></div>
-        <!-- 内部脉冲圆 -->
-        <div
-          class="absolute inset-3 rounded-full animate-pulse opacity-20 transition-colors duration-500"
-          :class="progress >= 100 ? 'bg-green-500' : 'bg-indigo-500'"
-        ></div>
-        <!-- 中心图标 -->
-        <div
-          class="absolute inset-6 rounded-full flex items-center justify-center transition-colors duration-500"
-          :class="progress >= 100 ? 'bg-green-500' : 'bg-indigo-500'"
+          class="blueprint-confirm__spinner-center"
+          :class="{ 'blueprint-confirm__spinner-center--done': progress >= 100 }"
         >
           <svg
             v-if="progress >= 100"
-            class="w-6 h-6 text-white"
+            class="w-5 h-5"
             fill="currentColor"
             viewBox="0 0 20 20"
           >
@@ -56,77 +40,49 @@
           </svg>
           <svg
             v-else
-            class="w-6 h-6 text-white animate-pulse"
+            class="w-5 h-5"
             fill="currentColor"
             viewBox="0 0 20 20"
+            style="opacity: 0.8"
           >
             <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
           </svg>
         </div>
       </div>
 
-      <!-- 加载文本和进度 -->
-      <div class="space-y-4">
-        <h3 class="text-xl font-semibold text-gray-800 animate-pulse">{{ loadingText }}</h3>
-        <p class="text-gray-600">AI正在为您精心打造独特的故事蓝图...</p>
+      <div class="blueprint-confirm__loading-text">
+        <h3 class="blueprint-confirm__loading-title">{{ loadingText }}</h3>
+        <p class="blueprint-confirm__loading-desc">AI正在为您精心打造独特的故事蓝图...</p>
 
-        <!-- 进度条 -->
-        <div class="w-full max-w-md mx-auto">
-          <!-- <div class="flex justify-between text-xs text-gray-500 mb-2">
-            <span>生成进度</span>
-            <span>{{ Math.round(progress) }}%</span>
-          </div> -->
-          <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+        <div class="blueprint-confirm__progress">
+          <div class="blueprint-confirm__progress-track">
             <div
-              class="h-2 rounded-full transition-all duration-1000 ease-out relative"
-              :class="
-                progress >= 100
-                  ? 'bg-gradient-to-r from-green-500 to-emerald-600'
-                  : 'bg-gradient-to-r from-indigo-500 to-purple-600'
-              "
+              class="blueprint-confirm__progress-bar"
+              :class="{ 'blueprint-confirm__progress-bar--done': progress >= 100 }"
               :style="{ width: `${progress}%` }"
-            >
-              <!-- 闪光效果 -->
-              <div
-                class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-shimmer"
-              ></div>
-            </div>
+            ></div>
           </div>
         </div>
 
-        <!-- 倒计时 -->
-        <!-- <div class="text-sm text-gray-500">
-          <span>预计完成时间: {{ timeRemaining }}秒</span>
-        </div> -->
-
-        <!-- 温馨提示 -->
-        <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <p class="text-sm text-blue-800">
-            <svg class="inline w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
-                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                clip-rule="evenodd"
-              ></path>
-            </svg>
-            AI正在分析您的创意偏好，生成过程需要一些时间，请耐心等待...
-          </p>
+        <div class="blueprint-confirm__tip">
+          <svg class="inline w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+              clip-rule="evenodd"
+            ></path>
+          </svg>
+          AI正在分析您的创意偏好，生成过程需要一些时间，请耐心等待...
         </div>
       </div>
     </div>
 
     <!-- 操作按钮 -->
-    <div v-else class="text-center space-x-4">
-      <!-- <button
-        @click="$emit('back')"
-        class="bg-gray-200 text-gray-700 font-bold py-3 px-8 rounded-full hover:bg-gray-300 transition-all duration-300 transform hover:scale-105"
-      >
-        返回对话
-      </button> -->
+    <div v-else class="blueprint-confirm__actions">
       <button
         @click="generateBlueprint"
         :disabled="isGenerating"
-        class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold py-3 px-8 rounded-full hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+        class="md-btn md-btn-filled md-ripple blueprint-confirm__generate-btn"
       >
         <span class="flex items-center justify-center">
           <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -144,6 +100,7 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
 import { marked } from 'marked'
+import DOMPurify from 'dompurify'
 import { useGenerateBlueprintMutation } from '@/queries/novel'
 import { globalAlert } from '@/composables/useAlert'
 
@@ -176,7 +133,11 @@ let timeoutTimer: NodeJS.Timeout | null = null
 
 // 渲染 Markdown
 const renderedAiMessage = computed(() => {
-  return marked.parse(props.aiMessage)
+  const parsed = marked.parse(props.aiMessage)
+  const html = typeof parsed === 'string' ? parsed : ''
+  return DOMPurify.sanitize(html, {
+    USE_PROFILES: { html: true },
+  })
 })
 
 // 动态加载文本
@@ -280,98 +241,154 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-@keyframes shimmer {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(100%);
-  }
+.blueprint-confirm {
+  padding: var(--md-spacing-8);
+  background-color: var(--md-surface);
+  border-radius: var(--md-radius-xl);
+  border: 1px solid var(--md-outline-variant);
+  box-shadow: var(--md-elevation-2);
 }
 
-.animate-shimmer {
-  animation: shimmer 2s infinite;
-}
-
-/* 自定义动画增强 */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.fade-in {
-  animation: fadeIn 0.6s ease-out;
-}
-
-/* 按钮悬停效果增强 */
-.transform {
-  transition: transform 0.2s ease-in-out;
-}
-
-.hover\:scale-105:hover {
-  transform: scale(1.05);
-}
-
-/* 禁用状态样式 */
-.disabled\:transform-none:disabled {
-  transform: none !important;
-}
-
-/* Markdown 内容样式优化 */
-.prose {
-  text-align: left;
-}
-
-.prose strong {
-  color: #374151;
+.blueprint-confirm__title {
+  font-size: var(--md-headline-small);
   font-weight: 700;
+  text-align: center;
+  color: var(--md-on-surface);
+  margin-bottom: var(--md-spacing-6);
 }
 
-.prose em {
-  color: #4b5563;
-  font-style: italic;
+.blueprint-confirm__body {
+  text-align: center;
+  margin-bottom: var(--md-spacing-8);
 }
 
-.prose p {
-  margin-bottom: 0.75rem;
+.blueprint-confirm__hint {
+  font-size: var(--md-body-small);
+  color: var(--md-on-surface-variant);
 }
 
-.prose p:last-child {
-  margin-bottom: 0;
+.blueprint-confirm__loading {
+  text-align: center;
+  padding: var(--md-spacing-8) 0;
 }
 
-.prose a {
-  color: #6366f1;
-  text-decoration: none;
-  transition: color 0.2s;
+.blueprint-confirm__spinner {
+  position: relative;
+  width: 5rem;
+  height: 5rem;
+  margin: 0 auto var(--md-spacing-6);
 }
 
-.prose a:hover {
-  color: #4f46e5;
-  text-decoration: underline;
+.blueprint-confirm__spinner-track {
+  position: absolute;
+  inset: 0;
+  border: 3px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-full);
 }
 
-.prose code {
-  background-color: #f3f4f6;
-  padding: 0.125rem 0.375rem;
-  border-radius: 0.25rem;
-  font-size: 0.875em;
-  color: #1f2937;
+.blueprint-confirm__spinner-fill {
+  position: absolute;
+  inset: 0;
+  border: 3px solid transparent;
+  border-top-color: var(--md-primary);
+  border-right-color: var(--md-primary);
+  border-radius: var(--md-radius-full);
+  animation: blueprint-spin 1s linear infinite;
 }
 
-.prose ul,
-.prose ol {
-  margin-left: 1.5rem;
-  margin-bottom: 0.75rem;
+.blueprint-confirm__spinner-fill--done {
+  border-top-color: var(--md-success);
+  border-right-color: var(--md-success);
+  animation: none;
 }
 
-.prose li {
-  margin-bottom: 0.25rem;
+.blueprint-confirm__spinner-center {
+  position: absolute;
+  inset: 1rem;
+  border-radius: var(--md-radius-full);
+  background-color: var(--md-primary);
+  color: var(--md-on-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.blueprint-confirm__spinner-center--done {
+  background-color: var(--md-success);
+}
+
+.blueprint-confirm__loading-title {
+  font-size: var(--md-title-medium);
+  font-weight: 600;
+  color: var(--md-on-surface);
+  margin-bottom: var(--md-spacing-2);
+}
+
+.blueprint-confirm__loading-desc {
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-medium);
+  margin-bottom: var(--md-spacing-4);
+}
+
+.blueprint-confirm__progress {
+  max-width: 20rem;
+  margin: 0 auto var(--md-spacing-6);
+}
+
+.blueprint-confirm__progress-track {
+  width: 100%;
+  height: 6px;
+  background-color: var(--md-surface-container);
+  border-radius: var(--md-radius-full);
+  overflow: hidden;
+}
+
+.blueprint-confirm__progress-bar {
+  height: 100%;
+  background-color: var(--md-primary);
+  border-radius: var(--md-radius-full);
+  transition: width 1s ease-out;
+}
+
+.blueprint-confirm__progress-bar--done {
+  background-color: var(--md-success);
+}
+
+.blueprint-confirm__tip {
+  padding: var(--md-spacing-3) var(--md-spacing-4);
+  background-color: var(--md-surface-container-low);
+  border-radius: var(--md-radius-sm);
+  border: 1px solid var(--md-outline-variant);
+  font-size: var(--md-body-small);
+  color: var(--md-on-surface-variant);
+  max-width: 28rem;
+  margin: 0 auto;
+}
+
+.blueprint-confirm__actions {
+  text-align: center;
+}
+
+.blueprint-confirm__generate-btn {
+  padding: var(--md-spacing-3) var(--md-spacing-8);
+  font-weight: 600;
+}
+
+@keyframes blueprint-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blueprint-confirm__spinner-fill {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
+.blueprint-confirm__loading-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--md-spacing-2);
 }
 </style>

@@ -1,6 +1,7 @@
 // AIMETA P=LLM_API客户端_模型配置接口|R=LLM配置CRUD|NR=不含UI逻辑|E=api:llm|X=internal|A=llmApi对象|D=axios|S=net|RD=./README.ai
 import { useAuthStore } from '@/stores/auth';
 import { API_BASE_URL, API_PREFIX } from './base';
+import { requestJson } from './http';
 
 const LLM_BASE = `${API_BASE_URL}${API_PREFIX}/llm-config`;
 
@@ -104,25 +105,20 @@ const getHeaders = () => {
   return headers;
 };
 
-const readError = async (response: Response, fallback: string): Promise<Error> => {
-  try {
-    const payload = await response.json();
-    const detail = typeof payload?.detail === 'string' ? payload.detail : fallback;
-    return new Error(detail);
-  } catch {
-    return new Error(fallback);
-  }
-};
+const llmRequest = <T>(
+  path: string,
+  options: RequestInit = {},
+  fallbackErrorMessage = 'LLM 配置请求失败',
+) =>
+  requestJson<T>(`${LLM_BASE}${path}`, {
+    ...options,
+    headers: getHeaders(),
+    timeoutMs: 20_000,
+    fallbackErrorMessage,
+  });
 
 export const getLLMConfigBundle = async (): Promise<LLMConfigBundle> => {
-  const response = await fetch(LLM_BASE, {
-    method: 'GET',
-    headers: getHeaders(),
-  });
-  if (!response.ok) {
-    throw await readError(response, 'Failed to fetch LLM config');
-  }
-  return response.json();
+  return llmRequest<LLMConfigBundle>('', { method: 'GET' }, '获取 LLM 配置失败');
 };
 
 export const getLLMConfig = async (): Promise<LLMConfig | null> => {
@@ -131,25 +127,16 @@ export const getLLMConfig = async (): Promise<LLMConfig | null> => {
 };
 
 export const createOrUpdateLLMConfig = async (config: LLMConfigCreate): Promise<LLMConfig> => {
-  const response = await fetch(LLM_BASE, {
+  return llmRequest<LLMConfig>('', {
     method: 'PUT',
-    headers: getHeaders(),
     body: JSON.stringify(config),
-  });
-  if (!response.ok) {
-    throw await readError(response, 'Failed to save LLM config');
-  }
-  return response.json();
+  }, '保存 LLM 配置失败');
 };
 
 export const deleteLLMConfig = async (): Promise<void> => {
-  const response = await fetch(LLM_BASE, {
+  await llmRequest<void>('', {
     method: 'DELETE',
-    headers: getHeaders(),
-  });
-  if (!response.ok) {
-    throw await readError(response, 'Failed to delete LLM config');
-  }
+  }, '删除 LLM 配置失败');
 };
 
 export interface ModelListRequest {
@@ -158,105 +145,66 @@ export interface ModelListRequest {
 }
 
 export const getAvailableModels = async (request: ModelListRequest): Promise<string[]> => {
-  const response = await fetch(`${LLM_BASE}/models`, {
-    method: 'POST',
-    headers: getHeaders(),
-    body: JSON.stringify(request),
-  });
-  if (!response.ok) {
+  try {
+    return await llmRequest<string[]>('/models', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    }, '获取可用模型失败');
+  } catch {
     // 获取模型列表失败时返回空数组，不影响主流程
     return [];
   }
-  return response.json();
 };
 
 export const getProviderModels = async (providerId: number): Promise<string[]> => {
-  const response = await fetch(`${LLM_BASE}/providers/${providerId}/models`, {
+  return llmRequest<string[]>(`/providers/${providerId}/models`, {
     method: 'GET',
-    headers: getHeaders(),
-  });
-  if (!response.ok) {
-    throw await readError(response, 'Failed to fetch provider models');
-  }
-  return response.json();
+  }, '获取供应商模型列表失败');
 };
 
 export const createProvider = async (payload: ProviderCreate): Promise<UserModelProvider> => {
-  const response = await fetch(`${LLM_BASE}/providers`, {
+  return llmRequest<UserModelProvider>('/providers', {
     method: 'POST',
-    headers: getHeaders(),
     body: JSON.stringify(payload),
-  });
-  if (!response.ok) {
-    throw await readError(response, 'Failed to create provider');
-  }
-  return response.json();
+  }, '创建模型供应商失败');
 };
 
 export const updateProvider = async (providerId: number, payload: ProviderUpdate): Promise<UserModelProvider> => {
-  const response = await fetch(`${LLM_BASE}/providers/${providerId}`, {
+  return llmRequest<UserModelProvider>(`/providers/${providerId}`, {
     method: 'PATCH',
-    headers: getHeaders(),
     body: JSON.stringify(payload),
-  });
-  if (!response.ok) {
-    throw await readError(response, 'Failed to update provider');
-  }
-  return response.json();
+  }, '更新模型供应商失败');
 };
 
 export const deleteProvider = async (providerId: number): Promise<void> => {
-  const response = await fetch(`${LLM_BASE}/providers/${providerId}`, {
+  await llmRequest<void>(`/providers/${providerId}`, {
     method: 'DELETE',
-    headers: getHeaders(),
-  });
-  if (!response.ok) {
-    throw await readError(response, 'Failed to delete provider');
-  }
+  }, '删除模型供应商失败');
 };
 
 export const createUserModel = async (payload: UserAIModelCreate): Promise<UserAIModel> => {
-  const response = await fetch(`${LLM_BASE}/user-models`, {
+  return llmRequest<UserAIModel>('/user-models', {
     method: 'POST',
-    headers: getHeaders(),
     body: JSON.stringify(payload),
-  });
-  if (!response.ok) {
-    throw await readError(response, 'Failed to create model');
-  }
-  return response.json();
+  }, '创建模型失败');
 };
 
 export const updateUserModel = async (modelId: number, payload: UserAIModelUpdate): Promise<UserAIModel> => {
-  const response = await fetch(`${LLM_BASE}/user-models/${modelId}`, {
+  return llmRequest<UserAIModel>(`/user-models/${modelId}`, {
     method: 'PATCH',
-    headers: getHeaders(),
     body: JSON.stringify(payload),
-  });
-  if (!response.ok) {
-    throw await readError(response, 'Failed to update model');
-  }
-  return response.json();
+  }, '更新模型失败');
 };
 
 export const deleteUserModel = async (modelId: number): Promise<void> => {
-  const response = await fetch(`${LLM_BASE}/user-models/${modelId}`, {
+  await llmRequest<void>(`/user-models/${modelId}`, {
     method: 'DELETE',
-    headers: getHeaders(),
-  });
-  if (!response.ok) {
-    throw await readError(response, 'Failed to delete model');
-  }
+  }, '删除模型失败');
 };
 
 export const saveStageRoutes = async (payload: StageRoutesPayload): Promise<StageRoute[]> => {
-  const response = await fetch(`${LLM_BASE}/stage-routes`, {
+  return llmRequest<StageRoute[]>('/stage-routes', {
     method: 'PUT',
-    headers: getHeaders(),
     body: JSON.stringify(payload),
-  });
-  if (!response.ok) {
-    throw await readError(response, 'Failed to save stage routes');
-  }
-  return response.json();
+  }, '保存阶段路由失败');
 };

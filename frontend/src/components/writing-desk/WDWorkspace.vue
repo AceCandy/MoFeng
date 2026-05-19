@@ -3,21 +3,13 @@
   <section class="writing-workspace">
     <div class="md-card md-card-outlined writing-workspace__panel">
       <!-- 章节工作区头部 -->
-      <div v-if="selectedChapterNumber" class="writing-workspace__header">
+      <div v-if="selectedChapterNumber !== null" class="writing-workspace__header">
         <div class="writing-workspace__header-row">
           <div class="writing-workspace__chapter-meta">
-            <div class="flex items-center gap-3 mb-2">
-              <h2 class="md-title-large font-semibold">第{{ selectedChapterNumber }}章</h2>
-              <span
-                :class="[
-                  'md-chip',
-                  isChapterCompleted(selectedChapterNumber) ? 'm3-chip-success' : 'm3-chip-neutral',
-                ]"
-              >
-                {{ isChapterCompleted(selectedChapterNumber) ? '已完成' : '未完成' }}
-              </span>
-            </div>
-            <div class="flex items-center gap-3 mb-1 flex-wrap">
+            <div class="writing-workspace__chapter-title-line">
+              <h2 class="md-title-large font-semibold writing-workspace__chapter-no">
+                第{{ selectedChapterNumber }}章
+              </h2>
               <Tooltip :text="chapterTitleTooltipText" :show-delay="150">
                 <button
                   type="button"
@@ -28,105 +20,258 @@
                   {{ selectedChapterOutline?.title || '未知标题' }}
                 </button>
               </Tooltip>
-              <span class="md-body-small md-on-surface-variant whitespace-nowrap">
-                {{ selectedChapterWordCount }} 字
+              <span
+                class="writing-workspace__status-tag"
+                :class="`writing-workspace__status-tag--${chapterStatusTone}`"
+              >
+                {{ chapterStatusLabel }}
+              </span>
+              <span class="writing-workspace__chapter-inline-meta md-label-small md-on-surface-variant">
+                {{ chapterInlineMeta }}
               </span>
             </div>
             <p class="writing-workspace__summary md-body-small md-on-surface-variant">
               {{ selectedChapterOutline?.summary || '暂无章节描述' }}
             </p>
           </div>
+          <aside class="writing-workspace__toolbar" role="toolbar" aria-label="章节操作">
+            <div class="writing-workspace__toolbar-row writing-workspace__toolbar-row--utility">
+              <div class="writing-workspace__toolbar-group writing-workspace__toolbar-group--utility">
+                <button
+                  type="button"
+                  @click="copySelectedChapterContent"
+                  :disabled="!hasSelectedChapterContent"
+                  class="md-btn md-btn-text md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--ghost disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  复制
+                </button>
+                <button
+                  type="button"
+                  @click="exportContentAsTxt"
+                  :disabled="!isChapterContentView"
+                  class="md-btn md-btn-text md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--ghost disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  导出
+                </button>
+                <button
+                  type="button"
+                  @click="openVersionDetail"
+                  :disabled="!canViewVersions"
+                  class="md-btn md-btn-text md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--ghost disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  查看版本
+                </button>
+              </div>
 
-          <div class="writing-workspace__actions">
-            <button
-              v-if="isChapterCompleted(selectedChapterNumber)"
-              type="button"
-              @click="copySelectedChapterContent"
-              :disabled="!hasSelectedChapterContent"
-              class="md-btn md-btn-outlined md-ripple flex items-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M8 7V5a2 2 0 012-2h6a2 2 0 012 2v6m-8 8h6a2 2 0 002-2v-6a2 2 0 00-2-2h-6a2 2 0 00-2 2v6a2 2 0 002 2zm-5-5h6a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2z"
-                ></path>
-              </svg>
-              复制正文
-            </button>
-            <button
-              v-if="isChapterCompleted(selectedChapterNumber)"
-              type="button"
-              @click="openEditModal"
-              class="md-btn md-btn-tonal md-ripple flex items-center gap-2 whitespace-nowrap"
-            >
-              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
-                ></path>
-              </svg>
-              手动编辑
-            </button>
-            <button
-              type="button"
-              @click="confirmRegenerateChapter"
-              :disabled="isSelectedChapterGeneratingLike"
-              class="md-btn md-btn-filled md-ripple flex items-center gap-2 whitespace-nowrap disabled:opacity-50"
-            >
-              <svg
-                v-if="isSelectedChapterGeneratingLike"
-                class="w-4 h-4 animate-spin"
-                fill="currentColor"
-                viewBox="0 0 20 20"
+              <span class="writing-workspace__toolbar-divider" aria-hidden="true"></span>
+
+              <div ref="moreMenuRef" class="writing-workspace__more-menu">
+                <button
+                  ref="moreMenuTriggerRef"
+                  type="button"
+                  @click="toggleMoreMenu"
+                  class="md-btn md-btn-text md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--ghost"
+                  :aria-expanded="showMoreMenu ? 'true' : 'false'"
+                  aria-haspopup="menu"
+                  :aria-controls="moreMenuId"
+                >
+                  更多
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 9l-7 7-7-7"
+                    ></path>
+                  </svg>
+                </button>
+
+                <div
+                  v-if="showMoreMenu"
+                  :id="moreMenuId"
+                  ref="moreMenuPanelRef"
+                  class="writing-workspace__more-menu-panel"
+                  role="menu"
+                  tabindex="-1"
+                  @keydown="handleMoreMenuKeydown"
+                >
+                  <button
+                    :ref="(el) => registerMoreMenuItemRef(el, 0)"
+                    type="button"
+                    role="menuitem"
+                    @click="handleCopyFromMore"
+                    :disabled="!hasSelectedChapterContent"
+                    class="writing-workspace__more-menu-item disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    复制
+                  </button>
+                  <button
+                    :ref="(el) => registerMoreMenuItemRef(el, 1)"
+                    type="button"
+                    role="menuitem"
+                    @click="handleExportFromMore"
+                    :disabled="!isChapterContentView"
+                    class="writing-workspace__more-menu-item disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    导出
+                  </button>
+                  <button
+                    :ref="(el) => registerMoreMenuItemRef(el, 2)"
+                    type="button"
+                    role="menuitem"
+                    @click="handleViewVersionFromMore"
+                    :disabled="!canViewVersions"
+                    class="writing-workspace__more-menu-item disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    查看版本
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="writing-workspace__toolbar-row writing-workspace__toolbar-row--primary">
+              <div class="writing-workspace__toolbar-group writing-workspace__toolbar-group--emphasis">
+              <button
+                type="button"
+                @click="openEditModal"
+                :disabled="!hasSelectedChapterContent"
+                class="md-btn md-btn-outlined md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--secondary writing-workspace__tool-btn--hero disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <path
-                  fill-rule="evenodd"
-                  d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                  clip-rule="evenodd"
-                ></path>
-              </svg>
-              <svg v-else class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fill-rule="evenodd"
-                  d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                  clip-rule="evenodd"
-                ></path>
-              </svg>
-              {{ isSelectedChapterGeneratingLike ? '生成中...' : '重新生成' }}
-            </button>
-          </div>
+                <span class="writing-workspace__label-full">编辑正文</span>
+                <span class="writing-workspace__label-short">编辑</span>
+              </button>
+
+              <div ref="aiMenuRef" class="writing-workspace__ai-menu">
+                <button
+                  ref="aiMenuTriggerRef"
+                  type="button"
+                  @click="toggleAiMenu"
+                  :disabled="isAiMenuDisabled"
+                  class="md-btn md-btn-tonal md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--primary writing-workspace__tool-btn--hero disabled:opacity-50 disabled:cursor-not-allowed"
+                  :aria-expanded="showAiMenu ? 'true' : 'false'"
+                  aria-haspopup="menu"
+                  :aria-controls="aiMenuId"
+                >
+                  <span class="writing-workspace__label-full">AI优化</span>
+                  <span class="writing-workspace__label-short">AI</span>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 9l-7 7-7-7"
+                    ></path>
+                  </svg>
+                </button>
+
+                <div
+                  v-if="showAiMenu"
+                  :id="aiMenuId"
+                  ref="aiMenuPanelRef"
+                  class="writing-workspace__ai-menu-panel"
+                  role="menu"
+                  tabindex="-1"
+                  @keydown="handleAiMenuKeydown"
+                >
+                  <button
+                    :ref="(el) => registerAiMenuItemRef(el, 0)"
+                    type="button"
+                    role="menuitem"
+                    @click="handleLayeredOptimize"
+                    :disabled="!isChapterContentView"
+                    class="writing-workspace__ai-menu-item disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    分层优化
+                  </button>
+                  <button
+                    :ref="(el) => registerAiMenuItemRef(el, 1)"
+                    type="button"
+                    role="menuitem"
+                    @click="handlePolishContent"
+                    :disabled="!isChapterContentView"
+                    class="writing-workspace__ai-menu-item disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    润色正文
+                  </button>
+                  <button
+                    :ref="(el) => registerAiMenuItemRef(el, 2)"
+                    type="button"
+                    role="menuitem"
+                    @click="handleAdjustRhythm"
+                    :disabled="!isChapterContentView"
+                    class="writing-workspace__ai-menu-item disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    调整节奏
+                  </button>
+                  <button
+                    :ref="(el) => registerAiMenuItemRef(el, 3)"
+                    type="button"
+                    role="menuitem"
+                    @click="handleRewriteStyle"
+                    :disabled="!isChapterContentView"
+                    class="writing-workspace__ai-menu-item disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    改写风格
+                  </button>
+                  <button
+                    :ref="(el) => registerAiMenuItemRef(el, 4)"
+                    type="button"
+                    role="menuitem"
+                    @click="handleRegenerateFromMenu"
+                    :disabled="isSelectedChapterGeneratingLike"
+                    class="writing-workspace__ai-menu-item writing-workspace__ai-menu-item--danger disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {{ isSelectedChapterGeneratingLike ? '生成中...' : '重新生成' }}
+                  </button>
+                </div>
+              </div>
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
 
       <!-- 章节内容展示区 -->
       <div class="writing-workspace__content">
-        <component
-          :is="currentComponent"
-          v-bind="currentComponentProps"
-          @hideVersionSelector="$emit('hideVersionSelector')"
-          @update:selectedVersionIndex="$emit('update:selectedVersionIndex', $event)"
-          @showVersionDetail="$emit('showVersionDetail', $event)"
-          @confirmVersionSelection="$emit('confirmVersionSelection')"
-          @generateChapter="$emit('generateChapter', $event)"
-          @showVersionSelector="$emit('showVersionSelector')"
-          @regenerateChapter="$emit('regenerateChapter')"
-          @evaluateChapter="$emit('evaluateChapter')"
-          @showEvaluationDetail="$emit('showEvaluationDetail')"
-        />
+        <div class="writing-workspace__body">
+          <component
+            ref="bodyComponentRef"
+            :is="currentComponent"
+            v-bind="currentComponentProps"
+            @hideVersionSelector="$emit('hideVersionSelector')"
+            @update:selectedVersionIndex="$emit('update:selectedVersionIndex', $event)"
+            @showVersionDetail="$emit('showVersionDetail', $event)"
+            @confirmVersionSelection="$emit('confirmVersionSelection')"
+            @generateChapter="$emit('generateChapter', $event)"
+            @showVersionSelector="$emit('showVersionSelector')"
+            @regenerateChapter="$emit('regenerateChapter')"
+            @evaluateChapter="$emit('evaluateChapter')"
+            @showEvaluationDetail="$emit('showEvaluationDetail')"
+          />
+        </div>
       </div>
     </div>
 
     <!-- 编辑章节内容模态框 -->
-    <div v-if="showEditModal" class="md-dialog-overlay">
-      <div class="md-dialog w-full h-full max-w-5xl m3-editor-dialog">
+    <div v-if="showEditModal" class="md-dialog-overlay" @click.self="closeEditModal">
+      <div
+        ref="editDialogRef"
+        class="md-dialog w-full h-full max-w-5xl m3-editor-dialog"
+        role="dialog"
+        aria-modal="true"
+        :aria-labelledby="editDialogTitleId"
+      >
         <!-- 模态框头部 -->
         <div
           class="flex items-center justify-between p-6 border-b"
           style="border-bottom-color: var(--md-outline-variant)"
         >
-          <h3 class="md-title-large font-semibold">编辑第{{ selectedChapterNumber }}章内容</h3>
+          <h3 :id="editDialogTitleId" class="md-title-large font-semibold">
+            编辑第{{ selectedChapterNumber }}章内容
+          </h3>
           <button
+            ref="editCloseButtonRef"
+            data-dialog-initial-focus
             type="button"
             @click="closeEditModal"
             class="md-icon-btn md-ripple"
@@ -145,8 +290,9 @@
         <!-- 模态框内容 -->
         <div class="flex-1 p-6 overflow-hidden">
           <div class="flex flex-col h-full">
-            <label class="md-text-field-label mb-2"> 章节内容 </label>
+            <label :for="editingContentInputId" class="md-text-field-label mb-2"> 章节内容 </label>
             <textarea
+              :id="editingContentInputId"
               v-model="editingContent"
               class="md-textarea flex-1 w-full resize-none"
               placeholder="请输入章节内容..."
@@ -198,9 +344,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onUnmounted } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { globalAlert } from '@/composables/useAlert'
+import { useDialogA11y } from '@/composables/useDialogA11y'
 import type {
   Chapter,
   ChapterOutline,
@@ -243,6 +390,26 @@ const emit = defineEmits([
   'fetchChapterStatus',
   'editChapter',
 ])
+
+interface ChapterContentExpose {
+  openOptimizerPanel?: () => void
+  openOptimizerPanelWithPreset?: (preset?: { dimension?: string; notes?: string }) => void
+  exportCurrentChapterAsTxt?: () => void
+}
+
+const bodyComponentRef = ref<ChapterContentExpose | null>(null)
+const aiMenuRef = ref<HTMLElement | null>(null)
+const moreMenuRef = ref<HTMLElement | null>(null)
+const aiMenuPanelRef = ref<HTMLElement | null>(null)
+const moreMenuPanelRef = ref<HTMLElement | null>(null)
+const aiMenuTriggerRef = ref<HTMLButtonElement | null>(null)
+const moreMenuTriggerRef = ref<HTMLButtonElement | null>(null)
+const aiMenuItemRefs = ref<Array<HTMLElement | null>>([])
+const moreMenuItemRefs = ref<Array<HTMLElement | null>>([])
+const aiMenuId = 'wd-workspace-ai-menu'
+const moreMenuId = 'wd-workspace-more-menu'
+const showAiMenu = ref(false)
+const showMoreMenu = ref(false)
 
 const confirmRegenerateChapter = async () => {
   const confirmed = await globalAlert.showConfirm(
@@ -305,7 +472,7 @@ const copySelectedChapterTitle = async () => {
 }
 
 const copySelectedChapterContent = async () => {
-  const content = cleanVersionContent(selectedChapter.value?.content || '').trim()
+  const content = selectedChapterResolvedContent.value.trim()
   if (!content) return
 
   const copied = await copyText(content)
@@ -316,6 +483,10 @@ const copySelectedChapterContent = async () => {
 
 // 编辑模态框状态
 const showEditModal = ref(false)
+const editDialogRef = ref<HTMLElement | null>(null)
+const editCloseButtonRef = ref<HTMLElement | null>(null)
+const editDialogTitleId = 'wd-workspace-edit-dialog-title'
+const editingContentInputId = 'wd-workspace-edit-content-input'
 const editingContent = ref('')
 const isSaving = ref(false)
 
@@ -362,20 +533,28 @@ const cleanVersionContent = (content: string): string => {
 const editingWordCount = computed(() => countNonWhitespaceChars(editingContent.value))
 
 const openEditModal = () => {
-  if (selectedChapter.value?.content) {
-    editingContent.value = cleanVersionContent(selectedChapter.value.content)
+  if (hasSelectedChapterContent.value) {
+    editingContent.value = selectedChapterResolvedContent.value
     showEditModal.value = true
   }
 }
 
 const closeEditModal = () => {
+  if (isSaving.value) return
   showEditModal.value = false
   editingContent.value = ''
   isSaving.value = false
 }
 
+useDialogA11y({
+  active: showEditModal,
+  dialogRef: editDialogRef,
+  onClose: closeEditModal,
+  initialFocusRef: editCloseButtonRef,
+})
+
 const saveEditedContent = async () => {
-  if (!props.selectedChapterNumber || !editingContent.value.trim()) return
+  if (props.selectedChapterNumber === null || !editingContent.value.trim()) return
 
   isSaving.value = true
   try {
@@ -408,20 +587,101 @@ const selectedChapterOutline = computed(() => {
   )
 })
 
-const hasSelectedChapterContent = computed(() => {
-  const content = selectedChapter.value?.content
-  return typeof content === 'string' && content.trim().length > 0
+const resolveChapterContent = (chapter: Chapter | null): string => {
+  if (!chapter) {
+    return ''
+  }
+
+  const directContent = cleanVersionContent(chapter?.content || '')
+  if (directContent.trim()) {
+    return directContent
+  }
+
+  for (const version of props.availableVersions) {
+    const normalized = cleanVersionContent(version.content || '')
+    if (normalized.trim()) {
+      return normalized
+    }
+  }
+
+  return ''
+}
+
+const selectedChapterResolvedContent = computed(() => resolveChapterContent(selectedChapter.value))
+
+const selectedChapterForDisplay = computed<Chapter | null>(() => {
+  const chapter = selectedChapter.value
+  if (!chapter) return null
+  if (chapter.content && cleanVersionContent(chapter.content).trim()) {
+    return chapter
+  }
+  return {
+    ...chapter,
+    content: selectedChapterResolvedContent.value,
+  }
 })
 
-const selectedChapterWordCount = computed(() =>
-  countNonWhitespaceChars(cleanVersionContent(selectedChapter.value?.content || '')),
+const hasSelectedChapterContent = computed(() => {
+  return selectedChapterResolvedContent.value.trim().length > 0
+})
+
+const selectedChapterWordCount = computed(() => countNonWhitespaceChars(selectedChapterResolvedContent.value))
+
+const chapterStatusLabel = computed(() => {
+  const status = selectedChapter.value?.generation_status
+  switch (status) {
+    case 'successful':
+      return '已完成'
+    case 'generating':
+      return '生成中'
+    case 'evaluating':
+      return '评审中'
+    case 'selecting':
+      return '选择版本'
+    case 'waiting_for_confirm':
+      return '待确认'
+    case 'failed':
+      return '生成失败'
+    case 'evaluation_failed':
+      return '评审失败'
+    default:
+      return '待开始'
+  }
+})
+
+const chapterStatusTone = computed(() => {
+  const status = selectedChapter.value?.generation_status
+  if (status === 'successful') return 'success'
+  if (status === 'failed' || status === 'evaluation_failed') return 'error'
+  if (status === 'generating' || status === 'evaluating' || status === 'selecting') return 'progress'
+  if (status === 'waiting_for_confirm') return 'pending'
+  return 'idle'
+})
+
+const formatDateTime = (value?: string | null) => {
+  if (!value) return '--'
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return '--'
+  const year = parsed.getFullYear()
+  const month = String(parsed.getMonth() + 1).padStart(2, '0')
+  const day = String(parsed.getDate()).padStart(2, '0')
+  const hour = String(parsed.getHours()).padStart(2, '0')
+  const minute = String(parsed.getMinutes()).padStart(2, '0')
+  return `${year}/${month}/${day} ${hour}:${minute}`
+}
+
+const chapterLastEditedText = computed(() =>
+  formatDateTime(selectedChapter.value?.status_updated_at ?? selectedChapter.value?.generation_started_at),
 )
 
-const isChapterCompleted = (chapterNumber: number) => {
-  if (!props.project?.chapters) return false
-  const chapter = props.project.chapters.find((ch) => ch.chapter_number === chapterNumber)
-  return chapter && chapter.generation_status === 'successful'
-}
+const chapterInlineMeta = computed(() => {
+  const segments: string[] = []
+  if (hasSelectedChapterContent.value) {
+    segments.push(`${selectedChapterWordCount.value}字`)
+  }
+  segments.push(`最后编辑 ${chapterLastEditedText.value}`)
+  return segments.join(' · ')
+})
 
 const isChapterGenerating = (chapterNumber: number) => {
   if (!props.project?.chapters) return false
@@ -491,7 +751,7 @@ const canGenerateChapter = (chapterNumber: number | null) => {
 }
 
 const currentComponent = computed(() => {
-  if (!props.selectedChapterNumber) {
+  if (props.selectedChapterNumber === null) {
     return WorkspaceInitial
   }
 
@@ -503,13 +763,13 @@ const currentComponent = computed(() => {
     return ChapterGenerating // Use a generic "in-progress" component
   }
 
-  // 优先展示已同步到前端的正文，避免状态短暂滞后时必须手动刷新
-  if (hasSelectedChapterContent.value) {
-    return ChapterContent
-  }
-
   if (status === 'waiting_for_confirm' || status === 'evaluation_failed') {
     return VersionSelector
+  }
+
+  // 仅在不处于选版态时展示正文，避免生成完成后看不到新版本选择区。
+  if (hasSelectedChapterContent.value) {
+    return ChapterContent
   }
 
   if (isChapterFailed(props.selectedChapterNumber)) {
@@ -517,6 +777,227 @@ const currentComponent = computed(() => {
   }
   return ChapterEmpty
 })
+
+const isChapterContentView = computed(
+  () => currentComponent.value === ChapterContent && hasSelectedChapterContent.value,
+)
+const canViewVersions = computed(() => props.availableVersions.length > 0)
+const isAiMenuDisabled = computed(
+  () => isSelectedChapterGeneratingLike.value && !isChapterContentView.value,
+)
+
+const resolveMenuElement = (element: unknown) => {
+  if (element instanceof HTMLElement) {
+    return element
+  }
+  if (element && typeof element === 'object' && '$el' in element) {
+    const componentElement = (element as { $el?: unknown }).$el
+    if (componentElement instanceof HTMLElement) {
+      return componentElement
+    }
+  }
+  return null
+}
+
+const registerAiMenuItemRef = (element: unknown, index: number) => {
+  aiMenuItemRefs.value[index] = resolveMenuElement(element)
+}
+
+const registerMoreMenuItemRef = (element: unknown, index: number) => {
+  moreMenuItemRefs.value[index] = resolveMenuElement(element)
+}
+
+const getEnabledMenuItems = (items: Array<HTMLElement | null>) => {
+  return items.filter((item) => item && !item.hasAttribute('disabled')) as HTMLElement[]
+}
+
+const focusMenuItemAtIndex = (items: Array<HTMLElement | null>, targetIndex: number) => {
+  const enabledItems = getEnabledMenuItems(items)
+  if (enabledItems.length === 0) return
+  const safeIndex = ((targetIndex % enabledItems.length) + enabledItems.length) % enabledItems.length
+  enabledItems[safeIndex]?.focus()
+}
+
+const focusFirstMenuItem = (items: Array<HTMLElement | null>) => {
+  focusMenuItemAtIndex(items, 0)
+}
+
+const handleMenuKeydown = (
+  event: KeyboardEvent,
+  items: Array<HTMLElement | null>,
+  closeMenu: (restoreFocus?: boolean) => void,
+) => {
+  const enabledItems = getEnabledMenuItems(items)
+  if (enabledItems.length === 0) return
+
+  const activeElement = document.activeElement as HTMLElement | null
+  const currentIndex = enabledItems.findIndex((item) => item === activeElement)
+
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    closeMenu(true)
+    return
+  }
+
+  if (event.key === 'Tab') {
+    closeMenu()
+    return
+  }
+
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    focusMenuItemAtIndex(enabledItems, currentIndex + 1)
+    return
+  }
+
+  if (event.key === 'ArrowUp') {
+    event.preventDefault()
+    focusMenuItemAtIndex(enabledItems, currentIndex - 1)
+    return
+  }
+
+  if (event.key === 'Home') {
+    event.preventDefault()
+    focusMenuItemAtIndex(enabledItems, 0)
+    return
+  }
+
+  if (event.key === 'End') {
+    event.preventDefault()
+    focusMenuItemAtIndex(enabledItems, enabledItems.length - 1)
+  }
+}
+
+const handleAiMenuKeydown = (event: KeyboardEvent) => {
+  handleMenuKeydown(event, aiMenuItemRefs.value, closeAiMenu)
+}
+
+const handleMoreMenuKeydown = (event: KeyboardEvent) => {
+  handleMenuKeydown(event, moreMenuItemRefs.value, closeMoreMenu)
+}
+
+const closeAiMenu = (restoreFocus: boolean = false) => {
+  showAiMenu.value = false
+  if (restoreFocus) {
+    aiMenuTriggerRef.value?.focus()
+  }
+}
+
+const closeMoreMenu = (restoreFocus: boolean = false) => {
+  showMoreMenu.value = false
+  if (restoreFocus) {
+    moreMenuTriggerRef.value?.focus()
+  }
+}
+
+const toggleAiMenu = () => {
+  if (isAiMenuDisabled.value) return
+  closeMoreMenu()
+  showAiMenu.value = !showAiMenu.value
+  if (showAiMenu.value) {
+    nextTick(() => {
+      focusFirstMenuItem(aiMenuItemRefs.value)
+    })
+  }
+}
+
+const toggleMoreMenu = () => {
+  closeAiMenu()
+  showMoreMenu.value = !showMoreMenu.value
+  if (showMoreMenu.value) {
+    nextTick(() => {
+      focusFirstMenuItem(moreMenuItemRefs.value)
+    })
+  }
+}
+
+const openVersionDetail = () => {
+  if (!canViewVersions.value) {
+    globalAlert.showError('当前章节暂无可查看版本')
+    return
+  }
+
+  const maxIndex = props.availableVersions.length - 1
+  const safeIndex = Math.min(Math.max(props.selectedVersionIndex, 0), maxIndex)
+  emit('showVersionDetail', safeIndex)
+}
+
+const openContentOptimizer = () => {
+  bodyComponentRef.value?.openOptimizerPanel?.()
+}
+
+const openContentOptimizerWithPreset = (preset?: { dimension?: string; notes?: string }) => {
+  bodyComponentRef.value?.openOptimizerPanelWithPreset?.(preset)
+}
+
+const exportContentAsTxt = () => {
+  bodyComponentRef.value?.exportCurrentChapterAsTxt?.()
+}
+
+const handleCopyFromMore = async () => {
+  closeMoreMenu()
+  await copySelectedChapterContent()
+}
+
+const handleExportFromMore = () => {
+  closeMoreMenu()
+  exportContentAsTxt()
+}
+
+const handleViewVersionFromMore = () => {
+  closeMoreMenu()
+  openVersionDetail()
+}
+
+const handleLayeredOptimize = () => {
+  closeAiMenu()
+  if (!isChapterContentView.value) return
+  openContentOptimizer()
+}
+
+const handlePolishContent = () => {
+  closeAiMenu()
+  if (!isChapterContentView.value) return
+  openContentOptimizerWithPreset({
+    dimension: 'dialogue',
+    notes: '请优先润色正文表达，让叙述更顺滑、更有画面感。',
+  })
+}
+
+const handleAdjustRhythm = () => {
+  closeAiMenu()
+  if (!isChapterContentView.value) return
+  openContentOptimizerWithPreset({
+    dimension: 'rhythm',
+    notes: '请重点调整章节节奏，控制信息密度与推进速度。',
+  })
+}
+
+const handleRewriteStyle = () => {
+  closeAiMenu()
+  if (!isChapterContentView.value) return
+  openContentOptimizerWithPreset({
+    dimension: 'dialogue',
+    notes: '请在不改变剧情事实的前提下改写文风，统一语气并提升辨识度。',
+  })
+}
+
+const handleRegenerateFromMenu = async () => {
+  closeAiMenu()
+  if (isSelectedChapterGeneratingLike.value) return
+  await confirmRegenerateChapter()
+}
+
+const handleAiMenuOutsideClick = (event: MouseEvent) => {
+  const targetNode = event.target as Node | null
+  if (!targetNode) return
+  if (showAiMenu.value && !aiMenuRef.value?.contains(targetNode)) {
+    showAiMenu.value = false
+  }
+  if (showMoreMenu.value && !moreMenuRef.value?.contains(targetNode)) {
+    showMoreMenu.value = false
+  }
+}
 
 // Polling for chapter status updates
 const pollingTimer = ref<number | null>(null)
@@ -584,12 +1065,25 @@ watch(
   { immediate: true },
 )
 
+watch(
+  () => props.selectedChapterNumber,
+  () => {
+    closeAiMenu()
+    closeMoreMenu()
+  },
+)
+
+onMounted(() => {
+  document.addEventListener('click', handleAiMenuOutsideClick)
+})
+
 onUnmounted(() => {
+  document.removeEventListener('click', handleAiMenuOutsideClick)
   stopPolling()
 })
 
 const currentComponentProps = computed(() => {
-  if (!props.selectedChapterNumber) {
+  if (props.selectedChapterNumber === null) {
     return {}
   }
   const status = selectedChapter.value?.generation_status
@@ -601,6 +1095,9 @@ const currentComponentProps = computed(() => {
     const renderStatus = isBackendInProgress ? status : 'generating'
     return {
       chapterNumber: props.selectedChapterNumber,
+      chapterTitle: selectedChapterOutline.value?.title || '',
+      chapterSummary: selectedChapterOutline.value?.summary || '',
+      chapterContentPreview: cleanVersionContent(selectedChapter.value?.content || ''),
       status: renderStatus,
       generationProgress: isBackendInProgress
         ? (selectedChapter.value?.generation_progress ?? null)
@@ -621,10 +1118,7 @@ const currentComponentProps = computed(() => {
     }
   }
 
-  if (
-    (status === 'waiting_for_confirm' || status === 'evaluation_failed') &&
-    !hasSelectedChapterContent.value
-  ) {
+  if (status === 'waiting_for_confirm' || status === 'evaluation_failed') {
     return {
       selectedChapter: selectedChapter.value,
       chapterGenerationResult: props.chapterGenerationResult,
@@ -637,7 +1131,7 @@ const currentComponentProps = computed(() => {
   }
   if (hasSelectedChapterContent.value) {
     return {
-      selectedChapter: selectedChapter.value,
+      selectedChapter: selectedChapterForDisplay.value,
       projectId: props.project?.id,
     }
   }
@@ -645,6 +1139,9 @@ const currentComponentProps = computed(() => {
     return {
       chapterNumber: props.selectedChapterNumber,
       generatingChapter: props.generatingChapter,
+      generationStatus: selectedChapter.value?.generation_status ?? 'failed',
+      generationStep: selectedChapter.value?.generation_step ?? null,
+      chapterContentPreview: cleanVersionContent(selectedChapter.value?.content || ''),
     }
   }
   return {
@@ -668,32 +1165,105 @@ const currentComponentProps = computed(() => {
   height: 100%;
   min-height: 0;
   border-radius: var(--md-radius-xl);
-  background-color: var(--md-surface);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--md-surface) 96%, transparent),
+      color-mix(in srgb, var(--md-surface-container-low) 82%, transparent)
+    );
+  border-color: color-mix(in srgb, var(--md-outline-variant) 82%, transparent);
 }
 
 .writing-workspace__header {
   flex-shrink: 0;
-  padding: var(--md-spacing-5) var(--md-spacing-5) var(--md-spacing-4);
+  padding: var(--md-spacing-4) var(--md-spacing-5);
   border-bottom: 1px solid var(--md-outline-variant);
-  background-color: color-mix(in srgb, var(--md-surface) 88%, var(--md-surface-container-low));
+  background-color: color-mix(in srgb, var(--md-surface) 92%, var(--md-surface-container-low));
 }
 
 .writing-workspace__header-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: var(--md-spacing-5);
+  gap: var(--md-spacing-4);
 }
 
 .writing-workspace__chapter-meta {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
+.writing-workspace__chapter-title-line {
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-2);
+  margin-bottom: var(--md-spacing-1);
+  flex-wrap: wrap;
+}
+
+.writing-workspace__chapter-no {
+  flex-shrink: 0;
+  font-size: clamp(1.2rem, 1.8vw, 1.45rem);
+}
+
+.writing-workspace__status-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  font-size: var(--md-label-small);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.writing-workspace__status-tag--success {
+  color: color-mix(in srgb, var(--md-success) 78%, var(--md-on-surface));
+  background-color: color-mix(in srgb, var(--md-success-container) 78%, var(--md-surface));
+  border-color: color-mix(in srgb, var(--md-success) 26%, var(--md-outline-variant));
+}
+
+.writing-workspace__status-tag--error {
+  color: color-mix(in srgb, var(--md-error) 80%, var(--md-on-surface));
+  background-color: color-mix(in srgb, var(--md-error-container) 74%, var(--md-surface));
+  border-color: color-mix(in srgb, var(--md-error) 24%, var(--md-outline-variant));
+}
+
+.writing-workspace__status-tag--progress {
+  color: color-mix(in srgb, var(--md-primary-dark) 80%, var(--md-on-surface));
+  background-color: color-mix(in srgb, var(--md-primary-container) 78%, var(--md-surface));
+  border-color: color-mix(in srgb, var(--md-primary) 24%, var(--md-outline-variant));
+}
+
+.writing-workspace__status-tag--pending {
+  color: color-mix(in srgb, var(--md-secondary) 72%, var(--md-on-surface));
+  background-color: color-mix(in srgb, var(--md-secondary-container) 74%, var(--md-surface));
+  border-color: color-mix(in srgb, var(--md-secondary) 20%, var(--md-outline-variant));
+}
+
+.writing-workspace__status-tag--idle {
+  color: var(--md-on-surface-variant);
+  background-color: color-mix(in srgb, var(--md-surface-container-low) 90%, var(--md-surface));
+  border-color: color-mix(in srgb, var(--md-outline-variant) 82%, transparent);
+}
+
+.writing-workspace__chapter-inline-meta {
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
 .writing-workspace__title-copy {
+  min-width: 0;
+  flex: 1;
   padding: 0;
   border: 0;
   background: transparent;
   text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   cursor: pointer;
   appearance: none;
   transition: color var(--md-duration-short) var(--md-easing-standard);
@@ -710,51 +1280,286 @@ const currentComponentProps = computed(() => {
 }
 
 .writing-workspace__summary {
-  max-width: 86ch;
+  max-width: 88ch;
   line-height: 1.6;
+  color: color-mix(in srgb, var(--md-on-surface-variant) 86%, transparent);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.writing-workspace__actions {
-  display: flex;
+.writing-workspace__toolbar {
+  margin-left: auto;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 8px;
+  padding-top: 4px;
+  white-space: nowrap;
+}
+
+.writing-workspace__toolbar-row {
+  display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--md-spacing-2);
-  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+}
+
+.writing-workspace__toolbar-row--utility {
+  opacity: 0.96;
+}
+
+.writing-workspace__toolbar-row--primary {
+  justify-content: flex-end;
+}
+
+.writing-workspace__toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.writing-workspace__toolbar-group--utility {
+  gap: 6px;
+}
+
+.writing-workspace__toolbar-group--emphasis {
+  gap: 8px;
+}
+
+.writing-workspace__toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background-color: color-mix(in srgb, var(--md-outline-variant) 72%, transparent);
+}
+
+.writing-workspace__tool-btn {
+  min-height: 36px;
+  height: 36px;
+  padding-inline: 10px;
+  border-radius: 8px;
+  font-size: var(--md-label-medium);
+  letter-spacing: 0.015em;
+  box-shadow: none;
+}
+
+.writing-workspace__tool-btn--hero {
+  height: 40px;
+  min-height: 40px;
+  padding-inline: 16px;
+  font-size: var(--md-title-small);
+  font-weight: 600;
+  border-width: 1px;
+}
+
+@media (pointer: coarse) {
+  .writing-workspace__tool-btn,
+  .writing-workspace__tool-btn--hero {
+    min-height: 44px;
+    height: 44px;
+  }
+}
+
+.writing-workspace__label-short {
+  display: none;
+}
+
+.writing-workspace__tool-btn--ghost {
+  border-color: color-mix(in srgb, var(--md-outline-variant) 56%, transparent);
+  color: var(--md-on-surface-variant);
+  background-color: transparent;
+}
+
+.writing-workspace__tool-btn--ghost:hover:not(:disabled) {
+  color: var(--md-on-surface);
+  background-color: color-mix(in srgb, var(--md-surface-container-low) 62%, var(--md-surface));
+  border-color: color-mix(in srgb, var(--md-outline) 84%, transparent);
+}
+
+.writing-workspace__tool-btn--secondary {
+  border-color: color-mix(in srgb, var(--md-primary) 18%, var(--md-outline-variant));
+  background-color: color-mix(in srgb, var(--md-surface-container-low) 72%, var(--md-surface));
+  color: var(--md-on-surface);
+}
+
+.writing-workspace__tool-btn--secondary.writing-workspace__tool-btn--hero {
+  border-color: color-mix(in srgb, var(--md-primary) 24%, var(--md-outline-variant));
+  box-shadow: 0 4px 10px rgba(38, 60, 89, 0.08);
+}
+
+.writing-workspace__tool-btn--primary {
+  border-color: color-mix(in srgb, var(--md-primary) 26%, var(--md-outline-variant));
+  background-color: color-mix(in srgb, var(--md-primary-container) 90%, var(--md-surface));
+  color: var(--md-on-primary-container);
+}
+
+.writing-workspace__tool-btn--primary:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--md-primary-container) 95%, var(--md-surface));
+  box-shadow: 0 4px 10px rgba(38, 60, 89, 0.12);
+}
+
+.writing-workspace__tool-btn--primary.writing-workspace__tool-btn--hero {
+  border-color: color-mix(in srgb, var(--md-primary) 32%, var(--md-outline-variant));
+  box-shadow: 0 5px 14px rgba(38, 60, 89, 0.14);
+}
+
+.writing-workspace__more-menu {
+  position: relative;
+  display: none;
+}
+
+.writing-workspace__more-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 8;
+  min-width: 148px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--md-outline-variant) 86%, transparent);
+  background: color-mix(in srgb, var(--md-surface) 94%, var(--md-surface-container-low));
+  box-shadow: 0 10px 20px rgba(24, 38, 58, 0.14);
+}
+
+.writing-workspace__more-menu-item {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  text-align: left;
+  font-size: var(--md-label-medium);
+  color: var(--md-on-surface);
+  cursor: pointer;
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard);
+}
+
+.writing-workspace__more-menu-item:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--md-primary-dark) 10%, transparent);
+}
+
+.writing-workspace__more-menu-item:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
+.writing-workspace__ai-menu {
+  position: relative;
+}
+
+.writing-workspace__ai-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 8;
+  min-width: 176px;
+  padding: 6px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--md-outline-variant) 86%, transparent);
+  background: color-mix(in srgb, var(--md-surface) 94%, var(--md-surface-container-low));
+  box-shadow: 0 10px 20px rgba(24, 38, 58, 0.14);
+}
+
+.writing-workspace__ai-menu-item {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  text-align: left;
+  font-size: var(--md-label-medium);
+  color: var(--md-on-surface);
+  cursor: pointer;
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard);
+}
+
+.writing-workspace__ai-menu-item:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--md-primary-dark) 10%, transparent);
+}
+
+.writing-workspace__ai-menu-item:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
+.writing-workspace__ai-menu-item--danger {
+  color: color-mix(in srgb, var(--md-error) 82%, var(--md-on-surface));
+}
+
+.writing-workspace__ai-menu-item--danger:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--md-error) 12%, transparent);
 }
 
 .writing-workspace__content {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--md-spacing-5);
+  padding: var(--md-spacing-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-4);
+  background-image: linear-gradient(
+    180deg,
+    transparent 0,
+    transparent calc(1.6em - 1px),
+    color-mix(in srgb, var(--md-outline-variant) 14%, transparent) calc(1.6em - 1px),
+    color-mix(in srgb, var(--md-outline-variant) 14%, transparent) 1.6em
+  );
+  background-size: 100% 1.6em;
 }
 
-.m3-chip-success {
-  background-color: var(--md-success-container);
-  color: var(--md-on-success-container);
-}
-
-.m3-chip-neutral {
-  background-color: var(--md-surface-container);
-  color: var(--md-on-surface-variant);
+.writing-workspace__body {
+  min-height: 0;
 }
 
 .m3-editor-dialog {
   max-width: min(1200px, calc(100vw - 32px));
-  max-height: calc(100vh - 32px);
+  max-height: calc(var(--app-viewport-unit) - 32px);
   border-radius: var(--md-radius-xl);
 }
 
-@media (max-width: 900px) {
-  .writing-workspace__header-row {
-    flex-direction: column;
-    gap: var(--md-spacing-4);
+@media (max-width: 1160px) {
+  .writing-workspace__toolbar-group--utility,
+  .writing-workspace__toolbar-divider {
+    display: none;
   }
 
-  .writing-workspace__actions {
+  .writing-workspace__more-menu {
+    display: block;
+  }
+}
+
+@media (max-width: 940px) {
+  .writing-workspace__header-row {
+    flex-direction: column;
+    gap: var(--md-spacing-3);
+  }
+
+  .writing-workspace__toolbar {
     width: 100%;
-    justify-content: flex-start;
+    align-items: stretch;
+    margin-left: 0;
+  }
+
+  .writing-workspace__toolbar-row {
+    justify-content: flex-end;
+  }
+
+  .writing-workspace__summary {
+    max-width: 100%;
   }
 }
 
@@ -763,13 +1568,41 @@ const currentComponentProps = computed(() => {
     padding: var(--md-spacing-4);
   }
 
-  .writing-workspace__content {
-    padding: var(--md-spacing-4);
+  .writing-workspace__chapter-title-line {
+    gap: 6px;
   }
 
-  .writing-workspace__actions .md-btn {
-    flex: 1 1 auto;
-    min-width: min(100%, 132px);
+  .writing-workspace__chapter-inline-meta {
+    width: 100%;
+  }
+
+  .writing-workspace__tool-btn {
+    min-width: 70px;
+    padding-inline: 8px;
+  }
+
+  .writing-workspace__tool-btn--hero {
+    height: 44px;
+    min-height: 44px;
+    padding-inline: 12px;
+  }
+
+  .writing-workspace__label-full {
+    display: none;
+  }
+
+  .writing-workspace__label-short {
+    display: inline;
+  }
+
+  .writing-workspace__ai-menu-panel,
+  .writing-workspace__more-menu-panel {
+    right: 0;
+    left: auto;
+  }
+
+  .writing-workspace__content {
+    padding: var(--md-spacing-4);
   }
 }
 </style>

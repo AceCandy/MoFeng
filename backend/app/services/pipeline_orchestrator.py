@@ -1052,10 +1052,13 @@ class PipelineOrchestrator:
                         return nested
             return None
         if isinstance(value, list):
+            parts: List[str] = []
             for item in value:
                 nested = PipelineOrchestrator._extract_text(item)
-                if nested:
-                    return nested
+                if nested and nested.strip():
+                    parts.append(nested.strip())
+            if parts:
+                return "\n\n".join(parts)
         return None
 
     async def _run_ai_review(

@@ -15,7 +15,7 @@
           v-if="showTooltip && text"
           ref="tooltipRef"
           :style="tooltipStyle"
-          class="fixed z-50 p-3 text-sm leading-tight text-white bg-gray-800 rounded-lg shadow-lg max-w-xs"
+          class="fixed z-50 p-3 text-sm leading-tight text-[var(--md-on-primary)] bg-[var(--md-on-surface)] rounded-lg shadow-lg max-w-xs"
           @mouseenter="onTooltipEnter"
           @mouseleave="onTooltipLeave"
         >

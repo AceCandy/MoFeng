@@ -1,11 +1,5 @@
 // AIMETA P=路由配置_所有页面路由定义|R=路由表_导航守卫_权限控制|NR=不含组件实现|E=router:index|X=internal|A=router实例|D=vue-router|S=none|RD=./README.ai
 import { createRouter, createWebHistory } from 'vue-router'
-import NovelWorkspace from '../views/NovelWorkspace.vue'
-import InspirationMode from '../views/InspirationMode.vue'
-import WritingDesk from '../views/WritingDesk.vue'
-import NovelDetail from '../views/NovelDetail.vue'
-import Login from '../views/Login.vue'
-import Register from '../views/Register.vue'
 import { useAuthStore } from '@/stores/auth'
 import { queryClient } from '@/lib/queryClient'
 import { currentUserQueryOptions } from '@/queries/auth'
@@ -22,7 +16,7 @@ const router = createRouter({
     {
       path: '/workspace',
       name: 'novel-workspace',
-      component: NovelWorkspace,
+      component: () => import('../views/NovelWorkspace.vue'),
       meta: {
         requiresAuth: true,
         layout: 'app',
@@ -33,7 +27,7 @@ const router = createRouter({
     {
       path: '/inspiration',
       name: 'inspiration-mode',
-      component: InspirationMode,
+      component: () => import('../views/InspirationMode.vue'),
       meta: {
         requiresAuth: true,
         layout: 'app',
@@ -44,7 +38,7 @@ const router = createRouter({
     {
       path: '/projects/:id',
       name: 'project-detail',
-      component: NovelDetail,
+      component: () => import('../views/NovelDetail.vue'),
       props: true,
       meta: {
         requiresAuth: true,
@@ -56,7 +50,7 @@ const router = createRouter({
     {
       path: '/projects/:id/write',
       name: 'project-write',
-      component: WritingDesk,
+      component: () => import('../views/WritingDesk.vue'),
       props: true,
       meta: {
         requiresAuth: true,
@@ -76,13 +70,13 @@ const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      component: Login,
+      component: () => import('../views/Login.vue'),
       meta: { layout: 'auth' },
     },
     {
       path: '/register',
       name: 'register',
-      component: Register,
+      component: () => import('../views/Register.vue'),
       meta: { layout: 'auth' },
     },
     {

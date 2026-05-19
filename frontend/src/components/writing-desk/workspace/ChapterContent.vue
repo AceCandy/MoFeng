@@ -1,40 +1,6 @@
 <!-- AIMETA P=章节内容_章节文本展示编辑|R=内容展示_编辑|NR=不含版本管理|E=component:ChapterContent|X=internal|A=内容组件|D=vue|S=dom|RD=./README.ai -->
 <template>
   <div class="space-y-6">
-    <div class="chapter-complete-banner">
-      <div class="flex items-center justify-between gap-3">
-        <div class="flex items-center gap-2 min-w-0" style="color: var(--md-on-success-container)">
-          <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fill-rule="evenodd"
-              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-              clip-rule="evenodd"
-            ></path>
-          </svg>
-          <div class="flex items-center gap-2 flex-wrap min-w-0">
-            <span class="font-medium">这个章节已经完成</span>
-          </div>
-        </div>
-
-        <button
-          v-if="selectedChapter.versions && selectedChapter.versions.length > 0"
-          type="button"
-          @click="$emit('showVersionSelector', true)"
-          class="md-btn md-btn-text md-ripple flex items-center gap-1"
-        >
-          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
-            <path
-              fill-rule="evenodd"
-              d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-              clip-rule="evenodd"
-            ></path>
-          </svg>
-          查看所有版本
-        </button>
-      </div>
-    </div>
-
     <article class="chapter-paper">
       <div class="chapter-paper__header">
         <Tooltip :text="contentTooltipText" :show-delay="150">
@@ -49,41 +15,6 @@
             章节内容
           </button>
         </Tooltip>
-        <div class="flex items-center gap-3 flex-wrap justify-end">
-          <!-- 分层优化按钮 -->
-          <button
-            type="button"
-            class="md-btn md-btn-tonal md-ripple flex items-center gap-1"
-            @click="openOptimizerPanel"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
-              />
-            </svg>
-            分层优化
-          </button>
-          <button
-            type="button"
-            class="md-btn md-btn-outlined md-ripple flex items-center gap-1"
-            :class="selectedChapter.content ? '' : 'opacity-50 cursor-not-allowed'"
-            :disabled="!selectedChapter.content"
-            @click="exportChapterAsTxt(selectedChapter)"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 4v16h16V4m-4 4l-4-4-4 4m4-4v12"
-              />
-            </svg>
-            导出TXT
-          </button>
-        </div>
       </div>
       <div class="prose max-w-none">
         <div class="chapter-prose">
@@ -97,22 +28,31 @@
     <!-- 分层优化弹窗 -->
     <Teleport to="body">
       <div v-if="showOptimizer" class="md-dialog-overlay" @click.self="closeOptimizerModal">
-        <div class="md-dialog m3-optimizer-dialog">
+        <div
+          ref="optimizerDialogRef"
+          class="md-dialog m3-optimizer-dialog"
+          role="dialog"
+          aria-modal="true"
+          :aria-labelledby="optimizerDialogTitleId"
+        >
           <div class="p-6">
             <!-- 优化面板头部 -->
             <div class="flex items-center justify-between mb-6">
               <div>
-                <h3 class="md-headline-small font-semibold">分层优化</h3>
+                <h3 :id="optimizerDialogTitleId" class="md-headline-small font-semibold">分层优化</h3>
                 <p class="md-body-small md-on-surface-variant mt-1">
                   选择一个维度生成可预览的优化稿。
                 </p>
               </div>
               <button
+                ref="optimizerCloseButtonRef"
+                data-dialog-initial-focus
                 type="button"
                 @click="closeOptimizerModal"
                 :disabled="isOptimizing"
                 class="md-icon-btn md-ripple"
                 :class="{ 'opacity-40 cursor-not-allowed': isOptimizing }"
+                aria-label="关闭分层优化弹窗"
               >
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                   <path
@@ -148,8 +88,9 @@
 
             <!-- 额外说明 -->
             <div class="mb-6">
-              <label class="md-text-field-label mb-2"> 额外优化指令（可选） </label>
+              <label :for="optimizerNotesInputId" class="md-text-field-label mb-2"> 额外优化指令（可选） </label>
               <textarea
+                :id="optimizerNotesInputId"
                 v-model="additionalNotes"
                 rows="3"
                 class="md-textarea w-full resize-none"
@@ -217,14 +158,29 @@
     <!-- 优化结果预览弹窗 -->
     <Teleport to="body">
       <div v-if="showOptimizeResult" class="md-dialog-overlay" @click.self="closeOptimizeResult">
-        <div class="md-dialog m3-result-dialog flex flex-col">
+        <div
+          ref="optimizeResultDialogRef"
+          class="md-dialog m3-result-dialog flex flex-col"
+          role="dialog"
+          aria-modal="true"
+          :aria-labelledby="optimizeResultDialogTitleId"
+        >
           <div class="p-6 border-b" style="border-bottom-color: var(--md-outline-variant)">
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="md-headline-small font-semibold">优化结果预览</h3>
+                <h3 :id="optimizeResultDialogTitleId" class="md-headline-small font-semibold">
+                  优化结果预览
+                </h3>
                 <p class="md-body-small md-on-surface-variant mt-1">{{ optimizeResultNotes }}</p>
               </div>
-              <button type="button" @click="closeOptimizeResult" class="md-icon-btn md-ripple">
+              <button
+                ref="optimizeResultCloseButtonRef"
+                data-dialog-initial-focus
+                type="button"
+                @click="closeOptimizeResult"
+                class="md-icon-btn md-ripple"
+                aria-label="关闭优化结果弹窗"
+              >
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                   <path
                     fill-rule="evenodd"
@@ -298,6 +254,7 @@
 import { computed, onUnmounted, ref } from 'vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { globalAlert } from '@/composables/useAlert'
+import { useDialogA11y } from '@/composables/useDialogA11y'
 import type { Chapter } from '@/api/novel'
 import {
   useApplyOptimizationMutation,
@@ -316,11 +273,16 @@ const { refreshChapter, refreshProjectQueries } = useNovelMutationRefresh(() => 
 const optimizeChapterMutation = useOptimizeChapterMutation()
 const applyOptimizationMutation = useApplyOptimizationMutation(() => props.projectId)
 
-defineEmits(['showVersionSelector'])
-
 // 优化相关状态
 const showOptimizer = ref(false)
 const showOptimizeResult = ref(false)
+const optimizerDialogRef = ref<HTMLElement | null>(null)
+const optimizerCloseButtonRef = ref<HTMLElement | null>(null)
+const optimizeResultDialogRef = ref<HTMLElement | null>(null)
+const optimizeResultCloseButtonRef = ref<HTMLElement | null>(null)
+const optimizerDialogTitleId = 'chapter-content-optimizer-dialog-title'
+const optimizeResultDialogTitleId = 'chapter-content-optimize-result-dialog-title'
+const optimizerNotesInputId = 'chapter-content-optimizer-notes-input'
 const selectedDimension = ref<string>('')
 const additionalNotes = ref('')
 const isOptimizing = computed(() => optimizeChapterMutation.isPending.value)
@@ -498,6 +460,20 @@ const openOptimizerPanel = () => {
   showOptimizer.value = true
 }
 
+const openOptimizerPanelWithPreset = (preset?: { dimension?: string; notes?: string }) => {
+  if (preset?.dimension) {
+    const exists = optimizeDimensions.some((item) => item.key === preset.dimension)
+    if (exists) {
+      selectedDimension.value = preset.dimension
+    }
+  }
+  if (typeof preset?.notes === 'string') {
+    additionalNotes.value = preset.notes
+  }
+  showOptimizeResult.value = false
+  showOptimizer.value = true
+}
+
 const closeOptimizeResult = () => {
   if (isApplying.value) return
   showOptimizeResult.value = false
@@ -528,6 +504,10 @@ const exportChapterAsTxt = (chapter?: Chapter | null) => {
   link.click()
   document.body.removeChild(link)
   URL.revokeObjectURL(url)
+}
+
+const exportCurrentChapterAsTxt = () => {
+  exportChapterAsTxt(props.selectedChapter)
 }
 
 const copyTextLegacy = (text: string): boolean => {
@@ -708,6 +688,20 @@ const closeOptimizerModal = () => {
   showOptimizer.value = false
 }
 
+useDialogA11y({
+  active: showOptimizer,
+  dialogRef: optimizerDialogRef,
+  onClose: closeOptimizerModal,
+  initialFocusRef: optimizerCloseButtonRef,
+})
+
+useDialogA11y({
+  active: showOptimizeResult,
+  dialogRef: optimizeResultDialogRef,
+  onClose: closeOptimizeResult,
+  initialFocusRef: optimizeResultCloseButtonRef,
+})
+
 const applyOptimization = async () => {
   if (!optimizedContent.value || !props.projectId) return
 
@@ -746,16 +740,15 @@ const applyOptimization = async () => {
 onUnmounted(() => {
   stopOptimizeHintRotation()
 })
+
+defineExpose({
+  openOptimizerPanel,
+  openOptimizerPanelWithPreset,
+  exportCurrentChapterAsTxt,
+})
 </script>
 
 <style scoped>
-.chapter-complete-banner {
-  padding: var(--md-spacing-3) var(--md-spacing-4);
-  border: 1px solid color-mix(in srgb, var(--md-success) 24%, var(--md-outline-variant));
-  border-radius: var(--md-radius-lg);
-  background-color: var(--md-success-container);
-}
-
 .chapter-paper {
   padding: var(--md-spacing-5);
   border: 1px solid var(--md-outline-variant);
@@ -794,14 +787,14 @@ onUnmounted(() => {
 
 .m3-optimizer-dialog {
   max-width: min(720px, calc(100vw - 32px));
-  max-height: calc(100vh - 32px);
+  max-height: calc(var(--app-viewport-unit) - 32px);
   border-radius: var(--md-radius-xl);
   animation: optimizer-pop-in 0.24s ease-out both;
 }
 
 .m3-result-dialog {
   max-width: min(900px, calc(100vw - 32px));
-  max-height: calc(100vh - 32px);
+  max-height: calc(var(--app-viewport-unit) - 32px);
   border-radius: var(--md-radius-xl);
 }
 
@@ -943,15 +936,6 @@ onUnmounted(() => {
 @media (max-width: 640px) {
   .chapter-paper {
     padding: var(--md-spacing-4);
-  }
-
-  .chapter-paper__header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .chapter-paper__header .md-btn {
-    min-width: 0;
   }
 
   .chapter-prose {

@@ -79,7 +79,12 @@
     </div>
 
     <!-- Create/Edit User Modal -->
-    <n-modal v-model:show="showModal" preset="card" :title="modalTitle" style="width: 500px">
+    <n-modal
+      v-model:show="showModal"
+      preset="card"
+      :title="modalTitle"
+      :style="{ width: 'min(500px, 92vw)' }"
+    >
       <n-form
         ref="formRef"
         :model="formModel"

@@ -1,46 +1,26 @@
 <!-- AIMETA P=蓝图展示_蓝图详细信息|R=蓝图详情展示|NR=不含编辑功能|E=component:BlueprintDisplay|X=internal|A=展示组件|D=vue|S=dom|RD=./README.ai -->
 <template>
-  <div class="p-8 bg-white rounded-2xl shadow-2xl fade-in">
-    <h2 class="text-3xl font-bold text-center text-gray-800 mb-6">你的故事蓝图已生成！</h2>
+  <div class="blueprint-display fade-in">
+    <h2 class="blueprint-display__heading">你的故事蓝图已生成！</h2>
 
     <!-- AI消息 -->
-    <div v-if="aiMessage" class="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-      <p class="text-blue-800">{{ aiMessage }}</p>
+    <div v-if="aiMessage" class="blueprint-display__ai-msg">
+      <p>{{ aiMessage }}</p>
     </div>
 
-    <div class="prose max-w-none p-6 bg-gray-50 rounded-lg border border-gray-200" v-html="formattedBlueprint"></div>
+    <div class="blueprint-display__content" v-html="formattedBlueprint"></div>
 
-    <!-- 加载状态 -->
-    <div v-if="isSaving" class="text-center py-8">
-      <!-- 保存动画 -->
-      <div class="relative mx-auto mb-6 w-16 h-16">
-        <!-- 旋转圆环 -->
-        <div class="absolute inset-0 border-4 border-green-100 rounded-full"></div>
-        <div class="absolute inset-0 border-4 border-transparent border-t-green-500 rounded-full animate-spin"></div>
-        <!-- 中心保存图标 -->
-        <div class="absolute inset-2 bg-green-500 rounded-full flex items-center justify-center">
-          <svg class="w-6 h-6 text-white animate-pulse" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6a1 1 0 10-2 0v5.586l-1.293-1.293z"></path>
-            <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v1a1 1 0 11-2 0V4H7v1a1 1 0 11-2 0V4z"></path>
-          </svg>
-        </div>
-      </div>
-
-      <h3 class="text-lg font-semibold text-gray-800 mb-2 animate-pulse">正在保存蓝图...</h3>
-      <p class="text-gray-600">即将跳转到写作工作台，开始您的创作之旅</p>
-
-      <!-- 保存进度指示 -->
-      <div class="mt-4 w-32 mx-auto">
-        <div class="w-full bg-gray-200 rounded-full h-1">
-          <div class="h-1 bg-gradient-to-r from-green-400 to-green-600 rounded-full animate-pulse" style="width: 100%"></div>
-        </div>
-      </div>
+    <!-- 保存状态 -->
+    <div v-if="isSaving" class="blueprint-display__saving">
+      <div class="blueprint-display__saving-spinner"></div>
+      <h3 class="blueprint-display__saving-title">正在保存蓝图...</h3>
+      <p class="blueprint-display__saving-desc">即将跳转到写作工作台，开始您的创作之旅</p>
     </div>
 
-    <div v-else class="text-center mt-8 space-x-4">
+    <div v-else class="blueprint-display__actions">
       <button
         @click="confirmRegenerate"
-        class="bg-gray-200 text-gray-700 font-bold py-3 px-8 rounded-full hover:bg-gray-300 transition-all duration-300 transform hover:scale-105"
+        class="md-btn md-btn-outlined md-ripple"
       >
         <span class="flex items-center justify-center">
           <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -52,7 +32,7 @@
       <button
         @click="confirmBlueprint"
         :disabled="isSaving"
-        class="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3 px-8 rounded-full hover:from-green-600 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+        class="md-btn md-btn-filled md-ripple"
       >
         <span class="flex items-center justify-center">
           <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -67,6 +47,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import DOMPurify from 'dompurify'
 import { globalAlert } from '@/composables/useAlert'
 import type { Blueprint } from '@/api/novel'
 
@@ -92,6 +73,12 @@ const emit = defineEmits<{
 
 const isSaving = ref(false)
 
+const sanitizeBlueprintHtml = (html: string) => {
+  return DOMPurify.sanitize(html, {
+    USE_PROFILES: { html: true, svg: true, svgFilters: true },
+  })
+}
+
 const confirmRegenerate = async () => {
   const confirmed = await globalAlert.showConfirm('重新生成会覆盖当前蓝图，确定继续吗？', '重新生成确认')
   if (confirmed) {
@@ -110,24 +97,22 @@ const confirmBlueprint = async () => {
 
 const formattedBlueprint = computed(() => {
   if (!props.blueprint) {
-    return '<p class="text-center text-red-500">抱歉，生成大纲失败，未能获取到最终数据。</p>'
+    return sanitizeBlueprintHtml('<p class="bp__error">抱歉，生成大纲失败，未能获取到最终数据。</p>')
   }
 
   const blueprint = props.blueprint
 
-  // Helper function to safely access nested properties
   const safe = (value: any, fallback = '待补充') => value || fallback
 
-  // Create section with icon and styling
   const createSection = (title: string, content: string, icon: string) => `
-    <div class="mb-8 bg-white rounded-xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow duration-300">
-      <div class="flex items-center mb-4">
-        <div class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center mr-3">
+    <div class="bp__section">
+      <div class="bp__section-header">
+        <div class="bp__section-icon">
           ${icon}
         </div>
-        <h3 class="text-xl font-bold text-gray-800">${title}</h3>
+        <h3 class="bp__section-title">${title}</h3>
       </div>
-      <div class="prose max-w-none text-gray-700">
+      <div class="bp__section-body">
         ${content}
       </div>
     </div>
@@ -135,61 +120,58 @@ const formattedBlueprint = computed(() => {
 
   // Icons
   const icons = {
-    summary: '<svg class="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
-    story: '<svg class="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>',
-    world: '<svg class="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" clip-rule="evenodd"></path></svg>',
-    characters: '<svg class="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path></svg>',
-    relationships: '<svg class="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>',
-    chapters: '<svg class="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"></path></svg>'
+    summary: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
+    story: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>',
+    world: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" clip-rule="evenodd"></path></svg>',
+    characters: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path></svg>',
+    relationships: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>',
+    chapters: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"></path></svg>'
   }
 
   // Format characters with enhanced styling - 动态兼容所有字段
   const formatCharacters = (characters: any[]) => {
-    if (!characters || characters.length === 0) return '<p class="text-gray-500 italic">暂无角色信息</p>'
+    if (!characters || characters.length === 0) return '<p class="bp__empty">暂无角色信息</p>'
 
     return characters.map(char => {
       if (typeof char === 'object' && char.name) {
         const name = char.name
 
-        // 定义字段映射和图标，支持多种可能的key名称
         const fieldMappings = {
           identity: {
             keys: ['identity_background', 'identity', 'background', '身份背景', '身份'],
-            label: '🎭 身份背景',
+            label: '身份背景',
             priority: 1
           },
           personality: {
             keys: ['personality_traits', 'personality', 'traits', 'character', '性格特质', '性格'],
-            label: '🎨 性格特质',
+            label: '性格特质',
             priority: 2
           },
           goal: {
             keys: ['core_goal', 'goal', 'objectives', 'aims', '核心目标', '目标'],
-            label: '🎯 核心目标',
+            label: '核心目标',
             priority: 3
           },
           abilities: {
             keys: ['abilities_skills', 'abilities', 'skills', 'powers', '能力技能', '能力', '技能'],
-            label: '⚡ 能力技能',
+            label: '能力技能',
             priority: 4
           },
           relationship: {
             keys: ['relationship_with_protagonist', 'relationship_to_protagonist', 'relationship', 'relation', '与主角关系', '关系'],
-            label: '🤝 与主角关系',
+            label: '与主角关系',
             priority: 5
           },
           role: {
             keys: ['role', 'character_role', 'story_role', '角色定位', '角色'],
-            label: '👤 角色定位',
+            label: '角色定位',
             priority: 0
           }
         }
 
-        // 提取所有字段
         const extractedFields: ExtractedFields = {}
-        const usedKeys = new Set(['name']) // 已使用的key
+        const usedKeys = new Set(['name'])
 
-        // 按优先级提取已知字段
         Object.entries(fieldMappings).forEach(([fieldType, mapping]) => {
           for (const key of mapping.keys) {
             if (char[key] && !usedKeys.has(key)) {
@@ -204,10 +186,8 @@ const formattedBlueprint = computed(() => {
           }
         })
 
-        // 提取剩余的未知字段
         Object.entries(char).forEach(([key, value]) => {
           if (!usedKeys.has(key) && value && typeof value === 'string' && value.trim()) {
-            // 为未知字段生成友好的标签
             const friendlyLabel = key
               .replace(/_/g, ' ')
               .replace(/([A-Z])/g, ' $1')
@@ -215,28 +195,22 @@ const formattedBlueprint = computed(() => {
 
             extractedFields[`unknown_${key}`] = {
               value: value,
-              label: `📝 ${friendlyLabel}`,
+              label: friendlyLabel,
               priority: 99
             }
             usedKeys.add(key)
           }
         })
 
-        // 按优先级排序字段
         const sortedFields = Object.entries(extractedFields).sort(([,a], [,b]) => a.priority - b.priority)
 
-        // 生成HTML
         let fieldsHTML = ''
         sortedFields.forEach(([fieldType, field]) => {
-          if (fieldType === 'role') {
-            // role字段显示为标签，不在详细信息中
-            return
-          }
-
+          if (fieldType === 'role') return
           fieldsHTML += `
-            <div class="bg-white/70 rounded-lg p-3">
-              <span class="font-medium text-gray-700 block mb-1">${field.label}：</span>
-              <span class="text-gray-800">${field.value}</span>
+            <div class="bp__char-field">
+              <span class="bp__char-field-label">${field.label}：</span>
+              <span>${field.value}</span>
             </div>
           `
         })
@@ -244,21 +218,17 @@ const formattedBlueprint = computed(() => {
         const roleField = extractedFields.role
 
         return `
-          <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-indigo-400 rounded-lg p-5 mb-4">
-            <div class="flex items-center justify-between mb-3">
-              <h4 class="text-lg font-bold text-indigo-800 flex items-center">
-                <span class="w-2 h-2 bg-indigo-500 rounded-full mr-2"></span>
-                ${name}
-              </h4>
-              ${roleField ? `<span class="bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full text-xs font-medium">${roleField.value}</span>` : ''}
+          <div class="bp__char-card">
+            <div class="bp__char-card-header">
+              <h4 class="bp__char-name">${name}</h4>
+              ${roleField ? `<span class="bp__char-role">${roleField.value}</span>` : ''}
             </div>
-            <div class="space-y-3 text-sm">
+            <div class="bp__char-fields">
               ${fieldsHTML}
             </div>
           </div>
         `
       }
-      // 处理简单的角色结构 (向后兼容)
       else if (typeof char === 'object' && char.description) {
         const desc = char.description
         const identity = desc.identity || ''
@@ -266,25 +236,21 @@ const formattedBlueprint = computed(() => {
         const relationship = desc.relationship_to_protagonist || ''
 
         return `
-          <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-indigo-400 rounded-lg p-5 mb-4">
-            <h4 class="text-lg font-bold text-indigo-800 mb-3 flex items-center">
-              <span class="w-2 h-2 bg-indigo-500 rounded-full mr-2"></span>
-              ${char.name}
-            </h4>
-            <div class="space-y-2 text-sm">
-              ${identity ? `<div class="flex items-start"><span class="font-medium text-gray-600 min-w-16">身份：</span><span class="text-gray-800">${identity}</span></div>` : ''}
-              ${personality ? `<div class="flex items-start"><span class="font-medium text-gray-600 min-w-16">性格：</span><span class="text-gray-800">${personality}</span></div>` : ''}
-              ${relationship ? `<div class="flex items-start"><span class="font-medium text-gray-600 min-w-16">关系：</span><span class="text-gray-800">${relationship}</span></div>` : ''}
+          <div class="bp__char-card">
+            <h4 class="bp__char-name">${char.name}</h4>
+            <div class="bp__char-fields">
+              ${identity ? `<div class="bp__char-field"><span class="bp__char-field-label">身份：</span><span>${identity}</span></div>` : ''}
+              ${personality ? `<div class="bp__char-field"><span class="bp__char-field-label">性格：</span><span>${personality}</span></div>` : ''}
+              ${relationship ? `<div class="bp__char-field"><span class="bp__char-field-label">关系：</span><span>${relationship}</span></div>` : ''}
             </div>
           </div>
         `
       }
-      // 处理最简单的结构
       else {
         return `
-          <div class="bg-gray-50 border-l-4 border-gray-300 rounded-lg p-4 mb-3">
-            <h4 class="font-semibold text-gray-800">${char.name || '未知角色'}</h4>
-            <p class="text-gray-600 text-sm mt-1">${char.description || '无描述'}</p>
+          <div class="bp__char-card">
+            <h4 class="bp__char-name">${char.name || '未知角色'}</h4>
+            <p class="bp__char-desc">${char.description || '无描述'}</p>
           </div>
         `
       }
@@ -293,34 +259,34 @@ const formattedBlueprint = computed(() => {
 
   // Format world setting with enhanced styling
   const formatWorldSetting = (worldSetting: any) => {
-    if (!worldSetting || typeof worldSetting !== 'object') return '<p class="text-gray-500 italic">暂无世界设定信息</p>'
+    if (!worldSetting || typeof worldSetting !== 'object') return '<p class="bp__empty">暂无世界设定信息</p>'
 
     let html = ''
 
     if (worldSetting.core_rules) {
       html += `
-        <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
-          <h4 class="font-semibold text-amber-800 mb-2 flex items-center">
+        <div class="bp__world-rules">
+          <h4 class="bp__world-rules-title">
             <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
             核心设定
           </h4>
-          <p class="text-amber-700">${worldSetting.core_rules}</p>
+          <p>${worldSetting.core_rules}</p>
         </div>
       `
     }
 
     if (worldSetting.key_locations && worldSetting.key_locations.length > 0) {
       html += `
-        <div class="mb-4">
-          <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
-            <svg class="w-4 h-4 mr-2 text-teal-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
+        <div class="bp__world-group">
+          <h4 class="bp__world-group-title">
+            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
             关键地点
           </h4>
-          <div class="grid gap-3">
+          <div class="bp__world-items">
             ${worldSetting.key_locations.map((loc: any) => `
-              <div class="bg-teal-50 border-l-3 border-teal-400 p-3 rounded-r-lg">
-                <h5 class="font-medium text-teal-800">${loc.name}</h5>
-                <p class="text-teal-700 text-sm mt-1">${loc.description}</p>
+              <div class="bp__world-item">
+                <h5 class="bp__world-item-name">${loc.name}</h5>
+                <p class="bp__world-item-desc">${loc.description}</p>
               </div>
             `).join('')}
           </div>
@@ -330,16 +296,16 @@ const formattedBlueprint = computed(() => {
 
     if (worldSetting.factions && worldSetting.factions.length > 0) {
       html += `
-        <div>
-          <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
-            <svg class="w-4 h-4 mr-2 text-purple-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path></svg>
+        <div class="bp__world-group">
+          <h4 class="bp__world-group-title">
+            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path></svg>
             主要势力
           </h4>
-          <div class="grid gap-3">
+          <div class="bp__world-items">
             ${worldSetting.factions.map((fac: any) => `
-              <div class="bg-purple-50 border-l-3 border-purple-400 p-3 rounded-r-lg">
-                <h5 class="font-medium text-purple-800">${fac.name}</h5>
-                <p class="text-purple-700 text-sm mt-1">${fac.description}</p>
+              <div class="bp__world-item">
+                <h5 class="bp__world-item-name">${fac.name}</h5>
+                <p class="bp__world-item-desc">${fac.description}</p>
               </div>
             `).join('')}
           </div>
@@ -347,34 +313,31 @@ const formattedBlueprint = computed(() => {
       `
     }
 
-    return html || '<p class="text-gray-500 italic">暂无世界设定详细信息</p>'
+    return html || '<p class="bp__empty">暂无世界设定详细信息</p>'
   }
 
-  // Format relationships with enhanced styling - 支持新的数据结构
+  // Format relationships with enhanced styling
   const formatRelationships = (relationships: any[]) => {
-    if (!relationships || relationships.length === 0) return '<p class="text-gray-500 italic">暂无关系设定</p>'
+    if (!relationships || relationships.length === 0) return '<p class="bp__empty">暂无关系设定</p>'
 
     return `
-      <div class="space-y-3">
+      <div class="bp__rel-list">
         ${relationships.map(rel => {
-          // 支持新的字段名：character_from, character_to 以及旧的 source, target
           const fromChar = rel.character_from || rel.source || '角色A'
           const toChar = rel.character_to || rel.target || '角色B'
           const description = rel.description || '暂无描述'
 
           return `
-            <div class="bg-rose-50 border border-rose-200 rounded-lg p-4">
-              <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center">
-                  <span class="font-medium text-rose-800 bg-white px-3 py-1 rounded-full text-sm shadow-sm">${fromChar}</span>
-                  <svg class="w-5 h-5 mx-3 text-rose-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"></path>
-                  </svg>
-                  <span class="font-medium text-rose-800 bg-white px-3 py-1 rounded-full text-sm shadow-sm">${toChar}</span>
-                </div>
+            <div class="bp__rel-card">
+              <div class="bp__rel-pair">
+                <span class="bp__rel-name">${fromChar}</span>
+                <svg class="w-5 h-5" style="color: var(--md-on-surface-variant)" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                </svg>
+                <span class="bp__rel-name">${toChar}</span>
               </div>
-              <div class="text-sm text-rose-700 bg-white/50 rounded-lg p-3">
-                <span class="font-medium">关系描述：</span>${description}
+              <div class="bp__rel-desc">
+                <span class="bp__rel-desc-label">关系描述：</span>${description}
               </div>
             </div>
           `
@@ -385,13 +348,13 @@ const formattedBlueprint = computed(() => {
 
   // Header with title and badges
   const headerHTML = `
-    <div class="text-center mb-8 p-6 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl text-white">
-      <h1 class="text-4xl font-bold mb-4">${safe(blueprint.title, '未知标题')}</h1>
-      <div class="flex flex-wrap justify-center gap-3 mb-4">
-        <span class="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-medium">${safe(blueprint.genre, '未指定')}</span>
-        <span class="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-medium">${safe(blueprint.style, '未指定')}</span>
-        <span class="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-medium">${safe(blueprint.tone, '未指定')}</span>
-        <span class="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-sm font-medium">${safe(blueprint.target_audience, '未指定')}</span>
+    <div class="bp__header">
+      <h1 class="bp__header-title">${safe(blueprint.title, '未知标题')}</h1>
+      <div class="bp__header-badges">
+        <span class="bp__badge">${safe(blueprint.genre, '未指定')}</span>
+        <span class="bp__badge">${safe(blueprint.style, '未指定')}</span>
+        <span class="bp__badge">${safe(blueprint.tone, '未指定')}</span>
+        <span class="bp__badge">${safe(blueprint.target_audience, '未指定')}</span>
       </div>
     </div>
   `
@@ -400,45 +363,410 @@ const formattedBlueprint = computed(() => {
   const summaryHTML = createSection(
     '故事梗概',
     `
-    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-5 mb-4">
-      <h4 class="font-semibold text-blue-800 mb-2">一句话总结</h4>
-      <p class="text-lg italic text-blue-700">"${safe(blueprint.one_sentence_summary)}"</p>
+    <div class="bp__summary-highlight">
+      <h4 class="bp__summary-label">一句话总结</h4>
+      <p class="bp__summary-quote">"${safe(blueprint.one_sentence_summary)}"</p>
     </div>
-    <div class="prose max-w-none">
-      <h4 class="font-semibold text-gray-800 mb-3">完整简介</h4>
-      <p class="text-gray-700 leading-relaxed">${safe(blueprint.full_synopsis)}</p>
+    <div>
+      <h4 class="bp__summary-label">完整简介</h4>
+      <p>${safe(blueprint.full_synopsis)}</p>
     </div>
     `,
     icons.summary
   )
 
-  // Chapters section with enhanced styling
+  // Chapters section
   const chaptersHTML = `
-    <div class="space-y-4">
-      ${(blueprint.chapter_outline || []).map((ch, index) => `
-        <div class="group relative overflow-hidden bg-gradient-to-r from-gray-50 to-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all duration-300">
-          <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-500 to-purple-600 transform origin-top group-hover:scale-y-110 transition-transform duration-300"></div>
-          <div class="flex items-start">
-            <div class="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center mr-4">
-              <span class="text-indigo-600 font-bold text-sm">${ch.chapter_number}</span>
-            </div>
-            <div class="flex-1">
-              <h4 class="text-lg font-bold text-gray-800 mb-2 group-hover:text-indigo-600 transition-colors duration-300">第 ${ch.chapter_number} 章: ${ch.title}</h4>
-              <p class="text-gray-600 leading-relaxed">${ch.summary}</p>
-            </div>
+    <div class="bp__chapters">
+      ${(blueprint.chapter_outline || []).map((ch) => `
+        <div class="bp__chapter-item">
+          <div class="bp__chapter-num">${ch.chapter_number}</div>
+          <div class="bp__chapter-body">
+            <h4 class="bp__chapter-title">第 ${ch.chapter_number} 章: ${ch.title}</h4>
+            <p class="bp__chapter-summary">${ch.summary}</p>
           </div>
         </div>
       `).join('')}
     </div>
   `
 
-  return `
+  return sanitizeBlueprintHtml(`
     ${headerHTML}
     ${summaryHTML}
     ${createSection('世界设定', formatWorldSetting(blueprint.world_setting), icons.world)}
     ${createSection('主要角色', formatCharacters(blueprint.characters || []), icons.characters)}
     ${createSection('角色关系', formatRelationships(blueprint.relationships || []), icons.relationships)}
     ${createSection('章节大纲', chaptersHTML, icons.chapters)}
-  `
+  `)
 })
 </script>
+
+<style scoped>
+.blueprint-display {
+  padding: var(--md-spacing-8);
+  background-color: var(--md-surface);
+  border-radius: var(--md-radius-xl);
+  border: 1px solid var(--md-outline-variant);
+  box-shadow: var(--md-elevation-2);
+}
+
+.blueprint-display__heading {
+  font-size: var(--md-headline-small);
+  font-weight: 700;
+  text-align: center;
+  color: var(--md-on-surface);
+  margin-bottom: var(--md-spacing-6);
+}
+
+.blueprint-display__ai-msg {
+  margin-bottom: var(--md-spacing-6);
+  padding: var(--md-spacing-4);
+  background-color: var(--md-surface-container-low);
+  border-radius: var(--md-radius-sm);
+  border: 1px solid var(--md-outline-variant);
+  color: var(--md-on-surface);
+}
+
+.blueprint-display__content {
+  padding: var(--md-spacing-6);
+  background-color: var(--md-surface-container-lowest);
+  border-radius: var(--md-radius-md);
+  border: 1px solid var(--md-outline-variant);
+  margin-bottom: var(--md-spacing-6);
+}
+
+.blueprint-display__saving {
+  text-align: center;
+  padding: var(--md-spacing-8) 0;
+}
+
+.blueprint-display__saving-spinner {
+  width: 3rem;
+  height: 3rem;
+  border: 3px solid var(--md-outline-variant);
+  border-top-color: var(--md-primary);
+  border-radius: var(--md-radius-full);
+  margin: 0 auto var(--md-spacing-4);
+  animation: bp-spin 1s linear infinite;
+}
+
+.blueprint-display__saving-title {
+  font-size: var(--md-title-medium);
+  font-weight: 600;
+  color: var(--md-on-surface);
+  margin-bottom: var(--md-spacing-2);
+}
+
+.blueprint-display__saving-desc {
+  color: var(--md-on-surface-variant);
+}
+
+.blueprint-display__actions {
+  display: flex;
+  justify-content: center;
+  gap: var(--md-spacing-4);
+  flex-wrap: wrap;
+}
+
+@keyframes bp-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blueprint-display__saving-spinner {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+</style>
+
+<style>
+.blueprint-display__content .bp__error {
+  text-align: center;
+  color: var(--md-error);
+}
+
+.blueprint-display__content .bp__empty {
+  color: var(--md-on-surface-variant);
+  font-style: italic;
+}
+
+.blueprint-display__content .bp__section {
+  margin-bottom: var(--md-spacing-6);
+  background-color: var(--md-surface);
+  border-radius: var(--md-radius-md);
+  border: 1px solid var(--md-outline-variant);
+  padding: var(--md-spacing-5);
+}
+
+.blueprint-display__content .bp__section-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--md-spacing-4);
+}
+
+.blueprint-display__content .bp__section-icon {
+  width: 2rem;
+  height: 2rem;
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  border-radius: var(--md-radius-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: var(--md-spacing-3);
+}
+
+.blueprint-display__content .bp__section-title {
+  font-size: var(--md-title-medium);
+  font-weight: 700;
+  color: var(--md-on-surface);
+}
+
+.blueprint-display__content .bp__section-body {
+  color: var(--md-on-surface-variant);
+  line-height: 1.7;
+}
+
+.blueprint-display__content .bp__header {
+  text-align: center;
+  margin-bottom: var(--md-spacing-8);
+  padding: var(--md-spacing-6);
+  background-color: var(--md-primary);
+  border-radius: var(--md-radius-md);
+  color: var(--md-on-primary);
+}
+
+.blueprint-display__content .bp__header-title {
+  font-size: var(--md-headline-medium);
+  font-weight: 700;
+  margin-bottom: var(--md-spacing-4);
+}
+
+.blueprint-display__content .bp__header-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--md-spacing-2);
+}
+
+.blueprint-display__content .bp__badge {
+  background-color: color-mix(in oklch, var(--md-on-primary) 15%, transparent);
+  padding: var(--md-spacing-1) var(--md-spacing-3);
+  border-radius: var(--md-radius-full);
+  font-size: var(--md-label-medium);
+  font-weight: 500;
+}
+
+.blueprint-display__content .bp__summary-highlight {
+  background-color: var(--md-surface-container-low);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-sm);
+  padding: var(--md-spacing-4);
+  margin-bottom: var(--md-spacing-4);
+}
+
+.blueprint-display__content .bp__summary-label {
+  font-weight: 600;
+  color: var(--md-on-surface);
+  margin-bottom: var(--md-spacing-2);
+}
+
+.blueprint-display__content .bp__summary-quote {
+  font-size: var(--md-body-large);
+  font-style: italic;
+  color: var(--md-primary);
+}
+
+.blueprint-display__content .bp__char-card {
+  background-color: var(--md-surface-container-low);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-sm);
+  padding: var(--md-spacing-4);
+  margin-bottom: var(--md-spacing-3);
+}
+
+.blueprint-display__content .bp__char-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--md-spacing-3);
+}
+
+.blueprint-display__content .bp__char-name {
+  font-size: var(--md-title-small);
+  font-weight: 700;
+  color: var(--md-on-surface);
+}
+
+.blueprint-display__content .bp__char-role {
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  padding: 2px var(--md-spacing-2);
+  border-radius: var(--md-radius-full);
+  font-size: var(--md-label-small);
+  font-weight: 500;
+}
+
+.blueprint-display__content .bp__char-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-2);
+  font-size: var(--md-body-small);
+}
+
+.blueprint-display__content .bp__char-field {
+  background-color: var(--md-surface);
+  border-radius: var(--md-radius-xs);
+  padding: var(--md-spacing-2) var(--md-spacing-3);
+}
+
+.blueprint-display__content .bp__char-field-label {
+  font-weight: 600;
+  color: var(--md-on-surface);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.blueprint-display__content .bp__char-desc {
+  font-size: var(--md-body-small);
+  color: var(--md-on-surface-variant);
+  margin-top: var(--md-spacing-1);
+}
+
+.blueprint-display__content .bp__world-rules {
+  background-color: var(--md-surface-container-low);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-sm);
+  padding: var(--md-spacing-4);
+  margin-bottom: var(--md-spacing-4);
+}
+
+.blueprint-display__content .bp__world-rules-title {
+  font-weight: 600;
+  color: var(--md-on-surface);
+  margin-bottom: var(--md-spacing-2);
+  display: flex;
+  align-items: center;
+}
+
+.blueprint-display__content .bp__world-group {
+  margin-bottom: var(--md-spacing-4);
+}
+
+.blueprint-display__content .bp__world-group-title {
+  font-weight: 600;
+  color: var(--md-on-surface);
+  margin-bottom: var(--md-spacing-3);
+  display: flex;
+  align-items: center;
+}
+
+.blueprint-display__content .bp__world-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-2);
+}
+
+.blueprint-display__content .bp__world-item {
+  background-color: var(--md-surface-container-low);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-xs);
+  padding: var(--md-spacing-3);
+}
+
+.blueprint-display__content .bp__world-item-name {
+  font-weight: 600;
+  color: var(--md-on-surface);
+}
+
+.blueprint-display__content .bp__world-item-desc {
+  font-size: var(--md-body-small);
+  color: var(--md-on-surface-variant);
+  margin-top: 2px;
+}
+
+.blueprint-display__content .bp__rel-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-3);
+}
+
+.blueprint-display__content .bp__rel-card {
+  background-color: var(--md-surface-container-low);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-sm);
+  padding: var(--md-spacing-4);
+}
+
+.blueprint-display__content .bp__rel-pair {
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-3);
+  margin-bottom: var(--md-spacing-2);
+}
+
+.blueprint-display__content .bp__rel-name {
+  font-weight: 500;
+  color: var(--md-on-surface);
+  background-color: var(--md-surface);
+  padding: 2px var(--md-spacing-3);
+  border-radius: var(--md-radius-full);
+  font-size: var(--md-body-small);
+  border: 1px solid var(--md-outline-variant);
+}
+
+.blueprint-display__content .bp__rel-desc {
+  font-size: var(--md-body-small);
+  color: var(--md-on-surface-variant);
+  background-color: var(--md-surface);
+  border-radius: var(--md-radius-xs);
+  padding: var(--md-spacing-2) var(--md-spacing-3);
+}
+
+.blueprint-display__content .bp__rel-desc-label {
+  font-weight: 600;
+}
+
+.blueprint-display__content .bp__chapters {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-3);
+}
+
+.blueprint-display__content .bp__chapter-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--md-spacing-3);
+  background-color: var(--md-surface-container-low);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-sm);
+  padding: var(--md-spacing-4);
+}
+
+.blueprint-display__content .bp__chapter-num {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  border-radius: var(--md-radius-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: var(--md-label-medium);
+}
+
+.blueprint-display__content .bp__chapter-title {
+  font-size: var(--md-title-small);
+  font-weight: 700;
+  color: var(--md-on-surface);
+  margin-bottom: var(--md-spacing-1);
+}
+
+.blueprint-display__content .bp__chapter-summary {
+  color: var(--md-on-surface-variant);
+  line-height: 1.6;
+}
+</style>

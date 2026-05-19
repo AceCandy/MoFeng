@@ -36,29 +36,14 @@
           </div>
         </div>
 
-        <!-- 右侧：操作按钮 -->
-        <div class="writing-header__actions">
+        <div v-if="showAssistantToggle" class="writing-header__actions">
           <button
-            v-if="hasIncompleteChapters"
             type="button"
-            @click="$emit('locateIncomplete')"
-            class="md-btn md-btn-tonal md-ripple flex items-center gap-2"
+            class="md-btn md-btn-outlined md-ripple writing-header__assistant-toggle"
+            :aria-pressed="assistantOpen ? 'true' : 'false'"
+            @click="$emit('toggleAssistant')"
           >
-            <svg
-              class="w-4 h-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <span class="hidden sm:inline">定位到未完成</span>
-            <span class="sm:hidden">未完成</span>
+            {{ assistantButtonLabel }}
           </button>
         </div>
       </div>
@@ -86,14 +71,22 @@ interface Props {
   progress: number
   completedChapters: number
   totalChapters: number
-  hasIncompleteChapters: boolean
+  showAssistantToggle?: boolean
+  assistantOpen?: boolean
+  assistantDrawerMode?: boolean
 }
 
 const props = defineProps<Props>()
 
-defineEmits(['goBack', 'locateIncomplete'])
+defineEmits(['goBack', 'toggleAssistant'])
 
 const clampedProgress = computed(() => Math.max(0, Math.min(100, props.progress || 0)))
+const assistantButtonLabel = computed(() => {
+  if (props.assistantDrawerMode) {
+    return props.assistantOpen ? '收起辅助' : '辅助信息'
+  }
+  return props.assistantOpen ? '收起辅助信息' : '显示辅助信息'
+})
 </script>
 
 <style scoped>
@@ -149,10 +142,16 @@ const clampedProgress = computed(() => Math.max(0, Math.min(100, props.progress 
 }
 
 .writing-header__actions {
-  display: flex;
   flex-shrink: 0;
-  align-items: center;
-  gap: var(--md-spacing-2);
+}
+
+.writing-header__assistant-toggle {
+  min-height: 44px;
+  height: 44px;
+  border-radius: 10px;
+  padding-inline: 12px;
+  font-size: var(--md-label-medium);
+  white-space: nowrap;
 }
 
 .writing-header__progress {
@@ -189,8 +188,18 @@ const clampedProgress = computed(() => Math.max(0, Math.min(100, props.progress 
     display: none;
   }
 
+  .writing-header__actions {
+    margin-left: auto;
+  }
+
+  .writing-header__assistant-toggle {
+    min-height: 44px;
+    height: 44px;
+    padding-inline: 10px;
+  }
+
   .writing-header__title-block h1 {
-    max-width: calc(100vw - 188px);
+    max-width: calc(100vw - 230px);
     font-size: var(--md-title-medium);
   }
 
@@ -199,9 +208,5 @@ const clampedProgress = computed(() => Math.max(0, Math.min(100, props.progress 
     font-size: var(--md-label-medium);
   }
 
-  .writing-header__actions .md-btn {
-    min-height: 40px;
-    padding: 0 var(--md-spacing-3);
-  }
 }
 </style>

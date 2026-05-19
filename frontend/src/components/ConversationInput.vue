@@ -13,22 +13,24 @@
           v-for="option in uiControl.options"
           :key="option.id"
           @click="handleOptionSelect(option.id, option.label)"
-          class="p-3 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+          class="conv-input__option conv-input__option--primary"
         >
           {{ option.label }}
         </button>
         <button
           @click="isManualInput = true"
-          class="p-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400"
+          class="conv-input__option conv-input__option--neutral"
         >
           我要输入
         </button>
       </div>
       <form @submit.prevent="handleTextSubmit" class="flex items-center gap-3">
+        <label :for="manualTextareaId" class="sr-only">输入你的想法</label>
         <textarea
+          :id="manualTextareaId"
           v-model="textInput"
-          :placeholder="isManualInput ? '请输入您的想法...' : '选择上方选项或点击“我要输入”'"
-          class="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none transition-all disabled:bg-gray-100 resize-none overflow-y-auto leading-relaxed"
+          :placeholder="isManualInput ? '请输入您的想法...' : '选择上方选项或点击「我要输入」'"
+          class="conv-input__textarea"
           :disabled="!isManualInput"
           rows="5"
           ref="textInputRef"
@@ -36,11 +38,11 @@
         ></textarea>
         <button
           type="submit"
-          class="flex-shrink-0 w-12 h-12 bg-indigo-500 rounded-full flex items-center justify-center hover:bg-indigo-600 transition-all shadow-md disabled:bg-gray-300"
+          class="conv-input__send"
           :disabled="!isManualInput"
+          aria-label="发送"
         >
           <svg
-            xmlns="http://www.w3.org/2000/svg"
             width="24"
             height="24"
             viewBox="0 0 24 24"
@@ -49,7 +51,6 @@
             stroke-width="2"
             stroke-linecap="round"
             stroke-linejoin="round"
-            class="text-white"
           >
             <line x1="22" y1="2" x2="11" y2="13"></line>
             <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -60,10 +61,12 @@
 
     <!-- 文本输入 -->
     <form v-else-if="uiControl.type === 'text_input'" @submit.prevent="handleTextSubmit" class="flex items-center gap-3">
+      <label :for="textInputTextareaId" class="sr-only">输入内容</label>
       <textarea
+        :id="textInputTextareaId"
         v-model="textInput"
         :placeholder="uiControl.placeholder || '请输入...'"
-        class="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none transition-all resize-none overflow-y-auto leading-relaxed"
+        class="conv-input__textarea"
         required
         ref="textInputRef"
         rows="5"
@@ -71,10 +74,10 @@
       ></textarea>
       <button
         type="submit"
-        class="flex-shrink-0 w-12 h-12 bg-indigo-500 rounded-full flex items-center justify-center hover:bg-indigo-600 transition-all shadow-md"
+        class="conv-input__send"
+        aria-label="发送"
       >
         <svg
-          xmlns="http://www.w3.org/2000/svg"
           width="24"
           height="24"
           viewBox="0 0 24 24"
@@ -83,7 +86,6 @@
           stroke-width="2"
           stroke-linecap="round"
           stroke-linejoin="round"
-          class="text-white"
         >
           <line x1="22" y1="2" x2="11" y2="13"></line>
           <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -106,6 +108,10 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
   submit: [userInput: { id: string; value: string } | null]
 }>()
+
+const controlIdPrefix = `conv-input-${Math.random().toString(36).slice(2, 10)}`
+const manualTextareaId = `${controlIdPrefix}-manual-textarea`
+const textInputTextareaId = `${controlIdPrefix}-text-textarea`
 
 const textInput = ref('')
 const textInputRef = ref<HTMLTextAreaElement>()
@@ -176,3 +182,82 @@ watch(isManualInput, async (newValue) => {
 })
 
 </script>
+
+<style scoped>
+.conv-input__option {
+  padding: var(--md-spacing-3) var(--md-spacing-4);
+  border-radius: var(--md-radius-sm);
+  font-weight: 500;
+  font-size: var(--md-body-medium);
+  transition: background-color 0.15s, color 0.15s;
+  cursor: pointer;
+  border: none;
+}
+
+.conv-input__option--primary {
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+}
+
+.conv-input__option--primary:hover {
+  background-color: var(--md-primary);
+  color: var(--md-on-primary);
+}
+
+.conv-input__option--neutral {
+  background-color: var(--md-surface-container);
+  color: var(--md-on-surface-variant);
+}
+
+.conv-input__option--neutral:hover {
+  background-color: var(--md-surface-container-high);
+  color: var(--md-on-surface);
+}
+
+.conv-input__textarea {
+  flex: 1;
+  padding: var(--md-spacing-3) var(--md-spacing-4);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-md);
+  background-color: var(--md-surface);
+  color: var(--md-on-surface);
+  font-size: var(--md-body-medium);
+  resize: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.conv-input__textarea:focus {
+  outline: none;
+  border-color: var(--md-primary);
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--md-primary) 20%, transparent);
+}
+
+.conv-input__textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.conv-input__send {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--md-radius-full);
+  background-color: var(--md-primary);
+  color: var(--md-on-primary);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s, opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.conv-input__send:hover {
+  background-color: color-mix(in oklch, var(--md-primary) 85%, black);
+}
+
+.conv-input__send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+</style>

@@ -6,9 +6,11 @@
       :progress="progress"
       :completed-chapters="completedChapters"
       :total-chapters="totalChapters"
-      :has-incomplete-chapters="hasIncompleteChapters"
+      :show-assistant-toggle="Boolean(project)"
+      :assistant-open="assistantToggleActive"
+      :assistant-drawer-mode="useAssistantDrawer"
       @go-back="goBack"
-      @locate-incomplete="locateFirstIncompleteChapter"
+      @toggle-assistant="toggleAssistantVisibility"
     />
 
     <!-- 主要内容区域 -->
@@ -53,45 +55,93 @@
       </div>
 
       <!-- 主要内容 -->
-      <div v-else-if="project" class="writing-desk-layout">
-        <WDSidebar
-          ref="sidebarRef"
-          :project="project"
-          :selected-chapter-number="selectedChapterNumber"
-          :generating-chapter="generatingChapter"
-          :evaluating-chapter="evaluatingChapter"
-          :is-generating-outline="isGeneratingOutline"
-          @open-project-detail="viewProjectDetail"
-          @select-chapter="selectChapter"
-          @generate-chapter="generateChapter"
-          @edit-chapter="openEditChapterModal"
-          @delete-chapter="deleteChapter"
-          @generate-outline="generateOutline"
-        />
-
-        <div class="writing-desk-workspace-shell">
-          <WDWorkspace
-            :project="project"
-            :selected-chapter-number="selectedChapterNumber"
-            :generating-chapter="generatingChapter"
-            :evaluating-chapter="evaluatingChapter"
-            :show-version-selector="showVersionSelector"
-            :chapter-generation-result="chapterGenerationResult"
-            :selected-version-index="selectedVersionIndex"
-            :available-versions="availableVersions"
-            :is-selecting-version="isSelectingVersion"
-            @regenerate-chapter="regenerateChapter"
-            @evaluate-chapter="evaluateChapter"
-            @hide-version-selector="hideVersionSelector"
-            @update:selected-version-index="selectedVersionIndex = $event"
-            @show-version-detail="showVersionDetail"
-            @confirm-version-selection="confirmVersionSelection"
-            @generate-chapter="generateChapter"
-            @show-evaluation-detail="showEvaluationDetailModal = true"
-            @fetch-chapter-status="fetchChapterStatus"
-            @edit-chapter="editChapterContent"
-          />
+      <div v-else-if="project" class="writing-desk-layout-wrap">
+        <div class="writing-desk-mobile-actions" v-if="useSidebarDrawer">
+          <button
+            v-if="useSidebarDrawer"
+            type="button"
+            class="md-btn md-btn-outlined md-ripple writing-desk-mobile-action"
+            @click="toggleSidebarDrawer"
+          >
+            章节大纲
+          </button>
         </div>
+
+        <div
+          class="writing-desk-layout"
+          :class="{ 'writing-desk-layout--assistant-hidden': !useAssistantDrawer && !isAssistantPanelVisible }"
+        >
+          <div
+            class="writing-desk-sidebar-shell"
+            :class="{
+              'is-drawer': useSidebarDrawer,
+              'is-open': isSidebarDrawerOpen,
+            }"
+          >
+            <WDSidebar
+              :project="project"
+              :selected-chapter-number="selectedChapterNumber"
+              :generating-chapter="generatingChapter"
+              :evaluating-chapter="evaluatingChapter"
+              :is-generating-outline="isGeneratingOutline"
+              @open-project-detail="viewProjectDetail"
+              @select-chapter="selectChapter"
+              @generate-chapter="generateChapter"
+              @edit-chapter="openEditChapterModal"
+              @delete-chapter="deleteChapter"
+              @generate-outline="generateOutline"
+            />
+          </div>
+
+          <div class="writing-desk-workspace-shell">
+            <WDWorkspace
+              :project="project"
+              :selected-chapter-number="selectedChapterNumber"
+              :generating-chapter="generatingChapter"
+              :evaluating-chapter="evaluatingChapter"
+              :show-version-selector="showVersionSelector"
+              :chapter-generation-result="chapterGenerationResult"
+              :selected-version-index="selectedVersionIndex"
+              :available-versions="availableVersions"
+              :is-selecting-version="isSelectingVersion"
+              @regenerate-chapter="regenerateChapter"
+              @evaluate-chapter="evaluateChapter"
+              @hide-version-selector="hideVersionSelector"
+              @update:selected-version-index="selectedVersionIndex = $event"
+              @show-version-detail="showVersionDetail"
+              @confirm-version-selection="confirmVersionSelection"
+              @generate-chapter="generateChapter"
+              @show-evaluation-detail="showEvaluationDetailModal = true"
+              @fetch-chapter-status="fetchChapterStatus"
+              @edit-chapter="editChapterContent"
+            />
+          </div>
+
+          <div
+            v-if="shouldRenderAssistantShell"
+            class="writing-desk-assistant-shell"
+            :class="{
+              'is-drawer': useAssistantDrawer,
+              'is-open': isAssistantDrawerOpen,
+              'is-collapsed': !useAssistantDrawer && !isAssistantPanelVisible,
+            }"
+          >
+            <WDAssistantPanel
+              :project="project"
+              :selected-chapter-number="selectedChapterNumber"
+              :selected-chapter="selectedChapter"
+              :selected-chapter-outline="selectedChapterOutline"
+            />
+          </div>
+        </div>
+
+        <button
+          v-if="isDrawerBackdropVisible"
+          type="button"
+          class="writing-desk-drawer-backdrop"
+          aria-label="关闭侧边面板"
+          @click="closeAllDrawers"
+        ></button>
       </div>
     </section>
     <WDVersionDetailModal
@@ -115,20 +165,31 @@
         class="md-dialog-overlay"
         @click.self="closeRecommendedOptimizeResult"
       >
-        <div class="md-dialog m3-result-dialog flex flex-col">
+        <div
+          ref="recommendedDialogRef"
+          class="md-dialog m3-result-dialog flex flex-col"
+          role="dialog"
+          aria-modal="true"
+          :aria-labelledby="recommendedDialogTitleId"
+        >
           <div class="p-6 border-b" style="border-bottom-color: var(--md-outline-variant)">
             <div class="flex items-center justify-between gap-4">
               <div>
-                <h3 class="md-headline-small font-semibold">评审优化结果预览</h3>
+                <h3 :id="recommendedDialogTitleId" class="md-headline-small font-semibold">
+                  评审优化结果预览
+                </h3>
                 <p class="md-body-small md-on-surface-variant mt-1">
                   {{ recommendedOptimizeResultNotes }}
                 </p>
               </div>
               <button
+                ref="recommendedDialogCloseButtonRef"
+                data-dialog-initial-focus
                 type="button"
                 @click="closeRecommendedOptimizeResult"
                 :disabled="isApplyingRecommendedOptimization"
                 class="md-icon-btn md-ripple disabled:opacity-50"
+                aria-label="关闭评审优化结果弹窗"
               >
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                   <path
@@ -209,7 +270,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import type {
   Chapter,
@@ -232,6 +293,7 @@ import {
   useUpdateChapterOutlineMutation,
 } from '@/queries/novel'
 import { globalAlert } from '@/composables/useAlert'
+import { useDialogA11y } from '@/composables/useDialogA11y'
 import { countNonWhitespaceChars } from '@/utils/text'
 import WDHeader from '@/components/writing-desk/WDHeader.vue'
 import WDSidebar from '@/components/writing-desk/WDSidebar.vue'
@@ -240,6 +302,7 @@ import WDVersionDetailModal from '@/components/writing-desk/WDVersionDetailModal
 import WDEvaluationDetailModal from '@/components/writing-desk/WDEvaluationDetailModal.vue'
 import WDEditChapterModal from '@/components/writing-desk/WDEditChapterModal.vue'
 import WDGenerateOutlineModal from '@/components/writing-desk/WDGenerateOutlineModal.vue'
+import WDAssistantPanel from '@/components/writing-desk/WDAssistantPanel.vue'
 
 interface Props {
   id: string
@@ -254,7 +317,6 @@ const selectedChapterNumber = ref<number | null>(null)
 const chapterGenerationResult = ref<ChapterGenerationResponse | null>(null)
 const selectedVersionIndex = ref<number>(0)
 const generatingChapter = ref<number | null>(null)
-const sidebarRef = ref<InstanceType<typeof WDSidebar> | null>(null)
 const showVersionDetailModal = ref(false)
 const detailVersionIndex = ref<number>(0)
 const showEvaluationDetailModal = ref(false)
@@ -265,6 +327,9 @@ const showGenerateOutlineModal = ref(false)
 const isFetchingChapterStatus = ref(false)
 const optimizeRecommendedVersionMutation = useOptimizeRecommendedVersionMutation()
 const showRecommendedOptimizeResultModal = ref(false)
+const recommendedDialogRef = ref<HTMLElement | null>(null)
+const recommendedDialogCloseButtonRef = ref<HTMLElement | null>(null)
+const recommendedDialogTitleId = 'writing-desk-recommended-optimize-title'
 const applyOptimizationMutation = useApplyOptimizationMutation(() => props.id)
 const isOptimizingRecommendedVersion = computed(
   () => optimizeRecommendedVersionMutation.isPending.value,
@@ -272,6 +337,13 @@ const isOptimizingRecommendedVersion = computed(
 const isApplyingRecommendedOptimization = computed(() => applyOptimizationMutation.isPending.value)
 const recommendedOptimizedContent = ref('')
 const recommendedOptimizeResultNotes = ref('')
+const viewportWidth = ref<number>(typeof window !== 'undefined' ? window.innerWidth : 1600)
+const isSidebarDrawerOpen = ref(false)
+const isAssistantDrawerOpen = ref(false)
+const isAssistantPanelVisible = ref(true)
+const SIDEBAR_DRAWER_BREAKPOINT = 1023
+const ASSISTANT_DRAWER_BREAKPOINT = 1279
+const ASSISTANT_PANEL_VISIBILITY_STORAGE_KEY = 'mofeng.writingDesk.assistant.visible'
 
 const chapterQuery = useNovelChapterQuery(() => props.id, selectedChapterNumber)
 const { refreshProjectQueries, upsertChapterInProjectCache } = useNovelMutationRefresh(
@@ -292,6 +364,74 @@ const projectError = computed(() => {
   const error = projectQuery.error.value
   return error instanceof Error ? error.message : error ? '加载项目失败' : null
 })
+
+const useSidebarDrawer = computed(() => viewportWidth.value <= SIDEBAR_DRAWER_BREAKPOINT)
+const useAssistantDrawer = computed(() => viewportWidth.value <= ASSISTANT_DRAWER_BREAKPOINT)
+const shouldRenderAssistantShell = computed(
+  () => useAssistantDrawer.value || isAssistantPanelVisible.value,
+)
+const assistantToggleActive = computed(() =>
+  useAssistantDrawer.value ? isAssistantDrawerOpen.value : isAssistantPanelVisible.value,
+)
+
+const isDrawerBackdropVisible = computed(
+  () =>
+    (useSidebarDrawer.value && isSidebarDrawerOpen.value) ||
+    (useAssistantDrawer.value && isAssistantDrawerOpen.value),
+)
+
+const closeAllDrawers = () => {
+  isSidebarDrawerOpen.value = false
+  isAssistantDrawerOpen.value = false
+}
+
+const persistAssistantPanelVisibility = (visible: boolean) => {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(ASSISTANT_PANEL_VISIBILITY_STORAGE_KEY, visible ? '1' : '0')
+  } catch (error) {
+    console.warn('保存辅助信息面板状态失败:', error)
+  }
+}
+
+const restoreAssistantPanelVisibility = () => {
+  if (typeof window === 'undefined') return
+  try {
+    const stored = window.localStorage.getItem(ASSISTANT_PANEL_VISIBILITY_STORAGE_KEY)
+    if (stored === '0') {
+      isAssistantPanelVisible.value = false
+    } else if (stored === '1') {
+      isAssistantPanelVisible.value = true
+    }
+  } catch (error) {
+    console.warn('读取辅助信息面板状态失败:', error)
+  }
+}
+
+const toggleSidebarDrawer = () => {
+  if (!useSidebarDrawer.value) return
+  isSidebarDrawerOpen.value = !isSidebarDrawerOpen.value
+  if (isSidebarDrawerOpen.value) {
+    isAssistantDrawerOpen.value = false
+  }
+}
+
+const toggleAssistantDrawer = () => {
+  if (!useAssistantDrawer.value) return
+  isAssistantDrawerOpen.value = !isAssistantDrawerOpen.value
+  if (isAssistantDrawerOpen.value && useSidebarDrawer.value) {
+    isSidebarDrawerOpen.value = false
+  }
+}
+
+const toggleAssistantVisibility = () => {
+  if (useAssistantDrawer.value) {
+    toggleAssistantDrawer()
+    return
+  }
+  isAssistantPanelVisible.value = !isAssistantPanelVisible.value
+  persistAssistantPanelVisibility(isAssistantPanelVisible.value)
+}
 
 const selectedChapter = computed(() => {
   if (!project.value || selectedChapterNumber.value === null) return null
@@ -348,16 +488,6 @@ const totalChapters = computed(() => {
 
 const completedChapters = computed(() => {
   return project.value?.chapters?.filter((ch) => ch.content)?.length || 0
-})
-
-const hasIncompleteChapters = computed(() => {
-  if (!project.value?.blueprint?.chapter_outline) return false
-  return project.value.blueprint.chapter_outline.some((outline) => {
-    const chapter = project.value?.chapters.find(
-      (ch) => ch.chapter_number === outline.chapter_number,
-    )
-    return chapter?.generation_status !== 'successful'
-  })
 })
 
 const isCurrentVersion = (versionIndex: number) => {
@@ -652,6 +782,13 @@ const closeRecommendedOptimizeResult = () => {
   showRecommendedOptimizeResultModal.value = false
 }
 
+useDialogA11y({
+  active: showRecommendedOptimizeResultModal,
+  dialogRef: recommendedDialogRef,
+  onClose: closeRecommendedOptimizeResult,
+  initialFocusRef: recommendedDialogCloseButtonRef,
+})
+
 const optimizeRecommendedVersionFromEvaluation = async () => {
   if (!project.value || !selectedChapter.value) {
     globalAlert.showError('缺少章节信息，无法执行优化')
@@ -735,6 +872,26 @@ const applyRecommendedOptimization = async () => {
   }
 }
 
+const syncLayoutMode = () => {
+  viewportWidth.value = window.innerWidth
+  if (!useSidebarDrawer.value) {
+    isSidebarDrawerOpen.value = false
+  }
+  if (!useAssistantDrawer.value) {
+    isAssistantDrawerOpen.value = false
+  }
+}
+
+onMounted(() => {
+  restoreAssistantPanelVisibility()
+  syncLayoutMode()
+  window.addEventListener('resize', syncLayoutMode)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', syncLayoutMode)
+})
+
 // 方法
 const goBack = () => {
   router.push('/workspace')
@@ -744,11 +901,6 @@ const viewProjectDetail = () => {
   if (project.value) {
     router.push(`/projects/${project.value.id}`)
   }
-}
-
-const locateFirstIncompleteChapter = async () => {
-  await nextTick()
-  sidebarRef.value?.scrollToFirstIncompleteChapter()
 }
 
 const loadProject = async () => {
@@ -813,6 +965,7 @@ const selectChapter = (chapterNumber: number) => {
   selectedChapterNumber.value = chapterNumber
   chapterGenerationResult.value = null
   selectedVersionIndex.value = 0
+  closeAllDrawers()
 }
 
 const generateChapter = async (chapterNumber: number) => {
@@ -883,7 +1036,7 @@ const generateChapter = async (chapterNumber: number) => {
 
     if (generatedChapter?.generation_status === 'waiting_for_confirm' && validVersionCount === 1) {
       selectedVersionIndex.value = 0
-      // 单版本自动确认阶段已进入“确认版本”流程，不应再被当作“生成中”渲染。
+      // 单版本自动确认阶段已进入"确认版本"流程，不应再被当作"生成中"渲染。
       generatingChapter.value = null
       await selectVersion(0, {
         chapterNumber,
@@ -1131,7 +1284,7 @@ const handleGenerateOutline = async (numChapters: number) => {
 
 <style scoped>
 .writing-desk-page {
-  height: 100vh;
+  height: var(--app-viewport-unit);
   min-height: 640px;
   background-color: var(--md-surface-dim);
   color: var(--md-on-surface);
@@ -1143,38 +1296,129 @@ const handleGenerateOutline = async (numChapters: number) => {
   flex: 1;
   min-height: 0;
   width: 100%;
+  position: relative;
   padding: var(--md-spacing-5) clamp(var(--md-spacing-4), 2.4vw, var(--md-spacing-8))
     var(--md-spacing-6);
   overflow: hidden;
 }
 
-.writing-desk-layout {
-  display: flex;
-  align-items: stretch;
-  gap: var(--md-spacing-5);
+.writing-desk-layout-wrap {
+  position: relative;
   height: 100%;
   min-height: 0;
-  width: min(100%, 1680px);
+}
+
+.writing-desk-mobile-actions {
+  display: none;
+  align-items: center;
+  gap: var(--md-spacing-2);
+  margin-bottom: var(--md-spacing-3);
+}
+
+.writing-desk-mobile-action {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: var(--md-label-medium);
+}
+
+.writing-desk-layout {
+  display: grid;
+  grid-template-columns: minmax(250px, 300px) minmax(0, 1fr) minmax(240px, 296px);
+  align-items: stretch;
+  gap: var(--md-spacing-4);
+  height: 100%;
+  min-height: 0;
+  width: min(100%, 1720px);
   margin: 0 auto;
 }
 
+.writing-desk-layout--assistant-hidden {
+  grid-template-columns: minmax(250px, 300px) minmax(0, 1fr);
+}
+
+.writing-desk-sidebar-shell,
+.writing-desk-assistant-shell,
 .writing-desk-workspace-shell {
-  flex: 1;
   min-width: 0;
   min-height: 0;
   height: 100%;
+}
+
+.writing-desk-assistant-shell {
+  overflow: hidden;
+}
+
+.writing-desk-assistant-shell.is-collapsed {
+  display: none;
+}
+
+.writing-desk-drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background-color: rgba(32, 33, 36, 0.28);
+  z-index: 34;
+}
+
+@media (max-width: 1535px) {
+  .writing-desk-layout {
+    grid-template-columns: minmax(220px, 276px) minmax(0, 1fr) minmax(220px, 260px);
+    width: 100%;
+    max-width: none;
+  }
+
+  .writing-desk-layout--assistant-hidden {
+    grid-template-columns: minmax(220px, 276px) minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1279px) {
+  .writing-desk-mobile-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .writing-desk-layout {
+    grid-template-columns: minmax(220px, 276px) minmax(0, 1fr);
+    width: 100%;
+    max-width: none;
+  }
+
+  .writing-desk-assistant-shell.is-drawer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(320px, calc(100vw - 56px));
+    transform: translateX(110%);
+    transition: transform var(--md-duration-medium) var(--md-easing-emphasized);
+    z-index: 40;
+    pointer-events: none;
+  }
+
+  .writing-desk-assistant-shell.is-drawer.is-open {
+    transform: translateX(0);
+    pointer-events: auto;
+    box-shadow: -10px 0 24px rgba(24, 32, 45, 0.18);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .writing-desk-page {
     animation: none;
   }
+
+  .writing-desk-sidebar-shell.is-drawer,
+  .writing-desk-assistant-shell.is-drawer {
+    transition: none;
+  }
 }
 
 @media (max-width: 1023px) {
   .writing-desk-page {
     height: auto;
-    min-height: calc(100vh - 104px);
+    min-height: calc(var(--app-viewport-unit) - 104px);
   }
 
   .writing-desk-main {
@@ -1182,8 +1426,14 @@ const handleGenerateOutline = async (numChapters: number) => {
     overflow: visible;
   }
 
+  .writing-desk-mobile-actions {
+    margin-bottom: var(--md-spacing-3);
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
   .writing-desk-layout {
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--md-spacing-4);
     height: auto;
     overflow: visible;
@@ -1192,11 +1442,46 @@ const handleGenerateOutline = async (numChapters: number) => {
   .writing-desk-workspace-shell {
     min-height: 560px;
   }
+
+  .writing-desk-sidebar-shell.is-drawer,
+  .writing-desk-assistant-shell.is-drawer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: min(320px, calc(100vw - 56px));
+    z-index: 40;
+    pointer-events: none;
+    transition: transform var(--md-duration-medium) var(--md-easing-emphasized);
+  }
+
+  .writing-desk-sidebar-shell.is-drawer {
+    left: 0;
+    transform: translateX(-110%);
+  }
+
+  .writing-desk-assistant-shell.is-drawer {
+    right: 0;
+    transform: translateX(110%);
+  }
+
+  .writing-desk-sidebar-shell.is-drawer.is-open,
+  .writing-desk-assistant-shell.is-drawer.is-open {
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+
+  .writing-desk-sidebar-shell.is-drawer.is-open {
+    box-shadow: 10px 0 24px rgba(24, 32, 45, 0.18);
+  }
+
+  .writing-desk-assistant-shell.is-drawer.is-open {
+    box-shadow: -10px 0 24px rgba(24, 32, 45, 0.18);
+  }
 }
 
 .m3-result-dialog {
   max-width: min(900px, calc(100vw - 32px));
-  max-height: calc(100vh - 32px);
+  max-height: calc(var(--app-viewport-unit) - 32px);
   border-radius: var(--md-radius-xl);
 }
 
@@ -1220,25 +1505,6 @@ const handleGenerateOutline = async (numChapters: number) => {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
-}
-
-/* 自定义滚动条 */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--md-surface-container);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--md-outline);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--md-on-surface-variant);
 }
 
 /* 动画效果 */

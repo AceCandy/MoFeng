@@ -48,6 +48,7 @@ const navigationItems = computed(() => {
 })
 
 const pageLabel = computed(() => String(route.meta.label || '工作台'))
+const pageDescription = computed(() => String(route.meta.description || ''))
 const isProjectContext = computed(() =>
   ['project-detail', 'project-write', 'admin-project-detail'].includes(String(route.name || '')),
 )
@@ -93,9 +94,10 @@ onUnmounted(() => {
       :inert="isMobileShell && !isMobileNavOpen"
     >
       <div class="app-shell__brand">
-        <div class="app-shell__brand-mark" aria-hidden="true">A</div>
+        <div class="app-shell__brand-mark" aria-hidden="true">墨</div>
         <div class="app-shell__brand-copy">
-          <p class="app-shell__brand-title">MoFeng 墨风</p>
+          <p class="app-shell__brand-title">墨风</p>
+          <p class="app-shell__account-role">AI 小说创作中控台</p>
         </div>
         <button
           type="button"
@@ -167,7 +169,7 @@ onUnmounted(() => {
       <div class="app-shell__account">
         <div class="app-shell__account-copy">
           <p class="app-shell__account-name">{{ authStore.user?.username || '当前用户' }}</p>
-          <p class="app-shell__account-role">{{ authStore.user?.is_admin ? '管理员' : '作者' }}</p>
+          <p class="app-shell__account-role">{{ authStore.user?.is_admin ? '管理模式' : '作者模式' }}</p>
         </div>
         <button
           type="button"
@@ -206,6 +208,7 @@ onUnmounted(() => {
         <div class="app-shell__workspace-context">
           <div class="app-shell__title-block">
             <h1>{{ pageLabel }}</h1>
+            <p v-if="pageDescription" class="app-shell__title-description">{{ pageDescription }}</p>
           </div>
         </div>
       </header>
