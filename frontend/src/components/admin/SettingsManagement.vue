@@ -243,6 +243,71 @@
             :description="configKeyword || managedOnly ? '没有匹配的配置项' : '暂无配置项'"
           />
 
+          <div v-else-if="isMobile" class="settings-config-mobile-list" role="list">
+            <article
+              v-for="config in filteredConfigs"
+              :key="config.key"
+              class="settings-config-mobile-card"
+              :class="{ 'is-managed': isManagedConfigKey(config.key) }"
+              role="listitem"
+            >
+              <div class="settings-config-mobile-card__head">
+                <code class="key-code">{{ config.key }}</code>
+                <n-tag
+                  v-if="isManagedConfigKey(config.key)"
+                  type="info"
+                  size="small"
+                  :bordered="false"
+                >
+                  托管
+                </n-tag>
+                <n-tag v-else size="small" :bordered="false">
+                  {{ getConfigDomain(config.key) }}
+                </n-tag>
+              </div>
+              <dl class="settings-config-mobile-card__meta">
+                <div>
+                  <dt>值</dt>
+                  <dd :title="config.value">{{ config.value || '—' }}</dd>
+                </div>
+                <div>
+                  <dt>描述</dt>
+                  <dd>{{ config.description || '—' }}</dd>
+                </div>
+              </dl>
+              <div class="settings-config-mobile-card__actions">
+                <n-button
+                  size="small"
+                  type="primary"
+                  tertiary
+                  @click="openEditModal(config)"
+                >
+                  编辑
+                </n-button>
+                <n-popconfirm
+                  positive-text="删除"
+                  negative-text="取消"
+                  type="error"
+                  placement="left"
+                  @positive-click="deleteConfig(config.key)"
+                >
+                  <template #default>
+                    {{
+                      isManagedConfigKey(config.key)
+                        ? '该项属于托管配置，建议优先使用上方快捷设置。确认删除？'
+                        : '确认删除该配置项？'
+                    }}
+                  </template>
+                  <template #trigger>
+                    <n-button size="small" type="error" quaternary>
+                      删除
+                    </n-button>
+                  </template>
+                </n-popconfirm>
+              </div>
+            </article>
+          </div>
+
           <div v-else class="admin-table-shell">
             <n-data-table
               :columns="columns"
@@ -317,6 +382,8 @@ import type {
 } from '@/api/admin'
 import { normalizeComparableVersion } from '@/api/version'
 import { useAlert } from '@/composables/useAlert'
+import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
+import { mobileMax } from '@/constants/responsive'
 import {
   useDeleteSystemConfigMutation,
   usePatchSystemConfigMutation,
@@ -387,6 +454,7 @@ const isCreateMode = ref(true)
 const configKeyword = ref('')
 const managedOnly = ref(false)
 const managedFirst = ref(true)
+const viewport = useResponsiveViewport()
 const configForm = reactive<SystemConfig>({
   key: '',
   value: '',
@@ -396,6 +464,7 @@ const configForm = reactive<SystemConfig>({
 const rowKey = (row: SystemConfig) => row.key
 
 const modalTitle = computed(() => (isCreateMode.value ? '新增配置项' : '编辑配置项'))
+const isMobile = computed(() => viewport.width.value <= mobileMax)
 const managedConfigs = computed(() => configs.value.filter((item) => isManagedConfigKey(item.key)))
 const customConfigsCount = computed(() => Math.max(0, configs.value.length - managedConfigs.value.length))
 const normalizedVersionInfoUrl = computed(() => normalizeConfigText(versionInfoUrl.value))
@@ -1120,6 +1189,62 @@ onMounted(() => {
 
 .config-table :deep(.row-managed td) {
   background-color: color-mix(in srgb, var(--md-primary) 7%, var(--md-surface));
+}
+
+.settings-config-mobile-list {
+  display: grid;
+  gap: 12px;
+}
+
+.settings-config-mobile-card {
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 12px;
+  padding: 12px;
+  background-color: var(--md-surface);
+}
+
+.settings-config-mobile-card.is-managed {
+  background-color: color-mix(in srgb, var(--md-primary) 7%, var(--md-surface));
+}
+
+.settings-config-mobile-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.settings-config-mobile-card__meta {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.settings-config-mobile-card__meta dt {
+  color: var(--md-on-surface-variant);
+  font-size: 0.75rem;
+}
+
+.settings-config-mobile-card__meta dd {
+  margin: 2px 0 0;
+  color: var(--md-on-surface);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.settings-config-mobile-card__actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.settings-config-mobile-card__actions :deep(.n-button) {
+  min-height: 44px;
 }
 
 .config-modal {

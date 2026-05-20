@@ -25,7 +25,7 @@
           <strong>{{ progress }}%</strong>
         </div>
         <div class="md-progress-linear">
-          <div class="md-progress-linear-bar" :style="{ width: `${progress}%` }"></div>
+          <div class="md-progress-linear-bar" :style="{ '--md-progress-scale': progressScale }"></div>
         </div>
       </div>
     </div>
@@ -98,6 +98,7 @@ const progress = computed(() => {
   const { completed_chapters, total_chapters } = props.project
   return total_chapters > 0 ? Math.round((completed_chapters / total_chapters) * 100) : 0
 })
+const progressScale = computed(() => Math.max(0, Math.min(100, progress.value)) / 100)
 
 const getStatusText = computed(() => {
   const { completed_chapters, total_chapters } = props.project

@@ -55,7 +55,7 @@
   --md-outline-variant: #e6dfd2;
 
   /* Semantic colors */
-  --md-error: #b85c58;
+  --md-error: #b35753;
   --md-error-strong: #7f2f2b;
   --md-error-container: #f8e5e2;
   --md-on-error: #fdf8f7;
@@ -985,14 +985,19 @@ button.md-chip,
 }
 
 .md-progress-linear-bar {
+  width: 100%;
   height: 100%;
   background-color: var(--md-primary);
   border-radius: 2px;
-  transition: width var(--md-duration-medium) var(--md-easing-standard);
+  transform-origin: left center;
+  transform: scaleX(var(--md-progress-scale, 0));
+  transition: transform var(--md-duration-medium) var(--md-easing-standard);
+  will-change: transform;
 }
 
 .md-progress-linear-indeterminate .md-progress-linear-bar {
   width: 50%;
+  transform: none;
   animation: md-progress-indeterminate 2s infinite var(--md-easing-standard);
 }
 

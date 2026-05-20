@@ -59,7 +59,7 @@
             <div
               class="blueprint-confirm__progress-bar"
               :class="{ 'blueprint-confirm__progress-bar--done': progress >= 100 }"
-              :style="{ width: `${progress}%` }"
+              :style="{ '--blueprint-progress-scale': progressScale }"
             ></div>
           </div>
         </div>
@@ -158,6 +158,7 @@ const loadingText = computed(() => {
   const index = Math.floor((progress.value / 100) * messages.length)
   return messages[Math.min(index, messages.length - 1)]
 })
+const progressScale = computed(() => Math.max(0, Math.min(100, progress.value)) / 100)
 
 // 剩余时间计算
 const timeRemaining = computed(() => {
@@ -344,10 +345,14 @@ onUnmounted(() => {
 }
 
 .blueprint-confirm__progress-bar {
+  width: 100%;
   height: 100%;
   background-color: var(--md-primary);
   border-radius: var(--md-radius-full);
-  transition: width 1s ease-out;
+  transform-origin: left center;
+  transform: scaleX(var(--blueprint-progress-scale, 0));
+  transition: transform 1s ease-out;
+  will-change: transform;
 }
 
 .blueprint-confirm__progress-bar--done {

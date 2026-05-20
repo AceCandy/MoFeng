@@ -93,22 +93,15 @@
             aria-valuemax="100"
             :aria-valuenow="continueProgress"
           >
-            <div class="md-progress-linear-bar" :style="{ width: `${continueProgress}%` }"></div>
+            <div class="md-progress-linear-bar" :style="{ '--md-progress-scale': continueProgressScale }"></div>
           </div>
         </div>
-        <div class="workspace-hero__stats">
-          <div>
-            <span>创作中项目</span>
-            <strong>{{ sortedProjects.length }}</strong>
-          </div>
-          <div>
-            <span>待推进章节</span>
-            <strong>{{ pendingChapters }}</strong>
-          </div>
-          <div>
-            <span>最近编辑</span>
-            <strong>{{ recentEditedProjects.length }}</strong>
-          </div>
+        <div class="workspace-hero__snapshot" aria-label="创作快照">
+          <span>创作中 <strong>{{ sortedProjects.length }}</strong> 个项目</span>
+          <span aria-hidden="true">·</span>
+          <span>待推进 <strong>{{ pendingChapters }}</strong> 章</span>
+          <span aria-hidden="true">·</span>
+          <span>最近编辑 <strong>{{ recentEditedProjects.length }}</strong> 个项目</span>
         </div>
       </div>
     </section>
@@ -394,6 +387,7 @@ const continueProgress = computed(() => {
 
   return Math.round((project.completed_chapters / project.total_chapters) * 100)
 })
+const continueProgressScale = computed(() => Math.max(0, Math.min(100, continueProgress.value)) / 100)
 
 const recentEditedProjects = computed(() => sortedProjects.value.slice(0, 5))
 
@@ -701,30 +695,23 @@ onUnmounted(() => {
   color: var(--md-on-surface);
 }
 
-.workspace-hero__stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--md-spacing-3);
-}
-
-.workspace-hero__stats div {
+.workspace-hero__snapshot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--md-spacing-2);
   padding: var(--md-spacing-3);
   border-radius: var(--md-radius-md);
-  border: 1px solid var(--md-outline-variant);
-  background-color: var(--md-surface-container-low);
-}
-
-.workspace-hero__stats span {
-  display: block;
+  border: 1px dashed color-mix(in srgb, var(--md-primary) 28%, var(--md-outline-variant));
+  background-color: color-mix(in srgb, var(--md-surface-container-low) 86%, var(--md-tint-cool));
   color: var(--md-on-surface-variant);
-  font-size: var(--md-label-small);
+  font-size: var(--md-label-medium);
+  line-height: 1.5;
 }
 
-.workspace-hero__stats strong {
-  display: block;
-  margin-top: 4px;
+.workspace-hero__snapshot strong {
   color: var(--md-on-surface);
-  font-size: var(--md-title-medium);
+  font-size: var(--md-title-small);
 }
 
 .workspace-canvas {
@@ -1111,8 +1098,8 @@ onUnmounted(() => {
     flex: 1 1 100%;
   }
 
-  .workspace-hero__stats {
-    grid-template-columns: minmax(0, 1fr);
+  .workspace-hero__snapshot {
+    font-size: var(--md-label-small);
   }
 }
 

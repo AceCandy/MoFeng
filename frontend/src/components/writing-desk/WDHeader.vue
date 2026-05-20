@@ -56,7 +56,7 @@
         aria-valuemax="100"
         :aria-label="`写作进度 ${clampedProgress}%`"
       >
-        <span :style="{ width: `${clampedProgress}%` }"></span>
+        <span :style="{ '--wd-progress-scale': clampedProgressScale }"></span>
       </div>
     </div>
   </header>
@@ -81,6 +81,7 @@ const props = defineProps<Props>()
 defineEmits(['goBack', 'toggleAssistant'])
 
 const clampedProgress = computed(() => Math.max(0, Math.min(100, props.progress || 0)))
+const clampedProgressScale = computed(() => clampedProgress.value / 100)
 const assistantButtonLabel = computed(() => {
   if (props.assistantDrawerMode) {
     return props.assistantOpen ? '收起辅助' : '辅助信息'
@@ -167,7 +168,10 @@ const assistantButtonLabel = computed(() => {
   height: 100%;
   border-radius: inherit;
   background-color: var(--md-primary);
-  transition: width var(--md-duration-medium) var(--md-easing-standard);
+  transform-origin: left center;
+  transform: scaleX(var(--wd-progress-scale, 0));
+  transition: transform var(--md-duration-medium) var(--md-easing-standard);
+  will-change: transform;
 }
 
 @media (max-width: 640px) {
