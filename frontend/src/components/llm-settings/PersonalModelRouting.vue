@@ -255,6 +255,9 @@
               type="button"
               class="md-btn md-btn-tonal md-ripple"
               :disabled="!provider.is_enabled || providerFetchState(provider.id).isLoading"
+              aria-haspopup="dialog"
+              :aria-expanded="isModelPickerOpen(provider.id)"
+              :aria-controls="`model-picker-${provider.id}`"
               @click="openProviderModelPicker(provider)"
             >
               {{ providerFetchState(provider.id).isLoading ? '拉取中...' : '拉取模型' }}
@@ -263,14 +266,18 @@
 
           <div
             v-if="isModelPickerOpen(provider.id)"
+            :id="`model-picker-${provider.id}`"
+            ref="modelPickerDialogRef"
             class="model-routing__model-picker"
             role="dialog"
-            :aria-label="activeSection === 'llm' ? '选择文本生成模型' : '选择记忆检索模型'"
+            aria-modal="false"
+            :aria-labelledby="`model-picker-title-${provider.id}`"
+            @keydown.esc.stop.prevent="closeModelPicker"
             @click.stop
           >
             <div class="model-routing__picker-head">
               <div>
-                <strong>{{
+                <strong :id="`model-picker-title-${provider.id}`">{{
                   activeSection === 'llm' ? '选择文本生成模型' : '选择记忆检索模型'
                 }}</strong>
                 <p class="model-routing__hint">
@@ -287,6 +294,8 @@
             <label class="md-text-field model-routing__picker-search">
               <span class="md-text-field-label">搜索模型</span>
               <input
+                ref="modelPickerSearchInputRef"
+                data-dialog-initial-focus
                 v-model="modelPickerQuery"
                 class="md-text-field-input"
                 type="search"
@@ -414,6 +423,7 @@ import type {
   UserModelProvider,
 } from '@/api/llm'
 import { globalAlert } from '@/composables/useAlert'
+import { useDialogA11y } from '@/composables/useDialogA11y'
 import {
   useDeleteProviderMutation,
   useDeleteUserModelMutation,
@@ -638,6 +648,9 @@ const isSavingRoutes = computed(() => saveStageRoutesMutation.isPending.value)
 const editingProviderId = ref<number | null>(null)
 const providerFormMode = ref<ProviderFormMode>(null)
 const activeModelPickerProviderId = ref<number | null>(null)
+const isModelPickerActive = computed(() => activeModelPickerProviderId.value !== null)
+const modelPickerDialogRef = ref<HTMLElement | null>(null)
+const modelPickerSearchInputRef = ref<HTMLElement | null>(null)
 const modelPickerQuery = ref('')
 const feedback = ref<{ type: 'success' | 'error'; message: string }>({
   type: 'success',
@@ -872,6 +885,15 @@ const closeModelPicker = () => {
   activeModelPickerProviderId.value = null
   modelPickerQuery.value = ''
 }
+
+useDialogA11y({
+  active: isModelPickerActive,
+  dialogRef: modelPickerDialogRef,
+  initialFocusRef: modelPickerSearchInputRef,
+  onClose: closeModelPicker,
+  trapFocus: false,
+  lockBodyScroll: false,
+})
 
 const syncRouteSelectionsFromBundle = () => {
   const bundle = bundleQuery.data.value
@@ -1234,6 +1256,26 @@ watch(
     if (!error) return
     const message = error instanceof Error ? error.message : '未知错误'
     setFeedback('error', `读取模型设置失败：${message}`)
+  },
+)
+
+watch(
+  () => activeSection.value,
+  () => {
+    closeModelPicker()
+  },
+)
+
+watch(
+  () => activeProviders.value,
+  (providersSnapshot) => {
+    if (activeModelPickerProviderId.value === null) return
+    const isCurrentProviderVisible = providersSnapshot.some(
+      (provider) => provider.id === activeModelPickerProviderId.value,
+    )
+    if (!isCurrentProviderVisible) {
+      closeModelPicker()
+    }
   },
 )
 

@@ -95,16 +95,19 @@
         <button
           v-for="section in adminSections"
           :key="section.key"
+          :ref="(el) => setAdminTabRef(section.key, el)"
           type="button"
           class="admin-console__nav-item"
           :class="{ 'is-active': section.key === activeSection.key }"
           :id="`admin-tab-${section.key}`"
           role="tab"
           :aria-selected="section.key === activeSection.key"
+          :tabindex="section.key === activeSection.key ? 0 : -1"
           :aria-current="section.key === activeSection.key ? 'page' : undefined"
           aria-controls="admin-panel"
           :title="section.description"
           @click="selectSection(section.key)"
+          @keydown="onAdminTabKeydown(section.key, $event)"
         >
           <span class="admin-console__nav-label">{{ section.label }}</span>
         </button>
@@ -127,7 +130,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, ref, watch, type Component } from 'vue'
+import {
+  computed,
+  defineAsyncComponent,
+  ref,
+  watch,
+  type Component,
+  type ComponentPublicInstance,
+} from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { NMessageProvider } from 'naive-ui/es/message'
 import {
@@ -277,6 +287,15 @@ const resolveMenuKey = (value: unknown): MenuKey => {
 }
 
 const activeKey = ref<MenuKey>('statistics')
+const adminTabRefs = ref<Record<MenuKey, HTMLButtonElement | null>>({
+  statistics: null,
+  users: null,
+  prompts: null,
+  novels: null,
+  logs: null,
+  settings: null,
+  password: null,
+})
 
 watch(
   () => route.query.tab,
@@ -297,6 +316,47 @@ const activeComponent = computed(() => components[activeSection.value.key])
 const selectSection = (key: MenuKey) => {
   activeKey.value = key
   router.replace({ name: 'admin', query: { tab: key } })
+}
+
+const setAdminTabRef = (
+  key: MenuKey,
+  element: Element | ComponentPublicInstance | null,
+) => {
+  const target =
+    element instanceof HTMLButtonElement
+      ? element
+      : element && '$el' in element && element.$el instanceof HTMLButtonElement
+        ? element.$el
+        : null
+  adminTabRefs.value[key] = target
+}
+
+const focusAdminTab = (key: MenuKey) => {
+  adminTabRefs.value[key]?.focus()
+}
+
+// 管理台 tabs 支持方向键快速切换，符合 ARIA Tabs 键盘交互习惯。
+const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
+  const currentIndex = adminSections.findIndex((section) => section.key === key)
+  if (currentIndex === -1) return
+  const lastIndex = adminSections.length - 1
+
+  let nextIndex: number | null = null
+  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+    nextIndex = currentIndex === lastIndex ? 0 : currentIndex + 1
+  } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+    nextIndex = currentIndex === 0 ? lastIndex : currentIndex - 1
+  } else if (event.key === 'Home') {
+    nextIndex = 0
+  } else if (event.key === 'End') {
+    nextIndex = lastIndex
+  }
+
+  if (nextIndex === null || nextIndex === currentIndex) return
+  event.preventDefault()
+  const nextKey = adminSections[nextIndex].key
+  selectSection(nextKey)
+  focusAdminTab(nextKey)
 }
 </script>
 
@@ -574,7 +634,7 @@ const selectSection = (key: MenuKey) => {
   min-width: 0;
 }
 
-@media (max-width: 1120px) {
+@media (max-width: 1199px) {
   .admin-ops__metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -588,7 +648,7 @@ const selectSection = (key: MenuKey) => {
   }
 }
 
-@media (max-width: 740px) {
+@media (max-width: 833px) {
   .admin-console {
     gap: var(--md-spacing-4);
   }

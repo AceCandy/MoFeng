@@ -1081,13 +1081,13 @@ onUnmounted(() => {
   height: 32px;
 }
 
-@media (max-width: 1120px) {
+@media (max-width: 1199px) {
   .workspace-hero {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 833px) {
   .workspace-page {
     gap: var(--md-spacing-4);
   }
@@ -1116,7 +1116,7 @@ onUnmounted(() => {
   }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 833px) {
   .workspace-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--md-spacing-4);

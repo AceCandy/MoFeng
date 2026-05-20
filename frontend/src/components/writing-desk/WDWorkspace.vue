@@ -1389,7 +1389,7 @@ const currentComponentProps = computed(() => {
 
 .writing-workspace__tool-btn--secondary.writing-workspace__tool-btn--hero {
   border-color: color-mix(in srgb, var(--md-primary) 24%, var(--md-outline-variant));
-  box-shadow: 0 4px 10px rgba(38, 60, 89, 0.08);
+  box-shadow: var(--md-elevation-1);
 }
 
 .writing-workspace__tool-btn--primary {
@@ -1400,12 +1400,12 @@ const currentComponentProps = computed(() => {
 
 .writing-workspace__tool-btn--primary:hover:not(:disabled) {
   background-color: color-mix(in srgb, var(--md-primary-container) 95%, var(--md-surface));
-  box-shadow: 0 4px 10px rgba(38, 60, 89, 0.12);
+  box-shadow: var(--md-elevation-2);
 }
 
 .writing-workspace__tool-btn--primary.writing-workspace__tool-btn--hero {
   border-color: color-mix(in srgb, var(--md-primary) 32%, var(--md-outline-variant));
-  box-shadow: 0 5px 14px rgba(38, 60, 89, 0.14);
+  box-shadow: var(--md-elevation-2);
 }
 
 .writing-workspace__more-menu {
@@ -1423,7 +1423,7 @@ const currentComponentProps = computed(() => {
   border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--md-outline-variant) 86%, transparent);
   background: color-mix(in srgb, var(--md-surface) 94%, var(--md-surface-container-low));
-  box-shadow: 0 10px 20px rgba(24, 38, 58, 0.14);
+  box-shadow: var(--md-elevation-2);
 }
 
 .writing-workspace__more-menu-item {

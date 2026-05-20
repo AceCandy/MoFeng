@@ -1,84 +1,75 @@
 <!-- AIMETA P=应用布局_认证后共享外壳|R=全局导航_页面容器|NR=不含业务页面逻辑|E=component:AppShell|X=ui|A=布局组件|D=vue,vue-router,pinia|S=dom|RD=./README.ai -->
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useQueryClient } from '@tanstack/vue-query'
-import { useAuthStore } from '@/stores/auth'
+
+import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
 import { clearAuthQueryCache } from '@/queries/auth'
+import { useAuthStore } from '@/stores/auth'
+import {
+  buildShellNavigation,
+  type ShellNavIcon,
+} from '@/components/shared/shellNavigation'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const queryClient = useQueryClient()
-const isMobileNavOpen = ref(false)
-const isMobileShell = ref(false)
+const viewport = useResponsiveViewport()
+const isDrawerOpen = ref(false)
 
-let mobileMediaQuery: MediaQueryList | null = null
-
-const syncMobileShell = () => {
-  isMobileShell.value = Boolean(mobileMediaQuery?.matches)
-}
-
-const navigationItems = computed(() => {
-  const items = [
-    {
-      label: '工作台',
-      path: '/workspace',
-      match: (path: string) => path === '/workspace' || path.startsWith('/projects/'),
-      icon: 'desk',
-    },
-    {
-      label: '模型设置',
-      path: '/settings',
-      match: (path: string) => path.startsWith('/settings'),
-      icon: 'settings',
-    },
-  ]
-
-  if (authStore.user?.is_admin) {
-    items.push({
-      label: '管理',
-      path: '/admin',
-      match: (path: string) => path.startsWith('/admin'),
-      icon: 'admin',
-    })
-  }
-
-  return items
-})
+const navigation = computed(() => buildShellNavigation(Boolean(authStore.user?.is_admin)))
+const isCompactShell = computed(() => viewport.tier.value !== 'desktop')
+const isMobileShell = computed(() => viewport.isMobile.value)
 
 const pageLabel = computed(() => String(route.meta.label || '工作台'))
+const pageDescription = computed(() => String(route.meta.description || ''))
 const isProjectContext = computed(() =>
   ['project-detail', 'project-write', 'admin-project-detail'].includes(String(route.name || '')),
 )
 
-const closeMobileNav = () => {
-  isMobileNavOpen.value = false
+const navIconPaths: Record<ShellNavIcon, string[]> = {
+  desk: ['M4 5h16v14H4z', 'M4 10h16', 'M9 19v-9'],
+  spark: ['M12 3l1.9 4.8L19 10l-5.1 2.2L12 17l-1.9-4.8L5 10l5.1-2.2L12 3z'],
+  settings: [
+    'M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z',
+    'M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 01-2.83 2.83l-.06-.06A1.7 1.7 0 0015 19.4a1.7 1.7 0 00-1 .6 1.7 1.7 0 00-.4 1.1V21a2 2 0 01-4 0v-.09A1.7 1.7 0 009 19.4a1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.7 1.7 0 004.6 15a1.7 1.7 0 00-.6-1 1.7 1.7 0 00-1.1-.4H3a2 2 0 010-4h.09A1.7 1.7 0 004.6 9a1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 012.83-2.83l.06.06A1.7 1.7 0 009 4.6a1.7 1.7 0 001-.6 1.7 1.7 0 00.4-1.1V3a2 2 0 014 0v.09A1.7 1.7 0 0015 4.6a1.7 1.7 0 001.87-.34l.06-.06a2 2 0 012.83 2.83l-.06.06A1.7 1.7 0 0019.4 9a1.7 1.7 0 00.6 1 1.7 1.7 0 001.1.4H21a2 2 0 010 4h-.09A1.7 1.7 0 0019.4 15z',
+  ],
+  admin: ['M4 7h16', 'M6 7v12h12V7', 'M9 11h6', 'M9 15h6'],
+}
+
+const closeDrawer = () => {
+  isDrawerOpen.value = false
+}
+
+const toggleDrawer = () => {
+  isDrawerOpen.value = !isDrawerOpen.value
 }
 
 const logout = () => {
   authStore.logout()
   clearAuthQueryCache(queryClient)
+  closeDrawer()
   router.push('/login')
 }
 
 watch(
   () => route.fullPath,
   () => {
-    closeMobileNav()
+    closeDrawer()
   },
 )
 
-onMounted(() => {
-  mobileMediaQuery = window.matchMedia('(max-width: 1023px)')
-  syncMobileShell()
-  mobileMediaQuery.addEventListener('change', syncMobileShell)
-})
-
-onUnmounted(() => {
-  mobileMediaQuery?.removeEventListener('change', syncMobileShell)
-  mobileMediaQuery = null
-})
+watch(
+  isCompactShell,
+  (compact) => {
+    if (!compact) {
+      closeDrawer()
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -88,9 +79,9 @@ onUnmounted(() => {
     <aside
       id="app-primary-navigation"
       class="app-shell__sidebar"
-      :class="{ 'is-open': isMobileNavOpen }"
-      :aria-hidden="isMobileShell && !isMobileNavOpen ? 'true' : undefined"
-      :inert="isMobileShell && !isMobileNavOpen"
+      :class="{ 'is-open': isCompactShell && isDrawerOpen }"
+      :aria-hidden="isCompactShell && !isDrawerOpen ? 'true' : undefined"
+      :inert="isCompactShell && !isDrawerOpen"
     >
       <div class="app-shell__brand">
         <div class="app-shell__brand-mark" aria-hidden="true">墨</div>
@@ -99,10 +90,11 @@ onUnmounted(() => {
           <p class="app-shell__account-role">AI 小说创作中控台</p>
         </div>
         <button
+          v-if="isCompactShell"
           type="button"
           class="md-icon-btn app-shell__close"
           aria-label="关闭导航"
-          @click="closeMobileNav"
+          @click="closeDrawer"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -112,8 +104,8 @@ onUnmounted(() => {
 
       <nav class="app-shell__nav" aria-label="主导航">
         <RouterLink
-          v-for="item in navigationItems"
-          :key="item.path"
+          v-for="item in navigation.sidebarItems"
+          :key="item.key"
           :to="item.path"
           class="app-shell__nav-item"
           :class="{ 'is-active': item.match(route.path) }"
@@ -123,41 +115,17 @@ onUnmounted(() => {
         >
           <span class="app-shell__nav-icon" aria-hidden="true">
             <svg
-              v-if="item.icon === 'desk'"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
             >
               <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M4 5h16v14H4zM4 10h16M9 19v-9"
-              />
-            </svg>
-            <svg
-              v-else-if="item.icon === 'settings'"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z"
-              />
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 01-2.83 2.83l-.06-.06A1.7 1.7 0 0015 19.4a1.7 1.7 0 00-1 .6 1.7 1.7 0 00-.4 1.1V21a2 2 0 01-4 0v-.09A1.7 1.7 0 009 19.4a1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.7 1.7 0 004.6 15a1.7 1.7 0 00-.6-1 1.7 1.7 0 00-1.1-.4H3a2 2 0 010-4h.09A1.7 1.7 0 004.6 9a1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 012.83-2.83l.06.06A1.7 1.7 0 009 4.6a1.7 1.7 0 001-.6 1.7 1.7 0 00.4-1.1V3a2 2 0 014 0v.09A1.7 1.7 0 0015 4.6a1.7 1.7 0 001.87-.34l.06-.06a2 2 0 012.83 2.83l-.06.06A1.7 1.7 0 0019.4 9a1.7 1.7 0 00.6 1 1.7 1.7 0 001.1.4H21a2 2 0 010 4h-.09A1.7 1.7 0 0019.4 15z"
-              />
-            </svg>
-            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M4 7h16M6 7v12h12V7M9 11h6M9 15h6"
+                v-for="(path, index) in navIconPaths[item.icon]"
+                :key="`${item.key}-${index}`"
+                :d="path"
               />
             </svg>
           </span>
@@ -183,22 +151,23 @@ onUnmounted(() => {
     </aside>
 
     <button
-      v-if="isMobileNavOpen"
+      v-if="isCompactShell && isDrawerOpen"
       type="button"
       class="app-shell__mobile-backdrop"
       aria-label="关闭导航"
-      @click="closeMobileNav"
+      @click="closeDrawer"
     ></button>
 
     <div class="app-shell__main">
       <header class="app-shell__topbar">
         <button
+          v-if="isCompactShell"
           type="button"
           class="md-icon-btn app-shell__menu"
           aria-label="打开导航"
           aria-controls="app-primary-navigation"
-          :aria-expanded="isMobileNavOpen"
-          @click="isMobileNavOpen = true"
+          :aria-expanded="isDrawerOpen"
+          @click="toggleDrawer"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
@@ -207,6 +176,9 @@ onUnmounted(() => {
         <div class="app-shell__workspace-context">
           <div class="app-shell__title-block">
             <h1>{{ pageLabel }}</h1>
+            <p v-if="pageDescription" class="app-shell__title-description">
+              {{ pageDescription }}
+            </p>
           </div>
         </div>
       </header>
@@ -215,5 +187,36 @@ onUnmounted(() => {
         <slot />
       </main>
     </div>
+
+    <nav v-if="isMobileShell" class="app-shell__bottom-tabs" aria-label="移动主导航">
+      <RouterLink
+        v-for="item in navigation.mobileTabs"
+        :key="item.key"
+        :to="item.path"
+        class="app-shell__bottom-tab"
+        :class="{ 'is-active': item.match(route.path) }"
+        :aria-current="item.match(route.path) ? 'page' : undefined"
+        :aria-label="item.mobileLabel || item.label"
+        :title="item.mobileLabel || item.label"
+      >
+        <span class="app-shell__bottom-tab-icon" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              v-for="(path, index) in navIconPaths[item.icon]"
+              :key="`${item.key}-mobile-${index}`"
+              :d="path"
+            />
+          </svg>
+        </span>
+        <span class="app-shell__bottom-tab-text">{{ item.mobileLabel || item.label }}</span>
+      </RouterLink>
+    </nav>
   </div>
 </template>

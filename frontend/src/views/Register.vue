@@ -414,13 +414,22 @@ onUnmounted(() => {
   text-align: center;
 }
 
-@media (max-width: 520px) {
+@media (max-width: 833px) {
   .register-page {
     gap: var(--md-spacing-5);
   }
 
+  .register-brand {
+    min-height: 48px;
+  }
+
   .register-card {
+    width: min(100%, 480px);
     padding: var(--md-spacing-5);
+  }
+
+  .register-card__header {
+    margin-bottom: var(--md-spacing-6);
   }
 
   .register-code-row {

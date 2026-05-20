@@ -1006,7 +1006,7 @@ const selectEmbeddingModel = (model: string) => {
   color: var(--md-on-error-container);
 }
 
-@media (min-width: 768px) {
+@media (min-width: 834px) {
   .llm-model-row {
     flex-direction: row;
     align-items: flex-end;

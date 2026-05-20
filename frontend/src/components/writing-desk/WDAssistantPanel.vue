@@ -165,7 +165,7 @@ const risks = computed(() => {
   border: 1px solid color-mix(in srgb, var(--md-outline-variant) 80%, transparent);
   border-radius: var(--md-radius-xl);
   background-color: color-mix(in srgb, var(--md-surface) 95%, var(--md-surface-container-low));
-  box-shadow: 0 2px 8px rgba(38, 47, 61, 0.05);
+  box-shadow: var(--md-elevation-1);
 }
 
 .wd-ai__section {

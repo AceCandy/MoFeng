@@ -1,13 +1,16 @@
 <!-- AIMETA P=根组件_应用根节点|R=全局布局_RouterView|NR=不含页面逻辑|E=component:App|X=ui|A=RouterView|D=vue-router|S=dom|RD=./README.ai -->
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
-import CustomAlert from '@/components/CustomAlert.vue'
-import AppShell from '@/components/shared/AppShell.vue'
-import AuthLayout from '@/components/shared/AuthLayout.vue'
 import { globalAlert } from '@/composables/useAlert'
 
 const route = useRoute()
+
+// 布局壳与弹窗只在实际渲染时加载，避免登录首屏带上认证后导航和焦点陷阱代码。
+const AppShell = defineAsyncComponent(() => import('@/components/shared/AppShell.vue'))
+const AuthLayout = defineAsyncComponent(() => import('@/components/shared/AuthLayout.vue'))
+const CustomAlert = defineAsyncComponent(() => import('@/components/CustomAlert.vue'))
+
 const layoutComponent = computed(() => route.meta.layout === 'auth' ? AuthLayout : AppShell)
 </script>
 

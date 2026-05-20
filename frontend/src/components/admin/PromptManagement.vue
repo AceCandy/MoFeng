@@ -145,7 +145,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { NAlert } from 'naive-ui/es/alert'
 import { NButton } from 'naive-ui/es/button'
 import { NDynamicTags } from 'naive-ui/es/dynamic-tags'
@@ -161,6 +161,8 @@ import { NTag } from 'naive-ui/es/tag'
 
 import type { PromptCreatePayload, PromptItem } from '@/api/admin'
 import { useAlert } from '@/composables/useAlert'
+import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
+import { mobileMax } from '@/constants/responsive'
 import {
   useAdminPromptsQuery,
   useCreateAdminPromptMutation,
@@ -206,16 +208,13 @@ const createForm = reactive<PromptCreatePayload>({
   tags: []
 })
 
-const isMobile = ref(false)
+const viewport = useResponsiveViewport()
+const isMobile = computed(() => viewport.width.value <= mobileMax)
 const NAME_REGEXP = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/
 const MAX_TITLE_LENGTH = 255
 const MAX_TAG_COUNT = 12
 const MAX_TAG_LENGTH = 24
 const MAX_SERIALIZED_TAG_LENGTH = 255
-
-const updateLayout = () => {
-  isMobile.value = window.innerWidth < 920
-}
 
 const normalizeTags = (tags: string[] | null | undefined): string[] => {
   const normalized = (tags || [])
@@ -401,14 +400,6 @@ const createPrompt = async () => {
   }
 }
 
-onMounted(() => {
-  updateLayout()
-  window.addEventListener('resize', updateLayout)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', updateLayout)
-})
 </script>
 
 <style scoped>
@@ -569,7 +560,7 @@ onBeforeUnmount(() => {
   max-width: min(720px, 90vw);
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1199px) {
   .prompt-sidebar {
     width: 260px;
   }

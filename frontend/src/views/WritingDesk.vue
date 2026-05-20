@@ -270,7 +270,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineAsyncComponent, nextTick, onBeforeUnmount, onMounted } from 'vue'
+import { ref, computed, defineAsyncComponent, nextTick, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import type {
   Chapter,
@@ -294,6 +294,8 @@ import {
 } from '@/queries/novel'
 import { globalAlert } from '@/composables/useAlert'
 import { useDialogA11y } from '@/composables/useDialogA11y'
+import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
+import { desktopMin, mobileMax } from '@/constants/responsive'
 import { countNonWhitespaceChars } from '@/utils/text'
 import WDHeader from '@/components/writing-desk/WDHeader.vue'
 import WDSidebar from '@/components/writing-desk/WDSidebar.vue'
@@ -344,12 +346,13 @@ const isOptimizingRecommendedVersion = computed(
 const isApplyingRecommendedOptimization = computed(() => applyOptimizationMutation.isPending.value)
 const recommendedOptimizedContent = ref('')
 const recommendedOptimizeResultNotes = ref('')
-const viewportWidth = ref<number>(typeof window !== 'undefined' ? window.innerWidth : 1600)
+const viewport = useResponsiveViewport()
+const viewportWidth = computed(() => viewport.width.value)
 const isSidebarDrawerOpen = ref(false)
 const isAssistantDrawerOpen = ref(false)
 const isAssistantPanelVisible = ref(true)
-const SIDEBAR_DRAWER_BREAKPOINT = 1023
-const ASSISTANT_DRAWER_BREAKPOINT = 1279
+const SIDEBAR_DRAWER_BREAKPOINT = mobileMax
+const ASSISTANT_DRAWER_BREAKPOINT = desktopMin - 1
 const ASSISTANT_PANEL_VISIBILITY_STORAGE_KEY = 'mofeng.writingDesk.assistant.visible'
 
 const chapterQuery = useNovelChapterQuery(() => props.id, selectedChapterNumber)
@@ -385,6 +388,26 @@ const isDrawerBackdropVisible = computed(
   () =>
     (useSidebarDrawer.value && isSidebarDrawerOpen.value) ||
     (useAssistantDrawer.value && isAssistantDrawerOpen.value),
+)
+
+watch(
+  () => useSidebarDrawer.value,
+  (enabled) => {
+    if (!enabled) {
+      isSidebarDrawerOpen.value = false
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => useAssistantDrawer.value,
+  (enabled) => {
+    if (!enabled) {
+      isAssistantDrawerOpen.value = false
+    }
+  },
+  { immediate: true },
 )
 
 const closeAllDrawers = () => {
@@ -881,24 +904,8 @@ const applyRecommendedOptimization = async () => {
   }
 }
 
-const syncLayoutMode = () => {
-  viewportWidth.value = window.innerWidth
-  if (!useSidebarDrawer.value) {
-    isSidebarDrawerOpen.value = false
-  }
-  if (!useAssistantDrawer.value) {
-    isAssistantDrawerOpen.value = false
-  }
-}
-
 onMounted(() => {
   restoreAssistantPanelVisibility()
-  syncLayoutMode()
-  window.addEventListener('resize', syncLayoutMode)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', syncLayoutMode)
 })
 
 // 方法
@@ -1333,9 +1340,9 @@ const handleGenerateOutline = async (numChapters: number) => {
 }
 
 .writing-desk-mobile-action {
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: var(--md-radius-sm);
   font-size: var(--md-label-medium);
 }
 
@@ -1390,7 +1397,7 @@ const handleGenerateOutline = async (numChapters: number) => {
   }
 }
 
-@media (max-width: 1279px) {
+@media (max-width: 1199px) {
   .writing-desk-mobile-actions {
     display: flex;
     justify-content: flex-end;
@@ -1417,7 +1424,7 @@ const handleGenerateOutline = async (numChapters: number) => {
   .writing-desk-assistant-shell.is-drawer.is-open {
     transform: translateX(0);
     pointer-events: auto;
-    box-shadow: -10px 0 24px rgba(24, 32, 45, 0.18);
+    box-shadow: var(--md-elevation-drawer-right);
   }
 }
 
@@ -1432,7 +1439,7 @@ const handleGenerateOutline = async (numChapters: number) => {
   }
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 833px) {
   .writing-desk-page {
     height: auto;
     min-height: calc(var(--app-viewport-unit) - 104px);
@@ -1488,11 +1495,11 @@ const handleGenerateOutline = async (numChapters: number) => {
   }
 
   .writing-desk-sidebar-shell.is-drawer.is-open {
-    box-shadow: 10px 0 24px rgba(24, 32, 45, 0.18);
+    box-shadow: var(--md-elevation-drawer-left);
   }
 
   .writing-desk-assistant-shell.is-drawer.is-open {
-    box-shadow: -10px 0 24px rgba(24, 32, 45, 0.18);
+    box-shadow: var(--md-elevation-drawer-right);
   }
 }
 

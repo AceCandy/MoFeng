@@ -146,7 +146,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, h, reactive, ref, watch } from 'vue'
 import { NAlert } from 'naive-ui/es/alert'
 import { NButton } from 'naive-ui/es/button'
 import { NDataTable } from 'naive-ui/es/data-table'
@@ -163,6 +163,8 @@ import { NTag } from 'naive-ui/es/tag'
 import type { DataTableColumns, FormInst, FormRules, FormItemRule } from 'naive-ui'
 
 import type { AdminUser, UserCreatePayload, UserUpdatePayload } from '@/api/admin'
+import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
+import { mobileMax } from '@/constants/responsive'
 import {
   useAdminUsersQuery,
   useCreateAdminUserMutation,
@@ -189,7 +191,8 @@ const error = computed({
   },
 })
 const keyword = ref('')
-const isMobile = ref(false)
+const viewport = useResponsiveViewport()
+const isMobile = computed(() => viewport.width.value <= mobileMax)
 
 const showModal = ref(false)
 const isEditMode = ref(false)
@@ -226,10 +229,6 @@ const pagination = reactive({
   showSizePicker: true,
   pageSizes: [10, 20, 50],
 })
-
-const updateLayout = () => {
-  isMobile.value = window.innerWidth < 768
-}
 
 const columns: DataTableColumns<AdminUser> = [
   {
@@ -429,14 +428,6 @@ const handleSubmit = () => {
   })
 }
 
-onMounted(() => {
-  updateLayout()
-  window.addEventListener('resize', updateLayout)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', updateLayout)
-})
 </script>
 
 <style scoped>
@@ -520,7 +511,7 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 833px) {
   .search-input {
     width: 100%;
   }

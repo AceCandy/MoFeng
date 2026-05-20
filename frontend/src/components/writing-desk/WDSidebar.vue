@@ -93,18 +93,7 @@
                     <div class="writing-sidebar__chapter-index">
                       <Tooltip :text="getChapterTag(chapter.chapter_number)">
                         <span
-                          :class="[
-                            'writing-sidebar__status-dot',
-                            isChapterCompleted(chapter.chapter_number)
-                              ? 'is-completed'
-                              : isChapterGeneratingLike(chapter.chapter_number) ||
-                                  isChapterEvaluating(chapter.chapter_number) ||
-                                  isChapterSelecting(chapter.chapter_number)
-                                ? 'is-progress'
-                                : isChapterFailed(chapter.chapter_number)
-                                  ? 'is-failed'
-                                  : 'is-idle',
-                          ]"
+                          :class="['writing-sidebar__status-dot', chapterStatusDotClass(chapter.chapter_number)]"
                         ></span>
                       </Tooltip>
                       <Tooltip :text="getChapterTag(chapter.chapter_number)">
@@ -212,6 +201,19 @@ const totalChapters = computed(() => {
   return props.project?.blueprint?.chapter_outline?.length || 0
 })
 
+// 章节号到章节数据的索引，避免模板渲染时多次线性查找。
+const chapterByNumber = computed(() => {
+  const map = new Map<number, NovelProject['chapters'][number]>()
+  for (const chapter of props.project?.chapters ?? []) {
+    map.set(chapter.chapter_number, chapter)
+  }
+  return map
+})
+
+const chapterStatusByNumber = (chapterNumber: number) => {
+  return chapterByNumber.value.get(chapterNumber)?.generation_status || null
+}
+
 const hasIncompleteChapter = computed(() => {
   if (!props.project?.blueprint?.chapter_outline?.length) return false
   return props.project.blueprint.chapter_outline.some(
@@ -257,21 +259,15 @@ defineExpose({
 
 // 章节状态检查
 const isChapterCompleted = (chapterNumber: number) => {
-  if (!props.project?.chapters) return false
-  const chapter = props.project.chapters.find((ch) => ch.chapter_number === chapterNumber)
-  return chapter && chapter.generation_status === 'successful'
+  return chapterStatusByNumber(chapterNumber) === 'successful'
 }
 
 const hasChapterInProgress = (chapterNumber: number) => {
-  if (!props.project?.chapters) return false
-  const chapter = props.project.chapters.find((ch) => ch.chapter_number === chapterNumber)
-  return chapter && chapter.generation_status === 'waiting_for_confirm'
+  return chapterStatusByNumber(chapterNumber) === 'waiting_for_confirm'
 }
 
 const isChapterGenerating = (chapterNumber: number) => {
-  if (!props.project?.chapters) return false
-  const chapter = props.project.chapters.find((ch) => ch.chapter_number === chapterNumber)
-  return chapter && chapter.generation_status === 'generating'
+  return chapterStatusByNumber(chapterNumber) === 'generating'
 }
 
 const isChapterGeneratingLike = (chapterNumber: number) => {
@@ -279,25 +275,20 @@ const isChapterGeneratingLike = (chapterNumber: number) => {
 }
 
 const isChapterEvaluating = (chapterNumber: number) => {
-  if (!props.project?.chapters) return false
-  const chapter = props.project.chapters.find((ch) => ch.chapter_number === chapterNumber)
-  return chapter && chapter.generation_status === 'evaluating'
+  return chapterStatusByNumber(chapterNumber) === 'evaluating'
 }
 
 const isChapterFailed = (chapterNumber: number) => {
-  if (!props.project?.chapters) return false
-  const chapter = props.project.chapters.find((ch) => ch.chapter_number === chapterNumber)
-  return chapter && chapter.generation_status === 'failed'
+  const status = chapterStatusByNumber(chapterNumber)
+  return status === 'failed' || status === 'evaluation_failed'
 }
 
 const isChapterSelecting = (chapterNumber: number) => {
-  if (!props.project?.chapters) return false
-  const chapter = props.project.chapters.find((ch) => ch.chapter_number === chapterNumber)
-  return chapter && chapter.generation_status === 'selecting'
+  return chapterStatusByNumber(chapterNumber) === 'selecting'
 }
 
 const getChapterWordCount = (chapterNumber: number): number => {
-  const chapter = props.project?.chapters?.find((item) => item.chapter_number === chapterNumber)
+  const chapter = chapterByNumber.value.get(chapterNumber)
   if (!chapter) return 0
   if (typeof chapter.word_count === 'number' && chapter.word_count >= 0) return chapter.word_count
   return (chapter.content || '').replace(/\s+/g, '').length
@@ -310,6 +301,20 @@ const getChapterTag = (chapterNumber: number): string => {
   if (isChapterSelecting(chapterNumber) || hasChapterInProgress(chapterNumber)) return '待选择'
   if (isChapterFailed(chapterNumber)) return '待修复'
   return '待开始'
+}
+
+const chapterStatusDotClass = (chapterNumber: number) => {
+  if (isChapterCompleted(chapterNumber)) return 'is-completed'
+  if (
+    isChapterGeneratingLike(chapterNumber) ||
+    isChapterEvaluating(chapterNumber) ||
+    isChapterSelecting(chapterNumber) ||
+    hasChapterInProgress(chapterNumber)
+  ) {
+    return 'is-progress'
+  }
+  if (isChapterFailed(chapterNumber)) return 'is-failed'
+  return 'is-idle'
 }
 
 // 为屏幕阅读器补充章节状态，避免仅依赖颜色或悬浮提示传达关键信息。
@@ -547,7 +552,7 @@ const shouldReduceMotion = (): boolean => {
   animation: m3-rise 0.45s ease-out both;
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 833px) {
   .writing-sidebar-shell {
     height: auto;
   }

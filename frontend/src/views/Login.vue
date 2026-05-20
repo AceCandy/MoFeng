@@ -323,13 +323,26 @@ const handleLogin = async () => {
   text-decoration: underline;
 }
 
-@media (max-width: 520px) {
+@media (max-width: 833px) {
   .login-page {
     gap: var(--md-spacing-5);
   }
 
+  .login-brand {
+    min-height: 48px;
+  }
+
   .login-card {
+    width: min(100%, 480px);
     padding: var(--md-spacing-5);
+  }
+
+  .login-card__header {
+    margin-bottom: var(--md-spacing-6);
+  }
+
+  .login-divider {
+    margin: var(--md-spacing-6) 0;
   }
 }
 </style>

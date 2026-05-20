@@ -71,7 +71,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, h, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { NAlert } from 'naive-ui/es/alert'
 import { NButton } from 'naive-ui/es/button'
@@ -83,6 +83,8 @@ import { NTag } from 'naive-ui/es/tag'
 import type { DataTableColumns } from 'naive-ui'
 
 import type { AdminNovelSummary } from '@/api/admin'
+import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
+import { mobileMax } from '@/constants/responsive'
 import { useAdminNovelsQuery } from '@/queries/admin'
 
 const novelsQuery = useAdminNovelsQuery()
@@ -99,7 +101,8 @@ const error = computed({
     isErrorDismissed.value = true
   },
 })
-const isMobile = ref(false)
+const viewport = useResponsiveViewport()
+const isMobile = computed(() => viewport.width.value <= mobileMax)
 const router = useRouter()
 
 const pagination = {
@@ -109,10 +112,6 @@ const pagination = {
 
 const MAX_VISIBLE_GENRE_SEGMENTS = 3
 const GENRE_SEPARATOR_REGEXP = /\s*[\/,，、|]\s*/
-
-const updateLayout = () => {
-  isMobile.value = window.innerWidth < 768
-}
 
 const formatDate = (value: string | null | undefined) => {
   if (!value) return '未记录'
@@ -244,14 +243,6 @@ watch(
   },
 )
 
-onMounted(() => {
-  updateLayout()
-  window.addEventListener('resize', updateLayout)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', updateLayout)
-})
 </script>
 
 <style scoped>
@@ -374,7 +365,7 @@ onBeforeUnmount(() => {
   padding: var(--md-spacing-8) 0;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 833px) {
   .mobile-card-header {
     gap: var(--md-spacing-2);
   }

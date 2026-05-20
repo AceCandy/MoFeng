@@ -60,15 +60,18 @@
         <button
           v-for="section in settingsSections"
           :key="section.id"
+          :ref="(el) => setSettingsTabRef(section.id, el)"
           type="button"
           class="settings-center__nav-item"
           :class="{ 'is-active': activeSettingsSection === section.id }"
           :id="`settings-tab-${section.id}`"
           role="tab"
           :aria-selected="activeSettingsSection === section.id"
+          :tabindex="activeSettingsSection === section.id ? 0 : -1"
           aria-controls="settings-panel"
           :title="section.description"
           @click="selectSettingsSection(section.id)"
+          @keydown="onSettingsTabKeydown(section.id, $event)"
         >
           <span class="settings-center__nav-item-label">{{ section.label }}</span>
           <small>{{ section.description }}</small>
@@ -105,7 +108,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, type ComponentPublicInstance } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PersonalModelRouting from '@/components/llm-settings/PersonalModelRouting.vue'
 import { useLLMConfigBundleQuery } from '@/queries/llm'
@@ -129,11 +132,57 @@ const settingsSections: SettingsSection[] = [
 ]
 
 const activeSettingsSection = ref<SettingsSectionId>('llm')
+const settingsTabRefs = ref<Record<SettingsSectionId, HTMLButtonElement | null>>({
+  llm: null,
+  embedding: null,
+  routes: null,
+})
 
 const activeSettingsTabId = computed(() => `settings-tab-${activeSettingsSection.value}`)
 
 const selectSettingsSection = (sectionId: SettingsSectionId) => {
   activeSettingsSection.value = sectionId
+}
+
+const setSettingsTabRef = (
+  sectionId: SettingsSectionId,
+  element: Element | ComponentPublicInstance | null,
+) => {
+  const target =
+    element instanceof HTMLButtonElement
+      ? element
+      : element && '$el' in element && element.$el instanceof HTMLButtonElement
+        ? element.$el
+        : null
+  settingsTabRefs.value[sectionId] = target
+}
+
+const focusSettingsTab = (sectionId: SettingsSectionId) => {
+  settingsTabRefs.value[sectionId]?.focus()
+}
+
+// 设置页 tabs 使用 roving tabindex 和方向键切换，保证键盘用户无需反复 Tab 扫描。
+const onSettingsTabKeydown = (sectionId: SettingsSectionId, event: KeyboardEvent) => {
+  const currentIndex = settingsSections.findIndex((section) => section.id === sectionId)
+  if (currentIndex === -1) return
+  const lastIndex = settingsSections.length - 1
+
+  let nextIndex: number | null = null
+  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+    nextIndex = currentIndex === lastIndex ? 0 : currentIndex + 1
+  } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+    nextIndex = currentIndex === 0 ? lastIndex : currentIndex - 1
+  } else if (event.key === 'Home') {
+    nextIndex = 0
+  } else if (event.key === 'End') {
+    nextIndex = lastIndex
+  }
+
+  if (nextIndex === null || nextIndex === currentIndex) return
+  event.preventDefault()
+  const nextSectionId = settingsSections[nextIndex].id
+  selectSettingsSection(nextSectionId)
+  focusSettingsTab(nextSectionId)
 }
 
 const showInspirationConfigNotice = computed(
@@ -509,7 +558,7 @@ const handleLLMConfigSaved = async () => {
   padding: var(--md-spacing-5);
 }
 
-@media (max-width: 1120px) {
+@media (max-width: 1199px) {
   .settings-center {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -520,13 +569,7 @@ const handleLLMConfigSaved = async () => {
   }
 }
 
-@media (max-width: 900px) {
-  .settings-center__nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 680px) {
+@media (max-width: 833px) {
   .settings-page {
     gap: var(--md-spacing-4);
   }
@@ -551,11 +594,17 @@ const handleLLMConfigSaved = async () => {
   }
 
   .settings-center__nav {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .settings-center__panel {
     padding: var(--md-spacing-4);
+  }
+}
+
+@media (max-width: 680px) {
+  .settings-center__nav {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

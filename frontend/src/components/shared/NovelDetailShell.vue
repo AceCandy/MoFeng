@@ -308,7 +308,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, h, type Component } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref, h, type Component, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   useForeshadowingQuery,
@@ -321,6 +321,8 @@ import type {
   NovelSectionType,
   AllSectionType,
 } from '@/api/novel'
+import { desktopMin } from '@/constants/responsive'
+import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
 import { formatDateTime } from '@/utils/date'
 import { globalAlert } from '@/composables/useAlert'
 import { useDialogA11y } from '@/composables/useDialogA11y'
@@ -343,10 +345,8 @@ const projectId = route.params.id as string
 const projectQuery = useNovelProjectQuery(() => (!props.isAdmin ? projectId : null))
 const updateBlueprintMutation = useUpdateBlueprintMutation(() => projectId)
 const foreshadowingQuery = useForeshadowingQuery(() => (!props.isAdmin ? projectId : null))
-const DESKTOP_BREAKPOINT = 1024
-const isDesktopViewport = ref(
-  typeof window !== 'undefined' ? window.innerWidth >= DESKTOP_BREAKPOINT : true,
-)
+const viewport = useResponsiveViewport()
+const isDesktopViewport = computed(() => viewport.width.value >= desktopMin)
 const isSidebarOpen = ref(isDesktopViewport.value)
 
 const sections: Array<{ key: SectionKey; label: string }> = [
@@ -590,16 +590,6 @@ const closeSidebar = () => {
   isSidebarOpen.value = false
 }
 
-const handleResize = () => {
-  if (typeof window === 'undefined') return
-  const wasDesktop = isDesktopViewport.value
-  const nowDesktop = window.innerWidth >= DESKTOP_BREAKPOINT
-  isDesktopViewport.value = nowDesktop
-  if (wasDesktop !== nowDesktop) {
-    isSidebarOpen.value = nowDesktop
-  }
-}
-
 const loadSection = async (section: SectionKey, _force = false) => {
   if (!projectId) return
 
@@ -794,17 +784,26 @@ const saveNewChapter = async () => {
 
 onMounted(async () => {
   prefetchSectionComponent(activeSection.value)
-  if (typeof window !== 'undefined') {
-    window.addEventListener('resize', handleResize)
-    handleResize()
-  }
 })
 
-onBeforeUnmount(() => {
-  if (typeof window !== 'undefined') {
-    window.removeEventListener('resize', handleResize)
-  }
-})
+watch(
+  () => isDesktopViewport.value,
+  (isDesktop, wasDesktop) => {
+    if (wasDesktop === undefined || isDesktop !== wasDesktop) {
+      isSidebarOpen.value = isDesktop
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => route.fullPath,
+  () => {
+    if (!isDesktopViewport.value) {
+      closeSidebar()
+    }
+  },
+)
 </script>
 
 <style scoped>
@@ -1176,7 +1175,7 @@ onBeforeUnmount(() => {
   max-height: calc(var(--app-viewport-unit) - 6rem);
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1200px) {
   .detail-shell__drawer {
     position: sticky;
     top: 4rem;
@@ -1208,13 +1207,13 @@ onBeforeUnmount(() => {
   }
 }
 
-@media (min-width: 640px) {
+@media (min-width: 834px) {
   .detail-shell__content-surface {
     padding: var(--md-spacing-8);
   }
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1199px) {
   .detail-shell__overview-strip {
     grid-template-columns: minmax(0, 1fr);
     padding: var(--md-spacing-4) var(--md-spacing-4) 0;
@@ -1225,7 +1224,7 @@ onBeforeUnmount(() => {
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 833px) {
   .detail-shell__overview-metrics {
     grid-template-columns: minmax(0, 1fr);
   }

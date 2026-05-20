@@ -665,7 +665,7 @@ onMounted(async () => {
   40% { opacity: 1; }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1199px) {
   .inspiration-chat {
     height: calc(
       var(--app-viewport-unit) - max(var(--md-spacing-6), env(safe-area-inset-top)) -
@@ -681,7 +681,7 @@ onMounted(async () => {
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 833px) {
   .inspiration-page {
     padding:
       max(var(--md-spacing-2), env(safe-area-inset-top))

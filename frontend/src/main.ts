@@ -9,7 +9,6 @@ import App from './App.vue'
 import router from './router'
 import { useAuthStore } from './stores/auth'
 import { queryClient } from './lib/queryClient'
-import { currentUserQueryOptions } from './queries/auth'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -18,22 +17,28 @@ app.use(pinia)
 app.use(VueQueryPlugin, { queryClient })
 app.use(router)
 
-// Handle token from URL
-const urlParams = new URLSearchParams(window.location.search)
-const token = urlParams.get('token')
+const bootstrapUrlToken = async () => {
+  const urlParams = new URLSearchParams(window.location.search)
+  const token = urlParams.get('token')
 
-if (token) {
+  if (!token) {
+    return
+  }
+
+  // 只有第三方登录回跳携带 token 时，才加载认证恢复查询。
+  const { currentUserQueryOptions } = await import('./queries/auth')
   const authStore = useAuthStore()
   authStore.setToken(token)
-  // Clean the URL
   window.history.replaceState({}, document.title, '/workspace')
-  queryClient.fetchQuery(currentUserQueryOptions(token))
-    .then((user) => {
-      authStore.setUser(user)
-    })
-    .catch(() => {
-      authStore.logout()
-    })
+
+  try {
+    const user = await queryClient.fetchQuery(currentUserQueryOptions(token))
+    authStore.setUser(user)
+  } catch {
+    authStore.logout()
+  }
 }
 
-app.mount('#app')
+void bootstrapUrlToken().finally(() => {
+  app.mount('#app')
+})

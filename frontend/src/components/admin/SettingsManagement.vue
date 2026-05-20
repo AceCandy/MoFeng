@@ -1126,7 +1126,7 @@ onMounted(() => {
   max-width: min(640px, 92vw);
 }
 
-@media (max-width: 767px) {
+@media (max-width: 833px) {
   .meta-grid {
     grid-template-columns: 1fr;
   }

@@ -59,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { NAlert } from 'naive-ui/es/alert'
 import { NButton } from 'naive-ui/es/button'
 import { NCard } from 'naive-ui/es/card'
@@ -67,6 +67,8 @@ import { NGi, NGrid } from 'naive-ui/es/grid'
 import { NSpin } from 'naive-ui/es/spin'
 import { NStatistic } from 'naive-ui/es/statistic'
 
+import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
+import { mobileMax } from '@/constants/responsive'
 import { useAdminStatisticsQuery } from '@/queries/admin'
 
 const statisticsQuery = useAdminStatisticsQuery()
@@ -85,12 +87,8 @@ const error = computed({
     isErrorDismissed.value = true
   },
 })
-const isMobile = ref(false)
-
-const updateLayout = () => {
-  isMobile.value = window.innerWidth < 768
-}
-
+const viewport = useResponsiveViewport()
+const isMobile = computed(() => viewport.width.value <= mobileMax)
 const gridCols = computed(() => (isMobile.value ? 1 : 3))
 
 const fetchStats = () => {
@@ -104,14 +102,6 @@ watch(
   },
 )
 
-onMounted(() => {
-  updateLayout()
-  window.addEventListener('resize', updateLayout)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', updateLayout)
-})
 </script>
 
 <style scoped>
@@ -146,7 +136,7 @@ onBeforeUnmount(() => {
   height: 24px;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 833px) {
   .stat-card :deep(.n-card__content) {
     padding: var(--md-spacing-4);
   }

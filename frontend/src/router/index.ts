@@ -2,7 +2,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { queryClient } from '@/lib/queryClient'
-import { currentUserQueryOptions } from '@/queries/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -128,6 +127,7 @@ router.beforeEach(async (to, from, next) => {
   // 有 token 但缺少用户信息时，通过 Query 缓存恢复会话。
   if (authStore.token && !authStore.user) {
     try {
+      const { currentUserQueryOptions } = await import('@/queries/auth')
       const user = await queryClient.fetchQuery(currentUserQueryOptions(authStore.token))
       authStore.setUser(user)
     } catch {
