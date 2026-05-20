@@ -1,50 +1,170 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-05-11T00:14:24+08:00",
+  "generatedAt": "2026-05-20T19:32:17+08:00",
   "title": "Design System: MoFeng",
   "extensions": {
     "colorMeta": {
-      "clear-blue": {
+      "primary": {
         "role": "primary",
-        "displayName": "清晰蓝",
-        "canonical": "#4285F4",
-        "tonalRamp": ["#D2E3FC", "#669DF6", "#4285F4", "#1A73E8"]
+        "displayName": "墨蓝",
+        "canonical": "#4d6b97",
+        "tonalRamp": ["#273b58", "#355274", "#4d6b97", "#6e8ab3", "#dfe8f4"]
       },
-      "paper-white": {
-        "role": "neutral",
-        "displayName": "纸白",
-        "canonical": "#FFFFFF",
-        "tonalRamp": ["#FFFFFF", "#F8F9FA", "#F1F3F4", "#E8EAED", "#DADCE0"]
+      "primary-light": {
+        "role": "primary",
+        "displayName": "浅墨蓝",
+        "canonical": "#6e8ab3",
+        "tonalRamp": ["#355274", "#4d6b97", "#6e8ab3", "#a6b7cf", "#dfe8f4"]
       },
-      "ink": {
-        "role": "neutral",
-        "displayName": "墨灰",
-        "canonical": "#202124",
-        "tonalRamp": ["#202124", "#5F6368", "#DADCE0"]
+      "primary-dark": {
+        "role": "primary",
+        "displayName": "深墨蓝",
+        "canonical": "#355274",
+        "tonalRamp": ["#1f2f45", "#273b58", "#355274", "#4d6b97", "#dfe8f4"]
       },
-      "success": {
-        "role": "state",
-        "displayName": "确认绿",
-        "canonical": "#34A853",
-        "tonalRamp": ["#E6F4EA", "#34A853", "#0D652D"]
+      "on-primary": {
+        "role": "on-color",
+        "displayName": "主色前景",
+        "canonical": "#f7f4ef",
+        "tonalRamp": ["#dcd5c8", "#e8e2d8", "#f3efe8", "#f7f4ef", "#fefcf8"]
       },
-      "warning": {
-        "role": "state",
-        "displayName": "提醒黄",
-        "canonical": "#FBBC04",
-        "tonalRamp": ["#FEF7E0", "#FBBC04", "#5F4B08"]
+      "primary-container": {
+        "role": "container",
+        "displayName": "蓝色容器",
+        "canonical": "#dfe8f4",
+        "tonalRamp": ["#273b58", "#6e8ab3", "#a6b7cf", "#dfe8f4", "#f3f7fb"]
+      },
+      "on-primary-container": {
+        "role": "on-container",
+        "displayName": "蓝色容器前景",
+        "canonical": "#273b58",
+        "tonalRamp": ["#1f2f45", "#273b58", "#355274", "#4d6b97", "#6e8ab3"]
+      },
+      "secondary": {
+        "role": "secondary",
+        "displayName": "静墨灰蓝",
+        "canonical": "#5f6676",
+        "tonalRamp": ["#323948", "#454b59", "#5f6676", "#7a8190", "#e6eaf0"]
+      },
+      "secondary-container": {
+        "role": "container",
+        "displayName": "次级容器",
+        "canonical": "#e6eaf0",
+        "tonalRamp": ["#323948", "#7a8190", "#bcc4d0", "#e6eaf0", "#f7f8fa"]
+      },
+      "surface": {
+        "role": "surface",
+        "displayName": "暖纸白",
+        "canonical": "#fbfaf7",
+        "tonalRamp": ["#dcd5c8", "#e8e2d8", "#f0ece4", "#f7f3ec", "#fbfaf7"]
+      },
+      "surface-dim": {
+        "role": "surface",
+        "displayName": "暖纸灰",
+        "canonical": "#f3efe8",
+        "tonalRamp": ["#dcd5c8", "#e8e2d8", "#f0ece4", "#f3efe8", "#fbfaf7"]
+      },
+      "surface-container-lowest": {
+        "role": "surface",
+        "displayName": "最低容器面",
+        "canonical": "#fefcf8",
+        "tonalRamp": ["#e8e2d8", "#f0ece4", "#f7f3ec", "#fbfaf7", "#fefcf8"]
+      },
+      "surface-container-low": {
+        "role": "surface",
+        "displayName": "低容器面",
+        "canonical": "#f7f3ec",
+        "tonalRamp": ["#dcd5c8", "#e8e2d8", "#f0ece4", "#f7f3ec", "#fbfaf7"]
+      },
+      "surface-container": {
+        "role": "surface",
+        "displayName": "容器面",
+        "canonical": "#f0ece4",
+        "tonalRamp": ["#cfc7ba", "#dcd5c8", "#e8e2d8", "#f0ece4", "#f7f3ec"]
+      },
+      "surface-container-high": {
+        "role": "surface",
+        "displayName": "高容器面",
+        "canonical": "#e8e2d8",
+        "tonalRamp": ["#c6bcad", "#dcd5c8", "#e8e2d8", "#f0ece4", "#f7f3ec"]
+      },
+      "surface-container-highest": {
+        "role": "surface",
+        "displayName": "最高容器面",
+        "canonical": "#dcd5c8",
+        "tonalRamp": ["#b8ae9e", "#c6bcad", "#dcd5c8", "#e8e2d8", "#f0ece4"]
+      },
+      "background": {
+        "role": "background",
+        "displayName": "页面暖纸底",
+        "canonical": "#f4f0e9",
+        "tonalRamp": ["#dcd5c8", "#e8e2d8", "#f0ece4", "#f4f0e9", "#fbfaf7"]
+      },
+      "on-surface": {
+        "role": "text",
+        "displayName": "墨色",
+        "canonical": "#1f2530",
+        "tonalRamp": ["#1f2530", "#343b48", "#5e6674", "#8a929f", "#c8ced8"]
+      },
+      "on-surface-variant": {
+        "role": "text-muted",
+        "displayName": "浅墨色",
+        "canonical": "#5e6674",
+        "tonalRamp": ["#343b48", "#5e6674", "#7d8591", "#a6adb7", "#d8dce2"]
+      },
+      "outline": {
+        "role": "border",
+        "displayName": "边界",
+        "canonical": "#d8d0c4",
+        "tonalRamp": ["#b8ae9e", "#c6bcad", "#d8d0c4", "#e6dfd2", "#f3efe8"]
+      },
+      "outline-variant": {
+        "role": "border",
+        "displayName": "浅边界",
+        "canonical": "#e6dfd2",
+        "tonalRamp": ["#c6bcad", "#d8d0c4", "#e6dfd2", "#f0ece4", "#f7f3ec"]
       },
       "error": {
         "role": "state",
         "displayName": "错误红",
-        "canonical": "#EA4335",
-        "tonalRamp": ["#FCE8E6", "#EA4335", "#5F2120"]
+        "canonical": "#b85c58",
+        "tonalRamp": ["#643431", "#8f4540", "#b85c58", "#d9908b", "#f8e5e2"]
+      },
+      "error-container": {
+        "role": "state-container",
+        "displayName": "错误容器",
+        "canonical": "#f8e5e2",
+        "tonalRamp": ["#8f4540", "#b85c58", "#d9908b", "#f8e5e2", "#fdf8f7"]
+      },
+      "success": {
+        "role": "state",
+        "displayName": "确认绿",
+        "canonical": "#4f7b66",
+        "tonalRamp": ["#30503f", "#3e6552", "#4f7b66", "#87aa97", "#e3eee7"]
+      },
+      "success-container": {
+        "role": "state-container",
+        "displayName": "确认容器",
+        "canonical": "#e3eee7",
+        "tonalRamp": ["#4f7b66", "#87aa97", "#c3d8ca", "#e3eee7", "#f8fbf8"]
+      },
+      "warning": {
+        "role": "state",
+        "displayName": "提醒黄",
+        "canonical": "#b5904c",
+        "tonalRamp": ["#5f4a24", "#8c6f39", "#b5904c", "#d8ba78", "#f8eed8"]
+      },
+      "warning-container": {
+        "role": "state-container",
+        "displayName": "提醒容器",
+        "canonical": "#f8eed8",
+        "tonalRamp": ["#8c6f39", "#b5904c", "#d8ba78", "#f8eed8", "#fdf8f0"]
       }
     },
     "typographyMeta": {
       "display": {
         "displayName": "Display",
-        "purpose": "Rare, high-level orientation only."
+        "purpose": "Rare empty-state or onboarding orientation, not dashboard panels."
       },
       "headline": {
         "displayName": "Headline",
@@ -64,25 +184,31 @@
       }
     },
     "elevation": {
-      "elevation-1": "0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15)",
-      "elevation-2": "0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 2px 6px 2px rgba(60, 64, 67, 0.15)",
-      "elevation-3": "0 1px 3px 0 rgba(60, 64, 67, 0.3), 0 4px 8px 3px rgba(60, 64, 67, 0.15)"
+      "elevation-1": "0 1px 2px rgba(42, 46, 56, 0.05), 0 4px 12px rgba(42, 46, 56, 0.05)",
+      "elevation-2": "0 2px 6px rgba(42, 46, 56, 0.08), 0 12px 26px rgba(42, 46, 56, 0.06)",
+      "elevation-3": "0 8px 30px rgba(42, 46, 56, 0.09)"
     },
     "motion": {
-      "duration-short": "100ms",
-      "duration-medium": "250ms",
-      "duration-long": "400ms",
-      "easing-standard": "cubic-bezier(0.2, 0, 0, 1)",
-      "easing-decelerate": "cubic-bezier(0, 0, 0, 1)",
-      "easing-accelerate": "cubic-bezier(0.3, 0, 1, 1)"
+      "duration-short": "110ms",
+      "duration-medium": "240ms",
+      "duration-long": "420ms",
+      "easing-standard": "cubic-bezier(0.22, 1, 0.36, 1)",
+      "easing-emphasized": "cubic-bezier(0.19, 1, 0.22, 1)",
+      "easing-decelerate": "cubic-bezier(0, 1, 0.3, 1)",
+      "easing-accelerate": "cubic-bezier(0.7, 0, 1, 0.5)"
+    },
+    "breakpoints": {
+      "mobile-max": "833px",
+      "tablet-min": "834px",
+      "desktop-min": "1200px"
     },
     "northStar": "安静写作台",
     "rules": [
-      "Use clear blue for action and selection, not decoration.",
-      "Keep long writing and review text on paper-white or soft-paper surfaces.",
-      "Use shadows only when a layer has a job.",
+      "Use 墨蓝 only for primary actions, selected state, active navigation, and focus.",
+      "Keep long writing and review text on warm-paper surfaces.",
+      "Use shadows only when a layer has a real stacking or focus job.",
       "Keep model, provider, and route settings explicit and recoverable.",
-      "Avoid SaaS landing-page drama, purple-blue AI gradients, glassmorphism, and novelty AI demo styling."
+      "Avoid SaaS landing-page drama, purple-blue AI gradients, glassmorphism, noisy animations, and decorative card grids."
     ]
   }
 }

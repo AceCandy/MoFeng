@@ -11,7 +11,9 @@
 /* ============================================
    CSS Custom Properties (Design Tokens)
    ============================================ */
-:root {
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
   /* Brand accents */
   --md-google-blue: #4c6b95;
   --md-google-red: #b45a56;
@@ -55,7 +57,7 @@
   --md-outline-variant: #e6dfd2;
 
   /* Semantic colors */
-  --md-error: #b35753;
+  --md-error: #b85c58;
   --md-error-strong: #7f2f2b;
   --md-error-container: #f8e5e2;
   --md-on-error: #fdf8f7;
@@ -159,6 +161,68 @@
   --app-shell-mobile-tab-height: 72px;
   --app-content-max: 1480px;
   --app-viewport-unit: 100vh;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Primary */
+  --md-primary: #89a5cf;
+  --md-primary-light: #a6bde0;
+  --md-primary-dark: #6f8dbb;
+  --md-on-primary: #1b2a40;
+  --md-primary-container: #30455f;
+  --md-on-primary-container: #dbe8ff;
+
+  /* Secondary */
+  --md-secondary: #a9b2c4;
+  --md-secondary-light: #c2cad9;
+  --md-secondary-dark: #919bad;
+  --md-on-secondary: #222c39;
+  --md-secondary-container: #2f3847;
+  --md-on-secondary-container: #d9e2f3;
+
+  /* Surface */
+  --md-surface: #23272f;
+  --md-surface-dim: #1c2027;
+  --md-surface-bright: #2a2f38;
+  --md-surface-container-lowest: #171b22;
+  --md-surface-container-low: #20252d;
+  --md-surface-container: #272d36;
+  --md-surface-container-high: #303740;
+  --md-surface-container-highest: #39414c;
+  --md-on-surface: #edf1f7;
+  --md-on-surface-variant: #c8d0de;
+
+  /* Background */
+  --md-background: #1a1f26;
+  --md-on-background: #edf1f7;
+
+  /* Outline */
+  --md-outline: #566071;
+  --md-outline-variant: #46505f;
+
+  /* Semantic colors */
+  --md-error: #ef8a86;
+  --md-error-strong: #ffb4ab;
+  --md-error-container: #4e2625;
+  --md-on-error: #2b1211;
+  --md-on-error-container: #ffd9d5;
+
+  --md-success: #87b89d;
+  --md-success-container: #243b31;
+  --md-on-success: #10241c;
+  --md-on-success-container: #c4eed7;
+
+  --md-warning: #dfbe7f;
+  --md-warning-container: #4a3b1d;
+  --md-on-warning: #2f230a;
+  --md-on-warning-container: #ffe8bc;
+
+  --md-scrim: color-mix(in srgb, var(--md-on-surface) 56%, transparent);
+  --md-scrim-soft: color-mix(in srgb, var(--md-on-surface) 44%, transparent);
+  --md-state-layer-hover: color-mix(in srgb, var(--md-on-surface) 14%, transparent);
+  --md-state-layer-pressed: color-mix(in srgb, var(--md-on-surface) 20%, transparent);
 }
 
 @supports (height: 100dvh) {
@@ -1130,17 +1194,16 @@ button.md-chip,
 
 .md-switch-thumb {
   position: absolute;
-  left: 6px;
-  width: 16px;
-  height: 16px;
+  top: 50%;
+  left: 4px;
+  width: 24px;
+  height: 24px;
   border-radius: var(--md-radius-full);
   background-color: var(--md-outline);
+  transform: translateY(-50%) scale(0.67);
   transition:
     background-color var(--md-duration-short) var(--md-easing-standard),
-    height var(--md-duration-short) var(--md-easing-standard),
-    left var(--md-duration-short) var(--md-easing-standard),
-    transform var(--md-duration-short) var(--md-easing-standard),
-    width var(--md-duration-short) var(--md-easing-standard);
+    transform var(--md-duration-short) var(--md-easing-standard);
 }
 
 .md-switch.checked .md-switch-track {
@@ -1149,11 +1212,7 @@ button.md-chip,
 }
 
 .md-switch.checked .md-switch-thumb {
-  left: 30px;
-  width: 24px;
-  height: 24px;
-  top: 50%;
-  transform: translateY(-50%);
+  transform: translate(20px, -50%) scale(1);
   background-color: var(--md-on-primary);
 }
 

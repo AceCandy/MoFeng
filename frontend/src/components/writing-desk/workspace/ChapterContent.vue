@@ -933,6 +933,14 @@ defineExpose({
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .m3-optimizer-dialog,
+  .m3-progress-bar,
+  .m3-optimizing-dots i {
+    animation: none;
+  }
+}
+
 @media (max-width: 640px) {
   .chapter-paper {
     padding: var(--md-spacing-4);

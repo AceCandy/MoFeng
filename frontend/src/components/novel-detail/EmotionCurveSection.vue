@@ -550,134 +550,18 @@ onBeforeUnmount(() => {
   color: var(--md-on-surface);
 }
 
-.md-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 40px;
-  padding: 0 16px;
-  border-radius: 20px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition:
-    background-color 0.2s,
-    color 0.2s;
-}
-
-.md-btn-tonal {
-  background-color: var(--md-secondary-container);
-  color: var(--md-on-secondary-container);
-}
-
-.md-btn-tonal:hover {
-  background-color: var(--md-secondary-container-hover);
-}
-
 .refresh-btn {
   gap: 8px;
   padding: 0 12px;
-}
-
-.md-spinner {
-  width: 32px;
-  height: 32px;
-  border: 4px solid var(--md-primary);
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
-.md-card {
-  background-color: var(--md-surface-container-low);
-  border-radius: var(--md-radius-md);
-  padding: 16px;
-}
-
-.md-card-outlined {
-  border: 1px solid var(--md-outline);
-  background-color: var(--md-surface);
-}
-
-.md-chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0 12px;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  background-color: var(--md-surface-container-low);
-  color: var(--md-on-surface);
-  border: 1px solid var(--md-outline);
-  cursor: pointer;
-  transition:
-    background-color 0.2s,
-    border-color 0.2s;
-}
-
-button.md-chip {
-  min-height: 44px;
-}
-
-.md-chip.selected {
-  background-color: var(--md-primary-container);
-  color: var(--md-on-primary-container);
-  border-color: var(--md-primary);
 }
 
 .md-chip-filter .w-2.h-2 {
   margin-right: 8px;
 }
 
-.md-title-medium {
-  font-size: 1rem;
-  font-weight: 500;
-}
-
-.md-body-small {
-  font-size: 0.75rem;
-}
-
-.md-body-medium {
-  font-size: 0.875rem;
-}
-
-.md-body-large {
-  font-size: 1rem;
-}
-
-.md-label-medium {
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-.md-headline-small {
-  font-size: 1.5rem;
-  font-weight: 400;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .md-spinner {
     animation: none;
   }
-}
-
-.md-title-small {
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.md-label-large {
-  font-size: 1rem;
-  font-weight: 500;
 }
 </style>

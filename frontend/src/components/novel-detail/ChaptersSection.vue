@@ -51,9 +51,12 @@
       <section class="flex-1 flex flex-col bg-[var(--md-surface)] h-full min-h-0 max-h-full overflow-hidden relative">
         <!-- 移动端浮动按钮 -->
         <button
+          type="button"
           v-if="!showChapterList"
           @click="showChapterList = true"
           class="lg:hidden fixed bottom-6 left-6 z-30 w-14 h-14 bg-[var(--md-primary)] text-[var(--md-on-primary)] rounded-full shadow-lg flex items-center justify-center hover:bg-[var(--md-primary-dark)] transition-colors"
+          aria-label="打开章节列表"
+          title="打开章节列表"
         >
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -164,7 +167,7 @@
                 </div>
 
                 <!-- Main Content -->
-                <div class="prose prose-slate max-w-none p-4 sm:p-6 rounded-xl bg-[var(--paper-card)]">
+                <div class="prose prose-slate max-w-none p-4 sm:p-6 rounded-xl bg-[var(--md-surface-container-low)]">
                   <div class="text-base text-[var(--md-on-surface)] leading-8 whitespace-pre-wrap font-serif">
                     {{ selectedChapter.content || '暂无内容' }}
                   </div>
@@ -176,27 +179,29 @@
             <div v-show="activeTab === 'versions'" class="px-2 py-3">
               <div class="max-w-full">
                 <div v-if="selectedChapter.versions && selectedChapter.versions.length > 0" class="space-y-4">
-                  <div v-for="(version, index) in selectedChapter.versions" :key="index"
-                    class="border border-[var(--md-outline-variant)] rounded-xl p-5 hover:border-[var(--md-primary-container)] hover:shadow-md transition-all duration-200 group cursor-pointer"
+                  <button v-for="(version, index) in selectedChapter.versions" :key="index"
+                    type="button"
+                    class="chapter-version-card group"
+                    :aria-label="`查看版本 ${index + 1} 全文，${calculateWordCount(version)} 字`"
                     @click="openVersionModal(version, index)">
-                    <div class="flex items-center justify-between mb-3">
-                      <h5 class="text-sm font-semibold text-[var(--md-on-surface)] flex items-center gap-2">
-                        <span class="w-6 h-6 bg-[var(--md-primary-container)] text-[var(--md-primary)] rounded-full flex items-center justify-center text-xs font-bold">
+                    <span class="chapter-version-card__head">
+                      <span class="chapter-version-card__title">
+                        <span class="chapter-version-card__index">
                           {{ index + 1 }}
                         </span>
-                        版本 {{ index + 1 }}
-                      </h5>
-                      <div class="flex items-center gap-3">
+                        <span>版本 {{ index + 1 }}</span>
+                      </span>
+                      <span class="chapter-version-card__meta">
                         <span class="text-xs text-[var(--md-on-surface-variant)]">{{ calculateWordCount(version) }} 字</span>
-                        <span class="text-xs font-medium text-[var(--md-primary)] opacity-0 group-hover:opacity-100 transition-opacity">
-                          点击查看全文 →
+                        <span class="chapter-version-card__hint">
+                          查看全文
                         </span>
-                      </div>
-                    </div>
-                    <div class="text-sm text-[var(--md-on-surface)] leading-7 whitespace-pre-wrap line-clamp-4">
+                      </span>
+                    </span>
+                    <span class="chapter-version-card__excerpt line-clamp-4">
                       {{ version }}
-                    </div>
-                  </div>
+                    </span>
+                  </button>
                 </div>
                 <div v-else class="text-center py-12 text-[var(--md-on-surface-variant)]">
                   暂无版本记录
@@ -371,9 +376,14 @@
       leave-to-class="opacity-0"
     >
       <div v-if="versionModal.show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--md-scrim)]"
-        @click="closeVersionModal">
-        <div class="bg-[var(--md-surface)] rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden"
-          @click.stop>
+        @click.self="closeVersionModal">
+        <div
+          ref="versionDialogRef"
+          class="bg-[var(--md-surface)] rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden"
+          role="dialog"
+          aria-modal="true"
+          :aria-labelledby="versionModalTitleId"
+        >
           <!-- Modal Header -->
           <div class="flex items-center justify-between px-6 py-4 border-b border-[var(--md-outline-variant)] bg-[var(--md-surface-container-low)]">
             <div class="flex items-center gap-3">
@@ -381,13 +391,20 @@
                 {{ versionModal.index + 1 }}
               </span>
               <div>
-                <h3 class="text-lg font-bold text-[var(--md-on-surface)]">版本 {{ versionModal.index + 1 }}</h3>
+                <h3 :id="versionModalTitleId" class="text-lg font-bold text-[var(--md-on-surface)]">版本 {{ versionModal.index + 1 }}</h3>
                 <p class="text-xs text-[var(--md-on-surface-variant)]">{{ calculateWordCount(versionModal.content) }} 字</p>
               </div>
             </div>
-            <button @click="closeVersionModal"
-              class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--md-surface-container-high)] transition-colors">
-              <svg class="w-5 h-5 text-[var(--md-on-surface-variant)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button
+              ref="versionCloseButtonRef"
+              type="button"
+              class="md-icon-btn"
+              aria-label="关闭版本全文弹窗"
+              title="关闭版本全文弹窗"
+              data-dialog-initial-focus
+              @click="closeVersionModal"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -413,6 +430,7 @@ import { useRoute } from 'vue-router'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { useNovelChapterDetailQuery } from '@/queries/novel'
+import { useDialogA11y } from '@/composables/useDialogA11y'
 
 interface ChapterItem {
   chapter_number: number
@@ -468,6 +486,10 @@ const versionModal = ref({
   content: '',
   index: 0
 })
+const versionDialogRef = ref<HTMLElement | null>(null)
+const versionCloseButtonRef = ref<HTMLElement | null>(null)
+const isVersionModalOpen = computed(() => versionModal.value.show)
+const versionModalTitleId = 'chapter-version-modal-title'
 
 const chapters = computed(() => props.chapters || [])
 
@@ -559,6 +581,13 @@ const openVersionModal = (content: string, index: number) => {
 const closeVersionModal = () => {
   versionModal.value.show = false
 }
+
+useDialogA11y({
+  active: isVersionModalOpen,
+  dialogRef: versionDialogRef,
+  onClose: closeVersionModal,
+  initialFocusRef: versionCloseButtonRef,
+})
 
 // 解析评审数据
 const evaluationData = computed(() => {
@@ -697,6 +726,102 @@ defineExpose({
   -webkit-line-clamp: 6;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.chapter-version-card {
+  width: 100%;
+  display: block;
+  padding: 1.25rem;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 0.75rem;
+  background-color: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard);
+}
+
+.chapter-version-card:hover {
+  border-color: var(--md-primary-container);
+  box-shadow: var(--md-elevation-1);
+}
+
+.chapter-version-card:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
+.chapter-version-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-spacing-3);
+  margin-bottom: var(--md-spacing-3);
+}
+
+.chapter-version-card__title,
+.chapter-version-card__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--md-spacing-2);
+}
+
+.chapter-version-card__title {
+  color: var(--md-on-surface);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.chapter-version-card__index {
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--md-radius-full);
+  background-color: var(--md-primary-container);
+  color: var(--md-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.chapter-version-card__meta {
+  flex-shrink: 0;
+}
+
+.chapter-version-card__hint {
+  color: var(--md-primary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity var(--md-duration-short) var(--md-easing-standard);
+}
+
+.chapter-version-card:hover .chapter-version-card__hint,
+.chapter-version-card:focus-visible .chapter-version-card__hint {
+  opacity: 1;
+}
+
+.chapter-version-card__excerpt {
+  display: -webkit-box;
+  color: var(--md-on-surface);
+  font-size: 0.875rem;
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 640px) {
+  .chapter-version-card__head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .chapter-version-card__hint {
+    opacity: 1;
+  }
 }
 </style>
 

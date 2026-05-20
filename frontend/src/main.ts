@@ -10,6 +10,48 @@ import router from './router'
 import { useAuthStore } from './stores/auth'
 import { queryClient } from './lib/queryClient'
 
+type ThemePreference = 'light' | 'dark' | 'system'
+
+const THEME_STORAGE_KEY = 'mofeng-theme-preference'
+
+const resolveThemePreference = (value: string | null): ThemePreference => {
+  if (value === 'light' || value === 'dark' || value === 'system') {
+    return value
+  }
+  return 'system'
+}
+
+// 统一在应用启动时解析主题偏好，支持 light/dark 固定值与 system 自动跟随。
+const setupTheme = () => {
+  const root = document.documentElement
+  const media = window.matchMedia('(prefers-color-scheme: dark)')
+  const preference = resolveThemePreference(window.localStorage.getItem(THEME_STORAGE_KEY))
+
+  const applyResolvedTheme = () => {
+    const resolvedTheme = preference === 'system' ? (media.matches ? 'dark' : 'light') : preference
+    root.dataset.theme = resolvedTheme
+  }
+
+  applyResolvedTheme()
+
+  if (preference !== 'system') {
+    return
+  }
+
+  const syncThemeWithSystem = () => {
+    applyResolvedTheme()
+  }
+
+  if (typeof media.addEventListener === 'function') {
+    media.addEventListener('change', syncThemeWithSystem)
+    return
+  }
+
+  media.addListener(syncThemeWithSystem)
+}
+
+setupTheme()
+
 const app = createApp(App)
 const pinia = createPinia()
 

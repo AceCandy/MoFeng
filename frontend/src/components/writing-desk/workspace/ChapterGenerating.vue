@@ -104,8 +104,8 @@
       </div>
     </article>
 
-    <details class="chapter-console__log" :open="showLog">
-      <summary @click.prevent="toggleLog">{{ showLog ? '收起生成日志' : '查看生成日志' }}</summary>
+    <details class="chapter-console__log" :open="showLog" @toggle="syncLogOpen">
+      <summary>{{ showLog ? '收起生成日志' : '查看生成日志' }}</summary>
       <div class="chapter-console__log-body">
         <p><strong>阶段编码：</strong>{{ statusDetails.stageKey }}</p>
         <p><strong>输入：</strong>{{ statusDetails.inputs }}</p>
@@ -476,6 +476,10 @@ const stepState = (key: string, index: number) => {
 
 const toggleLog = () => {
   showLog.value = !showLog.value
+}
+
+const syncLogOpen = (event: Event) => {
+  showLog.value = (event.currentTarget as HTMLDetailsElement).open
 }
 
 const moveToBackground = async () => {
@@ -856,6 +860,13 @@ onUnmounted(() => {
   50%,
   100% {
     opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chapter-console__pipeline-item.is-in-progress .chapter-console__dot,
+  .chapter-console__cursor {
+    animation: none;
   }
 }
 

@@ -1031,8 +1031,6 @@ watch(
   border-right: 1px solid var(--md-outline-variant);
   transform: translateX(-100%);
   transition:
-    flex-basis 300ms cubic-bezier(0.2, 0, 0, 1),
-    width 300ms cubic-bezier(0.2, 0, 0, 1),
     transform 300ms cubic-bezier(0.2, 0, 0, 1),
     opacity 200ms cubic-bezier(0.2, 0, 0, 1),
     border-color 200ms cubic-bezier(0.2, 0, 0, 1),

@@ -1114,4 +1114,14 @@ onUnmounted(() => {
     align-items: flex-start;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-skeleton__avatar,
+  .workspace-skeleton__lines span,
+  .workspace-skeleton__bar,
+  .workspace-skeleton__chips {
+    animation: none;
+    background-position: 0 0;
+  }
+}
 </style>

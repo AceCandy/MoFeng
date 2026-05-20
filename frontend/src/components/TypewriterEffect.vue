@@ -51,4 +51,11 @@ onMounted(() => {
     border-color: var(--md-on-surface);
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .typewriter {
+    animation: none;
+    border-right-color: transparent;
+  }
+}
 </style>

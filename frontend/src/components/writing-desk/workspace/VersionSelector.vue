@@ -135,7 +135,7 @@
                   ? 'bg-[var(--md-primary)] text-[var(--md-on-primary)]'
                   : isCurrentVersion(index)
                     ? 'bg-[var(--md-success)] text-[var(--md-on-success)]'
-                    : 'bg-[var(--md-surface-container-highest)] text-[var(--md-on-surface-variant)]',
+                    : 'bg-[var(--md-surface-container-highest)] text-[var(--md-on-surface)]',
               ]"
             >
               <svg

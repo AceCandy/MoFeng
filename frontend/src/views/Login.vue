@@ -345,4 +345,10 @@ const handleLogin = async () => {
     margin: var(--md-spacing-6) 0;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .login-spinner {
+    animation: none;
+  }
+}
 </style>
