@@ -1,16 +1,16 @@
 {
-  "version": "0.1.3",
-  "git_tag": "v0.1.3",
+  "version": "0.1.4",
+  "git_tag": "v0.1.4",
   "image_repo": "acecandy/mofeng",
   "image_tags": [
-    "acecandy/mofeng:0.1.3",
+    "acecandy/mofeng:0.1.4",
     "acecandy/mofeng:latest"
   ],
-  "build_time_beijing": "2026-05-21 03:39:49 +08:00",
-  "build_time_iso_beijing": "2026-05-21T03:39:49+08:00",
+  "build_time_beijing": "2026-05-22 03:26:12 +08:00",
+  "build_time_iso_beijing": "2026-05-22T03:26:12+08:00",
   "timezone": "Asia/Shanghai",
   "repository": "AceCandy/MoFeng",
-  "commit_sha": "a79ff7c978080a6f4868cf0f10088d46b8da7da8",
-  "run_id": "26185490726",
+  "commit_sha": "e990bc3523b879ab7f186d38b592d02a7346bf38",
+  "run_id": "26248056926",
   "source": "github-actions"
 }
