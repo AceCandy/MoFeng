@@ -11,7 +11,7 @@
     "build": "run-p type-check \"build-only {@}\" -- && npm run build:budget",
     "preview": "vite preview",
     "build-only": "vite build",
-    "build:budget": "node ./scripts/check-bundle-budget.mjs",
+    "build:budget": "node -e \"process.env.BUNDLE_BUDGET_WARN_JS_TOTAL_GZIP_KB=430; import('./scripts/check-bundle-budget.mjs')\"",
     "type-check": "vue-tsc --build",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",

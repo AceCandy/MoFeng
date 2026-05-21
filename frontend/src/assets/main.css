@@ -60,16 +60,22 @@
   --md-error: #b85c58;
   --md-error-strong: #7f2f2b;
   --md-error-container: #f8e5e2;
+  --md-error-text: #7f2f2b;
+  --md-error-container-text: #643431;
   --md-on-error: #fdf8f7;
   --md-on-error-container: #643431;
 
   --md-success: #4f7b66;
   --md-success-container: #e3eee7;
+  --md-success-text: #30503f;
+  --md-success-container-text: #30503f;
   --md-on-success: #f8fbf8;
   --md-on-success-container: #30503f;
 
   --md-warning: #b5904c;
   --md-warning-container: #f8eed8;
+  --md-warning-text: #5f4a24;
+  --md-warning-container-text: #5f4a24;
   --md-on-warning: #332710;
   --md-on-warning-container: #5f4a24;
   --md-scrim: color-mix(in srgb, var(--md-on-surface) 32%, transparent);
@@ -206,16 +212,22 @@
   --md-error: #ef8a86;
   --md-error-strong: #ffb4ab;
   --md-error-container: #4e2625;
+  --md-error-text: #ffd9d5;
+  --md-error-container-text: #ffd9d5;
   --md-on-error: #2b1211;
   --md-on-error-container: #ffd9d5;
 
   --md-success: #87b89d;
   --md-success-container: #243b31;
+  --md-success-text: #c4eed7;
+  --md-success-container-text: #c4eed7;
   --md-on-success: #10241c;
   --md-on-success-container: #c4eed7;
 
   --md-warning: #dfbe7f;
   --md-warning-container: #4a3b1d;
+  --md-warning-text: #ffe8bc;
+  --md-warning-container-text: #ffe8bc;
   --md-on-warning: #2f230a;
   --md-on-warning-container: #ffe8bc;
 
@@ -1323,10 +1335,13 @@ button.md-chip,
   color: var(--md-primary);
 }
 .md-error-text {
-  color: var(--md-error);
+  color: var(--md-error-text);
+}
+.md-warning-text {
+  color: var(--md-warning-text);
 }
 .md-success-text {
-  color: var(--md-success);
+  color: var(--md-success-text);
 }
 
 .md-elevation-0 {

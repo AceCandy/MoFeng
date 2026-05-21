@@ -75,7 +75,7 @@
         <div v-else-if="error" class="h-full flex items-center justify-center">
           <div class="text-center">
             <div class="w-12 h-12 bg-[var(--md-error-container)] rounded-full flex items-center justify-center mx-auto mb-3">
-              <svg class="w-6 h-6 text-[var(--md-error)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-6 h-6 text-[var(--md-error-text)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
@@ -156,13 +156,13 @@
                     <p class="text-sm text-[var(--md-on-surface)] leading-relaxed">{{ selectedChapter.summary }}</p>
                   </div>
                   <div v-if="selectedChapter.real_summary" class="bg-[var(--md-success-container)] border border-[color-mix(in_oklch,var(--md-success)_20%,transparent)] rounded-xl p-4">
-                    <h5 class="text-xs font-semibold text-[var(--md-success)] mb-2 flex items-center gap-1.5">
+                    <h5 class="text-xs font-semibold text-[var(--md-success-text)] mb-2 flex items-center gap-1.5">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
                       </svg>
                       实际内容概要
                     </h5>
-                    <div class="prose prose-sm prose-green max-w-none text-[var(--md-success)]" v-html="renderMarkdown(selectedChapter.real_summary)"></div>
+                    <div class="prose prose-sm prose-green max-w-none text-[var(--md-success-text)]" v-html="renderMarkdown(selectedChapter.real_summary)"></div>
                   </div>
                 </div>
 
@@ -258,7 +258,7 @@
                         <!-- 优点 -->
                         <div v-if="versionEval.pros && versionEval.pros.length > 0"
                           class="bg-[var(--md-success-container)] border border-[color-mix(in_oklch,var(--md-success)_20%,transparent)] rounded-lg p-3">
-                          <h6 class="text-xs font-bold text-[var(--md-success)] mb-2 flex items-center gap-1.5">
+                          <h6 class="text-xs font-bold text-[var(--md-success-text)] mb-2 flex items-center gap-1.5">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                             </svg>
@@ -266,7 +266,7 @@
                           </h6>
                           <ul class="space-y-1.5">
                             <li v-for="(item, idx) in versionEval.pros" :key="idx"
-                              class="flex items-start gap-2 text-xs text-[var(--md-success)] leading-relaxed">
+                              class="flex items-start gap-2 text-xs text-[var(--md-success-text)] leading-relaxed">
                               <span class="w-1 h-1 bg-[var(--md-success)] rounded-full mt-1.5 flex-shrink-0"></span>
                               <span>{{ item }}</span>
                             </li>
@@ -276,7 +276,7 @@
                         <!-- 缺点 -->
                         <div v-if="versionEval.cons && versionEval.cons.length > 0"
                           class="bg-[var(--md-error-container)] border border-[color-mix(in_oklch,var(--md-error)_20%,transparent)] rounded-lg p-3">
-                          <h6 class="text-xs font-bold text-[var(--md-error)] mb-2 flex items-center gap-1.5">
+                          <h6 class="text-xs font-bold text-[var(--md-error-text)] mb-2 flex items-center gap-1.5">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                             </svg>
@@ -284,7 +284,7 @@
                           </h6>
                           <ul class="space-y-1.5">
                             <li v-for="(item, idx) in versionEval.cons" :key="idx"
-                              class="flex items-start gap-2 text-xs text-[var(--md-error)] leading-relaxed">
+                              class="flex items-start gap-2 text-xs text-[var(--md-error-text)] leading-relaxed">
                               <span class="w-1 h-1 bg-[var(--md-error)] rounded-full mt-1.5 flex-shrink-0"></span>
                               <span>{{ item }}</span>
                             </li>
@@ -528,11 +528,11 @@ const getStatusColor = (status: string): string => {
     'not_generated': 'bg-[var(--md-surface-container)] text-[var(--md-on-surface-variant)]',
     'generating': 'bg-[var(--md-surface-container-low)] text-[var(--md-primary)]',
     'evaluating': 'bg-[var(--md-primary-container)] text-[var(--md-on-primary-container)]',
-    'selecting': 'bg-[var(--md-warning-container)] text-[var(--md-warning)]',
-    'failed': 'bg-[var(--md-error-container)] text-[var(--md-error)]',
-    'evaluation_failed': 'bg-[var(--md-error-container)] text-[var(--md-error)]',
-    'waiting_for_confirm': 'bg-[var(--md-warning-container)] text-[var(--md-warning)]',
-    'successful': 'bg-[var(--md-success-container)] text-[var(--md-success)]'
+    'selecting': 'bg-[var(--md-warning-container)] text-[var(--md-warning-text)]',
+    'failed': 'bg-[var(--md-error-container)] text-[var(--md-error-text)]',
+    'evaluation_failed': 'bg-[var(--md-error-container)] text-[var(--md-error-text)]',
+    'waiting_for_confirm': 'bg-[var(--md-warning-container)] text-[var(--md-warning-text)]',
+    'successful': 'bg-[var(--md-success-container)] text-[var(--md-success-text)]'
   }
   return colorMap[status] || 'bg-[var(--md-surface-container)] text-[var(--md-on-surface-variant)]'
 }
@@ -623,10 +623,10 @@ const getScoreLabel = (key: string | number): string => {
 
 // 获取评分颜色
 const getScoreColor = (score: number): string => {
-  if (score >= 8) return 'text-[var(--md-success)]'
+  if (score >= 8) return 'text-[var(--md-success-text)]'
   if (score >= 6) return 'text-[var(--md-primary)]'
-  if (score >= 4) return 'text-[var(--md-warning)]'
-  return 'text-[var(--md-error)]'
+  if (score >= 4) return 'text-[var(--md-warning-text)]'
+  return 'text-[var(--md-error-text)]'
 }
 
 // 获取评分条颜色

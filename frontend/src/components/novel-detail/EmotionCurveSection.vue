@@ -196,13 +196,100 @@
       <!-- Chart -->
       <div class="md-card md-card-outlined p-4" style="border-radius: var(--md-radius-md)">
         <p :id="chartSummaryId" class="sr-only">{{ chartA11ySummary }}</p>
-        <canvas
-          ref="chartCanvas"
-          height="300"
+        <svg
+          class="emotion-curve-svg h-[320px] w-full"
+          :viewBox="`0 0 ${CHART_VIEWBOX_WIDTH} ${CHART_VIEWBOX_HEIGHT}`"
+          preserveAspectRatio="none"
           role="img"
-          :aria-label="`章节情感曲线图`"
           :aria-describedby="chartSummaryId"
-        ></canvas>
+        >
+          <title>章节情感曲线图</title>
+          <desc>{{ chartA11ySummary }}</desc>
+          <rect
+            :x="0"
+            :y="0"
+            :width="CHART_VIEWBOX_WIDTH"
+            :height="CHART_VIEWBOX_HEIGHT"
+            rx="18"
+            fill="var(--md-surface-container-low)"
+          />
+
+          <g>
+            <line
+              v-for="tick in chartYAxisTicks"
+              :key="`y-${tick.value}`"
+              :x1="CHART_PADDING.left"
+              :x2="CHART_VIEWBOX_WIDTH - CHART_PADDING.right"
+              :y1="tick.y"
+              :y2="tick.y"
+              stroke="var(--md-outline-variant)"
+              stroke-width="1"
+              stroke-dasharray="4 6"
+            />
+            <text
+              v-for="tick in chartYAxisTicks"
+              :key="`y-label-${tick.value}`"
+              :x="CHART_PADDING.left - 12"
+              :y="tick.y + 4"
+              text-anchor="end"
+              class="fill-[var(--md-on-surface-variant)] text-[12px]"
+            >
+              {{ tick.value }}
+            </text>
+          </g>
+
+          <g v-for="axisLabel in chartAxisLabels" :key="axisLabel.label">
+            <line
+              :x1="axisLabel.x"
+              :x2="axisLabel.x"
+              :y1="CHART_PADDING.top"
+              :y2="CHART_VIEWBOX_HEIGHT - CHART_PADDING.bottom"
+              stroke="transparent"
+            />
+            <text
+              :x="axisLabel.x"
+              :y="CHART_VIEWBOX_HEIGHT - 14"
+              text-anchor="middle"
+              class="fill-[var(--md-on-surface-variant)] text-[12px]"
+            >
+              {{ axisLabel.label }}
+            </text>
+          </g>
+
+          <g v-for="series in chartSeries" :key="series.key">
+            <path
+              :d="series.path"
+              fill="none"
+              :stroke="series.color"
+              stroke-width="3"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <circle
+              v-for="point in series.points"
+              :key="`${series.key}-${point.chapterNumber}`"
+              :cx="point.x"
+              :cy="point.y"
+              r="4.5"
+              :fill="series.color"
+              stroke="var(--md-surface-container-low)"
+              stroke-width="2"
+            />
+          </g>
+
+          <g v-if="selectedEmotionLabels.length" transform="translate(24, 18)">
+            <g v-for="(emotionLabel, index) in selectedEmotionLabels" :key="emotionLabel">
+              <circle :cx="index * 118" cy="0" r="5" :fill="chartLegendColor(emotionLabel)" />
+              <text
+                :x="index * 118 + 12"
+                y="4"
+                class="fill-[var(--md-on-surface-variant)] text-[12px]"
+              >
+                {{ emotionLabel }}
+              </text>
+            </g>
+          </g>
+        </svg>
       </div>
 
       <!-- Chapter Details List -->
@@ -251,14 +338,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
+import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAnalyzeEmotionMutation, useEmotionCurveQuery } from '@/queries/novel'
 
 const route = useRoute()
 const projectId = route.params.id as string
 
-const chartCanvas = ref<HTMLCanvasElement | null>(null)
 const emotionQuery = useEmotionCurveQuery(() => projectId)
 const analyzeEmotionMutation = useAnalyzeEmotionMutation(() => projectId)
 const isLoading = computed(
@@ -280,8 +366,6 @@ const averageIntensity = computed(() =>
 const emotionDistribution = computed<Record<string, number>>(
   () => emotionData.value?.emotion_distribution ?? {},
 )
-let chartInstance: any = null
-let chartModulePromise: Promise<typeof import('@/lib/chartLine')> | null = null
 
 const EMOTION_KEY_MAP: { [key: string]: string } = {
   joy: '喜悦',
@@ -291,6 +375,10 @@ const EMOTION_KEY_MAP: { [key: string]: string } = {
   surprise: '惊讶',
   calm: '平静',
 }
+
+const EMOTION_LABEL_TO_KEY_MAP = Object.fromEntries(
+  Object.entries(EMOTION_KEY_MAP).map(([key, label]) => [label, key]),
+) as Record<string, string>
 
 const EMOTION_COLOR_TOKEN_MAP: Record<string, string> = {
   joy: '--md-success',
@@ -315,6 +403,10 @@ const getEmotionColorByKey = (emotionKey: string) => {
   return resolveCssVarColor(tokenName, fallback)
 }
 
+const getEmotionKeyByType = (emotionType: string) => {
+  return EMOTION_LABEL_TO_KEY_MAP[emotionType] || 'calm'
+}
+
 const emotionTypes = computed(() =>
   Object.entries(EMOTION_KEY_MAP).map(([key, label]) => ({
     key,
@@ -336,6 +428,15 @@ const emotionTypeCount = computed(() => {
 })
 
 const chartSummaryId = 'emotion-curve-chart-summary'
+const CHART_VIEWBOX_WIDTH = 800
+const CHART_VIEWBOX_HEIGHT = 320
+const CHART_PADDING = {
+  top: 24,
+  right: 24,
+  bottom: 44,
+  left: 48,
+}
+const CHART_MAX_INTENSITY = 10
 
 const selectedEmotionLabels = computed(() =>
   emotionTypes.value
@@ -354,8 +455,7 @@ const chartA11ySummary = computed(() => {
 })
 
 const getEmotionColor = (emotionType: string) => {
-  const emotionKey = Object.keys(EMOTION_KEY_MAP).find((key) => EMOTION_KEY_MAP[key] === emotionType)
-  return emotionKey ? getEmotionColorByKey(emotionKey) : getEmotionColorByKey('calm')
+  return getEmotionColorByKey(getEmotionKeyByType(emotionType))
 }
 
 const toggleEmotion = (key: string) => {
@@ -367,136 +467,6 @@ const toggleEmotion = (key: string) => {
   } else {
     selectedEmotions.value.push(key)
   }
-  void updateChart()
-}
-
-const loadChartModule = async () => {
-  if (!chartModulePromise) {
-    chartModulePromise = import('@/lib/chartLine')
-  }
-  return chartModulePromise
-}
-
-const updateChart = async () => {
-  if (!chartInstance) {
-    await initChart()
-    return
-  }
-
-  const labels = emotionPoints.value.map((p) => `第${p.chapter_number}章`)
-  const datasets = emotionTypes.value
-    .filter((et) => selectedEmotions.value.includes(et.key))
-    .map((emotionType) => {
-      const data = emotionPoints.value.map((p) => {
-        const key = Object.keys(EMOTION_KEY_MAP).find((k) => EMOTION_KEY_MAP[k] === p.emotion_type)
-        return key === emotionType.key ? p.intensity : null
-      })
-      return {
-        label: emotionType.label,
-        data: data,
-        borderColor: emotionType.color,
-        backgroundColor: emotionType.color + '33',
-        tension: 0.4,
-        fill: false,
-        spanGaps: true,
-      }
-    })
-
-  chartInstance.data.labels = labels
-  chartInstance.data.datasets = datasets
-  chartInstance.update()
-}
-
-const initChart = async () => {
-  if (!chartCanvas.value) {
-    return
-  }
-
-  if (chartInstance) {
-    chartInstance.destroy()
-  }
-
-  const ctx = chartCanvas.value.getContext('2d')
-  if (!ctx) {
-    console.error('Failed to get 2D context for canvas.')
-    return
-  }
-
-  const { Chart } = await loadChartModule()
-
-  const labels = emotionPoints.value.map((p) => `第${p.chapter_number}章`)
-  const datasets = emotionTypes.value
-    .filter((et) => selectedEmotions.value.includes(et.key))
-    .map((emotionType) => {
-      const data = emotionPoints.value.map((p) => {
-        const key = Object.keys(EMOTION_KEY_MAP).find((k) => EMOTION_KEY_MAP[k] === p.emotion_type)
-        return key === emotionType.key ? p.intensity : null
-      })
-      return {
-        label: emotionType.label,
-        data: data,
-        borderColor: emotionType.color,
-        backgroundColor: emotionType.color + '33',
-        tension: 0.4,
-        fill: false,
-        spanGaps: true,
-      }
-    })
-
-  chartInstance = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: datasets,
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        y: {
-          beginAtZero: true,
-          max: 10,
-          title: {
-            display: true,
-            text: '情感强度',
-          },
-        },
-        x: {
-          title: {
-            display: true,
-            text: '章节',
-          },
-        },
-      },
-      plugins: {
-        tooltip: {
-          callbacks: {
-            title: function (context: any[]) {
-              return context[0].label
-            },
-            label: function (context: any) {
-              const emotionType = emotionTypes.value.find((et) => et.label === context.dataset.label)
-              const point = emotionPoints.value[context.dataIndex]
-              if (
-                point &&
-                emotionType &&
-                Object.keys(EMOTION_KEY_MAP).find(
-                  (k) => EMOTION_KEY_MAP[k] === point.emotion_type,
-                ) === emotionType.key
-              ) {
-                return `${point.emotion_type}: ${point.intensity}/10`
-              }
-              return ''
-            },
-          },
-        },
-        legend: {
-          display: true,
-          position: 'top',
-        },
-      },
-    },
-  })
 }
 
 const refreshData = () => {
@@ -507,39 +477,114 @@ const useAIAnalysis = () => {
   analyzeEmotionMutation.mutate()
 }
 
-watch(
-  emotionPoints,
-  (newPoints) => {
-    if (newPoints && newPoints.length > 0) {
-      nextTick(() => {
-        if (chartInstance) {
-          void updateChart()
-        } else {
-          void initChart()
-        }
-      })
-    } else if (chartInstance) {
-      chartInstance.destroy()
-      chartInstance = null
-    }
-  },
-  { deep: true },
-)
+const chartGeometry = computed(() => {
+  const innerWidth = CHART_VIEWBOX_WIDTH - CHART_PADDING.left - CHART_PADDING.right
+  const innerHeight = CHART_VIEWBOX_HEIGHT - CHART_PADDING.top - CHART_PADDING.bottom
+  const pointCount = emotionPoints.value.length
+  const step = pointCount > 1 ? innerWidth / (pointCount - 1) : 0
 
-watch(
-  selectedEmotions,
-  () => {
-    void updateChart()
-  },
-  { deep: true },
-)
-
-onBeforeUnmount(() => {
-  if (chartInstance) {
-    chartInstance.destroy()
-    chartInstance = null
+  return {
+    innerWidth,
+    innerHeight,
+    step,
+    pointCount,
   }
 })
+
+const toChartX = (index: number) => {
+  if (chartGeometry.value.pointCount <= 1) {
+    return CHART_PADDING.left + chartGeometry.value.innerWidth / 2
+  }
+
+  return CHART_PADDING.left + index * chartGeometry.value.step
+}
+
+const toChartY = (intensity: number) => {
+  const ratio = Math.max(0, Math.min(intensity, CHART_MAX_INTENSITY)) / CHART_MAX_INTENSITY
+  return CHART_PADDING.top + (1 - ratio) * chartGeometry.value.innerHeight
+}
+
+const buildPath = (points: Array<{ x: number; y: number } | null>) => {
+  const commands: string[] = []
+  let segmentOpen = false
+
+  for (const point of points) {
+    if (!point) {
+      segmentOpen = false
+      continue
+    }
+
+    commands.push(`${segmentOpen ? 'L' : 'M'} ${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
+    segmentOpen = true
+  }
+
+  return commands.join(' ')
+}
+
+const chartSeries = computed(() =>
+  emotionTypes.value
+    .filter((emotionType) => selectedEmotions.value.includes(emotionType.key))
+    .map((emotionType) => {
+      const rawPoints = emotionPoints.value
+        .map((point, index) => {
+          if (getEmotionKeyByType(point.emotion_type) !== emotionType.key) {
+            return null
+          }
+
+          return {
+            chapterNumber: point.chapter_number,
+            intensity: point.intensity,
+            x: toChartX(index),
+            y: toChartY(point.intensity),
+          }
+        })
+      const points = rawPoints.filter(
+        (point): point is { chapterNumber: number; intensity: number; x: number; y: number } =>
+          Boolean(point),
+      )
+
+      return {
+        key: emotionType.key,
+        color: emotionType.color,
+        points,
+        path: buildPath(rawPoints.map((point) => (point ? { x: point.x, y: point.y } : null))),
+      }
+    }),
+)
+
+const chartYAxisTicks = computed(() =>
+  [10, 8, 6, 4, 2, 0].map((value) => ({
+    value,
+    y: toChartY(value),
+  })),
+)
+
+const chartAxisLabels = computed(() => {
+  const pointCount = emotionPoints.value.length
+  if (pointCount === 0) {
+    return []
+  }
+
+  const step = Math.max(1, Math.ceil(pointCount / 6))
+
+  return emotionPoints.value
+    .map((point, index) => {
+      if (index !== 0 && index !== pointCount - 1 && index % step !== 0) {
+        return null
+      }
+
+      return {
+        label: `第${point.chapter_number}章`,
+        x: toChartX(index),
+      }
+    })
+    .filter((label): label is { label: string; x: number } => Boolean(label))
+})
+
+const chartLegendColor = (emotionLabel: string) => {
+  const emotionKey = EMOTION_LABEL_TO_KEY_MAP[emotionLabel] || 'calm'
+  return getEmotionColorByKey(emotionKey)
+}
 </script>
 
 <style scoped>

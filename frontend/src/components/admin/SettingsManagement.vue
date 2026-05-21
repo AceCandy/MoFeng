@@ -1139,15 +1139,15 @@ onMounted(() => {
 }
 
 .compare-new {
-  color: var(--md-warning);
+  color: var(--md-warning-text);
 }
 
 .compare-same {
-  color: var(--md-success);
+  color: var(--md-success-text);
 }
 
 .compare-error {
-  color: var(--md-error);
+  color: var(--md-error-text);
 }
 
 .table-toolbar {

@@ -21,6 +21,23 @@ const readCssCustomProperty = (source: string, selector: string, property: strin
   return value
 }
 
+const readLightThemeCustomProperty = (source: string, property: string) => {
+  const block = source.match(/:root,\s*:root\[data-theme='light'\]\s*\{([\s\S]*?)\}/)
+  const value = block?.[1].match(new RegExp(`${property}\\s*:\\s*([^;]+);`))?.[1]?.trim()
+  if (!value) {
+    throw new Error(`Missing ${property} in light theme`)
+  }
+  return value
+}
+
+const readCssBlock = (source: string, selector: string) => {
+  const block = source.match(new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([\\s\\S]*?)\\}`))
+  if (!block) {
+    throw new Error(`Missing ${selector} block`)
+  }
+  return block[1]
+}
+
 const parseHexColor = (value: string) => {
   const normalized = value.trim()
   const match = normalized.match(/^#([0-9a-fA-F]{6})$/)
@@ -126,6 +143,44 @@ describe('UI audit regressions', () => {
     const darkBackground = readCssCustomProperty(source, ":root[data-theme='dark']", '--md-background')
 
     expect(contrastRatio(darkPrimaryText, darkBackground)).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('uses accessible semantic text tokens for light theme status copy', () => {
+    const css = readSource('src/assets/main.css')
+    const lightSurface = readLightThemeCustomProperty(css, '--md-surface')
+    const errorContainer = readLightThemeCustomProperty(css, '--md-error-container')
+    const warningContainer = readLightThemeCustomProperty(css, '--md-warning-container')
+    const successContainer = readLightThemeCustomProperty(css, '--md-success-container')
+    const errorText = readLightThemeCustomProperty(css, '--md-error-text')
+    const warningText = readLightThemeCustomProperty(css, '--md-warning-text')
+    const successText = readLightThemeCustomProperty(css, '--md-success-text')
+
+    expect(contrastRatio(errorText, lightSurface)).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(errorText, errorContainer)).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(warningText, lightSurface)).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(warningText, warningContainer)).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(successText, lightSurface)).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(successText, successContainer)).toBeGreaterThanOrEqual(4.5)
+
+    const chaptersSource = readSource('src/components/novel-detail/ChaptersSection.vue')
+    const settingsSource = readSource('src/components/admin/SettingsManagement.vue')
+
+    expect(chaptersSource).toContain('text-[var(--md-warning-text)]')
+    expect(chaptersSource).toContain('text-[var(--md-error-text)]')
+    expect(chaptersSource).toContain('text-[var(--md-success-text)]')
+    const compareNewBlock = readCssBlock(settingsSource, '.compare-new')
+    const compareSameBlock = readCssBlock(settingsSource, '.compare-same')
+    const compareErrorBlock = readCssBlock(settingsSource, '.compare-error')
+
+    expect(compareNewBlock).toContain('var(--md-warning-text)')
+    expect(compareSameBlock).toContain('var(--md-success-text)')
+    expect(compareErrorBlock).toContain('var(--md-error-text)')
+    expect(chaptersSource).not.toContain('text-[var(--md-warning)]')
+    expect(chaptersSource).not.toContain('text-[var(--md-error)]')
+    expect(chaptersSource).not.toContain('text-[var(--md-success)]')
+    expect(compareNewBlock).not.toContain('var(--md-warning);')
+    expect(compareSameBlock).not.toContain('var(--md-success);')
+    expect(compareErrorBlock).not.toContain('var(--md-error);')
   })
 
   it('uses the readable primary token for workspace eyebrow labels', () => {
