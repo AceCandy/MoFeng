@@ -124,7 +124,7 @@
                 v-for="tab in tabs"
                 :key="tab.key"
                 @click="activeTab = tab.key"
-                class="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200"
+                class="px-4 py-2 text-sm font-medium rounded-lg transition-[background-color,box-shadow,color] duration-200"
                 :class="activeTab === tab.key
                   ? 'bg-[var(--md-surface)] text-[var(--md-primary)] shadow-sm'
                   : 'text-[var(--md-on-surface-variant)] hover:text-[var(--md-on-surface)] hover:bg-[var(--md-surface-container-lowest)]'"
@@ -327,9 +327,9 @@
                           <span class="text-lg font-bold" :class="getScoreColor(score)">{{ score }}</span>
                         </div>
                         <div class="w-full bg-[var(--md-surface-container)] rounded-full h-2">
-                          <div class="h-2 rounded-full transition-all duration-300"
+                          <div class="h-2 w-full origin-left rounded-full transition-transform duration-300"
                             :class="getScoreBarColor(score)"
-                            :style="{ width: `${(score / 10) * 100}%` }"></div>
+                            :style="{ transform: `scaleX(${score / 10})` }"></div>
                         </div>
                       </div>
                     </div>
@@ -370,8 +370,8 @@
 
     <!-- 版本全文弹窗 -->
     <transition
-      enter-active-class="transition-all duration-300"
-      leave-active-class="transition-all duration-300"
+      enter-active-class="transition-opacity duration-300"
+      leave-active-class="transition-opacity duration-300"
       enter-from-class="opacity-0"
       leave-to-class="opacity-0"
     >

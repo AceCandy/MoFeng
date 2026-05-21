@@ -179,7 +179,7 @@
       <div
         v-for="item in filteredForeshadowing"
         :key="item.id"
-        class="md-card md-card-outlined p-4 transition-all duration-200 hover:shadow-md"
+        class="md-card md-card-outlined p-4 transition-shadow duration-200 hover:shadow-md"
         style="border-radius: var(--md-radius-md)"
       >
         <div class="flex items-start justify-between">

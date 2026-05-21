@@ -8,8 +8,8 @@
   >
     <div v-if="show" class="md-dialog-overlay" @click.self="handleClose">
       <transition
-        enter-active-class="transition-all duration-300"
-        leave-active-class="transition-all duration-200"
+        enter-active-class="transition-[opacity,transform] duration-300"
+        leave-active-class="transition-[opacity,transform] duration-200"
         enter-from-class="opacity-0 scale-95"
         leave-to-class="opacity-0 scale-95"
       >
@@ -49,6 +49,7 @@
                 class="md-textarea w-full"
                 style="min-height: 256px;"
                 placeholder="请输入内容..."
+                :aria-label="`编辑${title ? ` ${title}` : '内容'}`"
               ></textarea>
             </div>
           </div>

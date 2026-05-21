@@ -20,6 +20,8 @@
             name="username"
             type="text"
             required
+            :aria-invalid="Boolean(error)"
+            :aria-describedby="error ? 'register-error' : undefined"
             class="md-text-field-input"
             placeholder="请输入用户名"
             autocomplete="username"
@@ -37,6 +39,8 @@
             name="email"
             type="email"
             required
+            :aria-invalid="Boolean(error)"
+            :aria-describedby="error ? 'register-error' : undefined"
             class="md-text-field-input"
             placeholder="请输入邮箱"
             autocomplete="email"
@@ -55,6 +59,8 @@
               name="verificationCode"
               type="text"
               required
+              :aria-invalid="Boolean(error)"
+              :aria-describedby="error ? 'register-error' : undefined"
               class="md-text-field-input"
               placeholder="请输入验证码"
               inputmode="numeric"
@@ -83,6 +89,8 @@
             name="password"
             type="password"
             required
+            :aria-invalid="Boolean(error)"
+            :aria-describedby="error ? 'register-error' : undefined"
             class="md-text-field-input"
             placeholder="至少 8 个字符"
             autocomplete="new-password"
@@ -91,7 +99,7 @@
           />
         </div>
 
-        <div v-if="error" class="register-feedback is-error" role="alert">
+        <div v-if="error" id="register-error" class="register-feedback is-error" role="alert">
           {{ error }}
         </div>
         <div v-if="success" class="register-feedback is-success" role="status">
@@ -107,10 +115,12 @@
         </button>
       </form>
 
-      <p class="register-link">
-        已有账户？
-        <router-link to="/login">立即登录</router-link>
-      </p>
+      <div class="register-link">
+        <span>已有账户？</span>
+        <router-link to="/login" class="md-btn md-btn-text md-ripple register-link__cta">
+          立即登录
+        </router-link>
+      </div>
     </section>
 
     <section v-else class="md-card md-card-elevated register-card register-card--closed">
@@ -397,13 +407,16 @@ onUnmounted(() => {
 
 .register-link {
   margin-top: var(--md-spacing-6);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--md-spacing-1);
   text-align: center;
 }
 
-.register-link a {
-  color: var(--md-primary-dark);
-  font-weight: 600;
-  text-decoration: none;
+.register-link__cta {
+  min-height: 44px;
 }
 
 .register-card--closed {

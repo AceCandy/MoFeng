@@ -13,8 +13,8 @@
         @click.self="handleClose"
       >
         <transition
-          enter-active-class="transition-all duration-300"
-          leave-active-class="transition-all duration-200"
+          enter-active-class="transition-[opacity,transform] duration-300"
+          leave-active-class="transition-[opacity,transform] duration-200"
           enter-from-class="opacity-0 scale-95"
           leave-to-class="opacity-0 scale-95"
         >

@@ -154,9 +154,10 @@ const handleDelete = () => {
 
 .project-card__title-button {
   max-width: 100%;
+  min-height: 44px;
   display: -webkit-box;
   overflow: hidden;
-  padding: 0;
+  padding: var(--md-spacing-1) 0;
   border: 0;
   background: transparent;
   color: var(--md-on-surface);

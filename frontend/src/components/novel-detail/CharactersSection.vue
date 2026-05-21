@@ -22,7 +22,7 @@
       <article
         v-for="(character, index) in characters"
         :key="index"
-        class="bg-[var(--md-surface)] rounded-2xl border border-[var(--md-outline-variant)] shadow-sm hover:shadow-lg transition-all duration-300">
+        class="bg-[var(--md-surface)] rounded-2xl border border-[var(--md-outline-variant)] shadow-sm hover:shadow-lg transition-shadow duration-300">
         <div class="p-6">
           <div class="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
             <div class="w-16 h-16 rounded-full bg-[var(--md-primary-container)] flex items-center justify-center text-[var(--md-primary)] text-lg font-semibold">

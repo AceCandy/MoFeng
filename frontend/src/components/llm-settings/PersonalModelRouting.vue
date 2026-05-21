@@ -85,7 +85,11 @@
                   <strong>{{ stage.label }}</strong>
                   <small>{{ stage.description }}</small>
                 </span>
-                <select v-model="routeSelections[stage.key]" class="md-text-field-input">
+                <select
+                  v-model="routeSelections[stage.key]"
+                  class="md-text-field-input"
+                  :aria-label="`${stage.label} 模型路由`"
+                >
                   <option value="">使用主模型</option>
                   <option
                     v-for="model in enabledChatModels"
@@ -334,7 +338,7 @@
                   type="checkbox"
                   :checked="Boolean(chatModelForName(provider.id, modelName)?.is_enabled)"
                   :disabled="!provider.is_enabled"
-                  aria-label="启用文本生成模型"
+                  :aria-label="`启用文本生成模型 ${modelName}`"
                   @change="toggleChatModel(provider, modelName, $event)"
                 />
                 <input
@@ -348,7 +352,7 @@
                     )
                   "
                   :disabled="!provider.is_enabled"
-                  aria-label="选择向量模型"
+                  :aria-label="`选择向量模型 ${modelName}`"
                   @change="selectEmbeddingModel(provider, modelName)"
                 />
               </label>

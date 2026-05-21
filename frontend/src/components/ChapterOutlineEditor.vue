@@ -15,7 +15,7 @@
         <button
           type="button"
           @click="removeChapter(index)"
-          class="ml-2 text-[var(--md-error)] hover:text-[var(--md-error)] transition-colors p-1"
+          class="blueprint-editor__delete-button ml-2 text-[var(--md-error)] hover:text-[var(--md-error)] transition-colors"
           :aria-label="`删除第 ${chapter.chapter_number} 章`"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">

@@ -73,12 +73,14 @@ def test_app_uses_shared_shell_layouts():
 
 def test_app_shell_contains_primary_navigation_and_mobile_behavior():
     source = _source("components/shared/AppShell.vue")
+    navigation = _source("components/shared/shellNavigation.ts")
 
-    for text in ["工作台", "模型设置", "管理", "isMobileNavOpen"]:
+    for text in ["buildShellNavigation", "isMobileShell", "isDrawerOpen"]:
         assert text in source
 
-    assert "灵感" not in source
-    assert "path: '/inspiration'" not in source
+    for text in ["工作台", "灵感", "模型设置", "管理", "path: '/inspiration'"]:
+        assert text in navigation
+
     assert 'aria-label="打开导航"' in source
     assert 'aria-label="关闭导航"' in source
     assert "app-shell__mobile-backdrop" in source
@@ -114,7 +116,7 @@ def test_workspace_polish_preserves_primary_flow_and_responsive_states():
         "workspace-continue__progress",
         "aria-label=\"最近项目进度\"",
         "workspace-panel__action:focus-visible",
-        "@media (max-width: 520px)",
+        "@media (max-width: 833px)",
     ]:
         assert text in workspace
 
@@ -130,13 +132,12 @@ def test_workspace_polish_preserves_primary_flow_and_responsive_states():
 
     for text in [
         'id="app-primary-navigation"',
-        ':aria-expanded="isMobileNavOpen"',
+        ':aria-expanded="isDrawerOpen"',
         'aria-controls="app-primary-navigation"',
+        "isCompactShell",
         "isMobileShell",
-        "window.matchMedia",
-        "(max-width: 1023px)",
-        ':aria-hidden="isMobileShell && !isMobileNavOpen ? \'true\' : undefined"',
-        ':inert="isMobileShell && !isMobileNavOpen"',
+        ':aria-hidden="isCompactShell && !isDrawerOpen ? \'true\' : undefined"',
+        ':inert="isCompactShell && !isDrawerOpen"',
     ]:
         assert text in shell
 
@@ -272,7 +273,6 @@ def test_distill_simplifies_archive_nav_and_global_shell_copy():
         "app-shell__brand-subtitle",
         "app-shell__nav-label",
         "app-shell__eyebrow",
-        "pageDescription",
         "当前区域",
     ]:
         assert removed not in shell
@@ -457,7 +457,7 @@ def test_admin_child_panels_use_tokens_and_remove_decorative_gradients():
         "isMobile",
         "user-mobile-list",
         "user-mobile-card",
-        "window.innerWidth < 768",
+        "mobileMax",
     ]:
         assert text in users
 
@@ -616,7 +616,7 @@ def test_novel_archive_drawer_toggle_and_scroll_are_operable():
         'aria-controls="novel-detail-blueprint-nav"',
         ':aria-expanded="isSidebarOpen"',
         ":aria-label=\"isSidebarOpen ? '收起蓝图导航' : '展开蓝图导航'\"",
-        "const isDesktopViewport = ref",
+        "const isDesktopViewport = computed",
         "const closeSidebar = () => {",
     ]:
         assert text in source

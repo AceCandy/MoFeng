@@ -5,7 +5,7 @@
       <button
         type="button"
         @click="removeLocation(index)"
-        class="absolute top-2 right-2 text-[var(--md-error)] hover:text-[var(--md-error)] transition-colors p-1"
+        class="blueprint-editor__delete-button absolute top-2 right-2 text-[var(--md-error)] hover:text-[var(--md-error)] transition-colors"
         :aria-label="`删除地点 ${location.name || index + 1}`"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">

@@ -21,6 +21,8 @@
             name="username"
             type="text"
             required
+            :aria-invalid="Boolean(error)"
+            :aria-describedby="error ? 'login-error' : undefined"
             class="md-text-field-input"
             placeholder="请输入用户名"
             autocomplete="username"
@@ -38,6 +40,8 @@
             name="password"
             type="password"
             required
+            :aria-invalid="Boolean(error)"
+            :aria-describedby="error ? 'login-error' : undefined"
             class="md-text-field-input"
             placeholder="请输入密码"
             autocomplete="current-password"
@@ -45,7 +49,7 @@
           />
         </div>
 
-        <div v-if="error" class="login-feedback" role="alert">
+        <div v-if="error" id="login-error" class="login-feedback" role="alert">
           <svg
             aria-hidden="true"
             viewBox="0 0 24 24"
@@ -109,10 +113,12 @@
         </a>
       </div>
 
-      <p v-if="allowRegistration" class="login-link">
-        还没有账户？
-        <router-link to="/register">立即注册</router-link>
-      </p>
+      <div v-if="allowRegistration" class="login-link">
+        <span>还没有账户？</span>
+        <router-link to="/register" class="md-btn md-btn-text md-ripple login-link__cta">
+          立即注册
+        </router-link>
+      </div>
     </section>
   </div>
 </template>
@@ -308,15 +314,18 @@ const handleLogin = async () => {
 
 .login-link {
   margin: var(--md-spacing-6) 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--md-spacing-1);
   color: var(--md-on-surface-variant);
   font-size: var(--md-body-medium);
   text-align: center;
 }
 
-.login-link a {
-  color: var(--md-primary-dark);
-  font-weight: 600;
-  text-decoration: none;
+.login-link__cta {
+  min-height: 44px;
 }
 
 .login-link a:hover {

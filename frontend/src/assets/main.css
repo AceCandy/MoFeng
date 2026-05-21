@@ -1249,6 +1249,22 @@ button.md-chip,
   color: var(--md-on-surface);
 }
 
+/* Blueprint editors share compact delete icons; keep their touch target usable. */
+.blueprint-editor__delete-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px;
+  border-radius: var(--md-radius-sm);
+}
+
+.blueprint-editor__delete-button:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
 /* ============================================
    Material Ripple Effect
    ============================================ */

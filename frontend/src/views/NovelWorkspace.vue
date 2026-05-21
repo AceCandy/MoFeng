@@ -596,7 +596,7 @@ onUnmounted(() => {
 
 .workspace-eyebrow {
   margin: 0;
-  color: var(--md-primary-dark);
+  color: var(--md-primary);
   font-size: var(--md-label-medium);
   font-weight: 700;
   letter-spacing: 0.08em;

@@ -309,8 +309,8 @@
           <div class="mt-4 flex items-center gap-2">
             <div class="flex-1 bg-[var(--md-surface-container-high)] rounded-full h-2">
               <div
-                class="bg-[var(--md-primary)] h-2 rounded-full transition-all duration-300"
-                :style="{ width: getDNACompleteness(character) + '%' }"
+                class="bg-[var(--md-primary)] h-2 w-full origin-left rounded-full transition-transform duration-300"
+                :style="{ transform: `scaleX(${getDNACompleteness(character) / 100})` }"
               ></div>
             </div>
             <span class="text-xs text-[var(--md-on-surface-variant)]">{{ getDNACompleteness(character) }}% 完成</span>
@@ -468,20 +468,20 @@ const removeCharacter = (index: number) => {
 .slide-enter-active,
 .slide-leave-active {
   transition:
-    max-height 0.3s ease,
-    opacity 0.3s ease;
+    opacity 0.2s ease-out,
+    transform 0.2s ease-out;
+  transform-origin: top;
 }
 
 .slide-enter-from,
 .slide-leave-to {
   opacity: 0;
-  max-height: 0;
-  overflow: hidden;
+  transform: translateY(-4px);
 }
 
 .slide-enter-to,
 .slide-leave-from {
   opacity: 1;
-  max-height: 1000px;
+  transform: translateY(0);
 }
 </style>

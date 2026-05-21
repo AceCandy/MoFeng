@@ -73,7 +73,7 @@
                 @click="selectedDimension = dim.key"
                 :disabled="isOptimizing"
                 :class="[
-                  'md-card md-card-outlined p-4 text-left transition-all duration-200',
+                  'md-card md-card-outlined p-4 text-left transition-[background-color,border-color,box-shadow,color] duration-200',
                   selectedDimension === dim.key ? 'm3-option-selected' : 'm3-option',
                   isOptimizing ? 'opacity-70 cursor-not-allowed' : '',
                 ]"

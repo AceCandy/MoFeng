@@ -1,34 +1,53 @@
 <!-- AIMETA P=打字机效果_文字动画组件|R=打字动画|NR=不含业务逻辑|E=component:TypewriterEffect|X=internal|A=动画组件|D=vue|S=dom|RD=./README.ai -->
 <template>
-  <h1 class="typewriter text-4xl md:text-5xl font-extrabold text-center text-[var(--md-on-surface)] tracking-wider" :style="{ '--char-count': fullText.length }">
+  <h1
+    class="typewriter text-4xl md:text-5xl font-extrabold text-center text-[var(--md-on-surface)] tracking-wider"
+    :style="{ '--char-count': fullText.length }"
+  >
     {{ displayedText }}
   </h1>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 
-const props = defineProps({
-  text: {
-    type: String,
-    required: true,
-  },
-});
+const props = defineProps<{
+  text: string
+}>()
 
-const fullText = props.text;
-const displayedText = ref('');
-let index = 0;
+const fullText = props.text
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches
+const displayedText = ref(prefersReducedMotion() ? fullText : '')
+let index = 0
+let timer: number | null = null
 
 onMounted(() => {
-  const interval = setInterval(() => {
+  if (prefersReducedMotion()) {
+    displayedText.value = fullText
+    return
+  }
+
+  timer = window.setInterval(() => {
     if (index < fullText.length) {
-      displayedText.value += fullText.charAt(index);
-      index++;
+      displayedText.value += fullText.charAt(index)
+      index++
     } else {
-      clearInterval(interval);
+      if (timer !== null) {
+        window.clearInterval(timer)
+        timer = null
+      }
     }
-  }, 150); // Adjust typing speed here
-});
+  }, 150)
+})
+
+onBeforeUnmount(() => {
+  if (timer !== null) {
+    window.clearInterval(timer)
+    timer = null
+  }
+})
 </script>
 
 <style scoped>
