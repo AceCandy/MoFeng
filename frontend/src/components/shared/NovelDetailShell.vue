@@ -28,9 +28,12 @@
         <!-- Title -->
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 min-w-0">
-            <h1 class="md-title-large truncate" style="color: var(--md-on-surface)">
+            <h2
+              class="detail-shell__title md-title-large truncate"
+              style="color: var(--md-on-surface)"
+            >
               {{ formattedTitle }}
-            </h1>
+            </h2>
             <span v-if="isAdmin" class="detail-shell__mode-chip">管理只读</span>
           </div>
           <p

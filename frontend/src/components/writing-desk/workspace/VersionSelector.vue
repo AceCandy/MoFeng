@@ -1,7 +1,14 @@
 <!-- AIMETA P=版本选择器_章节版本切换|R=版本列表_切换|NR=不含版本管理|E=component:VersionSelector|X=internal|A=选择器|D=vue|S=dom|RD=./README.ai -->
 <template>
   <div class="space-y-6">
-    <div v-if="showGeneratedBanner" class="md-card md-card-filled p-4 version-ready" style="border-radius: var(--md-radius-lg)">
+    <div
+      v-if="showGeneratedBanner"
+      class="md-card md-card-filled p-4 version-ready"
+      style="border-radius: var(--md-radius-lg)"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
       <p class="version-ready__title">第{{ selectedChapter?.chapter_number }}章已生成新版本 {{ latestVersionLabel }}，原版本已保留。</p>
       <div class="version-ready__actions">
         <button type="button" class="md-btn md-btn-outlined md-ripple" @click="$emit('showVersionDetail', selectedVersionIndex)">查看正文</button>
@@ -30,6 +37,9 @@
       v-if="versionNotice"
       :class="['md-card md-card-filled p-4 version-notice', `version-notice--${versionNotice.tone}`]"
       style="border-radius: var(--md-radius-lg)"
+      :role="versionNotice.tone === 'error' ? 'alert' : 'status'"
+      :aria-live="versionNotice.tone === 'error' ? 'assertive' : 'polite'"
+      aria-atomic="true"
     >
       <div class="version-notice__row">
         <div class="flex items-center gap-3 min-w-0">
@@ -104,86 +114,86 @@
       </div>
 
       <div class="version-grid" role="radiogroup" aria-label="章节候选版本">
-        <div
-          v-for="(version, index) in availableVersions"
-          :key="index"
-          :ref="(el) => registerVersionCardRef(el, index)"
-          @click="$emit('update:selectedVersionIndex', index)"
-          @keydown.enter.prevent="$emit('update:selectedVersionIndex', index)"
-          @keydown.space.prevent="$emit('update:selectedVersionIndex', index)"
-          @keydown="handleVersionRadioKeydown($event, index)"
-          role="radio"
-          :tabindex="selectedVersionIndex === index ? 0 : -1"
-          :aria-checked="selectedVersionIndex === index"
-          :aria-label="`候选版本 ${index + 1}`"
-          :aria-posinset="index + 1"
-          :aria-setsize="availableVersions.length"
-          :class="[
-            'cursor-pointer p-4 m3-version-card',
-            selectedVersionIndex === index
-              ? 'm3-version-selected md-elevation-1'
-              : isCurrentVersion(index)
-                ? 'm3-version-current'
-                : 'hover:md-elevation-1',
-          ]"
-        >
-          <div class="flex items-start gap-3">
-            <div
-              :class="[
-                'w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0',
-                selectedVersionIndex === index
-                  ? 'bg-[var(--md-primary)] text-[var(--md-on-primary)]'
-                  : isCurrentVersion(index)
-                    ? 'bg-[var(--md-success)] text-[var(--md-on-success)]'
-                    : 'bg-[var(--md-surface-container-highest)] text-[var(--md-on-surface)]',
-              ]"
-            >
-              <svg
-                v-if="isCurrentVersion(index)"
-                class="w-3 h-3"
-                fill="currentColor"
-                viewBox="0 0 20 20"
+        <div v-for="(version, index) in availableVersions" :key="index" class="version-card">
+          <div
+            :ref="(el) => registerVersionCardRef(el, index)"
+            @click="$emit('update:selectedVersionIndex', index)"
+            @keydown.enter.prevent="$emit('update:selectedVersionIndex', index)"
+            @keydown.space.prevent="$emit('update:selectedVersionIndex', index)"
+            @keydown="handleVersionRadioKeydown($event, index)"
+            role="radio"
+            :tabindex="selectedVersionIndex === index ? 0 : -1"
+            :aria-checked="selectedVersionIndex === index"
+            :aria-label="`候选版本 ${index + 1}`"
+            :aria-posinset="index + 1"
+            :aria-setsize="availableVersions.length"
+            :class="[
+              'cursor-pointer p-4 m3-version-card',
+              selectedVersionIndex === index
+                ? 'm3-version-selected md-elevation-1'
+                : isCurrentVersion(index)
+                  ? 'm3-version-current'
+                  : 'hover:md-elevation-1',
+            ]"
+          >
+            <div class="flex items-start gap-3">
+              <div
+                :class="[
+                  'w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0',
+                  selectedVersionIndex === index
+                    ? 'bg-[var(--md-primary)] text-[var(--md-on-primary)]'
+                    : isCurrentVersion(index)
+                      ? 'bg-[var(--md-success)] text-[var(--md-on-success)]'
+                      : 'bg-[var(--md-surface-container-highest)] text-[var(--md-on-surface)]',
+                ]"
               >
+                <svg
+                  v-if="isCurrentVersion(index)"
+                  class="w-3 h-3"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clip-rule="evenodd"
+                  ></path>
+                </svg>
+                <span v-else>{{ index + 1 }}</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="md-body-medium md-on-surface line-clamp-3">
+                  {{ cleanVersionContent(version.content).substring(0, 150) }}...
+                </p>
+                <div class="mt-2 flex items-center gap-2 md-body-small md-on-surface-variant">
+                  <span>{{ getVersionWordCount(version.content) }} 字</span>
+                  <span>•</span>
+                  <span>{{ version.style || '标准' }}风格</span>
+                  <span
+                    v-if="isCurrentVersion(index)"
+                    style="color: var(--md-success); font-weight: 600"
+                    >• 当前选中</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="version-card__actions">
+            <button
+              type="button"
+              @click="$emit('showVersionDetail', index)"
+              class="md-btn md-btn-text md-ripple version-card__details-action flex items-center gap-1"
+            >
+              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
                 <path
                   fill-rule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
                   clip-rule="evenodd"
                 ></path>
               </svg>
-              <span v-else>{{ index + 1 }}</span>
-            </div>
-            <div class="flex-1">
-              <p class="md-body-medium md-on-surface line-clamp-3">
-                {{ cleanVersionContent(version.content).substring(0, 150) }}...
-              </p>
-              <div class="mt-2 flex items-center gap-2 md-body-small md-on-surface-variant">
-                <span>{{ getVersionWordCount(version.content) }} 字</span>
-                <span>•</span>
-                <span>{{ version.style || '标准' }}风格</span>
-                <span
-                  v-if="isCurrentVersion(index)"
-                  style="color: var(--md-success); font-weight: 600"
-                  >• 当前选中</span
-                >
-              </div>
-              <div class="mt-2">
-                <button
-                  type="button"
-                  @click.stop="$emit('showVersionDetail', index)"
-                  class="md-btn md-btn-text md-ripple flex items-center gap-1"
-                >
-                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
-                    <path
-                      fill-rule="evenodd"
-                      d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-                      clip-rule="evenodd"
-                    ></path>
-                  </svg>
-                  查看详情
-                </button>
-              </div>
-            </div>
+              查看详情
+            </button>
           </div>
         </div>
       </div>
@@ -578,6 +588,24 @@ const parseMarkdown = (text: string): string => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--md-spacing-3);
+}
+
+.version-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-2);
+  min-width: 0;
+}
+
+.version-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.version-card__details-action {
+  min-height: 44px;
+  padding-inline: 0;
 }
 
 .version-actions {

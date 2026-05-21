@@ -30,7 +30,7 @@
               </svg>
             </div>
             <div class="min-w-0 text-left">
-              <h2 class="md-title-medium font-semibold">故事蓝图</h2>
+              <span class="md-title-medium font-semibold">故事蓝图</span>
               <p class="md-body-small md-on-surface-variant">
                 {{ project.blueprint?.style || '未设定风格' }}
               </p>
@@ -72,14 +72,11 @@
                 :key="chapter.chapter_number"
                 class="writing-sidebar__tree-item"
               >
-                <div
+                <button
+                  type="button"
                   :ref="(el) => setChapterRef(chapter.chapter_number, el)"
                   @click="$emit('selectChapter', chapter.chapter_number)"
-                  @keydown.enter.prevent="$emit('selectChapter', chapter.chapter_number)"
-                  @keydown.space.prevent="$emit('selectChapter', chapter.chapter_number)"
-                  role="button"
-                  tabindex="0"
-                  :aria-pressed="selectedChapterNumber === chapter.chapter_number"
+                  :aria-current="selectedChapterNumber === chapter.chapter_number ? 'true' : undefined"
                   :aria-label="getChapterA11yLabel(chapter.chapter_number, chapter.title)"
                   :class="[
                     'cursor-pointer writing-sidebar__chapter-row m3-stagger',
@@ -107,11 +104,11 @@
                     </div>
                     <div class="writing-sidebar__chapter-title-row">
                       <Tooltip :text="chapter.title">
-                        <h4
+                        <span
                           class="writing-sidebar__chapter-title md-body-medium font-semibold line-clamp-1"
                         >
                           {{ chapter.title }}
-                        </h4>
+                        </span>
                       </Tooltip>
                       <span
                         v-if="isChapterCompleted(chapter.chapter_number)"
@@ -121,7 +118,7 @@
                       </span>
                     </div>
                   </div>
-                </div>
+                </button>
               </div>
             </div>
             <div v-else class="text-center py-8 md-body-medium md-on-surface-variant">
@@ -461,11 +458,19 @@ const shouldReduceMotion = (): boolean => {
 }
 
 .writing-sidebar__chapter-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  appearance: none;
+  -webkit-appearance: none;
   padding: 9px 4px 9px 5px;
   border-radius: var(--md-radius-md);
   border: 1px solid transparent;
   background-color: transparent;
+  color: inherit;
+  font: inherit;
   outline: none;
+  cursor: pointer;
   transition:
     background-color var(--md-duration-medium) var(--md-easing-standard),
     border-color var(--md-duration-medium) var(--md-easing-standard);

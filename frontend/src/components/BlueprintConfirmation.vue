@@ -50,12 +50,19 @@
         </div>
       </div>
 
-      <div class="blueprint-confirm__loading-text">
+      <div class="blueprint-confirm__loading-text" role="status" aria-live="polite">
         <h3 class="blueprint-confirm__loading-title">{{ loadingText }}</h3>
         <p class="blueprint-confirm__loading-desc">AI正在为您精心打造独特的故事蓝图...</p>
 
         <div class="blueprint-confirm__progress">
-          <div class="blueprint-confirm__progress-track">
+          <div
+            class="blueprint-confirm__progress-track"
+            role="progressbar"
+            aria-label="蓝图生成进度"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            :aria-valuenow="Math.round(progress)"
+          >
             <div
               class="blueprint-confirm__progress-bar"
               :class="{ 'blueprint-confirm__progress-bar--done': progress >= 100 }"

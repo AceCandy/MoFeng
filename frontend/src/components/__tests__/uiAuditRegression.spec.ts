@@ -199,6 +199,64 @@ describe('UI audit regressions', () => {
     expect(titleButtonBlock).toContain('padding:')
   })
 
+  it('keeps version cards free of nested detail buttons inside radios', () => {
+    const source = readSource('src/components/writing-desk/workspace/VersionSelector.vue')
+    const radioStart = source.indexOf('role="radio"')
+    const actionsStart = source.indexOf('version-card__actions')
+    const radioBlock = radioStart >= 0 && actionsStart > radioStart ? source.slice(radioStart, actionsStart) : ''
+
+    expect(source).toContain('role="radiogroup"')
+    expect(source).toContain('role="radio"')
+    expect(source).toContain('version-card__details-action')
+    expect(source).toContain('version-card__actions')
+    expect(radioStart).toBeGreaterThanOrEqual(0)
+    expect(actionsStart).toBeGreaterThan(radioStart)
+    expect(radioBlock).not.toContain('version-card__details-action')
+    expect(radioBlock).not.toContain('查看详情')
+  })
+
+  it('announces version banners with live region semantics', () => {
+    const source = readSource('src/components/writing-desk/workspace/VersionSelector.vue')
+
+    expect(source).toContain('version-ready')
+    expect(source).toContain('role="status"')
+    expect(source).toContain('aria-live="polite"')
+    expect(source).toContain('aria-atomic="true"')
+    expect(source).toContain('version-notice')
+    expect(source).toContain(':role="versionNotice.tone === \'error\' ? \'alert\' : \'status\'"')
+    expect(source).toContain(':aria-live="versionNotice.tone === \'error\' ? \'assertive\' : \'polite\'"')
+  })
+
+  it('exposes project card progress as an accessible progressbar', () => {
+    const source = readSource('src/components/ProjectCard.vue')
+
+    expect(source).toContain('role="progressbar"')
+    expect(source).toContain('aria-label="项目完成进度"')
+    expect(source).toContain(':aria-valuenow="progress"')
+    expect(source).toContain('const rawProgress = computed')
+    expect(source).toContain('const progress = computed(() => Math.max(0, Math.min(100, rawProgress.value)))')
+  })
+
+  it('keeps workspace loading states announced and visually stable', () => {
+    const source = readSource('src/views/NovelWorkspace.vue')
+
+    expect(source).toContain(':aria-busy="projectsLoading"')
+    expect(source).not.toContain('class="app-page workspace-page" :aria-busy="projectsLoading"')
+    expect(source).toContain('role="status"')
+    expect(source).toContain('aria-live="polite"')
+    expect(source).toContain('workspace-hero--loading')
+    expect(source).toContain('workspace-hero__loading-line')
+  })
+
+  it('announces blueprint generation progress to assistive technology', () => {
+    const source = readSource('src/components/BlueprintConfirmation.vue')
+
+    expect(source).toContain('role="status"')
+    expect(source).toContain('aria-live="polite"')
+    expect(source).toContain('role="progressbar"')
+    expect(source).toContain(':aria-valuenow="Math.round(progress)"')
+  })
+
   it('renders complete typewriter text immediately when reduced motion is preferred', async () => {
     window.matchMedia = ((query: string) =>
       ({

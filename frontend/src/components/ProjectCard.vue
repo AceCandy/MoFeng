@@ -24,7 +24,14 @@
           <span>完成进度</span>
           <strong>{{ progress }}%</strong>
         </div>
-        <div class="md-progress-linear">
+        <div
+          class="md-progress-linear"
+          role="progressbar"
+          aria-label="项目完成进度"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          :aria-valuenow="progress"
+        >
           <div class="md-progress-linear-bar" :style="{ '--md-progress-scale': progressScale }"></div>
         </div>
       </div>
@@ -93,12 +100,13 @@ const emit = defineEmits<{
   (e: 'delete', id: string): void
 }>()
 
-// 使用后端预计算的进度数据
-const progress = computed(() => {
+// 使用后端预计算的进度数据，并夹紧异常值，避免视觉进度和读屏值分叉。
+const rawProgress = computed(() => {
   const { completed_chapters, total_chapters } = props.project
   return total_chapters > 0 ? Math.round((completed_chapters / total_chapters) * 100) : 0
 })
-const progressScale = computed(() => Math.max(0, Math.min(100, progress.value)) / 100)
+const progress = computed(() => Math.max(0, Math.min(100, rawProgress.value)))
+const progressScale = computed(() => progress.value / 100)
 
 const getStatusText = computed(() => {
   const { completed_chapters, total_chapters } = props.project

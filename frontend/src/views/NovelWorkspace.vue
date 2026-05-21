@@ -38,52 +38,93 @@
       </div>
     </transition>
 
-    <section class="workspace-hero" aria-label="今日创作总览">
+    <section
+      :class="['workspace-hero', { 'workspace-hero--loading': projectsLoading }]"
+      :aria-busy="projectsLoading"
+      aria-label="今日创作总览"
+    >
       <div class="workspace-hero__intro">
         <p class="workspace-eyebrow">今日创作</p>
-        <h2>{{ continueProject ? continueProject.title : '开始一段新的长篇创作' }}</h2>
-        <p class="workspace-hero__summary">
-          {{
-            continueProject
-              ? `继续推进《${continueProject.title}》，把设定、节奏和伏笔收束到同一条叙事线上。`
-              : '你还没有创作中的项目，可以从灵感模式启动一个世界观草案。'
-          }}
-        </p>
+        <template v-if="projectsLoading">
+          <div class="workspace-hero__loading-block">
+            <span class="workspace-hero__loading-line workspace-hero__loading-line--title"></span>
+          </div>
+          <div class="workspace-hero__loading-block workspace-hero__loading-block--summary">
+            <span class="workspace-hero__loading-line workspace-hero__loading-line--summary"></span>
+            <span
+              class="workspace-hero__loading-line workspace-hero__loading-line--summary is-short"
+            ></span>
+          </div>
+          <div class="workspace-hero__meta workspace-hero__loading-meta" aria-hidden="true">
+            <span class="workspace-chip workspace-hero__loading-chip"></span>
+            <span class="workspace-chip workspace-hero__loading-chip"></span>
+          </div>
+          <div class="workspace-hero__actions workspace-panel__actions workspace-hero__loading-actions" aria-hidden="true">
+            <span class="workspace-hero__loading-line workspace-hero__loading-line--button"></span>
+            <span
+              class="workspace-hero__loading-line workspace-hero__loading-line--button is-secondary"
+            ></span>
+          </div>
+        </template>
+        <template v-else>
+          <h2>{{ continueProject ? continueProject.title : '开始一段新的长篇创作' }}</h2>
+          <p class="workspace-hero__summary">
+            {{
+              continueProject
+                ? `继续推进《${continueProject.title}》，把设定、节奏和伏笔收束到同一条叙事线上。`
+                : '你还没有创作中的项目，可以从灵感模式启动一个世界观草案。'
+            }}
+          </p>
 
-        <div v-if="continueProject" class="workspace-hero__meta">
-          <span class="workspace-chip">{{ continueProject.genre || '未设定题材' }}</span>
-          <span class="workspace-chip">{{ continueProject.completed_chapters }}/{{ continueProject.total_chapters }} 章</span>
-        </div>
+          <div v-if="continueProject" class="workspace-hero__meta">
+            <span class="workspace-chip">{{ continueProject.genre || '未设定题材' }}</span>
+            <span class="workspace-chip">{{ continueProject.completed_chapters }}/{{ continueProject.total_chapters }} 章</span>
+          </div>
 
-        <div class="workspace-hero__actions workspace-panel__actions">
-          <button
-            v-if="continueProject"
-            type="button"
-            class="md-btn md-btn-filled md-ripple workspace-panel__action"
-            @click="enterProject(continueProject)"
-          >
-            继续写作
-          </button>
-          <button
-            type="button"
-            class="md-btn md-btn-tonal md-ripple workspace-panel__action"
-            @click="goToInspiration"
-          >
-            新建灵感项目
-          </button>
-        </div>
+          <div class="workspace-hero__actions workspace-panel__actions">
+            <button
+              v-if="continueProject"
+              type="button"
+              class="md-btn md-btn-filled md-ripple workspace-panel__action"
+              @click="enterProject(continueProject)"
+            >
+              继续写作
+            </button>
+            <button
+              type="button"
+              class="md-btn md-btn-tonal md-ripple workspace-panel__action"
+              @click="goToInspiration"
+            >
+              新建灵感项目
+            </button>
+          </div>
+        </template>
       </div>
 
       <div class="workspace-hero__panel">
         <div class="workspace-hero__panel-head">
           <p>今日目标</p>
-          <strong>{{ todayGoal.title }}</strong>
+          <strong v-if="projectsLoading">
+            <span class="workspace-hero__loading-line workspace-hero__loading-line--panel-title"></span>
+          </strong>
+          <strong v-else>{{ todayGoal.title }}</strong>
         </div>
-        <p class="workspace-hero__goal-desc">{{ todayGoal.description }}</p>
+        <p class="workspace-hero__goal-desc">
+          <template v-if="projectsLoading">
+            <span class="workspace-hero__loading-line workspace-hero__loading-line--goal"></span>
+            <span
+              class="workspace-hero__loading-line workspace-hero__loading-line--goal is-short"
+            ></span>
+          </template>
+          <template v-else>{{ todayGoal.description }}</template>
+        </p>
         <div class="workspace-hero__progress workspace-continue__progress">
           <div class="workspace-hero__progress-label">
             <span>项目推进度</span>
-            <strong>{{ continueProgress }}%</strong>
+            <strong v-if="projectsLoading">
+              <span class="workspace-hero__loading-line workspace-hero__loading-line--progress"></span>
+            </strong>
+            <strong v-else>{{ continueProgress }}%</strong>
           </div>
           <div
             class="md-progress-linear"
@@ -97,11 +138,22 @@
           </div>
         </div>
         <div class="workspace-hero__snapshot" aria-label="创作快照">
-          <span>创作中 <strong>{{ sortedProjects.length }}</strong> 个项目</span>
-          <span aria-hidden="true">·</span>
-          <span>待推进 <strong>{{ pendingChapters }}</strong> 章</span>
-          <span aria-hidden="true">·</span>
-          <span>最近编辑 <strong>{{ recentEditedProjects.length }}</strong> 个项目</span>
+          <template v-if="projectsLoading">
+            <span class="workspace-hero__loading-line workspace-hero__loading-line--snapshot"></span>
+            <span
+              class="workspace-hero__loading-line workspace-hero__loading-line--snapshot is-short"
+            ></span>
+            <span
+              class="workspace-hero__loading-line workspace-hero__loading-line--snapshot is-shorter"
+            ></span>
+          </template>
+          <template v-else>
+            <span>创作中 <strong>{{ sortedProjects.length }}</strong> 个项目</span>
+            <span aria-hidden="true">·</span>
+            <span>待推进 <strong>{{ pendingChapters }}</strong> 章</span>
+            <span aria-hidden="true">·</span>
+            <span>最近编辑 <strong>{{ recentEditedProjects.length }}</strong> 个项目</span>
+          </template>
         </div>
       </div>
     </section>
@@ -177,7 +229,14 @@
         <span class="workspace-chip">{{ sortedProjects.length }} 个项目</span>
       </div>
 
-      <div v-if="projectsLoading" class="workspace-grid" aria-label="项目加载中">
+      <div
+        v-if="projectsLoading"
+        class="workspace-grid"
+        role="status"
+        aria-live="polite"
+        aria-label="项目加载中"
+      >
+        <span class="sr-only">项目加载中</span>
         <article v-for="index in 3" :key="index" class="workspace-skeleton">
           <div class="workspace-skeleton__header">
             <span class="workspace-skeleton__avatar"></span>
@@ -594,6 +653,11 @@ onUnmounted(() => {
   box-shadow: var(--md-elevation-1);
 }
 
+.workspace-hero--loading .workspace-hero__intro,
+.workspace-hero--loading .workspace-hero__panel {
+  min-height: 244px;
+}
+
 .workspace-eyebrow {
   margin: 0;
   color: var(--md-primary);
@@ -642,6 +706,114 @@ onUnmounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: var(--md-spacing-3);
+}
+
+.workspace-hero__loading-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-3);
+}
+
+.workspace-hero__loading-block--summary {
+  margin-top: var(--md-spacing-3);
+}
+
+.workspace-hero__loading-meta {
+  margin-top: var(--md-spacing-4);
+}
+
+.workspace-hero__loading-actions {
+  margin-top: var(--md-spacing-5);
+}
+
+.workspace-hero__loading-chip {
+  width: 92px;
+  min-width: 92px;
+  border-color: transparent;
+  background-color: color-mix(in srgb, var(--md-surface-container-low) 82%, var(--md-outline-variant));
+}
+
+.workspace-hero__loading-chip:last-child {
+  width: 112px;
+  min-width: 112px;
+}
+
+.workspace-hero__loading-line {
+  display: block;
+  border-radius: var(--md-radius-full);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--md-surface-container-low) 88%, transparent) 0%,
+    color-mix(in srgb, var(--md-surface-container-high) 96%, transparent) 48%,
+    color-mix(in srgb, var(--md-surface-container-low) 88%, transparent) 100%
+  );
+  background-size: 220% 100%;
+  animation: workspace-hero-loading-pulse 1.5s var(--md-easing-standard) infinite;
+}
+
+.workspace-hero__loading-line--title {
+  width: min(18rem, 78%);
+  height: 2.5rem;
+}
+
+.workspace-hero__loading-line--summary {
+  width: min(30rem, 92%);
+  height: 1rem;
+}
+
+.workspace-hero__loading-line--summary.is-short {
+  width: min(21rem, 68%);
+}
+
+.workspace-hero__loading-line--button {
+  width: 126px;
+  height: 42px;
+}
+
+.workspace-hero__loading-line--button.is-secondary {
+  width: 144px;
+}
+
+.workspace-hero__loading-line--panel-title {
+  width: min(12rem, 72%);
+  height: 1.5rem;
+}
+
+.workspace-hero__loading-line--goal {
+  width: 100%;
+  height: 1rem;
+}
+
+.workspace-hero__loading-line--goal.is-short {
+  width: 76%;
+}
+
+.workspace-hero__loading-line--progress {
+  width: 3.2rem;
+  height: 1rem;
+}
+
+.workspace-hero__loading-line--snapshot {
+  width: min(18rem, 100%);
+  height: 2rem;
+}
+
+.workspace-hero__loading-line--snapshot.is-short {
+  width: min(14rem, 86%);
+}
+
+.workspace-hero__loading-line--snapshot.is-shorter {
+  width: min(11rem, 72%);
+}
+
+@keyframes workspace-hero-loading-pulse {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
 }
 
 .workspace-panel__action:focus-visible {
@@ -1079,6 +1251,11 @@ onUnmounted(() => {
     gap: var(--md-spacing-4);
   }
 
+  .workspace-hero--loading .workspace-hero__intro,
+  .workspace-hero--loading .workspace-hero__panel {
+    min-height: 212px;
+  }
+
   .workspace-hero,
   .workspace-module,
   .workspace-archive {
@@ -1116,6 +1293,7 @@ onUnmounted(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .workspace-hero__loading-line,
   .workspace-skeleton__avatar,
   .workspace-skeleton__lines span,
   .workspace-skeleton__bar,

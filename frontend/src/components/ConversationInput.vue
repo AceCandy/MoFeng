@@ -157,22 +157,29 @@ const handleTextSubmit = () => {
   }
 }
 
-// 当输入控件变为文本输入时，自动聚焦
+const getControlIdentity = (control: UIControl | null) => {
+  if (!control) return 'empty'
+  if (control.type === 'single_choice') {
+    const optionIds = control.options?.map((option) => option.id).join('|') ?? ''
+    return `${control.type}:${optionIds}`
+  }
+  return control.type
+}
+
+// 只有输入控件身份真正变化时，才重置草稿并在需要时聚焦。
 watch(
-  () => props.uiControl,
-  async (newControl) => {
-    // 每次控件更新时，都重置手动输入状态和文本内容
+  () => getControlIdentity(props.uiControl),
+  async () => {
     isManualInput.value = false
     textInput.value = ''
 
     await nextTick()
     adjustTextareaHeight()
 
-    if (newControl?.type === 'text_input') {
+    if (props.uiControl?.type === 'text_input') {
       textInputRef.value?.focus()
     }
   },
-  { deep: true } // 使用 deep watch 确保即使是相同类型的控件也能触发
 )
 
 // 监听手动输入状态的变化，以聚焦输入框
