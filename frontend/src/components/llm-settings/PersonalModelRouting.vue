@@ -219,33 +219,10 @@
               <label class="md-text-field">
                 <span class="md-text-field-label">名称</span>
                 <input
-<<<<<<< HEAD
-                  v-if="activeSection === 'llm'"
-                  type="checkbox"
-                  :checked="Boolean(chatModelForName(provider.id, modelName)?.is_enabled)"
-                  :disabled="!provider.is_enabled"
-                  :aria-label="`启用文本生成模型 ${modelName}`"
-                  @change="toggleChatModel(provider, modelName, $event)"
-                />
-                <input
-                  v-else
-                  name="embedding-model"
-                  type="radio"
-                  :checked="
-                    Boolean(
-                      embeddingModelForName(provider.id, modelName)?.is_enabled &&
-                      embeddingModelForName(provider.id, modelName)?.is_default_embedding,
-                    )
-                  "
-                  :disabled="!provider.is_enabled"
-                  :aria-label="`选择向量模型 ${modelName}`"
-                  @change="selectEmbeddingModel(provider, modelName)"
-=======
                   v-model="providerForm.name"
                   class="md-text-field-input"
                   type="text"
                   placeholder="如 OpenAI / Anthropic / DeepSeek"
->>>>>>> ef8ae6f (fix)
                 />
               </label>
 

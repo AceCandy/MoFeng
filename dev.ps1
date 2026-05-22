@@ -22,7 +22,6 @@ if (-not $npmCmd) {
     throw 'npm.cmd not found. Please install Node.js 18+.'
 }
 
-$cmdExe = (Get-Command cmd.exe -ErrorAction Stop).Source
 $taskkillExe = (Get-Command taskkill.exe -ErrorAction SilentlyContinue).Source
 
 function Resolve-VenvPython {
@@ -122,14 +121,14 @@ function Ensure-BackendEnvironment {
 function Test-PortAvailable {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$Host,
+        [string]$BindHost,
         [Parameter(Mandatory = $true)]
         [int]$Port
     )
 
     $listener = $null
     try {
-        $address = [System.Net.IPAddress]::Parse($Host)
+        $address = [System.Net.IPAddress]::Parse($BindHost)
         $listener = [System.Net.Sockets.TcpListener]::new($address, $Port)
         $listener.Start()
         return $true
@@ -147,18 +146,18 @@ function Test-PortAvailable {
 function Find-AvailablePort {
     param(
         [Parameter(Mandatory = $true)]
-        [string]$Host,
+        [string]$BindHost,
         [Parameter(Mandatory = $true)]
         [int]$StartPort
     )
 
     for ($port = $StartPort; $port -le 65535; $port++) {
-        if (Test-PortAvailable -Host $Host -Port $port) {
+        if (Test-PortAvailable -BindHost $BindHost -Port $port) {
             return $port
         }
     }
 
-    throw "No available port found in range ${Host}:${StartPort}-65535."
+    throw "No available port found in range ${BindHost}:${StartPort}-65535."
 }
 
 function Stop-TrackedProcess {
@@ -189,8 +188,8 @@ try {
     Ensure-FrontendDependencies
     Ensure-BackendEnvironment
 
-    $BackendPort = Find-AvailablePort -Host $BackendHost -StartPort $BackendDefaultPort
-    $FrontendPort = Find-AvailablePort -Host $FrontendHost -StartPort $FrontendDefaultPort
+    $BackendPort = Find-AvailablePort -BindHost $BackendHost -StartPort $BackendDefaultPort
+    $FrontendPort = Find-AvailablePort -BindHost $FrontendHost -StartPort $FrontendDefaultPort
 
     if ($BackendPort -ne $BackendDefaultPort) {
         Write-Host "Detected backend default port $BackendDefaultPort in use, switching to $BackendPort."
@@ -207,10 +206,35 @@ try {
     Write-Host 'Starting backend dev server...'
     $backendProcess = Start-Process -FilePath $BackendPython -ArgumentList '-m', 'uvicorn', 'app.main:app', '--reload', '--host', $BackendHost, '--port', $BackendPort -WorkingDirectory $BackendDir -PassThru
 
-    $frontendCommand = "set BACKEND_PROXY_HOST=$BackendProxyHost && set BACKEND_PORT=$BackendPort && set FRONTEND_HOST=$FrontendHost && set FRONTEND_PORT=$FrontendPort && set FRONTEND_HMR_HOST=$FrontendHmrHost && npm.cmd run dev"
+    $previousFrontendEnv = @{
+        BACKEND_PROXY_HOST = $env:BACKEND_PROXY_HOST
+        BACKEND_PORT = $env:BACKEND_PORT
+        FRONTEND_HOST = $env:FRONTEND_HOST
+        FRONTEND_PORT = $env:FRONTEND_PORT
+        FRONTEND_HMR_HOST = $env:FRONTEND_HMR_HOST
+    }
 
     Write-Host 'Starting frontend dev server...'
-    $frontendProcess = Start-Process -FilePath $cmdExe -ArgumentList '/c', $frontendCommand -WorkingDirectory $FrontendDir -PassThru
+    try {
+        # 前端 dev server 从环境变量读取代理和监听配置，子进程会继承这里设置的值。
+        $env:BACKEND_PROXY_HOST = $BackendProxyHost
+        $env:BACKEND_PORT = $BackendPort
+        $env:FRONTEND_HOST = $FrontendHost
+        $env:FRONTEND_PORT = $FrontendPort
+        $env:FRONTEND_HMR_HOST = $FrontendHmrHost
+
+        $frontendProcess = Start-Process -FilePath $npmCmd.Source -ArgumentList 'run', 'dev' -WorkingDirectory $FrontendDir -PassThru
+    }
+    finally {
+        foreach ($entry in $previousFrontendEnv.GetEnumerator()) {
+            if ($null -eq $entry.Value) {
+                Remove-Item -Path "Env:\$($entry.Key)" -ErrorAction SilentlyContinue
+            }
+            else {
+                Set-Item -Path "Env:\$($entry.Key)" -Value $entry.Value
+            }
+        }
+    }
 
     Write-Host ''
     Write-Host 'Dev environment started:'

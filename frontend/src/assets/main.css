@@ -61,41 +61,25 @@
   --md-outline-variant: #dcd2be; /* 墨晕 */
 
   /* Semantic colors */
-<<<<<<< HEAD
-  --md-error: #b85c58;
-  --md-error-strong: #7f2f2b;
-  --md-error-container: #f8e5e2;
-  --md-error-text: #7f2f2b;
-  --md-error-container-text: #643431;
-=======
   --md-error: #c0392b; /* 丹砂红 */
   --md-error-strong: #962d22;
   --md-error-container: #fbebea;
->>>>>>> ef8ae6f (fix)
+  --md-error-text: #7f2f2b;
+  --md-error-container-text: #643431;
   --md-on-error: #fdf8f7;
   --md-on-error-container: #5c120c;
 
-<<<<<<< HEAD
-  --md-success: #4f7b66;
-  --md-success-container: #e3eee7;
-  --md-success-text: #30503f;
-  --md-success-container-text: #30503f;
-=======
   --md-success: #3b7a57; /* 石绿 */
   --md-success-container: #eaf3ee;
->>>>>>> ef8ae6f (fix)
+  --md-success-text: #30503f;
+  --md-success-container-text: #30503f;
   --md-on-success: #f8fbf8;
   --md-on-success-container: #1b3828;
 
-<<<<<<< HEAD
-  --md-warning: #b5904c;
-  --md-warning-container: #f8eed8;
-  --md-warning-text: #5f4a24;
-  --md-warning-container-text: #5f4a24;
-=======
   --md-warning: #e6a23c; /* 藤黄 */
   --md-warning-container: #fdf6ec;
->>>>>>> ef8ae6f (fix)
+  --md-warning-text: #5f4a24;
+  --md-warning-container-text: #5f4a24;
   --md-on-warning: #332710;
   --md-on-warning-container: #5f4a24;
   
@@ -225,43 +209,26 @@
   --md-outline-variant: #383328; /* 暗墨晕 */
 
   /* Semantic colors */
-<<<<<<< HEAD
-  --md-error: #ef8a86;
-  --md-error-strong: #ffb4ab;
-  --md-error-container: #4e2625;
-  --md-error-text: #ffd9d5;
-  --md-error-container-text: #ffd9d5;
-  --md-on-error: #2b1211;
-  --md-on-error-container: #ffd9d5;
-
-  --md-success: #87b89d;
-  --md-success-container: #243b31;
-  --md-success-text: #c4eed7;
-  --md-success-container-text: #c4eed7;
-  --md-on-success: #10241c;
-  --md-on-success-container: #c4eed7;
-
-  --md-warning: #dfbe7f;
-  --md-warning-container: #4a3b1d;
-  --md-warning-text: #ffe8bc;
-  --md-warning-container-text: #ffe8bc;
-  --md-on-warning: #2f230a;
-=======
   --md-error: #b8433a;
   --md-error-strong: #d85247;
   --md-error-container: #331f1d;
+  --md-error-text: #ffd9d5;
+  --md-error-container-text: #ffd9d5;
   --md-on-error: #faf6ed;
   --md-on-error-container: #ffd9d5;
 
   --md-success: #4a6b53; /* 石绿暗 */
   --md-success-container: #1b2e21;
+  --md-success-text: #c4eed7;
+  --md-success-container-text: #c4eed7;
   --md-on-success: #faf6ed;
   --md-on-success-container: #c4eed7;
 
   --md-warning: #b5904c;
   --md-warning-container: #332710;
+  --md-warning-text: #ffe8bc;
+  --md-warning-container-text: #ffe8bc;
   --md-on-warning: #e5dec9;
->>>>>>> ef8ae6f (fix)
   --md-on-warning-container: #ffe8bc;
 
   --md-scrim: rgba(13, 16, 17, 0.7);
@@ -3322,7 +3289,7 @@ body .app-shell__topbar {
   color: var(--md-on-surface) !important;
   font-size: 0.85rem !important;
   box-shadow: inset 1px 1px 2px rgba(28, 32, 34, 0.02) !important;
-  gap: var(--md-spacing-3.5) !important;
+  gap: 14px !important;
   padding: 0 var(--md-spacing-5) !important;
 }
 
@@ -3361,7 +3328,7 @@ body .app-shell__topbar {
     0 8px 10px -6px rgba(28, 32, 34, 0.05),
     3px 3px 0px var(--md-outline-variant) !important;
   z-index: 100 !important;
-  padding: var(--md-spacing-3.5) 0 !important;
+  padding: 14px 0 !important;
   text-align: left !important;
   /* 宣纸纸底 */
   background-image: radial-gradient(rgba(28, 32, 34, 0.02) 1px, transparent 0) !important;
@@ -3471,7 +3438,7 @@ body .app-shell__topbar {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: var(--md-spacing-1.5) !important;
+  gap: 6px !important;
   padding: var(--md-spacing-2) !important;
   border-radius: var(--md-radius-xs) !important;
   font-family: var(--md-font-display) !important;
@@ -3624,7 +3591,7 @@ body .app-shell__topbar {
 .app-shell__action-btn {
   display: flex !important;
   align-items: center !important;
-  gap: var(--md-spacing-1.5) !important;
+  gap: 6px !important;
   text-decoration: none !important;
   border: none !important;
   background: transparent !important;
@@ -4372,6 +4339,4 @@ body .app-shell__topbar {
   background-color: #bd3e33;
   border-color: #bd3e33;
 }
-
-
 
