@@ -1,5 +1,9 @@
 /* AIMETA P=主CSS_全局样式和Tailwind导入|R=全局样式_Tailwind|NR=不含组件样式|E=-|X=internal|A=全局样式|D=tailwindcss|S=dom|RD=./README.ai */
 @import 'tailwindcss';
+@import "@fontsource/noto-serif-sc/400.css";
+@import "@fontsource/noto-serif-sc/500.css";
+@import "@fontsource/noto-serif-sc/600.css";
+@import "@fontsource/noto-serif-sc/700.css";
 
 @plugin "@tailwindcss/typography";
 
@@ -14,130 +18,142 @@
 :root,
 :root[data-theme='light'] {
   color-scheme: light;
-  /* Brand accents */
-  --md-google-blue: #4c6b95;
-  --md-google-red: #b45a56;
-  --md-google-yellow: #b8964b;
-  --md-google-green: #517863;
+  /* 墨风国风配色系统 */
+  --md-google-blue: #2e5c8a; /* 石青 */
+  --md-google-red: #b83c32; /* 朱砂 */
+  --md-google-yellow: #e6a23c; /* 藤黄 */
+  --md-google-green: #3b7a57; /* 石绿 */
 
-  /* Primary */
-  --md-primary: #4d6b97;
-  --md-primary-light: #6e8ab3;
-  --md-primary-dark: #355274;
-  --md-on-primary: #f7f4ef;
-  --md-primary-container: #dfe8f4;
-  --md-on-primary-container: #273b58;
+  /* Primary (焦墨 / 松烟) */
+  --md-primary: #1c2022; /* 焦墨 */
+  --md-primary-light: #3a4648; /* 松烟 */
+  --md-primary-dark: #111415; /* 漆黑 */
+  --md-on-primary: #faf6ed; /* 熟宣 */
+  --md-primary-container: #2e5c8a; /* 石青 */
+  --md-on-primary-container: #ffffff;
 
-  /* Secondary */
-  --md-secondary: #5f6676;
-  --md-secondary-light: #7a8190;
-  --md-secondary-dark: #454b59;
-  --md-on-secondary: #f7f4ef;
-  --md-secondary-container: #e6eaf0;
-  --md-on-secondary-container: #323948;
+  /* Secondary (朱砂) */
+  --md-secondary: #b83c32; /* 朱砂 */
+  --md-secondary-light: #d85247;
+  --md-secondary-dark: #8c241c;
+  --md-on-secondary: #faf6ed;
+  --md-secondary-container: #fbebea;
+  --md-on-secondary-container: #5c120c;
 
-  /* Surface */
-  --md-surface: #fbfaf7;
-  --md-surface-dim: #f3efe8;
-  --md-surface-bright: #fbfaf8;
-  --md-surface-container-lowest: #fefcf8;
-  --md-surface-container-low: #f7f3ec;
-  --md-surface-container: #f0ece4;
-  --md-surface-container-high: #e8e2d8;
-  --md-surface-container-highest: #dcd5c8;
-  --md-on-surface: #1f2530;
-  --md-on-surface-variant: #5e6674;
+  /* Surface (熟宣 / 竹纸) */
+  --md-surface: #faf6ed; /* 熟宣 */
+  --md-surface-dim: #f0ead8; /* 老宣 */
+  --md-surface-bright: #faf7e8; /* 竹纸 */
+  --md-surface-container-lowest: #fdfdfb; /* 极净熟宣 */
+  --md-surface-container-low: #faf7e8; /* 竹纸 */
+  --md-surface-container: #f6f0e0; /* 墨晕浅灰 */
+  --md-surface-container-high: #ede4d0; /* 素骨 */
+  --md-surface-container-highest: #dcd2be; /* 墨晕深 */
+  --md-on-surface: #1c2224; /* 焦墨 */
+  --md-on-surface-variant: #556265; /* 松烟灰 */
 
-  /* Background */
-  --md-background: #f4f0e9;
-  --md-on-background: #1f2530;
+  /* Background (素骨) */
+  --md-background: #f2ece0; /* 素骨大底 */
+  --md-on-background: #1c2224;
 
-  /* Outline */
-  --md-outline: #d8d0c4;
-  --md-outline-variant: #e6dfd2;
+  /* Outline (竹青 / 墨晕) */
+  --md-outline: #c2b69d; /* 竹青 */
+  --md-outline-variant: #dcd2be; /* 墨晕 */
 
   /* Semantic colors */
+<<<<<<< HEAD
   --md-error: #b85c58;
   --md-error-strong: #7f2f2b;
   --md-error-container: #f8e5e2;
   --md-error-text: #7f2f2b;
   --md-error-container-text: #643431;
+=======
+  --md-error: #c0392b; /* 丹砂红 */
+  --md-error-strong: #962d22;
+  --md-error-container: #fbebea;
+>>>>>>> ef8ae6f (fix)
   --md-on-error: #fdf8f7;
-  --md-on-error-container: #643431;
+  --md-on-error-container: #5c120c;
 
+<<<<<<< HEAD
   --md-success: #4f7b66;
   --md-success-container: #e3eee7;
   --md-success-text: #30503f;
   --md-success-container-text: #30503f;
+=======
+  --md-success: #3b7a57; /* 石绿 */
+  --md-success-container: #eaf3ee;
+>>>>>>> ef8ae6f (fix)
   --md-on-success: #f8fbf8;
-  --md-on-success-container: #30503f;
+  --md-on-success-container: #1b3828;
 
+<<<<<<< HEAD
   --md-warning: #b5904c;
   --md-warning-container: #f8eed8;
   --md-warning-text: #5f4a24;
   --md-warning-container-text: #5f4a24;
+=======
+  --md-warning: #e6a23c; /* 藤黄 */
+  --md-warning-container: #fdf6ec;
+>>>>>>> ef8ae6f (fix)
   --md-on-warning: #332710;
   --md-on-warning-container: #5f4a24;
-  --md-scrim: color-mix(in srgb, var(--md-on-surface) 32%, transparent);
-  --md-scrim-soft: color-mix(in srgb, var(--md-on-surface) 28%, transparent);
-  --md-state-layer-hover: color-mix(in srgb, var(--md-on-surface-variant) 8%, transparent);
-  --md-state-layer-pressed: color-mix(in srgb, var(--md-on-surface-variant) 12%, transparent);
-  --md-shadow-primary-1: 0 6px 16px color-mix(in srgb, var(--md-primary-dark) 34%, transparent);
-  --md-shadow-primary-2: 0 8px 18px color-mix(in srgb, var(--md-primary-dark) 38%, transparent);
-  --md-secondary-container-hover: color-mix(
-    in oklch,
-    var(--md-secondary-container) 72%,
-    var(--md-primary-container)
-  );
-  --md-info: oklch(from var(--md-primary) calc(l + 0.02) calc(c * 1.08) h);
-  --md-info-container: color-mix(in oklch, var(--md-info) 18%, var(--md-surface));
-  --md-on-info-container: oklch(from var(--md-info) 34% calc(c * 0.45) h);
-  --md-tertiary: oklch(from var(--md-success) calc(l + 0.02) calc(c * 1.05) h);
-  --md-tint-cool: oklch(from var(--md-primary) 97% 0.012 h);
-  --md-tint-focus: oklch(from var(--md-primary) 93% 0.036 h);
-  --md-tint-success: oklch(from var(--md-success) 94% 0.03 h);
-  --md-tint-warm: oklch(from var(--md-warning) 95% 0.022 h);
+  
+  --md-scrim: rgba(28, 32, 34, 0.4);
+  --md-scrim-soft: rgba(28, 32, 34, 0.25);
+  --md-state-layer-hover: rgba(28, 32, 34, 0.05);
+  --md-state-layer-pressed: rgba(28, 32, 34, 0.1);
+  --md-shadow-primary-1: 2px 2px 0px rgba(28, 32, 34, 0.15); /* 拓片偏置硬投影 */
+  --md-shadow-primary-2: 3px 3px 0px rgba(184, 60, 50, 0.2); /* 朱印深拓 */
+  --md-secondary-container-hover: #fbebea;
+  --md-info: #2e5c8a;
+  --md-info-container: #eef5fc;
+  --md-on-info-container: #122c4a;
+  --md-tertiary: #3b7a57;
+  --md-tint-cool: rgba(46, 92, 138, 0.03);
+  --md-tint-focus: rgba(28, 32, 34, 0.05);
+  --md-tint-success: rgba(59, 122, 87, 0.03);
+  --md-tint-warm: rgba(230, 162, 60, 0.03);
 
   /* Typography */
-  --md-font-family: 'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
-    sans-serif;
-  --md-font-display: 'STSong', 'Songti SC', 'Noto Serif CJK SC', 'Source Han Serif SC', serif;
-  --md-font-mono: 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+  --md-font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Noto Serif CJK SC', 'STSong', 'Songti SC', serif;
+  --md-font-display: 'Noto Serif SC', 'Source Han Serif SC', 'Noto Serif CJK SC', 'STSong', 'Songti SC', serif;
+  --md-font-mono: 'JetBrains Mono', 'Consolas', monospace;
 
   /* Type scale */
-  --md-display-large: 54px;
-  --md-display-medium: 42px;
-  --md-display-small: 34px;
-  --md-headline-large: 32px;
-  --md-headline-medium: 28px;
-  --md-headline-small: 24px;
-  --md-title-large: 22px;
-  --md-title-medium: 17px;
-  --md-title-small: 14px;
-  --md-body-large: 16px;
-  --md-body-medium: 14px;
+  --md-display-large: 48px;
+  --md-display-medium: 38px;
+  --md-display-small: 30px;
+  --md-headline-large: 28px;
+  --md-headline-medium: 24px;
+  --md-headline-small: 20px;
+  --md-title-large: 18px;
+  --md-title-medium: 15px;
+  --md-title-small: 13px;
+  --md-body-large: 15px;
+  --md-body-medium: 13.5px;
   --md-body-small: 12px;
-  --md-label-large: 14px;
-  --md-label-medium: 12px;
-  --md-label-small: 11px;
+  --md-label-large: 13px;
+  --md-label-medium: 11.5px;
+  --md-label-small: 10px;
 
-  /* Elevation */
+  /* Elevation (拓片硬压印偏置投影，抛弃现代高斯模糊投影) */
   --md-elevation-0: none;
-  --md-elevation-1: 0 1px 2px rgba(42, 46, 56, 0.05), 0 4px 12px rgba(42, 46, 56, 0.05);
-  --md-elevation-2: 0 2px 6px rgba(42, 46, 56, 0.08), 0 12px 26px rgba(42, 46, 56, 0.06);
-  --md-elevation-3: 0 8px 30px rgba(42, 46, 56, 0.09);
-  --md-elevation-4: 0 14px 40px rgba(42, 46, 56, 0.12);
-  --md-elevation-5: 0 20px 48px rgba(42, 46, 56, 0.14);
-  --md-elevation-drawer-right: -10px 0 24px rgba(24, 32, 45, 0.18);
-  --md-elevation-drawer-left: 10px 0 24px rgba(24, 32, 45, 0.18);
+  --md-elevation-1: 2px 2px 0px var(--md-outline);
+  --md-elevation-2: 3px 3px 0px var(--md-on-surface);
+  --md-elevation-3: 4px 4px 0px var(--md-on-surface);
+  --md-elevation-4: 5px 5px 0px var(--md-outline);
+  --md-elevation-5: 6px 6px 0px var(--md-on-surface);
+  --md-elevation-drawer-right: -4px 0 0px var(--md-outline);
+  --md-elevation-drawer-left: 4px 0 0px var(--md-outline);
 
-  /* Radius */
+  /* Radius (方圆风骨，微直角，2px / 4px / 6px) */
   --md-radius-none: 0;
-  --md-radius-xs: 6px;
-  --md-radius-sm: 10px;
-  --md-radius-md: 14px;
-  --md-radius-lg: 18px;
-  --md-radius-xl: 24px;
+  --md-radius-xs: 2px;
+  --md-radius-sm: 4px;
+  --md-radius-md: 6px;
+  --md-radius-lg: 8px;
+  --md-radius-xl: 12px;
   --md-radius-full: 9999px;
 
   /* Spacing */
@@ -153,62 +169,63 @@
   --md-spacing-12: 48px;
   --md-spacing-16: 64px;
 
-  /* Motion */
-  --md-duration-short: 110ms;
-  --md-duration-medium: 240ms;
-  --md-duration-long: 420ms;
+  /* Motion (水墨意象缓动曲线) */
+  --md-duration-short: 140ms;
+  --md-duration-medium: 280ms;
+  --md-duration-long: 450ms;
   --md-easing-standard: cubic-bezier(0.22, 1, 0.36, 1);
   --md-easing-emphasized: cubic-bezier(0.19, 1, 0.22, 1);
   --md-easing-decelerate: cubic-bezier(0, 1, 0.3, 1);
   --md-easing-accelerate: cubic-bezier(0.7, 0, 1, 0.5);
 
   /* Layout */
-  --app-shell-width: 272px;
-  --app-shell-mobile-tab-height: 72px;
-  --app-content-max: 1480px;
+  --app-shell-width: 260px;
+  --app-shell-mobile-tab-height: 64px;
+  --app-content-max: 1320px;
   --app-viewport-unit: 100vh;
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  /* Primary */
-  --md-primary: #89a5cf;
-  --md-primary-light: #a6bde0;
-  --md-primary-dark: #6f8dbb;
-  --md-on-primary: #1b2a40;
-  --md-primary-container: #30455f;
-  --md-on-primary-container: #dbe8ff;
+  /* 深夜书房 Midnight Study 暗色模式 */
+  --md-primary: #e5dec9; /* 素骨黄，温润高可读 */
+  --md-primary-light: #f5eed9;
+  --md-primary-dark: #c5beaa;
+  --md-on-primary: #1a1f21; /* 焦墨深灰 */
+  --md-primary-container: #2e4033; /* 暗石绿 container */
+  --md-on-primary-container: #e5dec9;
 
-  /* Secondary */
-  --md-secondary: #a9b2c4;
-  --md-secondary-light: #c2cad9;
-  --md-secondary-dark: #919bad;
-  --md-on-secondary: #222c39;
-  --md-secondary-container: #2f3847;
-  --md-on-secondary-container: #d9e2f3;
+  /* Secondary (朱砂暗化) */
+  --md-secondary: #9c332b;
+  --md-secondary-light: #b8433a;
+  --md-secondary-dark: #73221c;
+  --md-on-secondary: #e5dec9;
+  --md-secondary-container: #331f1d;
+  --md-on-secondary-container: #e5dec9;
 
-  /* Surface */
-  --md-surface: #23272f;
-  --md-surface-dim: #1c2027;
-  --md-surface-bright: #2a2f38;
-  --md-surface-container-lowest: #171b22;
-  --md-surface-container-low: #20252d;
-  --md-surface-container: #272d36;
-  --md-surface-container-high: #303740;
-  --md-surface-container-highest: #39414c;
-  --md-on-surface: #edf1f7;
-  --md-on-surface-variant: #c8d0de;
+  /* Surface (深夜书房焦墨暗灰) */
+  --md-surface: #1a1f21; /* 焦墨深 */
+  --md-surface-dim: #131718;
+  --md-surface-bright: #22282a;
+  --md-surface-container-lowest: #0d1011;
+  --md-surface-container-low: #1d2224;
+  --md-surface-container: #22282b;
+  --md-surface-container-high: #293135;
+  --md-surface-container-highest: #333d42;
+  --md-on-surface: #e5dec9; /* 素骨黄 */
+  --md-on-surface-variant: #9c978b; /* 暗灰黄，辅助文字极其柔和 */
 
   /* Background */
-  --md-background: #1a1f26;
-  --md-on-background: #edf1f7;
+  --md-background: #15191b;
+  --md-on-background: #e5dec9;
 
   /* Outline */
-  --md-outline: #566071;
-  --md-outline-variant: #46505f;
+  --md-outline: #4a4335; /* 暗竹青 */
+  --md-outline-variant: #383328; /* 暗墨晕 */
 
   /* Semantic colors */
+<<<<<<< HEAD
   --md-error: #ef8a86;
   --md-error-strong: #ffb4ab;
   --md-error-container: #4e2625;
@@ -229,12 +246,28 @@
   --md-warning-text: #ffe8bc;
   --md-warning-container-text: #ffe8bc;
   --md-on-warning: #2f230a;
+=======
+  --md-error: #b8433a;
+  --md-error-strong: #d85247;
+  --md-error-container: #331f1d;
+  --md-on-error: #faf6ed;
+  --md-on-error-container: #ffd9d5;
+
+  --md-success: #4a6b53; /* 石绿暗 */
+  --md-success-container: #1b2e21;
+  --md-on-success: #faf6ed;
+  --md-on-success-container: #c4eed7;
+
+  --md-warning: #b5904c;
+  --md-warning-container: #332710;
+  --md-on-warning: #e5dec9;
+>>>>>>> ef8ae6f (fix)
   --md-on-warning-container: #ffe8bc;
 
-  --md-scrim: color-mix(in srgb, var(--md-on-surface) 56%, transparent);
-  --md-scrim-soft: color-mix(in srgb, var(--md-on-surface) 44%, transparent);
-  --md-state-layer-hover: color-mix(in srgb, var(--md-on-surface) 14%, transparent);
-  --md-state-layer-pressed: color-mix(in srgb, var(--md-on-surface) 20%, transparent);
+  --md-scrim: rgba(13, 16, 17, 0.7);
+  --md-scrim-soft: rgba(13, 16, 17, 0.45);
+  --md-state-layer-hover: rgba(229, 222, 201, 0.08);
+  --md-state-layer-pressed: rgba(229, 222, 201, 0.15);
 }
 
 @supports (height: 100dvh) {
@@ -259,17 +292,18 @@ html {
 body {
   font-family: var(--md-font-family);
   font-size: var(--md-body-medium);
-  line-height: 1.55;
+  font-weight: 500 !important; /* 提升全局默认字重至 500 Medium，避免 Regular 400 的干细缺陷 */
+  line-height: 1.65;
   color: var(--md-on-background);
+  /* 国风柔和纸质微弱墨晕背景 */
   background:
-    radial-gradient(circle at 3% -8%, color-mix(in oklch, var(--md-tint-focus) 78%, transparent), transparent 34%),
-    radial-gradient(circle at 112% 12%, color-mix(in oklch, var(--md-tint-warm) 74%, transparent), transparent 36%),
-    radial-gradient(circle at 55% 124%, color-mix(in oklch, var(--md-tint-success) 68%, transparent), transparent 42%),
+    radial-gradient(circle at 5% 5%, rgba(46, 92, 138, 0.035), transparent 40%),
+    radial-gradient(circle at 95% 15%, rgba(184, 60, 50, 0.02), transparent 40%),
     linear-gradient(
       180deg,
-      color-mix(in oklch, var(--md-surface-bright) 92%, var(--md-tint-cool)) 0%,
-      var(--md-background) 58%,
-      color-mix(in oklch, var(--md-surface-container) 85%, var(--md-tint-warm)) 100%
+      var(--md-surface) 0%,
+      var(--md-background) 65%,
+      var(--md-surface-dim) 100%
     );
   margin: 0;
   padding: 0;
@@ -277,9 +311,14 @@ body {
 
 h1,
 h2,
-h3 {
+h3,
+h4,
+h5,
+h6 {
   font-family: var(--md-font-display);
-  letter-spacing: 0.015em;
+  letter-spacing: 0.06em; /* 碑拓骨力规则：显式拉开字间距，展现大气格局 */
+  font-weight: 600 !important; /* 标题使用 600 SemiBold，展现风骨锋芒而不臃肿 */
+  color: var(--md-primary);
 }
 
 /* ============================================
@@ -387,19 +426,22 @@ h3 {
 /* ============================================
    Material 3 Button Styles
    ============================================ */
+/* ============================================
+   墨风中式硬挺按钮样式
+   ============================================ */
 .md-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 44px;
-  padding: 0 20px;
+  min-height: 40px;
+  padding: 0 22px;
   border: 1px solid transparent;
-  border-radius: var(--md-radius-sm);
+  border-radius: var(--md-radius-xs); /* 2px 极窄直角 */
   font-family: var(--md-font-family);
   font-size: var(--md-label-large);
   font-weight: 500;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   text-decoration: none;
   cursor: pointer;
   transition:
@@ -415,179 +457,173 @@ h3 {
 }
 
 .md-btn:focus-visible {
-  outline: 2px solid var(--md-primary);
+  outline: 2px solid var(--md-outline);
   outline-offset: 2px;
 }
 
 .md-btn:disabled {
-  opacity: 0.38;
+  opacity: 0.35;
   cursor: not-allowed;
+  border-color: var(--md-outline-variant) !important;
+  background-color: var(--md-surface-container) !important;
+  color: var(--md-on-surface-variant) !important;
+  box-shadow: none !important;
 }
 
-/* Filled Button */
+/* Filled Button (焦墨主按钮) */
 .md-btn-filled {
   background-color: var(--md-primary);
   color: var(--md-on-primary);
-  border-color: color-mix(in srgb, var(--md-primary-dark) 45%, transparent);
+  border: 1px solid var(--md-outline);
   box-shadow: var(--md-shadow-primary-1);
 }
 
 .md-btn-filled:hover:not(:disabled) {
-  box-shadow: var(--md-shadow-primary-2);
   background-color: var(--md-primary-dark);
+  border-color: var(--md-primary);
+  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.25);
 }
 
 .md-btn-filled:active:not(:disabled) {
-  box-shadow: var(--md-elevation-0);
+  box-shadow: none;
+  transform: translate(1px, 1px);
 }
 
-/* Outlined Button */
+/* Outlined Button (古籍线框按钮) */
 .md-btn-outlined {
-  background-color: color-mix(in srgb, var(--md-surface) 82%, transparent);
-  color: var(--md-on-surface);
+  background-color: transparent;
+  color: var(--md-primary);
   border: 1px solid var(--md-outline);
 }
 
 .md-btn-outlined:hover:not(:disabled) {
-  background-color: var(--md-surface);
-  border-color: color-mix(in srgb, var(--md-primary) 38%, var(--md-outline));
+  background-color: var(--md-surface-dim);
+  border-color: var(--md-primary);
   color: var(--md-primary-dark);
 }
 
 .md-btn-outlined:active:not(:disabled) {
-  background-color: color-mix(in srgb, var(--md-primary-dark) 12%, transparent);
+  background-color: var(--md-surface-container);
 }
 
-/* Text Button */
+/* Text Button (批注文字按钮) */
 .md-btn-text {
   background-color: transparent;
-  color: var(--md-primary-dark);
+  color: var(--md-primary-light);
   border-color: transparent;
-  padding: 0 10px;
-  border-radius: var(--md-radius-sm);
+  padding: 0 12px;
 }
 
 .md-btn-text:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--md-primary-dark) 8%, transparent);
+  background-color: var(--md-state-layer-hover);
+  color: var(--md-primary);
 }
 
-.md-btn-text:active:not(:disabled) {
-  background-color: color-mix(in srgb, var(--md-primary-dark) 12%, transparent);
-}
-
-/* Tonal Button */
+/* Tonal Button (石青创意/AI主按钮) */
 .md-btn-tonal {
   background-color: var(--md-primary-container);
   color: var(--md-on-primary-container);
-  border-color: color-mix(in srgb, var(--md-primary) 14%, transparent);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 2px 2px 0px rgba(46, 92, 138, 0.2);
 }
 
 .md-btn-tonal:hover:not(:disabled) {
-  box-shadow: var(--md-elevation-1);
+  background-color: #244b73; /* 稍深石青 */
+  box-shadow: 3px 3px 0px rgba(46, 92, 138, 0.3);
 }
 
-/* Elevated Button */
+/* Elevated Button (拓片轻悬浮按钮) */
 .md-btn-elevated {
-  background-color: var(--md-surface-container-low);
+  background-color: var(--md-surface-bright);
   color: var(--md-primary);
-  border-color: var(--md-outline-variant);
+  border: 1px solid var(--md-outline-variant);
   box-shadow: var(--md-elevation-1);
 }
 
 .md-btn-elevated:hover:not(:disabled) {
   box-shadow: var(--md-elevation-2);
+  background-color: var(--md-surface);
 }
 
-/* Icon Button */
+/* Icon Button (硬直角图标按钮) */
 .md-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  padding: 10px;
-  border: none;
-  border-radius: var(--md-radius-sm);
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  border-radius: var(--md-radius-xs); /* 2px */
   background-color: transparent;
   color: var(--md-on-surface-variant);
   border: 1px solid transparent;
   cursor: pointer;
-  transition:
-    background-color var(--md-duration-short) var(--md-easing-standard),
-    color var(--md-duration-short) var(--md-easing-standard),
-    opacity var(--md-duration-short) var(--md-easing-standard);
-}
-
-.md-icon-btn:focus-visible {
-  outline: 2px solid var(--md-primary);
-  outline-offset: 2px;
+  transition: all var(--md-duration-short) var(--md-easing-standard);
 }
 
 .md-icon-btn:hover:not(:disabled) {
-  border-color: var(--md-outline-variant);
-  background-color: color-mix(in srgb, var(--md-surface-container) 70%, transparent);
+  border-color: var(--md-outline);
+  background-color: var(--md-surface-container);
+  color: var(--md-primary);
 }
 
-.md-icon-btn:active:not(:disabled) {
-  background-color: var(--md-state-layer-pressed);
-}
-
-/* FAB (Floating Action Button) */
+/* FAB (中式刻印悬浮 FAB) */
 .md-fab {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
-  border: none;
-  border-radius: var(--md-radius-lg);
-  background-color: var(--md-primary-container);
-  color: var(--md-on-primary-container);
-  box-shadow: var(--md-elevation-3);
+  width: 52px;
+  height: 52px;
+  border: 1px solid var(--md-outline);
+  border-radius: var(--md-radius-md); /* 6px 直角 */
+  background-color: var(--md-secondary); /* 朱砂红，稀有罕用规则下的画龙点睛 */
+  color: var(--md-on-primary);
+  box-shadow: var(--md-shadow-primary-2);
   cursor: pointer;
-  transition:
-    background-color var(--md-duration-medium) var(--md-easing-standard),
-    box-shadow var(--md-duration-medium) var(--md-easing-standard),
-    color var(--md-duration-medium) var(--md-easing-standard);
+  transition: all var(--md-duration-medium) var(--md-easing-standard);
 }
 
 .md-fab:hover:not(:disabled) {
-  box-shadow: var(--md-elevation-4);
+  background-color: var(--md-secondary-light);
+  box-shadow: 4px 4px 0px rgba(184, 60, 50, 0.35);
+  transform: translate(-1px, -1px);
 }
 
 .md-fab-small {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--md-radius-md);
+  width: 38px;
+  height: 38px;
+  border-radius: var(--md-radius-sm);
 }
 
 .md-fab-large {
-  width: 96px;
-  height: 96px;
-  border-radius: var(--md-radius-xl);
+  width: 80px;
+  height: 80px;
+  border-radius: var(--md-radius-lg);
 }
 
-/* Extended FAB */
 .md-fab-extended {
   width: auto;
   padding: 0 20px;
-  gap: 12px;
+  gap: 10px;
   font-size: var(--md-label-large);
   font-weight: 500;
 }
 
 /* ============================================
-   Material 3 Card Styles
+   墨风古籍线装卡片样式 (Double Border Card)
    ============================================ */
 .md-card {
   background-color: var(--md-surface);
-  border-radius: var(--md-radius-lg);
+  border-radius: var(--md-radius-sm); /* 4px 极窄直角 */
   overflow: hidden;
-  border: 1px solid var(--md-outline-variant);
+  /* 双线框：外粗内细/双细线，CSS 完美的 border-double 表达 */
+  border: 3px double var(--md-outline);
+  padding: 2px; /* 留出双线空隙 */
   transition:
     background-color var(--md-duration-medium) var(--md-easing-standard),
     border-color var(--md-duration-medium) var(--md-easing-standard),
-    box-shadow var(--md-duration-medium) var(--md-easing-standard);
+    box-shadow var(--md-duration-medium) var(--md-easing-standard),
+    transform var(--md-duration-medium) var(--md-easing-standard);
 }
 
 .md-card-elevated {
@@ -596,28 +632,30 @@ h3 {
 
 .md-card-elevated:hover {
   box-shadow: var(--md-elevation-2);
-  border-color: color-mix(in srgb, var(--md-primary) 20%, var(--md-outline-variant));
+  border-color: var(--md-primary-light);
+  transform: translateY(-1px);
 }
 
 .md-card-filled {
-  background-color: var(--md-surface-container-highest);
-}
-
-.md-card-outlined {
+  background-color: var(--md-surface-container);
   border: 1px solid var(--md-outline-variant);
 }
 
+.md-card-outlined {
+  border: 3px double var(--md-outline);
+}
+
 .md-card-content {
-  padding: var(--md-spacing-4);
+  padding: var(--md-spacing-6); /* 中式大气留白 */
 }
 
 .md-card-header {
-  padding: var(--md-spacing-4);
-  border-bottom: 1px solid var(--md-outline-variant);
+  padding: var(--md-spacing-4) var(--md-spacing-6);
+  border-bottom: 1px dashed var(--md-outline-variant); /* 虚线古风分隔 */
 }
 
 .md-card-actions {
-  padding: var(--md-spacing-2) var(--md-spacing-4);
+  padding: var(--md-spacing-3) var(--md-spacing-6);
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -639,94 +677,95 @@ h3 {
   font-weight: 500;
   color: var(--md-on-surface-variant);
   margin-bottom: 4px;
+  letter-spacing: 0.05em;
 }
 
 .md-text-field-input {
   width: 100%;
-  height: 56px;
-  padding: 16px;
+  height: 48px;
+  padding: 12px 16px;
   border: 1px solid var(--md-outline);
-  border-radius: var(--md-radius-xs);
+  border-radius: var(--md-radius-xs); /* 2px 极窄直角 */
   background-color: transparent;
   font-family: var(--md-font-family);
   font-size: var(--md-body-large);
   color: var(--md-on-surface);
-  transition:
-    background-color var(--md-duration-short) var(--md-easing-standard),
-    border-color var(--md-duration-short) var(--md-easing-standard),
-    color var(--md-duration-short) var(--md-easing-standard),
-    box-shadow var(--md-duration-short) var(--md-easing-standard);
+  transition: all var(--md-duration-short) var(--md-easing-standard);
   outline: none;
 }
 
 .md-text-field-input:hover:not(:disabled):not(:focus) {
-  border-color: var(--md-on-surface);
+  border-color: var(--md-primary);
 }
 
 .md-text-field-input:focus,
 .md-text-field-input:focus-visible {
   border-color: var(--md-primary);
-  box-shadow: 0 0 0 1px var(--md-primary);
+  /* 拓片压印右下硬阴影 */
+  box-shadow: 2px 2px 0px var(--md-outline);
 }
 
 .md-text-field-input::placeholder {
   color: var(--md-on-surface-variant);
+  opacity: 0.65;
 }
 
 .md-text-field-input:disabled {
   background-color: var(--md-surface-container);
-  color: var(--md-on-surface);
-  opacity: 0.38;
+  color: var(--md-on-surface-variant);
+  opacity: 0.5;
+  border-color: var(--md-outline-variant);
 }
 
-/* Filled Text Field */
+/* Filled Text Field (中式单线底面) */
 .md-text-field-filled .md-text-field-input {
-  background-color: var(--md-surface-container-highest);
+  background-color: var(--md-surface-container);
   border: none;
-  border-bottom: 1px solid var(--md-on-surface-variant);
+  border-bottom: 2px solid var(--md-outline);
   border-radius: var(--md-radius-xs) var(--md-radius-xs) 0 0;
 }
 
 .md-text-field-filled .md-text-field-input:focus {
-  border-bottom: 2px solid var(--md-primary);
-  padding-bottom: 15px;
+  border-bottom-color: var(--md-primary);
+  background-color: var(--md-surface-container-high);
 }
 
-/* Textarea */
+/* Textarea (中式多行草稿域) */
 .md-textarea {
   min-height: 120px;
   resize: vertical;
   padding: 16px;
   border: 1px solid var(--md-outline);
-  border-radius: var(--md-radius-xs);
+  border-radius: var(--md-radius-xs); /* 2px */
   background-color: transparent;
   font-family: var(--md-font-family);
   font-size: var(--md-body-large);
   color: var(--md-on-surface);
-  transition:
-    background-color var(--md-duration-short) var(--md-easing-standard),
-    border-color var(--md-duration-short) var(--md-easing-standard),
-    color var(--md-duration-short) var(--md-easing-standard),
-    box-shadow var(--md-duration-short) var(--md-easing-standard);
+  line-height: 1.8;
+  transition: all var(--md-duration-short) var(--md-easing-standard);
   outline: none;
+}
+
+.md-textarea:hover:not(:disabled):not(:focus) {
+  border-color: var(--md-primary);
 }
 
 .md-textarea:focus,
 .md-textarea:focus-visible {
   border-color: var(--md-primary);
-  box-shadow: 0 0 0 1px var(--md-primary);
+  box-shadow: 2px 2px 0px var(--md-outline);
 }
 
 /* ============================================
-   Material 3 Navigation Styles
+   墨风古典导航与侧栏样式 (Vermilion Active Navs)
    ============================================ */
 .md-nav-rail {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 80px;
+  width: 72px;
   padding: 12px 0;
-  background-color: var(--md-surface);
+  background-color: var(--md-surface-dim);
   border-right: 1px solid var(--md-outline-variant);
 }
 
@@ -735,41 +774,53 @@ h3 {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
-  padding: 12px 0 4px;
+  width: 48px;
+  height: 48px;
   border: none;
-  border-radius: var(--md-radius-lg);
+  border-radius: var(--md-radius-xs); /* 2px */
   background-color: transparent;
   color: var(--md-on-surface-variant);
   cursor: pointer;
-  transition:
-    background-color var(--md-duration-short) var(--md-easing-standard),
-    color var(--md-duration-short) var(--md-easing-standard);
+  position: relative;
+  transition: all var(--md-duration-short) var(--md-easing-standard);
   text-decoration: none;
 }
 
 .md-nav-rail-item:hover {
-  background-color: var(--md-state-layer-hover);
+  color: var(--md-primary);
+  background-color: var(--md-surface-container);
 }
 
+/* 朱印竖描活动态覆盖 */
 .md-nav-rail-item.active {
-  background-color: var(--md-primary-container);
-  color: var(--md-on-primary-container);
+  background-color: var(--md-surface);
+  color: var(--md-secondary); /* 朱砂红 */
+}
+
+.md-nav-rail-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 1.5px; /* 改为苍劲纤细的朱砂墨痕起落线 */
+  background-color: var(--md-secondary);
+  border-radius: 1px;
 }
 
 .md-nav-rail-label {
+  font-family: var(--md-font-display);
   font-size: var(--md-label-medium);
   margin-top: 4px;
 }
 
-/* Navigation Drawer */
+/* Navigation Drawer (古籍线装目录抽屉) */
 .md-nav-drawer {
-  width: 360px;
+  width: 280px;
   height: 100%;
-  background-color: var(--md-surface);
+  background-color: var(--md-surface-dim);
   border-right: 1px solid var(--md-outline-variant);
-  padding: 12px;
+  padding: 16px 12px;
 }
 
 .md-nav-drawer-item {
@@ -777,39 +828,52 @@ h3 {
   align-items: center;
   gap: 12px;
   width: 100%;
-  height: 56px;
-  padding: 0 16px 0 16px;
+  height: 44px;
+  padding: 0 16px;
   border: none;
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs); /* 2px */
   background-color: transparent;
   color: var(--md-on-surface-variant);
+  font-family: var(--md-font-display); /* 宋体书卷感 */
   font-size: var(--md-label-large);
   font-weight: 500;
   cursor: pointer;
-  transition:
-    background-color var(--md-duration-short) var(--md-easing-standard),
-    color var(--md-duration-short) var(--md-easing-standard);
+  position: relative;
+  transition: all var(--md-duration-short) var(--md-easing-standard);
   text-decoration: none;
   text-align: left;
 }
 
 .md-nav-drawer-item:hover {
-  background-color: var(--md-state-layer-hover);
+  background-color: var(--md-surface-container);
+  color: var(--md-primary);
 }
 
 .md-nav-drawer-item.active {
-  background-color: var(--md-primary-container);
-  color: var(--md-on-primary-container);
+  background-color: var(--md-surface);
+  color: var(--md-secondary);
+  font-weight: 600;
 }
 
-/* Top App Bar */
+.md-nav-drawer-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 1.5px; /* 纤细的界尺朱批 */
+  background-color: var(--md-secondary);
+  border-radius: 1px;
+}
+
+/* Top App Bar (书香顶栏) */
 .md-top-app-bar {
   display: flex;
   align-items: center;
-  height: 64px;
+  height: 56px;
   padding: 0 16px;
   background-color: var(--md-surface);
-  border-bottom: 1px solid var(--md-outline-variant);
+  border-bottom: 1px dashed var(--md-outline-variant);
 }
 
 .md-top-app-bar-title {
@@ -868,38 +932,41 @@ h3 {
 }
 
 /* ============================================
-   Material 3 Chips
+   墨风古典中式标签 (Chips) 与特色朱砂印章
    ============================================ */
 .md-chip {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 32px;
-  padding: 0 16px;
-  border-radius: var(--md-radius-sm);
-  font-size: var(--md-label-large);
+  min-height: 28px;
+  padding: 2px 12px;
+  border-radius: var(--md-radius-xs); /* 2px */
+  font-family: var(--md-font-family);
+  font-size: var(--md-label-medium);
   font-weight: 500;
   cursor: pointer;
-  transition:
-    background-color var(--md-duration-short) var(--md-easing-standard),
-    border-color var(--md-duration-short) var(--md-easing-standard),
-    color var(--md-duration-short) var(--md-easing-standard);
+  background-color: var(--md-surface-dim);
+  border: 1px solid var(--md-outline-variant);
+  color: var(--md-on-surface-variant);
+  transition: all var(--md-duration-short) var(--md-easing-standard);
   user-select: none;
 }
 
 button.md-chip,
 [role='button'].md-chip {
-  min-height: 44px;
+  min-height: 36px;
+}
+
+.md-chip:hover {
+  border-color: var(--md-outline);
+  color: var(--md-primary);
+  background-color: var(--md-surface-container);
 }
 
 .md-chip-assist {
   background-color: transparent;
   border: 1px solid var(--md-outline);
   color: var(--md-on-surface);
-}
-
-.md-chip-assist:hover {
-  background-color: var(--md-state-layer-hover);
 }
 
 .md-chip-filter {
@@ -909,9 +976,10 @@ button.md-chip,
 }
 
 .md-chip-filter.selected {
-  background-color: var(--md-primary-container);
-  border-color: transparent;
+  background-color: var(--md-primary-container); /* 石青 AI 容器 */
+  border-color: var(--md-primary-container);
   color: var(--md-on-primary-container);
+  box-shadow: 1px 1px 0px rgba(46, 92, 138, 0.15);
 }
 
 .md-chip-input {
@@ -924,6 +992,73 @@ button.md-chip,
   background-color: var(--md-surface-container-low);
   border: 1px solid var(--md-outline-variant);
   color: var(--md-on-surface-variant);
+}
+
+/* 
+   朱砂金石方印 (Vermilion Seal Stamp Tag) 
+   为章节审核状态（如已发布、已保存、已完成）打上高古的落款。
+*/
+.ds-seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'STKaiti', 'Kaiti SC', 'STSong', serif; /* 古典批注楷体 */
+  font-size: var(--md-label-medium);
+  font-weight: 600;
+  color: var(--md-secondary); /* 朱砂红 */
+  background-color: var(--md-secondary-container); /* 极淡朱砂粉底 */
+  padding: 3px 8px;
+  /* 斑驳印章边框：1.5px 仿古崩缺实线 */
+  border: 1.5px solid var(--md-secondary);
+  border-radius: var(--md-radius-xs); /* 2px */
+  letter-spacing: 0.08em;
+  text-shadow: 0.5px 0.5px 0px rgba(184, 60, 50, 0.1);
+  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15);
+  position: relative;
+}
+
+/* 阴刻朱砂印（满朱红底，素白/老宣字） */
+.ds-seal-yin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'STKaiti', 'Kaiti SC', 'STSong', serif;
+  font-size: var(--md-label-medium);
+  font-weight: 600;
+  color: var(--md-on-primary); /* 熟宣白 */
+  background-color: var(--md-secondary); /* 朱砂红满底 */
+  padding: 3px 8px;
+  border: 1.5px solid var(--md-secondary);
+  border-radius: var(--md-radius-xs);
+  letter-spacing: 0.08em;
+  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.2);
+}
+
+/* 触控防范热区 (Touch Target Expansion) 
+   为精致的古典小标签提供 44px * 44px 的隐式触控响应热区，
+   在完全不影响其中式精致小巧物理外观的同时，极大地提升移动端或触屏的点击友好性与 WCAG 无障碍合规性。
+*/
+.md-chip,
+.ds-seal,
+.ds-seal-yin {
+  position: relative;
+}
+
+.md-chip::after,
+.ds-seal::after,
+.ds-seal-yin::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 44px;
+  min-height: 44px;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 1;
 }
 
 /* ============================================
@@ -1392,12 +1527,13 @@ button.md-chip,
 .app-shell {
   min-height: var(--app-viewport-unit);
   display: grid;
-  grid-template-columns: var(--app-shell-width) minmax(0, 1fr);
+  grid-template-columns: 1fr;
   background-color: transparent;
   color: var(--md-on-surface);
 }
 
 .app-shell__sidebar {
+  display: none !important;
   position: sticky;
   top: 0;
   height: var(--app-viewport-unit);
@@ -1636,7 +1772,6 @@ button.md-chip,
   justify-content: center;
 }
 
-.app-shell--project-context .app-shell__brand-copy,
 .app-shell--project-context .app-shell__nav-text,
 .app-shell--project-context .app-shell__account-copy {
   display: none;
@@ -1951,29 +2086,11 @@ button.md-chip,
 
 @media (max-width: 833px) {
   .app-shell__content {
-    padding-bottom: calc(
-      var(--app-shell-mobile-tab-height) + max(var(--md-spacing-4), env(safe-area-inset-bottom))
-    );
+    padding-bottom: var(--md-spacing-4);
   }
 
   .app-shell__bottom-tabs {
-    position: fixed;
-    inset: auto 0 0 0;
-    z-index: 55;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
-    align-items: stretch;
-    gap: var(--md-spacing-1);
-    height: calc(var(--app-shell-mobile-tab-height) + env(safe-area-inset-bottom));
-    padding:
-      var(--md-spacing-1) var(--md-spacing-2)
-      calc(var(--md-spacing-1) + env(safe-area-inset-bottom));
-    border-top: 1px solid color-mix(in oklch, var(--md-outline) 72%, var(--md-tint-cool));
-    background: linear-gradient(
-      180deg,
-      color-mix(in oklch, var(--md-surface) 92%, var(--md-tint-cool)),
-      color-mix(in oklch, var(--md-surface-container-low) 94%, var(--md-tint-warm))
-    );
+    display: none !important;
   }
 }
 
@@ -2149,3 +2266,2112 @@ button.md-chip,
     font-family: var(--md-font-family);
   }
 }
+
+/* ==========================================================================
+   墨风第二阶段「水墨宣纸八行笺」深度沉浸式中国风升级
+   ========================================================================== */
+
+/* ============================================
+   1. 章节阅读与编辑区（宣纸信笺八行笺）
+   ============================================ */
+
+/* 章节阅读纸张：微直角、古籍双粗细线框、纵向朱砂红信笺界格底纹 */
+body .chapter-paper {
+  border-radius: var(--md-radius-xs) !important;
+  border: 3px double var(--md-outline) !important;
+  padding: var(--md-spacing-8) !important;
+  background: 
+    /* 纵向朱砂红信笺界格（38px 循环，高雅轻透明度，护眼润字） */
+    repeating-linear-gradient(90deg, transparent, transparent 38px, rgba(184, 60, 50, 0.04) 38px, rgba(184, 60, 50, 0.05) 40px),
+    /* 熟宣色温润底色 */
+    linear-gradient(var(--md-surface), var(--md-surface)) !important;
+  background-attachment: local !important;
+  box-shadow: var(--md-elevation-1) !important;
+  transition: all var(--md-duration-medium) var(--md-easing-standard);
+}
+
+/* 深夜书房暗色模式自适应朱红暗化 */
+:root[data-theme='dark'] body .chapter-paper {
+  background: 
+    /* 暗砂红格线 */
+    repeating-linear-gradient(90deg, transparent, transparent 38px, rgba(140, 36, 28, 0.16) 38px, rgba(140, 36, 28, 0.22) 40px),
+    /* 焦墨深夜底色 */
+    linear-gradient(var(--md-surface), var(--md-surface)) !important;
+}
+
+/* 章节正文古宋体碑拓骨力展现 */
+body .chapter-prose {
+  font-family: var(--md-font-display) !important;
+  letter-spacing: 0.035em !important;
+  font-weight: 500 !important; /* 稿纸正文使用饱满清晰的 500 Medium */
+  color: var(--md-on-surface) !important;
+  max-width: 72ch !important;
+  line-height: 2 !important;
+}
+
+body .chapter-prose p {
+  line-height: 2 !important;
+  text-indent: 2em !important;
+  margin-bottom: 1.25em !important;
+}
+
+/* 章节正文标题 */
+body .chapter-paper__title {
+  font-family: var(--md-font-display) !important;
+  letter-spacing: 0.06em !important;
+  font-weight: 600 !important;
+  color: var(--md-primary) !important;
+}
+
+/* 编辑章节文本域（笺格写字板）：带横向红色格线底纹，还原落笔书笺的意境 */
+body .md-textarea {
+  border-radius: var(--md-radius-xs) !important;
+  border: 1px solid var(--md-outline) !important;
+  background-color: var(--md-surface) !important;
+  color: var(--md-on-surface) !important;
+  line-height: 2 !important;
+  font-size: var(--md-body-large) !important;
+  font-family: var(--md-font-family) !important;
+  font-weight: 500 !important; /* 写字板输入框使用 500 Medium，笔迹温润饱满 */
+  padding: 1.5rem !important;
+  box-shadow: inset 1px 1px 3px rgba(28, 32, 34, 0.03) !important;
+  /* 笺纸横向书写红线 */
+  background-image: repeating-linear-gradient(
+    rgba(184, 60, 50, 0.03) 0px,
+    rgba(184, 60, 50, 0.03) 1px,
+    transparent 1px,
+    transparent 2rem
+  ) !important;
+  background-size: 100% 2rem !important;
+  background-attachment: local !important;
+  transition: border-color var(--md-duration-short) var(--md-easing-standard), box-shadow var(--md-duration-short) !important;
+}
+
+body .md-textarea:focus {
+  outline: none !important;
+  border-color: var(--md-primary) !important;
+  box-shadow: var(--md-shadow-primary-1) !important;
+}
+
+/* 暗色模式下写字格线自适应变暗 */
+:root[data-theme='dark'] body .md-textarea {
+  background-image: repeating-linear-gradient(
+    rgba(140, 36, 28, 0.1) 0px,
+    rgba(140, 36, 28, 0.1) 1px,
+    transparent 1px,
+    transparent 2rem
+  ) !important;
+}
+
+/* ============================================
+   2. Naive UI 全系列组件全局水墨直角魔改
+   ============================================ */
+
+/* 2.1 全局水墨极简滚动条 */
+.n-scrollbar {
+  --n-scrollbar-border-radius: 0px !important;
+  --n-scrollbar-width: 5px !important;
+  --n-scrollbar-height: 5px !important;
+}
+
+.n-scrollbar-rail {
+  background-color: transparent !important;
+  border-radius: 0 !important;
+}
+
+.n-scrollbar-rail__handle {
+  border-radius: 0 !important;
+  width: 3px !important;
+  background-color: var(--md-outline) !important;
+  opacity: 0.45 !important;
+  transition: 
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    opacity var(--md-duration-short) !important;
+}
+
+.n-scrollbar-rail__handle:hover,
+.n-scrollbar-rail__handle:active {
+  background-color: var(--md-primary) !important; /* 焦墨极简墨迹细线 */
+  opacity: 1 !important;
+}
+
+/* 2.2 输入框魔改 (n-input) */
+.n-input {
+  --n-border-radius: var(--md-radius-xs) !important;
+  --n-border: 1px solid var(--md-outline) !important;
+  --n-border-hover: 1px solid var(--md-primary-light) !important;
+  --n-border-focus: 1px solid var(--md-primary) !important;
+  --n-box-shadow-focus: var(--md-shadow-primary-1) !important;
+  --n-color: var(--md-surface-container-low) !important;
+  --n-color-focus: var(--md-surface) !important;
+  --n-text-color: var(--md-on-surface) !important;
+  --n-placeholder-color: var(--md-on-surface-variant) !important;
+  background-color: var(--md-surface-container-low) !important;
+  border-radius: var(--md-radius-xs) !important;
+  border: 1px solid var(--md-outline) !important;
+  box-shadow: none !important;
+  transition: 
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) !important;
+}
+
+.n-input:hover {
+  border-color: var(--md-primary-light) !important;
+}
+
+.n-input.n-input--focus,
+.n-input:focus {
+  border-color: var(--md-primary) !important;
+  background-color: var(--md-surface) !important;
+  box-shadow: var(--md-shadow-primary-1) !important;
+}
+
+/* 2.3 下拉框与选择组件魔改 (n-select / n-base-selection) */
+.n-base-selection {
+  --n-border-radius: var(--md-radius-xs) !important;
+  --n-border: 1px solid var(--md-outline) !important;
+  --n-border-hover: 1px solid var(--md-primary-light) !important;
+  --n-border-active: 1px solid var(--md-primary) !important;
+  --n-border-focus: 1px solid var(--md-primary) !important;
+  --n-box-shadow-focus: var(--md-shadow-primary-1) !important;
+  --n-color: var(--md-surface-container-low) !important;
+  --n-color-active: var(--md-surface) !important;
+  border-radius: var(--md-radius-xs) !important;
+  box-shadow: none !important;
+}
+
+/* 下拉浮层古籍化 */
+.n-dropdown-menu,
+.n-popover {
+  border-radius: var(--md-radius-xs) !important;
+  background-color: var(--md-surface) !important;
+  border: 3px double var(--md-outline) !important;
+  box-shadow: var(--md-elevation-1) !important;
+  padding: 4px !important;
+}
+
+.n-dropdown-option {
+  border-radius: var(--md-radius-xs) !important;
+}
+
+.n-dropdown-option:hover {
+  background-color: var(--md-state-layer-hover) !important;
+}
+
+.n-dropdown-option-content {
+  font-family: var(--md-font-family) !important;
+  color: var(--md-on-surface) !important;
+}
+
+/* 2.4 对话框弹窗与抽屉全局中国风化 (n-modal / n-dialog / n-drawer) */
+.n-modal,
+.n-dialog {
+  border-radius: var(--md-radius-xs) !important;
+  border: 3px double var(--md-outline) !important;
+  background-color: var(--md-surface) !important;
+  box-shadow: var(--md-elevation-2) !important;
+  padding: var(--md-spacing-2) !important;
+}
+
+.n-drawer {
+  border-radius: 0 !important;
+  background-color: var(--md-surface-dim) !important;
+  box-shadow: var(--md-elevation-drawer-right) !important;
+}
+
+.n-drawer-content {
+  background-color: var(--md-surface-dim) !important;
+}
+
+.n-drawer-header {
+  border-bottom: 1px solid var(--md-outline-variant) !important;
+}
+
+.n-drawer-header__title {
+  font-family: var(--md-font-display) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.05em !important;
+  color: var(--md-primary) !important;
+}
+
+/* 2.5 折叠面板中式化 (n-collapse) */
+.n-collapse {
+  --n-title-text-color: var(--md-primary) !important;
+  --n-font-size: var(--md-title-medium) !important;
+}
+
+.n-collapse-item {
+  border-bottom-color: var(--md-outline-variant) !important;
+}
+
+.n-collapse-item__header-main {
+  font-family: var(--md-font-display) !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.05em !important;
+  color: var(--md-primary) !important;
+}
+
+/* ============================================
+   3. 特色手抄书法朱批与水墨太极加载
+   ============================================ */
+
+/* 古典手抄朱批：AI 对白与辅助说明的楷体化 */
+.chat-bubble-ai,
+.m3-option-marker,
+.md-text-field-label,
+.m3-preview-metric,
+.writing-desk-assistant-shell .md-body-medium,
+.writing-desk-assistant-shell .md-body-small {
+  font-family: 'STKaiti', 'Kaiti SC', 'Kaiti TC', 'Kaiti', 'Noto Sans SC', sans-serif !important;
+}
+
+/* 批注卡片点缀 */
+.m3-option-marker {
+  font-weight: 600 !important;
+  letter-spacing: 0.06em !important;
+}
+
+/* 水墨阴阳太极旋转加载动画（替代现代圆圈加载，极具国风神韵） */
+body .md-spinner,
+.n-spin-body {
+  border: none !important;
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 50% !important;
+  /* 阴阳太极图案的纯 CSS 渐变实现 */
+  background: 
+    radial-gradient(circle at 50% 25%, var(--md-primary) 12%, transparent 12%),
+    radial-gradient(circle at 50% 75%, var(--md-on-primary) 12%, transparent 12%),
+    radial-gradient(circle at 50% 25%, var(--md-on-primary) 25%, transparent 25%),
+    radial-gradient(circle at 50% 75%, var(--md-primary) 25%, transparent 25%),
+    linear-gradient(90deg, var(--md-primary) 50%, var(--md-on-primary) 50%) !important;
+  box-shadow: 2px 2px 5px rgba(28, 32, 34, 0.12) !important;
+  animation: md-spin 2.2s linear infinite !important;
+}
+
+/* 优化正在生成中的过渡水墨呼吸动画 */
+.m3-optimizing-panel {
+  border: 1px solid var(--md-outline-variant) !important;
+  border-radius: var(--md-radius-xs) !important;
+  background: linear-gradient(135deg, var(--md-surface-container) 0%, var(--md-surface-dim) 100%) !important;
+}
+
+/* ==========================================================================
+   墨风第三阶段「新中式写意书院」超级沉浸式大刀阔斧视觉重塑
+   ========================================================================== */
+
+/* ============================================
+   1. 大背景云雾与“泼墨成风”极致水墨风流重塑 (Windblown Splattered Ink)
+   ============================================ */
+body,
+.writing-desk-page {
+  /* 空灵山水重雾与飞洒墨迹风竹矢量 (内联轻量 SVG 1.4% 白天超轻柔透明度，极具风骨) */
+  background-image: 
+    /* 左上角与右下角：水墨远山云雾的径向渐变模糊 */
+    radial-gradient(circle at 5% 10%, rgba(28, 32, 34, 0.05), transparent 45%),
+    radial-gradient(circle at 95% 85%, rgba(46, 92, 138, 0.035), transparent 50%),
+    /* 狂飙飞洒的风竹叶影与墨迹矢量 */
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><g fill='%231c2022' fill-opacity='0.014'><path d='M10,25 Q30,10 50,8 C35,20 22,25 15,30 Z M25,45 Q50,22 65,30 C45,35 35,42 30,50 Z M90,75 C75,55 95,35 105,40 C85,55 92,68 95,80 Z'/><path d='M5,95 C40,75 80,85 110,65 C75,70 35,62 10,85 Z' fill-opacity='0.01'/></g></svg>"),
+    /* 熟宣大底 */
+    linear-gradient(var(--md-surface) 0%, var(--md-background) 60%, var(--md-surface-dim) 100%) !important;
+  background-size: 100% 100%, 100% 100%, 280px 280px, 100% 100% !important;
+  background-attachment: fixed !important;
+}
+
+/* 深夜书房暗色模式自适应变暗为黛青焦墨竹影风痕 */
+:root[data-theme='dark'] body,
+:root[data-theme='dark'] .writing-desk-page {
+  background-image: 
+    radial-gradient(circle at 5% 10%, rgba(13, 16, 17, 0.6), transparent 50%),
+    radial-gradient(circle at 95% 85%, rgba(46, 92, 138, 0.08), transparent 55%),
+    /* 暗色模式下焦墨金石风痕 */
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><g fill='%23e5dec9' fill-opacity='0.009'><path d='M10,25 Q30,10 50,8 C35,20 22,25 15,30 Z M25,45 Q50,22 65,30 C45,35 35,42 30,50 Z M90,75 C75,55 95,35 105,40 C85,55 92,68 95,80 Z'/></g></svg>"),
+    linear-gradient(var(--md-surface) 0%, var(--md-background) 70%, var(--md-surface-dim) 100%) !important;
+}
+
+/* ============================================
+   2. 章节大纲目录“朱丝线装穿线”与“激活墨拓印章”
+   ============================================ */
+
+/* 章节目录穿线：利用 pseudo 伪元素绘制带有阴影、毛糙感的红丝线装装订线 */
+.writing-sidebar__tree-item::before {
+  content: '' !important;
+  width: 2px !important;
+  /* 宣纸落色：高雅半透朱砂红线 */
+  background-color: rgba(184, 60, 50, 0.28) !important;
+  border-left: 1px solid rgba(184, 60, 50, 0.15) !important;
+  box-shadow: 1px 0px 1px rgba(28, 32, 34, 0.05) !important;
+}
+
+.writing-sidebar__tree-item::after {
+  content: '' !important;
+  height: 2px !important;
+  background-color: rgba(184, 60, 50, 0.22) !important;
+}
+
+/* 选中章节行重绘：松烟墨拓 */
+.writing-sidebar__chapter-row--compact-selected {
+  border: 1px solid rgba(184, 60, 50, 0.35) !important;
+  /* 宣纸纤维墨拓渐变底纹 */
+  background: 
+    linear-gradient(135deg, rgba(28, 32, 34, 0.065) 0%, rgba(28, 32, 34, 0.015) 100%),
+    repeating-linear-gradient(45deg, rgba(28, 32, 34, 0.01) 0px, rgba(28, 32, 34, 0.01) 1px, transparent 1px, transparent 4px),
+    var(--md-surface) !important;
+  box-shadow: var(--md-elevation-1) !important;
+  position: relative !important;
+  transform: translateX(2px) !important;
+}
+
+/* 暗色模式下选中项自适应 */
+:root[data-theme='dark'] .writing-sidebar__chapter-row--compact-selected {
+  border: 1px solid rgba(140, 36, 28, 0.45) !important;
+  background: 
+    linear-gradient(135deg, rgba(229, 222, 201, 0.07) 0%, rgba(229, 222, 201, 0.01) 100%),
+    var(--md-surface) !important;
+}
+
+/* 行尾浮现朱红闲章「著」 */
+.writing-sidebar__chapter-row--compact-selected::after {
+  content: '著' !important;
+  position: absolute !important;
+  right: 6px !important;
+  top: 50% !important;
+  transform: translateY(-50%) rotate(4deg) !important;
+  font-family: var(--md-font-display) !important;
+  font-size: 10px !important;
+  line-height: 10px !important;
+  font-weight: bold !important;
+  padding: 3px 2px 2px 3px !important;
+  background-color: var(--md-secondary) !important;
+  color: var(--md-on-secondary) !important;
+  border: 1px solid var(--md-secondary) !important;
+  border-radius: 1px !important;
+  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.15) !important;
+  letter-spacing: 0 !important;
+}
+
+/* 暗色模式闲章适配 */
+:root[data-theme='dark'] .writing-sidebar__chapter-row--compact-selected::after {
+  background-color: #9c332b !important;
+  border-color: #9c332b !important;
+  color: #e5dec9 !important;
+}
+
+/* ============================================
+   3. 稿纸三折物理折页、“墨底风徽”水印与“紫檀纸镇”
+   ============================================ */
+
+/* 物理三折线效果：利用稿纸底纹，在两侧和中央加入极其幽微的宣纸折叠纸张凹凸阴影，顶部叠加紫檀木压纸镇尺包边 */
+body .chapter-paper {
+  position: relative !important;
+  background: 
+    /* 顶部紫檀木压纸镇尺 (8px 深褐木色压条) */
+    linear-gradient(180deg, #2b211a 0px, #2b211a 8px, transparent 8px),
+    /* 左右两道朱红信笺笺边线 */
+    linear-gradient(90deg, rgba(184, 60, 50, 0.12) 0px, rgba(184, 60, 50, 0.12) 2px, transparent 2px, transparent calc(100% - 2px), rgba(184, 60, 50, 0.12) calc(100% - 2px)),
+    /* 三折物理折痕棱线光影 (1/3 与 2/3 处微妙白光与暗影) */
+    linear-gradient(90deg, transparent 33%, rgba(28, 32, 34, 0.015) 33.3%, rgba(255, 255, 255, 0.08) 33.5%, transparent 35%, transparent 65%, rgba(28, 32, 34, 0.015) 65.3%, rgba(255, 255, 255, 0.08) 65.5%, transparent 67%),
+    /* 写意扫墨风竹底图水印 (0.8% 极其微透，绝不夺目，高阶文人墨香) */
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' opacity='0.008'><path d='M5,50 C40,30 60,70 95,50 C60,55 30,45 5,70 Z' fill='%231c2022'/></svg>"),
+    /* 纵向朱砂笺纸红格 */
+    repeating-linear-gradient(90deg, transparent, transparent 38px, rgba(184, 60, 50, 0.04) 38px, rgba(184, 60, 50, 0.05) 40px),
+    /* 宣纸底色 */
+    linear-gradient(var(--md-surface), var(--md-surface)) !important;
+  background-size: 100% 100%, calc(100% - 40px) 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100% !important;
+  background-position: top center, center, center, center, center, center !important;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat !important;
+  padding-top: calc(var(--md-spacing-8) + 12px) !important; /* 留出木镇高度与呼吸空档 */
+}
+
+:root[data-theme='dark'] body .chapter-paper {
+  background: 
+    linear-gradient(180deg, #1b1612 0px, #1b1612 8px, transparent 8px),
+    linear-gradient(90deg, rgba(140, 36, 28, 0.2) 0px, rgba(140, 36, 28, 0.2) 2px, transparent 2px, transparent calc(100% - 2px), rgba(140, 36, 28, 0.2) calc(100% - 2px)),
+    linear-gradient(90deg, transparent 33%, rgba(13, 16, 17, 0.18) 33.3%, rgba(255, 255, 255, 0.02) 33.5%, transparent 35%, transparent 65%, rgba(13, 16, 17, 0.18) 65.3%, rgba(255, 255, 255, 0.02) 65.5%, transparent 67%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' opacity='0.005'><path d='M5,50 C40,30 60,70 95,50 C60,55 30,45 5,70 Z' fill='%23e5dec9'/></svg>"),
+    repeating-linear-gradient(90deg, transparent, transparent 38px, rgba(140, 36, 28, 0.16) 38px, rgba(140, 36, 28, 0.22) 40px),
+    linear-gradient(var(--md-surface), var(--md-surface)) !important;
+  background-size: 100% 100%, calc(100% - 40px) 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100% !important;
+  background-position: top center, center, center, center, center, center !important;
+}
+
+/* 稿纸起笔：朱砂钤印首字下沉 */
+body .chapter-prose p:first-of-type::first-letter {
+  font-family: var(--md-font-display) !important;
+  font-size: 2.85rem !important;
+  float: left !important;
+  line-height: 1 !important;
+  padding: 6px 7px 5px 7px !important;
+  margin-right: 12px !important;
+  margin-top: 4px !important;
+  color: var(--md-secondary) !important;
+  font-weight: 700 !important;
+  /* 钤印朱泥磨砂背景：径向磨砂杂质效果 */
+  background: 
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.35) 2%, transparent 8%),
+    radial-gradient(circle at 75% 65%, rgba(255, 255, 255, 0.25) 3%, transparent 10%),
+    linear-gradient(135deg, rgba(184, 60, 50, 0.09) 0%, rgba(184, 60, 50, 0.04) 100%),
+    rgba(184, 60, 50, 0.05) !important;
+  /* 古风斑驳雕刻边界框 */
+  border: 2px dashed rgba(184, 60, 50, 0.45) !important;
+  border-radius: 2px !important;
+  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.15) !important;
+  /* 天然错位斜印 */
+  transform: rotate(-3deg) !important;
+  display: inline-block !important;
+}
+
+/* 暗色模式首字钤印适配 */
+:root[data-theme='dark'] body .chapter-prose p:first-of-type::first-letter {
+  color: var(--md-primary) !important;
+  background: 
+    linear-gradient(135deg, rgba(156, 51, 43, 0.28) 0%, rgba(156, 51, 43, 0.15) 100%),
+    rgba(156, 51, 43, 0.1) !important;
+  border-color: rgba(156, 51, 43, 0.6) !important;
+  box-shadow: 2px 2px 0px rgba(156, 51, 43, 0.3) !important;
+}
+
+/* ============================================
+   4. AI 评审助手面板“砚台批注册”与“古典双行朱批”
+   ============================================ */
+
+/* 助手面板壳古籍化 */
+.writing-desk-assistant-shell {
+  background-color: var(--md-surface-dim) !important;
+  border-left: 1px solid var(--md-outline-variant) !important;
+  box-shadow: var(--md-elevation-drawer-left) !important;
+}
+
+/* 夹注化排版覆写 */
+.writing-desk-assistant-shell .chat-bubble-ai {
+  background-color: transparent !important;
+  border-radius: 0 !important;
+  border: none !important;
+  padding: var(--md-spacing-4) var(--md-spacing-2) !important;
+  position: relative !important;
+  /* 左右两道极其精细古雅的朱砂细竖虚线 */
+  border-left: 1.5px dashed rgba(184, 60, 50, 0.2) !important;
+  border-right: 1.5px dashed rgba(184, 60, 50, 0.2) !important;
+}
+
+/* 暗色模式助手面板朱线适配 */
+:root[data-theme='dark'] .writing-desk-assistant-shell .chat-bubble-ai {
+  border-left-color: rgba(140, 36, 28, 0.3) !important;
+  border-right-color: rgba(140, 36, 28, 0.3) !important;
+}
+
+/* 评审红字夹注楷书化 */
+.writing-desk-assistant-shell .chat-bubble-ai,
+.writing-desk-assistant-shell .chat-bubble-ai p {
+  color: var(--md-secondary) !important; /* 批红 */
+  font-family: 'STKaiti', 'Kaiti SC', 'Kaiti', sans-serif !important;
+  font-size: var(--md-body-medium) !important;
+  line-height: 1.75 !important;
+  letter-spacing: 0.04em !important;
+}
+
+:root[data-theme='dark'] .writing-desk-assistant-shell .chat-bubble-ai,
+:root[data-theme='dark'] .writing-desk-assistant-shell .chat-bubble-ai p {
+  color: #b8433a !important; /* 柔和暗红 */
+}
+
+/* ============================================
+   5. 老檀木屏风隔条与四角黄铜古角扣
+   ============================================ */
+
+/* 多宝阁檀木框架隔断 */
+.writing-desk-layout {
+  gap: var(--md-spacing-3) !important;
+  background-color: transparent !important;
+}
+
+/* 工作台侧边栏、主工作区、助手面板的隔栏木质化 */
+.writing-desk-sidebar-shell,
+.writing-desk-assistant-shell {
+  border-color: #2b211a !important; /* 檀木棕黑 */
+}
+
+/* 整个工作台大边框装饰 */
+.writing-desk-layout-wrap {
+  border: 1px solid #2b211a !important;
+  border-radius: var(--md-radius-xs) !important;
+  position: relative !important;
+  background-color: transparent !important;
+}
+
+/* 纯 CSS 伪元素雕刻的古典“直角黄铜书角扣” */
+.writing-desk-layout-wrap::before {
+  content: '' !important;
+  position: absolute !important;
+  top: -1px !important;
+  left: -1px !important;
+  width: 15px !important;
+  height: 15px !important;
+  border-top: 3px solid #d4af37 !important; /* 亮古铜金 */
+  border-left: 3px solid #d4af37 !important;
+  z-index: 50 !important;
+  pointer-events: none !important;
+}
+
+.writing-desk-layout-wrap::after {
+  content: '' !important;
+  position: absolute !important;
+  bottom: -1px !important;
+  right: -1px !important;
+  width: 15px !important;
+  height: 15px !important;
+  border-bottom: 3px solid #d4af37 !important;
+  border-right: 3px solid #d4af37 !important;
+  z-index: 50 !important;
+  pointer-events: none !important;
+}
+
+/* ============================================
+   6. 交互过渡与特色水墨气旋动画 (Blowing Ink & Tai-chi)
+   ============================================ */
+
+/* 中式按钮、章节行过渡动效的墨滴晕开效果 */
+.md-btn,
+.writing-sidebar__chapter-row {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.md-btn::after,
+.writing-sidebar__chapter-row::after {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background: radial-gradient(circle, rgba(28, 32, 34, 0.12) 0%, transparent 70%) !important;
+  transform: scale(0) !important;
+  opacity: 0 !important;
+  transition: transform 0s, opacity 0s !important;
+  pointer-events: none !important;
+  z-index: 0 !important;
+}
+
+.md-btn:active::after,
+.writing-sidebar__chapter-row:active::after {
+  transform: scale(3.5) !important;
+  opacity: 1 !important;
+  filter: blur(5px) !important;
+  transition: transform 0.65s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 0.5s ease-out, filter 0.6s !important;
+}
+
+/* 暗色模式墨晕适配 */
+:root[data-theme='dark'] .md-btn::after,
+:root[data-theme='dark'] .writing-sidebar__chapter-row::after {
+  background: radial-gradient(circle, rgba(229, 222, 201, 0.15) 0%, transparent 70%) !important;
+}
+
+/* 加载态“墨风太极”气流飞旋环绕覆写 */
+body .md-spinner {
+  position: relative !important;
+}
+
+body .md-spinner::before {
+  content: '' !important;
+  position: absolute !important;
+  inset: -6px !important;
+  border-radius: 50% !important;
+  /* 飞舞在太极外圈的泼墨风暴气旋环线 */
+  border: 2px dashed rgba(28, 32, 34, 0.22) !important;
+  border-top-color: transparent !important;
+  border-bottom-color: transparent !important;
+  animation: md-spin 1.4s ease-in-out infinite !important;
+}
+
+:root[data-theme='dark'] body .md-spinner::before {
+  border-color: rgba(229, 222, 201, 0.18) !important;
+  border-top-color: transparent !important;
+  border-bottom-color: transparent !important;
+}
+
+/* ============================================
+   7. 顶部 Header 注入「墨風」专属金石篆印 LOGO
+   ============================================ */
+
+/* 核心Header：在标题组左侧强力生成金石朱砂名章 LOGO，让墨风项目名完美与视觉融合 */
+.writing-header__project::before {
+  content: '墨風' !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-family: var(--md-font-display) !important;
+  font-size: 15.5px !important;
+  font-weight: 700 !important; /* 印章使用 700 Bold，字痕浑厚饱满 */
+  letter-spacing: 0.15em !important;
+  color: var(--md-on-secondary) !important;
+  background-color: var(--md-secondary) !important;
+  border: 2px solid var(--md-secondary) !important;
+  box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.3) !important;
+  padding: 5px 6px 3px 8px !important;
+  line-height: 1 !important;
+  border-radius: 2px !important;
+  margin-right: 14px !important;
+  transform: rotate(-3deg) !important; /* 钤印微倾斜手作感 */
+  flex-shrink: 0 !important;
+}
+
+/* 暗色模式 LOGO 印章自适应变暗 */
+:root[data-theme='dark'] .writing-header__project::before {
+  background-color: #9c332b !important;
+  border-color: #9c332b !important;
+  color: #e5dec9 !important;
+  box-shadow: 3px 3px 0px rgba(156, 51, 43, 0.4) !important;
+}
+
+/* ==========================================================================
+   墨风第四阶段「墨落惊风雨，泼墨成风」——「墨风」品牌与极致中国风大刀阔斧重构
+   ========================================================================== */
+
+/* 1. 全局大背景升级：注入“墨落惊风雨”狂草“墨風”二字与写意水墨云海巨幅 SVG */
+body,
+.writing-desk-page {
+  background-image: 
+    radial-gradient(circle at 5% 10%, rgba(28, 32, 34, 0.06), transparent 45%),
+    radial-gradient(circle at 95% 85%, rgba(46, 92, 138, 0.04), transparent 50%),
+    /* 狂草“墨風”大水印、飞洒墨滴与写意风暴气流 SVG */
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><g fill='%231c2022' fill-opacity='0.016'><path d='M10,25 Q30,10 50,8 C35,20 22,25 15,30 Z M25,45 Q50,22 65,30 C45,35 35,42 30,50 Z'/><text x='12' y='98' font-family='Georgia, serif' font-size='22' font-weight='bold' fill-opacity='0.024'>墨風</text><text x='12' y='111' font-family='serif' font-size='6.5' fill-opacity='0.018'>笔落惊风雨  诗成泣鬼神</text><path d='M5,95 C40,75 80,85 110,65 C75,70 35,62 10,85 Z' fill-opacity='0.012'/></g></svg>"),
+    linear-gradient(var(--md-surface) 0%, var(--md-background) 60%, var(--md-surface-dim) 100%) !important;
+}
+
+:root[data-theme='dark'] body,
+:root[data-theme='dark'] .writing-desk-page {
+  background-image: 
+    radial-gradient(circle at 5% 10%, rgba(229, 222, 201, 0.04), transparent 45%),
+    radial-gradient(circle at 95% 85%, rgba(74, 107, 83, 0.03), transparent 50%),
+    /* 暗色模式下白玉色狂草“墨風”水印 */
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><g fill='%23e5dec9' fill-opacity='0.012'><path d='M10,25 Q30,10 50,8 C35,20 22,25 15,30 Z M25,45 Q50,22 65,30 C45,35 35,42 30,50 Z'/><text x='12' y='98' font-family='Georgia, serif' font-size='22' font-weight='bold' fill-opacity='0.018'>墨風</text><text x='12' y='111' font-family='serif' font-size='6.5' fill-opacity='0.014'>笔落惊风雨  诗成泣鬼神</text><path d='M5,95 C40,75 80,85 110,65 C75,70 35,62 10,85 Z' fill-opacity='0.01'/></g></svg>"),
+    linear-gradient(var(--md-surface) 0%, var(--md-background) 65%, var(--md-surface-dim) 100%) !important;
+}
+
+/* 2. 侧边栏品牌 Logo 升级：将 .app-shell__brand-mark 深度覆写为“手作朱泥磨砂大方印” */
+body .app-shell__brand-mark {
+  background: var(--md-secondary) !important;
+  color: var(--md-on-secondary) !important;
+  border: 2px solid var(--md-secondary-dark) !important;
+  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.25) !important;
+  font-family: var(--md-font-display) !important;
+  font-weight: 700 !important; /* 印章使用 700 Bold 凸显阳刻饱满感 */
+  font-size: 18px !important;
+  transform: rotate(-3.5deg) !important; /* 钤印微斜 */
+  border-radius: 4px !important;
+  position: relative !important;
+  width: 40px !important;
+  height: 40px !important;
+}
+
+body .app-shell__brand-mark::after {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  /* 泥印斑驳颗粒感 */
+  background-image: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.12) 1px, transparent 1px) !important;
+  background-size: 3px 3px !important;
+  pointer-events: none !important;
+  opacity: 0.65 !important;
+}
+
+:root[data-theme='dark'] body .app-shell__brand-mark {
+  background-color: #9c332b !important;
+  border-color: #73221c !important;
+  color: #e5dec9 !important;
+  box-shadow: 2px 2px 0px rgba(156, 51, 43, 0.3) !important;
+}
+
+/* 3. 大厅项目卡片 .project-card 大改：重绘为古雅的“线装古籍书卷” */
+body .project-card {
+  background: 
+    /* 宣纸微噪底纹 */
+    radial-gradient(circle at 50% 50%, rgba(28, 32, 34, 0.005) 1px, transparent 1px),
+    linear-gradient(var(--md-surface), var(--md-surface)) !important;
+  background-size: 8px 8px, 100% 100% !important;
+  border: 1px solid var(--md-outline) !important;
+  /* 左侧石青色古典装订书脊 */
+  border-left: 14px solid #2e5c8a !important;
+  border-radius: 2px !important;
+  position: relative !important;
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.05) !important;
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+/* 三个红色装订孔 */
+body .project-card::before {
+  content: '• • •' !important;
+  position: absolute !important;
+  left: -10px !important;
+  top: 30px !important;
+  bottom: 30px !important;
+  writing-mode: vertical-rl !important;
+  font-size: 15px !important;
+  font-weight: bold !important;
+  color: var(--md-secondary) !important;
+  letter-spacing: 3rem !important;
+  opacity: 0.8 !important;
+  z-index: 10 !important;
+  line-height: 1 !important;
+}
+
+/* 右上角“藏書”闲章 */
+body .project-card::after {
+  content: '藏書' !important;
+  position: absolute !important;
+  right: 16px !important;
+  top: 16px !important;
+  font-family: var(--md-font-display) !important;
+  font-size: 10px !important;
+  font-weight: bold !important;
+  color: rgba(184, 60, 50, 0.16) !important;
+  border: 1px solid rgba(184, 60, 50, 0.16) !important;
+  padding: 2px 3px !important;
+  line-height: 1 !important;
+  border-radius: 1px !important;
+  transform: rotate(6deg) !important;
+}
+
+/* Hover 物理展开立体效果 */
+body .project-card:hover {
+  transform: translateY(-2px) translateZ(0) !important;
+  border-color: var(--md-primary-light) !important;
+  /* 书脊与纸张阴影加深，产生实体书微微被拿起、翻开的视觉厚度 */
+  box-shadow: 4px 4px 0px var(--md-outline), 0 6px 12px rgba(28, 32, 34, 0.08) !important;
+  background-color: var(--md-surface-bright) !important;
+}
+
+:root[data-theme='dark'] body .project-card {
+  border-left-color: #1a3324 !important; /* 暗绿松针色书脊 */
+  border-color: var(--md-outline-variant) !important;
+  box-shadow: 2px 2px 0px rgba(13, 16, 17, 0.4) !important;
+  background: linear-gradient(var(--md-surface), var(--md-surface)) !important;
+}
+
+:root[data-theme='dark'] body .project-card::before {
+  color: #9c332b !important;
+}
+
+:root[data-theme='dark'] body .project-card::after {
+  color: rgba(156, 51, 43, 0.22) !important;
+  border-color: rgba(156, 51, 43, 0.22) !important;
+}
+
+:root[data-theme='dark'] body .project-card:hover {
+  box-shadow: 4px 4px 0px var(--md-outline-variant), 0 6px 12px rgba(13, 16, 17, 0.6) !important;
+}
+
+/* 4. 侧边栏大改造：背景融入“檀木冰裂纹格格窗棂”底图，菜单项 Hover 覆写为“毛笔横扫枯笔飞白墨痕” */
+body .app-shell__sidebar {
+  background-image: 
+    /* 檀木雕花窗棂细线 SVG */
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' opacity='0.015'><path d='M0,0 L28,28 M28,0 L0,28 M0,14 L28,14 M14,0 L14,28' stroke='%231c2022' stroke-width='0.6'/></svg>"),
+    linear-gradient(var(--md-surface-dim), var(--md-surface-dim)) !important;
+}
+
+:root[data-theme='dark'] body .app-shell__sidebar {
+  background-image: 
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' opacity='0.008'><path d='M0,0 L28,28 M28,0 L0,28 M0,14 L28,14 M14,0 L14,28' stroke='%23e5dec9' stroke-width='0.6'/></svg>"),
+    linear-gradient(var(--md-surface-dim), var(--md-surface-dim)) !important;
+}
+
+/* 菜单项 Hover 毛笔扫墨飞白效果 */
+body .app-shell__nav-item:hover {
+  background: 
+    /* 毛笔扫过宣纸带有微飞白散边墨痕的 SVG (5% 极低透明度，防止花哨) */
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' opacity='0.05'><path d='M0,10 C15,3 40,17 75,4 C90,8 95,2 100,10 C85,12 55,2 0,10 Z' fill='%231c2022'/></svg>"),
+    linear-gradient(135deg, rgba(28, 32, 34, 0.03), rgba(28, 32, 34, 0.01)) !important;
+  border-color: rgba(28, 32, 34, 0.12) !important;
+  color: var(--md-primary-dark) !important;
+}
+
+/* 激活项墨拓效果，右侧隐约带有风吹波纹 */
+body .app-shell__nav-item.is-active {
+  background: 
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' opacity='0.08'><path d='M0,10 C15,3 40,17 75,4 C90,8 95,2 100,10 C85,12 55,2 0,10 Z' fill='%231c2022'/></svg>"),
+    linear-gradient(135deg, var(--md-primary-light), var(--md-primary)) !important;
+  border-color: var(--md-primary-dark) !important;
+  color: var(--md-on-primary) !important;
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.1) !important;
+}
+
+:root[data-theme='dark'] body .app-shell__nav-item:hover {
+  background: 
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' opacity='0.04'><path d='M0,10 C15,3 40,17 75,4 C90,8 95,2 100,10 C85,12 55,2 0,10 Z' fill='%23e5dec9'/></svg>"),
+    linear-gradient(135deg, rgba(229, 222, 201, 0.04), rgba(229, 222, 201, 0.01)) !important;
+  border-color: rgba(229, 222, 201, 0.1) !important;
+  color: var(--md-primary-light) !important;
+}
+
+:root[data-theme='dark'] body .app-shell__nav-item.is-active {
+  background: 
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' opacity='0.05'><path d='M0,10 C15,3 40,17 75,4 C90,8 95,2 100,10 C85,12 55,2 0,10 Z' fill='%23e5dec9'/></svg>"),
+    linear-gradient(135deg, var(--md-primary-light), var(--md-primary)) !important;
+  border-color: var(--md-outline) !important;
+  color: var(--md-on-primary) !important;
+}
+
+/* 5. 稿纸大改造：在 .chapter-paper 右下角通过伪元素注入淡雅书法款识“墨風·筆落惊風雨”水印 */
+body .chapter-paper::after {
+  content: '墨風·筆落惊風雨' !important;
+  position: absolute !important;
+  right: 28px !important;
+  bottom: 24px !important;
+  font-family: var(--md-font-display) !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  color: rgba(28, 32, 34, 0.05) !important;
+  letter-spacing: 0.15em !important;
+  pointer-events: none !important;
+  z-index: 10 !important;
+}
+
+:root[data-theme='dark'] body .chapter-paper::after {
+  color: rgba(229, 222, 201, 0.04) !important;
+}
+
+/* 6. AI 评审助手对话框重塑：AI 对话泡泡覆写为朱红细描“宣纸信笺”；用户对话泡泡覆写为“焦墨拓片”风格（手撕毛边） */
+body .chat-bubble-ai {
+  background-color: var(--md-surface) !important;
+  border: 1px dashed rgba(184, 60, 50, 0.28) !important;
+  border-radius: 2px !important;
+  box-shadow: inset 0 0 10px rgba(184, 60, 50, 0.03) !important;
+  position: relative !important;
+}
+
+/* 夹批朱印 */
+body .chat-bubble-ai::before {
+  content: '批' !important;
+  position: absolute !important;
+  right: 12px !important;
+  top: 10px !important;
+  font-family: var(--md-font-display) !important;
+  font-size: 10px !important;
+  font-weight: bold !important;
+  color: rgba(184, 60, 50, 0.2) !important;
+  border: 1px solid rgba(184, 60, 50, 0.2) !important;
+  border-radius: 50% !important;
+  width: 16px !important;
+  height: 16px !important;
+  display: grid !important;
+  place-items: center !important;
+}
+
+body .chat-bubble-user {
+  background-color: var(--md-primary-light) !important;
+  color: var(--md-on-primary) !important;
+  /* 手撕拓片毛边：使用微妙的不规则折纸剪裁 */
+  clip-path: polygon(
+    0% 3%, 12% 0%, 25% 2%, 37% 0%, 50% 3%, 62% 0%, 75% 2%, 87% 0%, 100% 3%, 
+    99% 25%, 100% 50%, 98% 75%, 100% 97%, 
+    88% 100%, 75% 98%, 62% 100%, 50% 97%, 38% 100%, 25% 98%, 12% 100%, 0% 97%,
+    1% 75%, 0% 50%, 2% 25%
+  ) !important;
+  border-radius: var(--md-radius-xs) !important;
+  box-shadow: var(--md-elevation-1) !important;
+  padding: 1rem 1.25rem !important;
+}
+
+:root[data-theme='dark'] body .chat-bubble-ai {
+  border-color: rgba(156, 51, 43, 0.45) !important;
+  background-color: var(--md-surface-dim) !important;
+}
+
+:root[data-theme='dark'] body .chat-bubble-ai::before {
+  color: rgba(156, 51, 43, 0.35) !important;
+  border-color: rgba(156, 51, 43, 0.35) !important;
+}
+
+:root[data-theme='dark'] body .chat-bubble-user {
+  background-color: var(--md-surface-bright) !important;
+  color: var(--md-on-surface) !important;
+  box-shadow: 2px 2px 0px rgba(13, 16, 17, 0.5) !important;
+}
+
+/* ==========================================================================
+   Phase 5 「案头横展，金石落印」无侧边栏及顶部金石落印导航重构样式
+   ========================================================================== */
+
+/* 1. 桌面端去除侧边栏 & 主内容区全屏沉浸适配 */
+@media (min-width: 1024px) {
+  .app-shell {
+    grid-template-columns: 1fr !important; /* 桌面端彻底干掉左侧侧边栏宽度占位 */
+  }
+}
+
+/* 2. 顶部 Header 全局导航栏布局与中国风重塑 */
+body .app-shell__topbar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: var(--md-spacing-4) !important;
+  min-height: 84px !important;
+  padding: 0 clamp(var(--md-spacing-4), 3vw, var(--md-spacing-8)) !important;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(46, 92, 138, 0.02), transparent 50%),
+    linear-gradient(180deg, var(--md-surface) 60%, var(--md-background) 100%) !important;
+  border-bottom: 1px solid var(--md-outline-variant) !important;
+  box-shadow: 0 2px 8px rgba(28, 32, 34, 0.02) !important;
+}
+
+/* 桌面端顶栏品牌区 */
+.app-shell__brand-top {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--md-spacing-3) !important;
+  margin-right: var(--md-spacing-6) !important;
+}
+
+.app-shell__brand-top .app-shell__brand-title {
+  margin: 0 !important;
+  font-family: var(--md-font-display) !important;
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  color: var(--md-primary) !important;
+  letter-spacing: 0.05em !important;
+}
+
+.app-shell__brand-top .app-shell__account-role {
+  margin: 2px 0 0 0 !important;
+  font-size: 11px !important;
+  color: var(--md-on-surface-variant) !important;
+  letter-spacing: 0.02em !important;
+}
+
+/* 3. 中间核心导航：升级版「砚海阁案头中枢」双胶囊与水墨下拉菜单 */
+.app-shell__project-capsule-container {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--md-spacing-3) !important;
+  margin-left: var(--md-spacing-4) !important;
+}
+
+/* 核心胶囊基础样式 */
+.app-shell__project-capsule {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  height: 42px !important;
+  padding: 0 var(--md-spacing-4) !important;
+  border-radius: 21px !important;
+  font-family: var(--md-font-display) !important;
+  font-size: 0.9rem !important;
+  font-weight: 500 !important;
+  transition: all var(--md-duration-medium) var(--md-easing-standard) !important;
+  border: 1px solid var(--md-outline-variant) !important;
+  background-color: var(--md-surface) !important;
+  /* 带有熟宣噪点背景 */
+  background-image: radial-gradient(rgba(28, 32, 34, 0.02) 1px, transparent 0) !important;
+  background-size: 8px 8px !important;
+}
+
+/* 胶囊一：选择作品空间 */
+.app-shell__project-capsule.is-select {
+  cursor: pointer !important;
+  color: var(--md-primary) !important;
+  box-shadow: 1.5px 1.5px 0px var(--md-outline-variant) !important;
+}
+
+/* 选择胶囊的 Hover / Active：松烟墨晕微转角 */
+.app-shell__project-capsule.is-select:hover,
+.app-shell__project-capsule.is-select.is-active {
+  background-color: var(--md-surface-bright) !important;
+  border-color: var(--md-secondary) !important;
+  box-shadow: 2px 2.5px 0px rgba(184, 60, 50, 0.15) !important;
+  transform: rotate(-0.5deg) translateY(-0.5px) !important;
+}
+
+.app-shell__project-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  margin-right: var(--md-spacing-2) !important;
+  color: var(--md-secondary) !important;
+}
+
+.app-shell__project-icon svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.app-shell__project-title {
+  font-weight: 600 !important;
+  letter-spacing: 0.02em !important;
+}
+
+.app-shell__project-arrow {
+  display: inline-flex !important;
+  align-items: center !important;
+  margin-left: var(--md-spacing-2) !important;
+  color: var(--md-on-surface-variant) !important;
+  transition: transform var(--md-duration-short) !important;
+}
+
+.app-shell__project-arrow svg {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+.app-shell__project-arrow.is-open {
+  transform: rotate(180deg) !important;
+}
+
+/* 胶囊二：作品状态与成就多维胶囊 */
+.app-shell__project-capsule.is-status {
+  cursor: default !important;
+  background-color: rgba(28, 32, 34, 0.02) !important;
+  border-color: var(--md-outline-variant) !important;
+  color: var(--md-on-surface) !important;
+  font-size: 0.85rem !important;
+  box-shadow: inset 1px 1px 2px rgba(28, 32, 34, 0.02) !important;
+  gap: var(--md-spacing-3.5) !important;
+  padding: 0 var(--md-spacing-5) !important;
+}
+
+.app-shell__project-tag-info {
+  color: var(--md-on-surface-variant) !important;
+  font-weight: 500 !important;
+}
+
+.app-shell__project-divider {
+  color: var(--md-outline) !important;
+  opacity: 0.4 !important;
+}
+
+.app-shell__project-progress-info,
+.app-shell__project-chapter-info {
+  color: var(--md-on-surface-variant) !important;
+}
+
+.app-shell__number {
+  color: var(--md-secondary) !important;
+  font-weight: 700 !important;
+  font-family: var(--md-font-display) !important;
+}
+
+/* 水墨风微粒下拉菜单 */
+.app-shell__project-dropdown {
+  position: absolute !important;
+  top: 50px !important;
+  left: 0 !important;
+  width: 280px !important;
+  background-color: var(--md-surface) !important;
+  border: 1px solid var(--md-outline) !important;
+  border-radius: var(--md-radius-sm) !important;
+  box-shadow: 
+    0 10px 25px -5px rgba(28, 32, 34, 0.1),
+    0 8px 10px -6px rgba(28, 32, 34, 0.05),
+    3px 3px 0px var(--md-outline-variant) !important;
+  z-index: 100 !important;
+  padding: var(--md-spacing-3.5) 0 !important;
+  text-align: left !important;
+  /* 宣纸纸底 */
+  background-image: radial-gradient(rgba(28, 32, 34, 0.02) 1px, transparent 0) !important;
+  background-size: 6px 6px !important;
+}
+
+.app-shell__dropdown-header {
+  font-family: var(--md-font-display) !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  color: var(--md-secondary) !important;
+  padding: 0 var(--md-spacing-4) var(--md-spacing-2) var(--md-spacing-4) !important;
+  border-bottom: 1px dashed rgba(184, 60, 50, 0.15) !important;
+  margin-bottom: var(--md-spacing-2) !important;
+  letter-spacing: 0.05em !important;
+}
+
+.app-shell__dropdown-list {
+  max-height: 200px !important;
+  overflow-y: auto !important;
+  padding: 0 var(--md-spacing-2) !important;
+}
+
+/* 自定义水墨风滚动条 */
+.app-shell__dropdown-list::-webkit-scrollbar {
+  width: 4px !important;
+}
+.app-shell__dropdown-list::-webkit-scrollbar-thumb {
+  background-color: var(--md-outline-variant) !important;
+  border-radius: 2px !important;
+}
+.app-shell__dropdown-list::-webkit-scrollbar-thumb:hover {
+  background-color: var(--md-outline) !important;
+}
+
+.app-shell__dropdown-item {
+  display: flex !important;
+  align-items: center !important;
+  padding: var(--md-spacing-2) var(--md-spacing-3) !important;
+  border-radius: var(--md-radius-xs) !important;
+  color: var(--md-on-surface) !important;
+  font-family: var(--md-font-display) !important;
+  font-size: 0.88rem !important;
+  transition: all var(--md-duration-short) !important;
+  margin-bottom: 2px !important;
+  gap: var(--md-spacing-2) !important;
+}
+
+.app-shell__dropdown-item .item-title {
+  font-weight: 500 !important;
+  flex: 1 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.app-shell__dropdown-item .item-tag {
+  font-size: 10px !important;
+  background-color: rgba(28, 32, 34, 0.04) !important;
+  border: 1px solid var(--md-outline-variant) !important;
+  padding: 1px 5px !important;
+  border-radius: 2px !important;
+  color: var(--md-on-surface-variant) !important;
+  font-family: var(--md-font-family) !important;
+}
+
+/* 项 Hover：扫墨枯笔飞白墨迹 */
+.app-shell__dropdown-item:hover {
+  color: var(--md-secondary) !important;
+  background-color: rgba(184, 60, 50, 0.03) !important;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' opacity='0.08'><path d='M0,10 C20,2 50,18 80,4 C90,8 95,2 100,10 Z' fill='%23b83c32'/></svg>") !important;
+  background-size: 100% 100% !important;
+  background-repeat: no-repeat !important;
+  transform: translateX(2px) !important;
+}
+
+.app-shell__dropdown-item.is-active {
+  color: var(--md-secondary) !important;
+  font-weight: 600 !important;
+  background-color: rgba(184, 60, 50, 0.05) !important;
+  border-left: 2px solid var(--md-secondary) !important;
+}
+
+.app-shell__dropdown-empty {
+  padding: var(--md-spacing-6) var(--md-spacing-4) !important;
+  text-align: center !important;
+  color: var(--md-on-surface-variant) !important;
+  font-size: 0.8rem !important;
+  font-family: var(--md-font-display) !important;
+  font-style: italic !important;
+}
+
+.app-shell__dropdown-divider {
+  height: 1px !important;
+  background-image: linear-gradient(to right, transparent, var(--md-outline-variant) 20%, var(--md-outline-variant) 80%, transparent) !important;
+  margin: var(--md-spacing-2) 0 !important;
+}
+
+.app-shell__dropdown-actions {
+  display: flex !important;
+  justify-content: space-around !important;
+  padding: 0 var(--md-spacing-2) !important;
+}
+
+.app-shell__dropdown-action {
+  flex: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: var(--md-spacing-1.5) !important;
+  padding: var(--md-spacing-2) !important;
+  border-radius: var(--md-radius-xs) !important;
+  font-family: var(--md-font-display) !important;
+  font-size: 0.85rem !important;
+  font-weight: 500 !important;
+  color: var(--md-on-surface-variant) !important;
+  cursor: pointer !important;
+  transition: all var(--md-duration-short) !important;
+}
+
+.app-shell__dropdown-action:hover {
+  color: var(--md-primary) !important;
+  background-color: rgba(28, 32, 34, 0.03) !important;
+}
+
+.app-shell__dropdown-action:first-child:hover {
+  color: var(--md-secondary) !important;
+  background-color: rgba(184, 60, 50, 0.03) !important;
+}
+
+/* 空白状态：山水泼墨励志寄语样式 */
+.app-shell__project-welcome-message {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--md-spacing-2) !important;
+  padding: 0 var(--md-spacing-4) !important;
+  height: 42px !important;
+  color: var(--md-on-surface-variant) !important;
+  font-family: var(--md-font-display) !important;
+  font-size: 0.88rem !important;
+  font-weight: 500 !important;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 20' opacity='0.03'><path d='M0,10 C40,0 100,18 160,2 C180,6 190,2 200,10 Z' fill='%231c2022'/></svg>") !important;
+  background-size: 100% 100% !important;
+  background-repeat: no-repeat !important;
+  animation: fadeIn 1.2s ease-out !important;
+}
+
+.welcome-spark {
+  color: var(--md-secondary) !important;
+  animation: pulse 2.5s infinite alternate !important;
+}
+
+.welcome-text {
+  letter-spacing: 0.04em !important;
+  text-shadow: 1px 1px 0px rgba(250, 246, 237, 0.8) !important;
+}
+
+/* 暗色模式适配 */
+:root[data-theme='dark'] .app-shell__project-capsule {
+  border-color: var(--md-outline) !important;
+  box-shadow: 1.5px 1.5px 0px var(--md-outline-variant) !important;
+  background-image: radial-gradient(rgba(225, 222, 201, 0.03) 1px, transparent 0) !important;
+}
+
+:root[data-theme='dark'] .app-shell__project-capsule.is-select:hover,
+:root[data-theme='dark'] .app-shell__project-capsule.is-select.is-active {
+  border-color: var(--md-secondary) !important;
+  box-shadow: 2px 2.5px 0px rgba(156, 51, 43, 0.3) !important;
+}
+
+:root[data-theme='dark'] .app-shell__project-capsule.is-status {
+  background-color: rgba(229, 222, 201, 0.02) !important;
+  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.4) !important;
+}
+
+:root[data-theme='dark'] .app-shell__project-dropdown {
+  border-color: var(--md-outline) !important;
+  box-shadow: 
+    0 10px 25px -5px rgba(0, 0, 0, 0.5),
+    3px 3px 0px var(--md-outline-variant) !important;
+  background-image: radial-gradient(rgba(225, 222, 201, 0.02) 1px, transparent 0) !important;
+}
+
+:root[data-theme='dark'] .app-shell__dropdown-item:hover {
+  background-color: rgba(156, 51, 43, 0.05) !important;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' opacity='0.08'><path d='M0,10 C20,2 50,18 80,4 C90,8 95,2 100,10 Z' fill='%239c332b'/></svg>") !important;
+}
+
+:root[data-theme='dark'] .app-shell__dropdown-item.is-active {
+  background-color: rgba(156, 51, 43, 0.08) !important;
+}
+
+:root[data-theme='dark'] .app-shell__project-welcome-message {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 20' opacity='0.03'><path d='M0,10 C40,0 100,18 160,2 C180,6 190,2 200,10 Z' fill='%23e5dec9'/></svg>") !important;
+  text-shadow: 1px 1px 0px rgba(21, 25, 27, 0.8) !important;
+}
+
+/* 过渡动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease !important;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0 !important;
+  transform: translateY(-8px) scale(0.98) !important;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 0.9; }
+  100% { transform: scale(1.08); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 4. 右侧操作控制区与微型金石方印 */
+.app-shell__actions-right {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--md-spacing-4) !important;
+  margin-left: auto !important;
+}
+
+/* 案头名签用户标牌 */
+.app-shell__user-tag {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--md-spacing-2) !important;
+  padding: 4px 10px !important;
+  background-color: rgba(28, 32, 34, 0.03) !important;
+  border: 1px solid var(--md-outline-variant) !important;
+  border-radius: 1px !important;
+  box-shadow: inset 1px 1px 2px rgba(28, 32, 34, 0.02) !important;
+}
+
+.app-shell__user-role-dot {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  background-color: var(--md-success) !important; /* 普通作者：石绿小圆点 */
+  display: inline-block !important;
+}
+
+.app-shell__user-role-dot.is-admin-dot {
+  background-color: var(--md-secondary) !important; /* 管理员：朱砂小圆点 */
+}
+
+.app-shell__user-name {
+  font-size: var(--md-label-medium) !important;
+  color: var(--md-on-surface) !important;
+  font-weight: 600 !important;
+  font-family: var(--md-font-display) !important;
+}
+
+/* 5. 金石方印按钮与“盖印下压”物理交互 */
+.app-shell__action-btn {
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--md-spacing-1.5) !important;
+  text-decoration: none !important;
+  border: none !important;
+  background: transparent !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+}
+
+.app-shell__action-badge {
+  width: 32px !important;
+  height: 32px !important;
+  display: grid !important;
+  place-items: center !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  font-family: var(--md-font-display) !important;
+  border-radius: 2px !important;
+  transition: all var(--md-duration-short) var(--md-easing-standard) !important;
+}
+
+/* 模型设置：朱泥印 */
+.app-shell__action-badge.is-settings {
+  background-color: var(--md-secondary) !important;
+  color: var(--md-on-secondary) !important;
+  border: 1px solid var(--md-secondary-dark) !important;
+  box-shadow: 1.5px 1.5px 0px rgba(184, 60, 50, 0.25) !important;
+  transform: rotate(-3deg) !important;
+}
+
+/* 系统管理：石青印 */
+.app-shell__action-badge.is-admin {
+  background-color: var(--md-info) !important;
+  color: var(--md-on-primary) !important;
+  border: 1px solid #1c3d5e !important;
+  box-shadow: 1.5px 1.5px 0px rgba(46, 92, 138, 0.25) !important;
+  transform: rotate(2.5deg) !important;
+}
+
+/* 离席退出：焦墨印 */
+.app-shell__action-badge.is-logout {
+  background-color: var(--md-primary) !important;
+  color: var(--md-on-primary) !important;
+  border: 1px solid var(--md-primary-dark) !important;
+  box-shadow: 1.5px 1.5px 0px rgba(28, 32, 34, 0.25) !important;
+  transform: rotate(-1.5deg) !important;
+}
+
+/* 文字说明 Hover 过渡 */
+.app-shell__action-text {
+  font-size: var(--md-label-medium) !important;
+  color: var(--md-on-surface-variant) !important;
+  font-weight: 500 !important;
+  transition: color var(--md-duration-short) !important;
+}
+
+/* 盖印下压物理交互：Hover 时印章像盖印一样下压、挤压并淡化阴影 */
+.app-shell__action-btn:hover .app-shell__action-badge {
+  transform: translateY(1px) scale(0.97) !important; /* 手动下压盖章 */
+  box-shadow: 0.5px 0.5px 0px rgba(28, 32, 34, 0.1) !important; /* 阴影扁平聚拢 */
+}
+
+.app-shell__action-btn:hover .app-shell__action-text {
+  color: var(--md-on-surface) !important;
+}
+
+/* 暗色模式下金石方印的微调 */
+:root[data-theme='dark'] .app-shell__user-tag {
+  background-color: rgba(229, 222, 201, 0.03) !important;
+}
+
+:root[data-theme='dark'] .app-shell__action-badge.is-settings {
+  background-color: #9c332b !important;
+  border-color: #73221c !important;
+  box-shadow: 1.5px 1.5px 0px rgba(156, 51, 43, 0.4) !important;
+}
+
+:root[data-theme='dark'] .app-shell__action-badge.is-admin {
+  background-color: #2e4033 !important; /* 澄泥暗石绿 */
+  border-color: #1b2e21 !important;
+  box-shadow: 1.5px 1.5px 0px rgba(46, 64, 51, 0.4) !important;
+}
+
+:root[data-theme='dark'] .app-shell__action-badge.is-logout {
+  background-color: #333d42 !important;
+  border-color: #1d2224 !important;
+  box-shadow: 1.5px 1.5px 0px rgba(13, 16, 17, 0.5) !important;
+}
+
+/* ==========================================================================
+   Phase 5 窄屏/移动端超精细化响应式自适应重绘（砚海阁案头中枢）
+   ========================================================================== */
+
+/* 全视口统一顶栏 flex 间距与高度弹性缩减 */
+body .app-shell__topbar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  min-height: 72px !important;
+  padding: 0 clamp(var(--md-spacing-3), 2.5vw, var(--md-spacing-6)) !important;
+}
+
+/* 窄屏下隐藏左侧 Logo 旁的文字，仅保留精致的“墨”字朱泥大方章 */
+@media (max-width: 768px) {
+  .app-shell__brand-top .app-shell__brand-copy {
+    display: none !important;
+  }
+  .app-shell__brand-top {
+    margin-right: 0 !important;
+  }
+}
+
+/* 窄屏下隐藏状态胶囊及寄语，只保留核心书名选择胶囊，实现零拥挤 */
+@media (max-width: 960px) {
+  .app-shell__project-capsule.is-status,
+  .app-shell__project-welcome-message {
+    display: none !important;
+  }
+  .app-shell__project-capsule-container {
+    margin-left: var(--md-spacing-2) !important;
+    gap: 0 !important;
+    min-width: 0 !important;
+    flex: 1 !important;
+  }
+  /* 胶囊自适应宽度释放与文字溢出省略，防止撑宽视口 */
+  .app-shell__project-capsule.is-select {
+    max-width: clamp(130px, 42vw, 170px) !important;
+    padding: 0 10px !important; /* 缩减内边距以让出更多字符空间 */
+    overflow: hidden !important;
+  }
+  /* 窄屏下隐藏胶囊内非核心图标和箭头，释放水平黄金空间 */
+  .app-shell__project-capsule.is-select .app-shell__project-icon,
+  .app-shell__project-capsule.is-select .app-shell__project-arrow {
+    display: none !important;
+  }
+  .app-shell__project-title {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    flex: 1 !important;
+    min-width: 0 !important; /* flex收缩基础 */
+    display: inline-block !important;
+    text-align: center !important;
+  }
+}
+
+/* 窄屏下右侧操作区极简化，隐藏文字说明和阁主名签，仅保留三枚精美金石小印章 */
+@media (max-width: 768px) {
+  .app-shell__user-tag,
+  .app-shell__action-text {
+    display: none !important;
+  }
+  .app-shell__actions-right {
+    gap: var(--md-spacing-2) !important;
+  }
+}
+
+/* ==========================================================================
+   Phase 8: 砚海阁案头全局顶栏去重与「輔」字方印深度融合
+   ========================================================================== */
+
+/* 1. 全局写作进度条 (松烟朱砂水墨渐变) */
+.app-shell__global-progress {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  height: 3.5px !important;
+  background-color: rgba(28, 32, 34, 0.05) !important;
+  z-index: 40 !important;
+  overflow: hidden !important;
+}
+
+.app-shell__global-progress span {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: linear-gradient(to right, #e2dcc8, var(--md-secondary), var(--md-primary)) !important;
+  transform-origin: left center !important;
+  will-change: transform !important;
+  transition: transform var(--md-duration-medium) var(--md-easing-standard) !important;
+  box-shadow: 0 0 4px var(--md-secondary-light) !important;
+}
+
+/* 2. 琥珀蜜蜡印：写作辅助 */
+.app-shell__action-badge.is-assistant {
+  background-color: #c58c2c !important;
+  color: #ffffff !important;
+  border: 1px solid #966418 !important;
+  box-shadow: 1.5px 1.5px 0px rgba(197, 140, 44, 0.25) !important;
+  transform: rotate(1.5deg) !important;
+}
+
+/* 暗色模式下金石方印微调 */
+:root[data-theme='dark'] .app-shell__action-badge.is-assistant {
+  background-color: #a8721c !important;
+  border-color: #7b5110 !important;
+  box-shadow: 1.5px 1.5px 0px rgba(168, 114, 28, 0.4) !important;
+}
+
+/* 3. 双胶囊之二：小说状态多维数据（文人熟宣虚线风格覆盖） */
+.app-shell__project-capsule.is-status {
+  cursor: default !important;
+  background-color: rgba(229, 222, 201, 0.15) !important; /* 熟宣微黄半透 */
+  border: 1px dashed rgba(184, 60, 50, 0.2) !important; /* 朱砂红细虚线边框，显金石拓印底蕴 */
+  color: var(--md-on-surface) !important;
+  box-shadow: inset 1px 1px 3px rgba(28, 32, 34, 0.01) !important;
+  gap: var(--md-spacing-3) !important;
+  padding: 0 var(--md-spacing-4) !important;
+  font-family: var(--md-font-display) !important;
+  font-size: 0.85rem !important;
+}
+
+:root[data-theme='dark'] .app-shell__project-capsule.is-status {
+  background-color: rgba(229, 222, 201, 0.03) !important;
+  border-color: rgba(156, 51, 43, 0.3) !important;
+}
+
+/* ==========================================================================
+   Phase 9: 阁主案头用户标签与水墨信笺下拉折叠交互重塑样式
+   ========================================================================== */
+
+/* 1. 用户名标签触发器 */
+.app-shell__user-tag.is-trigger {
+  position: relative !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--md-spacing-2) !important;
+  padding: 6px 12px !important;
+  border-radius: 16px !important;
+  border: 1px solid transparent !important;
+  transition: all var(--md-duration-short) var(--md-easing-standard) !important;
+}
+
+.app-shell__user-tag.is-trigger:hover,
+.app-shell__user-tag.is-trigger.is-active {
+  background-color: var(--md-surface-variant) !important;
+  border-color: var(--md-outline-variant) !important;
+}
+
+:root[data-theme='dark'] .app-shell__user-tag.is-trigger:hover,
+:root[data-theme='dark'] .app-shell__user-tag.is-trigger.is-active {
+  background-color: rgba(229, 222, 201, 0.06) !important;
+  border-color: rgba(229, 222, 201, 0.12) !important;
+}
+
+/* 2. 用户下拉箭头 SVG 样式 */
+.app-shell__user-arrow {
+  display: inline-flex !important;
+  align-items: center !important;
+  color: var(--md-on-surface-variant) !important;
+  transition: transform var(--md-duration-short) !important;
+}
+
+.app-shell__user-arrow svg {
+  width: 10px !important;
+  height: 10px !important;
+}
+
+.app-shell__user-arrow.is-open {
+  transform: rotate(180deg) !important;
+  color: var(--md-primary) !important;
+}
+
+/* 3. 水墨信笺下拉菜单面板 */
+.app-shell__user-dropdown {
+  position: absolute !important;
+  top: calc(100% + 8px) !important;
+  right: 0 !important;
+  width: 230px !important;
+  z-index: 50 !important;
+  background-color: var(--md-surface-bright) !important;
+  /* 文人熟宣噪点背景 */
+  background-image: radial-gradient(rgba(28, 32, 34, 0.03) 1px, transparent 0) !important;
+  background-size: 6px 6px !important;
+  /* 宣纸古籍粗细双边线 */
+  border: 2px solid var(--md-primary-dark) !important;
+  outline: 1px solid rgba(28, 32, 34, 0.1) !important;
+  border-radius: var(--md-radius-xs) !important;
+  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15) !important;
+  padding: var(--md-spacing-3) 0 !important;
+  text-align: left !important;
+  animation: inkLetterFadeIn var(--md-duration-short) var(--md-easing-standard) !important;
+}
+
+@keyframes inkLetterFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 4. 下拉菜单标题 */
+.app-shell__user-dropdown-header {
+  padding: 2px 16px 8px 16px !important;
+  font-family: var(--md-font-display) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: var(--md-primary) !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  border-bottom: 1px dashed var(--md-outline-variant) !important;
+  margin-bottom: var(--md-spacing-2) !important;
+  opacity: 0.8 !important;
+}
+
+/* 5. 下拉条目样式 */
+.app-shell__user-dropdown-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+.app-shell__user-dropdown-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: var(--md-spacing-2) 16px !important;
+  color: var(--md-on-surface) !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  background: transparent !important;
+  border: none !important;
+  width: 100% !important;
+  transition: all var(--md-duration-short) !important;
+}
+
+/* Hover 时的松烟朱砂墨晕 */
+.app-shell__user-dropdown-item:hover {
+  background-color: rgba(184, 60, 50, 0.04) !important;
+}
+
+.app-shell__user-dropdown-item .app-shell__action-badge {
+  width: 28px !important;
+  height: 28px !important;
+  font-size: 13px !important;
+  line-height: 26px !important;
+  margin: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+.app-shell__user-dropdown-item .item-text {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+}
+
+.app-shell__user-dropdown-item .item-title {
+  font-family: var(--md-font-display) !important;
+  font-size: var(--md-label-medium) !important;
+  font-weight: 600 !important;
+  color: var(--md-on-surface) !important;
+  line-height: 1.3 !important;
+}
+
+.app-shell__user-dropdown-item .item-desc {
+  font-size: 10px !important;
+  color: var(--md-on-surface-variant) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  margin-top: 1px !important;
+}
+
+/* 分割线 */
+.app-shell__user-dropdown-divider {
+  height: 1px !important;
+  background-image: linear-gradient(to right, transparent, var(--md-outline-variant) 20%, var(--md-outline-variant) 80%, transparent) !important;
+  margin: var(--md-spacing-2) 0 !important;
+}
+
+/* 退出项 hover 时为极柔焦墨底色 */
+.app-shell__user-dropdown-item.is-logout-action:hover {
+  background-color: rgba(28, 32, 34, 0.04) !important;
+}
+
+/* 金石印章的盖章物理下压 Hover 联动 */
+.app-shell__user-dropdown-item:hover .app-shell__action-badge {
+  transform: translateY(1px) scale(0.97) !important;
+  box-shadow: 0.5px 0.5px 0px rgba(28, 32, 34, 0.1) !important;
+}
+
+/* 6. 暗色模式 (深夜书房) 超精细化适配 */
+:root[data-theme='dark'] .app-shell__user-dropdown {
+  background-color: var(--md-surface-bright) !important;
+  /* 黛青宣纸噪点 */
+  background-image: radial-gradient(rgba(229, 222, 201, 0.015) 1px, transparent 0) !important;
+  border-color: #9c332b !important; /* 朱泥色围框 */
+  outline-color: rgba(229, 222, 201, 0.08) !important;
+  box-shadow: 4px 4px 0px rgba(13, 16, 17, 0.5) !important;
+}
+
+:root[data-theme='dark'] .app-shell__user-dropdown-header {
+  color: #e5dec9 !important;
+  border-bottom-color: rgba(229, 222, 201, 0.12) !important;
+}
+
+:root[data-theme='dark'] .app-shell__user-dropdown-item:hover {
+  background-color: rgba(156, 51, 43, 0.08) !important; /* 暗色朱砂墨晕 */
+}
+
+:root[data-theme='dark'] .app-shell__user-dropdown-item.is-logout-action:hover {
+  background-color: rgba(229, 222, 201, 0.04) !important;
+}
+
+:root[data-theme='dark'] .app-shell__user-dropdown-divider {
+  background-image: linear-gradient(to right, transparent, rgba(229, 222, 201, 0.15) 20%, rgba(229, 222, 201, 0.15) 80%, transparent) !important;
+}
+
+/* 移动端窄屏下，右上角动作区只需展示用户标签，如果开启下拉自适应适配 */
+@media (max-width: 768px) {
+  /* 窄屏恢复展示 user-tag 及其下拉功能 */
+  body .app-shell__user-tag {
+    display: flex !important;
+  }
+}
+
+/* ============================================
+   全局水墨大弹窗内部子视图样式自适应覆写 (Modal Adapters)
+   ============================================ */
+
+/* 1. 弹窗内的模型设置页自适应 */
+.m3-ink-modal-box .settings-page {
+  min-height: auto !important;
+  gap: var(--md-spacing-4) !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.m3-ink-modal-box .settings-hero {
+  padding: var(--md-spacing-4) var(--md-spacing-5) !important;
+  border-radius: var(--md-radius-lg) !important;
+  background: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--md-surface-bright) 95%, transparent),
+    color-mix(in srgb, var(--md-primary-container) 15%, var(--md-surface-container-low))
+  ) !important;
+  border-color: var(--md-outline-variant) !important;
+}
+
+.m3-ink-modal-box .settings-hero h2 {
+  font-size: 1.45rem !important;
+  margin-top: 6px !important;
+}
+
+.m3-ink-modal-box .settings-summary {
+  gap: var(--md-spacing-3) !important;
+}
+
+.m3-ink-modal-box .settings-center {
+  gap: var(--md-spacing-3) !important;
+}
+
+.m3-ink-modal-box .settings-center__nav,
+.m3-ink-modal-box .settings-center__panel {
+  border-radius: var(--md-radius-lg) !important;
+  background-color: color-mix(in srgb, var(--md-surface) 98%, transparent) !important;
+}
+
+.m3-ink-modal-box .settings-center__panel {
+  padding: var(--md-spacing-4) !important;
+}
+
+/* 2. 弹窗内的管理员运营控制台页自适应 */
+.m3-ink-modal-box .admin-console {
+  min-height: auto !important;
+  background-color: transparent !important;
+  gap: var(--md-spacing-4) !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+.m3-ink-modal-box .admin-ops {
+  padding: var(--md-spacing-4) var(--md-spacing-5) !important;
+  background: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--md-surface-bright) 95%, transparent),
+    color-mix(in srgb, var(--md-secondary-container) 15%, var(--md-surface-container-low))
+  ) !important;
+  border-color: var(--md-outline-variant) !important;
+  border-radius: var(--md-radius-lg) !important;
+  gap: var(--md-spacing-4) !important;
+}
+
+.m3-ink-modal-box .admin-ops h2 {
+  font-size: 1.45rem !important;
+  margin-top: 6px !important;
+}
+
+.m3-ink-modal-box .admin-ops__metrics {
+  gap: var(--md-spacing-3) !important;
+}
+
+.m3-ink-modal-box .admin-ops__grid {
+  gap: var(--md-spacing-3) !important;
+}
+
+.m3-ink-modal-box .admin-console__nav {
+  background-color: color-mix(in srgb, var(--md-surface-container-low) 96%, transparent) !important;
+  border-color: var(--md-outline-variant) !important;
+  border-radius: var(--md-radius-full) !important;
+}
+
+.m3-ink-modal-box .admin-console__nav-item {
+  min-height: 38px !important;
+  padding: 0 var(--md-spacing-3) !important;
+}
+
+.m3-ink-modal-box .admin-console__content {
+  padding: var(--md-spacing-1) 0 !important;
+}
+
+/* ============================================
+   模型设置弹窗「朱印落宣，折扇开合」高画质中国风重绘
+   ============================================ */
+
+/* 1. 根容器自适应极简案头 */
+.settings-page.is-in-modal {
+  min-height: auto !important;
+  gap: var(--md-spacing-4) !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* 2. 核心布局降级为 Flex 纵向流，上 Tab 下内容 */
+.settings-page.is-in-modal .settings-center {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important; /* 强制拉伸，填满外部大弹窗 */
+  gap: var(--md-spacing-4) !important;
+  width: 100% !important;
+}
+
+/* 3. 宣纸折扇上方横向选项卡 */
+.settings-page.is-in-modal .settings-center__nav {
+  width: 100% !important;
+  max-width: 640px !important;
+  margin: 0 auto !important;
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: stretch !important;
+  padding: 2px !important;
+  gap: 0 !important;
+  background-color: var(--md-surface-container-low) !important;
+  border: 1px solid var(--md-outline-variant) !important;
+  border-radius: var(--md-radius-sm) !important; /* 严整方折直角风格 */
+  box-shadow: 
+    var(--md-elevation-1),
+    inset 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  overflow: hidden !important;
+}
+
+/* 4. 折扇单页选项卡 */
+.settings-page.is-in-modal .settings-center__nav-item {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 46px !important;
+  padding: var(--md-spacing-2) var(--md-spacing-3) !important;
+  border: none !important;
+  border-right: 1px dashed var(--md-outline-variant) !important;
+  border-radius: 0 !important; /* 方正直角，绝不圆滑 */
+  background: transparent !important;
+  color: var(--md-on-surface) !important;
+  font-family: "SentyGoldRogue", "Long Cang", "Noto Serif SC", serif !important;
+  font-size: var(--md-title-small) !important;
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+  position: relative !important;
+  cursor: pointer !important;
+}
+
+/* 最后一个折扇去除右边线 */
+.settings-page.is-in-modal .settings-center__nav-item:last-child {
+  border-right: none !important;
+}
+
+/* 隐藏描述小字，达成极简案头 */
+.settings-page.is-in-modal .settings-center__nav-item small {
+  display: none !important;
+}
+
+/* 5. 朱砂落泥金石藏书章（Active 态） */
+.settings-page.is-in-modal .settings-center__nav-item.is-active,
+.settings-page.is-in-modal .settings-center__nav-item[aria-selected='true'] {
+  background-color: var(--md-secondary) !important; /* 新中式朱砂红印泥色 */
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 
+    inset 0 0 10px rgba(0, 0, 0, 0.2), 
+    0 1px 3px rgba(184, 60, 50, 0.3) !important;
+  border-right-color: transparent !important;
+  z-index: 2 !important;
+}
+
+/* 6. 朱泥物理盖印按压及 Hover 触觉交互 */
+.settings-page.is-in-modal .settings-center__nav-item:not(.is-active):hover {
+  background-color: color-mix(in srgb, var(--md-secondary) 8%, var(--md-surface-container-high)) !important;
+  color: var(--md-secondary) !important;
+  transform: translateY(-0.5px) !important;
+}
+
+.settings-page.is-in-modal .settings-center__nav-item:active {
+  transform: translateY(1.5px) scale(0.985) !important;
+  transition-duration: 0.05s !important; /* 瞬时按压回馈 */
+}
+
+/* 7. 深夜书房（暗色模式）精细配色自适应 */
+.dark-theme .settings-page.is-in-modal .settings-center__nav,
+[data-theme="dark"] .settings-page.is-in-modal .settings-center__nav {
+  background-color: var(--md-surface-container-lowest) !important;
+  border-color: var(--md-outline-variant) !important;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark-theme .settings-page.is-in-modal .settings-center__nav-item,
+[data-theme="dark"] .settings-page.is-in-modal .settings-center__nav-item {
+  color: var(--md-on-surface-variant) !important;
+  border-right-color: var(--md-outline-variant) !important;
+}
+
+.dark-theme .settings-page.is-in-modal .settings-center__nav-item.is-active,
+[data-theme="dark"] .settings-page.is-in-modal .settings-center__nav-item.is-active {
+  background-color: #9c332b !important; /* 熟化暗朱砂印泥 */
+  color: #f2ebd9 !important; /* 汉白玉熟宣白 */
+  box-shadow: 
+    inset 0 0 12px rgba(0, 0, 0, 0.4), 
+    0 1px 3px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark-theme .settings-page.is-in-modal .settings-center__nav-item:not(.is-active):hover,
+[data-theme="dark"] .settings-page.is-in-modal .settings-center__nav-item:not(.is-active):hover {
+  background-color: color-mix(in srgb, #9c332b 12%, var(--md-surface-container-low)) !important;
+  color: #e57267 !important;
+}
+
+/* 8. 配置面板容器水墨感融合 */
+.settings-page.is-in-modal .settings-center__panel {
+  width: 100% !important; /* 确保横向彻底铺满 */
+  border: 1px solid var(--md-outline-variant) !important;
+  border-radius: var(--md-radius-lg) !important;
+  background-color: color-mix(in srgb, var(--md-surface) 98%, transparent) !important;
+  padding: var(--md-spacing-5) !important;
+}
+
+@media (max-width: 768px) {
+  .settings-page.is-in-modal .settings-center__nav {
+    max-width: 100% !important;
+  }
+  .settings-page.is-in-modal .settings-center__nav-item {
+    font-size: var(--md-body-medium) !important;
+    min-height: 42px !important;
+  }
+}
+
+/* ============================================
+   Phase 12: 弹窗右上角「存」字金石朱红方章保存样式
+   ============================================ */
+.m3-ink-modal-save-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px 0 8px;
+  border: 1px solid #b83c32;
+  border-radius: var(--md-radius-full, 99px);
+  background-color: #b83c32;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  margin-right: 6px;
+  box-shadow: 0 2px 6px rgba(184, 60, 50, 0.25);
+}
+
+.dark .m3-ink-modal-save-btn,
+.dark-theme .m3-ink-modal-save-btn,
+[data-theme="dark"] .m3-ink-modal-save-btn {
+  background-color: #a2352b;
+  border-color: #a2352b;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.m3-ink-modal-save-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--md-radius-full);
+  background-color: #ffffff;
+  border: 1px solid rgba(184, 60, 50, 0.15);
+  color: #b83c32; /* 朱砂红 */
+  font-family: 'Noto Serif SC', '思源宋体', serif;
+  font-weight: 700;
+  font-size: var(--md-label-large);
+  box-shadow: inset 0 1px 2px rgba(184, 60, 50, 0.1);
+  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.dark .m3-ink-modal-save-badge,
+.dark-theme .m3-ink-modal-save-badge,
+[data-theme="dark"] .m3-ink-modal-save-badge {
+  background-color: #ffffff;
+  color: #a2352b;
+}
+
+.m3-ink-modal-save-text {
+  font-size: var(--md-label-medium);
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.m3-ink-modal-save-btn:hover {
+  background-color: #cf4338;
+  border-color: #cf4338;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(184, 60, 50, 0.4);
+  transform: translateY(-0.5px);
+}
+
+.m3-ink-modal-save-btn:hover .m3-ink-modal-save-badge {
+  transform: rotate(-10deg) scale(1.05);
+  background-color: #ffffff;
+  color: #cf4338;
+}
+
+/* 物理按压反馈 */
+.m3-ink-modal-save-btn:active {
+  transform: translateY(1px);
+}
+
+.dark .m3-ink-modal-save-btn:hover,
+.dark-theme .m3-ink-modal-save-btn:hover,
+[data-theme="dark"] .m3-ink-modal-save-btn:hover {
+  background-color: #bd3e33;
+  border-color: #bd3e33;
+}
+
+
+

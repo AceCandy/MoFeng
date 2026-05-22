@@ -123,6 +123,7 @@
 import { computed, ref, nextTick, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import type { UIControl, Blueprint, NovelProject } from '@/api/novel'
+import { HttpRequestError } from '@/api/http'
 import {
   useConverseConceptStreamMutation,
   useCreateNovelMutation,
@@ -248,6 +249,29 @@ const ensureModelConfigOrRedirect = async () => {
   }
 }
 
+const readUnfinishedInspirationProjectId = (error: unknown): string | null => {
+  if (!(error instanceof HttpRequestError) || error.status !== 409) {
+    return null
+  }
+
+  const payload = error.payload
+  if (!payload || typeof payload !== 'object') {
+    return null
+  }
+
+  const detail = (payload as Record<string, unknown>).detail
+  if (!detail || typeof detail !== 'object') {
+    return null
+  }
+
+  const record = detail as Record<string, unknown>
+  if (record.code !== 'unfinished_inspiration') {
+    return null
+  }
+
+  return typeof record.project_id === 'string' && record.project_id ? record.project_id : null
+}
+
 // 清空所有状态，开始新的灵感对话
 const resetInspirationMode = () => {
   conversationStarted.value = false
@@ -330,6 +354,22 @@ const startConversation = async () => {
     await showLocalOpeningMessage()
   } catch (error) {
     console.error('启动灵感模式失败:', error)
+    const existingProjectId = readUnfinishedInspirationProjectId(error)
+    if (existingProjectId) {
+      resetInspirationMode()
+      globalAlert.showAlert(
+        '你已有未完成的灵感对话，已为你恢复上次进度。',
+        'info',
+        '继续未完成灵感',
+      )
+      await router.replace({
+        name: 'inspiration-mode',
+        query: { project_id: existingProjectId },
+      })
+      await restoreConversation(existingProjectId)
+      return
+    }
+
     globalAlert.showError(
       `无法开始灵感模式: ${error instanceof Error ? error.message : '未知错误'}`,
       '启动失败',

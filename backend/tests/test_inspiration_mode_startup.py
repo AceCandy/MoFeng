@@ -26,3 +26,13 @@ def test_start_conversation_does_not_request_first_ai_turn():
 
     assert "handleUserInput(null)" not in start_block
     assert "showLocalOpeningMessage()" in start_block
+
+
+def test_start_conversation_reuses_unfinished_inspiration_project():
+    source = _source()
+
+    assert "readUnfinishedInspirationProjectId" in source
+    assert "HttpRequestError" in source
+    assert "unfinished_inspiration" in source
+    assert "router.replace" in source
+    assert "restoreConversation(existingProjectId)" in source

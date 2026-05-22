@@ -8,6 +8,7 @@
       </div>
       <div class="model-routing__topbar-actions">
         <button
+          v-if="!props.isModal"
           type="button"
           class="md-btn md-btn-outlined md-ripple"
           :disabled="isLoading"
@@ -16,7 +17,7 @@
           {{ isLoading ? '刷新中...' : '刷新' }}
         </button>
         <button
-          v-if="activeSection === 'routes'"
+          v-if="activeSection === 'routes' && !props.isModal"
           type="button"
           class="md-btn md-btn-tonal md-ripple"
           :disabled="isSavingRoutes"
@@ -25,7 +26,7 @@
           {{ isSavingRoutes ? '保存中...' : '保存阶段路由' }}
         </button>
         <button
-          v-else
+          v-else-if="activeSection !== 'routes'"
           type="button"
           class="md-btn md-btn-filled md-ripple"
           @click="beginCreateProvider"
@@ -107,11 +108,9 @@
     </template>
 
     <template v-else>
-      <section v-if="providerFormMode" class="model-routing__panel model-routing__provider-form">
+      <section v-if="providerFormMode === 'create'" class="model-routing__panel model-routing__provider-form">
         <div class="model-routing__form-head">
-          <h3 class="md-title-medium">
-            {{ providerFormMode === 'create' ? '新增供应商' : '编辑供应商' }}
-          </h3>
+          <h3 class="md-title-medium">新增供应商</h3>
           <button type="button" class="model-routing__link" @click="cancelProviderForm">
             取消
           </button>
@@ -154,9 +153,7 @@
               v-model="providerForm.api_key"
               class="md-text-field-input"
               type="password"
-              :placeholder="
-                editingProviderId ? '留空则保留已保存 Key' : '请输入 API Key，Ollama 可留空'
-              "
+              placeholder="请输入 API Key，Ollama 可留空"
             />
           </label>
 
@@ -204,136 +201,25 @@
         <article
           v-for="provider in activeProviders"
           :key="provider.id"
-          class="model-routing__provider-card"
+          :class="[
+            'model-routing__provider-card',
+            { 'is-editing': providerFormMode === 'edit' && editingProviderId === provider.id }
+          ]"
         >
-          <header class="model-routing__provider-head">
-            <div class="model-routing__provider-main">
-              <div class="model-routing__provider-title-row">
-                <h3 class="md-title-medium">{{ provider.name }}</h3>
-                <span
-                  :class="[
-                    'model-routing__provider-state',
-                    provider.is_enabled ? 'is-enabled' : 'is-disabled',
-                  ]"
-                >
-                  {{ provider.is_enabled ? '已启用' : '已停用' }}
-                </span>
-              </div>
-              <div class="model-routing__provider-meta">
-                <span class="model-routing__provider-type">
-                  {{ providerTypeLabel(provider.provider_type) }}
-                </span>
-                <span>{{ providerKeyLabel(provider) }}</span>
-              </div>
-              <p class="model-routing__provider-url">{{ provider.base_url }}</p>
-            </div>
-            <div class="model-routing__provider-card-actions">
-              <button
-                type="button"
-                :class="['model-routing__toggle', provider.is_enabled ? 'is-on' : 'is-off']"
-                :disabled="isSavingProvider"
-                @click="toggleProviderEnabled(provider)"
-              >
-                {{ provider.is_enabled ? '停用' : '启用' }}
-              </button>
-              <button
-                type="button"
-                class="model-routing__provider-delete"
-                :disabled="isSavingProvider"
-                @click="deleteProviderFromCard(provider)"
-              >
-                删除供应商
-              </button>
-            </div>
-          </header>
-
-          <div class="model-routing__provider-actions">
-            <button
-              type="button"
-              class="md-btn md-btn-text md-ripple"
-              @click="beginEditProvider(provider)"
-            >
-              编辑供应商
-            </button>
-            <button
-              type="button"
-              class="md-btn md-btn-tonal md-ripple"
-              :disabled="!provider.is_enabled || providerFetchState(provider.id).isLoading"
-              aria-haspopup="dialog"
-              :aria-expanded="isModelPickerOpen(provider.id)"
-              :aria-controls="`model-picker-${provider.id}`"
-              @click="openProviderModelPicker(provider)"
-            >
-              {{ providerFetchState(provider.id).isLoading ? '拉取中...' : '拉取模型' }}
-            </button>
-          </div>
-
-          <div
-            v-if="isModelPickerOpen(provider.id)"
-            :id="`model-picker-${provider.id}`"
-            ref="modelPickerDialogRef"
-            class="model-routing__model-picker"
-            role="dialog"
-            aria-modal="false"
-            :aria-labelledby="`model-picker-title-${provider.id}`"
-            @keydown.esc.stop.prevent="closeModelPicker"
-            @click.stop
-          >
-            <div class="model-routing__picker-head">
-              <div>
-                <strong :id="`model-picker-title-${provider.id}`">{{
-                  activeSection === 'llm' ? '选择文本生成模型' : '选择记忆检索模型'
-                }}</strong>
-                <p class="model-routing__hint">
-                  {{
-                    activeSection === 'llm' ? '勾选后加入可用模型池。' : '单选后作为当前检索模型。'
-                  }}
-                </p>
-              </div>
-              <button type="button" class="model-routing__link" @click="closeModelPicker">
-                关闭
+          <!-- 行内编辑表单模式 -->
+          <template v-if="providerFormMode === 'edit' && editingProviderId === provider.id">
+            <div class="model-routing__inline-form-head">
+              <h4 class="md-title-medium">编辑供应商</h4>
+              <button type="button" class="model-routing__inline-cancel" @click="cancelProviderForm">
+                取消
               </button>
             </div>
 
-            <label class="md-text-field model-routing__picker-search">
-              <span class="md-text-field-label">搜索模型</span>
-              <input
-                ref="modelPickerSearchInputRef"
-                data-dialog-initial-focus
-                v-model="modelPickerQuery"
-                class="md-text-field-input"
-                type="search"
-                placeholder="输入模型名过滤"
-              />
-            </label>
-
-            <p v-if="providerFetchState(provider.id).isLoading" class="model-routing__empty">
-              正在拉取模型...
-            </p>
-            <p
-              v-else-if="filteredModelNamesForProvider(provider.id).length === 0"
-              class="model-routing__empty"
-            >
-              没有可选模型。
-            </p>
-            <div v-else class="model-routing__picker-list">
-              <label
-                v-for="modelName in filteredModelNamesForProvider(provider.id)"
-                :key="`${provider.id}-${modelName}`"
-                :class="[
-                  'model-routing__picker-row',
-                  {
-                    'is-selected': isModelSelectedForActiveSection(provider.id, modelName),
-                  },
-                ]"
-              >
-                <span class="model-routing__picker-model-name">
-                  {{ modelName }}
-                  <small v-if="activeModelStateLabel(provider.id, modelName)">
-                    {{ activeModelStateLabel(provider.id, modelName) }}
-                  </small>
-                </span>
+            <div class="model-routing__inline-form">
+              <label class="md-text-field">
+                <span class="md-text-field-label">名称</span>
                 <input
+<<<<<<< HEAD
                   v-if="activeSection === 'llm'"
                   type="checkbox"
                   :checked="Boolean(chatModelForName(provider.id, modelName)?.is_enabled)"
@@ -354,51 +240,257 @@
                   :disabled="!provider.is_enabled"
                   :aria-label="`选择向量模型 ${modelName}`"
                   @change="selectEmbeddingModel(provider, modelName)"
+=======
+                  v-model="providerForm.name"
+                  class="md-text-field-input"
+                  type="text"
+                  placeholder="如 OpenAI / Anthropic / DeepSeek"
+>>>>>>> ef8ae6f (fix)
                 />
               </label>
-            </div>
-          </div>
 
-          <p v-if="!provider.is_enabled" class="model-routing__hint">
-            启用供应商后才能使用里面的模型。
-          </p>
-          <p v-if="providerFetchState(provider.id).error" class="model-routing__hint is-error">
-            {{ providerFetchState(provider.id).error }}
-          </p>
+              <label class="md-text-field">
+                <span class="md-text-field-label">类型</span>
+                <select v-model="providerForm.provider_type" class="md-text-field-input">
+                  <option value="openai_compatible">OpenAI 兼容</option>
+                  <option value="anthropic">Anthropic</option>
+                  <option value="ollama">Ollama</option>
+                  <option value="custom">自定义</option>
+                </select>
+              </label>
 
-          <div class="model-routing__selected-models">
-            <p class="md-label-medium model-routing__model-list-title">
-              {{ activeSection === 'llm' ? '已选文本生成模型' : '已选检索模型' }}
-            </p>
-            <p
-              v-if="selectedModelChipsForProvider(provider.id).length === 0"
-              class="model-routing__empty"
-            >
-              点击"拉取模型"后勾选模型。
-            </p>
-            <div v-else class="model-routing__selected-chip-list">
-              <span
-                v-for="chip in selectedModelChipsForProvider(provider.id)"
-                :key="chip.id"
-                class="model-routing__selected-chip"
-              >
-                <span>{{ chip.display_name || chip.model_name }}</span>
-                <small v-if="activeSection === 'llm' && chip.is_default_chat"> 主模型 </small>
-                <small v-else-if="activeSection === 'embedding' && chip.is_default_embedding">
-                  当前使用
-                </small>
+              <label class="md-text-field">
+                <span class="md-text-field-label">API URL</span>
+                <input
+                  v-model="providerForm.base_url"
+                  class="md-text-field-input"
+                  type="text"
+                  placeholder="https://api.example.com/v1"
+                />
+              </label>
+
+              <label class="md-text-field">
+                <span class="md-text-field-label">API Key</span>
+                <input
+                  v-model="providerForm.api_key"
+                  class="md-text-field-input"
+                  type="password"
+                  placeholder="留空则保留已保存 Key"
+                />
+              </label>
+
+              <div class="model-routing__inline-form-footer">
+                <label class="model-routing__check">
+                  <input v-model="providerForm.is_enabled" type="checkbox" />
+                  <span>启用供应商</span>
+                </label>
+
                 <button
                   type="button"
-                  class="model-routing__delete-btn"
-                  :aria-label="`删除模型 ${chip.display_name || chip.model_name}`"
-                  :title="`删除模型 ${chip.display_name || chip.model_name}`"
-                  @click="deleteModelForActiveSection(provider, chip.model_name)"
+                  class="md-btn md-btn-filled md-ripple"
+                  :disabled="isSavingProvider"
+                  @click="saveProviderForm"
                 >
-                  删除
+                  {{ isSavingProvider ? '保存中...' : '保存供应商' }}
                 </button>
-              </span>
+              </div>
             </div>
-          </div>
+          </template>
+
+          <!-- 常态展示模式 -->
+          <template v-else>
+            <header class="model-routing__provider-head">
+              <div class="model-routing__provider-main">
+                <div class="model-routing__provider-title-row">
+                  <h3 class="md-title-medium">{{ provider.name }}</h3>
+                  <span
+                    :class="[
+                      'model-routing__provider-state',
+                      provider.is_enabled ? 'is-enabled' : 'is-disabled',
+                    ]"
+                  >
+                    {{ provider.is_enabled ? '已启用' : '已停用' }}
+                  </span>
+                </div>
+                <div class="model-routing__provider-meta">
+                  <span class="model-routing__provider-type">
+                    {{ providerTypeLabel(provider.provider_type) }}
+                  </span>
+                  <span>{{ providerKeyLabel(provider) }}</span>
+                </div>
+                <p class="model-routing__provider-url">{{ provider.base_url }}</p>
+              </div>
+              <div class="model-routing__provider-card-actions">
+                <button
+                  type="button"
+                  :class="['model-routing__toggle', provider.is_enabled ? 'is-on' : 'is-off']"
+                  :disabled="isSavingProvider"
+                  @click="toggleProviderEnabled(provider)"
+                >
+                  {{ provider.is_enabled ? '停用' : '启用' }}
+                </button>
+                <button
+                  type="button"
+                  class="model-routing__provider-delete"
+                  :disabled="isSavingProvider"
+                  @click="deleteProviderFromCard(provider)"
+                >
+                  删除供应商
+                </button>
+              </div>
+            </header>
+
+            <div class="model-routing__provider-actions">
+              <button
+                type="button"
+                class="md-btn md-btn-text md-ripple"
+                @click="beginEditProvider(provider)"
+              >
+                编辑供应商
+              </button>
+              <button
+                type="button"
+                class="md-btn md-btn-tonal md-ripple"
+                :disabled="!provider.is_enabled || providerFetchState(provider.id).isLoading"
+                aria-haspopup="dialog"
+                :aria-expanded="isModelPickerOpen(provider.id)"
+                :aria-controls="`model-picker-${provider.id}`"
+                @click="openProviderModelPicker(provider)"
+              >
+                {{ providerFetchState(provider.id).isLoading ? '拉取中...' : '拉取模型' }}
+              </button>
+            </div>
+
+            <div
+              v-if="isModelPickerOpen(provider.id)"
+              :id="`model-picker-${provider.id}`"
+              ref="modelPickerDialogRef"
+              class="model-routing__model-picker"
+              role="dialog"
+              aria-modal="false"
+              :aria-labelledby="`model-picker-title-${provider.id}`"
+              @keydown.esc.stop.prevent="closeModelPicker"
+              @click.stop
+            >
+              <div class="model-routing__picker-head">
+                <div>
+                  <strong :id="`model-picker-title-${provider.id}`">{{
+                    activeSection === 'llm' ? '选择文本生成模型' : '选择记忆检索模型'
+                  }}</strong>
+                  <p class="model-routing__hint">
+                    {{
+                      activeSection === 'llm' ? '勾选后加入可用模型池。' : '单选后作为当前检索模型。'
+                    }}
+                  </p>
+                </div>
+                <button type="button" class="model-routing__link" @click="closeModelPicker">
+                  关闭
+                </button>
+              </div>
+
+              <label class="md-text-field model-routing__picker-search">
+                <span class="md-text-field-label">搜索模型</span>
+                <input
+                  ref="modelPickerSearchInputRef"
+                  data-dialog-initial-focus
+                  v-model="modelPickerQuery"
+                  class="md-text-field-input"
+                  type="search"
+                  placeholder="输入模型名过滤"
+                />
+              </label>
+
+              <p v-if="providerFetchState(provider.id).isLoading" class="model-routing__empty">
+                正在拉取模型...
+              </p>
+              <p
+                v-else-if="filteredModelNamesForProvider(provider.id).length === 0"
+                class="model-routing__empty"
+              >
+                没有可选模型。
+              </p>
+              <div v-else class="model-routing__picker-list">
+                <label
+                  v-for="modelName in filteredModelNamesForProvider(provider.id)"
+                  :key="`${provider.id}-${modelName}`"
+                  :class="[
+                    'model-routing__picker-row',
+                    {
+                      'is-selected': isModelSelectedForActiveSection(provider.id, modelName),
+                    },
+                  ]"
+                >
+                  <span class="model-routing__picker-model-name">
+                    {{ modelName }}
+                    <small v-if="activeModelStateLabel(provider.id, modelName)">
+                      {{ activeModelStateLabel(provider.id, modelName) }}
+                    </small>
+                  </span>
+                  <input
+                    v-if="activeSection === 'llm'"
+                    type="checkbox"
+                    :checked="Boolean(chatModelForName(provider.id, modelName)?.is_enabled)"
+                    :disabled="!provider.is_enabled"
+                    aria-label="启用文本生成模型"
+                    @change="toggleChatModel(provider, modelName, $event)"
+                  />
+                  <input
+                    v-else
+                    name="embedding-model"
+                    type="radio"
+                    :checked="
+                      Boolean(
+                        embeddingModelForName(provider.id, modelName)?.is_enabled &&
+                        embeddingModelForName(provider.id, modelName)?.is_default_embedding,
+                      )
+                    "
+                    :disabled="!provider.is_enabled"
+                    aria-label="选择向量模型"
+                    @change="selectEmbeddingModel(provider, modelName)"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <p v-if="!provider.is_enabled" class="model-routing__hint">
+              启用供应商后才能使用里面的模型。
+            </p>
+            <p v-if="providerFetchState(provider.id).error" class="model-routing__hint is-error">
+              {{ providerFetchState(provider.id).error }}
+            </p>
+
+            <div class="model-routing__selected-models">
+              <p class="md-label-medium model-routing__model-list-title">
+                {{ activeSection === 'llm' ? '已选文本生成模型' : '已选检索模型' }}
+              </p>
+              <p
+                v-if="selectedModelChipsForProvider(provider.id).length === 0"
+                class="model-routing__empty"
+              >
+                点击"拉取模型"后勾选模型。
+              </p>
+              <div v-else class="model-routing__selected-chip-list">
+                <span
+                  v-for="chip in selectedModelChipsForProvider(provider.id)"
+                  :key="chip.id"
+                  class="model-routing__selected-chip"
+                >
+                  <span class="model-routing__chip-name">{{ chip.display_name || chip.model_name }}</span>
+                  <small v-if="activeSection === 'llm' && chip.is_default_chat" class="model-routing__stamp-label">主</small>
+                  <small v-else-if="activeSection === 'embedding' && chip.is_default_embedding" class="model-routing__stamp-label">用</small>
+                  <button
+                    type="button"
+                    class="model-routing__delete-btn"
+                    :aria-label="`删除模型 ${chip.display_name || chip.model_name}`"
+                    :title="`删除模型 ${chip.display_name || chip.model_name}`"
+                    @click="deleteModelForActiveSection(provider, chip.model_name)"
+                  >
+                    删除
+                  </button>
+                </span>
+              </div>
+            </div>
+          </template>
         </article>
       </div>
 
@@ -483,7 +575,16 @@ const emit = defineEmits<{
   (event: 'navigate', section: RoutingSection): void
 }>()
 
-const props = defineProps<{ activeSection?: RoutingSection }>()
+const props = withDefaults(
+  defineProps<{
+    activeSection?: RoutingSection
+    isModal?: boolean
+  }>(),
+  {
+    activeSection: 'llm',
+    isModal: false,
+  }
+)
 
 const activeSection = computed<RoutingSection>(() => props.activeSection || 'llm')
 
@@ -640,6 +741,7 @@ const saveStageRoutesMutation = useSaveStageRoutesMutation()
 const providers = computed<UserModelProvider[]>(() => bundleQuery.data.value?.providers ?? [])
 const models = computed<UserAIModel[]>(() => bundleQuery.data.value?.models ?? [])
 const routeSelections = reactive<Record<string, string>>({})
+const initialRouteSelections = ref<Record<string, string>>({})
 const providerFetchStates = reactive<Record<number, ProviderFetchState>>({})
 const isLoading = computed(() => bundleQuery.isLoading.value || bundleQuery.isFetching.value)
 const isSavingProvider = computed(
@@ -909,6 +1011,8 @@ const syncRouteSelectionsFromBundle = () => {
       routeSelections[route.stage] = String(route.model_id)
     }
   }
+  // 备份一份初始状态，以便判断脏数据
+  initialRouteSelections.value = { ...routeSelections }
 }
 
 const loadBundle = async () => {
@@ -1235,6 +1339,8 @@ const saveRoutes = async () => {
         routeSelections[route.stage] = String(route.model_id)
       }
     }
+    // 保存成功，重置脏数据状态
+    initialRouteSelections.value = { ...routeSelections }
     setFeedback('success', '阶段路由已保存。')
     emit('saved')
   } catch (error) {
@@ -1286,6 +1392,37 @@ watch(
 onMounted(() => {
   void loadBundle()
 })
+
+const isDirty = computed(() => {
+  // 1. 如果正在编辑或创建供应商表单，则有未保存修改
+  if (providerFormMode.value !== null) {
+    return true
+  }
+
+  // 2. 检查阶段路由是否有未保存修改
+  for (const key of allStageKeys.value) {
+    const currentVal = routeSelections[key] || ''
+    const initialVal = initialRouteSelections.value[key] || ''
+    if (currentVal !== initialVal) {
+      return true
+    }
+  }
+
+  return false
+})
+
+defineExpose({
+  isDirty,
+  save: async () => {
+    if (activeSection.value === 'routes') {
+      await saveRoutes()
+    } else if (providerFormMode.value) {
+      await saveProviderForm()
+    } else {
+      setFeedback('success', '所有模型配置已同步自动保存，案头大吉。')
+    }
+  }
+})
 </script>
 
 <style scoped>
@@ -1297,7 +1434,6 @@ onMounted(() => {
 .model-routing__topbar,
 .model-routing__form-head,
 .model-routing__provider-head,
-.model-routing__provider-actions,
 .model-routing__model-row {
   display: flex;
   align-items: flex-start;
@@ -1376,29 +1512,60 @@ onMounted(() => {
   font-size: var(--md-body-small);
 }
 
-.model-routing__panel,
-.model-routing__provider-card {
+.model-routing__panel {
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-radius-lg);
   padding: var(--md-spacing-4);
   background: var(--md-surface);
 }
 
-.model-routing__provider-grid,
+.model-routing__provider-card {
+  border: 3px double var(--md-outline);
+  border-radius: var(--md-radius-xs);
+  padding: var(--md-spacing-4);
+  background: var(--md-surface);
+  position: relative;
+  display: grid;
+  gap: var(--md-spacing-3);
+  overflow: hidden;
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.08);
+  transition: box-shadow var(--md-duration-short) var(--md-easing-standard);
+}
+
+.model-routing__provider-card::after {
+  content: '';
+  position: absolute;
+  right: -10px;
+  bottom: -10px;
+  width: 140px;
+  height: 160px;
+  pointer-events: none;
+  z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120' fill='none' stroke='%231C2022' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M70,120 Q65,80 62,40 M62,39 Q60,20 59,0 M63,50 Q45,45 35,55 M61,30 Q80,25 90,32' stroke-width='1.2' opacity='0.035'/%3E%3Cpath d='M35,55 Q20,62 10,68 Q25,60 33,56 Z' fill='%231C2022' opacity='0.025' stroke='none'/%3E%3Cpath d='M33,56 Q15,55 5,50 Q18,53 30,55 Z' fill='%231C2022' opacity='0.025' stroke='none'/%3E%3Cpath d='M90,32 Q105,30 115,35 Q100,33 88,32 Z' fill='%231C2022' opacity='0.025' stroke='none'/%3E%3Cpath d='M88,32 Q102,24 110,18 Q96,25 87,31 Z' fill='%231C2022' opacity='0.025' stroke='none'/%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: right bottom;
+}
+
+
 .model-routing__form,
 .model-routing__model-list,
 .model-routing__selected-models,
-.model-routing__stage-list,
 .model-routing__stage-groups {
   display: grid;
   gap: var(--md-spacing-3);
 }
 
-.model-routing__provider-card {
-  position: relative;
+.model-routing__provider-grid {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: var(--md-spacing-3);
-  overflow: visible;
+}
+
+.model-routing__stage-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--md-spacing-3);
 }
 
 .model-routing__primary-panel {
@@ -1588,36 +1755,66 @@ onMounted(() => {
 }
 
 .model-routing__selected-chip-list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: var(--md-spacing-2);
 }
 
 .model-routing__selected-chip {
-  max-width: 100%;
-  min-height: 34px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 38px;
   border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-full);
-  padding: 4px 6px 4px 12px;
-  background: var(--md-surface);
+  border-radius: var(--md-radius-xs);
+  padding: 6px 8px 6px 12px;
+  background: var(--md-surface-container);
   color: var(--md-on-surface);
+  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.04);
+  transition: all var(--md-duration-short) var(--md-easing-standard);
+  cursor: default;
 }
 
-.model-routing__selected-chip > span {
+.model-routing__selected-chip:hover {
+  background: var(--md-surface-container-high);
+  border-color: var(--md-outline);
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.1);
+}
+
+.model-routing__selected-chip > span.model-routing__chip-name {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: var(--md-body-small);
+  transition: padding var(--md-duration-short) var(--md-easing-standard);
+  flex: 1 1 0%;
 }
 
-.model-routing__selected-chip small {
-  border-radius: var(--md-radius-full);
-  padding: 2px 6px;
-  background: var(--md-primary-container);
-  color: var(--md-on-primary-container);
-  font-size: var(--md-label-small);
-  white-space: nowrap;
+.model-routing__selected-chip:hover > span.model-routing__chip-name {
+  padding-right: 18px;
 }
+
+.model-routing__selected-chip .model-routing__stamp-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1px;
+  padding: 1px 4px;
+  background: var(--md-secondary, #B83C32);
+  color: var(--md-on-primary, #FAF6ED);
+  font-family: var(--md-font-display, STSong, serif);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  border: 1px solid rgba(184, 60, 50, 0.2);
+  margin-left: 4px;
+  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15);
+  flex-shrink: 0;
+}
+
 
 .model-routing__model-row {
   width: 100%;
@@ -1662,73 +1859,104 @@ onMounted(() => {
 }
 
 .model-routing__delete-btn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%) scale(0.8);
   border: none;
-  border-radius: var(--md-radius-full);
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0 12px;
-  background: var(--md-error-container);
-  color: var(--md-on-error-container);
+  background: transparent;
+  color: var(--md-secondary, #B83C32);
   cursor: pointer;
-  font-size: var(--md-label-small);
-  font-weight: 600;
-  white-space: nowrap;
+  font-size: 16px;
+  line-height: 1;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: all var(--md-duration-short) var(--md-easing-standard);
+  border-radius: var(--md-radius-full);
+}
+
+.model-routing__selected-chip:hover .model-routing__delete-btn {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+  pointer-events: auto;
 }
 
 .model-routing__delete-btn:hover {
-  filter: brightness(0.96);
+  color: var(--md-error, #C0392B);
+  transform: translateY(-50%) scale(1.15) !important;
+  text-shadow: 1px 1px 0px rgba(184, 60, 50, 0.2);
 }
 
 .model-routing__toggle {
-  border: none;
-  border-radius: var(--md-radius-full);
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0 12px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-xs);
+  min-width: 48px;
+  min-height: 28px;
+  padding: 0 8px;
   cursor: pointer;
   font-size: var(--md-label-small);
   font-weight: 600;
   white-space: nowrap;
+  opacity: 0.35;
+  transition: all var(--md-duration-short) var(--md-easing-standard);
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  z-index: 2;
 }
 
 .model-routing__toggle:disabled,
 .model-routing__provider-delete:disabled {
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.15 !important;
 }
 
 .model-routing__toggle.is-on {
   border: 1px solid var(--md-outline);
-  background: var(--md-surface);
+  background: var(--md-surface-container);
   color: var(--md-primary-dark);
 }
 
 .model-routing__toggle.is-off {
-  background: var(--md-primary-container);
-  color: var(--md-on-primary-container);
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface-variant);
 }
 
 .model-routing__toggle:hover:not(:disabled) {
-  background: var(--md-surface-container);
+  opacity: 1;
+  border-color: var(--md-primary);
+  background: var(--md-primary);
+  color: var(--md-on-primary);
+  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.15);
 }
 
 .model-routing__provider-delete {
-  border: none;
-  border-radius: var(--md-radius-full);
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0 12px;
-  background: var(--md-error-container);
-  color: var(--md-error-strong);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-xs);
+  min-width: 48px;
+  min-height: 28px;
+  padding: 0 8px;
+  background: transparent;
+  color: var(--md-on-surface-variant);
   cursor: pointer;
   font-size: var(--md-label-small);
   font-weight: 600;
   white-space: nowrap;
+  opacity: 0.25;
+  transition: all var(--md-duration-short) var(--md-easing-standard);
+  z-index: 2;
 }
 
 .model-routing__provider-delete:hover:not(:disabled) {
-  background: var(--md-error-container);
-  color: var(--md-on-error-container);
+  opacity: 1;
+  background: var(--md-secondary, #B83C32);
+  color: var(--md-on-primary, #FAF6ED);
+  border-color: rgba(184, 60, 50, 0.3);
+  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.2);
 }
 
 .model-routing__check {
@@ -1819,10 +2047,6 @@ onMounted(() => {
 }
 
 @media (min-width: 960px) {
-  .model-routing__provider-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .model-routing__stage-row {
     grid-template-columns: minmax(220px, 0.8fr) minmax(240px, 1fr);
   }
@@ -1832,7 +2056,39 @@ onMounted(() => {
   .model-routing__primary-panel {
     grid-template-columns: minmax(0, 1fr);
   }
+}
 
+@media (min-width: 768px) {
+  .model-routing__stage-list,
+  .model-routing__provider-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .model-routing__provider-grid > .model-routing__provider-card:only-child {
+    grid-column: 1 / -1;
+  }
+
+  /* 无论是否为 only-child，只要处于编辑态，就强制跨列，100% 全宽铺满弹窗 */
+  .model-routing__provider-grid > .model-routing__provider-card.is-editing {
+    grid-column: 1 / -1 !important;
+  }
+
+  /* 原地编辑表单内部排版升级：名称与类型并排，API 地址和 API Key 独占一行，空间拉满 */
+  .model-routing__inline-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: var(--md-spacing-3) var(--md-spacing-4) !important;
+  }
+
+  .model-routing__inline-form > .md-text-field:nth-child(1),
+  .model-routing__inline-form > .md-text-field:nth-child(2) {
+    grid-column: span 1;
+  }
+
+  .model-routing__inline-form > .md-text-field:nth-child(3), /* API URL */
+  .model-routing__inline-form > .md-text-field:nth-child(4), /* API Key */
+  .model-routing__inline-form-footer {
+    grid-column: 1 / -1 !important;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1862,5 +2118,141 @@ onMounted(() => {
     width: 100%;
     max-height: 360px;
   }
+}
+
+.model-routing__provider-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--md-spacing-2);
+  margin-top: var(--md-spacing-1);
+  position: relative;
+  z-index: 2;
+}
+
+/* 拉取模型：朱砂印章主按钮 */
+.model-routing__provider-actions .md-btn-tonal {
+  border: 1px solid rgba(184, 60, 50, 0.35);
+  border-radius: var(--md-radius-xs) !important;
+  background: var(--md-secondary, #B83C32) !important;
+  color: var(--md-on-primary, #FAF6ED) !important;
+  font-family: var(--md-font-label, sans-serif);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  height: 34px;
+  padding: 0 16px;
+  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.25);
+  transition: all var(--md-duration-short) var(--md-easing-standard);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.model-routing__provider-actions .md-btn-tonal:hover:not(:disabled) {
+  background: #C0392B !important;
+  box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.35);
+}
+
+.model-routing__provider-actions .md-btn-tonal:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15);
+}
+
+.model-routing__provider-actions .md-btn-tonal:disabled {
+  background: var(--md-surface-container-high) !important;
+  color: var(--md-on-surface-variant) !important;
+  border-color: var(--md-outline-variant);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* 编辑供应商：次级古籍框线按钮 */
+.model-routing__provider-actions .md-btn-text {
+  border: 1px solid var(--md-outline);
+  border-radius: var(--md-radius-xs) !important;
+  background: transparent !important;
+  color: var(--md-primary, #1C2022) !important;
+  font-family: var(--md-font-label, sans-serif);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  height: 34px;
+  padding: 0 16px;
+  transition: all var(--md-duration-short) var(--md-easing-standard);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.model-routing__provider-actions .md-btn-text:hover {
+  background: var(--md-surface-container-high) !important;
+  border-color: var(--md-primary);
+}
+
+.model-routing__provider-actions .md-btn-text:active {
+  transform: translate(1px, 1px);
+}
+
+/* 卡片原地编辑表单样式 */
+.model-routing__inline-form-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px dashed var(--md-outline-variant);
+  padding-bottom: var(--md-spacing-2);
+  margin-bottom: var(--md-spacing-2);
+}
+
+.model-routing__inline-form-head h4 {
+  margin: 0;
+  color: var(--md-primary-dark);
+}
+
+.model-routing__inline-cancel {
+  border: none;
+  background: transparent;
+  color: var(--md-on-surface-variant);
+  cursor: pointer;
+  font-size: var(--md-label-small);
+  font-weight: 600;
+  transition: color var(--md-duration-short) var(--md-easing-standard);
+  min-height: 28px;
+  padding: 0 var(--md-spacing-2);
+}
+
+.model-routing__inline-cancel:hover {
+  color: var(--md-secondary, #B83C32);
+}
+
+.model-routing__inline-form {
+  display: grid;
+  gap: var(--md-spacing-3);
+  z-index: 2;
+  position: relative;
+}
+
+.model-routing__inline-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--md-spacing-2);
+  gap: var(--md-spacing-3);
+  flex-wrap: wrap;
+}
+
+/* 正在编辑中的卡片视觉增强 */
+.model-routing__provider-card.is-editing {
+  border-style: solid !important;
+  border-width: 2px !important;
+  border-color: var(--md-primary) !important;
+  background: color-mix(in srgb, var(--md-surface) 96%, var(--md-primary)) !important;
+  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.12) !important;
+}
+
+.model-routing__provider-card.is-editing::after {
+  opacity: 0.01 !important; /* 极度淡化背景竹影 */
 }
 </style>

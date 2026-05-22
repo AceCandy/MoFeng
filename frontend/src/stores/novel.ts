@@ -4,6 +4,7 @@ import { ref } from 'vue'
 
 export const useNovelStore = defineStore('novel', () => {
   const currentConversationState = ref<Record<string, unknown>>({})
+  const isAssistantPanelVisible = ref(true)
 
   function resetConversationState() {
     currentConversationState.value = {}
@@ -11,6 +12,7 @@ export const useNovelStore = defineStore('novel', () => {
 
   return {
     currentConversationState,
+    isAssistantPanelVisible,
     resetConversationState,
   }
 })

@@ -1,18 +1,6 @@
 <!-- AIMETA P=写作台_章节编辑主页面|R=写作界面_章节管理|NR=不含详情展示|E=route:/novel/:id#component:WritingDesk|X=ui|A=写作台|D=vue|S=dom,net|RD=./README.ai -->
 <template>
   <div class="writing-desk-page flex flex-col overflow-hidden">
-    <WDHeader
-      :project="project"
-      :progress="progress"
-      :completed-chapters="completedChapters"
-      :total-chapters="totalChapters"
-      :show-assistant-toggle="Boolean(project)"
-      :assistant-open="assistantToggleActive"
-      :assistant-drawer-mode="useAssistantDrawer"
-      @go-back="goBack"
-      @toggle-assistant="toggleAssistantVisibility"
-    />
-
     <!-- 主要内容区域 -->
     <section class="writing-desk-main" aria-label="写作台内容">
       <!-- 加载状态 -->
@@ -297,7 +285,7 @@ import { useDialogA11y } from '@/composables/useDialogA11y'
 import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
 import { desktopMin, mobileMax } from '@/constants/responsive'
 import { countNonWhitespaceChars } from '@/utils/text'
-import WDHeader from '@/components/writing-desk/WDHeader.vue'
+import { useNovelStore } from '@/stores/novel'
 import WDSidebar from '@/components/writing-desk/WDSidebar.vue'
 import WDWorkspace from '@/components/writing-desk/WDWorkspace.vue'
 
@@ -348,9 +336,16 @@ const recommendedOptimizedContent = ref('')
 const recommendedOptimizeResultNotes = ref('')
 const viewport = useResponsiveViewport()
 const viewportWidth = computed(() => viewport.width.value)
+const novelStore = useNovelStore()
 const isSidebarDrawerOpen = ref(false)
 const isAssistantDrawerOpen = ref(false)
-const isAssistantPanelVisible = ref(true)
+const isAssistantPanelVisible = computed({
+  get: () => novelStore.isAssistantPanelVisible,
+  set: (val) => {
+    novelStore.isAssistantPanelVisible = val
+    persistAssistantPanelVisibility(val)
+  }
+})
 const SIDEBAR_DRAWER_BREAKPOINT = mobileMax
 const ASSISTANT_DRAWER_BREAKPOINT = desktopMin - 1
 const ASSISTANT_PANEL_VISIBILITY_STORAGE_KEY = 'mofeng.writingDesk.assistant.visible'

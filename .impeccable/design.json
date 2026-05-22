@@ -1,214 +1,144 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-05-20T19:32:17+08:00",
-  "title": "Design System: MoFeng",
+  "generatedAt": "2026-05-21T17:39:00Z",
+  "title": "Design System: MoFeng (墨风)",
   "extensions": {
     "colorMeta": {
       "primary": {
         "role": "primary",
-        "displayName": "墨蓝",
-        "canonical": "#4d6b97",
-        "tonalRamp": ["#273b58", "#355274", "#4d6b97", "#6e8ab3", "#dfe8f4"]
-      },
-      "primary-light": {
-        "role": "primary",
-        "displayName": "浅墨蓝",
-        "canonical": "#6e8ab3",
-        "tonalRamp": ["#355274", "#4d6b97", "#6e8ab3", "#a6b7cf", "#dfe8f4"]
-      },
-      "primary-dark": {
-        "role": "primary",
-        "displayName": "深墨蓝",
-        "canonical": "#355274",
-        "tonalRamp": ["#1f2f45", "#273b58", "#355274", "#4d6b97", "#dfe8f4"]
-      },
-      "on-primary": {
-        "role": "on-color",
-        "displayName": "主色前景",
-        "canonical": "#f7f4ef",
-        "tonalRamp": ["#dcd5c8", "#e8e2d8", "#f3efe8", "#f7f4ef", "#fefcf8"]
-      },
-      "primary-container": {
-        "role": "container",
-        "displayName": "蓝色容器",
-        "canonical": "#dfe8f4",
-        "tonalRamp": ["#273b58", "#6e8ab3", "#a6b7cf", "#dfe8f4", "#f3f7fb"]
-      },
-      "on-primary-container": {
-        "role": "on-container",
-        "displayName": "蓝色容器前景",
-        "canonical": "#273b58",
-        "tonalRamp": ["#1f2f45", "#273b58", "#355274", "#4d6b97", "#6e8ab3"]
+        "displayName": "焦墨",
+        "canonical": "oklch(22% 0.01 240)",
+        "tonalRamp": ["#111415", "#1C2022", "#2B3134", "#3A4648", "#556265", "#778588", "#C2B69D", "#FAF6ED"]
       },
       "secondary": {
         "role": "secondary",
-        "displayName": "静墨灰蓝",
-        "canonical": "#5f6676",
-        "tonalRamp": ["#323948", "#454b59", "#5f6676", "#7a8190", "#e6eaf0"]
-      },
-      "secondary-container": {
-        "role": "container",
-        "displayName": "次级容器",
-        "canonical": "#e6eaf0",
-        "tonalRamp": ["#323948", "#7a8190", "#bcc4d0", "#e6eaf0", "#f7f8fa"]
+        "displayName": "朱砂红",
+        "canonical": "oklch(45% 0.18 30)",
+        "tonalRamp": ["#5C120C", "#8C2219", "#B83C32", "#CD5C52", "#DE857D", "#ECAFAB", "#FBEBEA", "#FDF6F5"]
       },
       "surface": {
         "role": "surface",
-        "displayName": "暖纸白",
-        "canonical": "#fbfaf7",
-        "tonalRamp": ["#dcd5c8", "#e8e2d8", "#f0ece4", "#f7f3ec", "#fbfaf7"]
-      },
-      "surface-dim": {
-        "role": "surface",
-        "displayName": "暖纸灰",
-        "canonical": "#f3efe8",
-        "tonalRamp": ["#dcd5c8", "#e8e2d8", "#f0ece4", "#f3efe8", "#fbfaf7"]
-      },
-      "surface-container-lowest": {
-        "role": "surface",
-        "displayName": "最低容器面",
-        "canonical": "#fefcf8",
-        "tonalRamp": ["#e8e2d8", "#f0ece4", "#f7f3ec", "#fbfaf7", "#fefcf8"]
-      },
-      "surface-container-low": {
-        "role": "surface",
-        "displayName": "低容器面",
-        "canonical": "#f7f3ec",
-        "tonalRamp": ["#dcd5c8", "#e8e2d8", "#f0ece4", "#f7f3ec", "#fbfaf7"]
-      },
-      "surface-container": {
-        "role": "surface",
-        "displayName": "容器面",
-        "canonical": "#f0ece4",
-        "tonalRamp": ["#cfc7ba", "#dcd5c8", "#e8e2d8", "#f0ece4", "#f7f3ec"]
-      },
-      "surface-container-high": {
-        "role": "surface",
-        "displayName": "高容器面",
-        "canonical": "#e8e2d8",
-        "tonalRamp": ["#c6bcad", "#dcd5c8", "#e8e2d8", "#f0ece4", "#f7f3ec"]
-      },
-      "surface-container-highest": {
-        "role": "surface",
-        "displayName": "最高容器面",
-        "canonical": "#dcd5c8",
-        "tonalRamp": ["#b8ae9e", "#c6bcad", "#dcd5c8", "#e8e2d8", "#f0ece4"]
-      },
-      "background": {
-        "role": "background",
-        "displayName": "页面暖纸底",
-        "canonical": "#f4f0e9",
-        "tonalRamp": ["#dcd5c8", "#e8e2d8", "#f0ece4", "#f4f0e9", "#fbfaf7"]
-      },
-      "on-surface": {
-        "role": "text",
-        "displayName": "墨色",
-        "canonical": "#1f2530",
-        "tonalRamp": ["#1f2530", "#343b48", "#5e6674", "#8a929f", "#c8ced8"]
-      },
-      "on-surface-variant": {
-        "role": "text-muted",
-        "displayName": "浅墨色",
-        "canonical": "#5e6674",
-        "tonalRamp": ["#343b48", "#5e6674", "#7d8591", "#a6adb7", "#d8dce2"]
-      },
-      "outline": {
-        "role": "border",
-        "displayName": "边界",
-        "canonical": "#d8d0c4",
-        "tonalRamp": ["#b8ae9e", "#c6bcad", "#d8d0c4", "#e6dfd2", "#f3efe8"]
-      },
-      "outline-variant": {
-        "role": "border",
-        "displayName": "浅边界",
-        "canonical": "#e6dfd2",
-        "tonalRamp": ["#c6bcad", "#d8d0c4", "#e6dfd2", "#f0ece4", "#f7f3ec"]
-      },
-      "error": {
-        "role": "state",
-        "displayName": "错误红",
-        "canonical": "#b85c58",
-        "tonalRamp": ["#643431", "#8f4540", "#b85c58", "#d9908b", "#f8e5e2"]
-      },
-      "error-container": {
-        "role": "state-container",
-        "displayName": "错误容器",
-        "canonical": "#f8e5e2",
-        "tonalRamp": ["#8f4540", "#b85c58", "#d9908b", "#f8e5e2", "#fdf8f7"]
-      },
-      "success": {
-        "role": "state",
-        "displayName": "确认绿",
-        "canonical": "#4f7b66",
-        "tonalRamp": ["#30503f", "#3e6552", "#4f7b66", "#87aa97", "#e3eee7"]
-      },
-      "success-container": {
-        "role": "state-container",
-        "displayName": "确认容器",
-        "canonical": "#e3eee7",
-        "tonalRamp": ["#4f7b66", "#87aa97", "#c3d8ca", "#e3eee7", "#f8fbf8"]
-      },
-      "warning": {
-        "role": "state",
-        "displayName": "提醒黄",
-        "canonical": "#b5904c",
-        "tonalRamp": ["#5f4a24", "#8c6f39", "#b5904c", "#d8ba78", "#f8eed8"]
-      },
-      "warning-container": {
-        "role": "state-container",
-        "displayName": "提醒容器",
-        "canonical": "#f8eed8",
-        "tonalRamp": ["#8c6f39", "#b5904c", "#d8ba78", "#f8eed8", "#fdf8f0"]
+        "displayName": "熟宣纸白",
+        "canonical": "oklch(97% 0.006 80)",
+        "tonalRamp": ["#F6F0E0", "#FAF6ED", "#FAF7E8", "#FDFDFB", "#FFFFFF"]
       }
     },
     "typographyMeta": {
       "display": {
-        "displayName": "Display",
-        "purpose": "Rare empty-state or onboarding orientation, not dashboard panels."
+        "displayName": "碑拓大字",
+        "purpose": "用于大字留白或书架欢迎页，呈现石刻风骨。"
       },
       "headline": {
-        "displayName": "Headline",
-        "purpose": "Page titles and major workflow transitions."
-      },
-      "title": {
-        "displayName": "Title",
-        "purpose": "Cards, panels, dialogs, and section headings."
+        "displayName": "古典宋体标题",
+        "purpose": "用于小说章节名和大字标题，字间距宽展大气。"
       },
       "body": {
-        "displayName": "Body",
-        "purpose": "Primary UI copy, generated summaries, settings text, and long-form readable content."
-      },
-      "label": {
-        "displayName": "Label",
-        "purpose": "Buttons, form labels, chips, metadata, and compact controls."
+        "displayName": "人文正文黑体",
+        "purpose": "正文 drafting 专用，大段行高 1.8 极速扫描护眼。"
       }
     },
-    "elevation": {
-      "elevation-1": "0 1px 2px rgba(42, 46, 56, 0.05), 0 4px 12px rgba(42, 46, 56, 0.05)",
-      "elevation-2": "0 2px 6px rgba(42, 46, 56, 0.08), 0 12px 26px rgba(42, 46, 56, 0.06)",
-      "elevation-3": "0 8px 30px rgba(42, 46, 56, 0.09)"
+    "shadows": [
+      {
+        "name": "ambient-low",
+        "value": "2px 2px 0px rgba(28, 32, 34, 0.15)",
+        "purpose": "硬朗的拓片边缘暗影，杜绝模糊高斯投影。"
+      },
+      {
+        "name": "seal-stamp",
+        "value": "1px 1px 0px rgba(184, 60, 50, 0.15)",
+        "purpose": "朱砂压章后轻微深深刻印的边缘金石感。"
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-ink",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "如墨滴入熟宣水中徐徐晕开的柔和淡入淡出缓动。"
+      }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "640px" },
+      { "name": "desktop", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "古籍双栏卡片",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "模拟古典线装古籍特有的粗细双边线与宣纸微黄底面，呈现极其大气的人文仪式感。",
+      "html": "<div class=\"ds-card-book\"><div class=\"ds-card-book-content\"><h3>第一章 问剑</h3><p>风止，雨歇。少年按剑立于古碑之前，碑上苔痕斑驳，隐现雷文。AI 辅助已就绪，随时可泼墨挥毫...</p></div></div>",
+      "css": ".ds-card-book { background: #FAF6ED; color: #1C2224; border: 3px double #C2B69D; border-radius: 4px; padding: 24px; font-family: 'STSong', 'Songti SC', serif; box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.15); transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1); } .ds-card-book:hover { border-color: #B83C32; box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.2); } .ds-card-book h3 { font-size: 20px; font-weight: 600; margin-top: 0; margin-bottom: 12px; letter-spacing: 0.05em; color: #1C2022; } .ds-card-book p { font-size: 14px; line-height: 1.8; color: #556265; margin: 0; }"
     },
-    "motion": {
-      "duration-short": "110ms",
-      "duration-medium": "240ms",
-      "duration-long": "420ms",
-      "easing-standard": "cubic-bezier(0.22, 1, 0.36, 1)",
-      "easing-emphasized": "cubic-bezier(0.19, 1, 0.22, 1)",
-      "easing-decelerate": "cubic-bezier(0, 1, 0.3, 1)",
-      "easing-accelerate": "cubic-bezier(0.7, 0, 1, 0.5)"
+    {
+      "name": "朱砂金石印鉴 Badge",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "摒弃现代 SaaS 扁平圆角 Tag，以四周斑驳 dashed 配合朱砂描红打造的‘完成/已成稿’中式落款印章。",
+      "html": "<span class=\"ds-seal\">成稿</span>",
+      "css": ".ds-seal { display: inline-flex; align-items: center; justify-content: center; padding: 4px 10px; font-size: 12px; font-weight: 600; font-family: 'STKaiti', 'Kaiti SC', serif; border: 1px dashed #B83C32; color: #B83C32; background: #FBEBEA; border-radius: 2px; box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15); position: relative; text-transform: uppercase; letter-spacing: 0.05em; } .ds-seal::after { content: ''; position: absolute; top: 1px; left: 1px; right: 1px; bottom: 1px; border: 1px solid #B83C32; opacity: 0.3; pointer-events: none; }"
     },
-    "breakpoints": {
-      "mobile-max": "833px",
-      "tablet-min": "834px",
-      "desktop-min": "1200px"
+    {
+      "name": "焦墨按钮 (Primary)",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "墨风沉稳的主动作按钮。微窄直角，带微弱竹青极细描边，点击如焦墨落纸般笃定。",
+      "html": "<button class=\"ds-btn-primary\">保存书卷</button>",
+      "css": ".ds-btn-primary { background: #1C2022; color: #FAF6ED; border: 1px solid #C2B69D; border-radius: 2px; padding: 10px 24px; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; cursor: pointer; transition: all 0.24s cubic-bezier(0.22, 1, 0.36, 1); box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.15); } .ds-btn-primary:hover { background: #3A4648; box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.2); }"
     },
-    "northStar": "安静写作台",
+    {
+      "name": "石青按钮 (Tonal)",
+      "kind": "button",
+      "refersTo": "button-tonal",
+      "description": "石青辅按钮，专用于 AI 分层优化、智能大纲等激发灵感的协作性高亮操作。",
+      "html": "<button class=\"ds-btn-ai\">AI分层优化</button>",
+      "css": ".ds-btn-ai { background: #2E5C8A; color: #FFFFFF; border: 1px solid #1C2022; border-radius: 2px; padding: 10px 24px; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; cursor: pointer; transition: all 0.24s cubic-bezier(0.22, 1, 0.36, 1); box-shadow: 1px 1px 0px rgba(46, 92, 138, 0.25); } .ds-btn-ai:hover { background: #3A72AA; box-shadow: 2px 2px 0px rgba(46, 92, 138, 0.35); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "墨砚书香，方圆风骨",
+    "overview": "墨风 (MoFeng) 是一套专为长篇虚构小说创作者打造的沉浸式 AI 写作控制中心。本设计系统旨在跳出喧嚣泛滥的现代 SaaS 扁平范式，将视觉语言迁移为强烈、大气且极具风骨的古典中国风。它不仅是创作的工具，更是创作者桌案前一案、一砚、一纸、一墨的文人精神投射。我们追求的国风不是肤浅的古风插画堆砌，也不是喧宾夺主的戏曲脸谱装饰，而是提取古典书斋中的核心哲学——宣纸的润、徽墨的骨、朱砂的醒、留白的意。系统在保持极低视觉疲劳度的安静写作氛围之余，在关键的骨架、排版、细节上展现出坚毅挺拔的大气格局。",
+    "keyCharacteristics": [
+      "古籍风骨的双栏规架：卡片、输入框与布局边缘采用利落微小的直圆角，并辅以古籍线装本特有的粗细双线（双边）来划分版面，极具碑拓与刻本的骨力。",
+      "熟宣玉版的温润底色：大面积的阅读区和主背景选用模拟老宣纸、竹纸的微黄暖色，全面隔绝蓝光刺眼，提供持久专注的生理基础。",
+      "徽墨五色的色彩层次：文字与基础架构由黑至灰均带有一丝古朴的青蓝色相（松烟），展现出水墨晕染的丰富细节。",
+      "朱印朱批的黄金点缀：所有完成状态、高亮警示与核心动作，均被重塑为苍劲有力的“传统朱砂篆刻印章”和“朱批”，作为古典的烙印跃然纸上。"
+    ],
     "rules": [
-      "Use 墨蓝 only for primary actions, selected state, active navigation, and focus.",
-      "Keep long writing and review text on warm-paper surfaces.",
-      "Use shadows only when a layer has a real stacking or focus job.",
-      "Keep model, provider, and route settings explicit and recoverable.",
-      "Avoid SaaS landing-page drama, purple-blue AI gradients, glassmorphism, noisy animations, and decorative card grids."
+      {
+        "name": "The Rare Vermilion Rule",
+        "body": "朱砂红 (#B83C32) 是墨风的视觉灵魂。它只被允许出现在方形印章、成功态的印记落款或极致强调的单一按钮上，大面积页面中朱砂红的使用面积绝对不可超过 3%。",
+        "section": "colors"
+      },
+      {
+        "name": "The Xuan Paper Warmth Rule",
+        "body": "所有章节长正文、段落优化器和 AI 评审生成内容，其底色必须为熟宣纸色 (#FAF6ED) 或竹纸暖黄 (#FAF7E8)。严禁使用纯白 (#FFFFFF) 或高饱和度的彩色背景承载文字，以此守护作家的生理阅读疲劳极限。",
+        "section": "colors"
+      },
+      {
+        "name": "The Editorial Spine Rule",
+        "body": "凡是使用宋体（Display、Headline、Title）的段落，必须显式拉开字间距 (letter-spacing)。小字标题拉开 0.03em，大字标题拉开 0.05em 以上。字与字之间的适度留白，能极大增强古典石刻拓片的大气格局。",
+        "section": "typography"
+      },
+      {
+        "name": "The Border Over Shadow Rule",
+        "body": "严禁使用大于 8px 模糊半径 (blur-radius) 的模糊阴影。所有界面的卡片、面板划分必须优先使用 1px 的竹青框线 (#C2B69D) 或墨晕细线 (#DCD2BE) 配合背景色差进行分割。",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do 使用熟宣色 (#FAF6ED) 和竹纸黄 (#FAF7E8) 作为长篇文字的主要承载背景。",
+      "Do 在 Display 与 Headline 标题中强制使用古典宋体，且字间距必须拉开至少 0.05em。",
+      "Do 使用 1px 竹青框线 (#C2B69D) 或古籍双线框 (border: 3px double) 来划分板块，而不是依靠模糊阴影。",
+      "Do 将关键状态 Badge 封装为“朱砂红仿古方印”的印鉴样式，为现代界面点睛。",
+      "Do 在按钮和输入框上使用微小的 2px - 4px 极窄圆角，维持方正古朴的木刻竹简风骨。"
+    ],
+    "donts": [
+      "Don't 使用任何现代 SaaS 软件特有的紫蓝色 AI 渐变背景（Purple-blue AI Gradients）或霓虹发光文字。",
+      "Don't 使用玻璃拟态（Glassmorphism）、毛玻璃背景模糊和现代卡片高斯模糊投影。",
+      "Don't 在按钮、卡片、输入框上使用现代大圆角（Pill/Capsule layout）或完全圆滑的边角。",
+      "Don't 在中式设计中堆砌大面积毫无功能意义的“古风山水插画”或“戏曲脸谱小插画”，这会沦为廉价的装饰性设计。",
+      "Don't 允许朱砂红 (#B83C32) 的大面积滥用，它的存在必须像画龙点睛的墨宝印鉴一样稀少而尊贵（小于 3% 面积）。"
     ]
   }
 }

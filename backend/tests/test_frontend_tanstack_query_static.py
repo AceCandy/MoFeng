@@ -124,6 +124,14 @@ def test_inspiration_flow_uses_query_mutations_and_local_conversation_state():
     assert "novelStore." not in confirmation
 
 
+def test_http_errors_keep_payload_for_inspiration_conflict_redirect():
+    source = _source("api/http.ts")
+
+    assert "payload: unknown" in source
+    assert "this.payload = options.payload" in source
+    assert "payload," in source
+
+
 def test_detail_shell_uses_query_project_cache_for_editing_paths():
     source = _source("components/shared/NovelDetailShell.vue")
 

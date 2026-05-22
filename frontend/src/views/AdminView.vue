@@ -146,6 +146,15 @@ import {
   useAdminUpdateLogsQuery,
 } from '@/queries/admin'
 
+const props = withDefaults(
+  defineProps<{
+    isModal?: boolean
+  }>(),
+  {
+    isModal: false,
+  }
+)
+
 type MenuKey = 'statistics' | 'users' | 'prompts' | 'novels' | 'logs' | 'settings' | 'password'
 
 interface AdminSection {
@@ -315,7 +324,9 @@ const activeComponent = computed(() => components[activeSection.value.key])
 
 const selectSection = (key: MenuKey) => {
   activeKey.value = key
-  router.replace({ name: 'admin', query: { tab: key } })
+  if (!props.isModal) {
+    router.replace({ name: 'admin', query: { tab: key } })
+  }
 }
 
 const setAdminTabRef = (

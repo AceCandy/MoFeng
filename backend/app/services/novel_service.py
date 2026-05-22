@@ -79,7 +79,7 @@ def _clean_string(text: str, parse_json: bool = True) -> str:
     )
 
 from fastapi import HTTPException, status
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -114,6 +114,15 @@ class NovelService:
     """小说项目服务，基于拆表后的结构提供聚合与业务操作。"""
 
     STALE_IN_PROGRESS_TIMEOUT = timedelta(minutes=10)
+    INSPIRATION_TITLE = "未命名灵感"
+    INSPIRATION_INITIAL_PROMPT = "开始灵感模式"
+    INSPIRATION_ACTIVE_STATUS = "inspiration_active"
+    INSPIRATION_BLUEPRINT_GENERATED_STATUS = "inspiration_blueprint_generated"
+    INSPIRATION_COMPLETE_STATUS = "blueprint_ready"
+    INSPIRATION_UNFINISHED_STATUSES = (
+        INSPIRATION_ACTIVE_STATUS,
+        INSPIRATION_BLUEPRINT_GENERATED_STATUS,
+    )
 
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -122,18 +131,59 @@ class NovelService:
     # ------------------------------------------------------------------
     # 项目与摘要
     # ------------------------------------------------------------------
-    async def create_project(self, user_id: int, title: str, initial_prompt: str) -> NovelProject:
+    @classmethod
+    def is_inspiration_seed(cls, title: str | None, initial_prompt: str | None) -> bool:
+        return (
+            (title or "").strip() == cls.INSPIRATION_TITLE
+            and (initial_prompt or "").strip() == cls.INSPIRATION_INITIAL_PROMPT
+        )
+
+    @classmethod
+    def is_unfinished_inspiration_project(cls, project: NovelProject) -> bool:
+        if project.status in cls.INSPIRATION_UNFINISHED_STATUSES:
+            return True
+        return project.status == "draft" and cls.is_inspiration_seed(project.title, project.initial_prompt)
+
+    async def create_project(
+        self,
+        user_id: int,
+        title: str,
+        initial_prompt: str,
+        status: str = "draft",
+    ) -> NovelProject:
         project = NovelProject(
             id=str(uuid.uuid4()),
             user_id=user_id,
             title=title,
             initial_prompt=initial_prompt,
+            status=status,
         )
         blueprint = NovelBlueprint(project=project)
         self.session.add_all([project, blueprint])
         await self.session.commit()
         await self.session.refresh(project)
         return project
+
+    async def find_unfinished_inspiration_project(self, user_id: int) -> Optional[NovelProject]:
+        # 兼容旧数据：早期灵感项目没有专用状态，只能通过固定标题和初始提示识别。
+        legacy_inspiration = and_(
+            or_(NovelProject.status == "draft", NovelProject.status.is_(None)),
+            NovelProject.title == self.INSPIRATION_TITLE,
+            NovelProject.initial_prompt == self.INSPIRATION_INITIAL_PROMPT,
+        )
+        stmt = (
+            select(NovelProject)
+            .where(
+                NovelProject.user_id == user_id,
+                or_(
+                    NovelProject.status.in_(self.INSPIRATION_UNFINISHED_STATUSES),
+                    legacy_inspiration,
+                ),
+            )
+            .order_by(NovelProject.updated_at.desc())
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
 
     async def ensure_project_owner(self, project_id: str, user_id: int) -> NovelProject:
         project = await self.repo.get_by_id(project_id)

@@ -143,7 +143,21 @@ async def create_novel(
 ) -> NovelProjectSchema:
     """为当前用户创建一个新的小说项目。"""
     novel_service = NovelService(session)
-    project = await novel_service.create_project(current_user.id, title, initial_prompt)
+    project_status = "draft"
+    if novel_service.is_inspiration_seed(title, initial_prompt):
+        existing_project = await novel_service.find_unfinished_inspiration_project(current_user.id)
+        if existing_project:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "unfinished_inspiration",
+                    "message": "已有未完成的灵感对话，请先继续完成并保存蓝图。",
+                    "project_id": existing_project.id,
+                },
+            )
+        project_status = novel_service.INSPIRATION_ACTIVE_STATUS
+
+    project = await novel_service.create_project(current_user.id, title, initial_prompt, status=project_status)
     logger.info("用户 %s 创建项目 %s", current_user.id, project.id)
     return await novel_service.get_project_schema(project.id, current_user.id)
 
@@ -464,12 +478,17 @@ async def generate_blueprint(
         ) from exc
 
     blueprint = Blueprint(**blueprint_data)
+    is_inspiration_flow = novel_service.is_unfinished_inspiration_project(project)
     await novel_service.replace_blueprint(project_id, blueprint)
-    if blueprint.title:
+    if blueprint.title and not is_inspiration_flow:
         project.title = blueprint.title
-        project.status = "blueprint_ready"
-        await session.commit()
-        logger.info("项目 %s 更新标题为 %s，并标记为 blueprint_ready", project_id, blueprint.title)
+    project.status = (
+        novel_service.INSPIRATION_BLUEPRINT_GENERATED_STATUS
+        if is_inspiration_flow
+        else novel_service.INSPIRATION_COMPLETE_STATUS
+    )
+    await session.commit()
+    logger.info("项目 %s 更新标题为 %s，并标记为 %s", project_id, blueprint.title, project.status)
 
     ai_message = (
         "太棒了！我已经根据我们的对话整理出完整的小说蓝图。请确认是否进入写作阶段，或提出修改意见。"
@@ -492,7 +511,8 @@ async def save_blueprint(
         await novel_service.replace_blueprint(project_id, blueprint_data)
         if blueprint_data.title:
             project.title = blueprint_data.title
-            await session.commit()
+        project.status = novel_service.INSPIRATION_COMPLETE_STATUS
+        await session.commit()
         logger.info("项目 %s 手动保存蓝图", project_id)
     else:
         logger.warning("项目 %s 保存蓝图时未提供蓝图数据", project_id)

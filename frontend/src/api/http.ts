@@ -5,6 +5,7 @@ export class HttpRequestError extends Error {
   status: number | null
   code: HttpErrorCode
   url: string
+  payload: unknown
 
   constructor(
     message: string,
@@ -12,6 +13,7 @@ export class HttpRequestError extends Error {
       status?: number | null
       code: HttpErrorCode
       url: string
+      payload?: unknown
     },
   ) {
     super(message)
@@ -19,6 +21,7 @@ export class HttpRequestError extends Error {
     this.status = options.status ?? null
     this.code = options.code
     this.url = options.url
+    this.payload = options.payload
   }
 }
 
@@ -194,6 +197,7 @@ export const requestRaw = async (url: string, options: HttpRequestOptions = {}):
         status: response.status,
         code: 'http',
         url,
+        payload,
       })
     }
 
@@ -216,4 +220,3 @@ export const requestJson = async <T>(url: string, options: HttpRequestOptions = 
   const payload = await readResponsePayload(response)
   return (payload ?? undefined) as T
 }
-

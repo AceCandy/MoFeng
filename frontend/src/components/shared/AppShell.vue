@@ -1,185 +1,380 @@
 <!-- AIMETA P=应用布局_认证后共享外壳|R=全局导航_页面容器|NR=不含业务页面逻辑|E=component:AppShell|X=ui|A=布局组件|D=vue,vue-router,pinia|S=dom|RD=./README.ai -->
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useQueryClient } from '@tanstack/vue-query'
 
-import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
 import { clearAuthQueryCache } from '@/queries/auth'
 import { useAuthStore } from '@/stores/auth'
 import {
-  buildShellNavigation,
-  type ShellNavIcon,
-} from '@/components/shared/shellNavigation'
+  useNovelProjectsQuery,
+  useNovelProjectQuery,
+  useImportNovelMutation,
+} from '@/queries/novel'
+import { useNovelStore } from '@/stores/novel'
+import GlobalModalContainer from '@/components/shared/GlobalModalContainer.vue'
+import { globalAlert } from '@/composables/useAlert'
+
+const SettingsView = defineAsyncComponent(() => import('@/views/SettingsView.vue'))
+const AdminView = defineAsyncComponent(() => import('@/views/AdminView.vue'))
+
+const showSettingsModal = ref(false)
+const showAdminModal = ref(false)
+
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const queryClient = useQueryClient()
-const viewport = useResponsiveViewport()
-const isDrawerOpen = ref(false)
+const isDropdownOpen = ref(false)
 
-const navigation = computed(() => buildShellNavigation(Boolean(authStore.user?.is_admin)))
-const isCompactShell = computed(() => viewport.tier.value !== 'desktop')
-const isMobileShell = computed(() => viewport.isMobile.value)
+const novelStore = useNovelStore()
+const isAssistantOpen = computed(() => novelStore.isAssistantPanelVisible)
+const toggleWorkspaceAssistant = () => {
+  novelStore.isAssistantPanelVisible = !novelStore.isAssistantPanelVisible
+}
 
-const pageLabel = computed(() => String(route.meta.label || '工作台'))
-const pageDescription = computed(() => String(route.meta.description || ''))
+const importMutation = useImportNovelMutation()
+const fileInputRef = ref<HTMLInputElement | null>(null)
+const capsuleRef = ref<HTMLElement | null>(null)
+
+const currentProjectId = computed(() => {
+  return (route.params.id as string) || null
+})
+
+const { data: currentProject } = useNovelProjectQuery(currentProjectId)
+const { data: projects = [] } = useNovelProjectsQuery()
+
+const projectTags = computed(() => {
+  if (!currentProject.value) return ''
+  const bp = currentProject.value.blueprint
+  let genreText = ''
+  
+  if (bp?.genre) {
+    genreText = bp.genre
+  } else {
+    const summary = projects.value?.find(p => p.id === currentProjectId.value)
+    if (summary?.genre) {
+      genreText = summary.genre
+    }
+  }
+  
+  if (!genreText) {
+    return '山水写意'
+  }
+  
+  return genreText
+})
+
+const projectStats = computed(() => {
+  if (!currentProject.value) return null
+  const total = currentProject.value.chapters?.length || 0
+  const completed = currentProject.value.chapters?.filter(c => c.content && c.content.length > 0).length || 0
+  const percent = total > 0 ? Math.round((completed / total) * 100) : 0
+  return {
+    completed,
+    total,
+    percent
+  }
+})
+
+const triggerImport = () => {
+  fileInputRef.value?.click()
+}
+
+const isUserDropdownOpen = ref(false)
+const userTagRef = ref<HTMLElement | null>(null)
+
+const handleFileChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  if (input.files && input.files[0]) {
+    const file = input.files[0]
+    try {
+      const res = await importMutation.mutateAsync(file)
+      isDropdownOpen.value = false
+      if (res && res.id) {
+        router.push(`/projects/${res.id}/write`)
+      } else {
+        router.push('/workspace')
+      }
+    } catch (err) {
+      console.error('导入卷轴失败:', err)
+    }
+  }
+}
+
+const selectProject = (proj: { id: string; title?: string }) => {
+  isDropdownOpen.value = false
+  const titleStr = (proj.title || '').trim()
+  if (titleStr === '未命名灵感') {
+    router.push(`/inspiration?project_id=${proj.id}`)
+  } else {
+    router.push(`/projects/${proj.id}/write`)
+  }
+}
+
+const selectInspiration = () => {
+  isDropdownOpen.value = false
+  router.push('/inspiration')
+}
+
 const isProjectContext = computed(() =>
   ['project-detail', 'project-write', 'admin-project-detail'].includes(String(route.name || '')),
 )
 
-const navIconPaths: Record<ShellNavIcon, string[]> = {
-  desk: ['M4 5h16v14H4z', 'M4 10h16', 'M9 19v-9'],
-  spark: ['M12 3l1.9 4.8L19 10l-5.1 2.2L12 17l-1.9-4.8L5 10l5.1-2.2L12 3z'],
-  settings: [
-    'M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z',
-    'M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 01-2.83 2.83l-.06-.06A1.7 1.7 0 0015 19.4a1.7 1.7 0 00-1 .6 1.7 1.7 0 00-.4 1.1V21a2 2 0 01-4 0v-.09A1.7 1.7 0 009 19.4a1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.7 1.7 0 004.6 15a1.7 1.7 0 00-.6-1 1.7 1.7 0 00-1.1-.4H3a2 2 0 010-4h.09A1.7 1.7 0 004.6 9a1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 012.83-2.83l.06.06A1.7 1.7 0 009 4.6a1.7 1.7 0 001-.6 1.7 1.7 0 00.4-1.1V3a2 2 0 014 0v.09A1.7 1.7 0 0015 4.6a1.7 1.7 0 001.87-.34l.06-.06a2 2 0 012.83 2.83l-.06.06A1.7 1.7 0 0019.4 9a1.7 1.7 0 00.6 1 1.7 1.7 0 001.1.4H21a2 2 0 010 4h-.09A1.7 1.7 0 0019.4 15z',
-  ],
-  admin: ['M4 7h16', 'M6 7v12h12V7', 'M9 11h6', 'M9 15h6'],
-}
-
-const closeDrawer = () => {
-  isDrawerOpen.value = false
-}
-
-const toggleDrawer = () => {
-  isDrawerOpen.value = !isDrawerOpen.value
-}
-
 const logout = () => {
   authStore.logout()
   clearAuthQueryCache(queryClient)
-  closeDrawer()
   router.push('/login')
 }
 
-watch(
-  () => route.fullPath,
-  () => {
-    closeDrawer()
-  },
-)
+const handleClickOutside = (event: MouseEvent) => {
+  if (isDropdownOpen.value && capsuleRef.value && !capsuleRef.value.contains(event.target as Node)) {
+    isDropdownOpen.value = false
+  }
+  if (isUserDropdownOpen.value && userTagRef.value && !userTagRef.value.contains(event.target as Node)) {
+    isUserDropdownOpen.value = false
+  }
+}
 
-watch(
-  isCompactShell,
-  (compact) => {
-    if (!compact) {
-      closeDrawer()
+const settingsViewRef = ref<any>(null)
+const isSavingSettings = ref(false)
+
+const triggerSettingsSave = async () => {
+  if (settingsViewRef.value) {
+    isSavingSettings.value = true
+    try {
+      await settingsViewRef.value.save()
+    } catch (err) {
+      console.error('配置保存失败:', err)
+    } finally {
+      isSavingSettings.value = false
     }
-  },
-  { immediate: true },
-)
+  }
+}
+
+const handleCloseSettingsModal = async () => {
+  const isDirty = settingsViewRef.value?.isDirty
+  if (isDirty) {
+    const confirmed = await globalAlert.showConfirm(
+      '案头仍有未保存的配置底墨，此时离席将丢弃修改，是否确定关闭？',
+      '未保存确认'
+    )
+    if (!confirmed) {
+      return
+    }
+  }
+  showSettingsModal.value = false
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <template>
   <div class="app-shell" :class="{ 'app-shell--project-context': isProjectContext }">
     <a class="skip-link" href="#main-content">跳到主内容</a>
 
-    <aside
-      id="app-primary-navigation"
-      class="app-shell__sidebar"
-      :class="{ 'is-open': isCompactShell && isDrawerOpen }"
-      :aria-hidden="isCompactShell && !isDrawerOpen ? 'true' : undefined"
-      :inert="isCompactShell && !isDrawerOpen"
-    >
-      <div class="app-shell__brand">
-        <div class="app-shell__brand-mark" aria-hidden="true">墨</div>
-        <div class="app-shell__brand-copy">
-          <p class="app-shell__brand-title">墨风</p>
-          <p class="app-shell__account-role">AI 小说创作中控台</p>
-        </div>
-        <button
-          v-if="isCompactShell"
-          type="button"
-          class="md-icon-btn app-shell__close"
-          aria-label="关闭导航"
-          @click="closeDrawer"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-
-      <nav class="app-shell__nav" aria-label="主导航">
-        <RouterLink
-          v-for="item in navigation.sidebarItems"
-          :key="item.key"
-          :to="item.path"
-          class="app-shell__nav-item"
-          :class="{ 'is-active': item.match(route.path) }"
-          :aria-current="item.match(route.path) ? 'page' : undefined"
-          :aria-label="item.label"
-          :title="item.label"
-        >
-          <span class="app-shell__nav-icon" aria-hidden="true">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path
-                v-for="(path, index) in navIconPaths[item.icon]"
-                :key="`${item.key}-${index}`"
-                :d="path"
-              />
-            </svg>
-          </span>
-          <span class="app-shell__nav-text">{{ item.label }}</span>
-        </RouterLink>
-      </nav>
-
-      <div class="app-shell__account">
-        <div class="app-shell__account-copy">
-          <p class="app-shell__account-name">{{ authStore.user?.username || '当前用户' }}</p>
-          <p class="app-shell__account-role">{{ authStore.user?.is_admin ? '管理模式' : '作者模式' }}</p>
-        </div>
-        <button
-          type="button"
-          class="md-btn md-btn-text app-shell__logout"
-          aria-label="退出登录"
-          title="退出登录"
-          @click="logout"
-        >
-          退出
-        </button>
-      </div>
-    </aside>
-
-    <button
-      v-if="isCompactShell && isDrawerOpen"
-      type="button"
-      class="app-shell__mobile-backdrop"
-      aria-label="关闭导航"
-      @click="closeDrawer"
-    ></button>
-
     <div class="app-shell__main">
       <header class="app-shell__topbar">
-        <button
-          v-if="isCompactShell"
-          type="button"
-          class="md-icon-btn app-shell__menu"
-          aria-label="打开导航"
-          aria-controls="app-primary-navigation"
-          :aria-expanded="isDrawerOpen"
-          @click="toggleDrawer"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-        <div class="app-shell__workspace-context">
-          <div class="app-shell__title-block">
-            <h1>{{ pageLabel }}</h1>
-            <p v-if="pageDescription" class="app-shell__title-description">
-              {{ pageDescription }}
-            </p>
+        <!-- 左侧墨风金石Logo -->
+        <RouterLink to="/" class="app-shell__brand-top" style="text-decoration: none;">
+          <div class="app-shell__brand-mark" aria-hidden="true">墨</div>
+          <div class="app-shell__brand-copy">
+            <p class="app-shell__brand-title">墨風</p>
+            <p class="app-shell__account-role">AI 小说创作中控台</p>
           </div>
+        </RouterLink>
+
+        <!-- 作品空间双胶囊选择器 (砚海阁案头中枢) -->
+        <div class="app-shell__top-nav app-shell__project-capsule-container">
+          <!-- 胶囊一：选择作品空间 -->
+          <div 
+            ref="capsuleRef"
+            class="app-shell__project-capsule is-select"
+            :class="{ 'is-active': isDropdownOpen }"
+            @click="isDropdownOpen = !isDropdownOpen"
+          >
+            <span class="app-shell__project-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </span>
+            <span class="app-shell__project-title">
+              {{ currentProject ? (currentProject.title || '未命名书卷') : '选择案头画卷...' }}
+            </span>
+            <span class="app-shell__project-arrow" :class="{ 'is-open': isDropdownOpen }">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </span>
+
+            <!-- 水墨风微粒下拉菜单 -->
+            <transition name="fade">
+              <div v-if="isDropdownOpen" class="app-shell__project-dropdown" @click.stop>
+                <div class="app-shell__dropdown-header">阁主已存书卷</div>
+                <div class="app-shell__dropdown-list">
+                  <div 
+                    v-for="proj in projects" 
+                    :key="proj.id" 
+                    class="app-shell__dropdown-item"
+                    :class="{ 'is-active': proj.id === currentProjectId }"
+                    @click="selectProject(proj)"
+                  >
+                    <span class="item-mark">📖</span>
+                    <span class="item-title">{{ proj.title || '未命名书卷' }}</span>
+                  </div>
+                  <div v-if="projects.length === 0" class="app-shell__dropdown-empty">
+                    案头尚无书卷，请点击下方开启创作
+                  </div>
+                </div>
+                <div class="app-shell__dropdown-divider"></div>
+                <div class="app-shell__dropdown-actions">
+                  <div class="app-shell__dropdown-action" @click="selectInspiration">
+                    <span class="action-icon">💡</span>
+                    <span>灵感启航</span>
+                  </div>
+                  <div class="app-shell__dropdown-action" @click="triggerImport">
+                    <span class="action-icon">📥</span>
+                    <span>导入卷轴</span>
+                  </div>
+                </div>
+              </div>
+            </transition>
+          </div>
+
+          <!-- 胶囊二：当前作品的多维成就与状态 -->
+          <div v-if="currentProject && projectStats" class="app-shell__project-capsule is-status">
+            <span class="app-shell__project-tag-info">{{ projectTags }}</span>
+            <span class="app-shell__project-divider">•</span>
+            <span class="app-shell__project-progress-info">
+              <strong class="app-shell__number">{{ projectStats.percent }}%</strong> 完成
+            </span>
+            <span class="app-shell__project-divider">•</span>
+            <span class="app-shell__project-chapter-info">
+              <strong class="app-shell__number">{{ projectStats.completed }}/{{ projectStats.total }}</strong> 章
+            </span>
+          </div>
+
+          <!-- 空白状态：山水泼墨励志寄语 -->
+          <div v-else class="app-shell__project-welcome-message">
+            <span class="welcome-spark">✍️</span>
+            <span class="welcome-text">笔底生墨，风动砚海。阁主，今天又是新的元气的一天，快来尽情创作吧！</span>
+          </div>
+
+          <!-- 隐藏的导入文件 Input -->
+          <input 
+            ref="fileInputRef" 
+            type="file" 
+            accept=".txt,.json,.md,.zip" 
+            style="display: none" 
+            @change="handleFileChange" 
+          />
+        </div>
+
+        <!-- 右侧操作控制台 (辅助信息印章与水墨折叠下拉) -->
+        <div class="app-shell__actions-right">
+          <!-- 辅助信息印章 (仅在写作台显示) -->
+          <button
+            v-if="route.name === 'project-write'"
+            type="button"
+            class="app-shell__action-btn"
+            title="展开/收起写作辅助面板"
+            @click="toggleWorkspaceAssistant"
+          >
+            <span class="app-shell__action-badge is-assistant">輔</span>
+            <span class="app-shell__action-text">{{ isAssistantOpen ? '收起辅助' : '辅助信息' }}</span>
+          </button>
+
+          <!-- 阁主身份名牌 (金石印章折叠中枢) -->
+          <div 
+            ref="userTagRef"
+            class="app-shell__user-tag is-trigger"
+            :class="{ 'is-active': isUserDropdownOpen }"
+            @click="isUserDropdownOpen = !isUserDropdownOpen"
+            role="button"
+            aria-haspopup="true"
+            :aria-expanded="isUserDropdownOpen"
+            title="查看阁主菜单"
+          >
+            <span class="app-shell__user-role-dot" :class="{ 'is-admin-dot': authStore.user?.is_admin }"></span>
+            <span class="app-shell__user-name">{{ authStore.user?.username || '阁主' }}</span>
+            <span class="app-shell__user-arrow" :class="{ 'is-open': isUserDropdownOpen }">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </span>
+
+            <!-- 水墨信笺下拉菜单 -->
+            <transition name="fade">
+              <div v-if="isUserDropdownOpen" class="app-shell__user-dropdown" @click.stop>
+                <div class="app-shell__user-dropdown-header">阁主案头起居</div>
+                <div class="app-shell__user-dropdown-list">
+                  <!-- 系统管理配置 -->
+                  <a
+                    v-if="authStore.user?.is_admin"
+                    href="javascript:void(0)"
+                    class="app-shell__user-dropdown-item"
+                    :class="{ 'is-active': showAdminModal }"
+                    @click.prevent="showAdminModal = true; isUserDropdownOpen = false"
+                  >
+                    <span class="app-shell__action-badge is-admin">管</span>
+                    <div class="item-text">
+                      <span class="item-title">系统管理</span>
+                      <span class="item-desc">配置全局与用户权限</span>
+                    </div>
+                  </a>
+
+                  <!-- 配置个人 AI 模型 -->
+                  <a
+                    href="javascript:void(0)"
+                    class="app-shell__user-dropdown-item"
+                    :class="{ 'is-active': showSettingsModal }"
+                    @click.prevent="showSettingsModal = true; isUserDropdownOpen = false"
+                  >
+                    <span class="app-shell__action-badge is-settings">設</span>
+                    <div class="item-text">
+                      <span class="item-title">模型设置</span>
+                      <span class="item-desc">配置个人大语言模型</span>
+                    </div>
+                  </a>
+
+                  <div class="app-shell__user-dropdown-divider"></div>
+
+                  <!-- 离席退出系统 -->
+                  <button
+                    type="button"
+                    class="app-shell__user-dropdown-item is-logout-action"
+                    @click="logout"
+                  >
+                    <span class="app-shell__action-badge is-logout">离</span>
+                    <div class="item-text">
+                      <span class="item-title">离席登出</span>
+                      <span class="item-desc">保存草稿并安全离线</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </transition>
+          </div>
+        </div>
+
+        <!-- 全局水墨宣纸写作进度条 (仅在写作台页面展示) -->
+        <div 
+          v-if="currentProject && projectStats && route.name === 'project-write'" 
+          class="app-shell__global-progress" 
+          role="progressbar"
+          :aria-valuenow="projectStats.percent"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          :aria-label="`写作进度 ${projectStats.percent}%`"
+        >
+          <span :style="{ transform: `scaleX(${projectStats.percent / 100})` }"></span>
         </div>
       </header>
 
@@ -188,35 +383,38 @@ watch(
       </main>
     </div>
 
-    <nav v-if="isMobileShell" class="app-shell__bottom-tabs" aria-label="移动主导航">
-      <RouterLink
-        v-for="item in navigation.mobileTabs"
-        :key="item.key"
-        :to="item.path"
-        class="app-shell__bottom-tab"
-        :class="{ 'is-active': item.match(route.path) }"
-        :aria-current="item.match(route.path) ? 'page' : undefined"
-        :aria-label="item.mobileLabel || item.label"
-        :title="item.mobileLabel || item.label"
+    <!-- 全局模型设置与系统管理大弹窗 (案头折纸折子戏) -->
+    <Teleport to="body">
+      <GlobalModalContainer
+        v-if="showSettingsModal"
+        title="模型与能力中枢"
+        hide-close-button
+        @close="handleCloseSettingsModal"
       >
-        <span class="app-shell__bottom-tab-icon" aria-hidden="true">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+        <template #header-actions>
+          <!-- 极具金石质感的「存」字朱红方章保存按钮 -->
+          <button
+            type="button"
+            class="m3-ink-modal-save-btn"
+            title="保存当前配置"
+            :disabled="isSavingSettings"
+            @click="triggerSettingsSave"
           >
-            <path
-              v-for="(path, index) in navIconPaths[item.icon]"
-              :key="`${item.key}-mobile-${index}`"
-              :d="path"
-            />
-          </svg>
-        </span>
-        <span class="app-shell__bottom-tab-text">{{ item.mobileLabel || item.label }}</span>
-      </RouterLink>
-    </nav>
+            <span class="m3-ink-modal-save-badge">存</span>
+            <span class="m3-ink-modal-save-text">{{ isSavingSettings ? '保存中...' : '保存' }}</span>
+          </button>
+        </template>
+        <SettingsView ref="settingsViewRef" :is-modal="true" @saved="showSettingsModal = false" />
+      </GlobalModalContainer>
+
+      <GlobalModalContainer
+        v-if="showAdminModal"
+        title="系统运营控制台"
+        hide-close-button
+        @close="showAdminModal = false"
+      >
+        <AdminView :is-modal="true" />
+      </GlobalModalContainer>
+    </Teleport>
   </div>
 </template>

@@ -158,67 +158,7 @@
       </div>
     </section>
 
-    <section class="workspace-canvas" aria-label="创作工作区">
-      <article class="workspace-module">
-        <header class="workspace-module__head">
-          <h3>最近项目</h3>
-          <p>快速回到你刚刚推进过的章节上下文</p>
-        </header>
-        <ul v-if="recentEditedProjects.length > 0" class="workspace-activity">
-          <li v-for="project in recentEditedProjects" :key="project.id">
-            <button
-              type="button"
-              class="workspace-activity__item"
-              @click="openProjectFromActivity(project)"
-            >
-              <div>
-                <strong>{{ project.title }}</strong>
-                <span>{{ project.genre || '未设定题材' }}</span>
-              </div>
-              <em>{{ formatProjectDate(project.last_edited) }}</em>
-            </button>
-          </li>
-        </ul>
-        <p v-else class="workspace-empty-hint">暂无最近编辑记录</p>
-      </article>
 
-      <article class="workspace-module workspace-module--insights">
-        <details class="workspace-insights">
-          <summary class="workspace-insights__summary">
-            <span>AI 创作建议</span>
-            <em>{{ aiSuggestions.length }} 条</em>
-          </summary>
-          <ul class="workspace-ai-list">
-            <li v-for="suggestion in aiSuggestions" :key="suggestion.title">
-              <p class="workspace-ai-list__title">{{ suggestion.title }}</p>
-              <p class="workspace-ai-list__desc">{{ suggestion.description }}</p>
-              <span :class="['workspace-ai-list__tag', `is-${suggestion.tone}`]">
-                {{ suggestion.tag }}
-              </span>
-            </li>
-          </ul>
-        </details>
-      </article>
-
-      <article class="workspace-module workspace-module--tools">
-        <header class="workspace-module__head">
-          <h3>工作台工具</h3>
-          <p>围绕创作节奏的辅助操作</p>
-        </header>
-        <div class="workspace-tools">
-          <button type="button" class="md-btn md-btn-outlined md-ripple" :disabled="isImporting" @click="triggerImport">
-            {{ isImporting ? '导入中' : '导入 TXT 稿件' }}
-          </button>
-          <button type="button" class="md-btn md-btn-outlined md-ripple" @click="loadProjects">
-            刷新项目状态
-          </button>
-          <button type="button" class="md-btn md-btn-tonal md-ripple" @click="goToInspiration">
-            进入灵感模式
-          </button>
-        </div>
-        <input type="file" ref="fileInput" accept=".txt" class="hidden" @change="handleFileImport" />
-      </article>
-    </section>
 
     <section class="workspace-archive" aria-label="项目档案库">
       <div class="workspace-archive__head">
@@ -541,7 +481,7 @@ const goToInspiration = () => {
 }
 
 const viewProjectDetail = (projectId: string) => {
-  router.push(`/projects/${projectId}`)
+  router.push(`/projects/${projectId}/write`)
 }
 
 const enterProject = (project: NovelProjectSummary) => {
@@ -634,7 +574,7 @@ onUnmounted(() => {
 .workspace-page {
   display: flex;
   flex-direction: column;
-  gap: var(--md-spacing-6);
+  gap: clamp(var(--md-spacing-6), 4vw, var(--md-spacing-10));
 }
 
 .workspace-hero {
@@ -1240,15 +1180,16 @@ onUnmounted(() => {
   height: 32px;
 }
 
-@media (max-width: 1199px) {
+@media (max-width: 960px) {
   .workspace-hero {
     grid-template-columns: minmax(0, 1fr);
+    gap: var(--md-spacing-5);
   }
 }
 
 @media (max-width: 833px) {
   .workspace-page {
-    gap: var(--md-spacing-4);
+    gap: var(--md-spacing-5);
   }
 
   .workspace-hero--loading .workspace-hero__intro,
@@ -1257,22 +1198,9 @@ onUnmounted(() => {
   }
 
   .workspace-hero,
-  .workspace-module,
   .workspace-archive {
-    padding: var(--md-spacing-4);
+    padding: var(--md-spacing-5);
     border-radius: var(--md-radius-lg);
-  }
-
-  .workspace-canvas {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .workspace-module--tools {
-    grid-column: span 1;
-  }
-
-  .workspace-hero__actions .md-btn {
-    flex: 1 1 100%;
   }
 
   .workspace-hero__snapshot {
@@ -1280,15 +1208,54 @@ onUnmounted(() => {
   }
 }
 
-@media (max-width: 833px) {
+@media (max-width: 600px) {
+  .workspace-page {
+    gap: var(--md-spacing-4);
+  }
+
+  .workspace-hero,
+  .workspace-archive {
+    padding: var(--md-spacing-4);
+  }
+
   .workspace-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--md-spacing-4);
   }
 
-  .workspace-activity__item {
+  .workspace-hero__snapshot {
     flex-direction: column;
     align-items: flex-start;
+    gap: var(--md-spacing-2);
+    padding: var(--md-spacing-4);
+  }
+
+  .workspace-hero__snapshot [aria-hidden="true"] {
+    display: none;
+  }
+
+  .workspace-hero__snapshot span:not([aria-hidden="true"]) {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    justify-content: space-between;
+    padding-bottom: var(--md-spacing-2);
+    border-bottom: 1px dashed color-mix(in srgb, var(--md-primary) 12%, var(--md-outline-variant));
+  }
+
+  .workspace-hero__snapshot span:not([aria-hidden="true"]):last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .workspace-hero__panel {
+    padding: var(--md-spacing-4);
+  }
+}
+
+@media (max-width: 480px) {
+  .workspace-hero__actions .md-btn {
+    flex: 1 1 100%;
   }
 }
 

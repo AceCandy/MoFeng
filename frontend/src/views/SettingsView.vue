@@ -1,7 +1,7 @@
 <!-- AIMETA P=设置页_用户设置|R=用户设置表单|NR=不含管理员设置|E=route:/settings#component:SettingsView|X=ui|A=设置表单|D=vue|S=dom,net|RD=./README.ai -->
 <template>
-  <div class="app-page settings-page">
-    <section class="settings-hero" aria-label="AI 能力中心总览">
+  <div :class="{ 'app-page': !props.isModal, 'settings-page': true, 'is-in-modal': props.isModal }">
+    <section v-if="!props.isModal" class="settings-hero" aria-label="AI 能力中心总览">
       <div class="settings-hero__copy">
         <p class="settings-eyebrow">AI 能力中心</p>
         <h2>模型、供应商与创作阶段路由</h2>
@@ -16,7 +16,7 @@
       </div>
     </section>
 
-    <section class="settings-summary" aria-label="能力摘要">
+    <section v-if="!props.isModal" class="settings-summary" aria-label="能力摘要">
       <article class="settings-summary__card">
         <p>主文本模型</p>
         <strong>{{ primaryChatModelLabel }}</strong>
@@ -29,7 +29,7 @@
       </article>
     </section>
 
-    <details class="settings-metrics">
+    <details v-if="!props.isModal" class="settings-metrics">
       <summary>
         <span>查看运行指标</span>
         <em>{{ enabledProviders }}/{{ providerCount }} 供应商已启用</em>
@@ -48,7 +48,7 @@
       </div>
     </details>
 
-    <section v-if="showInspirationConfigNotice" class="md-card settings-notice">
+    <section v-if="showInspirationConfigNotice && !props.isModal" class="md-card settings-notice">
       <p class="md-title-small">灵感模式需要先完成模型配置</p>
       <p class="md-body-small mt-1">
         请先在 <strong>文本生成</strong> 中启用模型并指定主模型，保存后会自动跳回灵感模式。
@@ -86,19 +86,25 @@
       >
         <PersonalModelRouting
           v-if="activeSettingsSection === 'llm'"
+          ref="personalRoutingXRef"
           active-section="llm"
+          :is-modal="props.isModal"
           @saved="handleLLMConfigSaved"
           @navigate="selectSettingsSection"
         />
         <PersonalModelRouting
           v-else-if="activeSettingsSection === 'embedding'"
+          ref="personalRoutingXRef"
           active-section="embedding"
+          :is-modal="props.isModal"
           @saved="handleLLMConfigSaved"
           @navigate="selectSettingsSection"
         />
         <PersonalModelRouting
           v-else
+          ref="personalRoutingXRef"
           active-section="routes"
+          :is-modal="props.isModal"
           @saved="handleLLMConfigSaved"
           @navigate="selectSettingsSection"
         />
@@ -112,6 +118,19 @@ import { computed, ref, type ComponentPublicInstance } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PersonalModelRouting from '@/components/llm-settings/PersonalModelRouting.vue'
 import { useLLMConfigBundleQuery } from '@/queries/llm'
+
+const props = withDefaults(
+  defineProps<{
+    isModal?: boolean
+  }>(),
+  {
+    isModal: false,
+  }
+)
+
+const emit = defineEmits<{
+  (e: 'saved'): void
+}>()
 
 type SettingsSectionId = 'llm' | 'embedding' | 'routes'
 
@@ -273,11 +292,31 @@ const centerStatus = computed(() => {
   }
 })
 
+const personalRoutingXRef = ref<any>(null)
+
+const save = async () => {
+  if (personalRoutingXRef.value && typeof personalRoutingXRef.value.save === 'function') {
+    await personalRoutingXRef.value.save()
+  }
+}
+
+const isDirty = computed(() => {
+  return personalRoutingXRef.value?.isDirty ?? false
+})
+
+defineExpose({
+  save,
+  isDirty,
+})
+
 const handleLLMConfigSaved = async () => {
+  emit('saved')
   if (!showInspirationConfigNotice.value) {
     return
   }
-  await router.push('/inspiration')
+  if (!props.isModal) {
+    await router.push('/inspiration')
+  }
 }
 </script>
 

@@ -163,6 +163,28 @@ find_available_port() {
   exit 1
 }
 
+resolve_frontend_node_options() {
+  local existing_options="${NODE_OPTIONS:-}"
+  local node_major
+
+  node_major="$(node -p "process.versions.node.split('.')[0]" 2>/dev/null || printf '0')"
+
+  if [ "$node_major" -lt 22 ] 2>/dev/null; then
+    printf '%s\n' "$existing_options"
+    return
+  fi
+
+  case " $existing_options " in
+    *" --no-experimental-webstorage "*|*" --localstorage-file="*)
+      printf '%s\n' "$existing_options"
+      ;;
+    *)
+      # Node 22+ 会暴露实验性 WebStorage；未配置持久化文件时会让 Vue DevTools 在 Vite 配置加载阶段崩溃。
+      printf '%s\n' "${existing_options:+$existing_options }--no-experimental-webstorage"
+      ;;
+  esac
+}
+
 trap cleanup INT TERM EXIT
 
 if ! command -v npm >/dev/null 2>&1; then
@@ -175,13 +197,14 @@ ensure_backend_environment
 
 BACKEND_PORT="$(find_available_port "$BACKEND_HOST" "$BACKEND_DEFAULT_PORT")"
 FRONTEND_PORT="$(find_available_port "$FRONTEND_HOST" "$FRONTEND_DEFAULT_PORT")"
+FRONTEND_NODE_OPTIONS="$(resolve_frontend_node_options)"
 
 if [ "$BACKEND_PORT" != "$BACKEND_DEFAULT_PORT" ]; then
-  echo "检测到后端默认端口 $BACKEND_DEFAULT_PORT 已占用，自动切换到 $BACKEND_PORT。"
+  echo "检测到后端默认端口 ${BACKEND_DEFAULT_PORT} 已占用，自动切换到 ${BACKEND_PORT}。"
 fi
 
 if [ "$FRONTEND_PORT" != "$FRONTEND_DEFAULT_PORT" ]; then
-  echo "检测到前端默认端口 $FRONTEND_DEFAULT_PORT 已占用，自动切换到 $FRONTEND_PORT。"
+  echo "检测到前端默认端口 ${FRONTEND_DEFAULT_PORT} 已占用，自动切换到 ${FRONTEND_PORT}。"
 fi
 
 if [ ! -f "$BACKEND_DIR/.env" ] && [ -f "$BACKEND_DIR/env.example" ]; then
@@ -198,7 +221,7 @@ BACKEND_PID=$!
 echo "启动前端开发服务..."
 (
   cd "$FRONTEND_DIR"
-  exec env BACKEND_PROXY_HOST="$BACKEND_PROXY_HOST" BACKEND_PORT="$BACKEND_PORT" FRONTEND_HOST="$FRONTEND_HOST" FRONTEND_PORT="$FRONTEND_PORT" FRONTEND_HMR_HOST="$FRONTEND_HMR_HOST" npm run dev
+  exec env NODE_OPTIONS="$FRONTEND_NODE_OPTIONS" BACKEND_PROXY_HOST="$BACKEND_PROXY_HOST" BACKEND_PORT="$BACKEND_PORT" FRONTEND_HOST="$FRONTEND_HOST" FRONTEND_PORT="$FRONTEND_PORT" FRONTEND_HMR_HOST="$FRONTEND_HMR_HOST" npm run dev
 ) &
 FRONTEND_PID=$!
 
