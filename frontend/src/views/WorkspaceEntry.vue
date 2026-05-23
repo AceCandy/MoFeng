@@ -1,33 +1,32 @@
 <!-- AIMETA P=工作区入口_应用主入口|R=入口导航|NR=不含具体功能|E=route:/#component:WorkspaceEntry|X=ui|A=入口页|D=vue|S=dom|RD=./README.ai -->
 <template>
-  <div class="workspace-entry md-surface-dim">
+  <div class="workspace-entry">
     <!-- Material 3 Update Log Modal -->
-    <div v-if="showModal" class="md-dialog-overlay" @click.self="closeModal">
-      <div
-        ref="updatesDialogRef"
-        class="md-dialog workspace-entry__dialog"
-        role="dialog"
-        aria-modal="true"
-        :aria-labelledby="updatesDialogTitleId"
-      >
+    <Transition name="dialog-fade">
+      <div v-if="showModal" class="md-dialog-overlay" @click.self="closeModal">
+        <div
+          ref="updatesDialogRef"
+          class="md-dialog workspace-entry__dialog"
+          role="dialog"
+          aria-modal="true"
+          :aria-labelledby="updatesDialogTitleId"
+        >
         <!-- Header -->
-        <div class="md-dialog-header border-b" style="border-color: var(--md-outline-variant)">
+        <div class="md-dialog-header border-b updates-dialog-header">
           <h1
             :id="updatesDialogTitleId"
-            class="md-headline-medium text-center"
-            style="color: var(--md-on-surface)"
+            class="md-headline-medium text-center updates-dialog-title"
           >
             更新日志
           </h1>
         </div>
 
         <!-- Community Section -->
-        <div v-if="communityLog" class="px-6 pt-6">
-          <div class="p-4 rounded-lg" style="background-color: var(--md-primary-container)">
+        <div v-if="renderedCommunityLog" class="px-6 pt-6">
+          <div class="p-4 updates-community-box">
             <div
-              class="prose max-w-none prose-sm"
-              style="color: var(--md-on-primary-container)"
-              v-html="renderMarkdown(communityLog.content)"
+              class="prose max-w-none prose-sm updates-community-text"
+              v-html="renderedCommunityLog.renderedContent"
             ></div>
           </div>
         </div>
@@ -41,26 +40,21 @@
                   <!-- Connector Line -->
                   <span
                     v-if="index < filteredUpdateLogs.length - 1"
-                    class="absolute left-2.5 top-4 -ml-px h-full w-0.5"
-                    style="background-color: var(--md-outline-variant)"
+                    class="absolute left-2.5 top-4 -ml-px h-full w-0.5 updates-timeline-connector"
                     aria-hidden="true"
                   ></span>
                   <div class="relative flex items-start space-x-4">
                     <!-- Timeline Dot -->
-                    <div
-                      class="h-5 w-5 rounded-full flex items-center justify-center ring-8 mt-1"
-                      style="background-color: var(--md-primary); ring-color: var(--md-surface)"
-                    ></div>
+                    <div class="updates-timeline-dot"></div>
                     <!-- Card Content -->
                     <div class="min-w-0 flex-1">
                       <div class="md-card md-card-outlined p-4">
-                        <time class="md-label-large" style="color: var(--md-on-surface-variant)">
+                        <time class="md-label-large updates-timeline-time">
                           {{ new Date(log.created_at).toLocaleDateString() }}
                         </time>
                         <div
-                          class="mt-3 prose max-w-none prose-sm"
-                          style="color: var(--md-on-surface)"
-                          v-html="renderMarkdown(log.content)"
+                          class="mt-3 prose max-w-none prose-sm updates-timeline-content"
+                          v-html="log.renderedContent"
                         ></div>
                       </div>
                     </div>
@@ -72,13 +66,7 @@
         </div>
 
         <!-- Footer Actions -->
-        <div
-          class="md-dialog-actions border-t"
-          style="
-            border-color: var(--md-outline-variant);
-            background-color: var(--md-surface-container-low);
-          "
-        >
+        <div class="md-dialog-actions border-t updates-dialog-actions">
           <button @click="hideModalToday" class="md-btn md-btn-text md-ripple">今日不再显示</button>
           <button
             ref="updatesCloseButtonRef"
@@ -95,28 +83,11 @@
     <!-- Top Right Actions -->
     <div class="workspace-entry__actions-top">
       <router-link to="/settings" class="md-btn md-btn-text md-ripple">
-        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-          />
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-          />
-        </svg>
+        <span class="workspace-entry__icon-txt">[ 設 ]</span>
         设置
       </router-link>
       <button @click="handleLogout" class="md-btn md-btn-text md-ripple">
-        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-          />
-        </svg>
+        <span class="workspace-entry__icon-txt">[ 歸 ]</span>
         退出登录
       </button>
     </div>
@@ -125,8 +96,8 @@
     <div class="workspace-entry__main">
       <div class="workspace-entry__hero fade-in">
         <!-- Title -->
-        <h1 class="md-display-small mb-4" style="color: var(--md-on-surface)">墨风：创作中心</h1>
-        <p class="md-body-large mb-12" style="color: var(--md-on-surface-variant)">
+        <h1 class="md-display-small mb-4 hero-title">墨风：创作中心</h1>
+        <p class="md-body-large mb-12 hero-subtitle">
           从一个新灵感开始，或继续打磨你的世界。
         </p>
 
@@ -137,19 +108,7 @@
             @click="goToWorkspace"
             class="md-btn md-btn-filled md-ripple entry-actions__primary"
           >
-            <svg
-              class="w-5 h-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-              />
-            </svg>
+            <span class="entry-actions__stamp">[ 啟 ]</span>
             进入小说工作台
           </button>
           <button
@@ -161,7 +120,7 @@
           </button>
         </div>
       </div>
-    </div>
+    </Transition>
   </div>
 </template>
 
@@ -206,12 +165,24 @@ const communityLog = computed(() => {
   return updateLogs.value.find((log) => /交流群/.test(log.content))
 })
 
-// 过滤掉包含"交流群"的日志，用于时间线显示
-const filteredUpdateLogs = computed(() => {
-  if (!communityLog.value) {
-    return updateLogs.value
+// 【逻辑解耦】：在 computed 中缓存社区日志 Markdown 渲染产物，防 template 高频重绘性能滑坡
+const renderedCommunityLog = computed(() => {
+  if (!communityLog.value) return null
+  return {
+    ...communityLog.value,
+    renderedContent: renderMarkdown(communityLog.value.content),
   }
-  return updateLogs.value.filter((log) => log.id !== communityLog.value!.id)
+})
+
+// 【逻辑解耦】：过滤日志，并预先在 computed 中进行 Markdown 渲染，保证只在数据流变更时触发解析
+const filteredUpdateLogs = computed(() => {
+  const logsToFilter = communityLog.value
+    ? updateLogs.value.filter((log) => log.id !== communityLog.value!.id)
+    : updateLogs.value
+  return logsToFilter.map(log => ({
+    ...log,
+    renderedContent: renderMarkdown(log.content),
+  }))
 })
 
 watch(
@@ -278,6 +249,10 @@ const goToWorkspace = () => {
   align-items: center;
   justify-content: center;
   padding: clamp(var(--md-spacing-4), 3vw, var(--md-spacing-8));
+  /* 采用平铺温暖熟宣纸与干燥木骨网格 */
+  background-color: var(--md-background) !important;
+  background-image: radial-gradient(var(--md-outline-variant) 1px, transparent 1px) !important;
+  background-size: 24px 24px !important;
 }
 
 .workspace-entry__actions-top {
@@ -291,22 +266,70 @@ const goToWorkspace = () => {
   gap: var(--md-spacing-2);
 }
 
+.workspace-entry__actions-top .md-btn {
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-weight: 600;
+  color: var(--md-primary-light) !important;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.workspace-entry__actions-top .md-btn:hover {
+  color: var(--md-secondary) !important; /* Hover 时变为朱砂红 */
+}
+
+/* 右上角朱砂小落款印章字标样式 */
+.workspace-entry__icon-txt {
+  font-family: var(--md-font-serif, "STSong", "Songti SC", "SimSun", serif) !important;
+  font-weight: 600;
+  color: var(--md-secondary) !important; /* 朱砂红，像一枚落款小印章点醒页面 */
+  margin-right: 4px;
+}
+
 .workspace-entry__main {
-  width: min(100%, 960px);
+  width: min(100%, 720px); /* 适度收窄，更具书卷聚拢感 */
   margin: 0 auto;
 }
 
+/* 将普通的看板区域，重构为宣纸折页线装卡片 */
 .workspace-entry__hero {
   text-align: center;
-  padding: clamp(var(--md-spacing-6), 4vw, var(--md-spacing-10));
+  padding: clamp(var(--md-spacing-8), 6vw, var(--md-spacing-12)) !important;
+  border-radius: var(--md-radius-sm) !important;
+  border: 3px double var(--md-outline) !important;
+  background: var(--md-surface) !important;
+  box-shadow: 5px 5px 0px rgba(28, 32, 34, 0.15) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+
+
+.hero-title {
+  font-family: var(--md-font-serif, "STSong", "Songti SC", "SimSun", serif) !important;
+  color: var(--md-on-surface) !important;
+  letter-spacing: 0.08em !important;
+  font-weight: 600 !important;
+  font-size: 32px !important;
+}
+
+.hero-subtitle {
+  color: var(--md-on-surface-variant) !important;
+  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-size: 16px !important;
+  letter-spacing: 0.03em !important;
 }
 
 .workspace-entry__dialog {
-  width: min(100%, 960px);
-  max-height: min(90vh, 900px);
+  width: min(100%, 720px);
+  max-height: min(85vh, 750px);
   margin: 0 var(--md-spacing-4);
   display: flex;
   flex-direction: column;
+  background-color: var(--md-surface) !important;
+  border-radius: var(--md-radius-sm) !important;
+  border: 3px double var(--md-outline) !important;
+  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.18) !important;
+  padding: 2px !important;
 }
 
 .workspace-entry__dialog-timeline {
@@ -317,30 +340,175 @@ const goToWorkspace = () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: min(100%, 560px);
+  width: min(100%, 480px);
   margin: 0 auto;
-  gap: var(--md-spacing-4);
+  gap: var(--md-spacing-5);
 }
 
+/* 焦墨动作大按钮，钤印下沉微动效 */
 .entry-actions__primary {
   min-height: 52px;
   min-width: min(100%, 320px);
   padding: 0 var(--md-spacing-8);
-  font-size: var(--md-body-large);
+  font-size: var(--md-body-large) !important;
   gap: var(--md-spacing-3);
+  border-radius: var(--md-radius-xs) !important;
+  border: 1px solid var(--md-outline) !important;
+  background-color: var(--md-primary) !important;
+  color: var(--md-on-primary) !important;
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.05em;
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.15) !important;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
 }
 
+.entry-actions__primary::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, var(--md-primary-light) 0%, transparent 70%);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  transition: 
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), 
+    opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.entry-actions__primary:hover:not(:disabled)::before {
+  transform: translate(-50%, -50%) scale(1.5);
+  opacity: 0.3;
+}
+
+.entry-actions__primary:hover:not(:disabled) {
+  background-color: var(--md-primary-light) !important;
+  box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.25) !important; /* 获得朱砂压章硬投影 */
+}
+
+.entry-actions__primary:active:not(:disabled) {
+  transform: translate(1.5px, 1.5px) !important;
+  box-shadow: 0.5px 0.5px 0px rgba(184, 60, 50, 0.25) !important; /* 点击下陷，缩回阴影 */
+}
+
+/* 辅动作用虚线竹青钮 */
 .entry-actions__secondary {
-  min-height: 44px;
+  min-height: 48px;
   padding: 0 var(--md-spacing-6);
   font-size: var(--md-body-medium);
-  color: var(--md-on-surface-variant);
-  border-color: var(--md-outline-variant);
+  border-radius: var(--md-radius-xs) !important;
+  border: 1px dashed var(--md-outline) !important;
+  background-color: transparent !important;
+  color: var(--md-on-surface-variant) !important;
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-weight: 600 !important;
+  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.05) !important;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  cursor: pointer;
 }
 
 .entry-actions__secondary:hover {
-  color: var(--md-primary-dark);
-  border-color: var(--md-primary);
+  background-color: var(--md-surface-container-low) !important;
+  color: var(--md-secondary) !important; /* 变为朱砂红 */
+  border-color: var(--md-secondary) !important;
+  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.15) !important;
+}
+
+.entry-actions__secondary:active {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 0.5px 0.5px 0px rgba(184, 60, 50, 0.15) !important;
+}
+
+/* Modal 样式国风微调 */
+.updates-dialog-header {
+  border-color: var(--md-outline-variant) !important;
+}
+
+.updates-dialog-title {
+  color: var(--md-on-surface) !important;
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.updates-community-box {
+  background-color: var(--md-surface-container-high) !important;
+  border: 1px dashed var(--md-secondary) !important;
+  border-radius: var(--md-radius-xs) !important;
+}
+
+.updates-community-text {
+  color: var(--md-on-surface) !important;
+  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+}
+
+.updates-timeline-connector {
+  background-color: var(--md-outline-variant) !important;
+}
+
+.updates-timeline-dot {
+  width: 10px;
+  height: 10px;
+  background-color: var(--md-secondary) !important; /* 朱砂方点 */
+  border-radius: var(--md-radius-xs) !important;
+  transform: rotate(45deg);
+  margin-top: 6px;
+  box-shadow: 0 0 0 6px var(--md-surface) !important;
+}
+
+.updates-timeline-time {
+  color: var(--md-secondary) !important;
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-weight: 600;
+}
+
+.updates-timeline-content {
+  color: var(--md-on-surface) !important;
+}
+
+.workspace-entry__dialog-timeline .md-card {
+  border-radius: var(--md-radius-xs) !important;
+  border: 1px solid var(--md-outline) !important;
+  background-color: var(--md-surface-container-low) !important;
+}
+
+.updates-dialog-actions .md-btn {
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-weight: 600;
+}
+
+/* 首屏宣纸润墨淡入动画 */
+.fade-in {
+  animation: ink-fade-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes ink-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(8px); /* 起笔淡墨模糊 */
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* 主动作按钮朱砂印章样式 */
+.entry-actions__stamp {
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-weight: 600;
+  color: var(--md-secondary) !important;
+  margin-right: var(--md-spacing-2);
+  user-select: none;
 }
 
 @media (max-width: 833px) {
@@ -385,5 +553,37 @@ const goToWorkspace = () => {
     width: 100%;
     padding-inline: var(--md-spacing-4);
   }
+}
+
+/* 遮罩背景水墨漫润般变深 */
+.dialog-fade-enter-active,
+.dialog-fade-leave-active {
+  transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dialog-fade-enter-from,
+.dialog-fade-leave-to {
+  opacity: 0;
+}
+
+/* 弹窗实体如折页书卷般舒展开来 */
+.dialog-fade-enter-active .workspace-entry__dialog,
+.dialog-fade-leave-active .workspace-entry__dialog {
+  transition: 
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dialog-fade-enter-from .workspace-entry__dialog {
+  transform: scale(0.96) translateY(10px);
+  filter: blur(4px); /* 刚出现时微模糊 */
+  opacity: 0;
+}
+
+.dialog-fade-leave-to .workspace-entry__dialog {
+  transform: scale(0.98) translateY(-6px);
+  filter: blur(2px);
+  opacity: 0;
 }
 </style>

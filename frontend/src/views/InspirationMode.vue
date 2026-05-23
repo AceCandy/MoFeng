@@ -2,125 +2,187 @@
 <template>
   <div class="inspiration-page">
     <div class="inspiration-page__container">
-      <!-- 灵感模式交互界面 -->
-      <div
-        v-if="!showBlueprintConfirmation && !showBlueprint"
-        class="inspiration-chat"
-      >
-        <!-- 头部 -->
-        <header class="inspiration-chat__header">
-          <div class="flex justify-between items-center">
-            <div class="flex items-center gap-2">
-              <span
-                class="inspiration-chat__status-dot"
-                aria-hidden="true"
-              ></span>
-              <span class="md-label-large" style="color: var(--md-primary)">与"文思"对话中...</span>
+      <Transition name="ink-stage" mode="out-in">
+        <!-- 阶段 1：灵感模式交互界面 -->
+        <div
+          v-if="!showBlueprintConfirmation && !showBlueprint"
+          key="chat"
+          class="inspiration-chat"
+        >
+          <!-- 左侧聊天主体 -->
+          <div class="inspiration-chat__main">
+            <!-- 头部 -->
+            <header class="inspiration-chat__header">
+              <div class="flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                  <span
+                    class="inspiration-chat__status-dot"
+                    aria-hidden="true"
+                  ></span>
+                  <span class="md-label-large inspiration-chat__title">与"文思"对话中...</span>
+                </div>
+                <div class="flex items-center gap-4">
+                  <span
+                    v-if="currentTurn > 0"
+                    class="inspiration-chat__turn-badge"
+                  >
+                    第 {{ currentTurn }} 轮
+                  </span>
+                  <button
+                    @click="handleRestart"
+                    title="重新开始"
+                    class="md-btn md-btn-text md-ripple inspiration-header-btn"
+                    aria-label="重新开始对话"
+                  >
+                    <span class="inspiration-header-btn__label">[ 始 ]</span> 重开
+                  </button>
+                  <button
+                    @click="exitConversation"
+                    title="返回首页"
+                    class="md-btn md-btn-text md-ripple inspiration-header-btn"
+                    aria-label="退出灵感模式"
+                  >
+                    <span class="inspiration-header-btn__label">[ 歸 ]</span> 退出
+                  </button>
+                </div>
+              </div>
+            </header>
+
+            <!-- 聊天区域 -->
+            <div class="inspiration-chat__messages" ref="chatArea">
+              <transition name="md-fade">
+                <InspirationLoading v-if="isInitialLoading" />
+              </transition>
+              <ChatBubble
+                v-for="(message, index) in chatMessages"
+                :id="`chat-bubble-${index}`"
+                :key="index"
+                :message="message.content"
+                :type="message.type"
+              />
             </div>
-            <div class="flex items-center gap-4">
-              <span
-                v-if="currentTurn > 0"
-                class="inspiration-chat__turn-badge"
-              >
-                第 {{ currentTurn }} 轮
-              </span>
+
+            <!-- 输入区域 -->
+            <div class="inspiration-chat__input">
+              <ConversationInput
+                :ui-control="currentUIControl"
+                :loading="
+                  inspirationRequestPending ||
+                  isInitialLoading ||
+                  isCheckingModelConfig ||
+                  !conversationStarted
+                "
+                @submit="handleUserInput"
+              />
+            </div>
+          </div>
+
+          <!-- 中间古雅挂轴式对话进度轴 -->
+          <div class="inspiration-chat__timeline" aria-label="对话进度轴" v-if="userSpeechNodes.length > 0">
+            <div class="timeline-line"></div>
+            <div class="timeline-nodes">
               <button
-                @click="handleRestart"
-                title="重新开始"
-                class="md-icon-btn"
-                aria-label="重新开始对话"
+                v-for="(node, nodeIdx) in userSpeechNodes"
+                :key="nodeIdx"
+                @click="scrollToUserMessage(node.chatIndex, nodeIdx)"
+                class="timeline-node-btn"
+                :class="{ 'is-active': activeNodeIndex === nodeIdx }"
+                :title="node.previewText"
               >
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fill-rule="evenodd"
-                    d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                    clip-rule="evenodd"
-                  ></path>
-                </svg>
-              </button>
-              <button
-                @click="exitConversation"
-                title="返回首页"
-                class="md-icon-btn"
-                aria-label="退出灵感模式"
-              >
-                <svg
-                  class="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <span class="timeline-node-seal">{{ node.numLabel }}</span>
+                <div class="timeline-node-tooltip">{{ node.tooltipText }}</div>
               </button>
             </div>
           </div>
-        </header>
 
-        <!-- 聊天区域 -->
-        <div class="inspiration-chat__messages" ref="chatArea">
-          <transition name="md-fade">
-            <InspirationLoading v-if="isInitialLoading" />
-          </transition>
-          <ChatBubble
-            v-for="(message, index) in chatMessages"
-            :key="index"
-            :message="message.content"
-            :type="message.type"
-          />
-          <div v-if="isAssistantResponding && !isInitialLoading" class="w-full flex justify-start">
-            <div class="chat-bubble-ai max-w-md lg:max-w-lg p-4 fade-in" style="box-shadow: var(--md-elevation-1)">
-              <div class="flex items-center gap-3 md-body-small" style="color: var(--md-on-surface-variant)">
-                <span>文思正在组织灵感</span>
-                <span class="inspiration-chat__typing-dots" aria-hidden="true">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </span>
+          <!-- 右侧：文思灵感要素词笺画轴 -->
+          <aside class="inspiration-chat__ledger" aria-label="文思灵感要素词笺">
+            <div class="ledger-header border-b">
+              <span class="ledger-eyebrow">文思灵感词笺</span>
+              <span class="ledger-stamp">[ 意 ]</span>
+            </div>
+            
+            <div class="ledger-content">
+              <ul class="ledger-items">
+                <!-- 要素 1：核心意象 -->
+                <li class="ledger-item" :class="{ 'is-active': currentTurn >= 1 }">
+                  <div class="ledger-item__seal">意</div>
+                  <div class="ledger-item__body">
+                    <h4 class="ledger-item__title">核心意象</h4>
+                    <p class="ledger-item__desc">
+                      {{ currentTurn >= 1 ? (extractedCoreIdea || '落笔有声，灵感之火正在凝聚成形...') : '阁主未曾落笔，灵感初蒙...' }}
+                    </p>
+                  </div>
+                </li>
+
+                <!-- 要素 2：时空背景 -->
+                <li class="ledger-item" :class="{ 'is-active': currentTurn >= 2 }">
+                  <div class="ledger-item__seal">境</div>
+                  <div class="ledger-item__body">
+                    <h4 class="ledger-item__title">时空背景</h4>
+                    <p class="ledger-item__desc">
+                      {{ currentTurn >= 2 ? '时空骨架初现，文思正勾勒江山画卷...' : '待阁主勾勒故事舞台...' }}
+                    </p>
+                  </div>
+                </li>
+
+                <!-- 要素 3：核心冲突 -->
+                <li class="ledger-item" :class="{ 'is-active': currentTurn >= 3 }">
+                  <div class="ledger-item__seal">鋒</div>
+                  <div class="ledger-item__body">
+                    <h4 class="ledger-item__title">主要冲突</h4>
+                    <p class="ledger-item__desc">
+                      {{ currentTurn >= 3 ? '矛盾暗影交锋，大纲隐显刀刻之锋芒...' : '待戏剧冲突破土萌发...' }}
+                    </p>
+                  </div>
+                </li>
+
+                <!-- 要素 4：章节蓝图 -->
+                <li class="ledger-item" :class="{ 'is-active': currentTurn >= 4 }">
+                  <div class="ledger-item__seal">章</div>
+                  <div class="ledger-item__body">
+                    <h4 class="ledger-item__title">章节大纲</h4>
+                    <p class="ledger-item__desc">
+                      {{ currentTurn >= 4 ? '万川归海，大纲即将落款成卷，请落座...' : '待文思集腋成裘，凝成章节蓝图...' }}
+                    </p>
+                  </div>
+                </li>
+              </ul>
+              
+              <!-- 底部国风点晴说明 -->
+              <div class="ledger-footer mt-auto">
+                <p>「笔底生墨，大纲渐润」</p>
               </div>
             </div>
-          </div>
+          </aside>
         </div>
 
-        <!-- 输入区域 -->
-        <div class="inspiration-chat__input">
-          <ConversationInput
-            :ui-control="currentUIControl"
-            :loading="
-              inspirationRequestPending ||
-              isInitialLoading ||
-              isCheckingModelConfig ||
-              !conversationStarted
-            "
-            @submit="handleUserInput"
-          />
-        </div>
-      </div>
+        <!-- 阶段 2：蓝图确认界面 -->
+        <BlueprintConfirmation
+          v-else-if="showBlueprintConfirmation"
+          key="confirm"
+          :ai-message="confirmationMessage"
+          :project-id="currentProject?.id || null"
+          @blueprint-generated="handleBlueprintGenerated"
+          @back="backToConversation"
+        />
 
-      <!-- 蓝图确认界面 -->
-      <BlueprintConfirmation
-        v-if="showBlueprintConfirmation"
-        :ai-message="confirmationMessage"
-        :project-id="currentProject?.id || null"
-        @blueprint-generated="handleBlueprintGenerated"
-        @back="backToConversation"
-      />
-
-      <!-- 大纲展示界面 -->
-      <BlueprintDisplay
-        v-if="showBlueprint"
-        :blueprint="completedBlueprint"
-        :ai-message="blueprintMessage"
-        @confirm="handleConfirmBlueprint"
-        @regenerate="handleRegenerateBlueprint"
-      />
+        <!-- 阶段 3：大纲展示界面 -->
+        <BlueprintDisplay
+          v-else-if="showBlueprint"
+          key="display"
+          :blueprint="completedBlueprint"
+          :ai-message="blueprintMessage"
+          @confirm="handleConfirmBlueprint"
+          @regenerate="handleRegenerateBlueprint"
+        />
+      </Transition>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, nextTick, onMounted } from 'vue'
+import { computed, ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import type { UIControl, Blueprint, NovelProject } from '@/api/novel'
 import { HttpRequestError } from '@/api/http'
@@ -150,7 +212,7 @@ const INSPIRATION_OPENING_MESSAGE = `灵感已经落座。
 
 const INSPIRATION_INITIAL_UI_CONTROL: UIControl = {
   type: 'text_input',
-  placeholder: '描述你的第一个灵感火花...',
+  placeholder: '起笔于此，写下您最初的灵感火花...',
 }
 
 const router = useRouter()
@@ -166,12 +228,60 @@ const currentTurn = ref(0)
 const completedBlueprint = ref<Blueprint | null>(null)
 const confirmationMessage = ref('')
 const blueprintMessage = ref('')
+
+// 动态提取阁主的第一个灵感火花作为核心意象展示
+const extractedCoreIdea = computed(() => {
+  const userMsg = chatMessages.value.find((m) => m.type === 'user')
+  if (!userMsg) return ''
+  const val = userMsg.content.trim()
+  return val.length > 28 ? val.slice(0, 26) + '...' : val
+})
 const chatArea = ref<HTMLElement>()
+const activeNodeIndex = ref<number | null>(null)
+
+interface UserSpeechNode {
+  chatIndex: number
+  numLabel: string
+  previewText: string
+  tooltipText: string
+}
+
+// 动态计算以阁主发言为骨架的进度轴节点
+const userSpeechNodes = computed<UserSpeechNode[]>(() => {
+  const chineseNumbers = ['壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖', '拾', '拾壹', '拾贰', '拾叁', '拾肆', '拾伍']
+  return chatMessages.value
+    .map((msg, index) => ({ msg, index }))
+    .filter(({ msg }) => msg.type === 'user')
+    .map(({ msg, index }, idx) => {
+      const numLabel = chineseNumbers[idx] || String(idx + 1)
+      const plainText = msg.content.trim()
+      const preview = plainText.length > 18 ? plainText.slice(0, 16) + '...' : plainText
+      return {
+        chatIndex: index,
+        numLabel,
+        previewText: preview,
+        tooltipText: `【第${numLabel}步】 ${preview}`
+      }
+    })
+})
+
+// 平滑滚动定位到阁主某次具体的发言位置
+const scrollToUserMessage = (chatIndex: number, nodeIdx: number) => {
+  activeNodeIndex.value = nodeIdx
+  const el = document.getElementById(`chat-bubble-${chatIndex}`)
+  if (el) {
+    el.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center'
+    })
+  }
+}
 const isCheckingModelConfig = ref(false)
 const isAssistantResponding = ref(false)
 const activeProjectId = ref<string | null>(null)
 const currentProject = ref<NovelProject | null>(null)
-const currentConversationState = ref<any>({})
+// 【强类型守卫】：将 any 替换为未定义属性的防御性安全字典或专属类型，杜绝类型逃逸
+const currentConversationState = ref<Record<string, unknown>>({})
 
 const projectQuery = useNovelProjectQuery(activeProjectId)
 const createNovelMutation = useCreateNovelMutation()
@@ -445,7 +555,8 @@ const restoreConversation = async (projectId: string) => {
   }
 }
 
-const handleUserInput = async (userInput: any) => {
+// 【强类型守卫】：定义明确的输入交互契约类型，支持空值安全以契合子组件声明，取代 any
+const handleUserInput = async (userInput: { id?: string; value: string; [key: string]: unknown } | null) => {
   const isFirstAssistantTurn = currentTurn.value === 0 && chatMessages.value.length === 0
   try {
     // 如果有用户输入，添加到聊天记录
@@ -551,7 +662,8 @@ const handleGenerateBlueprint = async () => {
   }
 }
 
-const handleBlueprintGenerated = (response: any) => {
+// 【强类型守卫】：通过传入精准的类型，剔除 any
+const handleBlueprintGenerated = (response: { blueprint: Blueprint; ai_message: string }) => {
   completedBlueprint.value = response.blueprint
   blueprintMessage.value = response.ai_message
   showBlueprintConfirmation.value = false
@@ -582,14 +694,30 @@ const handleConfirmBlueprint = async () => {
   }
 }
 
+let scrollFrameId: number | null = null
+// 【高阶性能解耦】：采用 requestAnimationFrame 合并流式高载 DOM 滚动重绘，确保一帧内仅触发一次重排并带有平滑过渡
 const scrollToBottom = async () => {
   await nextTick()
-  if (chatArea.value) {
-    chatArea.value.scrollTop = chatArea.value.scrollHeight
+  if (!chatArea.value) return
+  
+  if (scrollFrameId !== null) {
+    cancelAnimationFrame(scrollFrameId)
   }
+  scrollFrameId = requestAnimationFrame(() => {
+    if (chatArea.value) {
+      chatArea.value.scrollTo({
+        top: chatArea.value.scrollHeight,
+        behavior: 'smooth'
+      })
+    }
+    scrollFrameId = null
+  })
 }
 
 onMounted(async () => {
+  // 注入专属标识，极致限制外层 app-shell 溢出以击杀大滚动条，并去掉 app-shell__content 的 padding 实现无缝贴合
+  document.body.classList.add('is-in-inspiration')
+  
   const projectId = route.query.project_id as string
   if (projectId) {
     const hasRequiredConfig = await ensureModelConfigOrRedirect()
@@ -602,49 +730,76 @@ onMounted(async () => {
     await startConversation()
   }
 })
+
+onUnmounted(() => {
+  // 组件卸载时，毫秒级无害恢复全局布局样式
+  document.body.classList.remove('is-in-inspiration')
+})
 </script>
 
 <style scoped>
+/* 灵感模式激活时，将 body 及其 app-shell__content 容器的滚动与 padding 进行极致覆写，防止由于 1px 的计算误差引发的最右侧大滚动条 */
+:global(body.is-in-inspiration) {
+  overflow: hidden !important;
+}
+
+:global(body.is-in-inspiration .app-shell__content) {
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
 .inspiration-page {
   display: flex;
-  align-items: center;
+  align-items: flex-start !important; /* 向上靠，贴合顶栏导航 */
   justify-content: center;
-  min-height: var(--app-viewport-unit);
-  padding:
-    max(var(--md-spacing-4), env(safe-area-inset-top))
-    max(var(--md-spacing-4), env(safe-area-inset-right))
-    max(var(--md-spacing-4), env(safe-area-inset-bottom))
-    max(var(--md-spacing-4), env(safe-area-inset-left));
-  background-color: var(--md-surface-dim);
+  /* 精准扣除系统顶栏真实的 92px 占位，使内容与浏览器视口完美等高 */
+  height: calc(var(--app-viewport-unit) - 92px) !important;
+  padding: var(--md-spacing-3) var(--md-spacing-5) var(--md-spacing-4) !important; /* 顶部收缩，紧贴导航 */
+  /* 采用平铺温暖熟宣纸与干燥木骨网格 */
+  background-color: var(--md-background) !important;
+  background-image: radial-gradient(var(--md-outline-variant) 1px, transparent 1px) !important;
+  background-size: 24px 24px !important;
+  overflow: hidden !important;
 }
 
 .inspiration-page__container {
   width: 100%;
-  max-width: 1152px;
+  max-width: 1420px !important; /* 撑宽至 1420px，极度贴合屏幕宽度 */
+  height: 100%; /* 高度占满视口 */
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 }
 
 .inspiration-chat {
-  height: min(
-    950px,
-    calc(
-      var(--app-viewport-unit) - max(var(--md-spacing-8), env(safe-area-inset-top)) -
-        max(var(--md-spacing-8), env(safe-area-inset-bottom))
-    )
-  );
-  min-height: 560px;
+  height: 100%; /* 精准占满容器 */
+  max-height: 800px !important; /* 增高至 800px，舒展大气 */
+  display: flex;
+  flex-direction: row !important; /* 核心：改为横向双栏结构 */
+  background-color: var(--md-surface);
+  /* 誓死捍卫木刻微直角，配合右下拓片偏置硬投影 */
+  border-radius: var(--md-radius-sm) !important;
+  border: 3px double var(--md-outline) !important;
+  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15) !important;
+  overflow: hidden;
+}
+
+/* 左侧：聊天主体 */
+.inspiration-chat__main {
+  flex: 1 !important; /* 撑满全部剩余宽度，使对话框自适应拉大 */
   display: flex;
   flex-direction: column;
+  height: 100%;
+  border-right: 1px solid var(--md-outline-variant); /* 竹青界线 */
   background-color: var(--md-surface);
-  border-radius: var(--md-radius-xl);
-  border: 1px solid var(--md-outline-variant);
-  box-shadow: var(--md-elevation-2);
-  overflow: hidden;
+  min-width: 0;
 }
 
 .inspiration-chat__header {
   padding: var(--md-spacing-4);
   border-bottom: 1px solid var(--md-outline-variant);
+  flex-shrink: 0;
 }
 
 .inspiration-chat__status-dot {
@@ -671,12 +826,22 @@ onMounted(async () => {
   flex-direction: column;
   gap: var(--md-spacing-6);
   position: relative;
+  min-height: 0; /* 确保弹性子项在有 overflow 时高度收敛 */
+  
+  /* 剔除右侧进度条/滚动条，并保留滚动功能，呈完美一案宣纸 */
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}
+
+.inspiration-chat__messages::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari and Opera */
 }
 
 .inspiration-chat__input {
   padding: var(--md-spacing-4);
   border-top: 1px solid var(--md-outline-variant);
   background-color: var(--md-surface-container-low);
+  flex-shrink: 0;
 }
 
 .inspiration-chat__typing-dots {
@@ -689,35 +854,206 @@ onMounted(async () => {
   height: 6px;
   border-radius: var(--md-radius-full);
   background-color: var(--md-primary-light);
-  animation: inspiration-dot-pulse 1.2s ease-in-out infinite;
+  /* 墨色干湿呼吸：模拟笔墨起落 */
+  animation: ink-dot-breath 1.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 
 .inspiration-chat__typing-dots span:nth-child(2) {
-  animation-delay: 0.15s;
+  animation-delay: 0.25s;
 }
 
 .inspiration-chat__typing-dots span:nth-child(3) {
-  animation-delay: 0.3s;
+  animation-delay: 0.5s;
 }
 
-@keyframes inspiration-dot-pulse {
-  0%, 80%, 100% { opacity: 0.3; }
-  40% { opacity: 1; }
+/* 右侧：文思灵感词笺画轴 */
+.inspiration-chat__ledger {
+  flex: 0 0 320px !important; /* 固定宽 320px 挂载，其余给左侧主聊天区自适应 */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--md-surface-dim) !important; /* 用老宣纸底色形成极佳的视觉景深 */
+  min-width: 300px;
+  position: relative;
+}
+
+.ledger-header {
+  padding: var(--md-spacing-4) var(--md-spacing-5);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px dashed var(--md-outline-variant) !important; /* 仿古虚线分隔 */
+  flex-shrink: 0;
+}
+
+.ledger-eyebrow {
+  font-family: var(--md-font-display) !important; /* 宋体标题 */
+  font-size: var(--md-title-small);
+  font-weight: 600;
+  color: var(--md-primary);
+  letter-spacing: 0.05em;
+}
+
+.ledger-stamp {
+  font-family: var(--md-font-display) !important;
+  font-size: var(--md-label-large);
+  font-weight: 700;
+  color: var(--md-secondary) !important; /* 朱砂印章标志 */
+}
+
+.ledger-content {
+  flex: 1;
+  padding: var(--md-spacing-5) var(--md-spacing-4);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+  
+  /* 剔除挂轴右侧进度条/滚动条，保留滚动功能 */
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+.ledger-content::-webkit-scrollbar {
+  display: none !important;
+}
+
+.ledger-items {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-5);
+}
+
+/* 灵感卡片条目 */
+.ledger-item {
+  display: flex;
+  gap: var(--md-spacing-3);
+  padding: var(--md-spacing-3) var(--md-spacing-4);
+  border-radius: var(--md-radius-xs) !important; /* 微直角 2px */
+  border: 1px solid transparent;
+  background-color: transparent;
+  opacity: 0.38; /* 未激活时悬空墨淡 */
+  transition: all var(--md-duration-medium) var(--md-easing-standard);
+  transform: scale(0.97);
+}
+
+/* 激活态：红泥落地，字迹化实 */
+.ledger-item.is-active {
+  opacity: 1;
+  background-color: var(--md-surface) !important; /* 变熟宣白 */
+  border: 1px dashed var(--md-outline) !important; /* 竹青细线 */
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.04) !important;
+  transform: scale(1);
+}
+
+/* 金石单字阳刻小方印 */
+.ledger-item__seal {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  font-family: var(--md-font-display) !important; /* 宋体 */
+  font-weight: 900;
+  font-size: 13px;
+  border-radius: var(--md-radius-xs) !important; /* 2px */
+  background-color: var(--md-surface-container-high);
+  color: var(--md-on-surface-variant);
+  border: 1px solid var(--md-outline-variant);
+  flex-shrink: 0;
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ledger-item.is-active .ledger-item__seal {
+  background-color: rgba(184, 60, 50, 0.08) !important; /* 红泥朱砂半透 */
+  color: var(--md-secondary) !important;
+  border-color: var(--md-secondary) !important;
+  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15) !important;
+  animation: ink-seal-press 0.45s cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+
+.ledger-item__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.ledger-item__title {
+  margin: 0 0 4px;
+  font-family: var(--md-font-display) !important; /* 碑拓宋体 */
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--md-primary);
+  letter-spacing: 0.04em;
+}
+
+.ledger-item__desc {
+  margin: 0;
+  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important; /* 楷体 */
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--md-on-surface-variant);
+  word-wrap: break-word;
+  word-break: break-all;
+}
+
+.ledger-footer {
+  text-align: center;
+  padding-top: var(--md-spacing-4);
+  border-top: 1px dashed var(--md-outline-variant);
+  color: var(--md-outline);
+  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+@keyframes ink-dot-breath {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(0.8);
+    filter: blur(1px);
+  }
+  40% {
+    opacity: 0.9;
+    transform: scale(1.15);
+    filter: blur(0);
+  }
+}
+
+/* 钤印动效 */
+@keyframes ink-seal-press {
+  0% {
+    opacity: 0;
+    transform: scale(1.3) translateY(-4px);
+    filter: blur(1.5px);
+  }
+  65% {
+    opacity: 0.95;
+    transform: scale(0.92) translateY(1.5px);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
 }
 
 @media (max-width: 1199px) {
   .inspiration-chat {
-    height: calc(
-      var(--app-viewport-unit) - max(var(--md-spacing-6), env(safe-area-inset-top)) -
-        max(var(--md-spacing-6), env(safe-area-inset-bottom))
-    );
-    min-height: 0;
-    border-radius: var(--md-radius-lg);
+    flex-direction: column !important;
   }
 
-  .inspiration-chat__messages {
-    padding: var(--md-spacing-4);
-    gap: var(--md-spacing-4);
+  .inspiration-chat__ledger {
+    display: none !important; /* 移动端/小屏隐藏词笺画轴，保留纯净聊天 */
+  }
+
+  .inspiration-chat__main {
+    flex: 1;
+    border-right: none;
   }
 }
 
@@ -727,7 +1063,7 @@ onMounted(async () => {
       max(var(--md-spacing-2), env(safe-area-inset-top))
       max(var(--md-spacing-2), env(safe-area-inset-right))
       max(var(--md-spacing-2), env(safe-area-inset-bottom))
-      max(var(--md-spacing-2), env(safe-area-inset-left));
+      max(var(--md-spacing-2), env(safe-area-inset-left)) !important;
   }
 
   .inspiration-chat__header,
@@ -740,6 +1076,307 @@ onMounted(async () => {
   .inspiration-chat__typing-dots span {
     animation: none;
     opacity: 0.6;
+  }
+}
+
+.inspiration-chat__title {
+  color: var(--md-primary);
+}
+
+.inspiration-loading-text {
+  color: var(--md-on-surface-variant);
+}
+
+@keyframes ink-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.inspiration-ai-bubble-loading {
+  background-color: var(--md-surface) !important;
+  color: var(--md-on-surface) !important;
+  /* 精细的多边形剪裁模拟参差不齐的手撕宣纸毛边 */
+  clip-path: polygon(
+    0% 2%, 8% 0.5%, 19% 1.5%, 31% 0.5%, 44% 1.8%, 56% 0.8%, 69% 1.5%, 81% 0.5%, 93% 1.8%, 100% 2%, 
+    99.2% 15%, 100% 32%, 98.8% 48%, 99.5% 65%, 98.5% 82%, 99.2% 98%, 
+    91% 99.2%, 79% 98.2%, 66% 99.2%, 54% 98.5%, 41% 99.2%, 29% 98.2%, 16% 99.2%, 0% 98%,
+    0.8% 81%, 0% 63%, 1.2% 46%, 0% 28%, 0.8% 12%
+  ) !important;
+  padding: 1rem 1.6rem !important;
+  border: none !important;
+  box-shadow: none !important;
+  /* 搭配 drop-shadow 滤镜产生不规则毛边投影 */
+  filter: drop-shadow(3px 3px 0px rgba(28, 32, 34, 0.12)) !important;
+  animation: ink-fade-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+}
+
+/* 阶段视图水墨慢晕视差过渡 */
+.ink-stage-enter-active,
+.ink-stage-leave-active {
+  transition: 
+    opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ink-stage-enter-from {
+  opacity: 0;
+  filter: blur(8px);
+  transform: translateY(12px) scale(0.995);
+}
+
+.ink-stage-leave-to {
+  opacity: 0;
+  filter: blur(4px);
+  transform: translateY(-8px) scale(0.995);
+}
+
+/* 头部操作按钮金石朱砂小方字标及 active 钤印微沉 */
+.inspiration-header-btn {
+  min-width: 0 !important;
+  padding: 0 8px !important;
+  height: 32px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  color: var(--md-on-surface-variant) !important;
+  font-size: var(--md-label-medium) !important;
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-weight: 700 !important;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+}
+
+.inspiration-header-btn:hover {
+  color: var(--md-secondary) !important;
+}
+
+.inspiration-header-btn:active {
+  transform: translate(1px, 1px) !important;
+  opacity: 0.8 !important;
+}
+
+.inspiration-header-btn__label {
+  color: var(--md-secondary) !important;
+  font-weight: 900 !important;
+  font-size: 14px !important;
+}
+
+/* ============================================
+   中间古雅挂轴式对话进度轴
+   ============================================ */
+.inspiration-chat__timeline {
+  flex: 0 0 36px !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  background-color: var(--md-surface-dim) !important; /* 淡雅古风背景 */
+  border-left: 1px solid var(--md-outline-variant) !important;
+  border-right: 1px solid var(--md-outline-variant) !important;
+  position: relative;
+  padding: var(--md-spacing-6) 0 !important;
+  z-index: 10;
+}
+
+/* 贯穿全高的朱砂丝绳细线 */
+.timeline-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background-color: rgba(184, 60, 50, 0.18) !important; /* 极细朱砂红线，代表思路脉络 */
+  transform: translateX(-50%);
+  z-index: 1;
+}
+
+.timeline-nodes {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--md-spacing-5);
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  overflow-y: auto;
+  /* 隐藏原生滚动条 */
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+  width: 100%;
+}
+
+.timeline-nodes::-webkit-scrollbar {
+  display: none !important;
+}
+
+/* 进度节点圆章按钮 */
+.timeline-node-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--md-radius-full) !important;
+  border: 1px solid rgba(184, 60, 50, 0.28) !important;
+  background-color: var(--md-surface) !important;
+  color: var(--md-primary-dark) !important;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.08) !important;
+}
+
+.timeline-node-seal {
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+}
+
+/* 激活或悬浮状态，变为朱砂红泥印泥色 */
+.timeline-node-btn:hover,
+.timeline-node-btn.is-active {
+  background-color: var(--md-secondary) !important; /* 朱砂红 */
+  border-color: var(--md-secondary) !important;
+  color: var(--md-on-primary) !important; /* 暖白文字 */
+  transform: scale(1.15);
+  box-shadow: 0px 0px 5px rgba(184, 60, 50, 0.45) !important;
+}
+
+/* 极致精美的 Tooltip 悬浮标签 */
+.timeline-node-tooltip {
+  position: absolute;
+  right: 44px; /* 悬浮在左侧聊天界面上 */
+  top: 50%;
+  transform: translateY(-50%) translateX(6px);
+  background-color: var(--md-surface) !important;
+  color: var(--md-on-surface) !important;
+  border: 1px solid var(--md-outline) !important;
+  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.12) !important;
+  padding: 6px 12px !important;
+  border-radius: var(--md-radius-xs) !important;
+  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-size: 13px !important;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  z-index: 100;
+}
+
+/* 悬停展示 Tooltip，略带优雅的从右往左滑入效果 */
+.timeline-node-btn:hover .timeline-node-tooltip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+/* ============================================
+   极致国风水墨洇染 Loading 动效
+   ============================================ */
+.inspiration-ai-bubble-loading {
+  background-color: var(--md-surface) !important;
+  /* 宣纸淡雅微影 */
+  filter: drop-shadow(2px 2px 0px rgba(28, 32, 34, 0.08)) !important;
+  padding: 1.25rem 2rem !important;
+}
+
+.ink-bloom-loader {
+  width: 24px;
+  height: 24px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* 核心洇墨黑红双点，模拟松烟入墨与朱砂落印的晕染 */
+.ink-bloom-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--md-radius-full) !important;
+  mix-blend-mode: multiply; /* 极佳的颜色重叠水墨交融质感 */
+}
+
+/* 焦墨松烟 */
+.ink-bloom-dot--black {
+  background-color: var(--md-primary) !important;
+  animation: ink-bloom-black 2.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+/* 润以朱砂 */
+.ink-bloom-dot--red {
+  background-color: var(--md-secondary) !important;
+  animation: ink-bloom-red 2.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+  animation-delay: 1.1s;
+}
+
+@keyframes ink-bloom-black {
+  0% {
+    transform: scale(0.2) translate(0, 0);
+    filter: blur(1px);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.8) translate(-2px, -1px);
+    filter: blur(6px);
+    opacity: 0.35;
+  }
+  100% {
+    transform: scale(2.8) translate(-4px, -2px);
+    filter: blur(12px);
+    opacity: 0;
+  }
+}
+
+@keyframes ink-bloom-red {
+  0% {
+    transform: scale(0.2) translate(0, 0);
+    filter: blur(1px);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.6) translate(2px, 1px);
+    filter: blur(5px);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(2.5) translate(4px, 2px);
+    filter: blur(10px);
+    opacity: 0;
+  }
+}
+
+/* 古风文字运墨状态呼吸 */
+.inspiration-loading-text {
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: var(--md-on-surface-variant) !important;
+  letter-spacing: 0.06em !important;
+  animation: ink-text-breath 2.2s ease-in-out infinite alternate !important;
+  text-shadow: 0.5px 0.5px 0px rgba(28, 32, 34, 0.05) !important;
+}
+
+@keyframes ink-text-breath {
+  0% {
+    opacity: 0.45;
+    filter: blur(0.6px);
+  }
+  100% {
+    opacity: 0.95;
+    filter: blur(0px);
   }
 }
 </style>

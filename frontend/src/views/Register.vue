@@ -74,7 +74,7 @@
             type="button"
             @click="sendCode"
             :disabled="countdown > 0 || sending"
-            class="md-btn md-btn-tonal md-ripple register-code-button"
+            class="md-ripple register-code-button"
           >
             <span v-if="sending">发送中...</span>
             <span v-else>{{ countdown > 0 ? countdown + '秒后重试' : '发送验证码' }}</span>
@@ -99,12 +99,16 @@
           />
         </div>
 
-        <div v-if="error" id="register-error" class="register-feedback is-error" role="alert">
-          {{ error }}
-        </div>
-        <div v-if="success" class="register-feedback is-success" role="status">
-          {{ success }}
-        </div>
+        <Transition name="ink-fade">
+          <div v-if="error" id="register-error" class="register-feedback is-error" role="alert">
+            {{ error }}
+          </div>
+        </Transition>
+        <Transition name="ink-fade">
+          <div v-if="success" class="register-feedback is-success" role="status">
+            {{ success }}
+          </div>
+        </Transition>
 
         <button
           type="submit"
@@ -244,8 +248,12 @@ const sendCode = async () => {
         countdownTimer = null
       }
     }, 1000)
-  } catch (err: any) {
-    error.value = err.message
+  } catch (err) {
+    if (err instanceof Error) {
+      error.value = err.message
+    } else {
+      error.value = '发送验证码失败，请重试'
+    }
   }
 }
 
@@ -282,8 +290,12 @@ const handleRegister = async () => {
     setTimeout(() => {
       router.push('/login')
     }, 2000)
-  } catch (err: any) {
-    error.value = err.message || '注册失败，请稍后再试。'
+  } catch (err) {
+    if (err instanceof Error) {
+      error.value = err.message || '注册失败，请稍后再试。'
+    } else {
+      error.value = '注册失败，请稍后再试。'
+    }
   }
 }
 
@@ -308,22 +320,10 @@ onUnmounted(() => {
     max(var(--md-spacing-4), env(safe-area-inset-right))
     max(var(--md-spacing-4), env(safe-area-inset-bottom))
     max(var(--md-spacing-4), env(safe-area-inset-left));
-  background:
-    radial-gradient(
-      circle at 0% 0%,
-      color-mix(in oklch, var(--md-primary-container) 50%, transparent),
-      transparent 36%
-    ),
-    radial-gradient(
-      circle at 100% 10%,
-      color-mix(in oklch, var(--md-success-container) 54%, transparent),
-      transparent 40%
-    ),
-    linear-gradient(
-      180deg,
-      color-mix(in oklch, var(--md-surface-dim) 84%, var(--md-tint-cool)),
-      color-mix(in oklch, var(--md-surface-container-low) 90%, var(--md-tint-success))
-    );
+  /* 采用平铺温暖熟宣纸与网格，驱逐SaaS强渐变 */
+  background-color: var(--md-background) !important;
+  background-image: radial-gradient(var(--md-outline-variant) 1px, transparent 1px) !important;
+  background-size: 24px 24px !important;
 }
 
 .register-brand {
@@ -333,14 +333,12 @@ onUnmounted(() => {
 .register-card {
   width: min(100%, 448px);
   padding: var(--md-spacing-8);
-  border-radius: var(--md-radius-xl);
-  border: 1px solid color-mix(in oklch, var(--md-primary) 20%, var(--md-outline-variant));
-  background:
-    linear-gradient(
-      150deg,
-      color-mix(in oklch, var(--md-surface) 90%, var(--md-tint-cool)),
-      color-mix(in oklch, var(--md-surface) 92%, var(--md-tint-success))
-    );
+  /* 告别 SaaS 大圆角，改为方直微圆角 */
+  border-radius: var(--md-radius-sm) !important;
+  /* 古籍粗细线双线框与拓片硬投影 */
+  border: 3px double var(--md-outline) !important;
+  background: var(--md-surface) !important;
+  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15) !important;
 }
 
 .register-card__header {
@@ -351,19 +349,47 @@ onUnmounted(() => {
 .register-card h2 {
   margin: 0;
   color: var(--md-on-surface);
-  font-size: var(--md-headline-small);
+  /* 碑拓宋体，字距拉伸 */
+  font-family: var(--md-font-serif, "STSong", "Songti SC", "SimSun", serif) !important;
+  font-size: 28px !important;
   font-weight: 600;
+  letter-spacing: 0.06em !important;
 }
 
 .register-card p {
   margin: var(--md-spacing-2) 0 0;
   color: var(--md-on-surface-variant);
+  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-size: 14px;
 }
 
 .register-form {
   display: flex;
   flex-direction: column;
-  gap: var(--md-spacing-4);
+  gap: var(--md-spacing-5);
+}
+
+/* 输入框古典Focus反馈与朱砂压印硬影 */
+.md-text-field-input {
+  border-radius: var(--md-radius-xs) !important;
+  border-color: var(--md-outline) !important;
+  background-color: var(--md-surface-container-low) !important;
+  font-family: inherit;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.md-text-field-input:focus {
+  outline: none !important;
+  border-color: var(--md-secondary) !important;
+  background-color: var(--md-surface-container-lowest) !important;
+  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.25) !important; /* 朱批压章硬影 */
+}
+
+.md-text-field-label {
+  font-family: var(--md-font-serif, "STSong", "Songti SC", "SimSun", serif) !important;
+  color: var(--md-primary-light) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.03em;
 }
 
 .register-code-row {
@@ -373,18 +399,42 @@ onUnmounted(() => {
   gap: var(--md-spacing-3);
 }
 
+/* 发送验证码辅助按钮 */
 .register-code-button {
   min-width: 128px;
-  height: 56px;
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   white-space: nowrap;
+  background: var(--md-surface-container-high) !important;
+  border: 1px solid var(--md-outline) !important;
+  border-radius: var(--md-radius-xs) !important;
+  color: var(--md-on-surface) !important;
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-weight: 600;
+  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.08) !important;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  cursor: pointer;
+}
+
+.register-code-button:hover:not(:disabled) {
+  background: var(--md-surface-container-highest) !important;
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.15) !important;
+}
+
+.register-code-button:active:not(:disabled) {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 0.5px 0.5px 0px rgba(28, 32, 34, 0.15) !important;
 }
 
 .register-feedback {
   padding: var(--md-spacing-3);
-  border-radius: var(--md-radius-md);
+  border-radius: var(--md-radius-xs) !important;
   font-size: var(--md-body-medium);
   font-weight: 500;
   text-align: center;
+  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
 }
 
 .register-feedback {
@@ -393,16 +443,66 @@ onUnmounted(() => {
 
 .register-feedback.is-error {
   background-color: var(--md-error-container);
+  border: 1px dashed var(--md-secondary);
   color: var(--md-on-error-container);
+  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.08);
 }
 
 .register-feedback.is-success {
   background-color: var(--md-success-container);
+  border: 1px dashed var(--md-success);
   color: var(--md-on-success-container);
+  box-shadow: 1px 1px 0px rgba(59, 122, 87, 0.08);
 }
 
+/* 注册动作主按钮，动态水墨晕染Hover特效 */
 .register-submit {
   width: 100%;
+  min-height: 48px;
+  position: relative;
+  background: var(--md-primary) !important;
+  color: var(--md-on-primary) !important;
+  border: 1px solid var(--md-outline) !important;
+  border-radius: var(--md-radius-xs) !important;
+  overflow: hidden;
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.05em;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.12) !important;
+  cursor: pointer;
+}
+
+.register-submit::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, var(--md-primary-light) 0%, transparent 70%);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  transition: 
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), 
+    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.register-submit:hover:not(:disabled) {
+  background-color: var(--md-primary-light) !important;
+  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.18) !important;
+}
+
+.register-submit:hover:not(:disabled)::before {
+  transform: translate(-50%, -50%) scale(1.5);
+  opacity: 0.35;
+}
+
+.register-submit:active:not(:disabled) {
+  transform: translate(1.5px, 1.5px) !important;
+  box-shadow: 0.5px 0.5px 0px rgba(28, 32, 34, 0.25) !important;
 }
 
 .register-link {
@@ -413,10 +513,14 @@ onUnmounted(() => {
   justify-content: center;
   gap: var(--md-spacing-1);
   text-align: center;
+  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
 }
 
 .register-link__cta {
   min-height: 44px;
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  color: var(--md-secondary) !important;
+  font-weight: 600;
 }
 
 .register-card--closed {
@@ -425,6 +529,15 @@ onUnmounted(() => {
   align-items: center;
   gap: var(--md-spacing-4);
   text-align: center;
+  border-radius: var(--md-radius-sm) !important;
+  border: 3px double var(--md-outline) !important;
+  background: var(--md-surface) !important;
+  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15) !important;
+}
+
+.register-card--closed h2 {
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  color: var(--md-secondary) !important;
 }
 
 @media (max-width: 833px) {
@@ -452,5 +565,26 @@ onUnmounted(() => {
   .register-code-button {
     width: 100%;
   }
+}
+
+/* 模拟熟宣水墨渐显：从模糊、淡色到清晰凝重 */
+.ink-fade-enter-active,
+.ink-fade-leave-active {
+  transition: 
+    opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ink-fade-enter-from {
+  opacity: 0;
+  filter: blur(6px); /* 起笔淡墨模糊 */
+  transform: translateY(4px);
+}
+
+.ink-fade-leave-to {
+  opacity: 0;
+  filter: blur(4px);
+  transform: translateY(-4px);
 }
 </style>

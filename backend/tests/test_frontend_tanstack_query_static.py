@@ -124,6 +124,21 @@ def test_inspiration_flow_uses_query_mutations_and_local_conversation_state():
     assert "novelStore." not in confirmation
 
 
+def test_inspiration_stream_unblocks_input_before_background_cache_refresh():
+    query_source = _source("queries/novel.ts")
+    stream_source = _source("api/novel.ts")
+
+    converse_block = query_source.split("export function useConverseConceptStreamMutation", 1)[1].split(
+        "export function useGenerateBlueprintMutation",
+        1,
+    )[0]
+
+    assert "void refreshProjectQueries().catch" in converse_block
+    assert "await refreshProjectQueries()" not in converse_block
+    assert "return finishWithFinal(message.data as T)" in stream_source
+    assert "final 事件已经包含下一轮输入控件" in stream_source
+
+
 def test_http_errors_keep_payload_for_inspiration_conflict_redirect():
     source = _source("api/http.ts")
 

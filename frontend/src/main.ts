@@ -52,6 +52,43 @@ const setupTheme = () => {
 
 setupTheme()
 
+// 监听全局滚动，实现“滚动时显示滚动条，静止后隐藏”的水墨交互效果
+const setupScrollbarBehavior = () => {
+  const scrollTimeoutMap = new WeakMap<HTMLElement, number>()
+
+  window.addEventListener(
+    'scroll',
+    (event) => {
+      const target = event.target
+      if (!target) return
+
+      // 确定触发滚动的元素：如果是 document，则应用在 documentElement 上
+      const scrollEl = (target === document || target === window || (target as any).tagName === 'BODY')
+        ? document.documentElement
+        : target as HTMLElement
+
+      // 添加正在滚动类名
+      scrollEl.classList.add('is-scrolling')
+
+      // 使用 WeakMap 记录和管理定时器，避免全局污染与内存泄漏
+      const existingTimeout = scrollTimeoutMap.get(scrollEl)
+      if (existingTimeout) {
+        clearTimeout(existingTimeout)
+      }
+
+      const timeoutId = window.setTimeout(() => {
+        scrollEl.classList.remove('is-scrolling')
+        scrollTimeoutMap.delete(scrollEl)
+      }, 1000) // 停止滚动1秒后平滑淡出
+
+      scrollTimeoutMap.set(scrollEl, timeoutId)
+    },
+    { capture: true, passive: true }
+  )
+}
+
+setupScrollbarBehavior()
+
 const app = createApp(App)
 const pinia = createPinia()
 

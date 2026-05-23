@@ -1,23 +1,10 @@
 <!-- AIMETA P=空章节_未选择章节状态|R=空状态提示|NR=不含内容展示|E=component:ChapterEmpty|X=internal|A=空状态|D=vue|S=dom|RD=./README.ai -->
 <template>
   <div class="h-full flex items-center justify-center">
-    <div
-      class="md-card md-card-outlined p-8 text-center max-w-md"
-      style="border-radius: var(--md-radius-xl)"
-    >
-      <div
-        class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
-        style="background-color: var(--md-surface-container)"
-      >
-        <svg
-          class="w-7 h-7"
-          style="color: var(--md-on-surface-variant)"
-          fill="currentColor"
-          viewBox="0 0 20 20"
-        >
-          <path
-            d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
-          ></path>
+    <div class="md-card md-card-outlined p-8 text-center max-w-md m3-empty-card">
+      <div class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 m3-empty-icon-wrapper">
+        <svg class="w-7 h-7 m3-empty-icon" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"></path>
         </svg>
       </div>
       <h3 class="md-title-medium font-semibold mb-2">开始创作</h3>
@@ -79,3 +66,20 @@ defineProps<Props>()
 
 defineEmits(['generateChapter'])
 </script>
+
+<style scoped>
+.m3-empty-card {
+  border-radius: var(--md-radius-sm) !important;
+  border-color: var(--md-outline) !important;
+  background-color: var(--md-surface-dim) !important;
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.08) !important;
+}
+
+.m3-empty-icon-wrapper {
+  background-color: var(--md-surface-container) !important;
+}
+
+.m3-empty-icon {
+  color: var(--md-on-surface-variant) !important;
+}
+</style>

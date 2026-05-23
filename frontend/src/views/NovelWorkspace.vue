@@ -1,17 +1,11 @@
 <!-- AIMETA P=小说工作区_小说列表管理|R=小说列表_创建|NR=不含章节编辑|E=route:/workspace#component:NovelWorkspace|X=ui|A=工作区|D=vue|S=dom,net|RD=./README.ai -->
 <template>
   <div class="app-page workspace-page">
-    <transition
-      enter-active-class="transition-opacity duration-200"
-      leave-active-class="transition-opacity duration-200"
-      enter-from-class="opacity-0 translate-y-4"
-      leave-to-class="opacity-0 translate-y-4"
-    >
+    <transition name="ink-fade">
       <div v-if="workspaceMessage" class="md-snackbar" role="status">
         <svg
           v-if="workspaceMessage.type === 'success'"
-          class="w-5 h-5"
-          style="color: var(--md-success)"
+          class="w-5 h-5 snackbar-success-icon"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -21,8 +15,7 @@
         </svg>
         <svg
           v-else
-          class="w-5 h-5"
-          style="color: var(--md-error)"
+          class="w-5 h-5 snackbar-error-icon"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -200,7 +193,7 @@
             />
           </svg>
         </div>
-        <p class="md-body-large" style="color: var(--md-error)">{{ projectsError }}</p>
+        <p class="md-body-large state-error-text">{{ projectsError }}</p>
         <button @click="loadProjects" class="md-btn md-btn-filled md-ripple">重试</button>
       </div>
 
@@ -231,19 +224,8 @@
       </div>
     </section>
 
-    <transition
-      enter-active-class="transition-opacity duration-200"
-      leave-active-class="transition-opacity duration-200"
-      enter-from-class="opacity-0"
-      leave-to-class="opacity-0"
-    >
+    <transition name="md-dialog-overlay">
       <div v-if="showDeleteDialog" class="md-dialog-overlay" @click.self="cancelDelete">
-        <transition
-          enter-active-class="transition-opacity duration-200"
-          leave-active-class="transition-opacity duration-200"
-          enter-from-class="opacity-0 scale-95"
-          leave-to-class="opacity-0 scale-95"
-        >
           <div
             ref="deleteDialogRef"
             class="md-dialog max-w-md w-full mx-4"
@@ -252,13 +234,9 @@
             :aria-labelledby="deleteDialogTitleId"
           >
             <div class="md-dialog-header flex items-center gap-4">
-              <div
-                class="w-12 h-12 rounded-full flex items-center justify-center"
-                style="background-color: var(--md-error-container)"
-              >
+              <div class="w-12 h-12 rounded-full flex items-center justify-center delete-alert-icon-container">
                 <svg
-                  class="w-6 h-6"
-                  style="color: var(--md-error)"
+                  class="w-6 h-6 delete-alert-icon"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -273,14 +251,14 @@
               </div>
               <div>
                 <h3 :id="deleteDialogTitleId" class="md-dialog-title">确认删除</h3>
-                <p class="md-body-small" style="color: var(--md-on-surface-variant)">
+                <p class="md-body-small delete-dialog-subtitle">
                   此操作无法撤销
                 </p>
               </div>
             </div>
 
             <div class="md-dialog-content">
-              <p class="md-body-large" style="color: var(--md-on-surface)">
+              <p class="md-body-large delete-dialog-content-text">
                 确定要删除项目 "<strong>{{ projectToDelete?.title }}</strong
                 >" 吗？所有相关数据将被永久删除。
               </p>
@@ -298,8 +276,7 @@
               <button
                 @click="confirmDelete"
                 :disabled="isDeleting"
-                class="md-btn md-btn-filled md-ripple"
-                style="background-color: var(--md-error); color: var(--md-on-error)"
+                class="md-btn md-btn-filled md-ripple delete-confirm-btn"
               >
                 <svg v-if="isDeleting" class="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
                   <circle
@@ -320,7 +297,6 @@
               </button>
             </div>
           </div>
-        </transition>
       </div>
     </transition>
   </div>
@@ -520,8 +496,10 @@ const handleFileImport = async (event: Event) => {
   try {
     const response = await importNovelMutation.mutateAsync(file)
     router.push(`/projects/${response.id}/write`)
-  } catch (error: any) {
-    showWorkspaceMessage({ type: 'error', text: error.message || '导入失败，请重试' })
+  } catch (error) {
+    // 【强类型守卫】：杜绝 any 逃逸，通过安全分支守卫访问 message 属性
+    const text = error instanceof Error ? error.message : '导入失败，请重试'
+    showWorkspaceMessage({ type: 'error', text })
   } finally {
     target.value = ''
   }
@@ -582,15 +560,14 @@ onUnmounted(() => {
   grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
   gap: var(--md-spacing-5);
   padding: clamp(var(--md-spacing-5), 4vw, var(--md-spacing-8));
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-xl);
-  background:
-    linear-gradient(
-      140deg,
-      color-mix(in srgb, var(--md-surface) 92%, transparent),
-      color-mix(in srgb, var(--md-primary-container) 32%, var(--md-surface-container-low))
-    );
-  box-shadow: var(--md-elevation-1);
+  border: 3px double var(--md-outline);
+  border-radius: 0 !important; /* 彻底去除 SaaS 圆角，呈现国风直角 */
+  background-color: var(--md-surface-dim); /* 徽墨老宣底色 */
+  background-image:
+    radial-gradient(circle at 10% 10%, rgba(46, 92, 138, 0.03), transparent 45%),
+    radial-gradient(circle at 90% 80%, rgba(184, 60, 50, 0.02), transparent 45%);
+  box-shadow: 4px 4px 0px var(--md-outline-variant); /* 拓片硬偏置投影 */
+  position: relative;
 }
 
 .workspace-hero--loading .workspace-hero__intro,
@@ -680,15 +657,9 @@ onUnmounted(() => {
 
 .workspace-hero__loading-line {
   display: block;
-  border-radius: var(--md-radius-full);
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--md-surface-container-low) 88%, transparent) 0%,
-    color-mix(in srgb, var(--md-surface-container-high) 96%, transparent) 48%,
-    color-mix(in srgb, var(--md-surface-container-low) 88%, transparent) 100%
-  );
-  background-size: 220% 100%;
-  animation: workspace-hero-loading-pulse 1.5s var(--md-easing-standard) infinite;
+  border-radius: var(--md-radius-xs) !important; /* 纸条微直角 */
+  background: var(--md-surface-container-high) !important; /* 稳定的淡墨色 */
+  animation: ink-skeleton-breath 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite !important;
 }
 
 .workspace-hero__loading-line--title {
@@ -746,13 +717,14 @@ onUnmounted(() => {
   width: min(11rem, 72%);
 }
 
-@keyframes workspace-hero-loading-pulse {
-  from {
-    background-position: 100% 0;
+@keyframes ink-skeleton-breath {
+  0%, 100% {
+    opacity: 0.38;
+    filter: blur(0.5px);
   }
-
-  to {
-    background-position: -100% 0;
+  50% {
+    opacity: 0.85;
+    filter: blur(0);
   }
 }
 
@@ -762,13 +734,36 @@ onUnmounted(() => {
 }
 
 .workspace-hero__panel {
-  border: 1px solid color-mix(in srgb, var(--md-primary) 20%, var(--md-outline-variant));
-  border-radius: var(--md-radius-lg);
-  background: color-mix(in srgb, var(--md-surface) 92%, transparent);
+  border: 1px solid var(--md-outline-variant);
+  border-left: 4px solid var(--md-secondary); /* 朱砂立边描边，熟宣木函感 */
+  border-radius: 0 !important; /* 彻底直角化 */
+  background-color: var(--md-surface-container-low); /* 熟宣/竹纸质感 */
+  background-image: 
+    repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.015) 0px, rgba(28, 32, 34, 0.015) 1px, transparent 1px, transparent 40px), /* 仿手工宣纸帘纹 */
+    radial-gradient(circle at 80% 20%, rgba(28, 32, 34, 0.02) 0%, transparent 60%); /* 淡淡松烟墨晕 */
   padding: var(--md-spacing-5);
   display: flex;
   flex-direction: column;
   gap: var(--md-spacing-4);
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.05);
+  transition: 
+    border-left-width 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+/* Hover 时：朱砂立边加宽，投影微弱聚拢 */
+.workspace-hero__panel:hover {
+  border-left-width: 6px !important;
+  border-left-color: var(--md-secondary-dark) !important;
+  box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.12) !important;
+}
+
+/* Active 时：钤印微沉 */
+.workspace-hero__panel:active {
+  transform: translate(1px, 1px) !important;
+  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15) !important;
 }
 
 .workspace-hero__panel-head {
@@ -834,9 +829,10 @@ onUnmounted(() => {
 
 .workspace-module,
 .workspace-archive {
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-lg);
-  background-color: color-mix(in srgb, var(--md-surface) 95%, transparent);
+  border: 1px solid var(--md-outline);
+  border-radius: 0 !important; /* 彻底直角化 */
+  background-color: var(--md-surface); /* 熟宣 */
+  box-shadow: 3px 3px 0px var(--md-outline-variant); /* 拓片偏置硬影 */
 }
 
 .workspace-module {
@@ -871,7 +867,7 @@ onUnmounted(() => {
 .workspace-activity__item {
   width: 100%;
   border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-md);
+  border-radius: var(--md-radius-xs) !important; /* 极微直角 */
   background-color: var(--md-surface-container-low);
   padding: var(--md-spacing-3);
   display: flex;
@@ -988,7 +984,7 @@ onUnmounted(() => {
 
 .workspace-ai-list li {
   padding: var(--md-spacing-3);
-  border-radius: var(--md-radius-md);
+  border-radius: var(--md-radius-xs) !important; /* 极微直角 */
   border: 1px solid var(--md-outline-variant);
   background-color: var(--md-surface-container-low);
 }
@@ -1012,7 +1008,7 @@ onUnmounted(() => {
   align-items: center;
   height: 26px;
   padding: 0 10px;
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs) !important; /* 胶囊标签重塑为方直小签 */
   font-size: var(--md-label-small);
   font-weight: 600;
 }
@@ -1066,7 +1062,7 @@ onUnmounted(() => {
 
 .workspace-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: var(--md-spacing-5);
 }
 
@@ -1074,7 +1070,7 @@ onUnmounted(() => {
   min-height: 216px;
   padding: var(--md-spacing-5);
   border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-lg);
+  border-radius: 0 !important; /* 骨架屏亦需有直角骨气 */
   background-color: var(--md-surface);
 }
 
@@ -1089,21 +1085,15 @@ onUnmounted(() => {
 .workspace-skeleton__bar,
 .workspace-skeleton__chips {
   display: block;
-  border-radius: var(--md-radius-full);
-  background: linear-gradient(
-    90deg,
-    var(--md-surface-container-low) 0%,
-    var(--md-surface-container-high) 48%,
-    var(--md-surface-container-low) 100%
-  );
-  background-size: 220% 100%;
-  animation: workspace-skeleton-pulse 1.4s var(--md-easing-standard) infinite;
+  border-radius: var(--md-radius-xs) !important; /* 骨架屏直角化 */
+  background: var(--md-surface-container-high) !important; /* 稳定的淡墨色 */
+  animation: ink-skeleton-breath 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite !important;
 }
 
 .workspace-skeleton__avatar {
   width: 48px;
   height: 48px;
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs) !important; /* 头像骨架重塑为篆刻方印 */
 }
 
 .workspace-skeleton__lines {
@@ -1135,15 +1125,7 @@ onUnmounted(() => {
   height: 32px;
 }
 
-@keyframes workspace-skeleton-pulse {
-  from {
-    background-position: 100% 0;
-  }
-
-  to {
-    background-position: -100% 0;
-  }
-}
+/* 已统一使用国风水墨洇湿脉冲动画 workspace-ink-pulse */
 
 .workspace-state {
   min-height: 260px;
@@ -1200,7 +1182,7 @@ onUnmounted(() => {
   .workspace-hero,
   .workspace-archive {
     padding: var(--md-spacing-5);
-    border-radius: var(--md-radius-lg);
+    border-radius: 0 !important; /* 矢志不渝的直角坚持 */
   }
 
   .workspace-hero__snapshot {
@@ -1268,5 +1250,124 @@ onUnmounted(() => {
     animation: none;
     background-position: 0 0;
   }
+}
+
+.snackbar-success-icon {
+  color: var(--md-success);
+}
+
+.snackbar-error-icon {
+  color: var(--md-error);
+}
+
+.state-error-text {
+  color: var(--md-error);
+}
+
+.delete-alert-icon-container {
+  border-radius: var(--md-radius-xs) !important; /* 方直朱印 */
+  border: 1px solid var(--md-secondary) !important; /* 朱砂细边 */
+  background-color: rgba(184, 60, 50, 0.06) !important;
+}
+
+.delete-alert-icon {
+  color: var(--md-secondary);
+}
+
+.delete-dialog-subtitle {
+  color: var(--md-secondary-dark);
+}
+
+.delete-dialog-content-text strong {
+  color: var(--md-secondary);
+}
+
+.delete-confirm-btn {
+  background-color: var(--md-primary) !important; /* 焦墨背景 */
+  color: var(--md-secondary) !important; /* 朱砂红字 */
+  border: 1px solid var(--md-secondary) !important; /* 朱砂红细线框 */
+  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.2) !important; /* 朱印硬影 */
+  transition: all var(--md-duration-short) var(--md-easing-standard);
+}
+
+.delete-confirm-btn:hover {
+  background-color: rgba(184, 60, 50, 0.08) !important; /* 朱砂印泥微融 */
+  color: var(--md-secondary) !important;
+  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.2) !important;
+  transform: translate(1px, 1px); /* 钤印按压微沉交互 */
+}
+
+/* 墨风国风对话框与遮罩层极致打磨（直接作用于本组件直属 DOM，去除冗余穿透） */
+.md-dialog {
+  border: 3px double var(--md-outline) !important;
+  border-radius: 0 !important; /* 彻底直角化 */
+  background-color: var(--md-surface-bright) !important; /* 熟宣竹纸 */
+  box-shadow: 8px 8px 0px var(--md-primary) !important; /* 焦墨拓片超硬投影 */
+}
+
+.md-dialog-overlay {
+  background-color: var(--md-scrim) !important;
+  backdrop-filter: blur(4px);
+}
+
+/* 级联 Transition：阻尼回弹的金石印章落纸曲线，模拟钤印动作 */
+.md-dialog-overlay-enter-active {
+  transition: opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+.md-dialog-overlay-enter-active .md-dialog {
+  transition: 
+    transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1), /* 钤印微弱回弹 */
+    opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+.md-dialog-overlay-leave-active {
+  transition: opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+.md-dialog-overlay-leave-active .md-dialog {
+  transition: 
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+/* 进场状态：微弱放大并带有模糊，呈现印章从空中扣下的过程 */
+.md-dialog-overlay-enter-from {
+  opacity: 0 !important;
+}
+.md-dialog-overlay-enter-from .md-dialog {
+  transform: scale(1.04) translateY(-12px) !important;
+  filter: blur(4px) !important;
+  opacity: 0 !important;
+}
+
+/* 出场状态：微缩并淡出 */
+.md-dialog-overlay-leave-to {
+  opacity: 0 !important;
+}
+.md-dialog-overlay-leave-to .md-dialog {
+  transform: scale(0.97) translateY(6px) !important;
+  filter: blur(2px) !important;
+  opacity: 0 !important;
+}
+
+/* SnackBar 清水慢显 */
+.ink-fade-enter-active,
+.ink-fade-leave-active {
+  transition: 
+    opacity 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.38s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.38s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.ink-fade-enter-from {
+  opacity: 0 !important;
+  filter: blur(5px) !important;
+  transform: translateY(8px) !important;
+}
+
+.ink-fade-leave-to {
+  opacity: 0 !important;
+  filter: blur(3px) !important;
+  transform: translateY(-4px) !important;
 }
 </style>

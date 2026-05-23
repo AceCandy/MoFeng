@@ -17,9 +17,30 @@ import { globalAlert } from '@/composables/useAlert'
 
 const SettingsView = defineAsyncComponent(() => import('@/views/SettingsView.vue'))
 const AdminView = defineAsyncComponent(() => import('@/views/AdminView.vue'))
+const PromptUsageMap = defineAsyncComponent(() => import('@/components/admin/PromptUsageMap.vue'))
 
 const showSettingsModal = ref(false)
 const showAdminModal = ref(false)
+const showPromptUsageModal = ref(false)
+const adminInitialTab = ref('statistics')
+
+// 昼夜主题中式切换逻辑
+const isDarkTheme = ref(false)
+
+const syncThemeState = () => {
+  const currentTheme = document.documentElement.dataset.theme
+  isDarkTheme.value = currentTheme === 'dark'
+}
+
+const toggleTheme = () => {
+  const nextTheme = isDarkTheme.value ? 'light' : 'dark'
+  document.documentElement.dataset.theme = nextTheme
+  window.localStorage.setItem('mofeng-theme-preference', nextTheme)
+  isDarkTheme.value = nextTheme === 'dark'
+
+  // 向外抛出全局事件，方便其他组件同步
+  window.dispatchEvent(new Event('theme-changed'))
+}
 
 
 const route = useRoute()
@@ -43,7 +64,8 @@ const currentProjectId = computed(() => {
 })
 
 const { data: currentProject } = useNovelProjectQuery(currentProjectId)
-const { data: projects = [] } = useNovelProjectsQuery()
+const { data: rawProjects } = useNovelProjectsQuery()
+const projects = computed(() => rawProjects.value || [])
 
 const projectTags = computed(() => {
   if (!currentProject.value) return ''
@@ -53,7 +75,7 @@ const projectTags = computed(() => {
   if (bp?.genre) {
     genreText = bp.genre
   } else {
-    const summary = projects.value?.find(p => p.id === currentProjectId.value)
+    const summary = projects.value.find(p => p.id === currentProjectId.value)
     if (summary?.genre) {
       genreText = summary.genre
     }
@@ -113,6 +135,22 @@ const selectProject = (proj: { id: string; title?: string }) => {
   }
 }
 
+const goToWritingDesk = () => {
+  const project = currentProject.value
+  if (!project) return
+  const path =
+    project.title === '未命名灵感'
+      ? `/inspiration?project_id=${project.id}`
+      : `/projects/${project.id}/write`
+  router.push(path)
+}
+
+const goToBlueprint = () => {
+  if (currentProjectId.value) {
+    router.push(`/projects/${currentProjectId.value}`)
+  }
+}
+
 const selectInspiration = () => {
   isDropdownOpen.value = false
   router.push('/inspiration')
@@ -167,8 +205,37 @@ const handleCloseSettingsModal = async () => {
   showSettingsModal.value = false
 }
 
+const openAdminModal = (tab: string = 'statistics') => {
+  adminInitialTab.value = tab
+  showAdminModal.value = true
+  showPromptUsageModal.value = false
+  isUserDropdownOpen.value = false
+}
+
+const openPromptUsageModal = () => {
+  showPromptUsageModal.value = true
+  showAdminModal.value = false
+  isUserDropdownOpen.value = false
+}
+
+const openPromptEditor = () => {
+  openAdminModal('prompts')
+}
+
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  syncThemeState()
+
+  // 监听系统的偏好改变
+  const media = window.matchMedia('(prefers-color-scheme: dark)')
+  const preference = window.localStorage.getItem('mofeng-theme-preference')
+  if (preference === 'system' || !preference) {
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', syncThemeState)
+    } else {
+      media.addListener(syncThemeState)
+    }
+  }
 })
 
 onUnmounted(() => {
@@ -248,7 +315,7 @@ onUnmounted(() => {
             </transition>
           </div>
 
-          <!-- 胶囊二：当前作品的多维成就与状态 -->
+          <!-- 胶囊二：当前作品的多维成就与状态 (始终保留常驻展示) -->
           <div v-if="currentProject && projectStats" class="app-shell__project-capsule is-status">
             <span class="app-shell__project-tag-info">{{ projectTags }}</span>
             <span class="app-shell__project-divider">•</span>
@@ -261,8 +328,58 @@ onUnmounted(() => {
             </span>
           </div>
 
-          <!-- 空白状态：山水泼墨励志寄语 -->
-          <div v-else class="app-shell__project-welcome-message">
+          <!-- 当处于项目总览页 (project-detail) 时，在旁边紧贴着并列呈现“继续创作”顶栏金石按钮 -->
+          <div v-if="currentProject && route.name === 'project-detail'" class="app-shell__top-action-wrap">
+            <button 
+              type="button"
+              class="app-shell__top-action-btn md-ripple" 
+              title="点击继续创作正文"
+              @click="goToWritingDesk"
+            >
+              <svg
+                class="w-4 h-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                />
+              </svg>
+              <span>继续创作</span>
+            </button>
+          </div>
+
+          <!-- 当处于项目写作页 (project-write) 时，在旁边紧贴着并列呈现“蓝图概览”顶栏金石按钮 -->
+          <div v-if="currentProject && route.name === 'project-write'" class="app-shell__top-action-wrap">
+            <button 
+              type="button"
+              class="app-shell__top-action-btn md-ripple" 
+              title="点击回到故事蓝图"
+              @click="goToBlueprint"
+            >
+              <svg
+                class="w-4 h-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"
+                />
+              </svg>
+              <span>蓝图概览</span>
+            </button>
+          </div>
+
+          <!-- 空白状态：山水泼墨励志寄语 (仅在未选定工作空间前渲染) -->
+          <div v-if="!currentProjectId" class="app-shell__project-welcome-message">
             <span class="welcome-spark">✍️</span>
             <span class="welcome-text">笔底生墨，风动砚海。阁主，今天又是新的元气的一天，快来尽情创作吧！</span>
           </div>
@@ -279,17 +396,19 @@ onUnmounted(() => {
 
         <!-- 右侧操作控制台 (辅助信息印章与水墨折叠下拉) -->
         <div class="app-shell__actions-right">
-          <!-- 辅助信息印章 (仅在写作台显示) -->
+          <!-- 昼夜切换中式印章 -->
           <button
-            v-if="route.name === 'project-write'"
             type="button"
-            class="app-shell__action-btn"
-            title="展开/收起写作辅助面板"
-            @click="toggleWorkspaceAssistant"
+            class="app-shell__action-btn theme-toggle-btn"
+            :title="isDarkTheme ? '换至：昼模式 (熟宣暖白)' : '换至：夜模式 (深夜书房)'"
+            @click="toggleTheme"
           >
-            <span class="app-shell__action-badge is-assistant">輔</span>
-            <span class="app-shell__action-text">{{ isAssistantOpen ? '收起辅助' : '辅助信息' }}</span>
+            <span class="app-shell__action-badge" :class="isDarkTheme ? 'is-theme-light' : 'is-theme-dark'">
+              {{ isDarkTheme ? '晝' : '夜' }}
+            </span>
           </button>
+
+
 
           <!-- 阁主身份名牌 (金石印章折叠中枢) -->
           <div 
@@ -321,12 +440,27 @@ onUnmounted(() => {
                     href="javascript:void(0)"
                     class="app-shell__user-dropdown-item"
                     :class="{ 'is-active': showAdminModal }"
-                    @click.prevent="showAdminModal = true; isUserDropdownOpen = false"
+                    @click.prevent="openAdminModal()"
                   >
                     <span class="app-shell__action-badge is-admin">管</span>
                     <div class="item-text">
                       <span class="item-title">系统管理</span>
                       <span class="item-desc">配置全局与用户权限</span>
+                    </div>
+                  </a>
+
+                  <!-- 提示词阶段关系 -->
+                  <a
+                    v-if="authStore.user?.is_admin"
+                    href="javascript:void(0)"
+                    class="app-shell__user-dropdown-item"
+                    :class="{ 'is-active': showPromptUsageModal }"
+                    @click.prevent="openPromptUsageModal"
+                  >
+                    <span class="app-shell__action-badge is-prompt">词</span>
+                    <div class="item-text">
+                      <span class="item-title">提示词管理</span>
+                      <span class="item-desc">查看阶段与 Prompt 关系</span>
                     </div>
                   </a>
 
@@ -413,8 +547,85 @@ onUnmounted(() => {
         hide-close-button
         @close="showAdminModal = false"
       >
-        <AdminView :is-modal="true" />
+        <AdminView :is-modal="true" :initial-tab="adminInitialTab" />
+      </GlobalModalContainer>
+
+      <GlobalModalContainer
+        v-if="showPromptUsageModal"
+        title="提示词关系总览"
+        width="min(94vw, 1180px)"
+        @close="showPromptUsageModal = false"
+      >
+        <PromptUsageMap @open-prompt-editor="openPromptEditor" />
       </GlobalModalContainer>
     </Teleport>
   </div>
 </template>
+
+<style scoped>
+/* 昼夜切换中式印章专属样式 */
+.theme-toggle-btn {
+  margin-right: 4px;
+}
+
+/* 昼模式印章：翠玉竹青色，彰显清新白昼 */
+.app-shell__action-badge.is-theme-light {
+  background-color: var(--md-success, #3b7a57) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--md-outline) !important;
+  box-shadow: 1.5px 1.5px 0px rgba(59, 122, 87, 0.25) !important;
+  transform: rotate(2deg) !important;
+}
+
+/* 夜模式印章：深沉朱砂红，代表静谧深夜 */
+.app-shell__action-badge.is-theme-dark {
+  background-color: var(--md-secondary, #b83c32) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--md-outline) !important;
+  box-shadow: 1.5px 1.5px 0px rgba(184, 60, 50, 0.25) !important;
+  transform: rotate(-1.5deg) !important;
+}
+
+/* 悬浮微升，产生毛笔书写的弹跳动感 */
+.theme-toggle-btn:hover .app-shell__action-badge {
+  transform: scale(1.08) rotate(5deg) !important;
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.2) !important;
+}
+
+/* 顶栏继续创作方正金石按钮样式 */
+.app-shell__top-action-wrap {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+}
+
+.app-shell__top-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 2px !important; /* 碑拓直直风骨，微圆 */
+  border: 1px solid var(--md-outline) !important;
+  background-color: var(--md-primary) !important; /* 焦墨底色 */
+  color: var(--md-on-primary) !important; /* 熟宣字色 */
+  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  box-shadow: 1.5px 1.5px 0px rgba(28, 32, 34, 0.2);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.app-shell__top-action-btn:hover {
+  background-color: var(--md-primary-dark) !important;
+  box-shadow: 2.5px 2.5px 0px rgba(184, 60, 50, 0.25) !important; /* 朱批红印重影 */
+  transform: translate(-1px, -1px);
+}
+
+.app-shell__top-action-btn svg {
+  width: 14px;
+  height: 14px;
+}
+</style>

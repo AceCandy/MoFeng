@@ -16,7 +16,6 @@ describe('WDSidebar semantics', () => {
     expect(source).toContain('@click="$emit(\'selectChapter\', chapter.chapter_number)"')
     expect(source).toContain(':aria-label="getChapterA11yLabel(chapter.chapter_number, chapter.title)"')
     expect(source).toContain(':aria-current="selectedChapterNumber === chapter.chapter_number ? \'true\' : undefined"')
-    expect(normalizedSource).toContain('<span class="md-title-medium font-semibold">故事蓝图</span>')
     expect(normalizedSource).toContain(
       '<span class="writing-sidebar__chapter-title md-body-medium font-semibold line-clamp-1"',
     )

@@ -162,8 +162,8 @@ const risks = computed(() => {
 .wd-ai__panel {
   height: 100%;
   overflow-y: auto;
-  border: 1px solid color-mix(in srgb, var(--md-outline-variant) 80%, transparent);
-  border-radius: var(--md-radius-xl);
+  border: 1px solid var(--md-outline);
+  border-radius: var(--md-radius-sm);
   background-color: color-mix(in srgb, var(--md-surface) 95%, var(--md-surface-container-low));
   box-shadow: var(--md-elevation-1);
 }
@@ -191,8 +191,10 @@ const risks = computed(() => {
   margin-top: 6px;
   display: block;
   color: var(--md-on-surface);
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
   font-size: var(--md-body-large);
   line-height: 1.6;
+  letter-spacing: 0.03em;
 }
 
 .wd-ai__paragraph {
@@ -223,7 +225,7 @@ const risks = computed(() => {
 
 .wd-ai__project-stats div {
   border: 1px solid color-mix(in srgb, var(--md-outline-variant) 56%, transparent);
-  border-radius: var(--md-radius-md);
+  border-radius: var(--md-radius-xs);
   background-color: color-mix(in srgb, var(--md-surface-container-low) 76%, transparent);
   padding: var(--md-spacing-3);
 }
@@ -238,6 +240,8 @@ const risks = computed(() => {
   display: block;
   margin-top: 5px;
   color: var(--md-on-surface);
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
   font-size: var(--md-label-large);
+  letter-spacing: 0.02em;
 }
 </style>

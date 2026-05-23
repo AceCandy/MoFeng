@@ -21,13 +21,14 @@
         <ul class="flex-1 h-full overflow-y-auto divide-y divide-[var(--md-outline-variant)] overscroll-contain">
           <li v-for="(chapter, index) in chapters" :key="chapter.chapter_number">
             <button
+              :ref="(el) => setChapterRef(chapter.chapter_number, el)"
               class="w-full text-left px-5 py-3 transition-colors duration-200"
               :class="selectedChapter?.chapter_number === chapter.chapter_number ? 'bg-[var(--md-primary-container)] text-[var(--md-primary)] font-semibold' : 'hover:bg-[var(--md-surface-container-low)] lg:hover:bg-[var(--md-surface)] text-[var(--md-on-surface)]'"
               @click="selectChapter(chapter.chapter_number)"
             >
               <div class="flex items-center justify-between gap-3">
                 <div class="flex items-center gap-3 min-w-0">
-                  <span class="inline-flex items-center justify-center w-6 h-6 text-xs font-semibold text-[var(--md-on-surface-variant)] bg-[var(--md-surface-container)] rounded-full">
+                  <span class="inline-flex items-center justify-center w-6 h-6 text-xs font-semibold text-[var(--md-on-surface-variant)] bg-[var(--md-surface-container)] rounded-xs border border-[var(--md-outline-variant)]">
                     {{ index + 1 }}
                   </span>
                   <span class="truncate">{{ chapter.title || `第${chapter.chapter_number}章` }}</span>
@@ -54,7 +55,7 @@
           type="button"
           v-if="!showChapterList"
           @click="showChapterList = true"
-          class="lg:hidden fixed bottom-6 left-6 z-30 w-14 h-14 bg-[var(--md-primary)] text-[var(--md-on-primary)] rounded-full shadow-lg flex items-center justify-center hover:bg-[var(--md-primary-dark)] transition-colors"
+          class="lg:hidden fixed bottom-6 left-6 z-30 w-14 h-14 bg-[var(--md-primary)] text-[var(--md-on-primary)] rounded-xs shadow-[4px_4px_0px_rgba(28,32,34,0.15)] flex items-center justify-center hover:bg-[var(--md-primary-dark)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--md-primary)] focus-visible:outline-offset-2"
           aria-label="打开章节列表"
           title="打开章节列表"
         >
@@ -100,7 +101,7 @@
               </div>
               <div class="flex items-center gap-2 flex-wrap justify-end">
                 <button
-                  class="inline-flex items-center gap-1 min-h-[44px] px-3.5 py-2 text-sm font-medium rounded-lg border transition-colors duration-200"
+                  class="inline-flex items-center gap-1 min-h-[44px] px-3.5 py-2 text-sm font-medium rounded-xs border transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-[var(--md-primary)] focus-visible:outline-offset-2"
                   :class="selectedChapter?.content ? 'border-[var(--md-primary-container)] text-[var(--md-on-primary-container)] hover:bg-[var(--md-primary-container)]' : 'border-[var(--md-outline-variant)] text-[var(--md-on-surface-variant)] cursor-not-allowed'"
                   :disabled="!selectedChapter?.content"
                   @click="exportChapterAsTxt"
@@ -111,7 +112,7 @@
                   导出TXT
                 </button>
                 <span v-if="selectedChapter.generation_status"
-                  class="px-3 py-1 text-xs font-medium rounded-full"
+                  class="m3-signet-seal px-3 py-1 text-xs font-medium border rounded-xs"
                   :class="getStatusColor(selectedChapter.generation_status)">
                   {{ getStatusLabel(selectedChapter.generation_status) }}
                 </span>
@@ -119,19 +120,19 @@
             </div>
 
             <!-- Tab Navigation -->
-            <div class="flex gap-1">
+            <div class="flex gap-2">
               <button
                 v-for="tab in tabs"
                 :key="tab.key"
                 @click="activeTab = tab.key"
-                class="px-4 py-2 text-sm font-medium rounded-lg transition-[background-color,box-shadow,color] duration-200"
+                class="px-4 py-2 min-h-[44px] text-sm font-medium rounded-xs border border-transparent transition-[background-color,box-shadow,color] duration-200 focus-visible:outline-2 focus-visible:outline-[var(--md-primary)] focus-visible:outline-offset-2"
                 :class="activeTab === tab.key
-                  ? 'bg-[var(--md-surface)] text-[var(--md-primary)] shadow-sm'
+                  ? 'bg-[var(--md-surface)] text-[var(--md-primary)] border-[var(--md-outline)] shadow-[2px_2px_0px_rgba(28,32,34,0.15)]'
                   : 'text-[var(--md-on-surface-variant)] hover:text-[var(--md-on-surface)] hover:bg-[var(--md-surface-container-lowest)]'"
               >
                 {{ tab.label }}
                 <span v-if="tab.badge && getTabBadgeCount(tab.key)"
-                  class="ml-1.5 px-1.5 py-0.5 text-xs rounded-full"
+                  class="ml-1.5 px-1.5 py-0.5 text-xs rounded-xs border border-[var(--md-outline-variant)]"
                   :class="activeTab === tab.key ? 'bg-[var(--md-primary-container)] text-[var(--md-primary)]' : 'bg-[var(--md-surface-container-high)] text-[var(--md-on-surface-variant)]'">
                   {{ getTabBadgeCount(tab.key) }}
                 </span>
@@ -146,7 +147,7 @@
               <div class="max-w-full space-y-4">
                 <!-- Summary Cards -->
                 <div v-if="selectedChapter.summary || selectedChapter.real_summary" class="grid gap-4">
-                  <div v-if="selectedChapter.summary" class="bg-[var(--md-surface-container-low)] border border-[var(--md-outline-variant)] rounded-xl p-4">
+                  <div v-if="selectedChapter.summary" class="bg-[var(--md-surface-container-low)] border border-[var(--md-outline-variant)] rounded-sm p-4">
                     <h5 class="text-xs font-semibold text-[var(--md-on-surface)] mb-2 flex items-center gap-1.5">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -155,7 +156,7 @@
                     </h5>
                     <p class="text-sm text-[var(--md-on-surface)] leading-relaxed">{{ selectedChapter.summary }}</p>
                   </div>
-                  <div v-if="selectedChapter.real_summary" class="bg-[var(--md-success-container)] border border-[color-mix(in_oklch,var(--md-success)_20%,transparent)] rounded-xl p-4">
+                  <div v-if="selectedChapter.real_summary" class="bg-[var(--md-success-container)] border border-[color-mix(in_oklch,var(--md-success)_20%,transparent)] rounded-sm p-4">
                     <h5 class="text-xs font-semibold text-[var(--md-success-text)] mb-2 flex items-center gap-1.5">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -167,7 +168,7 @@
                 </div>
 
                 <!-- Main Content -->
-                <div class="prose prose-slate max-w-none p-4 sm:p-6 rounded-xl bg-[var(--md-surface-container-low)]">
+                <div class="prose prose-slate max-w-none p-4 sm:p-6 rounded-sm bg-[var(--md-surface-container-low)]">
                   <div class="text-base text-[var(--md-on-surface)] leading-8 whitespace-pre-wrap font-serif">
                     {{ selectedChapter.content || '暂无内容' }}
                   </div>
@@ -214,9 +215,9 @@
               <div class="max-w-full">
                 <div v-if="evaluationData" class="space-y-4">
                   <!-- 最佳选择 -->
-                  <div v-if="evaluationData.best_choice" class="bg-[var(--md-primary-container)] border border-[var(--md-primary-container)] rounded-xl p-4">
+                  <div v-if="evaluationData.best_choice" class="bg-[var(--md-primary-container)] border border-[var(--md-primary-container)] rounded-sm p-4">
                     <div class="flex items-start gap-4">
-                      <div class="w-12 h-12 bg-[var(--md-primary)] rounded-xl flex items-center justify-center flex-shrink-0">
+                      <div class="w-12 h-12 bg-[var(--md-primary)] rounded-xs flex items-center justify-center flex-shrink-0">
                         <svg class="w-7 h-7 text-[var(--md-on-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                         </svg>
@@ -224,7 +225,7 @@
                       <div class="flex-1">
                         <h5 class="text-lg font-bold text-[var(--md-on-primary-container)] mb-2">最佳版本选择</h5>
                         <div class="flex items-center gap-2 mb-3">
-                          <span class="px-3 py-1 bg-[var(--md-primary)] text-[var(--md-on-primary)] text-sm font-bold rounded-full">
+                          <span class="px-3 py-1 bg-[var(--md-primary)] text-[var(--md-on-primary)] text-sm font-bold rounded-xs">
                             版本 {{ evaluationData.best_choice }}
                           </span>
                         </div>
@@ -238,18 +239,18 @@
                   <!-- 各版本详细评审 -->
                   <div v-if="evaluationData.evaluation" class="space-y-4">
                     <div v-for="(versionEval, versionKey) in evaluationData.evaluation" :key="versionKey"
-                      class="border border-[var(--md-outline-variant)] rounded-xl overflow-hidden"
+                      class="border border-[var(--md-outline-variant)] rounded-sm overflow-hidden"
                       :class="isSelectedVersion(versionKey, evaluationData.best_choice) ? 'ring-2 ring-[var(--md-primary-light)]' : ''">
                       <!-- 版本标题 -->
                       <div class="px-5 py-3 bg-[var(--md-surface-container-low)] border-b border-[var(--md-outline-variant)] flex items-center justify-between">
                         <h6 class="font-bold text-[var(--md-on-surface)] flex items-center gap-2">
-                          <span class="w-6 h-6 bg-[var(--md-on-surface)] text-[var(--md-surface)] rounded-full flex items-center justify-center text-xs">
+                          <span class="w-6 h-6 bg-[var(--md-on-surface)] text-[var(--md-surface)] rounded-xs flex items-center justify-center text-xs">
                             {{ getVersionNumber(versionKey) }}
                           </span>
                           {{ getVersionLabel(versionKey) }}
                         </h6>
                         <span v-if="isSelectedVersion(versionKey, evaluationData.best_choice)"
-                          class="px-2.5 py-1 bg-[var(--md-primary-container)] text-[var(--md-primary-dark)] text-xs font-semibold rounded-full">
+                          class="px-2.5 py-1 bg-[var(--md-primary-container)] text-[var(--md-primary-dark)] text-xs font-semibold rounded-xs">
                           最佳
                         </span>
                       </div>
@@ -304,9 +305,9 @@
                   <!-- 简单格式兼容 -->
                   <div v-else-if="evaluationData.decision || evaluationData.feedback" class="space-y-4">
                     <!-- 评审决策 -->
-                    <div v-if="evaluationData.decision" class="bg-[var(--md-primary-container)] border border-[var(--md-primary-container)] rounded-xl p-4">
+                    <div v-if="evaluationData.decision" class="bg-[var(--md-primary-container)] border border-[var(--md-primary-container)] rounded-sm p-4">
                       <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 bg-[var(--md-primary)] rounded-lg flex items-center justify-center">
+                        <div class="w-10 h-10 bg-[var(--md-primary)] rounded-xs flex items-center justify-center">
                           <svg class="w-6 h-6 text-[var(--md-on-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
@@ -321,13 +322,13 @@
                     <!-- 评分卡片 -->
                     <div v-if="evaluationData.scores" class="grid grid-cols-2 md:grid-cols-3 gap-4">
                       <div v-for="(score, key) in evaluationData.scores" :key="key"
-                        class="bg-[var(--md-surface)] border border-[var(--md-outline-variant)] rounded-xl p-4 hover:shadow-md transition-shadow">
+                        class="bg-[var(--md-surface)] border border-[var(--md-outline-variant)] rounded-sm p-4 hover:shadow-[2px_2px_0px_rgba(28,32,34,0.15)] transition-shadow">
                         <div class="flex items-center justify-between mb-2">
                           <span class="text-xs font-medium text-[var(--md-on-surface-variant)]">{{ getScoreLabel(key) }}</span>
                           <span class="text-lg font-bold" :class="getScoreColor(score)">{{ score }}</span>
                         </div>
-                        <div class="w-full bg-[var(--md-surface-container)] rounded-full h-2">
-                          <div class="h-2 w-full origin-left rounded-full transition-transform duration-300"
+                        <div class="w-full bg-[var(--md-surface-container)] rounded-xs h-2">
+                          <div class="h-2 w-full origin-left rounded-xs transition-transform duration-300"
                             :class="getScoreBarColor(score)"
                             :style="{ transform: `scaleX(${score / 10})` }"></div>
                         </div>
@@ -336,7 +337,7 @@
 
                     <!-- 详细反馈 -->
                     <div v-if="evaluationData.feedback"
-                      class="bg-[var(--md-surface-container-low)] border border-[var(--md-outline-variant)] rounded-xl p-4">
+                      class="bg-[var(--md-surface-container-low)] border border-[var(--md-outline-variant)] rounded-sm p-4">
                       <h5 class="text-sm font-bold text-[var(--md-on-surface)] mb-3">详细反馈</h5>
                       <p class="text-sm text-[var(--md-on-surface)] leading-relaxed whitespace-pre-wrap">{{ evaluationData.feedback }}</p>
                     </div>
@@ -344,7 +345,7 @@
                 </div>
 
                 <div v-else class="text-center py-12">
-                  <div class="w-16 h-16 bg-[var(--md-surface-container)] rounded-full flex items-center justify-center mx-auto mb-3">
+                  <div class="w-16 h-16 bg-[var(--md-surface-container)] rounded-xs flex items-center justify-center mx-auto mb-3">
                     <svg class="w-8 h-8 text-[var(--md-on-surface-variant)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
@@ -379,7 +380,7 @@
         @click.self="closeVersionModal">
         <div
           ref="versionDialogRef"
-          class="bg-[var(--md-surface)] rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden"
+          class="bg-[var(--md-surface)] rounded-md border-3 border-double border-[var(--md-outline)] shadow-[4px_4px_0px_rgba(28,32,34,0.15)] max-w-4xl w-full max-h-[85vh] overflow-hidden"
           role="dialog"
           aria-modal="true"
           :aria-labelledby="versionModalTitleId"
@@ -387,7 +388,7 @@
           <!-- Modal Header -->
           <div class="flex items-center justify-between px-6 py-4 border-b border-[var(--md-outline-variant)] bg-[var(--md-surface-container-low)]">
             <div class="flex items-center gap-3">
-              <span class="w-8 h-8 bg-[var(--md-primary)] text-[var(--md-on-primary)] rounded-full flex items-center justify-center text-sm font-bold">
+              <span class="w-8 h-8 bg-[var(--md-primary)] text-[var(--md-on-primary)] rounded-xs flex items-center justify-center text-sm font-bold border border-[var(--md-outline-variant)]">
                 {{ versionModal.index + 1 }}
               </span>
               <div>
@@ -398,7 +399,7 @@
             <button
               ref="versionCloseButtonRef"
               type="button"
-              class="md-icon-btn"
+              class="md-icon-btn focus-visible:outline-2 focus-visible:outline-[var(--md-primary)] focus-visible:outline-offset-2"
               aria-label="关闭版本全文弹窗"
               title="关闭版本全文弹窗"
               data-dialog-initial-focus
@@ -426,17 +427,20 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
+import type { ComponentPublicInstance } from 'vue'
 import { useRoute } from 'vue-router'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { useNovelChapterDetailQuery } from '@/queries/novel'
 import { useDialogA11y } from '@/composables/useDialogA11y'
+import { resolveChapterNumberForEntry } from '@/utils/chapter'
 
 interface ChapterItem {
   chapter_number: number
   title?: string | null
   summary?: string | null
   content?: string | null
+  generation_status?: string | null
   word_count?: number
 }
 
@@ -444,11 +448,12 @@ interface ChapterDetail extends ChapterItem {
   real_summary?: string | null
   versions?: string[] | null
   evaluation?: string | null
-  generation_status?: string
+  generation_status?: string | null
 }
 
 const props = defineProps<{
   chapters: ChapterItem[]
+  chapterOutlines?: ChapterItem[]
   isAdmin?: boolean
 }>()
 
@@ -492,6 +497,8 @@ const isVersionModalOpen = computed(() => versionModal.value.show)
 const versionModalTitleId = 'chapter-version-modal-title'
 
 const chapters = computed(() => props.chapters || [])
+const chapterOutlines = computed(() => props.chapterOutlines || [])
+const chapterRefs = ref<Record<number, HTMLElement | null>>({})
 
 // Tab 配置
 const tabs = [
@@ -525,16 +532,16 @@ const getStatusLabel = (status: string): string => {
 // 获取状态颜色
 const getStatusColor = (status: string): string => {
   const colorMap: Record<string, string> = {
-    'not_generated': 'bg-[var(--md-surface-container)] text-[var(--md-on-surface-variant)]',
-    'generating': 'bg-[var(--md-surface-container-low)] text-[var(--md-primary)]',
-    'evaluating': 'bg-[var(--md-primary-container)] text-[var(--md-on-primary-container)]',
-    'selecting': 'bg-[var(--md-warning-container)] text-[var(--md-warning-text)]',
-    'failed': 'bg-[var(--md-error-container)] text-[var(--md-error-text)]',
-    'evaluation_failed': 'bg-[var(--md-error-container)] text-[var(--md-error-text)]',
-    'waiting_for_confirm': 'bg-[var(--md-warning-container)] text-[var(--md-warning-text)]',
-    'successful': 'bg-[var(--md-success-container)] text-[var(--md-success-text)]'
+    'not_generated': 'border-[var(--md-outline-variant)] bg-[var(--md-surface-container)] text-[var(--md-on-surface-variant)]',
+    'generating': 'border-[var(--md-primary)] bg-[var(--md-surface-container-low)] text-[var(--md-primary)]',
+    'evaluating': 'border-[var(--md-primary-container)] bg-[var(--md-primary-container)] text-[var(--md-on-primary-container)]',
+    'selecting': 'border-[var(--md-warning)] bg-[var(--md-warning-container)] text-[var(--md-warning-text)]',
+    'failed': 'border-[var(--md-error)] bg-[var(--md-error-container)] text-[var(--md-error-text)]',
+    'evaluation_failed': 'border-[var(--md-error)] bg-[var(--md-error-container)] text-[var(--md-error-text)]',
+    'waiting_for_confirm': 'border-[var(--md-warning)] bg-[var(--md-warning-container)] text-[var(--md-warning-text)]',
+    'successful': 'border-[var(--md-secondary)] bg-[var(--md-secondary-container)] text-[var(--md-secondary)]'
   }
-  return colorMap[status] || 'bg-[var(--md-surface-container)] text-[var(--md-on-surface-variant)]'
+  return colorMap[status] || 'border-[var(--md-outline-variant)] bg-[var(--md-surface-container)] text-[var(--md-on-surface-variant)]'
 }
 
 // 获取 Tab Badge 数量
@@ -670,6 +677,35 @@ const renderMarkdown = (text: string | null | undefined): string => {
   }
 }
 
+function setChapterRef(chapterNumber: number, el: Element | ComponentPublicInstance | null) {
+  if (!el) {
+    delete chapterRefs.value[chapterNumber]
+    return
+  }
+
+  const element = el instanceof Element ? el : el.$el instanceof Element ? el.$el : null
+  if (element) {
+    chapterRefs.value[chapterNumber] = element as HTMLElement
+  }
+}
+
+const scrollToChapter = async (chapterNumber: number | null) => {
+  if (chapterNumber === null) return
+  await nextTick()
+  const element = chapterRefs.value[chapterNumber]
+  if (!element) return
+  element.scrollIntoView({
+    behavior: shouldReduceMotion() ? 'auto' : 'smooth',
+    block: 'center',
+    inline: 'nearest',
+  })
+}
+
+const shouldReduceMotion = (): boolean => {
+  if (typeof window === 'undefined') return false
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
 watch(
   chapters,
   (list) => {
@@ -679,10 +715,21 @@ watch(
     }
     const stillExists = list.some((chapter) => chapter.chapter_number === selectedChapterNumber.value)
     if (!selectedChapterNumber.value || !stillExists) {
-      selectedChapterNumber.value = list[0].chapter_number
+      selectedChapterNumber.value = resolveChapterNumberForEntry({
+        outlines: chapterOutlines.value,
+        chapters: list,
+      })
     }
   },
   { immediate: true }
+)
+
+watch(
+  () => selectedChapterNumber.value,
+  (chapterNumber) => {
+    void scrollToChapter(chapterNumber)
+  },
+  { immediate: true },
 )
 
 const selectChapter = async (chapterNumber: number) => {
@@ -733,7 +780,7 @@ defineExpose({
   display: block;
   padding: 1.25rem;
   border: 1px solid var(--md-outline-variant);
-  border-radius: 0.75rem;
+  border-radius: var(--md-radius-sm, 4px);
   background-color: transparent;
   color: inherit;
   text-align: left;
@@ -745,8 +792,8 @@ defineExpose({
 }
 
 .chapter-version-card:hover {
-  border-color: var(--md-primary-container);
-  box-shadow: var(--md-elevation-1);
+  border-color: var(--md-primary);
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.15);
 }
 
 .chapter-version-card:focus-visible {
@@ -781,9 +828,10 @@ defineExpose({
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--md-radius-full);
-  background-color: var(--md-primary-container);
-  color: var(--md-primary);
+  border-radius: var(--md-radius-xs, 2px);
+  border: 1px solid var(--md-outline-variant);
+  background-color: var(--md-surface-container);
+  color: var(--md-on-surface);
   font-size: 0.75rem;
   font-weight: 700;
 }
@@ -803,6 +851,19 @@ defineExpose({
 .chapter-version-card:hover .chapter-version-card__hint,
 .chapter-version-card:focus-visible .chapter-version-card__hint {
   opacity: 1;
+}
+
+.m3-signet-seal {
+  font-family: 'STSong', 'Songti SC', serif;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  border-style: solid;
+  border-width: 1px;
+  border-radius: var(--md-radius-xs, 2px);
+  position: relative;
+  /* 增加仿古驳杂底纹 */
+  background-image: linear-gradient(45deg, rgba(255,255,255,0.05) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.05) 75%, transparent 75%, transparent);
+  background-size: 8px 8px;
 }
 
 .chapter-version-card__excerpt {

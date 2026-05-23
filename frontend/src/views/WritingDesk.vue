@@ -103,6 +103,22 @@
               @fetch-chapter-status="fetchChapterStatus"
               @edit-chapter="editChapterContent"
             />
+
+            <!-- 案头宣纸盖印·引首闲章 (写作辅助控制) -->
+            <button
+              type="button"
+              class="writing-desk-seal-stamp md-ripple"
+              :class="{ 'is-active': assistantToggleActive }"
+              :title="assistantToggleActive ? '折叠右侧辅助面板' : '展开右侧辅助面板'"
+              @click="toggleAssistantVisibility"
+            >
+              <!-- 印信篆字 (阴刻朱砂白文) -->
+              <span class="stamp-seal-char">輔</span>
+              <!-- 墨香字签（展开字条） -->
+              <span class="stamp-seal-text">
+                {{ assistantToggleActive ? '收起辅助' : '辅助信息' }}
+              </span>
+            </button>
           </div>
 
           <div
@@ -259,7 +275,7 @@
 
 <script setup lang="ts">
 import { ref, computed, defineAsyncComponent, nextTick, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import type {
   Chapter,
   ChapterOutline,
@@ -285,6 +301,7 @@ import { useDialogA11y } from '@/composables/useDialogA11y'
 import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
 import { desktopMin, mobileMax } from '@/constants/responsive'
 import { countNonWhitespaceChars } from '@/utils/text'
+import { resolveChapterNumberForEntry, resolveChapterNumberForProjectEntry } from '@/utils/chapter'
 import { useNovelStore } from '@/stores/novel'
 import WDSidebar from '@/components/writing-desk/WDSidebar.vue'
 import WDWorkspace from '@/components/writing-desk/WDWorkspace.vue'
@@ -307,10 +324,12 @@ interface Props {
 
 const props = defineProps<Props>()
 const router = useRouter()
+const route = useRoute()
 const projectQuery = useNovelProjectQuery(() => props.id)
 
 // 状态管理
 const selectedChapterNumber = ref<number | null>(null)
+const resolvedProjectEntryId = ref<string | null>(null)
 const chapterGenerationResult = ref<ChapterGenerationResponse | null>(null)
 const selectedVersionIndex = ref<number>(0)
 const generatingChapter = ref<number | null>(null)
@@ -403,6 +422,62 @@ watch(
     }
   },
   { immediate: true },
+)
+
+const getQueryChapterNumber = () => {
+  const rawChapterNumber = Array.isArray(route.query.chapter_number)
+    ? route.query.chapter_number[0]
+    : route.query.chapter_number
+  const chapterNumber = Number(rawChapterNumber)
+  return Number.isFinite(chapterNumber) && chapterNumber > 0 ? chapterNumber : null
+}
+
+// 写作台会在不同项目间复用组件，进入新项目时必须按当前项目重新定位章节。
+watch(
+  () => project.value,
+  (newProject) => {
+    if (!newProject) {
+      selectedChapterNumber.value = null
+      resolvedProjectEntryId.value = null
+      return
+    }
+
+    const resolvedChapterNumber = resolveChapterNumberForProjectEntry({
+      projectId: newProject.id,
+      previousProjectId: resolvedProjectEntryId.value,
+      currentChapterNumber: selectedChapterNumber.value,
+      outlines: newProject.blueprint?.chapter_outline ?? [],
+      chapters: newProject.chapters ?? [],
+      preferredChapterNumber: getQueryChapterNumber(),
+    })
+
+    selectedChapterNumber.value = resolvedChapterNumber
+    selectedVersionIndex.value = 0
+    chapterGenerationResult.value = null
+    resolvedProjectEntryId.value = newProject.id
+  },
+  { immediate: true },
+)
+
+watch(
+  () => route.query.chapter_number,
+  () => {
+    if (!project.value) {
+      return
+    }
+    const chapterNumber = getQueryChapterNumber()
+    if (!chapterNumber) {
+      return
+    }
+    const resolvedChapterNumber = resolveChapterNumberForEntry({
+      outlines: project.value.blueprint?.chapter_outline ?? [],
+      chapters: project.value.chapters ?? [],
+      preferredChapterNumber: chapterNumber,
+    })
+    if (resolvedChapterNumber !== null) {
+      selectChapter(resolvedChapterNumber)
+    }
+  },
 )
 
 const closeAllDrawers = () => {
@@ -1303,12 +1378,20 @@ const handleGenerateOutline = async (numChapters: number) => {
 
 <style scoped>
 .writing-desk-page {
-  height: var(--app-viewport-unit);
-  min-height: 640px;
+  /* 极致国风脑洞与视口自适应布局：自适应减去顶部中控台导航栏高度（宽屏 92px，窄屏 72px），彻底消除浏览器最右侧全局滚动条溢出，实现满屏高自适应 */
+  height: calc(var(--app-viewport-unit) - 92px);
+  min-height: calc(640px - 92px);
   background-color: var(--md-surface-dim);
   color: var(--md-on-surface);
   font-family: var(--md-font-family);
   animation: m3-fade 0.6s ease-out both;
+}
+
+@media (max-width: 1199px) {
+  .writing-desk-page {
+    height: calc(var(--app-viewport-unit) - 72px);
+    min-height: calc(640px - 72px);
+  }
 }
 
 .writing-desk-main {
@@ -1527,6 +1610,171 @@ const handleGenerateOutline = async (numChapters: number) => {
 }
 
 /* 动画效果 */
+@keyframes ink-backdrop-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
+   写作台辅助控制悬浮按钮 (案头宣纸盖印·引首闲章)
+   ========================================================================== */
+.writing-desk-workspace-shell {
+  position: relative; /* 确保闲章相对于工作区容器定位 */
+}
+
+/* 宣纸引首闲章本体 */
+.writing-desk-seal-stamp {
+  position: absolute;
+  right: 0;
+  top: 180px;
+  z-index: 30; /* 高于工作区，低于弹窗与 drawer 遮罩层 */
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  height: 38px;
+  width: 38px; /* 默认正方形印章尺寸 */
+  padding: 0 0 0 6px; /* 让印章内容偏左，留出右侧贴边空隙 */
+  cursor: pointer;
+  border: 1px solid #9c2720;
+  border-right: none; /* 右侧贴合分界线，呈无缝盖印状态 */
+
+  /* 运用左圆角、右直角设计，完美模拟盖在纸张右边缘的引首章印记 */
+  border-radius: 6px 0 0 6px / 8px 0 0 8px;
+
+  /* 精致沉稳的朱砂印泥色彩渐变 */
+  background: linear-gradient(135deg, #c94036 0%, #b83c32 50%, #a32720 100%);
+
+  /* 核心国风魔力：混合相乘模式！
+     它会让朱砂红与米黄色的稿纸底纹像素完美混合，呈现出极其逼真的“印泥渗入宣纸”拓印质感 */
+  mix-blend-mode: multiply;
+  opacity: 0.92;
+
+  /* 盖印后的轻微纸张受压凹凸质感与边缘斑驳微影 */
+  box-shadow:
+    -1px 2px 4px rgba(107, 21, 16, 0.25),
+    inset 1px 1px 1px rgba(255, 255, 255, 0.15),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.15);
+
+  transition:
+    width 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+    background 0.3s ease,
+    opacity 0.3s ease,
+    border-radius 0.4s ease,
+    padding 0.4s ease,
+    box-shadow 0.3s ease;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* 水墨印痕伪元素：当 hover 时，仿佛墨香未干，在宣纸边缘向外轻柔地晕染开一缕浅墨痕 */
+.writing-desk-seal-stamp::before {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  /* 极轻微向外渐隐的水墨晕染渐变 */
+  background: radial-gradient(circle, rgba(28, 32, 34, 0.25) 0%, rgba(28, 32, 34, 0.08) 50%, rgba(28, 32, 34, 0) 70%);
+  transform: scale(0.4);
+  opacity: 0;
+  z-index: -1;
+  pointer-events: none;
+  transition:
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.5s ease;
+}
+
+/* 闲章 Hover 时：优雅向左展卷拉伸，并显现金泥温润流光 */
+.writing-desk-seal-stamp:hover {
+  width: 114px; /* 展卷宽度 */
+  border-radius: 8px 0 0 8px / 10px 0 0 10px; /* 展开时保持边缘手工风化微弧 */
+  padding-left: 8px;
+  opacity: 0.98;
+  background: linear-gradient(135deg, #d4433b 0%, #b83c32 50%, #b02c25 100%);
+  box-shadow:
+    -2px 3px 8px rgba(107, 21, 16, 0.35),
+    inset 1px 1px 1px rgba(255, 255, 255, 0.2);
+}
+
+.writing-desk-seal-stamp:hover::before {
+  transform: scale(2.2); /* 墨晕在宣纸上优雅晕散 */
+  opacity: 1;
+}
+
+/* 阴刻古朴篆字 */
+.stamp-seal-char {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+
+  /* 白文阴刻金石托底，使文字如同在章体上镂空透出底部的宣纸暖白 */
+  background-color: rgba(28, 32, 34, 0.15);
+  color: #fff8eb !important; /* 古香古色的泥金白文 */
+  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-size: 13px;
+  font-weight: 800;
+  text-shadow: 1px 1px 1px rgba(107, 21, 16, 0.5);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.writing-desk-seal-stamp:hover .stamp-seal-char {
+  transform: scale(1.08) rotate(15deg); /* 展卷时篆字微偏，增添意趣 */
+}
+
+/* 墨香字签（展卷淡入的宋体标签） */
+.stamp-seal-text {
+  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff8eb !important; /* 泥金字色 */
+  letter-spacing: 0.12em;
+  opacity: 0;
+  transform: translateX(12px);
+  transition:
+    opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1) 0.08s,
+    transform 0.3s cubic-bezier(0.25, 1, 0.5, 1) 0.08s;
+  text-shadow: 1px 1px 1px rgba(107, 21, 16, 0.3);
+}
+
+.writing-desk-seal-stamp:hover .stamp-seal-text {
+  opacity: 0.95;
+  transform: translateX(0);
+}
+
+/* 移动端/窄屏响应式适配：精美贴合于右下角 */
+@media (max-width: 1199px) {
+  .writing-desk-seal-stamp {
+    top: auto;
+    bottom: 30px; /* 贴靠右下角 */
+    right: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 6px 0 0 6px / 8px 0 0 8px;
+    box-shadow: -2px 2px 6px rgba(107, 21, 16, 0.3);
+  }
+
+  .writing-desk-seal-stamp:hover {
+    width: 38px; /* 移动端悬停时保持紧凑的小章状态，避免横向展开遮挡写作界面 */
+    padding-left: 6px;
+    border-radius: 6px 0 0 6px / 8px 0 0 8px;
+    transform: scale(1.05); /* 仅做轻微点击缩放提示 */
+  }
+
+  .writing-desk-seal-stamp:hover .stamp-seal-text {
+    display: none; /* 移动端在悬停时隐藏字条 */
+  }
+}
+
 @keyframes m3-fade {
   from {
     opacity: 0;

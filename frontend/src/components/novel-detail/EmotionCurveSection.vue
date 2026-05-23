@@ -4,12 +4,10 @@
     <div class="flex items-center justify-between mb-6">
       <div class="flex items-center gap-3">
         <div
-          class="w-10 h-10 rounded-full flex items-center justify-center"
-          style="background-color: var(--md-primary-container)"
+          class="w-10 h-10 rounded-full flex items-center justify-center emotion-header-icon-container"
         >
           <svg
-            class="w-5 h-5"
-            style="color: var(--md-on-primary-container)"
+            class="w-5 h-5 emotion-header-icon"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -23,8 +21,8 @@
           </svg>
         </div>
         <div>
-          <h3 class="md-title-medium" style="color: var(--md-on-surface)">情感曲线</h3>
-          <p class="md-body-small" style="color: var(--md-on-surface-variant)">追踪章节情感变化</p>
+          <h3 class="md-title-medium emotion-title">情感曲线</h3>
+          <p class="md-body-small emotion-subtitle">追踪章节情感变化</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -71,7 +69,7 @@
     <!-- Loading State -->
     <div v-if="isLoading" class="flex flex-col items-center justify-center py-12">
       <div class="md-spinner"></div>
-      <p class="mt-4 md-body-medium" style="color: var(--md-on-surface-variant)">
+      <p class="mt-4 md-body-medium loading-text">
         分析情感数据中...
       </p>
     </div>
@@ -79,12 +77,10 @@
     <!-- Error State -->
     <div v-else-if="error" class="flex flex-col items-center justify-center py-12">
       <div
-        class="w-12 h-12 rounded-full flex items-center justify-center mb-4"
-        style="background-color: var(--md-error-container)"
+        class="w-12 h-12 rounded-full flex items-center justify-center mb-4 error-icon-container"
       >
         <svg
-          class="w-6 h-6"
-          style="color: var(--md-error)"
+          class="w-6 h-6 error-icon"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -97,7 +93,7 @@
           />
         </svg>
       </div>
-      <p class="md-body-medium" style="color: var(--md-error)">{{ error }}</p>
+      <p class="md-body-medium error-text">{{ error }}</p>
       <button @click="refreshData" class="md-btn md-btn-text md-ripple mt-4">重试</button>
     </div>
 
@@ -107,12 +103,10 @@
       class="flex flex-col items-center justify-center py-12"
     >
       <div
-        class="w-16 h-16 rounded-full flex items-center justify-center mb-4"
-        style="background-color: var(--md-surface-container)"
+        class="w-16 h-16 rounded-full flex items-center justify-center mb-4 empty-icon-container"
       >
         <svg
-          class="w-8 h-8"
-          style="color: var(--md-on-surface-variant)"
+          class="w-8 h-8 empty-icon"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -125,8 +119,8 @@
           />
         </svg>
       </div>
-      <p class="md-body-large" style="color: var(--md-on-surface)">暂无情感数据</p>
-      <p class="md-body-medium" style="color: var(--md-on-surface-variant)">
+      <p class="md-body-large empty-title">暂无情感数据</p>
+      <p class="md-body-medium empty-desc">
         生成章节内容后将自动分析情感曲线
       </p>
     </div>
@@ -135,33 +129,21 @@
     <div v-else>
       <!-- Statistics Cards -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div
-          class="md-card md-card-outlined p-4 text-center"
-          style="border-radius: var(--md-radius-md)"
-        >
-          <p class="md-label-medium" style="color: var(--md-on-surface-variant)">总章节</p>
-          <p class="md-headline-small" style="color: var(--md-primary)">{{ totalChapters }}</p>
+        <div class="md-card md-card-outlined p-4 text-center stat-card">
+          <p class="md-label-medium stat-label">总章节</p>
+          <p class="md-headline-small stat-value">{{ totalChapters }}</p>
         </div>
-        <div
-          class="md-card md-card-outlined p-4 text-center"
-          style="border-radius: var(--md-radius-md)"
-        >
-          <p class="md-label-medium" style="color: var(--md-on-surface-variant)">平均强度</p>
-          <p class="md-headline-small" style="color: var(--md-primary)">{{ averageIntensity }}</p>
+        <div class="md-card md-card-outlined p-4 text-center stat-card">
+          <p class="md-label-medium stat-label">平均强度</p>
+          <p class="md-headline-small stat-value">{{ averageIntensity }}</p>
         </div>
-        <div
-          class="md-card md-card-outlined p-4 text-center"
-          style="border-radius: var(--md-radius-md)"
-        >
-          <p class="md-label-medium" style="color: var(--md-on-surface-variant)">主导情感</p>
-          <p class="md-headline-small" style="color: var(--md-primary)">{{ dominantEmotion }}</p>
+        <div class="md-card md-card-outlined p-4 text-center stat-card">
+          <p class="md-label-medium stat-label">主导情感</p>
+          <p class="md-headline-small stat-value">{{ dominantEmotion }}</p>
         </div>
-        <div
-          class="md-card md-card-outlined p-4 text-center"
-          style="border-radius: var(--md-radius-md)"
-        >
-          <p class="md-label-medium" style="color: var(--md-on-surface-variant)">情感类型</p>
-          <p class="md-headline-small" style="color: var(--md-primary)">{{ emotionTypeCount }}</p>
+        <div class="md-card md-card-outlined p-4 text-center stat-card">
+          <p class="md-label-medium stat-label">情感类型</p>
+          <p class="md-headline-small stat-value">{{ emotionTypeCount }}</p>
         </div>
       </div>
 
@@ -194,7 +176,7 @@
       </div>
 
       <!-- Chart -->
-      <div class="md-card md-card-outlined p-4" style="border-radius: var(--md-radius-md)">
+      <div class="md-card md-card-outlined p-4 chart-card">
         <p :id="chartSummaryId" class="sr-only">{{ chartA11ySummary }}</p>
         <svg
           class="emotion-curve-svg h-[320px] w-full"
@@ -294,12 +276,11 @@
 
       <!-- Chapter Details List -->
       <div class="mt-6 space-y-3">
-        <h4 class="md-title-small" style="color: var(--md-on-surface)">章节情感详情</h4>
+        <h4 class="md-title-small details-title">章节情感详情</h4>
         <div
           v-for="point in emotionPoints"
           :key="point.chapter_number"
-          class="md-card md-card-outlined p-4 flex items-center gap-4"
-          style="border-radius: var(--md-radius-md)"
+          class="md-card md-card-outlined p-4 flex items-center gap-4 detail-card"
         >
           <div
             class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
@@ -310,10 +291,10 @@
             }}</span>
           </div>
           <div class="flex-1 min-w-0">
-            <p class="md-body-medium truncate" style="color: var(--md-on-surface)">
+            <p class="md-body-medium truncate detail-title">
               {{ point.title }}
             </p>
-            <p class="md-body-small" style="color: var(--md-on-surface-variant)">
+            <p class="md-body-small detail-desc">
               {{ point.description }}
             </p>
           </div>
@@ -327,7 +308,7 @@
             >
               {{ point.emotion_type }}
             </span>
-            <span class="md-label-medium" style="color: var(--md-on-surface-variant)">
+            <span class="md-label-medium detail-intensity-label">
               强度: {{ point.intensity }}/10
             </span>
           </div>
@@ -602,6 +583,91 @@ const chartLegendColor = (emotionLabel: string) => {
 
 .md-chip-filter .w-2.h-2 {
   margin-right: 8px;
+}
+
+/* 墨风重构样式 */
+.emotion-header-icon-container {
+  background-color: var(--md-primary-container);
+}
+
+.emotion-header-icon {
+  color: var(--md-on-primary-container);
+}
+
+.emotion-title {
+  color: var(--md-on-surface);
+}
+
+.emotion-subtitle {
+  color: var(--md-on-surface-variant);
+}
+
+.loading-text {
+  color: var(--md-on-surface-variant);
+}
+
+.error-icon-container {
+  background-color: var(--md-error-container);
+}
+
+.error-icon {
+  color: var(--md-error);
+}
+
+.error-text {
+  color: var(--md-error);
+}
+
+.empty-icon-container {
+  background-color: var(--md-surface-container);
+}
+
+.empty-icon {
+  color: var(--md-on-surface-variant);
+}
+
+.empty-title {
+  color: var(--md-on-surface);
+}
+
+.empty-desc {
+  color: var(--md-on-surface-variant);
+}
+
+.stat-card {
+  border-radius: var(--md-radius-md);
+}
+
+.stat-label {
+  color: var(--md-on-surface-variant);
+}
+
+.stat-value {
+  color: var(--md-primary);
+}
+
+.chart-card {
+  border-radius: var(--md-radius-md);
+}
+
+.details-title {
+  color: var(--md-on-surface);
+}
+
+.detail-card {
+  border-radius: var(--md-radius-md);
+}
+
+.detail-title {
+  color: var(--md-on-surface);
+}
+
+.detail-desc {
+  color: var(--md-on-surface-variant);
+}
+
+.detail-intensity-label {
+  color: var(--md-on-surface-variant);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -98,7 +98,16 @@
           :ref="(el) => setAdminTabRef(section.key, el)"
           type="button"
           class="admin-console__nav-item"
-          :class="{ 'is-active': section.key === activeSection.key }"
+          :class="{
+            'is-active': section.key === activeSection.key,
+            'nav-item-statistics': section.key === 'statistics',
+            'nav-item-users': section.key === 'users',
+            'nav-item-prompts': section.key === 'prompts',
+            'nav-item-novels': section.key === 'novels',
+            'nav-item-logs': section.key === 'logs',
+            'nav-item-settings': section.key === 'settings',
+            'nav-item-password': section.key === 'password'
+          }"
           :id="`admin-tab-${section.key}`"
           role="tab"
           :aria-selected="section.key === activeSection.key"
@@ -149,9 +158,11 @@ import {
 const props = withDefaults(
   defineProps<{
     isModal?: boolean
+    initialTab?: string
   }>(),
   {
     isModal: false,
+    initialTab: 'statistics',
   }
 )
 
@@ -307,9 +318,9 @@ const adminTabRefs = ref<Record<MenuKey, HTMLButtonElement | null>>({
 })
 
 watch(
-  () => route.query.tab,
-  (tab) => {
-    activeKey.value = resolveMenuKey(tab)
+  [() => route.query.tab, () => props.initialTab],
+  ([tab, initialTab]) => {
+    activeKey.value = props.isModal ? resolveMenuKey(initialTab) : resolveMenuKey(tab)
   },
   { immediate: true },
 )
@@ -377,21 +388,20 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
   flex-direction: column;
   gap: var(--md-spacing-6);
   min-height: calc(var(--app-viewport-unit) - 112px);
-  background-color: var(--md-surface-dim);
+  /* 采用平铺温暖熟宣纸大背景，完美融入墨风系统 */
+  background-color: var(--md-background) !important;
   color: var(--md-on-surface);
+  font-family: var(--md-font-family);
 }
 
 .admin-ops {
   padding: clamp(var(--md-spacing-5), 4vw, var(--md-spacing-8));
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-xl);
-  background:
-    linear-gradient(
-      140deg,
-      color-mix(in srgb, var(--md-surface) 94%, transparent),
-      color-mix(in srgb, var(--md-secondary-container) 34%, var(--md-surface-container-low))
-    );
-  box-shadow: var(--md-elevation-1);
+  /* 经典的线装本古籍双线边框 */
+  border: 3px double var(--md-outline) !important;
+  border-radius: var(--md-radius-sm) !important; /* 微直角 4px */
+  background-color: var(--md-surface) !important; /* 熟宣暖白 */
+  /* 硬朗偏置的拓片阴影 */
+  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15) !important;
   display: flex;
   flex-direction: column;
   gap: var(--md-spacing-5);
@@ -399,8 +409,9 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
 
 .admin-eyebrow {
   margin: 0;
-  color: var(--md-primary-dark);
-  font-size: var(--md-label-medium);
+  color: var(--md-secondary) !important; /* 朱砂红，像印章般醒目 */
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-size: var(--md-label-large);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -410,6 +421,10 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
   margin: 10px 0 0;
   font-size: clamp(1.4rem, 2vw, 1.95rem);
   color: var(--md-on-surface);
+  /* 宋体大标题与字距拉伸规则 */
+  font-family: var(--md-font-display) !important;
+  letter-spacing: 0.06em !important;
+  font-weight: 600 !important;
 }
 
 .admin-ops p {
@@ -417,6 +432,9 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
   color: var(--md-on-surface-variant);
   line-height: 1.7;
   max-width: 72ch;
+  /* 备注使用楷体展现水墨感 */
+  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-size: 15px;
 }
 
 .admin-ops__metrics {
@@ -427,23 +445,40 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
 
 .admin-ops__metric {
   padding: var(--md-spacing-4);
-  border-radius: var(--md-radius-lg);
-  border: 1px solid var(--md-outline-variant);
-  background-color: color-mix(in srgb, var(--md-surface) 95%, transparent);
+  border-radius: var(--md-radius-xs) !important; /* 极窄 2px 直角 */
+  border: 1px solid var(--md-outline) !important; /* 竹青细线 */
+  background-color: var(--md-surface-container-low) !important; /* 熟宣暖灰 */
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.05) !important;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
-.admin-ops__metric p,
+.admin-ops__metric:hover {
+  transform: translate(-1px, -1px);
+  border-color: var(--md-secondary) !important;
+  box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.15) !important; /* 获得轻微朱砂压影 */
+}
+
+.admin-ops__metric p {
+  margin: 0;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-small);
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+}
+
 .admin-ops__metric span {
   margin: 0;
   color: var(--md-on-surface-variant);
   font-size: var(--md-body-small);
+  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
 }
 
 .admin-ops__metric strong {
   margin: var(--md-spacing-2) 0 5px;
   display: block;
-  color: var(--md-on-surface);
-  font-size: var(--md-title-large);
+  color: var(--md-primary);
+  font-family: var(--md-font-mono) !important; /* 指标数字用 Mono 保证整齐 */
+  font-size: var(--md-display-small) !important;
+  font-weight: 600 !important;
 }
 
 .admin-ops__grid {
@@ -453,21 +488,26 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
 }
 
 .admin-panel-card {
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-lg);
-  background-color: color-mix(in srgb, var(--md-surface) 95%, transparent);
+  border: 3px double var(--md-outline) !important; /* 双线古书籍边框 */
+  border-radius: var(--md-radius-sm) !important; /* 微直角 4px */
+  background-color: var(--md-surface) !important; /* 熟宣底面 */
   padding: var(--md-spacing-4);
+  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.08) !important;
 }
 
 .admin-panel-card h3 {
   margin: 0;
   color: var(--md-on-surface);
-  font-size: var(--md-title-large);
+  /* 碑拓宋体，字间距舒展 */
+  font-family: var(--md-font-display) !important;
+  font-size: var(--md-title-medium) !important;
+  letter-spacing: 0.05em !important;
 }
 
 .admin-panel-card header p {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   color: var(--md-on-surface-variant);
+  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
   font-size: var(--md-body-small);
 }
 
@@ -484,9 +524,17 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
 .admin-log-list li,
 .admin-project-list li {
   padding: var(--md-spacing-3);
-  border-radius: var(--md-radius-md);
-  border: 1px solid var(--md-outline-variant);
-  background-color: var(--md-surface-container-low);
+  border-radius: var(--md-radius-xs) !important; /* 微直角 2px */
+  border: 1px solid var(--md-outline-variant) !important;
+  background-color: var(--md-surface-container-lowest) !important;
+  transition: all var(--md-duration-short) var(--md-easing-standard);
+}
+
+.admin-log-list li:hover,
+.admin-project-list li:hover {
+  border-color: var(--md-outline) !important;
+  background-color: var(--md-surface-container-low) !important;
+  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.05) !important;
 }
 
 .admin-log-list p {
@@ -517,6 +565,7 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
 .admin-empty-hint {
   margin: var(--md-spacing-5) 0 0;
   color: var(--md-on-surface-variant);
+  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
   font-size: var(--md-body-small);
 }
 
@@ -529,9 +578,9 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
   margin-top: var(--md-spacing-4);
   padding: var(--md-spacing-3);
   height: 176px;
-  border-radius: var(--md-radius-md);
-  border: 1px solid var(--md-outline-variant);
-  background-color: var(--md-surface-container-low);
+  border-radius: var(--md-radius-xs) !important; /* 微直角 2px */
+  border: 1px solid var(--md-outline) !important;
+  background-color: var(--md-surface-container-lowest) !important;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   align-items: end;
@@ -540,12 +589,12 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
 
 .admin-trend__bar {
   position: relative;
-  border-radius: 8px 8px 4px 4px;
+  border-radius: 2px 2px 0 0 !important; /* 驱逐大圆角，改为 2px 直角 */
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--md-primary-light) 85%, transparent),
-    color-mix(in srgb, var(--md-primary) 82%, transparent)
-  );
+    var(--md-primary-light) 0%,
+    var(--md-primary) 100%
+  ) !important; /* 水墨浓淡过渡 */
   min-height: 22px;
 }
 
@@ -556,6 +605,7 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
   transform: translateX(-50%);
   font-size: 11px;
   color: var(--md-on-surface-variant);
+  font-family: var(--md-font-mono);
 }
 
 .admin-trend__labels {
@@ -569,6 +619,7 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
   text-align: center;
   color: var(--md-on-surface-variant);
   font-size: 11px;
+  font-family: var(--md-font-mono);
 }
 
 .admin-console__tabs {
@@ -578,47 +629,43 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
 }
 
 .admin-console__nav {
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-xl);
-  background-color: color-mix(in srgb, var(--md-surface) 96%, transparent);
-  box-shadow: var(--md-elevation-1);
-}
-
-.admin-console__nav {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(104px, 1fr));
-  gap: var(--md-spacing-1);
-  padding: var(--md-spacing-1);
-  border-radius: var(--md-radius-full);
-  background-color: color-mix(in srgb, var(--md-surface-container-low) 94%, transparent);
+  /* 古典古籍线装双线栏 */
+  border: 3px double var(--md-outline) !important;
+  border-radius: var(--md-radius-sm) !important; /* 微直角 4px */
+  background-color: var(--md-surface) !important; /* 熟宣白 */
+  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.12) !important;
+  display: flex; /* 改为 flex 页签左右铺开，更具折页感 */
+  flex-wrap: nowrap;
+  gap: 0;
+  padding: 4px !important;
   overflow-x: auto;
 }
 
 .admin-console__nav-item {
+  flex: 1;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 44px;
-  padding: 0 var(--md-spacing-3);
+  justify-content: space-between;
+  min-height: 52px;
+  padding: 0 var(--md-spacing-4) !important;
   border: 1px solid transparent;
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs) !important; /* 2px */
   background-color: transparent;
   color: var(--md-on-surface);
-  font-size: var(--md-label-large);
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-size: var(--md-title-small) !important;
   font-weight: 600;
   line-height: 1;
   cursor: pointer;
   white-space: nowrap;
-  transition:
-    background-color var(--md-duration-short) var(--md-easing-standard),
-    border-color var(--md-duration-short) var(--md-easing-standard),
-    color var(--md-duration-short) var(--md-easing-standard);
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 .admin-console__nav-item:hover {
-  border-color: var(--md-outline-variant);
-  background-color: var(--md-surface-container);
+  border-color: var(--md-outline-variant) !important;
+  background-color: rgba(184, 60, 50, 0.04) !important;
+  color: var(--md-secondary) !important;
 }
 
 .admin-console__nav-item:focus-visible {
@@ -628,9 +675,86 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
 
 .admin-console__nav-item.is-active,
 .admin-console__nav-item[aria-selected='true'] {
-  border-color: color-mix(in srgb, var(--md-primary) 28%, var(--md-outline-variant));
-  background-color: var(--md-primary-container);
-  color: var(--md-on-primary-container);
+  border-color: transparent !important;
+  border-left: 3px solid var(--md-secondary) !important; /* 朱砂红左描边 */
+  background-color: rgba(184, 60, 50, 0.08) !important; /* 晕染熟宣红 */
+  color: var(--md-secondary) !important;
+}
+
+/* “盤、籍、令、卷、誌、樞、鑰” 终极金石印章 ::after - 初始悬空隐形，防止布局抖动 */
+.admin-console__nav-item::after {
+  content: '';
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-weight: 900;
+  font-size: 13px;
+  color: transparent !important;
+  background-color: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--md-radius-xs) !important;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  user-select: none;
+  flex-shrink: 0;
+  margin-left: 8px;
+  opacity: 0;
+  transform: scale(1.15) translateY(-3px); /* 悬空 */
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+/* 激活时，红泥落地，徐徐印下 */
+.admin-console__nav-item.is-active::after,
+.admin-console__nav-item[aria-selected='true']::after {
+  color: var(--md-secondary) !important;
+  background-color: rgba(184, 60, 50, 0.12) !important;
+  border: 1px solid var(--md-secondary) !important;
+  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15) !important;
+  opacity: 1;
+  transform: scale(1) translateY(0); /* 盖章 */
+  animation: ink-seal-press 0.4s cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+
+/* 为 7 个 Tab 标签特异性定制汉字印章 */
+.admin-console__nav-item.nav-item-statistics::after {
+  content: '盤' !important;
+}
+.admin-console__nav-item.nav-item-users::after {
+  content: '籍' !important;
+}
+.admin-console__nav-item.nav-item-prompts::after {
+  content: '令' !important;
+}
+.admin-console__nav-item.nav-item-novels::after {
+  content: '卷' !important;
+}
+.admin-console__nav-item.nav-item-logs::after {
+  content: '誌' !important;
+}
+.admin-console__nav-item.nav-item-settings::after {
+  content: '樞' !important;
+}
+.admin-console__nav-item.nav-item-password::after {
+  content: '鑰' !important;
+}
+
+/* 盖章动效：微重压垂直印痕起伏效果 */
+@keyframes ink-seal-press {
+  0% {
+    opacity: 0;
+    transform: scale(1.3) translateY(-4px);
+    filter: blur(1.5px);
+  }
+  65% {
+    opacity: 0.95;
+    transform: scale(0.92) translateY(1.5px); /* 下压 */
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0); /* 轻微回弹起笔 */
+    filter: blur(0);
+  }
 }
 
 .admin-console__nav-label {
@@ -666,7 +790,7 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
 
   .admin-ops {
     padding: var(--md-spacing-4);
-    border-radius: var(--md-radius-lg);
+    border-radius: var(--md-radius-sm) !important;
   }
 
   .admin-ops__metrics,
@@ -679,29 +803,33 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
   }
 
   .admin-console__nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: grid !important; /* 窄屏改回网格 */
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     overflow-x: visible;
-    border-radius: var(--md-radius-lg);
-    padding: var(--md-spacing-2);
+    border-radius: var(--md-radius-sm) !important;
+    padding: var(--md-spacing-2) !important;
   }
 
   .admin-console__nav-item {
     min-height: 44px;
-    padding: 8px var(--md-spacing-3);
+    padding: 8px var(--md-spacing-3) !important;
     white-space: normal;
     line-height: 1.25;
+  }
+
+  .admin-console__nav-item::after {
+    display: none !important; /* 窄屏空间狭窄，隐藏印记 */
   }
 
   .admin-console__nav-label {
     white-space: normal;
     text-overflow: clip;
   }
-
 }
 
 @media (max-width: 480px) {
   .admin-console__nav {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) !important;
   }
 }
 </style>

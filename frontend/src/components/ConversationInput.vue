@@ -2,14 +2,18 @@
 <template>
   <div class="fade-in">
     <!-- 加载状态 -->
-    <div v-if="loading || !uiControl" class="flex justify-center items-center p-4" role="status" aria-live="polite">
-      <div class="loader"></div>
-      <span class="sr-only">正在加载输入控件</span>
+    <div v-if="loading || !uiControl" class="flex justify-center items-center gap-4 p-4" role="status" aria-live="polite">
+      <!-- 极致国风水墨/朱砂双色洇染等待器 -->
+      <div class="ink-bloom-loader" aria-hidden="true">
+        <div class="ink-bloom-dot ink-bloom-dot--black"></div>
+        <div class="ink-bloom-dot ink-bloom-dot--red"></div>
+      </div>
+      <span class="inspiration-loading-text">文思正提笔研墨，恭候阁主落座起笔...</span>
     </div>
 
     <!-- 单选题 -->
     <div v-else-if="uiControl.type === 'single_choice'">
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+      <div class="flex flex-wrap gap-2 mb-3 max-h-[110px] overflow-y-auto pr-1 conv-input__options-scroll">
         <button
           v-for="option in uiControl.options"
           :key="option.id"
@@ -35,7 +39,7 @@
           :placeholder="isManualInput ? '请输入您的想法...' : '选择上方选项或点击「我要输入」'"
           class="conv-input__textarea"
           :disabled="!isManualInput"
-          rows="5"
+          rows="2"
           ref="textInputRef"
           @input="handleTextareaInput"
         ></textarea>
@@ -72,7 +76,7 @@
         class="conv-input__textarea"
         required
         ref="textInputRef"
-        rows="5"
+        rows="2"
         @input="handleTextareaInput"
       ></textarea>
       <button
@@ -120,8 +124,8 @@ const textInput = ref('')
 const textInputRef = ref<HTMLTextAreaElement>()
 const isManualInput = ref(false)
 
-const MIN_ROWS = 5
-const MAX_ROWS = 5
+const MIN_ROWS = 2
+const MAX_ROWS = 4
 
 const adjustTextareaHeight = () => {
   const textarea = textInputRef.value
@@ -195,33 +199,56 @@ watch(isManualInput, async (newValue) => {
 
 <style scoped>
 .conv-input__option {
-  padding: var(--md-spacing-3) var(--md-spacing-4);
-  border-radius: var(--md-radius-sm);
+  padding: 6px 12px !important;
+  border-radius: var(--md-radius-xs) !important; /* 极窄 2px 微直角 */
   font-weight: 500;
-  font-size: var(--md-body-medium);
-  transition: background-color 0.15s, color 0.15s;
+  font-size: 13px !important; /* 字号缩小 */
+  border: 1px solid var(--md-outline-variant) !important; /* 初始墨晕细线 */
+  background-color: var(--md-surface-container-lowest) !important;
+  color: var(--md-on-surface-variant) !important;
+  transition: all var(--md-duration-short) var(--md-easing-standard) !important;
   cursor: pointer;
-  border: none;
+  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.03) !important;
 }
 
 .conv-input__option--primary {
-  background-color: var(--md-primary-container);
-  color: var(--md-on-primary-container);
+  background-color: var(--md-surface-container-low) !important;
+  border-color: var(--md-outline) !important; /* 干燥竹青框线 */
+  color: var(--md-primary) !important;
 }
 
 .conv-input__option--primary:hover {
-  background-color: var(--md-primary);
-  color: var(--md-on-primary);
+  background-color: rgba(184, 60, 50, 0.05) !important; /* 润以朱砂红泥 */
+  border-color: var(--md-secondary) !important; /* 朱砂红 */
+  color: var(--md-secondary) !important;
+  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.12) !important;
 }
 
 .conv-input__option--neutral {
-  background-color: var(--md-surface-container);
-  color: var(--md-on-surface-variant);
+  background-color: var(--md-surface-dim) !important;
+  border-color: var(--md-outline-variant) !important;
+  color: var(--md-on-surface-variant) !important;
 }
 
 .conv-input__option--neutral:hover {
-  background-color: var(--md-surface-container-high);
-  color: var(--md-on-surface);
+  background-color: rgba(28, 32, 34, 0.04) !important;
+  border-color: var(--md-primary) !important;
+  color: var(--md-primary) !important;
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.08) !important;
+}
+
+/* 选项滚动条 */
+.conv-input__options-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.conv-input__options-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--md-outline-variant);
+  border-radius: var(--md-radius-xs);
+}
+
+.conv-input__options-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: var(--md-outline);
 }
 
 .conv-input__option:focus-visible {
@@ -279,5 +306,98 @@ watch(isManualInput, async (newValue) => {
 .conv-input__send:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* ============================================
+   极致国风水墨洇染 Loading 动效 (输入框端)
+   ============================================ */
+.ink-bloom-loader {
+  width: 20px;
+  height: 20px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* 核心洇墨黑红双点，模拟松烟入墨与朱砂落印的晕染 */
+.ink-bloom-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--md-radius-full) !important;
+  mix-blend-mode: multiply; /* 叠印色晕交融 */
+}
+
+/* 焦墨松烟 */
+.ink-bloom-dot--black {
+  background-color: var(--md-primary) !important;
+  animation: ink-bloom-black 2.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+/* 润以朱砂 */
+.ink-bloom-dot--red {
+  background-color: var(--md-secondary) !important;
+  animation: ink-bloom-red 2.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+  animation-delay: 1.1s;
+}
+
+@keyframes ink-bloom-black {
+  0% {
+    transform: scale(0.2) translate(0, 0);
+    filter: blur(0.8px);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.8) translate(-1.5px, -0.8px);
+    filter: blur(4px);
+    opacity: 0.35;
+  }
+  100% {
+    transform: scale(2.6) translate(-3px, -1.5px);
+    filter: blur(8px);
+    opacity: 0;
+  }
+}
+
+@keyframes ink-bloom-red {
+  0% {
+    transform: scale(0.2) translate(0, 0);
+    filter: blur(0.8px);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.6) translate(1.5px, 0.8px);
+    filter: blur(3.5px);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(2.3) translate(3px, 1.5px);
+    filter: blur(7px);
+    opacity: 0;
+  }
+}
+
+/* 古风文字运墨状态呼吸 */
+.inspiration-loading-text {
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  color: var(--md-on-surface-variant) !important;
+  letter-spacing: 0.05em !important;
+  animation: ink-text-breath 2.2s ease-in-out infinite alternate !important;
+  text-shadow: 0.5px 0.5px 0px rgba(28, 32, 34, 0.04) !important;
+}
+
+@keyframes ink-text-breath {
+  0% {
+    opacity: 0.45;
+    filter: blur(0.5px);
+  }
+  100% {
+    opacity: 0.95;
+    filter: blur(0px);
+  }
 }
 </style>

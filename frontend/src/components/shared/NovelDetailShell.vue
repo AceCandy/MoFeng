@@ -7,120 +7,6 @@
       'detail-shell--drawer-collapsed': !isSidebarOpen,
     }"
   >
-    <!-- Material 3 Top App Bar -->
-    <header class="md-top-app-bar detail-shell__topbar">
-      <div class="detail-shell__topbar-inner">
-        <!-- Leading: Blueprint navigation toggle -->
-        <button
-          type="button"
-          class="detail-shell__drawer-toggle md-ripple"
-          @click="toggleSidebar"
-          :aria-label="isSidebarOpen ? '收起蓝图导航' : '展开蓝图导航'"
-          aria-controls="novel-detail-blueprint-nav"
-          :aria-expanded="isSidebarOpen"
-          :title="isSidebarOpen ? '收起蓝图导航' : '展开蓝图导航'"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-
-        <!-- Title -->
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2 min-w-0">
-            <h2
-              class="detail-shell__title md-title-large truncate"
-              style="color: var(--md-on-surface)"
-            >
-              {{ formattedTitle }}
-            </h2>
-            <span v-if="isAdmin" class="detail-shell__mode-chip">管理只读</span>
-          </div>
-          <p
-            v-if="overviewMeta.updated_at"
-            class="md-body-small"
-            style="color: var(--md-on-surface-variant)"
-          >
-            最近更新：{{ formatDateTime(overviewMeta.updated_at) }}
-          </p>
-        </div>
-
-        <!-- Trailing: Actions -->
-        <div class="flex items-center gap-2 flex-shrink-0">
-          <button class="md-btn md-btn-outlined md-ripple" @click="goBack">
-            <svg
-              class="w-5 h-5 hidden sm:block"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M10 19l-7-7m0 0l7-7m-7 7h18"
-              />
-            </svg>
-            <span class="hidden sm:inline">返回列表</span>
-            <span class="sm:hidden">返回</span>
-          </button>
-          <button v-if="!isAdmin" class="md-btn md-btn-filled md-ripple" @click="goToWritingDesk">
-            <svg
-              class="w-5 h-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-              />
-            </svg>
-            <span class="hidden sm:inline">开始创作</span>
-            <span class="sm:hidden">创作</span>
-          </button>
-        </div>
-      </div>
-    </header>
-
-    <section v-if="!isAdmin" class="detail-shell__overview-strip" aria-label="小说宇宙总览">
-      <article class="detail-shell__overview-main">
-        <p class="detail-shell__kicker">小说宇宙总览</p>
-        <h2>{{ formattedTitle }}</h2>
-        <p>
-          你可以在这里统一查看世界观、角色关系、章节推进与伏笔状态，再进入正文写作台。
-        </p>
-        <div class="detail-shell__status-line">
-          <span :class="['detail-shell__status-pill', `is-${projectStatus.tone}`]">
-            {{ projectStatus.label }}
-          </span>
-          <span class="detail-shell__status-meta">
-            {{ chapterCompleted }}/{{ chapterTotal }} 章已完成
-          </span>
-        </div>
-      </article>
-
-      <div class="detail-shell__overview-metrics">
-        <article class="detail-shell__metric">
-          <p>角色数量</p>
-          <strong>{{ characterCount }}</strong>
-          <span>主要角色卡</span>
-        </article>
-        <article class="detail-shell__metric">
-          <p>当前章节</p>
-          <strong>{{ currentChapterLabel }}</strong>
-          <span>下一步创作焦点</span>
-        </article>
-        <article class="detail-shell__metric">
-          <p>伏笔提醒</p>
-          <strong>{{ foreshadowingOverview.overdue }}</strong>
-          <span>待回收 · {{ foreshadowingOverview.pending }}</span>
-        </article>
-      </div>
-    </section>
-
     <!-- Main Content -->
     <div class="detail-shell__body">
       <!-- Material 3 Navigation Drawer -->
@@ -327,6 +213,7 @@ import type {
 import { desktopMin } from '@/constants/responsive'
 import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
 import { formatDateTime } from '@/utils/date'
+import { resolveChapterNumberForEntry } from '@/utils/chapter'
 import { globalAlert } from '@/composables/useAlert'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import BlueprintEditModal from '@/components/BlueprintEditModal.vue'
@@ -523,13 +410,15 @@ const chapterCompleted = computed(
 )
 const currentChapterLabel = computed(() => {
   if (!chapterTotal.value) return '未开始'
-  const outlines = novel.value?.blueprint?.chapter_outline ?? []
-  const nextChapter = outlines.find((outline) => {
-    const chapter = novel.value?.chapters?.find((item) => item.chapter_number === outline.chapter_number)
-    return chapter?.generation_status !== 'successful'
+  const nextChapterNumber = resolveChapterNumberForEntry({
+    outlines: novel.value?.blueprint?.chapter_outline ?? [],
+    chapters: novel.value?.chapters ?? [],
   })
-  if (!nextChapter) return `已完成 ${chapterTotal.value} 章`
-  return `第 ${nextChapter.chapter_number} 章`
+  if (nextChapterNumber === null) return `已完成 ${chapterTotal.value} 章`
+  const completed =
+    novel.value?.chapters?.filter((chapter) => chapter.generation_status === 'successful').length ?? 0
+  if (completed >= chapterTotal.value) return `已完成 ${chapterTotal.value} 章`
+  return `第 ${nextChapterNumber} 章`
 })
 const foreshadowingOverview = computed(() => {
   const payload = foreshadowingQuery.data.value
@@ -572,10 +461,17 @@ const componentContainerClass = computed(() => {
 })
 
 const contentCardClass = computed(() => {
-  const fillSections: SectionKey[] = ['chapters']
-  return fillSections.includes(activeSection.value)
-    ? 'detail-shell__content-surface--fill overflow-hidden'
-    : 'overflow-visible'
+  const classes: string[] = []
+  // 核心：所有设定分区卡片在大屏下一律锁死满屏高度，并在卡片内部平滑滚动，根除全局右侧大滚动条溢出灾难
+  classes.push('detail-shell__content-surface--fill overflow-y-auto')
+  
+  // 概览页OverviewSection内部自带了两个大型双实线长卷，大外壳设为扁平透明托盘以避免重叠；其他页设为统一的双实线装订古籍卡片
+  if (activeSection.value === 'overview') {
+    classes.push('detail-shell__content-surface--flat')
+  } else {
+    classes.push('detail-shell__content-surface--classical')
+  }
+  return classes.join(' ')
 })
 
 // 懒加载完整项目（仅在需要编辑时）
@@ -633,11 +529,19 @@ const goToWritingDesk = async () => {
   await ensureProjectLoaded()
   const project = novel.value
   if (!project) return
-  const path =
-    project.title === '未命名灵感'
-      ? `/inspiration?project_id=${project.id}`
-      : `/projects/${project.id}/write`
-  router.push(path)
+  if (project.title === '未命名灵感') {
+    router.push(`/inspiration?project_id=${project.id}`)
+    return
+  }
+  const chapterNumber = resolveChapterNumberForEntry({
+    outlines: project.blueprint?.chapter_outline ?? [],
+    chapters: project.chapters ?? [],
+  })
+  router.push({
+    name: 'project-write',
+    params: { id: project.id },
+    query: chapterNumber === null ? undefined : { chapter_number: String(chapterNumber) },
+  })
 }
 
 const currentComponent = computed(() => sectionComponents[activeSection.value])
@@ -674,7 +578,11 @@ const componentProps = computed(() => {
     case 'chapter_outline':
       return { outline: data?.chapter_outline || [], editable }
     case 'chapters':
-      return { chapters: data?.chapters || [], isAdmin: props.isAdmin }
+      return {
+        chapters: data?.chapters || [],
+        chapterOutlines: novel.value?.blueprint?.chapter_outline || [],
+        isAdmin: props.isAdmin,
+      }
     default:
       return {}
   }
@@ -814,9 +722,11 @@ watch(
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: var(--app-viewport-unit);
+  height: var(--app-viewport-unit);
+  max-height: var(--app-viewport-unit);
   width: 100%;
   background-color: var(--md-surface-dim);
+  overflow: hidden; /* 彻底断绝最外层全局大滚动条 */
 }
 
 .detail-shell--embedded {
@@ -904,13 +814,13 @@ watch(
 .detail-shell__body {
   position: relative;
   display: flex;
-  flex: 1 0 auto;
-  min-height: calc(100vh - 4rem);
-  min-height: calc(var(--app-viewport-unit) - 4rem);
+  flex: 1 1 auto;
+  height: 100%;
+  max-height: 100%;
   width: 100%;
   max-width: 1800px;
   margin: 0 auto;
-  overflow: visible;
+  overflow: hidden; /* 绝不产生全局溢出滚动 */
 }
 
 .detail-shell__overview-strip {
@@ -918,120 +828,239 @@ watch(
   width: 100%;
   margin: 0 auto;
   padding: 1rem 1rem 0;
+  box-sizing: border-box;
+}
+
+/* 一体化古典长卷大容器 */
+.detail-shell__overview-scroll {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  border: 3px double var(--md-outline); /* 古籍特有双线边框 */
+  border-radius: 4px; /* 极微方折圆角 */
+  background-color: var(--md-surface); /* 熟宣底色 */
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.15); /* 拓片硬投影 */
+  overflow: hidden;
+}
+
+/* 左侧总览区 */
+.detail-shell__scroll-main {
+  padding: var(--md-spacing-5) var(--md-spacing-6);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-right: 1.5px solid var(--md-outline-variant); /* 分割画卷的墨晕细线 */
+}
+
+.detail-shell__scroll-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: var(--md-spacing-4);
-}
-
-.detail-shell__overview-main,
-.detail-shell__overview-metrics {
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-xl);
-  background-color: color-mix(in srgb, var(--md-surface) 95%, transparent);
-  box-shadow: var(--md-elevation-1);
-}
-
-.detail-shell__overview-main {
-  padding: clamp(var(--md-spacing-4), 3vw, var(--md-spacing-6));
 }
 
 .detail-shell__kicker {
   margin: 0;
-  color: var(--md-primary-dark);
+  color: var(--md-primary-light);
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
   font-size: var(--md-label-medium);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  border-bottom: 1.5px solid var(--md-outline-variant);
+  padding-bottom: 2px;
+  display: inline-block;
 }
 
-.detail-shell__overview-main h2 {
-  margin: var(--md-spacing-2) 0 0;
-  font-size: clamp(1.25rem, 2vw, 1.75rem);
-  color: var(--md-on-surface);
-}
-
-.detail-shell__overview-main p {
+.detail-shell__scroll-main h2 {
   margin: var(--md-spacing-3) 0 0;
-  color: var(--md-on-surface-variant);
-  line-height: 1.7;
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-size: clamp(1.4rem, 2.2vw, 1.95rem);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--md-primary-dark);
 }
 
-.detail-shell__status-line {
-  margin-top: var(--md-spacing-4);
+.detail-shell__scroll-desc {
+  margin: var(--md-spacing-3.5) 0;
+  color: var(--md-on-surface-variant);
+  font-family: Noto Sans SC, sans-serif;
+  font-size: 14.5px;
+  line-height: 1.75;
+}
+
+.detail-shell__scroll-status {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--md-spacing-2);
+  gap: var(--md-spacing-3);
+  margin-top: auto;
 }
 
 .detail-shell__status-pill {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  height: 30px;
-  padding: 0 12px;
-  border-radius: var(--md-radius-full);
-  font-size: var(--md-label-medium);
-  font-weight: 700;
+  justify-content: center;
+  height: 28px;
+  padding: 0 10px;
+  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  border-radius: 2px;
+  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15);
+}
+
+.detail-shell__status-pill::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border: 1px dashed currentColor;
+  opacity: 0.45;
+  pointer-events: none;
 }
 
 .detail-shell__status-pill.is-active {
-  background-color: var(--md-primary-container);
-  color: var(--md-on-primary-container);
+  background-color: var(--md-secondary-container);
+  color: var(--md-secondary);
+  border: 1.5px solid var(--md-secondary);
 }
 
 .detail-shell__status-pill.is-done {
   background-color: var(--md-success-container);
-  color: var(--md-on-success-container);
+  color: var(--md-success);
+  border: 1.5px solid var(--md-success);
 }
 
 .detail-shell__status-pill.is-draft {
   background-color: var(--md-surface-container);
   color: var(--md-on-surface-variant);
+  border: 1.5px solid var(--md-outline);
 }
 
 .detail-shell__status-meta {
   color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
+  font-size: 13.5px;
+  font-family: Noto Sans SC, sans-serif;
+  font-weight: 500;
 }
 
-.detail-shell__overview-metrics {
-  padding: var(--md-spacing-4);
+.detail-shell__scroll-time {
+  color: var(--md-on-surface-variant);
+  font-size: 12.5px;
+  font-family: Noto Sans SC, sans-serif;
+  opacity: 0.75;
+  margin-left: auto;
+}
+
+/* 提至右上角的方正金石按钮 */
+.detail-shell__action-btn {
+  flex: 0 0 auto;
+  border-radius: 2px !important;
+  border: 1px solid var(--md-outline) !important;
+  background-color: var(--md-primary) !important;
+  color: var(--md-on-primary) !important;
+  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 0 16px;
+  height: 36px;
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.2);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.detail-shell__action-btn:hover {
+  background-color: var(--md-primary-dark) !important;
+  box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.2) !important; /* 朱印深拓 */
+  transform: translate(-1px, -1px);
+}
+
+/* 右侧三栏指标区 */
+.detail-shell__scroll-metrics {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--md-spacing-3);
+  grid-template-rows: repeat(3, 1fr); /* 纵向均匀排开 */
+  background-color: var(--md-surface-container-low); /* 竹纸底色 */
 }
 
-.detail-shell__metric {
-  padding: var(--md-spacing-3);
-  border-radius: var(--md-radius-md);
-  border: 1px solid var(--md-outline-variant);
-  background-color: var(--md-surface-container-low);
+.detail-shell__scroll-metric {
+  position: relative;
+  padding: var(--md-spacing-4) var(--md-spacing-5);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-bottom: 1.5px solid var(--md-outline-variant); /* 墨晕细横线 */
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
-.detail-shell__metric p,
-.detail-shell__metric span {
+.detail-shell__scroll-metric:last-child {
+  border-bottom: none;
+}
+
+.detail-shell__scroll-metric::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3.5px;
+  background-color: var(--md-outline); /* 左侧竹青色装订线 */
+  transition: background-color 0.2s ease;
+}
+
+.detail-shell__scroll-metric:hover {
+  background-color: color-mix(in srgb, var(--md-surface) 60%, transparent);
+}
+
+.detail-shell__scroll-metric p {
+  margin: 0;
+  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--md-primary-light);
+  font-size: 13.5px;
+}
+
+.detail-shell__scroll-metric strong {
+  margin: var(--md-spacing-1.5) 0 var(--md-spacing-1);
+  display: block;
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  color: var(--md-primary-dark);
+  font-size: clamp(1.4rem, 2vw, 1.8rem);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.detail-shell__scroll-metric span {
   margin: 0;
   color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
+  font-size: 12px;
+  font-family: Noto Sans SC, sans-serif;
 }
 
-.detail-shell__metric strong {
-  margin: var(--md-spacing-2) 0 4px;
-  display: block;
-  color: var(--md-on-surface);
-  font-size: var(--md-title-medium);
+/* 警示性指标（待回收伏笔） */
+.detail-shell__scroll-metric.is-alert::before {
+  background-color: var(--md-secondary); /* 朱砂红竖描 */
+}
+
+.detail-shell__scroll-metric.is-alert strong {
+  color: var(--md-secondary); /* 数字朱批色 */
 }
 
 .detail-shell__drawer {
   position: fixed;
   left: 0;
-  top: 4rem;
+  top: 0;
   bottom: 0;
   z-index: 30;
   width: 16.25rem;
   overflow: hidden;
+  /* 极致国风脑洞：侧边栏升级为古籍折子戏熟宣纸帘纹背景 */
   background-color: var(--md-surface);
-  border-right: 1px solid var(--md-outline-variant);
+  background-image: repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.008) 0px, rgba(28, 32, 34, 0.008) 1px, transparent 1px, transparent 24px);
+  border-right: 3px double var(--md-outline) !important; /* 精致古籍线装本特有双线边框分割 */
+  box-shadow: 2px 0 6px rgba(28, 32, 34, 0.04);
   transform: translateX(-100%);
   transition:
     transform 300ms cubic-bezier(0.2, 0, 0, 1),
@@ -1058,66 +1087,102 @@ watch(
 }
 
 .detail-shell__nav-item {
+  position: relative;
   width: 100%;
   min-height: 3.25rem;
   display: flex;
   align-items: center;
   gap: var(--md-spacing-3);
-  padding: var(--md-spacing-3);
-  border: 1px solid transparent;
-  border-radius: var(--md-radius-lg);
-  background-color: transparent;
-  color: var(--md-on-surface);
+  padding: var(--md-spacing-3) var(--md-spacing-4);
+  /* 极致国风脑洞：木刻笺条外观 */
+  border-radius: 0 !important; /* 碑拓方直风骨 */
+  border: 1px solid var(--md-outline-variant) !important;
+  background-color: rgba(28, 32, 34, 0.015) !important;
+  color: var(--md-primary-light); /* 松烟色 */
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.06em; /* 碑拓骨力字距 */
   text-align: left;
   cursor: pointer;
+  outline: none;
   transition:
-    background-color var(--md-duration-short) var(--md-easing-standard),
-    border-color var(--md-duration-short) var(--md-easing-standard),
-    color var(--md-duration-short) var(--md-easing-standard);
+    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .detail-shell__nav-item + .detail-shell__nav-item {
-  margin-top: var(--md-spacing-1);
+  margin-top: var(--md-spacing-2);
 }
 
-.detail-shell__nav-item:hover {
-  background-color: var(--md-surface-container-low);
+/* 笺条抽出金石颤抖 */
+.detail-shell__nav-item:hover,
+.detail-shell__nav-item:focus-visible {
+  border-color: var(--md-outline) !important;
+  background-color: color-mix(in srgb, var(--md-secondary) 4%, var(--md-surface)) !important;
+  box-shadow: 2px 2px 0px var(--md-outline) !important;
+  transform: translateX(4px);
+  animation: stone-tremble 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+  color: var(--md-primary-dark) !important;
 }
 
 .detail-shell__nav-item:focus-visible {
-  outline: 2px solid var(--md-primary);
+  outline: 1.5px solid var(--md-outline);
   outline-offset: 2px;
 }
 
+/* 激活选中的朱砂方印笺条 */
 .detail-shell__nav-item.is-active {
-  border-color: color-mix(in srgb, var(--md-primary) 24%, var(--md-outline-variant));
-  background-color: var(--md-primary-container);
+  border: 1px solid var(--md-secondary) !important;
+  border-left: 4px solid var(--md-secondary) !important;
+  background-color: rgba(184, 60, 50, 0.03) !important;
+  color: var(--md-secondary) !important;
+  padding-left: calc(var(--md-spacing-4) - 3px);
+  box-shadow: 2px 2px 0px var(--md-secondary) !important;
+}
+
+/* 激活时在右下角轻微旋转渐显出朱砂阳刻方印 [ 卷 ] */
+.detail-shell__nav-item.is-active::after {
+  content: '卷';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-6deg);
+  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-size: 11px;
+  font-weight: bold;
+  color: rgba(184, 60, 50, 0.82);
+  border: 1.5px solid rgba(184, 60, 50, 0.82);
+  padding: 1px 3px;
+  line-height: 1;
+  background-color: rgba(184, 60, 50, 0.05);
+  animation: seal-stamp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  pointer-events: none;
 }
 
 .detail-shell__nav-icon {
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2rem;
+  height: 2rem;
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  border-radius: var(--md-radius-full);
-  background-color: var(--md-surface-container);
+  border-radius: 2px;
+  background-color: transparent; /* 去除拼凑感十足的灰色圆背景 */
   color: var(--md-on-surface-variant);
-  transition:
-    background-color var(--md-duration-short) var(--md-easing-standard),
-    color var(--md-duration-short) var(--md-easing-standard);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .detail-shell__nav-item.is-active .detail-shell__nav-icon {
-  background-color: var(--md-surface);
-  color: var(--md-primary-dark);
+  background-color: transparent;
+  color: var(--md-secondary) !important; /* 激活图标也是朱红色 */
 }
 
 .detail-shell__nav-label {
   flex: 1 1 auto;
   min-width: 0;
-  color: var(--md-on-surface);
-  font-size: var(--md-label-large);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1128,22 +1193,25 @@ watch(
   display: flex;
   flex: 1 1 auto;
   min-width: 0;
-  min-height: 0;
+  height: 100%;
+  max-height: 100%;
   width: 100%;
   margin-left: 0;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .detail-shell__content-wrap {
   display: flex;
   flex: 1 1 auto;
-  align-items: flex-start;
+  align-items: stretch;
   min-width: 0;
-  min-height: 0;
+  height: 100%;
+  max-height: 100%;
   width: 100%;
   padding: 1rem;
   box-sizing: border-box;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .detail-shell__content-frame {
@@ -1151,39 +1219,80 @@ watch(
   flex: 1 1 auto;
   flex-direction: column;
   min-width: 0;
+  height: 100%;
+  max-height: 100%;
   width: 100%;
 }
 
 .detail-shell__content-surface {
   flex: 1 1 auto;
   width: 100%;
-  min-height: 20rem;
-  height: auto;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
   display: flex;
   flex-direction: column;
   padding: var(--md-spacing-6);
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-lg);
-  background-color: var(--md-surface);
   box-sizing: border-box;
+  transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
+
+  /* 水墨微晕极细滚动条美化，保持纯净宣纸质感并引导高品质滚动 */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(60, 80, 70, 0.25) transparent;
+}
+
+.detail-shell__content-surface::-webkit-scrollbar {
+  display: block !important;
+  width: 4px;
+}
+
+.detail-shell__content-surface::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.detail-shell__content-surface::-webkit-scrollbar-thumb {
+  background-color: rgba(60, 80, 70, 0.2);
+  border-radius: var(--md-radius-full);
+}
+
+.detail-shell__content-surface::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(60, 80, 70, 0.45);
+}
+
+/* 概览分区的透明托盘设计，大框套小框的终结者 */
+.detail-shell__content-surface--flat {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* 其它设定分区的双线古籍装订框大卡片 */
+.detail-shell__content-surface--classical {
+  border: 3px double var(--md-outline) !important; /* 双线装订框 */
+  border-radius: 4px !important; /* 方折风骨 */
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.15) !important; /* 拓片硬投影 */
+  background-color: var(--md-surface) !important; /* 熟宣 */
+  /* 宣纸帘纹理 */
+  background-image: repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.005) 0px, rgba(28, 32, 34, 0.005) 1px, transparent 1px, transparent 32px);
 }
 
 .detail-shell__content-surface--fill {
   min-height: 0;
-  height: calc(100vh - 6rem);
-  height: calc(var(--app-viewport-unit) - 6rem);
-  max-height: calc(100vh - 6rem);
-  max-height: calc(var(--app-viewport-unit) - 6rem);
+  height: calc(100vh - 2rem);
+  height: calc(var(--app-viewport-unit) - 2rem);
+  max-height: calc(100vh - 2rem);
+  max-height: calc(var(--app-viewport-unit) - 2rem);
 }
 
 @media (min-width: 1200px) {
   .detail-shell__drawer {
     position: sticky;
-    top: 4rem;
+    top: 0;
     bottom: auto;
     flex: 0 0 16.25rem;
-    height: calc(var(--app-viewport-unit) - 4rem);
-    max-height: calc(var(--app-viewport-unit) - 4rem);
+    height: var(--app-viewport-unit);
+    max-height: var(--app-viewport-unit);
     transform: translateX(0);
   }
 
@@ -1196,15 +1305,20 @@ watch(
     transform: translateX(-100%);
   }
 
+  /* 顶部横卷长条在大屏下完美的 2rem 左右黄金垂直对齐线 */
+  .detail-shell__overview-strip {
+    padding: 1.5rem 2rem 0;
+  }
+
   .detail-shell__content-wrap {
     padding: 1.5rem 2rem 2rem;
   }
 
   .detail-shell__content-surface--fill {
-    height: calc(100vh - 7.5rem);
-    height: calc(var(--app-viewport-unit) - 7.5rem);
-    max-height: calc(100vh - 7.5rem);
-    max-height: calc(var(--app-viewport-unit) - 7.5rem);
+    height: calc(100vh - 3.5rem);
+    height: calc(var(--app-viewport-unit) - 3.5rem);
+    max-height: calc(100vh - 3.5rem);
+    max-height: calc(var(--app-viewport-unit) - 3.5rem);
   }
 }
 
@@ -1243,6 +1357,54 @@ watch(
 .md-scale-leave-to {
   opacity: 0;
   transform: scale(0.95);
+}
+
+/* ==========================================================================
+   统摄并修正蓝图内部所有子卡片的现代扁平圆角，升级为古风竹纸笺条与碑拓小卡片
+   ========================================================================== */
+.detail-shell__content-surface--classical :deep(.bg-\[var\(--md-surface\)\]) {
+  border: 1.5px solid var(--md-outline-variant) !important;
+  border-radius: 4px !important; /* 统一碑拓方直 */
+  background-color: var(--md-surface-container-low) !important; /* 竹纸淡黄底，产生层叠景深 */
+  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.08) !important;
+}
+
+/* 统一统摄深度子卡片的现代圆角，回归方正骨力 */
+.detail-shell__content-surface--classical :deep(.rounded-2xl) {
+  border-radius: 4px !important;
+}
+.detail-shell__content-surface--classical :deep(.rounded-xl) {
+  border-radius: 2px !important;
+}
+.detail-shell__content-surface--classical :deep(.rounded-lg) {
+  border-radius: 2px !important;
+}
+.detail-shell__content-surface--classical :deep(.shadow-sm) {
+  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.08) !important;
+}
+
+/* 动效关键帧 */
+@keyframes stone-tremble {
+  0% { transform: translateX(0); }
+  30% { transform: translateX(5px) rotate(0.4deg); }
+  60% { transform: translateX(3px) rotate(-0.3deg); }
+  80% { transform: translateX(4.5px) rotate(0.1deg); }
+  100% { transform: translateX(4px) rotate(0); }
+}
+
+@keyframes seal-stamp {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) scale(2.3) rotate(-22deg);
+  }
+  75% {
+    opacity: 0.9;
+    transform: translateY(-50%) scale(0.92) rotate(-8deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1) rotate(-6deg);
+  }
 }
 
 </style>

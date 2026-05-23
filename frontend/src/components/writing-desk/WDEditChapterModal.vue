@@ -113,7 +113,9 @@ useDialogA11y({
 
 <style scoped>
 .m3-edit-dialog {
-  border-radius: var(--md-radius-xl);
+  border-radius: var(--md-radius-md, 6px);
+  border: 3px double var(--md-outline);
+  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15);
   max-width: min(560px, calc(100vw - 32px));
 }
 </style>

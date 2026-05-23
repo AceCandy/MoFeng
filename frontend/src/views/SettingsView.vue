@@ -3,7 +3,7 @@
   <div :class="{ 'app-page': !props.isModal, 'settings-page': true, 'is-in-modal': props.isModal }">
     <section v-if="!props.isModal" class="settings-hero" aria-label="AI 能力中心总览">
       <div class="settings-hero__copy">
-        <p class="settings-eyebrow">AI 能力中心</p>
+        <p class="settings-eyebrow">AI 能力中心 <span class="settings-hero__stamp">[ 設 ]</span></p>
         <h2>模型、供应商与创作阶段路由</h2>
         <p>
           统一维护你的文本生成、记忆检索和阶段路由策略，让每个创作环节都调用到合适的 AI
@@ -63,7 +63,12 @@
           :ref="(el) => setSettingsTabRef(section.id, el)"
           type="button"
           class="settings-center__nav-item"
-          :class="{ 'is-active': activeSettingsSection === section.id }"
+          :class="{ 
+            'is-active': activeSettingsSection === section.id,
+            'nav-item-llm': section.id === 'llm',
+            'nav-item-embedding': section.id === 'embedding',
+            'nav-item-routes': section.id === 'routes'
+          }"
           :id="`settings-tab-${section.id}`"
           role="tab"
           :aria-selected="activeSettingsSection === section.id"
@@ -73,8 +78,10 @@
           @click="selectSettingsSection(section.id)"
           @keydown="onSettingsTabKeydown(section.id, $event)"
         >
-          <span class="settings-center__nav-item-label">{{ section.label }}</span>
-          <small>{{ section.description }}</small>
+          <div>
+            <span class="settings-center__nav-item-label">{{ section.label }}</span>
+            <small>{{ section.description }}</small>
+          </div>
         </button>
       </nav>
 
@@ -292,7 +299,7 @@ const centerStatus = computed(() => {
   }
 })
 
-const personalRoutingXRef = ref<any>(null)
+const personalRoutingXRef = ref<InstanceType<typeof PersonalModelRouting> | null>(null)
 
 const save = async () => {
   if (personalRoutingXRef.value && typeof personalRoutingXRef.value.save === 'function') {
@@ -327,6 +334,7 @@ const handleLLMConfigSaved = async () => {
   flex-direction: column;
   gap: var(--md-spacing-5);
   color: var(--md-on-surface);
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
 }
 
 .settings-hero {
@@ -335,14 +343,10 @@ const handleLLMConfigSaved = async () => {
   justify-content: space-between;
   gap: var(--md-spacing-4);
   padding: clamp(var(--md-spacing-5), 4vw, var(--md-spacing-8));
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-xl);
-  background:
-    linear-gradient(
-      140deg,
-      color-mix(in srgb, var(--md-surface) 92%, transparent),
-      color-mix(in srgb, var(--md-primary-container) 28%, var(--md-surface-container-low))
-    );
+  border: 3px double var(--md-outline) !important;
+  border-radius: var(--md-radius-xs) !important;
+  background-color: var(--md-surface) !important;
+  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15) !important;
 }
 
 .settings-eyebrow {
@@ -354,10 +358,21 @@ const handleLLMConfigSaved = async () => {
   text-transform: uppercase;
 }
 
+.settings-hero__stamp {
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-weight: 900;
+  color: var(--md-secondary) !important;
+  margin-left: 6px;
+  user-select: none;
+}
+
 .settings-hero h2 {
   margin: 10px 0 0;
   color: var(--md-on-surface);
   font-size: clamp(1.4rem, 2vw, 1.95rem);
+  font-family: var(--md-font-serif, "STSong", "Songti SC", "SimSun", serif) !important;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 .settings-hero p {
@@ -365,11 +380,12 @@ const handleLLMConfigSaved = async () => {
   max-width: 72ch;
   color: var(--md-on-surface-variant);
   line-height: 1.7;
+  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
 }
 
 .settings-hero__status {
   padding: var(--md-spacing-4);
-  border-radius: var(--md-radius-lg);
+  border-radius: var(--md-radius-xs) !important;
   border: 1px solid var(--md-outline-variant);
   background-color: color-mix(in srgb, var(--md-surface) 88%, transparent);
   min-width: 260px;
@@ -380,9 +396,11 @@ const handleLLMConfigSaved = async () => {
   align-items: center;
   height: 30px;
   padding: 0 12px;
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs) !important;
   font-size: var(--md-label-medium);
   font-weight: 700;
+  border: 1px solid currentColor !important;
+  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.05) !important;
 }
 
 .settings-status-chip.is-warning {
@@ -421,9 +439,17 @@ const handleLLMConfigSaved = async () => {
 
 .settings-summary__card {
   padding: var(--md-spacing-4);
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-lg);
-  background-color: color-mix(in srgb, var(--md-surface) 94%, transparent);
+  border: 1px solid var(--md-outline-variant) !important;
+  border-radius: var(--md-radius-xs) !important;
+  background-color: var(--md-surface) !important;
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.06) !important;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.settings-summary__card:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.15) !important;
+  border-color: var(--md-secondary) !important;
 }
 
 .settings-summary__card p,
@@ -441,9 +467,10 @@ const handleLLMConfigSaved = async () => {
 }
 
 .settings-metrics {
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-lg);
-  background-color: color-mix(in srgb, var(--md-surface) 96%, transparent);
+  border: 1px solid var(--md-outline-variant) !important;
+  border-radius: var(--md-radius-xs) !important;
+  background-color: var(--md-surface) !important;
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.06) !important;
 }
 
 .settings-metrics summary {
@@ -458,10 +485,7 @@ const handleLLMConfigSaved = async () => {
   font-size: var(--md-title-small);
   font-weight: 600;
   cursor: pointer;
-  transition:
-    color var(--md-duration-short) var(--md-easing-standard),
-    background-color var(--md-duration-short) var(--md-easing-standard),
-    opacity var(--md-duration-short) var(--md-easing-standard);
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 .settings-metrics summary::-webkit-details-marker {
@@ -484,11 +508,12 @@ const handleLLMConfigSaved = async () => {
 }
 
 .settings-metrics summary:hover {
-  color: var(--md-primary-dark);
-  background-color: color-mix(in srgb, var(--md-primary-container) 28%, transparent);
+  color: var(--md-secondary) !important;
+  background-color: rgba(184, 60, 50, 0.04) !important;
 }
 
 .settings-metrics summary:active {
+  transform: translate(1px, 1px);
   opacity: 0.8;
 }
 
@@ -510,15 +535,16 @@ const handleLLMConfigSaved = async () => {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--md-spacing-4);
   padding: var(--md-spacing-4);
-  border-top: 1px solid var(--md-outline-variant);
+  border-top: 1px dashed var(--md-outline-variant) !important;
 }
 
 .settings-notice {
-  border-radius: var(--md-radius-lg);
+  border-radius: var(--md-radius-xs) !important;
   padding: var(--md-spacing-4);
-  border: 1px solid color-mix(in srgb, var(--md-warning) 35%, var(--md-outline-variant));
-  background-color: var(--md-warning-container);
-  color: var(--md-on-warning-container);
+  border: 1px dashed var(--md-secondary) !important;
+  background-color: rgba(184, 60, 50, 0.04) !important;
+  color: var(--md-secondary) !important;
+  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.1) !important;
 }
 
 .settings-center {
@@ -530,10 +556,10 @@ const handleLLMConfigSaved = async () => {
 
 .settings-center__nav,
 .settings-center__panel {
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-xl);
-  background-color: color-mix(in srgb, var(--md-surface) 96%, transparent);
-  box-shadow: var(--md-elevation-1);
+  border: 3px double var(--md-outline) !important;
+  border-radius: var(--md-radius-sm) !important;
+  background-color: var(--md-surface) !important;
+  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.12) !important;
 }
 
 .settings-center__nav {
@@ -545,28 +571,36 @@ const handleLLMConfigSaved = async () => {
 
 .settings-center__nav-item {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-spacing-2);
   width: 100%;
   min-width: 0;
   min-height: 64px;
-  padding: 10px 12px;
+  padding: 12px var(--md-spacing-4) !important;
   border: 1px solid transparent;
-  border-radius: var(--md-radius-md);
+  border-radius: var(--md-radius-xs) !important;
   background-color: transparent;
   color: var(--md-on-surface);
   cursor: pointer;
   text-align: left;
-  transition:
-    background-color var(--md-duration-short) var(--md-easing-standard),
-    border-color var(--md-duration-short) var(--md-easing-standard),
-    color var(--md-duration-short) var(--md-easing-standard);
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.settings-center__nav-item > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
 }
 
 .settings-center__nav-item:hover {
   border-color: var(--md-outline-variant);
-  background-color: var(--md-surface-container-low);
+  background-color: rgba(184, 60, 50, 0.04) !important;
+  color: var(--md-secondary) !important;
 }
 
 .settings-center__nav-item:focus-visible {
@@ -576,9 +610,61 @@ const handleLLMConfigSaved = async () => {
 
 .settings-center__nav-item.is-active,
 .settings-center__nav-item[aria-selected='true'] {
-  border-color: color-mix(in srgb, var(--md-primary) 28%, var(--md-outline-variant));
-  background-color: var(--md-primary-container);
-  color: var(--md-on-primary-container);
+  border-color: transparent !important;
+  border-left: 4px solid var(--md-secondary) !important;
+  background-color: rgba(184, 60, 50, 0.08) !important;
+  color: var(--md-secondary) !important;
+  font-weight: 700 !important;
+}
+
+.settings-center__nav-item:active {
+  transform: translate(1px, 1px) !important;
+}
+
+/* “词、忆、枢” 终极金石印章 ::after - 初始悬空隐形，防止布局抖动 */
+.settings-center__nav-item::after {
+  content: '';
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-weight: 900;
+  font-size: 14px;
+  color: transparent !important;
+  background-color: transparent !important;
+  border: 1px solid transparent !important;
+  border-radius: var(--md-radius-xs) !important;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  user-select: none;
+  flex-shrink: 0;
+  margin-left: 8px;
+  opacity: 0;
+  transform: scale(1.1) translateY(-2px); /* 起笔悬空 */
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+/* 激活时，红泥落地，徐徐印下 */
+.settings-center__nav-item.is-active::after,
+.settings-center__nav-item[aria-selected='true']::after {
+  color: var(--md-secondary) !important;
+  background-color: rgba(184, 60, 50, 0.12) !important;
+  border: 1px solid var(--md-secondary) !important;
+  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15) !important;
+  opacity: 1;
+  transform: scale(1) translateY(0); /* 盖章印入熟宣 */
+}
+
+/* 预先配置字符，保证静态占位 */
+.settings-center__nav-item.nav-item-llm::after {
+  content: '詞' !important;
+}
+
+.settings-center__nav-item.nav-item-embedding::after {
+  content: '憶' !important;
+}
+
+.settings-center__nav-item.nav-item-routes::after {
+  content: '樞' !important;
 }
 
 .settings-center__nav-item-label {
@@ -617,7 +703,7 @@ const handleLLMConfigSaved = async () => {
     flex-direction: column;
     align-items: stretch;
     padding: var(--md-spacing-4);
-    border-radius: var(--md-radius-lg);
+    border-radius: var(--md-radius-xs) !important;
   }
 
   .settings-hero__status {
@@ -644,6 +730,25 @@ const handleLLMConfigSaved = async () => {
 @media (max-width: 680px) {
   .settings-center__nav {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* 补齐 details 伸缩栏展开纵向慢润动画 */
+.settings-metrics[open] .settings-metrics__grid {
+  animation: ink-details-slide 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transform-origin: top; /* 以顶端为轴垂挂挂开 */
+}
+
+@keyframes ink-details-slide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scaleY(0.95);
+    filter: blur(4px); /* 起笔淡墨模糊 */
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+    filter: blur(0);
   }
 }
 </style>

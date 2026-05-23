@@ -131,6 +131,8 @@ const assistantButtonLabel = computed(() => {
 .writing-header__title-block h1 {
   max-width: min(58vw, 760px);
   margin: 0;
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  letter-spacing: 0.05em;
   line-height: 1.25;
 }
 
@@ -149,7 +151,7 @@ const assistantButtonLabel = computed(() => {
 .writing-header__assistant-toggle {
   min-height: 44px;
   height: 44px;
-  border-radius: 10px;
+  border-radius: var(--md-radius-sm);
   padding-inline: 12px;
   font-size: var(--md-label-medium);
   white-space: nowrap;

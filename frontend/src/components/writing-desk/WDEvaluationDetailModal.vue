@@ -9,10 +9,10 @@
       :aria-labelledby="dialogTitleId"
     >
       <!-- 弹窗头部 -->
-      <div class="flex items-center justify-between p-6 border-b" style="border-bottom-color: var(--md-outline-variant);">
+      <div class="flex items-center justify-between p-6 border-b m3-eval-dialog__header">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style="background-color: var(--md-secondary);">
-                <svg class="w-6 h-6" style="color: var(--md-on-secondary);" fill="currentColor" viewBox="0 0 20 20">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 m3-eval-icon-wrapper">
+                <svg class="w-6 h-6 m3-eval-icon" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M10 2a6 6 0 00-6 6v3.586l-1.707 1.707A1 1 0 003 15v1a1 1 0 001 1h12a1 1 0 001-1v-1a1 1 0 00-.293-.707L16 11.586V8a6 6 0 00-6-6zM8.05 17a2 2 0 103.9 0H8.05z"></path>
                 </svg>
             </div>
@@ -34,12 +34,12 @@
       <!-- 弹窗内容 -->
       <div class="p-6 overflow-y-auto max-h-[calc(80vh-130px)]">
         <div v-if="parsedEvaluation" class="space-y-6 text-sm">
-            <div class="md-card md-card-filled p-4" style="border-radius: var(--md-radius-lg); background-color: var(--md-secondary-container);">
-              <p class="md-title-small font-semibold" style="color: var(--md-on-secondary-container);">🏆 最佳选择：版本 {{ parsedEvaluation.best_choice }}</p>
-              <p class="md-body-small mt-2" style="color: var(--md-on-secondary-container);">{{ parsedEvaluation.reason_for_choice }}</p>
+            <div class="md-card md-card-filled p-4 m3-eval-best-choice-card">
+              <p class="md-title-small font-semibold m3-eval-best-choice-title">🏆 最佳选择：版本 {{ parsedEvaluation.best_choice }}</p>
+              <p class="md-body-small mt-2 m3-eval-best-choice-reason">{{ parsedEvaluation.reason_for_choice }}</p>
             </div>
             <div class="space-y-4">
-              <div v-for="(evalResult, versionName) in parsedEvaluation.evaluation" :key="versionName" class="md-card md-card-outlined p-4" style="border-radius: var(--md-radius-lg);">
+              <div v-for="(evalResult, versionName) in parsedEvaluation.evaluation" :key="versionName" class="md-card md-card-outlined p-4 m3-eval-version-card">
                 <h5 class="md-title-medium font-semibold mb-2">版本 {{ String(versionName).replace('version', '') }} 评估</h5>
                 <div class="prose prose-sm max-w-none md-on-surface space-y-3">
                   <div>
@@ -64,14 +64,13 @@
           </div>
           <div
             v-else
-            class="prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0"
-            style="color: var(--md-on-surface);"
+            class="prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 m3-eval-markdown-container"
             v-html="parseMarkdown(evaluation)"
           ></div>
       </div>
 
       <!-- 弹窗底部操作按钮 -->
-      <div class="flex items-center justify-end gap-3 p-6 border-t" style="border-top-color: var(--md-outline-variant); background-color: var(--md-surface-container-low);">
+      <div class="flex items-center justify-end gap-3 p-6 border-t m3-eval-dialog__footer">
         <button
           @click="$emit('optimizeRecommendedVersion')"
           :disabled="!canOptimizeRecommendedVersion || isOptimizingRecommendedVersion"
@@ -146,7 +145,7 @@ const parseMarkdown = (text: string | null): string => {
   parsed = parsed.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
   parsed = parsed.replace(
     /^([A-Z])\)\s*\*\*(.*?)\*\*(.*)/gm,
-    '<div class="mb-2"><span class="inline-flex items-center justify-center w-6 h-6 text-sm font-bold rounded-full mr-2" style="background-color: var(--md-primary-container); color: var(--md-on-primary-container);">$1</span><strong>$2</strong>$3</div>'
+    '<div class="mb-2"><span class="inline-flex items-center justify-center w-6 h-6 text-sm font-bold rounded-full mr-2 m3-eval-badge">$1</span><strong>$2</strong>$3</div>'
   )
   parsed = parsed.replace(/\n/g, '<br>')
   parsed = parsed.replace(/(<br\s*\/?>\s*){2,}/g, '</p><p class="mt-2">')
@@ -170,6 +169,59 @@ useDialogA11y({
 .m3-eval-dialog {
   max-width: min(960px, calc(100vw - 32px));
   max-height: calc(var(--app-viewport-unit) - 32px);
-  border-radius: var(--md-radius-xl);
+  border-radius: var(--md-radius-md);
+  border: 3px double var(--md-outline);
+  background-color: var(--md-surface);
+  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.15);
+}
+
+.m3-eval-dialog__header {
+  border-bottom-color: var(--md-outline-variant) !important;
+}
+
+.m3-eval-icon-wrapper {
+  background-color: var(--md-secondary) !important;
+}
+
+.m3-eval-icon {
+  color: var(--md-on-secondary) !important;
+}
+
+/* 最佳选择卡片：熟宣底色 + 朱砂红细边框，圆角为 sm(4px) */
+.m3-eval-best-choice-card {
+  border-radius: var(--md-radius-sm) !important;
+  border: 1px solid var(--md-secondary) !important;
+  background-color: var(--md-surface-container-lowest) !important;
+  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.08) !important;
+}
+
+.m3-eval-best-choice-title {
+  color: var(--md-secondary) !important;
+  font-family: STSong, Songti SC, serif;
+}
+
+.m3-eval-best-choice-reason {
+  color: var(--md-on-surface) !important;
+}
+
+/* 评审卡片：圆角为 sm(4px)，使用竹青框线 */
+.m3-eval-version-card {
+  border-radius: var(--md-radius-sm) !important;
+  border-color: var(--md-outline) !important;
+  background-color: var(--md-surface-container-low) !important;
+}
+
+.m3-eval-markdown-container {
+  color: var(--md-on-surface) !important;
+}
+
+.m3-eval-dialog__footer {
+  border-top-color: var(--md-outline-variant) !important;
+  background-color: var(--md-surface-container-low) !important;
+}
+
+.m3-eval-badge {
+  background-color: var(--md-primary-container) !important;
+  color: var(--md-on-primary-container) !important;
 }
 </style>

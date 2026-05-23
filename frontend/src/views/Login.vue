@@ -49,22 +49,12 @@
           />
         </div>
 
-        <div v-if="error" id="login-error" class="login-feedback" role="alert">
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <span>{{ error }}</span>
-        </div>
+        <Transition name="ink-fade">
+          <div v-if="error" id="login-error" class="login-feedback" role="alert">
+            <span class="login-feedback__stamp">[ 謬 ]</span>
+            <span>{{ error }}</span>
+          </div>
+        </Transition>
 
         <button
           type="submit"
@@ -185,22 +175,10 @@ const handleLogin = async () => {
     max(var(--md-spacing-4), env(safe-area-inset-right))
     max(var(--md-spacing-4), env(safe-area-inset-bottom))
     max(var(--md-spacing-4), env(safe-area-inset-left));
-  background:
-    radial-gradient(
-      circle at 0% 0%,
-      color-mix(in oklch, var(--md-primary-container) 54%, transparent),
-      transparent 36%
-    ),
-    radial-gradient(
-      circle at 100% 0%,
-      color-mix(in oklch, var(--md-warning-container) 58%, transparent),
-      transparent 42%
-    ),
-    linear-gradient(
-      180deg,
-      color-mix(in oklch, var(--md-surface-dim) 84%, var(--md-tint-cool)),
-      color-mix(in oklch, var(--md-surface-container-low) 88%, var(--md-tint-warm))
-    );
+  /* 采用平铺温暖熟宣纸与干燥木骨色彩，驱逐SaaS放射性强渐变 */
+  background-color: var(--md-background) !important;
+  background-image: radial-gradient(var(--md-outline-variant) 1px, transparent 1px) !important;
+  background-size: 24px 24px !important;
 }
 
 .login-brand {
@@ -210,14 +188,12 @@ const handleLogin = async () => {
 .login-card {
   width: min(100%, 448px);
   padding: var(--md-spacing-8);
-  border-radius: var(--md-radius-xl);
-  border: 1px solid color-mix(in oklch, var(--md-primary) 20%, var(--md-outline-variant));
-  background:
-    linear-gradient(
-      150deg,
-      color-mix(in oklch, var(--md-surface) 90%, var(--md-tint-cool)),
-      color-mix(in oklch, var(--md-surface) 94%, var(--md-tint-warm))
-    );
+  /* 告别 SaaS 大圆角，改为木刻方直微圆角 */
+  border-radius: var(--md-radius-sm) !important;
+  /* 升级为古典双线细线框，配合右下拓片偏置硬投影 */
+  border: 3px double var(--md-outline) !important;
+  background: var(--md-surface) !important;
+  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15) !important;
 }
 
 .login-card__header {
@@ -227,29 +203,58 @@ const handleLogin = async () => {
 
 .login-card__header p {
   margin: 0 0 var(--md-spacing-2);
-  color: var(--md-primary-dark);
-  font-size: var(--md-label-medium);
+  color: var(--md-secondary); /* 朱砂红小标 */
+  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-size: var(--md-label-large);
   font-weight: 600;
+  letter-spacing: 0.05em;
 }
 
 .login-card__header h2 {
   margin: 0;
   color: var(--md-on-surface);
-  font-size: var(--md-headline-small);
+  /* 碑拓宋体，字间距舒展 */
+  font-family: var(--md-font-serif, "STSong", "Songti SC", "SimSun", serif) !important;
+  font-size: 28px !important;
   font-weight: 600;
+  letter-spacing: 0.06em !important;
 }
 
 .login-card__header span {
   display: block;
   margin-top: var(--md-spacing-2);
   color: var(--md-on-surface-variant);
-  font-size: var(--md-body-medium);
+  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-size: 14px;
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: var(--md-spacing-4);
+  gap: var(--md-spacing-5);
+}
+
+/* 输入框古典Focus反馈与朱砂压印硬影 */
+.md-text-field-input {
+  border-radius: var(--md-radius-xs) !important;
+  border-color: var(--md-outline) !important;
+  background-color: var(--md-surface-container-low) !important;
+  font-family: inherit;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.md-text-field-input:focus {
+  outline: none !important;
+  border-color: var(--md-secondary) !important;
+  background-color: var(--md-surface-container-lowest) !important;
+  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.25) !important; /* 朱批压章硬影 */
+}
+
+.md-text-field-label {
+  font-family: var(--md-font-serif, "STSong", "Songti SC", "SimSun", serif) !important;
+  color: var(--md-primary-light) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.03em;
 }
 
 .login-feedback {
@@ -257,15 +262,18 @@ const handleLogin = async () => {
   align-items: flex-start;
   gap: var(--md-spacing-2);
   padding: var(--md-spacing-3);
-  border-radius: var(--md-radius-md);
+  border-radius: var(--md-radius-xs) !important;
   background-color: var(--md-error-container);
+  border: 1px dashed var(--md-secondary);
   color: var(--md-on-error-container);
   font-size: var(--md-body-medium);
   font-weight: 500;
+  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.08);
 }
 
 .login-feedback span {
   overflow-wrap: anywhere;
+  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
 }
 
 .login-feedback svg,
@@ -277,12 +285,57 @@ const handleLogin = async () => {
 }
 
 .login-feedback svg {
-  color: var(--md-error);
+  color: var(--md-secondary);
 }
 
+/* 焦墨按钮与动态水墨晕染Hover特效 */
 .login-submit {
   width: 100%;
   min-height: 48px;
+  position: relative;
+  background: var(--md-primary) !important;
+  color: var(--md-on-primary) !important;
+  border: 1px solid var(--md-outline) !important;
+  border-radius: var(--md-radius-xs) !important;
+  overflow: hidden;
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.05em;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.12) !important;
+  cursor: pointer;
+}
+
+.login-submit::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, var(--md-primary-light) 0%, transparent 70%);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  transition: 
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), 
+    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.login-submit:hover {
+  background-color: var(--md-primary-light) !important;
+  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.18) !important;
+}
+
+.login-submit:hover::before {
+  transform: translate(-50%, -50%) scale(1.5);
+  opacity: 0.35; /* 墨晕微显 */
+}
+
+.login-submit:active {
+  transform: translate(1.5px, 1.5px) !important;
+  box-shadow: 0.5px 0.5px 0px rgba(28, 32, 34, 0.25) !important;
 }
 
 .login-spinner {
@@ -297,6 +350,7 @@ const handleLogin = async () => {
   margin: var(--md-spacing-8) 0;
   color: var(--md-on-surface-variant);
   font-size: var(--md-body-small);
+  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
 }
 
 .login-divider::before {
@@ -309,7 +363,7 @@ const handleLogin = async () => {
 .login-divider span {
   position: absolute;
   padding: 0 var(--md-spacing-4);
-  background-color: color-mix(in oklch, var(--md-surface) 92%, var(--md-tint-cool));
+  background-color: var(--md-surface) !important;
 }
 
 .login-link {
@@ -322,10 +376,14 @@ const handleLogin = async () => {
   color: var(--md-on-surface-variant);
   font-size: var(--md-body-medium);
   text-align: center;
+  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
 }
 
 .login-link__cta {
   min-height: 44px;
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  color: var(--md-secondary) !important;
+  font-weight: 600;
 }
 
 .login-link a:hover {
@@ -359,5 +417,31 @@ const handleLogin = async () => {
   .login-spinner {
     animation: none;
   }
+}
+
+/* 模拟熟宣水墨渐显：从模糊、淡色到清晰凝重 */
+.ink-fade-enter-active,
+.ink-fade-leave-active {
+  transition: 
+    opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ink-fade-enter-from {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.ink-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.login-feedback__stamp {
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-weight: 600;
+  color: var(--md-secondary) !important;
+  margin-right: 4px;
+  user-select: none;
 }
 </style>

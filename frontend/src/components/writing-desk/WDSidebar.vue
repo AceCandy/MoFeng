@@ -5,38 +5,9 @@
     <div
       class="md-card md-card-outlined writing-sidebar"
       id="writing-desk-chapter-sidebar"
-      style="border-radius: var(--md-radius-xl)"
     >
       <div class="h-full flex flex-col">
-        <!-- 蓝图预览卡片 -->
-        <div class="md-card-header flex-shrink-0">
-          <button
-            type="button"
-            class="writing-sidebar__link writing-sidebar__blueprint-link md-ripple"
-            aria-label="打开故事蓝图"
-            @click="emit('openProjectDetail')"
-          >
-            <div
-              class="w-10 h-10 rounded-full flex items-center justify-center"
-              style="background-color: var(--md-primary-container)"
-            >
-              <svg
-                class="w-5 h-5"
-                style="color: var(--md-on-primary-container)"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-            </div>
-            <div class="min-w-0 text-left">
-              <span class="md-title-medium font-semibold">故事蓝图</span>
-              <p class="md-body-small md-on-surface-variant">
-                {{ project.blueprint?.style || '未设定风格' }}
-              </p>
-            </div>
-          </button>
-        </div>
+
 
         <!-- 章节列表 -->
         <div ref="listContainer" class="flex-1 overflow-y-auto">
@@ -50,15 +21,15 @@
                 <button
                   type="button"
                   class="md-icon-btn md-ripple writing-sidebar__outline-action"
-                  @click="scrollToFirstIncompleteChapter"
+                  @click="scrollToNearestIncompleteChapter"
                   :disabled="!hasIncompleteChapter"
-                  aria-label="定位第一个未完成章节"
-                  title="定位第一个未完成章节"
+                  aria-label="定位最近未完成章节"
+                  title="定位最近未完成章节"
                 >
                   <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
                     <circle cx="12" cy="12" r="7.5" stroke="currentColor" />
                     <circle cx="12" cy="12" r="2.2" fill="currentColor" />
-                    <path d="M12 2.8v2.2M12 19v2.2M2.8 12H5M19 12h2.2" stroke="currentColor" />
+                  <path d="M12 2.8v2.2M12 19v2.2M2.8 12H5M19 12h2.2" stroke="currentColor" />
                   </svg>
                 </button>
               </div>
@@ -138,7 +109,7 @@
                 type="button"
                 @click="$emit('generateOutline')"
                 :disabled="props.isGeneratingOutline"
-                class="md-btn md-btn-tonal md-ripple w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                class="md-btn md-btn-tonal md-ripple w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed writing-sidebar__outline-gen-btn"
               >
                 <svg
                   v-if="props.isGeneratingOutline"
@@ -168,10 +139,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, nextTick } from 'vue'
+import { computed, ref, nextTick, watch } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import type { NovelProject } from '@/api/novel'
 import Tooltip from '@/components/Tooltip.vue'
+import { findNearestIncompleteChapterNumber, isChapterCompletedStatus } from '@/utils/chapter'
 
 interface Props {
   project: NovelProject
@@ -211,6 +183,10 @@ const chapterStatusByNumber = (chapterNumber: number) => {
   return chapterByNumber.value.get(chapterNumber)?.generation_status || null
 }
 
+const chapterByNumberOrNull = (chapterNumber: number) => {
+  return chapterByNumber.value.get(chapterNumber) ?? null
+}
+
 const hasIncompleteChapter = computed(() => {
   if (!props.project?.blueprint?.chapter_outline?.length) return false
   return props.project.blueprint.chapter_outline.some(
@@ -231,15 +207,10 @@ function setChapterRef(chapterNumber: number, el: Element | ComponentPublicInsta
   }
 }
 
-const scrollToFirstIncompleteChapter = async () => {
-  if (!props.project?.blueprint?.chapter_outline) return
-  const sorted = [...props.project.blueprint.chapter_outline].sort(
-    (a, b) => a.chapter_number - b.chapter_number,
-  )
-  const target = sorted.find((chapter) => !isChapterCompleted(chapter.chapter_number))
-  if (!target) return
+const scrollToChapterNumber = async (chapterNumber: number | null) => {
+  if (chapterNumber === null) return
   await nextTick()
-  const element = chapterRefs.value[target.chapter_number]
+  const element = chapterRefs.value[chapterNumber]
   if (!element) return
   const container = listContainer.value
   const scrollBehavior: ScrollBehavior = shouldReduceMotion() ? 'auto' : 'smooth'
@@ -250,13 +221,21 @@ const scrollToFirstIncompleteChapter = async () => {
   }
 }
 
+const scrollToNearestIncompleteChapter = async () => {
+  const targetChapterNumber = findNearestIncompleteChapterNumber(
+    props.project?.blueprint?.chapter_outline ?? [],
+    props.project?.chapters ?? [],
+  )
+  await scrollToChapterNumber(targetChapterNumber)
+}
+
 defineExpose({
-  scrollToFirstIncompleteChapter,
+  scrollToNearestIncompleteChapter,
 })
 
 // 章节状态检查
 const isChapterCompleted = (chapterNumber: number) => {
-  return chapterStatusByNumber(chapterNumber) === 'successful'
+  return isChapterCompletedStatus(chapterByNumberOrNull(chapterNumber))
 }
 
 const hasChapterInProgress = (chapterNumber: number) => {
@@ -325,6 +304,14 @@ const shouldReduceMotion = (): boolean => {
   if (typeof window === 'undefined') return false
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
+
+watch(
+  () => props.selectedChapterNumber,
+  (chapterNumber) => {
+    void scrollToChapterNumber(chapterNumber)
+  },
+  { immediate: true },
+)
 </script>
 
 <style scoped>
@@ -341,8 +328,12 @@ const shouldReduceMotion = (): boolean => {
   min-height: 0;
   height: 100%;
   overflow: hidden;
-  background-color: color-mix(in srgb, var(--md-surface) 95%, var(--md-surface-container-low));
-  border-color: color-mix(in srgb, var(--md-outline-variant) 86%, transparent);
+  background-color: var(--md-surface);
+  /* 极致国风脑洞：目录侧边栏独立的手工宣纸帘纹背景 */
+  background-image: repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.008) 0px, rgba(28, 32, 34, 0.008) 1px, transparent 1px, transparent 24px);
+  border: 3px double var(--md-outline) !important;
+  border-radius: 0 !important;
+  box-shadow: 3px 3px 0px var(--md-outline);
 }
 
 .writing-sidebar__link {
@@ -356,26 +347,19 @@ const shouldReduceMotion = (): boolean => {
 }
 
 .writing-sidebar__link:focus-visible {
-  outline: 2px solid var(--md-primary);
+  outline: 2px solid var(--md-secondary);
   outline-offset: 2px;
 }
 
-.writing-sidebar__blueprint-link {
-  display: flex;
-  align-items: center;
-  gap: var(--md-spacing-3);
-  margin-bottom: var(--md-spacing-4);
-  padding: 0;
-  background-color: transparent;
-}
+
 
 .writing-sidebar__outline-header {
   position: sticky;
   top: 0;
   z-index: 24;
   padding: var(--md-spacing-5) var(--md-spacing-6) var(--md-spacing-3);
-  background-color: color-mix(in srgb, var(--md-surface) 96%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--md-outline-variant) 58%, transparent);
+  background-color: var(--md-surface);
+  border-bottom: 1px dashed var(--md-outline);
 }
 
 .writing-sidebar__outline-header-row {
@@ -393,6 +377,10 @@ const shouldReduceMotion = (): boolean => {
   gap: 8px;
 }
 
+.writing-sidebar__outline-heading h3 {
+  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+}
+
 .writing-sidebar__outline-toolbar {
   flex-shrink: 0;
   display: flex;
@@ -404,28 +392,43 @@ const shouldReduceMotion = (): boolean => {
   color: var(--md-on-surface-variant);
   font-size: var(--md-label-medium);
   font-weight: 600;
+  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
 }
 
 .writing-sidebar__outline-action {
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  min-height: 44px;
-  border-radius: var(--md-radius-full);
-  border: 1px solid color-mix(in srgb, var(--md-outline-variant) 84%, transparent);
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 0 !important;
+  border: 1.5px solid var(--md-outline);
   color: var(--md-on-surface-variant);
-  background-color: color-mix(in srgb, var(--md-surface-container-low) 66%, var(--md-surface));
+  background-color: var(--md-surface-container-low);
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.writing-sidebar__outline-action:hover:not(:disabled) {
+  border-color: var(--md-secondary);
+  color: var(--md-secondary);
+  background-color: rgba(184, 60, 50, 0.04);
+}
+
+.writing-sidebar__outline-action:active:not(:disabled) {
+  transform: translate(1px, 1px);
 }
 
 .writing-sidebar__outline-action:disabled {
-  opacity: 0.45;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .writing-sidebar__tree {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 4px;
 }
 
 .writing-sidebar__tree-item {
@@ -438,53 +441,94 @@ const shouldReduceMotion = (): boolean => {
   position: absolute;
   left: 6px;
   top: 0;
-  bottom: -10px;
+  bottom: -4px;
   width: 1px;
-  background-color: color-mix(in srgb, var(--md-primary) 16%, var(--md-outline-variant));
+  background-color: var(--md-outline-variant);
 }
 
 .writing-sidebar__tree-item:last-child::before {
-  bottom: 40%;
+  bottom: 50%;
 }
 
 .writing-sidebar__tree-item::after {
   content: '';
   position: absolute;
   left: 6px;
-  top: 19px;
+  top: 20px;
   width: 7px;
   height: 1px;
-  background-color: color-mix(in srgb, var(--md-primary) 16%, var(--md-outline-variant));
+  background-color: var(--md-outline-variant);
 }
 
+/* 极致国风脑洞：木刻竹简签条样式章节行 */
 .writing-sidebar__chapter-row {
   display: block;
   width: 100%;
   text-align: left;
   appearance: none;
   -webkit-appearance: none;
-  padding: 9px 4px 9px 5px;
-  border-radius: var(--md-radius-md);
-  border: 1px solid transparent;
-  background-color: transparent;
+  padding: 8px 8px 8px 8px;
+  border-radius: 0 !important;
+  border: 1px solid var(--md-outline-variant);
+  background-color: rgba(28, 32, 34, 0.015);
   color: inherit;
   font: inherit;
   outline: none;
   cursor: pointer;
+  position: relative;
   transition:
-    background-color var(--md-duration-medium) var(--md-easing-standard),
-    border-color var(--md-duration-medium) var(--md-easing-standard);
+    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* Hover 脑洞：竹简抽出金石回弹微颤抖 */
 .writing-sidebar__chapter-row--compact-idle:hover,
 .writing-sidebar__chapter-row:focus-visible {
-  border-color: color-mix(in srgb, var(--md-outline-variant) 66%, transparent);
-  background-color: color-mix(in srgb, var(--md-surface-container-low) 62%, transparent);
+  border-color: var(--md-outline);
+  background-color: color-mix(in srgb, var(--md-secondary) 4%, var(--md-surface));
+  box-shadow: 2px 2px 0px var(--md-outline);
+  transform: translateX(4px);
+  animation: stone-tremble 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* 选中章节签条 */
 .writing-sidebar__chapter-row--compact-selected {
-  border-color: color-mix(in srgb, var(--md-primary) 38%, transparent);
-  background-color: color-mix(in srgb, var(--md-primary-container) 48%, var(--md-surface));
+  border: 1px solid var(--md-secondary) !important;
+  border-left: 4px solid var(--md-secondary) !important;
+  background-color: rgba(184, 60, 50, 0.03) !important;
+  padding-left: 10px;
+  box-shadow: 2px 2px 0px var(--md-secondary) !important;
+}
+
+.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-title {
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  color: var(--md-secondary) !important;
+  font-weight: bold;
+  letter-spacing: 0.03em;
+}
+
+.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-no {
+  color: var(--md-secondary) !important;
+}
+
+/* 极致国风脑洞：在选中时在右下角轻微旋转渐显出朱砂阳刻方印 [ 閱 ] */
+.writing-sidebar__chapter-row--compact-selected::after {
+  content: '閱';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-6deg);
+  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-size: 11px;
+  font-weight: bold;
+  color: rgba(184, 60, 50, 0.82);
+  border: 1.5px solid rgba(184, 60, 50, 0.82);
+  padding: 1px 3px;
+  line-height: 1;
+  background-color: rgba(184, 60, 50, 0.05);
+  animation: seal-stamp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  pointer-events: none;
 }
 
 .writing-sidebar__chapter-main {
@@ -501,28 +545,39 @@ const shouldReduceMotion = (): boolean => {
   padding-top: 0;
 }
 
+/* 极致国风脑洞：小圆点改造为微型“金石印章方印”，融入古典中式传统色 */
 .writing-sidebar__status-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
+  border-radius: 0 !important; /* 方直印章 */
   background-color: var(--md-outline);
+  display: inline-block;
+  border: 1px solid transparent;
 }
 
+/* 已完成使用“竹青”中式绿 */
 .writing-sidebar__status-dot.is-completed {
-  background-color: var(--md-success);
+  background-color: #3f6c5d !important; /* 古典竹青 */
+  border-color: #2b5043;
 }
 
+/* 进行中使用“朱砂”中式红，并加入水墨呼吸闪烁 */
 .writing-sidebar__status-dot.is-progress {
-  background-color: var(--md-primary);
-  animation: dot-pulse 1.2s ease-out infinite;
+  background-color: var(--md-secondary) !important; /* 古典朱砂 */
+  border-color: #92221b;
+  animation: dot-ink-pulse 1.4s ease-out infinite;
 }
 
+/* 失败使用“赤赭” */
 .writing-sidebar__status-dot.is-failed {
-  background-color: var(--md-error);
+  background-color: #b83c32 !important;
+  border-color: #8c2820;
 }
 
+/* 黛灰兜底 */
 .writing-sidebar__status-dot.is-idle {
-  background-color: color-mix(in srgb, var(--md-outline) 76%, var(--md-surface-container-highest));
+  background-color: #5c6265 !important; /* 古典黛灰 */
+  border-color: #43484a;
 }
 
 .writing-sidebar__chapter-no {
@@ -554,7 +609,7 @@ const shouldReduceMotion = (): boolean => {
 }
 
 .m3-stagger {
-  animation: m3-rise 0.45s ease-out both;
+  animation: m3-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @media (max-width: 833px) {
@@ -563,6 +618,7 @@ const shouldReduceMotion = (): boolean => {
   }
 }
 
+/* 动效关键帧 */
 @keyframes m3-rise {
   from {
     opacity: 0;
@@ -574,20 +630,69 @@ const shouldReduceMotion = (): boolean => {
   }
 }
 
-@keyframes dot-pulse {
-  0% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--md-primary) 30%, transparent);
-  }
+/* 脑洞：Hover 竹简抽出金石阻尼微颤抖 */
+@keyframes stone-tremble {
+  0% { transform: translateX(0); }
+  30% { transform: translateX(5px) rotate(0.4deg); }
+  60% { transform: translateX(3px) rotate(-0.3deg); }
+  80% { transform: translateX(4.5px) rotate(0.1deg); }
+  100% { transform: translateX(4px) rotate(0); }
+}
 
+/* 脑洞：朱砂 [閱] 印章空中扣下、落纸微回弹 */
+@keyframes seal-stamp {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) scale(2.3) rotate(-22deg);
+  }
+  75% {
+    opacity: 0.9;
+    transform: translateY(-50%) scale(0.92) rotate(-8deg);
+  }
   100% {
-    box-shadow: 0 0 0 8px color-mix(in srgb, var(--md-primary) 0%, transparent);
+    opacity: 1;
+    transform: translateY(-50%) scale(1) rotate(-6deg);
+  }
+}
+
+@keyframes dot-ink-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(184, 60, 50, 0.45);
+  }
+  100% {
+    box-shadow: 0 0 0 7px rgba(184, 60, 50, 0);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .m3-stagger,
+  .writing-sidebar__chapter-row--compact-idle:hover,
   .writing-sidebar__status-dot.is-progress {
     animation: none !important;
+    transform: none !important;
   }
+}
+
+.writing-sidebar__outline-gen-btn {
+  min-width: 156px;
+  flex-shrink: 0;
+}
+
+/* 自定义极细、高雅的国风半透明水墨滚动条，取代粗糙的系统默认灰色滚动条 */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 5px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background-color: rgba(28, 32, 34, 0.15); /* 淡淡的半透淡墨滑块 */
+  border-radius: 4px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(28, 32, 34, 0.35); /* 悬停时渐为松烟墨色 */
 }
 </style>

@@ -4,12 +4,34 @@
     <h2 class="blueprint-confirm__title">信息收集完成！</h2>
 
     <div class="blueprint-confirm__body">
-      <div
-        class="prose prose-lg max-w-none mx-auto mb-4"
-        style="color: var(--md-on-surface-variant)"
-        v-html="renderedAiMessage"
-      ></div>
-      <p class="blueprint-confirm__hint">
+      <!-- 极富设计感的卡片式大纲卡片流，使内容按照块逻辑严谨区分 -->
+      <div class="blueprint-confirm__cards-container">
+        <div 
+          v-for="(block, idx) in parsedBlocks" 
+          :key="idx" 
+          class="blueprint-confirm__card-wrapper"
+        >
+          <div 
+            class="blueprint-confirm__card"
+            :class="{ 'blueprint-confirm__card--intro': block.title === '故事蓝图引言' }"
+          >
+            <!-- 金石落印，微倾斜的红泥闲章 -->
+            <div class="blueprint-confirm__card-seal">
+              {{ idxToChinese(idx) }}
+            </div>
+
+            <!-- 正规版块卡片头部（引言卡片隐藏大标题，呈现错落有致之美） -->
+            <h3 v-if="block.title !== '故事蓝图引言'" class="blueprint-confirm__card-title">
+              {{ block.title }}
+            </h3>
+            
+            <!-- 卡片正文 Markdown 内容 -->
+            <div class="blueprint-confirm__card-content prose" v-html="block.content"></div>
+          </div>
+        </div>
+      </div>
+
+      <p class="blueprint-confirm__hint mt-6">
         我们已经收集了足够的信息来为您创建详细的小说蓝图。点击下方按钮开始生成您的专属故事大纲。
       </p>
     </div>
@@ -124,6 +146,12 @@ interface Props {
 
 const props = defineProps<Props>()
 
+const idxToChinese = (idx: number): string => {
+  if (idx === 0) return '启'
+  const chineseNums = ['', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖', '拾']
+  return chineseNums[idx] || String(idx)
+}
+
 const emit = defineEmits<{
   blueprintGenerated: [response: any]
   back: []
@@ -133,18 +161,88 @@ const generateBlueprintMutation = useGenerateBlueprintMutation(() => props.proje
 const isGenerating = ref(false)
 const progress = ref(0)
 const timeElapsed = ref(0)
-const maxTime = 180 // 180秒超时
+const maxTime = 480 // 与后端蓝图生成超时保持一致
 
 let progressTimer: NodeJS.Timeout | null = null
 let timeoutTimer: NodeJS.Timeout | null = null
 
-// 渲染 Markdown
-const renderedAiMessage = computed(() => {
-  const parsed = marked.parse(props.aiMessage)
+// 辅助渲染并净化 Markdown 的内部逻辑
+const renderMarkdown = (text: string): string => {
+  const parsed = marked.parse(text)
   const html = typeof parsed === 'string' ? parsed : ''
   return DOMPurify.sanitize(html, {
     USE_PROFILES: { html: true },
   })
+}
+
+interface BlueprintBlock {
+  title: string
+  content: string
+}
+
+// 动态将大篇幅 Markdown 文本按照标题切分为独立的 Vue 古雅卡片块
+const parsedBlocks = computed<BlueprintBlock[]>(() => {
+  const rawText = props.aiMessage || ''
+  if (!rawText) return []
+
+  // 正则匹配传统中式大写序号“一、”、“二、”等标题行或 Markdown 标题行
+  const blockRegex = /\n(?:#+\s+)?([一二三四五六七八九十]+[、.．\s]\s*[^\n]+)/g
+  
+  const blocks: BlueprintBlock[] = []
+  const matches: { index: number; title: string; textIndex: number }[] = []
+  
+  let match
+  while ((match = blockRegex.exec(rawText)) !== null) {
+    matches.push({
+      index: match.index,
+      title: match[1].trim(),
+      textIndex: match.index + match[0].length
+    })
+  }
+
+  // 降级兼容：如未找到国风大写序号，寻找标准的 Markdown H2/H3 标题
+  if (matches.length === 0) {
+    const mdTitleRegex = /\n(?:#+\s+)([^\n]+)/g
+    while ((match = mdTitleRegex.exec(rawText)) !== null) {
+      matches.push({
+        index: match.index,
+        title: match[1].trim(),
+        textIndex: match.index + match[0].length
+      })
+    }
+  }
+
+  // 兜底方案：如果没有找到任何明显的模块标题，直接整体作为一个块卡片
+  if (matches.length === 0) {
+    return [{
+      title: '小说概念蓝图',
+      content: renderMarkdown(rawText)
+    }]
+  }
+
+  // 1. 抽取蓝图开篇引言部分
+  const introText = rawText.slice(0, matches[0].index).trim()
+  if (introText) {
+    blocks.push({
+      title: '故事蓝图引言',
+      content: renderMarkdown(introText)
+    })
+  }
+
+  // 2. 切分剩余的国风模块卡片
+  for (let i = 0; i < matches.length; i++) {
+    const current = matches[i]
+    const next = matches[i + 1]
+    const endPos = next ? next.index : rawText.length
+    const blockContent = rawText.slice(current.textIndex, endPos).trim()
+    
+    blocks.push({
+      title: current.title,
+      content: renderMarkdown(blockContent)
+    })
+  }
+
+  return blocks
 })
 
 // 动态加载文本
@@ -193,7 +291,7 @@ const generateBlueprint = async () => {
     }
   }, 100)
 
-  // 60秒超时
+  // 与后端蓝图生成超时保持一致
   timeoutTimer = setTimeout(() => {
     clearTimers()
     isGenerating.value = false
@@ -250,24 +348,200 @@ onUnmounted(() => {
 
 <style scoped>
 .blueprint-confirm {
-  padding: var(--md-spacing-8);
+  padding: var(--md-spacing-6) var(--md-spacing-8);
   background-color: var(--md-surface);
-  border-radius: var(--md-radius-xl);
-  border: 1px solid var(--md-outline-variant);
-  box-shadow: var(--md-elevation-2);
+  border-radius: var(--md-radius-sm) !important; /* 中式木刻微直角 */
+  border: 3px double var(--md-outline) !important; /* 古籍双线框线，与左侧浑然一体 */
+  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15) !important;
+  /* 弹性布局一屏内高贴合收敛，绝不发生视口下溢，击杀看不全 Bug */
+  height: 100%;
+  max-height: calc(var(--app-viewport-unit) - 120px) !important;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
 
 .blueprint-confirm__title {
   font-size: var(--md-headline-small);
   font-weight: 700;
   text-align: center;
-  color: var(--md-on-surface);
-  margin-bottom: var(--md-spacing-6);
+  color: var(--md-primary);
+  margin-bottom: var(--md-spacing-4);
+  flex-shrink: 0; /* 标题固定不缩窄 */
 }
 
 .blueprint-confirm__body {
   text-align: center;
-  margin-bottom: var(--md-spacing-8);
+  margin-bottom: var(--md-spacing-4);
+  flex: 1; /* 弹性占据全部剩余高度 */
+  overflow-y: auto; /* 允许纵向平滑滚动 */
+  padding-right: var(--md-spacing-2);
+  min-height: 0; /* flex 内部 overflow 滚动必须 */
+  
+  /* 剔除多余粗重进度条/滚动条视觉，完美呈现大张宣纸 */
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+.blueprint-confirm__body::-webkit-scrollbar {
+  display: none !important;
+}
+
+/* ============================================
+   极致中式古风“手撕宣纸信笺手札”卡片排版
+   ============================================ */
+.blueprint-confirm__cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px; /* 严格物理间距，隔离认知负荷 */
+  max-width: 900px;
+  margin: 0 auto !important;
+  padding: var(--md-spacing-2) var(--md-spacing-4) !important;
+}
+
+/* 宣纸手撕卡片外壳，用于沿着手撕边缘承载水墨拓片偏置投影 */
+.blueprint-confirm__card-wrapper {
+  filter: drop-shadow(3px 3px 0px rgba(28, 32, 34, 0.12));
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.blueprint-confirm__card-wrapper:hover {
+  transform: translateY(-2px);
+}
+
+/* 极致手撕毛边宣纸卡片本体 */
+.blueprint-confirm__card {
+  background-color: var(--md-surface-container-lowest) !important; /* 精美温润宣纸白 */
+  border: none !important; /* clip-path 裁切，不需要粗硬的扁平外边框 */
+  padding: var(--md-spacing-6) var(--md-spacing-8) !important;
+  text-align: left !important;
+  position: relative;
+  /* 极致参差不齐的手撕宣纸边缘 polygon */
+  clip-path: polygon(
+    0% 1.5%, 10% 0.8%, 23% 1.5%, 35% 0.7%, 48% 1.4%, 60% 0.6%, 72% 1.3%, 85% 0.5%, 98% 1.2%, 100% 2%,
+    99.2% 12%, 100% 25%, 99.4% 38%, 99.8% 50%, 99.1% 63%, 99.7% 76%, 99.3% 88%, 99.9% 98.5%,
+    88% 99.3%, 76% 99.8%, 63% 99.2%, 50% 99.6%, 38% 99.1%, 25% 99.7%, 13% 99.3%, 0% 98.8%,
+    0.6% 88%, 0.2% 76%, 0.7% 63%, 0.3% 50%, 0.8% 38%, 0.2% 25%, 0.7% 12%
+  ) !important;
+  /* 注入轻透熟宣内阴影，使手撕边缘立体感跃然纸面 */
+  box-shadow: inset 0 0 20px rgba(184, 60, 50, 0.02) !important;
+}
+
+/* 引言卡片专属：淡砂晕染，错落雅致 */
+.blueprint-confirm__card--intro {
+  background: linear-gradient(
+    135deg, 
+    var(--md-surface-container-lowest) 70%, 
+    rgba(184, 60, 50, 0.02) 100%
+  ) !important;
+  box-shadow: inset 0 0 24px rgba(184, 60, 50, 0.04) !important;
+}
+
+/* 右上角钤印金石闲章（微倾斜阳刻） */
+.blueprint-confirm__card-seal {
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #b83c32;
+  color: #b83c32;
+  font-family: var(--md-font-display, "STSong", "Songti SC", serif) !important;
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1 !important;
+  transform: rotate(-8deg);
+  user-select: none;
+  background-color: rgba(184, 60, 50, 0.02);
+  box-shadow: inset 0 0 4px rgba(184, 60, 50, 0.08);
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 10;
+}
+
+.blueprint-confirm__card-wrapper:hover .blueprint-confirm__card-seal {
+  transform: rotate(-4deg) scale(1.08);
+  color: var(--md-secondary);
+  border-color: var(--md-secondary);
+  box-shadow: inset 0 0 6px rgba(184, 60, 50, 0.12), 0 2px 4px rgba(184, 60, 50, 0.1);
+}
+
+/* 卡片古典标题 */
+.blueprint-confirm__card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--md-font-display, "STSong", "Songti SC", serif) !important;
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  color: var(--md-primary) !important;
+  margin-bottom: var(--md-spacing-4) !important;
+  border-bottom: 1px dashed rgba(184, 60, 50, 0.15) !important;
+  padding-bottom: var(--md-spacing-2) !important;
+  margin-top: 0 !important;
+  padding-right: 50px; /* 留出印章的安全区域 */
+}
+
+/* 卡片内部正文：朱丝栏信笺底纹与行高精准锁定 */
+.blueprint-confirm__card-content {
+  text-align: justify !important;
+  text-justify: inter-ideograph !important;
+  /* 朱砂红横格底纹底图 */
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 27px,
+    rgba(184, 60, 50, 0.04) 27px,
+    rgba(184, 60, 50, 0.05) 28px
+  ) !important;
+  background-size: 100% 28px !important;
+  padding: 14px 0 !important; /* 精密微调内边距确保首行刚好落于红格线上 */
+}
+
+.blueprint-confirm__card-content :deep(.prose) {
+  padding: 0 !important;
+  max-width: none !important;
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-size: 15.5px !important;
+  color: var(--md-on-surface) !important;
+}
+
+/* 让卡片内部的段落、列表精准契合 28px 朱丝栏 */
+.blueprint-confirm__card-content :deep(p) {
+  line-height: 28px !important;
+  margin-bottom: 28px !important; /* 段落间距强制为 1 行格子高度，杜绝错位 */
+  text-indent: 2em !important; /* 优雅的首行缩进 */
+  text-align: left !important;
+}
+
+.blueprint-confirm__card-content :deep(p:last-child) {
+  margin-bottom: 0 !important;
+}
+
+.blueprint-confirm__card-content :deep(ol),
+.blueprint-confirm__card-content :deep(ul) {
+  padding-left: 24px !important;
+  margin-top: 0 !important;
+  margin-bottom: 28px !important;
+  text-align: left !important;
+}
+
+.blueprint-confirm__card-content :deep(li) {
+  line-height: 28px !important;
+  margin-bottom: 0 !important; /* 列表项内部折行，仍能贴合底线 */
+}
+
+.blueprint-confirm__card-content :deep(blockquote) {
+  border-left: 3px solid var(--md-secondary) !important;
+  background-color: rgba(184, 60, 50, 0.02) !important;
+  padding: 14px 18px !important;
+  margin: 14px 0 !important;
+  border-radius: var(--md-radius-xs) !important;
+  text-align: left !important;
+  line-height: 28px !important;
 }
 
 .blueprint-confirm__hint {
@@ -275,6 +549,9 @@ onUnmounted(() => {
   color: var(--md-on-surface-variant);
 }
 
+/* ============================================
+   极致中国风 Loading “水墨太极气流”
+   ============================================ */
 .blueprint-confirm__loading {
   text-align: center;
   padding: var(--md-spacing-8) 0;
@@ -282,47 +559,57 @@ onUnmounted(() => {
 
 .blueprint-confirm__spinner {
   position: relative;
-  width: 5rem;
-  height: 5rem;
+  width: 6.5rem;
+  height: 6.5rem;
   margin: 0 auto var(--md-spacing-6);
+  background: radial-gradient(circle, rgba(184, 60, 50, 0.04) 0%, transparent 70%);
+  border-radius: 50%;
 }
 
+/* 飞舞在太极外圈的泼墨风暴气旋环线 */
 .blueprint-confirm__spinner-track {
   position: absolute;
   inset: 0;
-  border: 3px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-full);
+  border: 2px dashed rgba(28, 32, 34, 0.15) !important;
+  border-top-color: transparent !important;
+  border-bottom-color: transparent !important;
+  border-radius: 50% !important;
+  animation: md-spin 2.6s linear infinite !important;
 }
 
+/* 朱砂红泥与焦墨交织的阴阳太极流转 */
 .blueprint-confirm__spinner-fill {
   position: absolute;
-  inset: 0;
-  border: 3px solid transparent;
-  border-top-color: var(--md-primary);
-  border-right-color: var(--md-primary);
-  border-radius: var(--md-radius-full);
-  animation: blueprint-spin 1s linear infinite;
+  inset: 0.9rem;
+  border: 3px solid transparent !important;
+  border-top-color: var(--md-secondary) !important; /* 朱砂红 */
+  border-bottom-color: rgba(28, 32, 34, 0.8) !important; /* 焦墨 */
+  border-radius: 50% !important;
+  animation: tai-chi-spin 1.5s cubic-bezier(0.42, 0, 0.58, 1) infinite !important;
 }
 
 .blueprint-confirm__spinner-fill--done {
-  border-top-color: var(--md-success);
-  border-right-color: var(--md-success);
-  animation: none;
+  border-top-color: var(--md-success) !important;
+  border-bottom-color: var(--md-success) !important;
+  animation: none !important;
 }
 
+/* 核心金石印章圆盘 */
 .blueprint-confirm__spinner-center {
   position: absolute;
-  inset: 1rem;
-  border-radius: var(--md-radius-full);
-  background-color: var(--md-primary);
-  color: var(--md-on-primary);
+  inset: 1.9rem;
+  border-radius: 50% !important;
+  background-color: var(--md-secondary) !important; /* 朱砂核心印 */
+  color: var(--md-on-primary) !important;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 1px 1px 3px rgba(184, 60, 50, 0.3) !important;
 }
 
 .blueprint-confirm__spinner-center--done {
-  background-color: var(--md-success);
+  background-color: var(--md-success) !important;
+  box-shadow: none !important;
 }
 
 .blueprint-confirm__loading-title {
@@ -386,7 +673,58 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-@keyframes blueprint-spin {
+/* ============================================
+   深夜案头自适应（暗色模式）
+   ============================================ */
+:root[data-theme='dark'] .blueprint-confirm__card-wrapper {
+  filter: drop-shadow(3px 3px 0px rgba(13, 16, 17, 0.45));
+}
+
+:root[data-theme='dark'] .blueprint-confirm__card {
+  background-color: var(--md-surface-dim) !important;
+  box-shadow: inset 0 0 20px rgba(13, 16, 17, 0.3) !important;
+}
+
+:root[data-theme='dark'] .blueprint-confirm__card--intro {
+  background: linear-gradient(
+    135deg, 
+    var(--md-surface-dim) 70%, 
+    rgba(140, 36, 28, 0.03) 100%
+  ) !important;
+  box-shadow: inset 0 0 24px rgba(140, 36, 28, 0.05) !important;
+}
+
+:root[data-theme='dark'] .blueprint-confirm__card-seal {
+  border-color: rgba(184, 60, 50, 0.55);
+  color: rgba(184, 60, 50, 0.7);
+  background-color: rgba(184, 60, 50, 0.01);
+}
+
+:root[data-theme='dark'] .blueprint-confirm__card-content {
+  /* 深夜案头朱砂红格线暗淡化 */
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 27px,
+    rgba(140, 36, 28, 0.12) 27px,
+    rgba(140, 36, 28, 0.16) 28px
+  ) !important;
+}
+
+:root[data-theme='dark'] .blueprint-confirm__spinner-track {
+  border-color: rgba(229, 222, 201, 0.12) !important;
+}
+
+:root[data-theme='dark'] .blueprint-confirm__spinner-fill {
+  border-bottom-color: rgba(229, 222, 201, 0.5) !important;
+}
+
+/* 传统太极流转动画与飞旋气流 */
+@keyframes tai-chi-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes md-spin {
   to { transform: rotate(360deg); }
 }
 

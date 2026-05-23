@@ -3,7 +3,7 @@
   <TransitionRoot as="template" :show="show">
     <Dialog as="div" class="relative z-50" @close="$emit('close')">
       <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0" enter-to="opacity-100" leave="ease-in duration-200" leave-from="opacity-100" leave-to="opacity-0">
-        <div class="fixed inset-0" style="background-color: var(--md-scrim);" />
+        <div class="fixed inset-0 m3-outline-scrim" />
       </TransitionChild>
 
       <div class="fixed inset-0 z-10 overflow-y-auto">
@@ -12,8 +12,8 @@
             <DialogPanel class="md-dialog m3-outline-dialog text-left transition-[opacity,transform] sm:my-6 sm:w-full sm:max-w-lg">
               <div class="px-5 pt-6 pb-5 sm:px-6 sm:pt-6 sm:pb-5">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
-                  <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full sm:mx-0 sm:h-12 sm:w-12" style="background-color: var(--md-primary-container);">
-                    <svg class="h-6 w-6" style="color: var(--md-on-primary-container);" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                  <div class="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xs sm:mx-0 sm:h-12 sm:w-12 border border-[var(--md-outline)] m3-outline-icon-wrapper">
+                    <svg class="h-6 w-6 m3-outline-icon" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6" />
                     </svg>
                   </div>
@@ -29,14 +29,14 @@
                   <input type="number" name="numChapters" id="numChapters" v-model.number="numChapters" class="md-text-field-input w-full mt-2" min="1" max="20">
                   <div class="mt-5 flex flex-wrap justify-center gap-3">
                     <button type="button" v-for="count in [1, 2, 5, 10]" :key="count" @click="setNumChapters(count)"
-                      :aria-pressed="numChapters === count"
-                      :class="['md-btn md-btn-outlined md-ripple', numChapters === count ? 'm3-count-selected' : '']">
+                       :aria-pressed="numChapters === count"
+                       :class="['md-btn md-btn-outlined md-ripple', numChapters === count ? 'm3-count-selected' : '']">
                       {{ count }} 章
                     </button>
                   </div>
                 </div>
               </div>
-              <div class="px-6 py-4 sm:flex sm:flex-row-reverse sm:px-8" style="background-color: var(--md-surface-container-low);">
+              <div class="px-6 py-4 sm:flex sm:flex-row-reverse sm:px-8 m3-outline-dialog__footer">
                 <button type="button" class="md-btn md-btn-filled md-ripple sm:ml-3 sm:w-auto w-full justify-center" @click="handleGenerate">生成</button>
                 <button type="button" class="md-btn md-btn-outlined md-ripple sm:mt-0 sm:ml-3 sm:w-auto w-full justify-center mt-3" @click="$emit('close')">取消</button>
               </div>
@@ -74,13 +74,33 @@ const handleGenerate = () => {
 </script>
 
 <style scoped>
+.m3-outline-scrim {
+  background-color: var(--md-scrim) !important;
+}
+
 .m3-outline-dialog {
-  border-radius: var(--md-radius-xl);
+  border-radius: var(--md-radius-md) !important;
+  border: 3px double var(--md-outline) !important;
+  background-color: var(--md-surface) !important;
+  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.15) !important;
+}
+
+.m3-outline-icon-wrapper {
+  background-color: var(--md-primary-container) !important;
+}
+
+.m3-outline-icon {
+  color: var(--md-on-primary-container) !important;
+}
+
+.m3-outline-dialog__footer {
+  background-color: var(--md-surface-container-low) !important;
+  border-top: 1px solid var(--md-outline-variant) !important;
 }
 
 .m3-count-selected {
-  background-color: var(--md-primary);
-  color: var(--md-on-primary);
-  border-color: transparent;
+  background-color: var(--md-primary) !important;
+  color: var(--md-on-primary) !important;
+  border-color: transparent !important;
 }
 </style>

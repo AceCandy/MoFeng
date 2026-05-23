@@ -133,19 +133,53 @@ const handleDelete = () => {
   justify-content: space-between;
   gap: var(--md-spacing-5);
   padding: var(--md-spacing-5);
-  border-radius: var(--md-radius-lg);
+  border-radius: var(--md-radius-xs) !important; /* 去 SaaS 大圆角，木刻方直微圆角 */
+  border: 1px solid var(--md-outline-variant) !important;
+  background-color: var(--md-surface) !important;
   box-shadow: none;
   touch-action: manipulation;
+  position: relative !important;
   transition:
     border-color var(--md-duration-short) var(--md-easing-standard),
     box-shadow var(--md-duration-short) var(--md-easing-standard),
     background-color var(--md-duration-short) var(--md-easing-standard);
 }
 
+/* Hover 态右下角金石阳刻“卷”朱砂钤印渐显，点睛之笔 */
+.project-card::after {
+  content: '卷' !important;
+  position: absolute !important;
+  right: 16px !important;
+  bottom: 60px !important;
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-size: 10px !important;
+  font-weight: bold !important;
+  color: var(--md-secondary) !important;
+  border: 1px solid var(--md-secondary) !important;
+  border-radius: 2px !important; /* 朱砂小方印 */
+  width: 15px !important;
+  height: 15px !important;
+  display: grid !important;
+  place-items: center !important;
+  line-height: 1 !important;
+  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15) !important;
+  opacity: 0;
+  transform: scale(0.7) rotate(-8deg);
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  pointer-events: none;
+}
+
+.project-card:hover::after {
+  opacity: 0.85 !important;
+  transform: scale(1) rotate(0deg) !important;
+}
+
 .project-card:hover,
 .project-card:focus-within {
-  border-color: color-mix(in srgb, var(--md-primary) 42%, var(--md-outline-variant));
-  box-shadow: var(--md-elevation-1);
+  border-color: color-mix(in srgb, var(--md-primary) 50%, var(--md-outline-variant)) !important;
+  /* 拓片偏置硬影 */
+  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.1) !important;
+  background-color: var(--md-surface-dim) !important; /* 宣纸微暖色 */
 }
 
 .project-card__header {
@@ -169,9 +203,10 @@ const handleDelete = () => {
   border: 0;
   background: transparent;
   color: var(--md-on-surface);
-  font: inherit;
+  /* 使用碑拓宋体 */
+  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
   font-size: var(--md-title-medium);
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.35;
   text-align: left;
   -webkit-box-orient: vertical;
@@ -180,7 +215,7 @@ const handleDelete = () => {
 }
 
 .project-card__title-button:hover {
-  color: var(--md-primary-dark);
+  color: var(--md-secondary) !important; /* 朱砂红 */
 }
 
 .project-card__title-button:focus-visible {
@@ -230,6 +265,13 @@ const handleDelete = () => {
   min-width: 0;
   padding-inline: var(--md-spacing-3);
   white-space: nowrap;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+/* 执笔创作按钮 active 钤印微沉 */
+.project-card__action:active {
+  transform: translate(1px, 1px) !important;
+  opacity: 0.9 !important;
 }
 
 .project-card__action svg,
@@ -240,6 +282,13 @@ const handleDelete = () => {
 
 .project-card__delete {
   color: var(--md-error);
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+/* 删除按钮 active 钤印微沉 */
+.project-card__delete:active {
+  transform: translate(1.5px, 1.5px) !important;
+  opacity: 0.8 !important;
 }
 
 @media (max-width: 420px) {

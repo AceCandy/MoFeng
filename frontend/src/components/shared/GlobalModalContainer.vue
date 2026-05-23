@@ -103,9 +103,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   padding: var(--md-spacing-4);
-  background-color: rgba(18, 22, 23, 0.45);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background-color: rgba(18, 22, 23, 0.75);
   animation: inkFadeIn 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
 }
 
@@ -118,8 +116,8 @@ onUnmounted(() => {
   background-image: radial-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 0);
   background-size: 4px 4px; /* 模拟宣纸极细砂感 */
   border: 3px double #1c2022; /* 古籍经典焦墨双线 */
-  border-radius: var(--md-radius-xl, 16px);
-  box-shadow: 0 24px 64px -12px rgba(10, 12, 13, 0.36), 0 0 0 1px rgba(28, 32, 34, 0.08);
+  border-radius: var(--md-radius-md, 6px);
+  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15);
   outline: none;
   animation: scrollFoldOpen 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
@@ -129,7 +127,7 @@ onUnmounted(() => {
   background-color: #1a1e20;
   background-image: radial-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 0);
   border-color: #3b4245;
-  box-shadow: 0 24px 64px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.5);
 }
 
 /* 四角古黄铜包角扣 */
@@ -148,7 +146,7 @@ onUnmounted(() => {
   left: -2px;
   border-right: none;
   border-bottom: none;
-  border-top-left-radius: var(--md-radius-xl);
+  border-top-left-radius: var(--md-radius-md, 6px);
 }
 
 .is-top-right {
@@ -156,7 +154,7 @@ onUnmounted(() => {
   right: -2px;
   border-left: none;
   border-bottom: none;
-  border-top-right-radius: var(--md-radius-xl);
+  border-top-right-radius: var(--md-radius-md, 6px);
 }
 
 .is-bottom-left {
@@ -164,7 +162,7 @@ onUnmounted(() => {
   left: -2px;
   border-right: none;
   border-top: none;
-  border-bottom-left-radius: var(--md-radius-xl);
+  border-bottom-left-radius: var(--md-radius-md, 6px);
 }
 
 .is-bottom-right {
@@ -172,7 +170,7 @@ onUnmounted(() => {
   right: -2px;
   border-left: none;
   border-top: none;
-  border-bottom-right-radius: var(--md-radius-xl);
+  border-bottom-right-radius: var(--md-radius-md, 6px);
 }
 
 :global(.dark) .m3-ink-modal-corner {
@@ -187,8 +185,8 @@ onUnmounted(() => {
   padding: var(--md-spacing-4) var(--md-spacing-5);
   border-bottom: 1.5px solid #e7e5d9;
   background-color: rgba(246, 245, 236, 0.5);
-  border-top-left-radius: var(--md-radius-xl);
-  border-top-right-radius: var(--md-radius-xl);
+  border-top-left-radius: var(--md-radius-md, 6px);
+  border-top-right-radius: var(--md-radius-md, 6px);
 }
 
 :global(.dark) .m3-ink-modal-header {
@@ -233,7 +231,7 @@ onUnmounted(() => {
   height: 38px;
   padding: 0 12px 0 6px;
   border: 1px dashed var(--md-outline-variant, #e7e5d9);
-  border-radius: var(--md-radius-full, 99px);
+  border-radius: var(--md-radius-xs, 2px);
   background-color: transparent;
   color: var(--md-on-surface-variant, #5b6264);
   cursor: pointer;
@@ -246,7 +244,7 @@ onUnmounted(() => {
   justify-content: center;
   width: 26px;
   height: 26px;
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs, 2px);
   background-color: rgba(184, 60, 50, 0.08);
   border: 1px solid rgba(184, 60, 50, 0.35);
   color: #b83c32; /* 朱砂红 */
@@ -287,8 +285,8 @@ onUnmounted(() => {
   min-height: 0;
   padding: var(--md-spacing-4) var(--md-spacing-5) var(--md-spacing-5);
   /* 使用古典淡宣线分隔 */
-  border-bottom-left-radius: var(--md-radius-xl);
-  border-bottom-right-radius: var(--md-radius-xl);
+  border-bottom-left-radius: var(--md-radius-md, 6px);
+  border-bottom-right-radius: var(--md-radius-md, 6px);
 }
 
 /* 极精细水墨滚动条 */

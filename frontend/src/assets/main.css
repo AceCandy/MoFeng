@@ -165,8 +165,15 @@
   /* Layout */
   --app-shell-width: 260px;
   --app-shell-mobile-tab-height: 64px;
-  --app-content-max: 1320px;
+  --app-content-max: 1360px;
   --app-viewport-unit: 100vh;
+}
+
+/* 超大宽屏设备下，自适应拓宽页面内容容量至 1520px，彰显国风舒展大气 */
+@media (min-width: 1600px) {
+  :root {
+    --app-content-max: 1520px;
+  }
 }
 
 :root[data-theme='dark'] {
@@ -1727,6 +1734,9 @@ button.md-chip,
 
 .app-shell--project-context {
   grid-template-columns: 72px minmax(0, 1fr);
+  height: var(--app-viewport-unit) !important;
+  max-height: var(--app-viewport-unit) !important;
+  overflow: hidden !important;
 }
 
 .app-shell--project-context .app-shell__sidebar {
@@ -1778,8 +1788,17 @@ button.md-chip,
   display: none;
 }
 
+.app-shell--project-context .app-shell__main {
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+}
+
 .app-shell--project-context .app-shell__content {
   padding: 0;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
 }
 
 .app-shell__bottom-tabs {
@@ -2244,6 +2263,8 @@ button.md-chip,
 
 /* 章节阅读纸张：微直角、古籍双粗细线框、纵向朱砂红信笺界格底纹 */
 body .chapter-paper {
+  width: 100% !important;
+  box-sizing: border-box !important;
   border-radius: var(--md-radius-xs) !important;
   border: 3px double var(--md-outline) !important;
   padding: var(--md-spacing-8) !important;
@@ -2631,6 +2652,8 @@ body,
 
 /* 物理三折线效果：利用稿纸底纹，在两侧和中央加入极其幽微的宣纸折叠纸张凹凸阴影，顶部叠加紫檀木压纸镇尺包边 */
 body .chapter-paper {
+  width: 100% !important;
+  box-sizing: border-box !important;
   position: relative !important;
   background: 
     /* 顶部紫檀木压纸镇尺 (8px 深褐木色压条) */
@@ -2987,11 +3010,12 @@ body .project-card::after {
   position: absolute !important;
   right: 16px !important;
   top: 16px !important;
-  font-family: var(--md-font-display) !important;
-  font-size: 10px !important;
-  font-weight: bold !important;
-  color: rgba(184, 60, 50, 0.16) !important;
-  border: 1px solid rgba(184, 60, 50, 0.16) !important;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  color: rgba(184, 60, 50, 0.85) !important;
+  border: 1px solid rgba(184, 60, 50, 0.85) !important;
+  background-color: rgba(184, 60, 50, 0.05) !important;
   padding: 2px 3px !important;
   line-height: 1 !important;
   border-radius: 1px !important;
@@ -3019,8 +3043,9 @@ body .project-card:hover {
 }
 
 :root[data-theme='dark'] body .project-card::after {
-  color: rgba(156, 51, 43, 0.22) !important;
-  border-color: rgba(156, 51, 43, 0.22) !important;
+  color: #ff7b6e !important;
+  border-color: #ff7b6e !important;
+  background-color: rgba(255, 110, 94, 0.12) !important;
 }
 
 :root[data-theme='dark'] body .project-card:hover {
@@ -3126,16 +3151,16 @@ body .chat-bubble-ai::before {
 body .chat-bubble-user {
   background-color: var(--md-primary-light) !important;
   color: var(--md-on-primary) !important;
-  /* 手撕拓片毛边：使用微妙的不规则折纸剪裁 */
+  /* 手撕拓片毛边：使用更温和保守的不规则残碑剪裁，结合扩大 padding 确保文字绝对安全，决不截边 */
   clip-path: polygon(
-    0% 3%, 12% 0%, 25% 2%, 37% 0%, 50% 3%, 62% 0%, 75% 2%, 87% 0%, 100% 3%, 
-    99% 25%, 100% 50%, 98% 75%, 100% 97%, 
-    88% 100%, 75% 98%, 62% 100%, 50% 97%, 38% 100%, 25% 98%, 12% 100%, 0% 97%,
-    1% 75%, 0% 50%, 2% 25%
+    0% 1.5%, 12% 0.5%, 25% 1%, 37% 0.5%, 50% 1.5%, 62% 0.5%, 75% 1%, 87% 0.5%, 100% 1.5%, 
+    99.5% 25%, 100% 50%, 99% 75%, 99.5% 98.5%, 
+    88% 99.5%, 75% 99%, 62% 99.5%, 50% 98.5%, 38% 99.5%, 25% 99%, 12% 99.5%, 0% 98.5%,
+    0.5% 75%, 0% 50%, 0.8% 25%
   ) !important;
   border-radius: var(--md-radius-xs) !important;
   box-shadow: var(--md-elevation-1) !important;
-  padding: 1rem 1.25rem !important;
+  padding: 1.15rem 1.5rem !important;
 }
 
 :root[data-theme='dark'] body .chat-bubble-ai {
@@ -3466,10 +3491,10 @@ body .app-shell__topbar {
   gap: var(--md-spacing-2) !important;
   padding: 0 var(--md-spacing-4) !important;
   height: 42px !important;
-  color: var(--md-on-surface-variant) !important;
-  font-family: var(--md-font-display) !important;
-  font-size: 0.88rem !important;
-  font-weight: 500 !important;
+  color: #0d1011 !important;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  font-size: 0.92rem !important;
+  font-weight: 600 !important;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 20' opacity='0.03'><path d='M0,10 C40,0 100,18 160,2 C180,6 190,2 200,10 Z' fill='%231c2022'/></svg>") !important;
   background-size: 100% 100% !important;
   background-repeat: no-repeat !important;
@@ -3483,7 +3508,6 @@ body .app-shell__topbar {
 
 .welcome-text {
   letter-spacing: 0.04em !important;
-  text-shadow: 1px 1px 0px rgba(250, 246, 237, 0.8) !important;
 }
 
 /* 暗色模式适配 */
@@ -3522,8 +3546,8 @@ body .app-shell__topbar {
 }
 
 :root[data-theme='dark'] .app-shell__project-welcome-message {
+  color: #ffffff !important;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 20' opacity='0.03'><path d='M0,10 C40,0 100,18 160,2 C180,6 190,2 200,10 Z' fill='%23e5dec9'/></svg>") !important;
-  text-shadow: 1px 1px 0px rgba(21, 25, 27, 0.8) !important;
 }
 
 /* 过渡动画 */
@@ -3629,6 +3653,15 @@ body .app-shell__topbar {
   transform: rotate(2.5deg) !important;
 }
 
+/* 提示词管理：藤黄校阅印 */
+.app-shell__action-badge.is-prompt {
+  background-color: var(--md-warning) !important;
+  color: var(--md-primary-dark) !important;
+  border: 1px solid #9f6b1f !important;
+  box-shadow: 1.5px 1.5px 0px rgba(230, 162, 60, 0.25) !important;
+  transform: rotate(-2deg) !important;
+}
+
 /* 离席退出：焦墨印 */
 .app-shell__action-badge.is-logout {
   background-color: var(--md-primary) !important;
@@ -3671,6 +3704,13 @@ body .app-shell__topbar {
   background-color: #2e4033 !important; /* 澄泥暗石绿 */
   border-color: #1b2e21 !important;
   box-shadow: 1.5px 1.5px 0px rgba(46, 64, 51, 0.4) !important;
+}
+
+:root[data-theme='dark'] .app-shell__action-badge.is-prompt {
+  background-color: #a8752a !important;
+  border-color: #684516 !important;
+  color: #f8eed8 !important;
+  box-shadow: 1.5px 1.5px 0px rgba(168, 117, 42, 0.4) !important;
 }
 
 :root[data-theme='dark'] .app-shell__action-badge.is-logout {
@@ -4340,3 +4380,104 @@ body .app-shell__topbar {
   border-color: #bd3e33;
 }
 
+/* ============================================
+   统一中国风极简水墨滚动条样式 (滚动时显示，平时不显示)
+   ============================================ */
+
+/* 1. 定义滚动条相关的全局 CSS 变量 */
+:root,
+:root[data-theme='light'] {
+  --scrollbar-thumb-color: rgba(58, 70, 72, 0.25); /* 松烟灰半透明，淡墨感 */
+  --scrollbar-thumb-hover-color: rgba(28, 32, 34, 0.6); /* 焦墨半透明，浓墨感 */
+}
+
+:root[data-theme='dark'] {
+  --scrollbar-thumb-color: rgba(229, 222, 201, 0.2); /* 素骨黄半透明 */
+  --scrollbar-thumb-hover-color: rgba(245, 238, 217, 0.55); /* 浅素骨黄半透明 */
+}
+
+/* 2. Webkit 浏览器 (Chrome, Safari, Edge) 全局滚动条魔改 */
+::-webkit-scrollbar {
+  width: 8px; /* 纵向滚动条宽度 */
+  height: 8px; /* 横向滚动条高度 */
+}
+
+::-webkit-scrollbar-track {
+  background: transparent !important; /* 轨道完全透明，平时不占用任何视觉空间 */
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: transparent !important; /* 默认完全透明，平时隐藏 */
+  border-radius: 4px; /* 柔和微圆角，圆润而有风骨 */
+  border: 2px solid transparent !important; /* 配合 background-clip 实现更精致的细条效果 */
+  background-clip: padding-box !important;
+  transition: background-color 0.3s ease !important;
+}
+
+/* 当容器被悬停，或者带有 is-scrolling class 时显示滚动条 */
+*:hover::-webkit-scrollbar-thumb,
+.is-scrolling::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb-color) !important;
+}
+
+/* 当滑块被 hover 时，呈现更深的墨色 */
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover-color) !important;
+}
+
+/* 针对 html (根滚动条) 的特殊样式 */
+html.is-scrolling::-webkit-scrollbar-thumb,
+html::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-color) !important;
+}
+html::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover-color) !important;
+}
+
+/* 3. Firefox 兼容方案 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.3s ease;
+}
+
+/* 悬停或滚动时显示 */
+*:hover,
+*.is-scrolling {
+  scrollbar-color: var(--scrollbar-thumb-color) transparent;
+}
+
+/* 4. Naive UI 全局滚动条统一魔改（防止其直角冲突） */
+.n-scrollbar-rail__handle {
+  background-color: var(--scrollbar-thumb-color) !important;
+  border-radius: 4px !important;
+  opacity: 0 !important;
+  width: 4px !important;
+  height: 4px !important;
+  transition: 
+    opacity 0.3s var(--md-easing-standard), 
+    background-color 0.3s var(--md-easing-standard) !important;
+}
+
+/* Naive UI 容器被悬停，或者正在滚动时，显示滑块 */
+.n-scrollbar:hover .n-scrollbar-rail__handle,
+.n-scrollbar.is-scrolling .n-scrollbar-rail__handle {
+  opacity: 1 !important;
+}
+
+.n-scrollbar-rail__handle:hover,
+.n-scrollbar-rail__handle:active {
+  background-color: var(--scrollbar-thumb-hover-color) !important;
+}
+
+/* 5. 覆盖之前可能存在的个别滚动条（以确保全局完美统一） */
+.app-shell__dropdown-list::-webkit-scrollbar {
+  width: 8px !important;
+}
+.app-shell__dropdown-list::-webkit-scrollbar-thumb {
+  background-color: transparent !important;
+}
+.app-shell__dropdown-list:hover::-webkit-scrollbar-thumb,
+.app-shell__dropdown-list.is-scrolling::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb-color) !important;
+}

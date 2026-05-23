@@ -4,13 +4,9 @@
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
       <div class="flex items-center gap-3">
-        <div
-          class="w-10 h-10 rounded-full flex items-center justify-center"
-          style="background-color: var(--md-warning-container)"
-        >
+        <div class="w-10 h-10 rounded-full flex items-center justify-center foreshadowing-header-icon-container">
           <svg
-            class="w-5 h-5"
-            style="color: var(--md-on-warning-container)"
+            class="w-5 h-5 foreshadowing-header-icon"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -20,8 +16,8 @@
           </svg>
         </div>
         <div>
-          <h3 class="md-title-medium" style="color: var(--md-on-surface)">伏笔管理</h3>
-          <p class="md-body-small" style="color: var(--md-on-surface-variant)">
+          <h3 class="md-title-medium foreshadowing-title">伏笔管理</h3>
+          <p class="md-body-small foreshadowing-subtitle">
             追踪故事线索与回收
           </p>
         </div>
@@ -52,33 +48,21 @@
 
     <!-- Statistics Cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-      <div
-        class="md-card md-card-outlined p-4 text-center"
-        style="border-radius: var(--md-radius-md)"
-      >
-        <p class="md-label-medium" style="color: var(--md-on-surface-variant)">总伏笔</p>
-        <p class="md-headline-small" style="color: var(--md-primary)">{{ totalForeshadowings }}</p>
+      <div class="md-card md-card-outlined p-4 text-center foreshadowing-stat-card">
+        <p class="md-label-medium foreshadowing-stat-label">总伏笔</p>
+        <p class="md-headline-small foreshadowing-stat-value foreshadowing-stat-value--total">{{ totalForeshadowings }}</p>
       </div>
-      <div
-        class="md-card md-card-outlined p-4 text-center"
-        style="border-radius: var(--md-radius-md)"
-      >
-        <p class="md-label-medium" style="color: var(--md-on-surface-variant)">已埋设</p>
-        <p class="md-headline-small" style="color: var(--md-google-yellow)">{{ plantedCount }}</p>
+      <div class="md-card md-card-outlined p-4 text-center foreshadowing-stat-card">
+        <p class="md-label-medium foreshadowing-stat-label">已埋设</p>
+        <p class="md-headline-small foreshadowing-stat-value foreshadowing-stat-value--planted">{{ plantedCount }}</p>
       </div>
-      <div
-        class="md-card md-card-outlined p-4 text-center"
-        style="border-radius: var(--md-radius-md)"
-      >
-        <p class="md-label-medium" style="color: var(--md-on-surface-variant)">已回收</p>
-        <p class="md-headline-small" style="color: var(--md-google-green)">{{ paidOffCount }}</p>
+      <div class="md-card md-card-outlined p-4 text-center foreshadowing-stat-card">
+        <p class="md-label-medium foreshadowing-stat-label">已回收</p>
+        <p class="md-headline-small foreshadowing-stat-value foreshadowing-stat-value--paid-off">{{ paidOffCount }}</p>
       </div>
-      <div
-        class="md-card md-card-outlined p-4 text-center"
-        style="border-radius: var(--md-radius-md)"
-      >
-        <p class="md-label-medium" style="color: var(--md-on-surface-variant)">待回收</p>
-        <p class="md-headline-small" style="color: var(--md-google-red)">{{ overdueCount }}</p>
+      <div class="md-card md-card-outlined p-4 text-center foreshadowing-stat-card">
+        <p class="md-label-medium foreshadowing-stat-label">待回收</p>
+        <p class="md-headline-small foreshadowing-stat-value foreshadowing-stat-value--overdue">{{ overdueCount }}</p>
       </div>
     </div>
 
@@ -94,8 +78,8 @@
         {{ tab.label }}
         <span
           v-if="getCountByStatus(tab.key) > 0"
-          class="ml-2 px-2 py-0.5 rounded-full md-label-small"
-          :style="{ backgroundColor: tab.color + '20', color: tab.color }"
+          class="ml-2 px-2 py-0.5 rounded-full md-label-small foreshadowing-tab-badge"
+          :class="'foreshadowing-tab-badge--' + tab.key"
         >
           {{ getCountByStatus(tab.key) }}
         </span>
@@ -103,8 +87,7 @@
     </div>
     <p
       v-if="isAutoAnalyzing && !isLoading"
-      class="mb-4 md-body-small"
-      style="color: var(--md-on-surface-variant)"
+      class="mb-4 md-body-small foreshadowing-auto-analyze-text"
     >
       正在后台自动识别伏笔，不影响当前页面操作...
     </p>
@@ -112,7 +95,7 @@
     <!-- Loading State -->
     <div v-if="isLoading" class="flex flex-col items-center justify-center py-12">
       <div class="md-spinner"></div>
-      <p class="mt-4 md-body-medium" style="color: var(--md-on-surface-variant)">
+      <p class="mt-4 md-body-medium foreshadowing-loading-text">
         加载伏笔数据中...
       </p>
     </div>
@@ -120,12 +103,10 @@
     <!-- Error State -->
     <div v-else-if="error" class="flex flex-col items-center justify-center py-12">
       <div
-        class="w-12 h-12 rounded-full flex items-center justify-center mb-4"
-        style="background-color: var(--md-error-container)"
+        class="w-12 h-12 rounded-full flex items-center justify-center mb-4 foreshadowing-error-icon-container"
       >
         <svg
-          class="w-6 h-6"
-          style="color: var(--md-error)"
+          class="w-6 h-6 foreshadowing-error-icon"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -138,7 +119,7 @@
           />
         </svg>
       </div>
-      <p class="md-body-medium" style="color: var(--md-error)">{{ error }}</p>
+      <p class="md-body-medium foreshadowing-error-text">{{ error }}</p>
       <button @click="refreshData" class="md-btn md-btn-text md-ripple mt-4">重试</button>
     </div>
 
@@ -148,12 +129,10 @@
       class="flex flex-col items-center justify-center py-12"
     >
       <div
-        class="w-16 h-16 rounded-full flex items-center justify-center mb-4"
-        style="background-color: var(--md-surface-container)"
+        class="w-16 h-16 rounded-full flex items-center justify-center mb-4 foreshadowing-empty-icon-container"
       >
         <svg
-          class="w-8 h-8"
-          style="color: var(--md-on-surface-variant)"
+          class="w-8 h-8 foreshadowing-empty-icon"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -162,14 +141,14 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
         </svg>
       </div>
-      <p class="md-body-large" style="color: var(--md-on-surface)">
+      <p class="md-body-large foreshadowing-empty-title">
         {{
           activeTab === 'all'
             ? '暂无伏笔记录'
             : `暂无${statusTabs.find((t) => t.key === activeTab)?.label}的伏笔`
         }}
       </p>
-      <p class="md-body-medium" style="color: var(--md-on-surface-variant)">
+      <p class="md-body-medium foreshadowing-empty-desc">
         优先展示已记录伏笔，无记录时自动从章节内容中识别
       </p>
     </div>
@@ -179,19 +158,15 @@
       <div
         v-for="item in filteredForeshadowing"
         :key="item.id"
-        class="md-card md-card-outlined p-4 transition-shadow duration-200 hover:shadow-md"
-        style="border-radius: var(--md-radius-md)"
+        class="md-card md-card-outlined p-4 transition-shadow duration-200 hover:shadow-md foreshadowing-list-card"
       >
         <div class="flex items-start justify-between">
           <div class="flex-1">
             <!-- Status & Importance -->
             <div class="flex items-center gap-2 mb-2">
               <span
-                class="md-chip md-chip-filter selected px-2 py-1"
-                :style="{
-                  backgroundColor: getStatusColor(item.status) + '20',
-                  color: getStatusColor(item.status),
-                }"
+                class="md-chip md-chip-filter selected px-2 py-1 foreshadowing-status-chip"
+                :class="'foreshadowing-status-chip--' + item.status"
               >
                 {{ getStatusLabel(item.status) }}
               </span>
@@ -201,7 +176,7 @@
             </div>
 
             <!-- Description -->
-            <p class="md-body-medium mb-3" style="color: var(--md-on-surface)">
+            <p class="md-body-medium mb-3 foreshadowing-item-desc">
               {{ item.description }}
             </p>
 
@@ -209,8 +184,7 @@
             <div class="flex flex-wrap gap-4">
               <div class="flex items-center gap-1">
                 <svg
-                  class="w-4 h-4"
-                  style="color: var(--md-on-surface-variant)"
+                  class="w-4 h-4 foreshadowing-meta-icon"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -222,14 +196,13 @@
                     d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
                   />
                 </svg>
-                <span class="md-body-small" style="color: var(--md-on-surface-variant)">
+                <span class="md-body-small foreshadowing-meta-text">
                   埋设于第{{ item.planted_chapter }}章《{{ item.planted_chapter_title }}》
                 </span>
               </div>
               <div v-if="item.expected_payoff_chapter" class="flex items-center gap-1">
                 <svg
-                  class="w-4 h-4"
-                  style="color: var(--md-on-surface-variant)"
+                  class="w-4 h-4 foreshadowing-meta-icon"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -241,14 +214,13 @@
                     d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                <span class="md-body-small" style="color: var(--md-on-surface-variant)">
+                <span class="md-body-small foreshadowing-meta-text">
                   预期回收于第{{ item.expected_payoff_chapter }}章
                 </span>
               </div>
               <div v-if="item.actual_payoff_chapter" class="flex items-center gap-1">
                 <svg
-                  class="w-4 h-4"
-                  style="color: var(--md-success)"
+                  class="w-4 h-4 foreshadowing-meta-icon--success"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -256,7 +228,7 @@
                 >
                   <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                <span class="md-body-small" style="color: var(--md-success)">
+                <span class="md-body-small foreshadowing-meta-text--success">
                   实际回收于第{{ item.actual_payoff_chapter }}章
                 </span>
               </div>
@@ -346,3 +318,144 @@ const refreshData = () => {
   foreshadowingQuery.refetch()
 }
 </script>
+
+<style scoped>
+.foreshadowing-header-icon-container {
+  background-color: var(--md-warning-container);
+}
+
+.foreshadowing-header-icon {
+  color: var(--md-on-warning-container);
+}
+
+.foreshadowing-title {
+  color: var(--md-on-surface);
+}
+
+.foreshadowing-subtitle {
+  color: var(--md-on-surface-variant);
+}
+
+.foreshadowing-stat-card {
+  border-radius: var(--md-radius-sm) !important;
+}
+
+.foreshadowing-stat-label {
+  color: var(--md-on-surface-variant);
+}
+
+.foreshadowing-stat-value {
+  font-weight: 700;
+}
+
+.foreshadowing-stat-value--total {
+  color: var(--md-primary);
+}
+
+.foreshadowing-stat-value--planted {
+  color: var(--md-warning);
+}
+
+.foreshadowing-stat-value--paid-off {
+  color: var(--md-success);
+}
+
+.foreshadowing-stat-value--overdue {
+  color: var(--md-error);
+}
+
+.foreshadowing-tab-badge--all {
+  background-color: color-mix(in srgb, var(--md-on-surface-variant) 12%, transparent);
+  color: var(--md-on-surface-variant);
+}
+
+.foreshadowing-tab-badge--planted {
+  background-color: color-mix(in srgb, var(--md-warning) 12%, transparent);
+  color: var(--md-warning);
+}
+
+.foreshadowing-tab-badge--paid_off {
+  background-color: color-mix(in srgb, var(--md-success) 12%, transparent);
+  color: var(--md-success);
+}
+
+.foreshadowing-tab-badge--overdue {
+  background-color: color-mix(in srgb, var(--md-error) 12%, transparent);
+  color: var(--md-error);
+}
+
+.foreshadowing-auto-analyze-text {
+  color: var(--md-on-surface-variant);
+}
+
+.foreshadowing-loading-text {
+  color: var(--md-on-surface-variant);
+}
+
+.foreshadowing-error-icon-container {
+  background-color: var(--md-error-container);
+}
+
+.foreshadowing-error-icon {
+  color: var(--md-error);
+}
+
+.foreshadowing-error-text {
+  color: var(--md-error);
+}
+
+.foreshadowing-empty-icon-container {
+  background-color: var(--md-surface-container);
+}
+
+.foreshadowing-empty-icon {
+  color: var(--md-on-surface-variant);
+}
+
+.foreshadowing-empty-title {
+  color: var(--md-on-surface);
+}
+
+.foreshadowing-empty-desc {
+  color: var(--md-on-surface-variant);
+}
+
+.foreshadowing-list-card {
+  border-radius: var(--md-radius-sm) !important;
+}
+
+.foreshadowing-status-chip--planted {
+  background-color: color-mix(in srgb, var(--md-warning) 12%, transparent) !important;
+  color: var(--md-warning) !important;
+}
+
+.foreshadowing-status-chip--paid_off {
+  background-color: color-mix(in srgb, var(--md-success) 12%, transparent) !important;
+  color: var(--md-success) !important;
+}
+
+.foreshadowing-status-chip--overdue {
+  background-color: color-mix(in srgb, var(--md-error) 12%, transparent) !important;
+  color: var(--md-error) !important;
+}
+
+.foreshadowing-item-desc {
+  color: var(--md-on-surface);
+}
+
+.foreshadowing-meta-icon {
+  color: var(--md-on-surface-variant);
+}
+
+.foreshadowing-meta-text {
+  color: var(--md-on-surface-variant);
+}
+
+.foreshadowing-meta-icon--success {
+  color: var(--md-success);
+}
+
+.foreshadowing-meta-text--success {
+  color: var(--md-success);
+}
+</style>

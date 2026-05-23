@@ -2,10 +2,13 @@
 import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
 import { API_BASE_URL, API_PREFIX } from './base'
-import { HttpRequestError, requestJson, requestRaw } from './http'
+import { HttpRequestError, requestJson, requestRaw, type HttpRequestOptions } from './http'
+
+const DEFAULT_NOVEL_REQUEST_TIMEOUT_MS = 60_000
+const BLUEPRINT_GENERATION_TIMEOUT_MS = 480_000
 
 // 统一的请求处理函数
-const request = async <T = any>(url: string, options: RequestInit = {}) => {
+const request = async <T = any>(url: string, options: HttpRequestOptions = {}) => {
   const authStore = useAuthStore()
   const headers = new Headers({
     'Content-Type': 'application/json',
@@ -25,7 +28,7 @@ const request = async <T = any>(url: string, options: RequestInit = {}) => {
     return await requestJson<T>(url, {
       ...options,
       headers,
-      timeoutMs: 60_000,
+      timeoutMs: options.timeoutMs ?? DEFAULT_NOVEL_REQUEST_TIMEOUT_MS,
       fallbackErrorMessage: '小说接口请求失败',
     })
   } catch (error) {
@@ -39,7 +42,7 @@ const request = async <T = any>(url: string, options: RequestInit = {}) => {
   }
 }
 
-const streamRequest = async (url: string, options: RequestInit = {}) => {
+const streamRequest = async (url: string, options: HttpRequestOptions = {}) => {
   const authStore = useAuthStore()
   const headers = new Headers({
     'Content-Type': 'application/json',
@@ -54,7 +57,7 @@ const streamRequest = async (url: string, options: RequestInit = {}) => {
     const response = await requestRaw(url, {
       ...options,
       headers,
-      timeoutMs: 60_000,
+      timeoutMs: options.timeoutMs ?? DEFAULT_NOVEL_REQUEST_TIMEOUT_MS,
       fallbackErrorMessage: '流式请求失败',
     })
 
@@ -152,54 +155,62 @@ const readSSEStream = async <T>(
   const reader = response.body!.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
-  let finalPayload: T | null = null
 
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) {
-      buffer += decoder.decode()
-      break
+  const finishWithFinal = (payload: T): T => {
+    handlers.onFinal(payload)
+    // final 事件已经包含下一轮输入控件，立刻结束读取，避免等连接关闭才恢复交互。
+    try {
+      void reader.cancel().catch(() => undefined)
+    } catch {
+      // 读取器可能已自然关闭，忽略即可。
     }
+    return payload
+  }
 
-    buffer += decoder.decode(value, { stream: true })
-    let boundaryIndex = findSSEBoundary(buffer)
-    while (boundaryIndex >= 0) {
-      const rawMessage = buffer.slice(0, boundaryIndex).trim()
-      const boundaryLength = getBoundaryLength(buffer, boundaryIndex)
-      buffer = buffer.slice(boundaryIndex + boundaryLength)
-
-      if (rawMessage) {
-        const message = parseSSEMessage(rawMessage)
-        if (message?.event === 'delta') {
-          handlers.onDelta?.(readDelta(message.data))
-        } else if (message?.event === 'final') {
-          finalPayload = message.data as T
-          handlers.onFinal(finalPayload)
-        } else if (message?.event === 'error') {
-          throw new Error(getSSEErrorDetail(message.data))
-        }
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) {
+        buffer += decoder.decode()
+        break
       }
 
-      boundaryIndex = findSSEBoundary(buffer)
-    }
-  }
+      buffer += decoder.decode(value, { stream: true })
+      let boundaryIndex = findSSEBoundary(buffer)
+      while (boundaryIndex >= 0) {
+        const rawMessage = buffer.slice(0, boundaryIndex).trim()
+        const boundaryLength = getBoundaryLength(buffer, boundaryIndex)
+        buffer = buffer.slice(boundaryIndex + boundaryLength)
 
-  const trailingMessage = buffer.trim()
-  if (trailingMessage) {
-    const message = parseSSEMessage(trailingMessage)
-    if (message?.event === 'final') {
-      finalPayload = message.data as T
-      handlers.onFinal(finalPayload)
-    } else if (message?.event === 'error') {
-      throw new Error(getSSEErrorDetail(message.data))
-    }
-  }
+        if (rawMessage) {
+          const message = parseSSEMessage(rawMessage)
+          if (message?.event === 'delta') {
+            handlers.onDelta?.(readDelta(message.data))
+          } else if (message?.event === 'final') {
+            return finishWithFinal(message.data as T)
+          } else if (message?.event === 'error') {
+            throw new Error(getSSEErrorDetail(message.data))
+          }
+        }
 
-  if (!finalPayload) {
+        boundaryIndex = findSSEBoundary(buffer)
+      }
+    }
+
+    const trailingMessage = buffer.trim()
+    if (trailingMessage) {
+      const message = parseSSEMessage(trailingMessage)
+      if (message?.event === 'final') {
+        return finishWithFinal(message.data as T)
+      } else if (message?.event === 'error') {
+        throw new Error(getSSEErrorDetail(message.data))
+      }
+    }
+
     throw new Error('流式请求未返回最终结果')
+  } finally {
+    reader.releaseLock()
   }
-
-  return finalPayload
 }
 
 // 类型定义
@@ -453,7 +464,8 @@ export class NovelAPI {
 
   static async generateBlueprint(projectId: string): Promise<BlueprintGenerationResponse> {
     return request(`${NOVELS_BASE}/${projectId}/blueprint/generate`, {
-      method: 'POST'
+      method: 'POST',
+      timeoutMs: BLUEPRINT_GENERATION_TIMEOUT_MS,
     })
   }
 

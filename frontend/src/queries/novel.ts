@@ -392,8 +392,11 @@ export function useConverseConceptStreamMutation(projectId: ProjectIdSource) {
         conversationState,
         onDelta,
       ),
-    onSuccess: async () => {
-      await refreshProjectQueries()
+    onSuccess: () => {
+      // 选项来自当前流式响应，缓存刷新只做后台同步，避免拖住下一轮输入。
+      void refreshProjectQueries().catch((error) => {
+        console.error('刷新概念对话缓存失败:', error)
+      })
     },
   })
 }

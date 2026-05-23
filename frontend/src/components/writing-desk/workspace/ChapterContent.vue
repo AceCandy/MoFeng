@@ -1,6 +1,6 @@
 <!-- AIMETA P=章节内容_章节文本展示编辑|R=内容展示_编辑|NR=不含版本管理|E=component:ChapterContent|X=internal|A=内容组件|D=vue|S=dom|RD=./README.ai -->
 <template>
-  <div class="space-y-6">
+  <div class="space-y-6 w-full">
     <article class="chapter-paper">
       <div class="chapter-paper__header">
         <Tooltip :text="contentTooltipText" :show-delay="150">
@@ -165,7 +165,7 @@
           aria-modal="true"
           :aria-labelledby="optimizeResultDialogTitleId"
         >
-          <div class="p-6 border-b" style="border-bottom-color: var(--md-outline-variant)">
+          <div class="p-6 border-b m3-result-dialog__header">
             <div class="flex items-center justify-between">
               <div>
                 <h3 :id="optimizeResultDialogTitleId" class="md-headline-small font-semibold">
@@ -200,10 +200,7 @@
               </div>
             </div>
           </div>
-          <div
-            class="p-6 border-t flex items-center justify-end gap-3"
-            style="border-top-color: var(--md-outline-variant)"
-          >
+          <div class="p-6 border-t flex items-center justify-end gap-3 m3-result-dialog__footer">
             <div class="md-body-small md-on-surface-variant m3-preview-metric">
               {{ optimizedPreviewWordCount }} 字
             </div>
@@ -226,8 +223,7 @@
               type="button"
               @click="applyOptimization"
               :disabled="isApplying"
-              class="md-btn md-btn-filled md-ripple disabled:opacity-50 flex items-center gap-2"
-              style="background-color: var(--md-success); color: var(--md-on-success)"
+              class="md-btn md-btn-filled md-ripple disabled:opacity-50 flex items-center gap-2 m3-btn-success"
             >
               <svg
                 v-if="isApplying"
@@ -751,9 +747,10 @@ defineExpose({
 <style scoped>
 .chapter-paper {
   padding: var(--md-spacing-5);
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-xl);
-  background-color: var(--md-surface);
+  border: 1px solid var(--md-outline);
+  border-radius: var(--md-radius-md);
+  background-color: var(--md-surface-dim);
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.08);
 }
 
 .chapter-paper__header {
@@ -772,6 +769,9 @@ defineExpose({
   text-align: left;
   cursor: pointer;
   appearance: none;
+  font-family: STSong, Songti SC, serif;
+  font-size: var(--md-headline-small);
+  letter-spacing: 0.08em;
   transition: color var(--md-duration-short) var(--md-easing-standard);
 }
 
@@ -788,14 +788,33 @@ defineExpose({
 .m3-optimizer-dialog {
   max-width: min(720px, calc(100vw - 32px));
   max-height: calc(var(--app-viewport-unit) - 32px);
-  border-radius: var(--md-radius-xl);
+  border-radius: var(--md-radius-md) !important;
+  border: 3px double var(--md-outline) !important;
+  background-color: var(--md-surface) !important;
+  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.15) !important;
   animation: optimizer-pop-in 0.24s ease-out both;
 }
 
 .m3-result-dialog {
   max-width: min(900px, calc(100vw - 32px));
   max-height: calc(var(--app-viewport-unit) - 32px);
-  border-radius: var(--md-radius-xl);
+  border-radius: var(--md-radius-md) !important;
+  border: 3px double var(--md-outline) !important;
+  background-color: var(--md-surface) !important;
+  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.15) !important;
+}
+
+.m3-result-dialog__header {
+  border-bottom-color: var(--md-outline-variant) !important;
+}
+
+.m3-result-dialog__footer {
+  border-top-color: var(--md-outline-variant) !important;
+}
+
+.m3-btn-success {
+  background-color: var(--md-success) !important;
+  color: var(--md-on-success) !important;
 }
 
 .m3-optimizing-panel {

@@ -8,7 +8,179 @@
       <p>{{ aiMessage }}</p>
     </div>
 
-    <div class="blueprint-display__content" v-html="formattedBlueprint"></div>
+    <!-- 蓝图主要内容区（已定制水墨极细滚动条，解决长内容滚动灾难） -->
+    <div class="blueprint-display__content">
+      <template v-if="blueprint">
+        <!-- 1. 牌匾落款 Header -->
+        <header class="bp__header">
+          <h1 class="bp__header-title">{{ safe(blueprint.title, '故事蓝图') }}</h1>
+          <div class="bp__header-badges">
+            <span v-if="blueprint.genre" class="bp__badge">{{ blueprint.genre }}</span>
+            <span v-if="blueprint.style" class="bp__badge">{{ blueprint.style }}</span>
+            <span v-if="blueprint.tone" class="bp__badge">{{ blueprint.tone }}</span>
+            <span v-if="blueprint.target_audience" class="bp__badge">{{ blueprint.target_audience }}</span>
+          </div>
+        </header>
+
+        <!-- 2. 故事梗概（温润竹纸笺条风格） -->
+        <section class="bp__section">
+          <div class="bp__section-header">
+            <div class="bp__section-icon" aria-hidden="true">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+            </div>
+            <h3 class="bp__section-title">故事梗概</h3>
+          </div>
+          <div class="bp__section-body">
+            <div v-if="blueprint.one_sentence_summary" class="bp__summary-highlight">
+              <h4 class="bp__summary-label">一句话总结</h4>
+              <p class="bp__summary-quote">“{{ blueprint.one_sentence_summary }}”</p>
+            </div>
+            <div v-if="blueprint.full_synopsis">
+              <h4 class="bp__summary-label">完整简介</h4>
+              <p class="bp__synopsis-text">{{ blueprint.full_synopsis }}</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. 世界设定（水墨分栏挂轴风格） -->
+        <section class="bp__section" v-if="parsedWorldSetting">
+          <div class="bp__section-header">
+            <div class="bp__section-icon" aria-hidden="true">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 002 2h2m-4-7a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+            <h3 class="bp__section-title">世界设定</h3>
+          </div>
+          <div class="bp__section-body">
+            <div v-if="parsedWorldSetting.coreRules" class="bp__world-rules">
+              <h4 class="bp__world-rules-title">
+                <span class="bp__world-indicator">◇</span>核心设定
+              </h4>
+              <p>{{ parsedWorldSetting.coreRules }}</p>
+            </div>
+
+            <div v-if="parsedWorldSetting.keyLocations.length > 0" class="bp__world-group">
+              <h4 class="bp__world-group-title">
+                <span class="bp__world-indicator">◇</span>关键地点
+              </h4>
+              <div class="bp__world-items">
+                <div v-for="loc in parsedWorldSetting.keyLocations" :key="loc.name" class="bp__world-item">
+                  <h5 class="bp__world-item-name">{{ loc.name }}</h5>
+                  <p class="bp__world-item-desc">{{ loc.description }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="parsedWorldSetting.factions.length > 0" class="bp__world-group">
+              <h4 class="bp__world-group-title">
+                <span class="bp__world-indicator">◇</span>主要势力
+              </h4>
+              <div class="bp__world-items">
+                <div v-for="fac in parsedWorldSetting.factions" :key="fac.name" class="bp__world-item">
+                  <h5 class="bp__world-item-name">{{ fac.name }}</h5>
+                  <p class="bp__world-item-desc">{{ fac.description }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. 主要角色（碑拓小笺卡片风格） -->
+        <section class="bp__section">
+          <div class="bp__section-header">
+            <div class="bp__section-icon" aria-hidden="true">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+              </svg>
+            </div>
+            <h3 class="bp__section-title">主要角色</h3>
+          </div>
+          <div class="bp__section-body">
+            <div v-if="parsedCharacters.length === 0" class="bp__empty">暂无角色信息</div>
+            <div v-else class="bp__char-list">
+              <div v-for="char in parsedCharacters" :key="char.name" class="bp__char-card">
+                <div class="bp__char-card-header">
+                  <h4 class="bp__char-name">{{ char.name }}</h4>
+                  <span v-if="char.role" class="bp__char-role">{{ char.role }}</span>
+                </div>
+                <div v-if="char.fields.length > 0" class="bp__char-fields">
+                  <div v-for="field in char.fields" :key="field.label" class="bp__char-field">
+                    <span class="bp__char-field-label">{{ field.label }}</span>
+                    <span class="bp__char-field-value">{{ field.value }}</span>
+                  </div>
+                </div>
+                <p v-if="char.description" class="bp__char-desc">{{ char.description }}</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. 角色关系（水墨并蒂细墨线连线风格） -->
+        <section class="bp__section">
+          <div class="bp__section-header">
+            <div class="bp__section-icon" aria-hidden="true">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+              </svg>
+            </div>
+            <h3 class="bp__section-title">角色关系</h3>
+          </div>
+          <div class="bp__section-body">
+            <div v-if="parsedRelationships.length === 0" class="bp__empty">暂无关系设定</div>
+            <div v-else class="bp__rel-list">
+              <div v-for="(rel, idx) in parsedRelationships" :key="idx" class="bp__rel-card">
+                <div class="bp__rel-pair">
+                  <span class="bp__rel-name">{{ rel.from }}</span>
+                  <div class="bp__rel-vine" aria-hidden="true">
+                    <span class="bp__rel-leaf bp__rel-leaf--left">◆</span>
+                    <span class="bp__rel-vine-line"></span>
+                    <span class="bp__rel-leaf bp__rel-leaf--right">◆</span>
+                  </div>
+                  <span class="bp__rel-name">{{ rel.to }}</span>
+                </div>
+                <div class="bp__rel-desc">
+                  <span class="bp__rel-desc-label">关系描述：</span>{{ rel.description }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 6. 章节大纲（木刻古雅挂签大纲挂筹风格） -->
+        <section class="bp__section">
+          <div class="bp__section-header">
+            <div class="bp__section-icon" aria-hidden="true">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+              </svg>
+            </div>
+            <h3 class="bp__section-title">章节大纲</h3>
+          </div>
+          <div class="bp__section-body">
+            <div v-if="!blueprint.chapter_outline || blueprint.chapter_outline.length === 0" class="bp__empty">
+              暂无章节大纲信息
+            </div>
+            <div v-else class="bp__chapters">
+              <div v-for="ch in blueprint.chapter_outline" :key="ch.chapter_number" class="bp__chapter-item">
+                <div class="bp__chapter-num" title="回目筹牌">
+                  <span class="bp__chapter-num-text">{{ convertToChineseNumber(ch.chapter_number) }}</span>
+                </div>
+                <div class="bp__chapter-body">
+                  <h4 class="bp__chapter-title">第 {{ ch.chapter_number }} 章: {{ ch.title }}</h4>
+                  <p class="bp__chapter-summary">{{ ch.summary }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </template>
+      <div v-else class="bp__error-wrap">
+        <p class="bp__error">抱歉，生成大纲失败，未能获取到最终数据。</p>
+      </div>
+    </div>
 
     <!-- 保存状态 -->
     <div v-if="isSaving" class="blueprint-display__saving">
@@ -47,17 +219,8 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import DOMPurify from 'dompurify'
 import { globalAlert } from '@/composables/useAlert'
 import type { Blueprint } from '@/api/novel'
-
-interface DisplayField {
-  label: string;
-  value: any;
-  priority: number;
-}
-
-type ExtractedFields = Record<string, DisplayField>;
 
 interface Props {
   blueprint: Blueprint | null
@@ -73,10 +236,15 @@ const emit = defineEmits<{
 
 const isSaving = ref(false)
 
-const sanitizeBlueprintHtml = (html: string) => {
-  return DOMPurify.sanitize(html, {
-    USE_PROFILES: { html: true, svg: true, svgFilters: true },
-  })
+const safe = (value: any, fallback = '待补充') => value || fallback
+
+// 罗马/古典中式数字转换，增强大纲竹签/牙筹之美
+const convertToChineseNumber = (num: number): string => {
+  const chineseNums = ['零', '壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖', '拾']
+  if (num <= 10) return chineseNums[num]
+  if (num < 20) return `拾${chineseNums[num % 10]}`
+  if (num % 10 === 0) return `${chineseNums[Math.floor(num / 10)]}拾`
+  return `${chineseNums[Math.floor(num / 10)]}拾${chineseNums[num % 10]}`
 }
 
 const confirmRegenerate = async () => {
@@ -95,349 +263,215 @@ const confirmBlueprint = async () => {
   }
 }
 
-const formattedBlueprint = computed(() => {
-  if (!props.blueprint) {
-    return sanitizeBlueprintHtml('<p class="bp__error">抱歉，生成大纲失败，未能获取到最终数据。</p>')
+// ----------------------------------------------------
+// 【强类型数据解析清洗】：彻底废弃 v-html 字符串拼接渲染
+// ----------------------------------------------------
+
+const parsedWorldSetting = computed(() => {
+  const ws = props.blueprint?.world_setting
+  if (!ws || typeof ws !== 'object') return null
+  return {
+    coreRules: ws.core_rules || '',
+    keyLocations: ws.key_locations || [],
+    factions: ws.factions || []
   }
+})
 
-  const blueprint = props.blueprint
+const parsedCharacters = computed(() => {
+  const list = props.blueprint?.characters || []
+  return list.map((char: any) => {
+    if (typeof char === 'object' && char.name) {
+      const name = char.name
 
-  const safe = (value: any, fallback = '待补充') => value || fallback
-
-  const createSection = (title: string, content: string, icon: string) => `
-    <div class="bp__section">
-      <div class="bp__section-header">
-        <div class="bp__section-icon">
-          ${icon}
-        </div>
-        <h3 class="bp__section-title">${title}</h3>
-      </div>
-      <div class="bp__section-body">
-        ${content}
-      </div>
-    </div>
-  `
-
-  // Icons
-  const icons = {
-    summary: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
-    story: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>',
-    world: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" clip-rule="evenodd"></path></svg>',
-    characters: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path></svg>',
-    relationships: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"></path></svg>',
-    chapters: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"></path></svg>'
-  }
-
-  // Format characters with enhanced styling - 动态兼容所有字段
-  const formatCharacters = (characters: any[]) => {
-    if (!characters || characters.length === 0) return '<p class="bp__empty">暂无角色信息</p>'
-
-    return characters.map(char => {
-      if (typeof char === 'object' && char.name) {
-        const name = char.name
-
-        const fieldMappings = {
-          identity: {
-            keys: ['identity_background', 'identity', 'background', '身份背景', '身份'],
-            label: '身份背景',
-            priority: 1
-          },
-          personality: {
-            keys: ['personality_traits', 'personality', 'traits', 'character', '性格特质', '性格'],
-            label: '性格特质',
-            priority: 2
-          },
-          goal: {
-            keys: ['core_goal', 'goal', 'objectives', 'aims', '核心目标', '目标'],
-            label: '核心目标',
-            priority: 3
-          },
-          abilities: {
-            keys: ['abilities_skills', 'abilities', 'skills', 'powers', '能力技能', '能力', '技能'],
-            label: '能力技能',
-            priority: 4
-          },
-          relationship: {
-            keys: ['relationship_with_protagonist', 'relationship_to_protagonist', 'relationship', 'relation', '与主角关系', '关系'],
-            label: '与主角关系',
-            priority: 5
-          },
-          role: {
-            keys: ['role', 'character_role', 'story_role', '角色定位', '角色'],
-            label: '角色定位',
-            priority: 0
-          }
+      const fieldMappings = {
+        identity: {
+          keys: ['identity_background', 'identity', 'background', '身份背景', '身份'],
+          label: '身份背景',
+          priority: 1
+        },
+        personality: {
+          keys: ['personality_traits', 'personality', 'traits', 'character', '性格特质', '性格'],
+          label: '性格特质',
+          priority: 2
+        },
+        goal: {
+          keys: ['core_goal', 'goal', 'objectives', 'aims', '核心目标', '目标'],
+          label: '核心目标',
+          priority: 3
+        },
+        abilities: {
+          keys: ['abilities_skills', 'abilities', 'skills', 'powers', '能力技能', '能力', '技能'],
+          label: '能力技能',
+          priority: 4
+        },
+        relationship: {
+          keys: ['relationship_with_protagonist', 'relationship_to_protagonist', 'relationship', 'relation', '与主角关系', '关系'],
+          label: '与主角关系',
+          priority: 5
+        },
+        role: {
+          keys: ['role', 'character_role', 'story_role', '角色定位', '角色'],
+          label: '角色定位',
+          priority: 0
         }
+      }
 
-        const extractedFields: ExtractedFields = {}
-        const usedKeys = new Set(['name'])
+      const extractedFields: Record<string, { value: any; label: string; priority: number }> = {}
+      const usedKeys = new Set(['name'])
 
-        Object.entries(fieldMappings).forEach(([fieldType, mapping]) => {
-          for (const key of mapping.keys) {
-            if (char[key] && !usedKeys.has(key)) {
-              extractedFields[fieldType] = {
-                value: char[key],
-                label: mapping.label,
-                priority: mapping.priority
-              }
-              usedKeys.add(key)
-              break
-            }
-          }
-        })
-
-        Object.entries(char).forEach(([key, value]) => {
-          if (!usedKeys.has(key) && value && typeof value === 'string' && value.trim()) {
-            const friendlyLabel = key
-              .replace(/_/g, ' ')
-              .replace(/([A-Z])/g, ' $1')
-              .replace(/^./, str => str.toUpperCase())
-
-            extractedFields[`unknown_${key}`] = {
-              value: value,
-              label: friendlyLabel,
-              priority: 99
+      Object.entries(fieldMappings).forEach(([fieldType, mapping]) => {
+        for (const key of mapping.keys) {
+          if (char[key] && !usedKeys.has(key)) {
+            extractedFields[fieldType] = {
+              value: char[key],
+              label: mapping.label,
+              priority: mapping.priority
             }
             usedKeys.add(key)
+            break
           }
-        })
+        }
+      })
 
-        const sortedFields = Object.entries(extractedFields).sort(([,a], [,b]) => a.priority - b.priority)
+      // 提取未知多余字段
+      Object.entries(char).forEach(([key, value]) => {
+        if (!usedKeys.has(key) && value && typeof value === 'string' && value.trim()) {
+          const friendlyLabel = key
+            .replace(/_/g, ' ')
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/^./, str => str.toUpperCase())
 
-        let fieldsHTML = ''
-        sortedFields.forEach(([fieldType, field]) => {
-          if (fieldType === 'role') return
-          fieldsHTML += `
-            <div class="bp__char-field">
-              <span class="bp__char-field-label">${field.label}：</span>
-              <span>${field.value}</span>
-            </div>
-          `
-        })
+          extractedFields[`unknown_${key}`] = {
+            value: value,
+            label: friendlyLabel,
+            priority: 99
+          }
+          usedKeys.add(key)
+        }
+      })
 
-        const roleField = extractedFields.role
+      const sortedFields = Object.entries(extractedFields)
+        .filter(([fieldType]) => fieldType !== 'role')
+        .sort(([, a], [, b]) => a.priority - b.priority)
+        .map(([, f]) => ({ label: f.label, value: f.value }))
 
-        return `
-          <div class="bp__char-card">
-            <div class="bp__char-card-header">
-              <h4 class="bp__char-name">${name}</h4>
-              ${roleField ? `<span class="bp__char-role">${roleField.value}</span>` : ''}
-            </div>
-            <div class="bp__char-fields">
-              ${fieldsHTML}
-            </div>
-          </div>
-        `
+      const roleField = extractedFields.role?.value || undefined
+
+      return {
+        name,
+        role: roleField,
+        fields: sortedFields
       }
-      else if (typeof char === 'object' && char.description) {
-        const desc = char.description
-        const identity = desc.identity || ''
-        const personality = desc.personality || ''
-        const relationship = desc.relationship_to_protagonist || ''
-
-        return `
-          <div class="bp__char-card">
-            <h4 class="bp__char-name">${char.name}</h4>
-            <div class="bp__char-fields">
-              ${identity ? `<div class="bp__char-field"><span class="bp__char-field-label">身份：</span><span>${identity}</span></div>` : ''}
-              ${personality ? `<div class="bp__char-field"><span class="bp__char-field-label">性格：</span><span>${personality}</span></div>` : ''}
-              ${relationship ? `<div class="bp__char-field"><span class="bp__char-field-label">关系：</span><span>${relationship}</span></div>` : ''}
-            </div>
-          </div>
-        `
+    } else if (typeof char === 'object' && char.description) {
+      const desc = char.description
+      const fields: Array<{ label: string; value: string }> = []
+      if (typeof desc === 'object') {
+        if (desc.identity) fields.push({ label: '身份', value: desc.identity })
+        if (desc.personality) fields.push({ label: '性格', value: desc.personality })
+        if (desc.relationship_to_protagonist) fields.push({ label: '关系', value: desc.relationship_to_protagonist })
       }
-      else {
-        return `
-          <div class="bp__char-card">
-            <h4 class="bp__char-name">${char.name || '未知角色'}</h4>
-            <p class="bp__char-desc">${char.description || '无描述'}</p>
-          </div>
-        `
+      return {
+        name: char.name || '未知角色',
+        fields,
+        description: typeof desc === 'string' ? desc : undefined
       }
-    }).join('')
-  }
-
-  // Format world setting with enhanced styling
-  const formatWorldSetting = (worldSetting: any) => {
-    if (!worldSetting || typeof worldSetting !== 'object') return '<p class="bp__empty">暂无世界设定信息</p>'
-
-    let html = ''
-
-    if (worldSetting.core_rules) {
-      html += `
-        <div class="bp__world-rules">
-          <h4 class="bp__world-rules-title">
-            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
-            核心设定
-          </h4>
-          <p>${worldSetting.core_rules}</p>
-        </div>
-      `
+    } else {
+      return {
+        name: char.name || '未知角色',
+        description: char.description || '无描述',
+        fields: []
+      }
     }
+  })
+})
 
-    if (worldSetting.key_locations && worldSetting.key_locations.length > 0) {
-      html += `
-        <div class="bp__world-group">
-          <h4 class="bp__world-group-title">
-            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
-            关键地点
-          </h4>
-          <div class="bp__world-items">
-            ${worldSetting.key_locations.map((loc: any) => `
-              <div class="bp__world-item">
-                <h5 class="bp__world-item-name">${loc.name}</h5>
-                <p class="bp__world-item-desc">${loc.description}</p>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `
+const parsedRelationships = computed(() => {
+  const list = props.blueprint?.relationships || []
+  return list.map((rel: any) => {
+    const fromChar = rel.character_from || rel.source || '角色A'
+    const toChar = rel.character_to || rel.target || '角色B'
+    const description = rel.description || '暂无描述'
+    return {
+      from: fromChar,
+      to: toChar,
+      description
     }
-
-    if (worldSetting.factions && worldSetting.factions.length > 0) {
-      html += `
-        <div class="bp__world-group">
-          <h4 class="bp__world-group-title">
-            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"></path></svg>
-            主要势力
-          </h4>
-          <div class="bp__world-items">
-            ${worldSetting.factions.map((fac: any) => `
-              <div class="bp__world-item">
-                <h5 class="bp__world-item-name">${fac.name}</h5>
-                <p class="bp__world-item-desc">${fac.description}</p>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `
-    }
-
-    return html || '<p class="bp__empty">暂无世界设定详细信息</p>'
-  }
-
-  // Format relationships with enhanced styling
-  const formatRelationships = (relationships: any[]) => {
-    if (!relationships || relationships.length === 0) return '<p class="bp__empty">暂无关系设定</p>'
-
-    return `
-      <div class="bp__rel-list">
-        ${relationships.map(rel => {
-          const fromChar = rel.character_from || rel.source || '角色A'
-          const toChar = rel.character_to || rel.target || '角色B'
-          const description = rel.description || '暂无描述'
-
-          return `
-            <div class="bp__rel-card">
-              <div class="bp__rel-pair">
-                <span class="bp__rel-name">${fromChar}</span>
-                <svg class="w-5 h-5" style="color: var(--md-on-surface-variant)" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"></path>
-                </svg>
-                <span class="bp__rel-name">${toChar}</span>
-              </div>
-              <div class="bp__rel-desc">
-                <span class="bp__rel-desc-label">关系描述：</span>${description}
-              </div>
-            </div>
-          `
-        }).join('')}
-      </div>
-    `
-  }
-
-  // Header with title and badges
-  const headerHTML = `
-    <div class="bp__header">
-      <h1 class="bp__header-title">${safe(blueprint.title, '未知标题')}</h1>
-      <div class="bp__header-badges">
-        <span class="bp__badge">${safe(blueprint.genre, '未指定')}</span>
-        <span class="bp__badge">${safe(blueprint.style, '未指定')}</span>
-        <span class="bp__badge">${safe(blueprint.tone, '未指定')}</span>
-        <span class="bp__badge">${safe(blueprint.target_audience, '未指定')}</span>
-      </div>
-    </div>
-  `
-
-  // Summary section
-  const summaryHTML = createSection(
-    '故事梗概',
-    `
-    <div class="bp__summary-highlight">
-      <h4 class="bp__summary-label">一句话总结</h4>
-      <p class="bp__summary-quote">"${safe(blueprint.one_sentence_summary)}"</p>
-    </div>
-    <div>
-      <h4 class="bp__summary-label">完整简介</h4>
-      <p>${safe(blueprint.full_synopsis)}</p>
-    </div>
-    `,
-    icons.summary
-  )
-
-  // Chapters section
-  const chaptersHTML = `
-    <div class="bp__chapters">
-      ${(blueprint.chapter_outline || []).map((ch) => `
-        <div class="bp__chapter-item">
-          <div class="bp__chapter-num">${ch.chapter_number}</div>
-          <div class="bp__chapter-body">
-            <h4 class="bp__chapter-title">第 ${ch.chapter_number} 章: ${ch.title}</h4>
-            <p class="bp__chapter-summary">${ch.summary}</p>
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  `
-
-  return sanitizeBlueprintHtml(`
-    ${headerHTML}
-    ${summaryHTML}
-    ${createSection('世界设定', formatWorldSetting(blueprint.world_setting), icons.world)}
-    ${createSection('主要角色', formatCharacters(blueprint.characters || []), icons.characters)}
-    ${createSection('角色关系', formatRelationships(blueprint.relationships || []), icons.relationships)}
-    ${createSection('章节大纲', chaptersHTML, icons.chapters)}
-  `)
+  })
 })
 </script>
 
 <style scoped>
 .blueprint-display {
-  padding: var(--md-spacing-8);
+  padding: var(--md-spacing-6) var(--md-spacing-8);
   background-color: var(--md-surface);
-  border-radius: var(--md-radius-xl);
-  border: 1px solid var(--md-outline-variant);
-  box-shadow: var(--md-elevation-2);
+  border-radius: var(--md-radius-sm) !important; /* 中式木刻微直角 */
+  border: 3px double var(--md-outline) !important; /* 古籍双线框线 */
+  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15) !important;
+  /* 弹性布局一屏内高度完美收敛，彻底根治大纲超长溢出看不全灾难 */
+  height: 100%;
+  max-height: calc(var(--app-viewport-unit) - 120px) !important;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
 
 .blueprint-display__heading {
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
   font-size: var(--md-headline-small);
   font-weight: 700;
   text-align: center;
-  color: var(--md-on-surface);
-  margin-bottom: var(--md-spacing-6);
+  color: var(--md-primary-dark);
+  margin-bottom: var(--md-spacing-4);
+  flex-shrink: 0; /* 标题固定不缩窄 */
 }
 
 .blueprint-display__ai-msg {
-  margin-bottom: var(--md-spacing-6);
-  padding: var(--md-spacing-4);
+  margin-bottom: var(--md-spacing-4);
+  padding: var(--md-spacing-3) var(--md-spacing-4);
   background-color: var(--md-surface-container-low);
-  border-radius: var(--md-radius-sm);
+  border-radius: var(--md-radius-xs) !important;
   border: 1px solid var(--md-outline-variant);
   color: var(--md-on-surface);
+  flex-shrink: 0; /* 消息框固定不缩窄 */
 }
 
 .blueprint-display__content {
-  padding: var(--md-spacing-6);
+  padding: var(--md-spacing-5) var(--md-spacing-6);
   background-color: var(--md-surface-container-lowest);
-  border-radius: var(--md-radius-md);
+  border-radius: var(--md-radius-xs) !important;
   border: 1px solid var(--md-outline-variant);
-  margin-bottom: var(--md-spacing-6);
+  margin-bottom: var(--md-spacing-4);
+  flex: 1; /* 弹性占据剩余高度，容纳超长大纲 */
+  overflow-y: auto; /* 允许纵向平滑滚动 */
+  min-height: 0; /* flex 内部 overflow 滚动必须 */
+  
+  /* 优雅的水墨轻盈极细滚动条，替代暴力隐藏，全面解决不可滚动交互灾难 */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(60, 80, 70, 0.25) transparent;
+}
+
+.blueprint-display__content::-webkit-scrollbar {
+  display: block !important;
+  width: 4px;
+}
+
+.blueprint-display__content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.blueprint-display__content::-webkit-scrollbar-thumb {
+  background-color: rgba(60, 80, 70, 0.2);
+  border-radius: var(--md-radius-full);
+}
+
+.blueprint-display__content::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(60, 80, 70, 0.45);
 }
 
 .blueprint-display__saving {
   text-align: center;
-  padding: var(--md-spacing-8) 0;
+  padding: var(--md-spacing-6) 0;
+  flex-shrink: 0;
 }
 
 .blueprint-display__saving-spinner {
@@ -466,6 +500,7 @@ const formattedBlueprint = computed(() => {
   justify-content: center;
   gap: var(--md-spacing-4);
   flex-wrap: wrap;
+  flex-shrink: 0; /* 按钮固定不缩窄 */
 }
 
 @keyframes bp-spin {
@@ -478,295 +513,522 @@ const formattedBlueprint = computed(() => {
     opacity: 0.6;
   }
 }
-</style>
 
-<style>
-.blueprint-display__content .bp__error {
+/* ----------------------------------------------------
+   「古雅熟宣竹纸笺与木刻拓片小卡片」古风视觉主题重塑
+   ---------------------------------------------------- */
+
+.bp__error-wrap {
   text-align: center;
+  padding: var(--md-spacing-10) 0;
+}
+
+.bp__error {
   color: var(--md-error);
+  font-weight: 500;
 }
 
-.blueprint-display__content .bp__empty {
-  color: var(--md-on-surface-variant);
+.bp__empty {
+  color: var(--md-primary-light);
   font-style: italic;
+  text-align: center;
+  padding: var(--md-spacing-6) 0;
+  opacity: 0.8;
 }
 
-.blueprint-display__content .bp__section {
+/* 牌匾落款 Header */
+.bp__header {
+  text-align: center;
   margin-bottom: var(--md-spacing-6);
-  background-color: var(--md-surface);
-  border-radius: var(--md-radius-md);
+  padding: var(--md-spacing-6) var(--md-spacing-4);
+  background-color: var(--md-surface-container-low); /* 温润竹纸底色 */
   border: 1px solid var(--md-outline-variant);
-  padding: var(--md-spacing-5);
+  border-bottom: 3px double var(--md-outline); /* 古籍特有双线分割 */
+  border-radius: 4px;
+  position: relative;
+  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.05);
 }
 
-.blueprint-display__content .bp__section-header {
+.bp__header::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 15%;
+  bottom: 15%;
+  width: 4px;
+  background-color: var(--md-secondary); /* 朱砂细竖批 */
+  border-radius: 1px;
+}
+
+.bp__header-title {
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-size: var(--md-headline-medium);
+  font-weight: 700;
+  color: var(--md-primary-dark); /* 焦墨字色 */
+  margin-bottom: var(--md-spacing-4);
+  letter-spacing: 0.08em;
+}
+
+.bp__header-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--md-spacing-2.5);
+}
+
+/* 微方折木刻朱砂戳印标签 */
+.bp__badge {
+  background-color: transparent;
+  border: 1px solid var(--md-secondary-light); /* 朱色细边框 */
+  color: var(--md-secondary); /* 朱红色 */
+  padding: 3px var(--md-spacing-3);
+  border-radius: 2px !important; /* 木刻小微直角 */
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-size: var(--md-label-medium);
+  font-weight: 600;
+  box-shadow: 1px 1px 0px rgba(180, 50, 50, 0.1);
+  letter-spacing: 0.05em;
+  display: inline-block;
+  line-height: 1.3;
+}
+
+/* 双线木刻大板块 */
+.bp__section {
+  margin-bottom: var(--md-spacing-6);
+  background-color: var(--md-surface); /* 熟宣纸色 */
+  border-radius: 4px !important; /* 微直角 */
+  border: 2px double var(--md-outline) !important; /* 雅致双线黑边框 */
+  padding: var(--md-spacing-5) clamp(var(--md-spacing-4), 4vw, var(--md-spacing-6));
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.08) !important; /* 碑拓偏置硬投影 */
+}
+
+.bp__section-header {
   display: flex;
   align-items: center;
-  margin-bottom: var(--md-spacing-4);
+  margin-bottom: var(--md-spacing-5);
+  border-bottom: 1px solid var(--md-outline-variant); /* 墨晕细横线 */
+  padding-bottom: var(--md-spacing-2.5);
 }
 
-.blueprint-display__content .bp__section-icon {
-  width: 2rem;
-  height: 2rem;
-  background-color: var(--md-primary-container);
-  color: var(--md-on-primary-container);
-  border-radius: var(--md-radius-xs);
+.bp__section-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  background-color: var(--md-surface-container-low);
+  color: var(--md-primary-dark);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 2px; /* 木刻微直角 */
   display: flex;
   align-items: center;
   justify-content: center;
   margin-right: var(--md-spacing-3);
 }
 
-.blueprint-display__content .bp__section-title {
+.bp__section-title {
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
   font-size: var(--md-title-medium);
   font-weight: 700;
-  color: var(--md-on-surface);
+  color: var(--md-primary-dark);
+  letter-spacing: 0.05em;
 }
 
-.blueprint-display__content .bp__section-body {
-  color: var(--md-on-surface-variant);
-  line-height: 1.7;
+.bp__section-body {
+  color: var(--md-primary-dark);
+  line-height: 1.8;
 }
 
-.blueprint-display__content .bp__header {
-  text-align: center;
-  margin-bottom: var(--md-spacing-8);
-  padding: var(--md-spacing-6);
-  background-color: var(--md-primary);
-  border-radius: var(--md-radius-md);
-  color: var(--md-on-primary);
-}
-
-.blueprint-display__content .bp__header-title {
-  font-size: var(--md-headline-medium);
-  font-weight: 700;
-  margin-bottom: var(--md-spacing-4);
-}
-
-.blueprint-display__content .bp__header-badges {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--md-spacing-2);
-}
-
-.blueprint-display__content .bp__badge {
-  background-color: color-mix(in oklch, var(--md-on-primary) 15%, transparent);
-  padding: var(--md-spacing-1) var(--md-spacing-3);
-  border-radius: var(--md-radius-full);
-  font-size: var(--md-label-medium);
-  font-weight: 500;
-}
-
-.blueprint-display__content .bp__summary-highlight {
-  background-color: var(--md-surface-container-low);
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-sm);
+/* 梗概：温润竹纸笺条 */
+.bp__summary-highlight {
+  background-color: var(--md-surface-container-low); /* 温润竹纸色 */
+  border: 1.5px solid var(--md-outline);
+  border-radius: 2px;
   padding: var(--md-spacing-4);
-  margin-bottom: var(--md-spacing-4);
+  margin-bottom: var(--md-spacing-5);
+  position: relative;
 }
 
-.blueprint-display__content .bp__summary-label {
+.bp__summary-highlight::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3.5px;
+  background-color: var(--md-secondary); /* 朱砂细描红 */
+}
+
+.bp__summary-label {
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
   font-weight: 600;
-  color: var(--md-on-surface);
+  color: var(--md-primary-light);
   margin-bottom: var(--md-spacing-2);
+  letter-spacing: 0.05em;
+  font-size: var(--md-label-large);
 }
 
-.blueprint-display__content .bp__summary-quote {
-  font-size: var(--md-body-large);
-  font-style: italic;
-  color: var(--md-primary);
+.bp__summary-quote {
+  font-family: Noto Sans SC, sans-serif;
+  font-size: 16px;
+  line-height: 1.8;
+  font-weight: 500;
+  color: var(--md-primary-dark); /* 焦墨 */
+  font-style: normal;
+  text-indent: 1em;
 }
 
-.blueprint-display__content .bp__char-card {
+.bp__synopsis-text {
+  font-family: Noto Sans SC, sans-serif;
+  font-size: 15px;
+  line-height: 1.85;
+  color: var(--md-primary-light);
+  text-indent: 2em; /* 首行缩进 */
+}
+
+/* 世界设定：分栏挂轴与朱印 */
+.bp__world-rules {
+  background-color: var(--md-surface-container-low);
+  border: 1.5px solid var(--md-outline);
+  border-radius: 2px;
+  padding: var(--md-spacing-4.5);
+  margin-bottom: var(--md-spacing-5);
+}
+
+.bp__world-rules p {
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--md-primary-light);
+}
+
+.bp__world-rules-title {
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-weight: 700;
+  color: var(--md-primary-dark);
+  margin-bottom: var(--md-spacing-3);
+  display: flex;
+  align-items: center;
+  font-size: var(--md-title-small);
+}
+
+.bp__world-indicator {
+  color: var(--md-secondary);
+  font-weight: bold;
+  margin-right: 6px;
+  font-size: 10px;
+}
+
+.bp__world-group {
+  margin-bottom: var(--md-spacing-5);
+}
+
+.bp__world-group-title {
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-weight: 700;
+  color: var(--md-primary-dark);
+  margin-bottom: var(--md-spacing-3.5);
+  display: flex;
+  align-items: center;
+  border-bottom: 1.5px solid var(--md-outline-variant);
+  padding-bottom: var(--md-spacing-1.5);
+  font-size: var(--md-title-small);
+}
+
+.bp__world-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--md-spacing-4);
+}
+
+.bp__world-item {
   background-color: var(--md-surface-container-low);
   border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-sm);
+  border-radius: 2px;
   padding: var(--md-spacing-4);
-  margin-bottom: var(--md-spacing-3);
+  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.03);
 }
 
-.blueprint-display__content .bp__char-card-header {
+.bp__world-item-name {
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-weight: 700;
+  color: var(--md-primary-dark);
+  margin-bottom: var(--md-spacing-1.5);
+  font-size: 15px;
+}
+
+.bp__world-item-desc {
+  font-family: Noto Sans SC, sans-serif;
+  font-size: var(--md-body-small);
+  color: var(--md-primary-light);
+  line-height: 1.6;
+}
+
+/* 角色：碑拓生宣折叠卡 */
+.bp__char-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-4);
+}
+
+.bp__char-card {
+  background-color: var(--md-surface-container-low); /* 竹纸底衬 */
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 2px;
+  padding: var(--md-spacing-5.5) var(--md-spacing-5);
+  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.04);
+  transition: all 0.25s ease;
+}
+
+.bp__char-card:hover {
+  background-color: var(--md-surface);
+  border-color: var(--md-outline);
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.08);
+}
+
+.bp__char-card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  border-bottom: 1.5px solid var(--md-outline-variant);
+  padding-bottom: var(--md-spacing-2);
   margin-bottom: var(--md-spacing-3);
 }
 
-.blueprint-display__content .bp__char-name {
-  font-size: var(--md-title-small);
+.bp__char-name {
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-size: 17px;
   font-weight: 700;
-  color: var(--md-on-surface);
+  color: var(--md-primary-dark);
+  letter-spacing: 0.02em;
 }
 
-.blueprint-display__content .bp__char-role {
-  background-color: var(--md-primary-container);
-  color: var(--md-on-primary-container);
-  padding: 2px var(--md-spacing-2);
-  border-radius: var(--md-radius-full);
+.bp__char-role {
+  background-color: transparent;
+  border: 1px solid var(--md-secondary-light); /* 朱色印泥边框 */
+  color: var(--md-secondary);
+  padding: 2px var(--md-spacing-2.5);
+  border-radius: 1px; /* 方正印记 */
   font-size: var(--md-label-small);
-  font-weight: 500;
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-weight: 600;
+  line-height: 1.1;
+  box-shadow: 0.5px 0.5px 0px rgba(180, 50, 50, 0.08);
 }
 
-.blueprint-display__content .bp__char-fields {
+.bp__char-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); /* 自适应分栏 */
+  gap: var(--md-spacing-3);
+  margin-bottom: var(--md-spacing-3);
+}
+
+.bp__char-field {
+  background-color: var(--md-surface); /* 纯白生宣底托 */
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 2px;
+  padding: var(--md-spacing-2.5) var(--md-spacing-3.5);
+  font-size: 13.5px;
+  line-height: 1.6;
   display: flex;
   flex-direction: column;
-  gap: var(--md-spacing-2);
-  font-size: var(--md-body-small);
 }
 
-.blueprint-display__content .bp__char-field {
-  background-color: var(--md-surface);
-  border-radius: var(--md-radius-xs);
-  padding: var(--md-spacing-2) var(--md-spacing-3);
-}
-
-.blueprint-display__content .bp__char-field-label {
+.bp__char-field-label {
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
   font-weight: 600;
-  color: var(--md-on-surface);
-  display: block;
+  color: var(--md-primary-light);
   margin-bottom: 2px;
+  border-bottom: 1.5px solid var(--md-outline-variant);
+  align-self: flex-start;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  padding-bottom: 1px;
 }
 
-.blueprint-display__content .bp__char-desc {
-  font-size: var(--md-body-small);
-  color: var(--md-on-surface-variant);
+.bp__char-field-value {
+  color: var(--md-primary-dark);
   margin-top: var(--md-spacing-1);
 }
 
-.blueprint-display__content .bp__world-rules {
-  background-color: var(--md-surface-container-low);
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-sm);
-  padding: var(--md-spacing-4);
-  margin-bottom: var(--md-spacing-4);
-}
-
-.blueprint-display__content .bp__world-rules-title {
-  font-weight: 600;
-  color: var(--md-on-surface);
-  margin-bottom: var(--md-spacing-2);
-  display: flex;
-  align-items: center;
-}
-
-.blueprint-display__content .bp__world-group {
-  margin-bottom: var(--md-spacing-4);
-}
-
-.blueprint-display__content .bp__world-group-title {
-  font-weight: 600;
-  color: var(--md-on-surface);
-  margin-bottom: var(--md-spacing-3);
-  display: flex;
-  align-items: center;
-}
-
-.blueprint-display__content .bp__world-items {
-  display: flex;
-  flex-direction: column;
-  gap: var(--md-spacing-2);
-}
-
-.blueprint-display__content .bp__world-item {
-  background-color: var(--md-surface-container-low);
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-xs);
+.bp__char-desc {
+  font-family: Noto Sans SC, sans-serif;
+  font-size: 14px;
+  color: var(--md-primary-light);
+  background-color: var(--md-surface);
   padding: var(--md-spacing-3);
+  border-radius: 2px;
+  border: 1px dashed var(--md-outline-variant);
+  line-height: 1.65;
+  margin-top: var(--md-spacing-2);
 }
 
-.blueprint-display__content .bp__world-item-name {
-  font-weight: 600;
-  color: var(--md-on-surface);
+/* 关系：并蒂双生墨藤/青玉细墨线 */
+.bp__rel-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--md-spacing-4.5);
 }
 
-.blueprint-display__content .bp__world-item-desc {
-  font-size: var(--md-body-small);
-  color: var(--md-on-surface-variant);
-  margin-top: 2px;
-}
-
-.blueprint-display__content .bp__rel-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--md-spacing-3);
-}
-
-.blueprint-display__content .bp__rel-card {
+.bp__rel-card {
   background-color: var(--md-surface-container-low);
   border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-sm);
-  padding: var(--md-spacing-4);
+  border-radius: 2px;
+  padding: var(--md-spacing-5);
+  box-shadow: 1.5px 1.5px 0px rgba(28, 32, 34, 0.04);
 }
 
-.blueprint-display__content .bp__rel-pair {
+.bp__rel-pair {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--md-spacing-3);
-  margin-bottom: var(--md-spacing-2);
+  margin-bottom: var(--md-spacing-3);
+  position: relative;
 }
 
-.blueprint-display__content .bp__rel-name {
-  font-weight: 500;
-  color: var(--md-on-surface);
-  background-color: var(--md-surface);
-  padding: 2px var(--md-spacing-3);
-  border-radius: var(--md-radius-full);
-  font-size: var(--md-body-small);
-  border: 1px solid var(--md-outline-variant);
-}
-
-.blueprint-display__content .bp__rel-desc {
-  font-size: var(--md-body-small);
-  color: var(--md-on-surface-variant);
-  background-color: var(--md-surface);
-  border-radius: var(--md-radius-xs);
-  padding: var(--md-spacing-2) var(--md-spacing-3);
-}
-
-.blueprint-display__content .bp__rel-desc-label {
+.bp__rel-name {
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
   font-weight: 600;
+  color: var(--md-primary-dark);
+  background-color: var(--md-surface);
+  padding: 3px var(--md-spacing-4);
+  border-radius: 2px;
+  font-size: 14px;
+  border: 1px solid var(--md-outline);
+  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.08);
+  letter-spacing: 0.02em;
 }
 
-.blueprint-display__content .bp__chapters {
+.bp__rel-vine {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  min-width: 40px;
+}
+
+.bp__rel-vine-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background-color: var(--md-outline); /* 青玉细线 */
+}
+
+.bp__rel-leaf {
+  color: var(--md-secondary); /* 朱砂细印徽志 */
+  font-size: 8px;
+  line-height: 1;
+  z-index: 5;
+  background-color: var(--md-surface-container-low);
+  padding: 0 2px;
+}
+
+.bp__rel-leaf--left {
+  margin-left: 2px;
+}
+
+.bp__rel-leaf--right {
+  margin-right: 2px;
+}
+
+.bp__rel-desc {
+  font-family: Noto Sans SC, sans-serif;
+  font-size: 13.5px;
+  color: var(--md-primary-light);
+  background-color: var(--md-surface);
+  border-radius: 2px;
+  padding: var(--md-spacing-2.5) var(--md-spacing-3.5);
+  border: 1px solid var(--md-outline-variant);
+  line-height: 1.6;
+}
+
+.bp__rel-desc-label {
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-weight: 600;
+  color: var(--md-primary-dark);
+}
+
+/* 章节大纲：木刻牙筹/水墨编号 */
+.bp__chapters {
   display: flex;
   flex-direction: column;
-  gap: var(--md-spacing-3);
+  gap: var(--md-spacing-4);
 }
 
-.blueprint-display__content .bp__chapter-item {
+.bp__chapter-item {
   display: flex;
   align-items: flex-start;
-  gap: var(--md-spacing-3);
+  gap: var(--md-spacing-4);
   background-color: var(--md-surface-container-low);
   border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-sm);
-  padding: var(--md-spacing-4);
+  border-radius: 2px;
+  padding: var(--md-spacing-5) var(--md-spacing-5.5);
+  transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
 }
 
-.blueprint-display__content .bp__chapter-num {
+.bp__chapter-item:hover {
+  background-color: var(--md-surface);
+  border-color: var(--md-outline);
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.08);
+}
+
+.bp__chapter-num {
   flex-shrink: 0;
   width: 2.25rem;
-  height: 2.25rem;
-  background-color: var(--md-primary-container);
-  color: var(--md-on-primary-container);
-  border-radius: var(--md-radius-xs);
+  height: 3.25rem; /* 挂筹牙筹筹牌形状 */
+  background-color: var(--md-surface);
+  border: 1.5px solid var(--md-outline);
+  color: var(--md-primary-dark);
+  border-radius: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
   font-weight: 700;
-  font-size: var(--md-label-medium);
+  font-size: var(--md-label-large);
+  box-shadow: 1.5px 1.5px 0px rgba(28, 32, 34, 0.1);
+  position: relative;
+  box-sizing: border-box;
 }
 
-.blueprint-display__content .bp__chapter-title {
-  font-size: var(--md-title-small);
-  font-weight: 700;
-  color: var(--md-on-surface);
-  margin-bottom: var(--md-spacing-1);
+.bp__chapter-num::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  width: 4px;
+  height: 4px;
+  background-color: var(--md-secondary); /* 朱砂挂筹红绳印 */
+  border-radius: 50%;
 }
 
-.blueprint-display__content .bp__chapter-summary {
-  color: var(--md-on-surface-variant);
-  line-height: 1.6;
+.bp__chapter-num-text {
+  writing-mode: vertical-rl; /* 优雅的古风回目竖写 */
+  text-orientation: upright;
+  line-height: 1;
+  font-size: 11px;
+  margin-top: 5px;
+  letter-spacing: -2px;
+}
+
+.bp__chapter-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.bp__chapter-title {
+  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--md-primary-dark);
+  margin-bottom: var(--md-spacing-2);
+  letter-spacing: 0.02em;
+}
+
+.bp__chapter-summary {
+  font-family: Noto Sans SC, sans-serif;
+  color: var(--md-primary-light);
+  line-height: 1.8;
+  font-size: 14.5px;
+  text-indent: 2em; /* 首行缩进 */
 }
 </style>
+

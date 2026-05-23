@@ -1,7 +1,7 @@
 # AIMETA P=小说API_项目和章节管理|R=小说CRUD_章节管理|NR=不含内容生成|E=route:GET_POST_/api/novels/*|X=http|A=小说CRUD_章节|D=fastapi,sqlalchemy|S=db|RD=./README.ai
 import json
 import logging
-from typing import AsyncGenerator, Dict, List
+from typing import Any, AsyncGenerator, Dict, List
 
 from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
@@ -49,11 +49,88 @@ IMPORTANT: 你的回复必须是合法的 JSON 对象，并严格包含以下字
 不要输出额外的文本或解释。
 """
 
+BLUEPRINT_JSON_REPAIR_PROMPT = """
+你是 JSON 语法修复器。请把用户提供的小说蓝图内容修复为一个合法 JSON 对象。
+
+要求：
+1. 只修复 JSON 语法问题，例如缺逗号、未转义换行、Markdown 包裹、尾随说明文字。
+2. 不要改写剧情内容，不要新增解释，不要输出 Markdown。
+3. 输出必须是一个 JSON 对象，并保留这些顶层字段：
+title, target_audience, genre, style, tone, one_sentence_summary,
+full_synopsis, world_setting, characters, relationships, chapter_outline。
+"""
+
 
 def _ensure_prompt(prompt: str | None, name: str) -> str:
     if not prompt:
         raise HTTPException(status_code=500, detail=f"未配置名为 {name} 的提示词，请联系管理员")
     return prompt
+
+
+def _parse_json_object_from_llm_text(raw_text: str) -> Dict[str, Any]:
+    """按模型输出常见形态清洗并解析 JSON 对象。"""
+    normalized = unwrap_markdown_json(raw_text)
+    sanitized = sanitize_json_like_text(normalized)
+    parsed = json.loads(sanitized)
+    if not isinstance(parsed, dict):
+        raise ValueError("AI 返回的蓝图不是 JSON 对象")
+    return parsed
+
+
+async def _parse_blueprint_json_with_repair(
+    *,
+    project_id: str,
+    user_id: int,
+    llm_service: LLMService,
+    blueprint_raw: str,
+) -> Dict[str, Any]:
+    """先直接解析蓝图 JSON，失败后让模型只做一次语法修复。"""
+    parse_error: Exception
+    try:
+        return _parse_json_object_from_llm_text(blueprint_raw)
+    except (json.JSONDecodeError, ValueError) as first_exc:
+        parse_error = first_exc
+        logger.warning(
+            "项目 %s 蓝图 JSON 首次解析失败，尝试自动修复: %s\n原始响应片段: %s",
+            project_id,
+            parse_error,
+            blueprint_raw[:500],
+        )
+
+    repair_input = f"""
+下面是一段 AI 生成的小说蓝图，但它不是合法 JSON。
+请只修复 JSON 语法，不要解释。
+
+解析错误：
+{parse_error}
+
+待修复内容：
+{blueprint_raw}
+""".strip()
+
+    try:
+        repaired_raw = await llm_service.get_llm_response(
+            system_prompt=BLUEPRINT_JSON_REPAIR_PROMPT,
+            conversation_history=[{"role": "user", "content": repair_input}],
+            temperature=0.0,
+            user_id=user_id,
+            timeout=180.0,
+            stage="world_blueprint",
+        )
+        repaired_raw = remove_think_tags(repaired_raw)
+        return _parse_json_object_from_llm_text(repaired_raw)
+    except Exception as repair_exc:
+        logger.error(
+            "项目 %s 蓝图 JSON 自动修复失败: first_error=%s repair_error=%s\n修复输入片段: %s",
+            project_id,
+            parse_error,
+            repair_exc,
+            blueprint_raw[:500],
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"蓝图生成失败，AI 返回的内容格式不正确，自动修复也未成功。错误详情: {str(parse_error)}"
+        ) from repair_exc
 
 
 class StreamingJSONFieldExtractor:
@@ -459,23 +536,12 @@ async def generate_blueprint(
     )
     blueprint_raw = remove_think_tags(blueprint_raw)
 
-    blueprint_normalized = unwrap_markdown_json(blueprint_raw)
-    blueprint_sanitized = sanitize_json_like_text(blueprint_normalized)
-    try:
-        blueprint_data = json.loads(blueprint_sanitized)
-    except json.JSONDecodeError as exc:
-        logger.error(
-            "项目 %s 蓝图生成 JSON 解析失败: %s\n原始响应: %s\n标准化后: %s\n清洗后: %s",
-            project_id,
-            exc,
-            blueprint_raw[:500],
-            blueprint_normalized[:500],
-            blueprint_sanitized[:500],
-        )
-        raise HTTPException(
-            status_code=500,
-            detail=f"蓝图生成失败，AI 返回的内容格式不正确。请重试或联系管理员。错误详情: {str(exc)}"
-        ) from exc
+    blueprint_data = await _parse_blueprint_json_with_repair(
+        project_id=project_id,
+        user_id=current_user.id,
+        llm_service=llm_service,
+        blueprint_raw=blueprint_raw,
+    )
 
     blueprint = Blueprint(**blueprint_data)
     is_inspiration_flow = novel_service.is_unfinished_inspiration_project(project)

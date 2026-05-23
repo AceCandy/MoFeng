@@ -3,8 +3,7 @@
   <div class="space-y-6">
     <div
       v-if="showGeneratedBanner"
-      class="md-card md-card-filled p-4 version-ready"
-      style="border-radius: var(--md-radius-lg)"
+      class="md-card md-card-filled p-4 version-ready m3-version-notice-box"
       role="status"
       aria-live="polite"
       aria-atomic="true"
@@ -35,8 +34,7 @@
 
     <div
       v-if="versionNotice"
-      :class="['md-card md-card-filled p-4 version-notice', `version-notice--${versionNotice.tone}`]"
-      style="border-radius: var(--md-radius-lg)"
+      :class="['md-card md-card-filled p-4 version-notice m3-version-notice-box', `version-notice--${versionNotice.tone}`]"
       :role="versionNotice.tone === 'error' ? 'alert' : 'status'"
       :aria-live="versionNotice.tone === 'error' ? 'assertive' : 'polite'"
       aria-atomic="true"
@@ -103,7 +101,7 @@
     </div>
 
     <!-- 版本选择器 -->
-    <div class="md-card md-card-outlined p-4" style="border-radius: var(--md-radius-xl)">
+    <div class="md-card md-card-outlined p-4 m3-version-container">
       <div class="flex items-center justify-between mb-4">
         <h4 class="md-title-medium font-semibold">
           {{ availableVersions.length > 1 ? '选择版本' : '生成内容' }}
@@ -156,8 +154,7 @@
                   <path
                     fill-rule="evenodd"
                     d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clip-rule="evenodd"
-                  ></path>
+                    clip-rule="evenodd"></path>
                 </svg>
                 <span v-else>{{ index + 1 }}</span>
               </div>
@@ -171,7 +168,7 @@
                   <span>{{ version.style || '标准' }}风格</span>
                   <span
                     v-if="isCurrentVersion(index)"
-                    style="color: var(--md-success); font-weight: 600"
+                    class="m3-version-current-label"
                     >• 当前选中</span
                   >
                 </div>
@@ -216,8 +213,7 @@
             <path
               fill-rule="evenodd"
               d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-              clip-rule="evenodd"
-            ></path>
+              clip-rule="evenodd"></path>
           </svg>
           {{ evaluatingChapter === selectedChapter?.chapter_number ? '评审中...' : 'AI 评审' }}
         </button>
@@ -240,8 +236,7 @@
             <path
               fill-rule="evenodd"
               d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-              clip-rule="evenodd"
-            ></path>
+              clip-rule="evenodd"></path>
           </svg>
           <span v-else>
             {{ isCurrentVersion(selectedVersionIndex) ? '当前版本' : '确认选择此版本' }}
@@ -470,7 +465,7 @@ const parseMarkdown = (text: string): string => {
   parsed = parsed.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>')
   parsed = parsed.replace(
     /^([A-Z])\)\s*\*\*(.*?)\*\*(.*)/gm,
-    '<div class="mb-2"><span class="inline-flex items-center justify-center w-6 h-6 text-sm font-semibold rounded-full mr-2" style="background-color: var(--md-primary-container); color: var(--md-on-primary-container);">$1</span><strong>$2</strong>$3</div>',
+    '<div class="mb-2"><span class="inline-flex items-center justify-center w-6 h-6 text-sm font-semibold rounded-full mr-2 m3-eval-badge">$1</span><strong>$2</strong>$3</div>',
   )
   parsed = parsed.replace(/\n/g, '<br>')
   parsed = parsed.replace(/(<br\s*\/?>\s*){2,}/g, '</p><p class="mt-2">')
@@ -484,14 +479,20 @@ const parseMarkdown = (text: string): string => {
 </script>
 
 <style scoped>
+.m3-version-notice-box {
+  border-radius: var(--md-radius-sm) !important;
+  border-color: var(--md-outline) !important;
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.05) !important;
+}
+
 .version-ready {
-  border: 1px solid color-mix(in srgb, var(--md-success) 28%, var(--md-outline-variant));
+  border: 1px solid color-mix(in srgb, var(--md-success) 28%, var(--md-outline-variant)) !important;
   background:
     linear-gradient(
       135deg,
       color-mix(in srgb, var(--md-success-container) 70%, var(--md-surface)),
       color-mix(in srgb, var(--md-surface) 94%, transparent)
-    );
+    ) !important;
 }
 
 .version-ready__title {
@@ -545,43 +546,50 @@ const parseMarkdown = (text: string): string => {
 }
 
 .version-notice--error {
-  background-color: var(--md-error-container);
-  color: var(--md-on-error-container);
+  background-color: var(--md-error-container) !important;
+  color: var(--md-on-error-container) !important;
 }
 
 .version-notice--error .version-notice__icon {
-  background-color: var(--md-error);
-  color: var(--md-on-error);
+  background-color: var(--md-error) !important;
+  color: var(--md-on-error) !important;
 }
 
 .version-notice--secondary {
-  background-color: var(--md-secondary-container);
-  color: var(--md-on-secondary-container);
+  background-color: var(--md-secondary-container) !important;
+  color: var(--md-on-secondary-container) !important;
 }
 
 .version-notice--secondary .version-notice__icon {
-  background-color: var(--md-secondary);
-  color: var(--md-on-secondary);
+  background-color: var(--md-secondary) !important;
+  color: var(--md-on-secondary) !important;
 }
 
 .version-notice--warning {
-  background-color: var(--md-warning-container);
-  color: var(--md-on-warning-container);
+  background-color: var(--md-warning-container) !important;
+  color: var(--md-on-warning-container) !important;
 }
 
 .version-notice--warning .version-notice__icon {
-  background-color: color-mix(in srgb, var(--md-warning) 70%, var(--md-surface));
-  color: var(--md-on-warning-container);
+  background-color: color-mix(in srgb, var(--md-warning) 70%, var(--md-surface)) !important;
+  color: var(--md-on-warning-container) !important;
 }
 
 .version-notice--primary {
-  background-color: var(--md-primary-container);
-  color: var(--md-on-primary-container);
+  background-color: var(--md-primary-container) !important;
+  color: var(--md-on-primary-container) !important;
 }
 
 .version-notice--primary .version-notice__icon {
-  background-color: var(--md-primary);
-  color: var(--md-on-primary);
+  background-color: var(--md-primary) !important;
+  color: var(--md-on-primary) !important;
+}
+
+.m3-version-container {
+  border-radius: var(--md-radius-sm) !important;
+  border-color: var(--md-outline) !important;
+  background-color: var(--md-surface-dim) !important;
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.08) !important;
 }
 
 .version-grid {
@@ -617,9 +625,9 @@ const parseMarkdown = (text: string): string => {
 }
 
 .m3-version-card {
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-lg);
-  background-color: var(--md-surface);
+  border: 1px solid var(--md-outline-variant) !important;
+  border-radius: var(--md-radius-sm) !important;
+  background-color: var(--md-surface) !important;
   outline: none;
   transition:
     background-color var(--md-duration-medium) var(--md-easing-standard),
@@ -628,24 +636,34 @@ const parseMarkdown = (text: string): string => {
 }
 
 .m3-version-card:hover {
-  background-color: var(--md-surface-container-low);
-  border-color: var(--md-outline);
+  background-color: var(--md-surface-container-low) !important;
+  border-color: var(--md-outline) !important;
 }
 
 .m3-version-card:focus-visible {
-  outline: 2px solid var(--md-primary);
-  outline-offset: 2px;
+  outline: 2px solid var(--md-primary) !important;
+  outline-offset: 2px !important;
 }
 
 .m3-version-selected {
-  border-color: var(--md-primary);
-  background-color: color-mix(in srgb, var(--md-primary-container) 72%, var(--md-surface));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--md-primary) 35%, transparent);
+  border-color: var(--md-primary) !important;
+  background-color: color-mix(in srgb, var(--md-primary-container) 12%, var(--md-surface)) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--md-primary) 35%, transparent) !important;
 }
 
 .m3-version-current {
-  border-color: var(--md-success);
-  background-color: var(--md-success-container);
+  border-color: var(--md-success) !important;
+  background-color: var(--md-success-container) !important;
+}
+
+.m3-version-current-label {
+  color: var(--md-success) !important;
+  font-weight: 600;
+}
+
+.m3-eval-badge {
+  background-color: var(--md-primary-container) !important;
+  color: var(--md-on-primary-container) !important;
 }
 
 @media (max-width: 640px) {

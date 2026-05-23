@@ -9,7 +9,7 @@
       :aria-labelledby="dialogTitleId"
     >
       <!-- 弹窗头部 -->
-      <div class="flex items-center justify-between p-6 border-b" style="border-bottom-color: var(--md-outline-variant);">
+      <div class="flex items-center justify-between p-6 border-b m3-detail-dialog__header">
         <div>
           <h3 :id="dialogTitleId" class="md-headline-small font-semibold">版本详情</h3>
           <p class="md-body-small md-on-surface-variant mt-1">
@@ -36,16 +36,16 @@
       <!-- 弹窗内容 -->
       <div class="p-6 overflow-y-auto max-h-[60vh]">
         <div class="prose max-w-none">
-          <div class="whitespace-pre-wrap leading-relaxed" style="color: var(--md-on-surface);">
+          <div class="whitespace-pre-wrap leading-relaxed m3-detail-dialog__content">
             {{ cleanVersionContent(version?.content || '') }}
           </div>
         </div>
       </div>
 
       <!-- 弹窗底部操作按钮 -->
-      <div class="flex items-center justify-between p-6 border-t" style="border-top-color: var(--md-outline-variant); background-color: var(--md-surface-container-low);">
+      <div class="flex items-center justify-between p-6 border-t m3-detail-dialog__footer">
         <div class="md-body-small md-on-surface-variant">
-          <span v-if="isCurrent" class="md-chip" style="background-color: var(--md-success-container); color: var(--md-on-success-container);">
+          <span v-if="isCurrent" class="md-chip m3-version-active-stamp">
             <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
             </svg>
@@ -154,6 +154,35 @@ useDialogA11y({
 .m3-detail-dialog {
   max-width: min(900px, calc(100vw - 32px));
   max-height: calc(var(--app-viewport-unit) - 32px);
-  border-radius: var(--md-radius-xl);
+  border-radius: var(--md-radius-md);
+  border: 3px double var(--md-outline);
+  background-color: var(--md-surface);
+  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.15);
+}
+
+.m3-detail-dialog__header {
+  border-bottom-color: var(--md-outline-variant) !important;
+}
+
+.m3-detail-dialog__content {
+  color: var(--md-on-surface) !important;
+  font-family: var(--md-font-family);
+}
+
+.m3-detail-dialog__footer {
+  border-top-color: var(--md-outline-variant) !important;
+  background-color: var(--md-surface-container-low) !important;
+}
+
+.m3-version-active-stamp {
+  background-color: var(--md-secondary) !important;
+  color: var(--md-on-secondary) !important;
+  border-radius: var(--md-radius-xs) !important;
+  border: 1px solid var(--md-secondary-dark) !important;
+  font-family: STSong, Songti SC, serif;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.15) !important;
 }
 </style>

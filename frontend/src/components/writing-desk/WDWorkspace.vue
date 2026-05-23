@@ -263,8 +263,7 @@
       >
         <!-- 模态框头部 -->
         <div
-          class="flex items-center justify-between p-6 border-b"
-          style="border-bottom-color: var(--md-outline-variant)"
+          class="flex items-center justify-between p-6 border-b m3-editor-dialog__header"
         >
           <h3 :id="editDialogTitleId" class="md-title-large font-semibold">
             编辑第{{ selectedChapterNumber }}章内容
@@ -306,8 +305,7 @@
 
         <!-- 模态框底部 -->
         <div
-          class="flex items-center justify-end gap-3 p-6 border-t"
-          style="border-top-color: var(--md-outline-variant)"
+          class="flex items-center justify-end gap-3 p-6 border-t m3-editor-dialog__footer"
         >
           <button
             type="button"
@@ -331,7 +329,7 @@
             >
               <path
                 fill-rule="evenodd"
-                d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-1-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
                 clip-rule="evenodd"
               ></path>
             </svg>
@@ -1164,21 +1162,19 @@ const currentComponentProps = computed(() => {
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  border-radius: var(--md-radius-xl);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--md-surface) 96%, transparent),
-      color-mix(in srgb, var(--md-surface-container-low) 82%, transparent)
-    );
-  border-color: color-mix(in srgb, var(--md-outline-variant) 82%, transparent);
+  border-radius: 0 !important; /* 方直古籍 */
+  background: var(--md-surface);
+  /* 极致国风脑洞：工作区熟宣纹理 */
+  background-image: repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.006) 0px, rgba(28, 32, 34, 0.006) 1px, transparent 1px, transparent 36px);
+  border: 3px double var(--md-outline) !important;
+  box-shadow: 3px 3px 0px var(--md-outline);
 }
 
 .writing-workspace__header {
   flex-shrink: 0;
   padding: var(--md-spacing-4) var(--md-spacing-5);
-  border-bottom: 1px solid var(--md-outline-variant);
-  background-color: color-mix(in srgb, var(--md-surface) 92%, var(--md-surface-container-low));
+  border-bottom: 1px dashed var(--md-outline);
+  background-color: var(--md-surface-container-low);
 }
 
 .writing-workspace__header-row {
@@ -1204,54 +1200,65 @@ const currentComponentProps = computed(() => {
 .writing-workspace__chapter-no {
   flex-shrink: 0;
   font-size: clamp(1.2rem, 1.8vw, 1.45rem);
+  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  letter-spacing: 0.05em;
 }
 
+/* 极致国风脑洞：将状态标签改造为方直“金石印章方印” */
 .writing-workspace__status-tag {
   display: inline-flex;
   align-items: center;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: 7px;
-  border: 1px solid transparent;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 0 !important; /* 强制去圆角 */
+  border: 1.5px solid transparent;
   font-size: var(--md-label-small);
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-weight: bold;
+  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  letter-spacing: 0.05em;
   white-space: nowrap;
 }
 
+/* 竹青阴刻 */
 .writing-workspace__status-tag--success {
-  color: color-mix(in srgb, var(--md-success) 78%, var(--md-on-surface));
-  background-color: color-mix(in srgb, var(--md-success-container) 78%, var(--md-surface));
-  border-color: color-mix(in srgb, var(--md-success) 26%, var(--md-outline-variant));
+  color: #ffffff;
+  background-color: #3f6c5d;
+  border-color: #2b5043;
+  box-shadow: 1px 1px 0px rgba(63, 108, 93, 0.25);
 }
 
+/* 赭红阴刻 */
 .writing-workspace__status-tag--error {
-  color: color-mix(in srgb, var(--md-error) 80%, var(--md-on-surface));
-  background-color: color-mix(in srgb, var(--md-error-container) 74%, var(--md-surface));
-  border-color: color-mix(in srgb, var(--md-error) 24%, var(--md-outline-variant));
+  color: #ffffff;
+  background-color: #b83c32;
+  border-color: #8c2820;
+  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.25);
 }
 
+/* 朱砂阳刻（红底白字或红边红字） */
 .writing-workspace__status-tag--progress {
-  color: color-mix(in srgb, var(--md-primary-dark) 80%, var(--md-on-surface));
-  background-color: color-mix(in srgb, var(--md-primary-container) 78%, var(--md-surface));
-  border-color: color-mix(in srgb, var(--md-primary) 24%, var(--md-outline-variant));
+  color: var(--md-secondary);
+  background-color: rgba(184, 60, 50, 0.05);
+  border-color: var(--md-secondary);
+  box-shadow: 1.5px 1.5px 0px rgba(184, 60, 50, 0.15);
 }
 
 .writing-workspace__status-tag--pending {
-  color: color-mix(in srgb, var(--md-secondary) 72%, var(--md-on-surface));
-  background-color: color-mix(in srgb, var(--md-secondary-container) 74%, var(--md-surface));
-  border-color: color-mix(in srgb, var(--md-secondary) 20%, var(--md-outline-variant));
+  color: #b83c32;
+  background-color: rgba(184, 60, 50, 0.03);
+  border-color: #8c2820;
 }
 
 .writing-workspace__status-tag--idle {
   color: var(--md-on-surface-variant);
-  background-color: color-mix(in srgb, var(--md-surface-container-low) 90%, var(--md-surface));
-  border-color: color-mix(in srgb, var(--md-outline-variant) 82%, transparent);
+  background-color: var(--md-surface-container-low);
+  border-color: var(--md-outline);
 }
 
 .writing-workspace__chapter-inline-meta {
   white-space: nowrap;
   letter-spacing: 0.01em;
+  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
 }
 
 .writing-workspace__title-copy {
@@ -1266,27 +1273,34 @@ const currentComponentProps = computed(() => {
   text-overflow: ellipsis;
   cursor: pointer;
   appearance: none;
-  transition: color var(--md-duration-short) var(--md-easing-standard);
+  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-weight: bold;
+  letter-spacing: 0.02em;
+  transition: color 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .writing-workspace__title-copy:hover {
-  color: var(--md-primary-dark);
+  color: var(--md-secondary);
+  text-decoration: underline;
 }
 
 .writing-workspace__title-copy:focus-visible {
-  outline: 2px solid var(--md-primary);
+  outline: 2.5px solid var(--md-secondary);
   outline-offset: 3px;
-  border-radius: var(--md-radius-xs);
+  border-radius: 0 !important;
 }
 
 .writing-workspace__summary {
   max-width: 88ch;
   line-height: 1.6;
-  color: color-mix(in srgb, var(--md-on-surface-variant) 86%, transparent);
+  color: var(--md-on-surface-variant);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-style: italic;
+  opacity: 0.85;
 }
 
 .writing-workspace__toolbar {
@@ -1335,34 +1349,59 @@ const currentComponentProps = computed(() => {
 .writing-workspace__toolbar-divider {
   width: 1px;
   height: 20px;
-  background-color: color-mix(in srgb, var(--md-outline-variant) 72%, transparent);
+  background-color: var(--md-outline);
 }
 
+/* 极致国风脑洞：工具栏按钮的直角古朴金石风骨 */
 .writing-workspace__tool-btn {
-  min-height: 36px;
-  height: 36px;
-  padding-inline: 10px;
-  border-radius: 8px;
+  min-height: 32px;
+  height: 32px;
+  padding-inline: 12px;
+  border-radius: 0 !important; /* 去除圆角 */
   font-size: var(--md-label-medium);
-  letter-spacing: 0.015em;
-  box-shadow: none;
+  letter-spacing: 0.05em;
+  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-weight: 600;
+  border: 1px solid var(--md-outline);
+  box-shadow: 1.5px 1.5px 0px var(--md-outline);
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Hover 状态 */
+.writing-workspace__tool-btn:hover:not(:disabled) {
+  transform: translate(-0.5px, -0.5px);
+  box-shadow: 2px 2px 0px var(--md-outline);
+  background-color: var(--md-surface-container-low);
+}
+
+/* 脑洞：Active 点击时产生用力向下一压的钤印重力反馈 */
+.writing-workspace__tool-btn:active:not(:disabled) {
+  transform: translate(1.5px, 1.5px) !important;
+  box-shadow: 0px 0px 0px var(--md-outline) !important;
 }
 
 .writing-workspace__tool-btn--hero {
-  height: 40px;
-  min-height: 40px;
+  height: 38px;
+  min-height: 38px;
   padding-inline: 16px;
   font-size: var(--md-title-small);
-  font-weight: 600;
-  border-width: 1px;
+  font-weight: bold;
+  border: 1.5px solid var(--md-outline) !important;
+  box-shadow: 2px 2px 0px var(--md-outline);
 }
 
-@media (pointer: coarse) {
-  .writing-workspace__tool-btn,
-  .writing-workspace__tool-btn--hero {
-    min-height: 44px;
-    height: 44px;
-  }
+.writing-workspace__tool-btn--hero:hover:not(:disabled) {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px var(--md-outline);
+}
+
+.writing-workspace__tool-btn--hero:active:not(:disabled) {
+  transform: translate(1.5px, 1.5px) !important;
+  box-shadow: 0.5px 0.5px 0px var(--md-outline) !important;
+}
+
+.writing-workspace__label-full {
+  display: inline;
 }
 
 .writing-workspace__label-short {
@@ -1370,42 +1409,44 @@ const currentComponentProps = computed(() => {
 }
 
 .writing-workspace__tool-btn--ghost {
-  border-color: color-mix(in srgb, var(--md-outline-variant) 56%, transparent);
+  border-color: var(--md-outline);
   color: var(--md-on-surface-variant);
   background-color: transparent;
+  box-shadow: 1px 1px 0px var(--md-outline);
 }
 
 .writing-workspace__tool-btn--ghost:hover:not(:disabled) {
-  color: var(--md-on-surface);
-  background-color: color-mix(in srgb, var(--md-surface-container-low) 62%, var(--md-surface));
-  border-color: color-mix(in srgb, var(--md-outline) 84%, transparent);
+  color: var(--md-secondary);
+  border-color: var(--md-secondary);
+  background-color: rgba(184, 60, 50, 0.02);
+  box-shadow: 1.5px 1.5px 0px var(--md-secondary);
+}
+
+.writing-workspace__tool-btn--ghost:active:not(:disabled) {
+  box-shadow: 0px 0px 0px var(--md-secondary) !important;
 }
 
 .writing-workspace__tool-btn--secondary {
-  border-color: color-mix(in srgb, var(--md-primary) 18%, var(--md-outline-variant));
-  background-color: color-mix(in srgb, var(--md-surface-container-low) 72%, var(--md-surface));
+  border-color: var(--md-outline) !important;
+  background-color: var(--md-surface);
   color: var(--md-on-surface);
 }
 
-.writing-workspace__tool-btn--secondary.writing-workspace__tool-btn--hero {
-  border-color: color-mix(in srgb, var(--md-primary) 24%, var(--md-outline-variant));
-  box-shadow: var(--md-elevation-1);
-}
-
 .writing-workspace__tool-btn--primary {
-  border-color: color-mix(in srgb, var(--md-primary) 26%, var(--md-outline-variant));
-  background-color: color-mix(in srgb, var(--md-primary-container) 90%, var(--md-surface));
-  color: var(--md-on-primary-container);
+  border-color: var(--md-secondary) !important;
+  background-color: rgba(184, 60, 50, 0.05);
+  color: var(--md-secondary);
+  box-shadow: 2px 2px 0px var(--md-secondary);
 }
 
 .writing-workspace__tool-btn--primary:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--md-primary-container) 95%, var(--md-surface));
-  box-shadow: var(--md-elevation-2);
+  background-color: rgba(184, 60, 50, 0.09);
+  box-shadow: 3px 3px 0px var(--md-secondary);
+  border-color: var(--md-secondary) !important;
 }
 
-.writing-workspace__tool-btn--primary.writing-workspace__tool-btn--hero {
-  border-color: color-mix(in srgb, var(--md-primary) 32%, var(--md-outline-variant));
-  box-shadow: var(--md-elevation-2);
+.writing-workspace__tool-btn--primary:active:not(:disabled) {
+  box-shadow: 0px 0px 0px var(--md-secondary) !important;
 }
 
 .writing-workspace__more-menu {
@@ -1413,96 +1454,66 @@ const currentComponentProps = computed(() => {
   display: none;
 }
 
-.writing-workspace__more-menu-panel {
+/* 极致国风脑洞：下拉菜单重塑为方直“折页折扇”宣纸面板 */
+.writing-workspace__more-menu-panel,
+.writing-workspace__ai-menu-panel {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 6px);
   right: 0;
-  z-index: 8;
-  min-width: 148px;
-  padding: 6px;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--md-outline-variant) 86%, transparent);
-  background: color-mix(in srgb, var(--md-surface) 94%, var(--md-surface-container-low));
-  box-shadow: var(--md-elevation-2);
-}
-
-.writing-workspace__more-menu-item {
-  display: block;
-  width: 100%;
-  min-height: 44px;
-  padding: 10px 12px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  text-align: left;
-  font-size: var(--md-label-medium);
-  color: var(--md-on-surface);
-  cursor: pointer;
-  transition:
-    background-color var(--md-duration-short) var(--md-easing-standard),
-    color var(--md-duration-short) var(--md-easing-standard);
-}
-
-.writing-workspace__more-menu-item:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--md-primary-dark) 10%, transparent);
-}
-
-.writing-workspace__more-menu-item:focus-visible {
-  outline: 2px solid var(--md-primary);
-  outline-offset: 2px;
-}
-
-.writing-workspace__ai-menu {
-  position: relative;
+  z-index: 48;
+  min-width: 156px;
+  padding: 4px;
+  border-radius: 0 !important; /* 强制直角 */
+  border: 2px solid var(--md-outline) !important;
+  background: var(--md-surface);
+  box-shadow: 3px 3px 0px var(--md-outline);
+  animation: ink-menu-slide 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .writing-workspace__ai-menu-panel {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 8;
-  min-width: 176px;
-  padding: 6px;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--md-outline-variant) 86%, transparent);
-  background: color-mix(in srgb, var(--md-surface) 94%, var(--md-surface-container-low));
-  box-shadow: 0 10px 20px rgba(24, 38, 58, 0.14);
+  min-width: 180px;
 }
 
+/* 极致国风脑洞：菜单项 Hover 水墨吸水徐徐晕开淡染 */
+.writing-workspace__more-menu-item,
 .writing-workspace__ai-menu-item {
   display: block;
   width: 100%;
-  min-height: 44px;
-  padding: 10px 12px;
+  min-height: 38px;
+  padding: 8px 12px;
   border: 0;
-  border-radius: 7px;
+  border-radius: 0 !important;
   background: transparent;
   text-align: left;
   font-size: var(--md-label-medium);
+  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-weight: 600;
   color: var(--md-on-surface);
   cursor: pointer;
-  transition:
-    background-color var(--md-duration-short) var(--md-easing-standard),
-    color var(--md-duration-short) var(--md-easing-standard);
+  transition: background-color 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.writing-workspace__more-menu-item:hover:not(:disabled),
 .writing-workspace__ai-menu-item:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--md-primary-dark) 10%, transparent);
+  background-color: rgba(184, 60, 50, 0.08) !important; /* 朱砂慢晕淡染 */
+  color: var(--md-secondary);
 }
 
+.writing-workspace__more-menu-item:focus-visible,
 .writing-workspace__ai-menu-item:focus-visible {
-  outline: 2px solid var(--md-primary);
-  outline-offset: 2px;
+  outline: 1.5px solid var(--md-secondary);
+  background-color: rgba(184, 60, 50, 0.04);
 }
 
 .writing-workspace__ai-menu-item--danger {
-  color: color-mix(in srgb, var(--md-error) 82%, var(--md-on-surface));
+  color: #b83c32;
 }
 
 .writing-workspace__ai-menu-item--danger:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--md-error) 12%, transparent);
+  background-color: rgba(184, 60, 50, 0.12) !important;
 }
 
+/* 极致国风脑洞：正文区融入古典竹青淡墨横线信笺格背景 */
 .writing-workspace__content {
   flex: 1;
   min-height: 0;
@@ -1511,14 +1522,16 @@ const currentComponentProps = computed(() => {
   display: flex;
   flex-direction: column;
   gap: var(--md-spacing-4);
+  background-color: var(--md-surface);
   background-image: linear-gradient(
     180deg,
-    transparent 0,
-    transparent calc(1.6em - 1px),
-    color-mix(in srgb, var(--md-outline-variant) 14%, transparent) calc(1.6em - 1px),
-    color-mix(in srgb, var(--md-outline-variant) 14%, transparent) 1.6em
+    transparent 0px,
+    transparent calc(1.85em - 1px),
+    rgba(63, 108, 93, 0.09) calc(1.85em - 1px),
+    rgba(63, 108, 93, 0.09) 1.85em
   );
-  background-size: 100% 1.6em;
+  background-size: 100% 1.85em;
+  line-height: 1.85em;
 }
 
 .writing-workspace__body {
@@ -1528,7 +1541,42 @@ const currentComponentProps = computed(() => {
 .m3-editor-dialog {
   max-width: min(1200px, calc(100vw - 32px));
   max-height: calc(var(--app-viewport-unit) - 32px);
-  border-radius: var(--md-radius-xl);
+  border-radius: 0 !important; /* 强制方直 */
+  border: 3px double var(--md-outline) !important;
+  background-color: var(--md-surface) !important;
+  box-shadow: 4px 4px 0px var(--md-outline) !important;
+}
+
+.m3-editor-dialog__header {
+  border-bottom: 1px dashed var(--md-outline) !important;
+  background-color: var(--md-surface-container-low);
+  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+}
+
+.m3-editor-dialog__header h3 {
+  font-weight: bold;
+  letter-spacing: 0.05em;
+}
+
+.m3-editor-dialog__footer {
+  border-top: 1px dashed var(--md-outline) !important;
+  background-color: var(--md-surface-container-low) !important;
+}
+
+.md-textarea {
+  border-radius: 0 !important;
+  border: 1px solid var(--md-outline) !important;
+  background-color: var(--md-surface) !important;
+  font-family: var(--md-font-family);
+  font-size: var(--md-body-large);
+  line-height: 1.7;
+  padding: 12px;
+}
+
+.md-textarea:focus {
+  border-color: var(--md-secondary) !important;
+  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.2) !important;
+  outline: none;
 }
 
 @media (max-width: 1160px) {
@@ -1603,6 +1651,22 @@ const currentComponentProps = computed(() => {
 
   .writing-workspace__content {
     padding: var(--md-spacing-4);
+  }
+}
+
+/* 极致国风脑洞：折页折扇徐徐挂下、模糊渐变清晰的宣纸舒展 */
+@keyframes ink-menu-slide {
+  from {
+    opacity: 0;
+    transform: scaleY(0.8) translateY(-8px);
+    filter: blur(4px);
+    transform-origin: top right;
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1) translateY(0);
+    filter: blur(0);
+    transform-origin: top right;
   }
 }
 </style>
