@@ -7,7 +7,7 @@
       "primary": {
         "role": "primary",
         "displayName": "焦墨",
-        "canonical": "oklch(22% 0.01 240)",
+        "canonical": "#4d6b97",
         "tonalRamp": ["#111415", "#1C2022", "#2B3134", "#3A4648", "#556265", "#778588", "#C2B69D", "#FAF6ED"]
       },
       "secondary": {
@@ -19,10 +19,29 @@
       "surface": {
         "role": "surface",
         "displayName": "熟宣纸白",
-        "canonical": "oklch(97% 0.006 80)",
-        "tonalRamp": ["#F6F0E0", "#FAF6ED", "#FAF7E8", "#FDFDFB", "#FFFFFF"]
+        "canonical": "#fbfaf7",
+        "tonalRamp": ["#F6F0E0", "#FAF6ED", "#FAF7E8", "#FDFDFB", "#FBFAF7"]
+      },
+      "background": {
+        "role": "background",
+        "displayName": "安静纸底",
+        "canonical": "#f4f0e9",
+        "tonalRamp": ["#ECE4D6", "#F4F0E9", "#FBFAF7"]
+      },
+      "on-surface": {
+        "role": "on-surface",
+        "displayName": "案头墨色",
+        "canonical": "#1f2530",
+        "tonalRamp": ["#111415", "#1F2530", "#556265"]
+      },
+      "error": {
+        "role": "error",
+        "displayName": "温丹砂",
+        "canonical": "#b85c58",
+        "tonalRamp": ["#7F2F2B", "#B85C58", "#F8E8E6"]
       }
     },
+    "northStar": "安静写作台",
     "typographyMeta": {
       "display": {
         "displayName": "碑拓大字",
@@ -68,7 +87,7 @@
       "refersTo": "card",
       "description": "模拟古典线装古籍特有的粗细双边线与宣纸微黄底面，呈现极其大气的人文仪式感。",
       "html": "<div class=\"ds-card-book\"><div class=\"ds-card-book-content\"><h3>第一章 问剑</h3><p>风止，雨歇。少年按剑立于古碑之前，碑上苔痕斑驳，隐现雷文。AI 辅助已就绪，随时可泼墨挥毫...</p></div></div>",
-      "css": ".ds-card-book { background: #FAF6ED; color: #1C2224; border: 3px double #C2B69D; border-radius: 4px; padding: 24px; font-family: 'STSong', 'Songti SC', serif; box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.15); transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1); } .ds-card-book:hover { border-color: #B83C32; box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.2); } .ds-card-book h3 { font-size: 20px; font-weight: 600; margin-top: 0; margin-bottom: 12px; letter-spacing: 0.05em; color: #1C2022; } .ds-card-book p { font-size: 14px; line-height: 1.8; color: #556265; margin: 0; }"
+      "css": ".ds-card-book { background: #FAF6ED; color: #1C2224; border: 3px double #C2B69D; border-radius: 4px; padding: 24px; font-family: 'STSong', 'Songti SC', serif; box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.15); transition: border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1); } .ds-card-book:hover { border-color: #B83C32; box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.2); } .ds-card-book h3 { font-size: 20px; font-weight: 600; margin-top: 0; margin-bottom: 12px; letter-spacing: 0.05em; color: #1C2022; } .ds-card-book p { font-size: 14px; line-height: 1.8; color: #556265; margin: 0; }"
     },
     {
       "name": "朱砂金石印鉴 Badge",
@@ -84,7 +103,7 @@
       "refersTo": "button-primary",
       "description": "墨风沉稳的主动作按钮。微窄直角，带微弱竹青极细描边，点击如焦墨落纸般笃定。",
       "html": "<button class=\"ds-btn-primary\">保存书卷</button>",
-      "css": ".ds-btn-primary { background: #1C2022; color: #FAF6ED; border: 1px solid #C2B69D; border-radius: 2px; padding: 10px 24px; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; cursor: pointer; transition: all 0.24s cubic-bezier(0.22, 1, 0.36, 1); box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.15); } .ds-btn-primary:hover { background: #3A4648; box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.2); }"
+      "css": ".ds-btn-primary { background: #1C2022; color: #FAF6ED; border: 1px solid #C2B69D; border-radius: 2px; padding: 10px 24px; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; cursor: pointer; transition: background-color 0.24s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.24s cubic-bezier(0.22, 1, 0.36, 1); box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.15); } .ds-btn-primary:hover { background: #3A4648; box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.2); }"
     },
     {
       "name": "石青按钮 (Tonal)",
@@ -92,7 +111,7 @@
       "refersTo": "button-tonal",
       "description": "石青辅按钮，专用于 AI 分层优化、智能大纲等激发灵感的协作性高亮操作。",
       "html": "<button class=\"ds-btn-ai\">AI分层优化</button>",
-      "css": ".ds-btn-ai { background: #2E5C8A; color: #FFFFFF; border: 1px solid #1C2022; border-radius: 2px; padding: 10px 24px; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; cursor: pointer; transition: all 0.24s cubic-bezier(0.22, 1, 0.36, 1); box-shadow: 1px 1px 0px rgba(46, 92, 138, 0.25); } .ds-btn-ai:hover { background: #3A72AA; box-shadow: 2px 2px 0px rgba(46, 92, 138, 0.35); }"
+      "css": ".ds-btn-ai { background: #2E5C8A; color: #FAF6ED; border: 1px solid #1C2022; border-radius: 2px; padding: 10px 24px; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; cursor: pointer; transition: background-color 0.24s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.24s cubic-bezier(0.22, 1, 0.36, 1); box-shadow: 1px 1px 0px rgba(46, 92, 138, 0.25); } .ds-btn-ai:hover { background: #3A72AA; box-shadow: 2px 2px 0px rgba(46, 92, 138, 0.35); }"
     }
   ],
   "narrative": {
@@ -112,7 +131,7 @@
       },
       {
         "name": "The Xuan Paper Warmth Rule",
-        "body": "所有章节长正文、段落优化器和 AI 评审生成内容，其底色必须为熟宣纸色 (#FAF6ED) 或竹纸暖黄 (#FAF7E8)。严禁使用纯白 (#FFFFFF) 或高饱和度的彩色背景承载文字，以此守护作家的生理阅读疲劳极限。",
+        "body": "所有章节长正文、段落优化器和 AI 评审生成内容，其底色必须为熟宣纸色 (#FAF6ED) 或竹纸暖黄 (#FAF7E8)。严禁使用纯白或高饱和度的彩色背景承载文字，以此守护作家的生理阅读疲劳极限。",
         "section": "colors"
       },
       {

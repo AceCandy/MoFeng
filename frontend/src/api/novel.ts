@@ -271,6 +271,7 @@ export interface Chapter {
   chapter_number: number
   title: string
   summary: string
+  real_summary?: string | null
   content: string | null
   versions: string[] | null  // versions是字符串数组，不是对象数组
   evaluation: string | null

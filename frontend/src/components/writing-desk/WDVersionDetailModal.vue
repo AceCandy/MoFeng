@@ -179,7 +179,7 @@ useDialogA11y({
   color: var(--md-on-secondary) !important;
   border-radius: var(--md-radius-xs) !important;
   border: 1px solid var(--md-secondary-dark) !important;
-  font-family: STSong, Songti SC, serif;
+  font-family: var(--md-font-serif);
   font-weight: bold;
   letter-spacing: 0.05em;
   padding: 2px 6px;

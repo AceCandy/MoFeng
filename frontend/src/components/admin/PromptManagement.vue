@@ -551,7 +551,7 @@ const createPrompt = async () => {
 }
 
 .prompt-textarea :deep(textarea) {
-  font-family: 'Fira Code', 'JetBrains Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
+  font-family: var(--md-font-mono);
   font-size: 14px;
   line-height: 1.5;
 }

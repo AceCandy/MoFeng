@@ -408,7 +408,7 @@
                     type="checkbox"
                     :checked="Boolean(chatModelForName(provider.id, modelName)?.is_enabled)"
                     :disabled="!provider.is_enabled"
-                    aria-label="启用文本生成模型"
+                    :aria-label="`启用文本生成模型 ${modelName}`"
                     @change="toggleChatModel(provider, modelName, $event)"
                   />
                   <input
@@ -422,7 +422,7 @@
                       )
                     "
                     :disabled="!provider.is_enabled"
-                    aria-label="选择向量模型"
+                    :aria-label="`选择向量模型 ${modelName}`"
                     @change="selectEmbeddingModel(provider, modelName)"
                   />
                 </label>
@@ -1749,7 +1749,13 @@ defineExpose({
   background: var(--md-surface-container);
   color: var(--md-on-surface);
   box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.04);
-  transition: all var(--md-duration-short) var(--md-easing-standard);
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard),
+    opacity var(--md-duration-short) var(--md-easing-standard),
+    transform var(--md-duration-short) var(--md-easing-standard);
   cursor: default;
 }
 
@@ -1765,12 +1771,8 @@ defineExpose({
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--md-body-small);
-  transition: padding var(--md-duration-short) var(--md-easing-standard);
+  padding-right: 18px; /* 固定右内边距，为删除按钮预留空间，静止稳定且无 layout-transition 隐患 */
   flex: 1 1 0%;
-}
-
-.model-routing__selected-chip:hover > span.model-routing__chip-name {
-  padding-right: 18px;
 }
 
 .model-routing__selected-chip .model-routing__stamp-label {
@@ -1781,7 +1783,7 @@ defineExpose({
   padding: 1px 4px;
   background: var(--md-secondary, #B83C32);
   color: var(--md-on-primary, #FAF6ED);
-  font-family: var(--md-font-display, STSong, serif);
+  font-family: var(--md-font-display);
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
@@ -1853,7 +1855,13 @@ defineExpose({
   justify-content: center;
   opacity: 0;
   pointer-events: none;
-  transition: all var(--md-duration-short) var(--md-easing-standard);
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard),
+    opacity var(--md-duration-short) var(--md-easing-standard),
+    transform var(--md-duration-short) var(--md-easing-standard);
   border-radius: var(--md-radius-full);
 }
 
@@ -1880,7 +1888,13 @@ defineExpose({
   font-weight: 600;
   white-space: nowrap;
   opacity: 0.35;
-  transition: all var(--md-duration-short) var(--md-easing-standard);
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard),
+    opacity var(--md-duration-short) var(--md-easing-standard),
+    transform var(--md-duration-short) var(--md-easing-standard);
   background: transparent;
   color: var(--md-on-surface-variant);
   z-index: 2;
@@ -1924,7 +1938,13 @@ defineExpose({
   font-weight: 600;
   white-space: nowrap;
   opacity: 0.25;
-  transition: all var(--md-duration-short) var(--md-easing-standard);
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard),
+    opacity var(--md-duration-short) var(--md-easing-standard),
+    transform var(--md-duration-short) var(--md-easing-standard);
   z-index: 2;
 }
 
@@ -2113,14 +2133,20 @@ defineExpose({
   border-radius: var(--md-radius-xs) !important;
   background: var(--md-secondary, #B83C32) !important;
   color: var(--md-on-primary, #FAF6ED) !important;
-  font-family: var(--md-font-label, sans-serif);
+  font-family: var(--md-font-label);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.05em;
   height: 34px;
   padding: 0 16px;
   box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.25);
-  transition: all var(--md-duration-short) var(--md-easing-standard);
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard),
+    opacity var(--md-duration-short) var(--md-easing-standard),
+    transform var(--md-duration-short) var(--md-easing-standard);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -2151,13 +2177,19 @@ defineExpose({
   border-radius: var(--md-radius-xs) !important;
   background: transparent !important;
   color: var(--md-primary, #1C2022) !important;
-  font-family: var(--md-font-label, sans-serif);
+  font-family: var(--md-font-label);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.02em;
   height: 34px;
   padding: 0 16px;
-  transition: all var(--md-duration-short) var(--md-easing-standard);
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard),
+    opacity var(--md-duration-short) var(--md-easing-standard),
+    transform var(--md-duration-short) var(--md-easing-standard);
   cursor: pointer;
   display: inline-flex;
   align-items: center;

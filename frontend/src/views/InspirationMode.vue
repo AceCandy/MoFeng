@@ -936,7 +936,12 @@ onUnmounted(() => {
   border: 1px solid transparent;
   background-color: transparent;
   opacity: 0.38; /* 未激活时悬空墨淡 */
-  transition: all var(--md-duration-medium) var(--md-easing-standard);
+  transition:
+    background-color var(--md-duration-medium) var(--md-easing-standard),
+    border-color var(--md-duration-medium) var(--md-easing-standard),
+    box-shadow var(--md-duration-medium) var(--md-easing-standard),
+    opacity var(--md-duration-medium) var(--md-easing-standard),
+    transform var(--md-duration-medium) var(--md-easing-standard);
   transform: scale(0.97);
 }
 
@@ -963,7 +968,13 @@ onUnmounted(() => {
   color: var(--md-on-surface-variant);
   border: 1px solid var(--md-outline-variant);
   flex-shrink: 0;
-  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    background-color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .ledger-item.is-active .ledger-item__seal {
@@ -990,7 +1001,7 @@ onUnmounted(() => {
 
 .ledger-item__desc {
   margin: 0;
-  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important; /* 楷体 */
+  font-family: var(--md-font-kai) !important; /* 楷体 */
   font-size: 13px;
   line-height: 1.5;
   color: var(--md-on-surface-variant);
@@ -1003,7 +1014,7 @@ onUnmounted(() => {
   padding-top: var(--md-spacing-4);
   border-top: 1px dashed var(--md-outline-variant);
   color: var(--md-outline);
-  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-family: var(--md-font-kai) !important;
   font-size: 12px;
   letter-spacing: 0.08em;
   user-select: none;
@@ -1149,9 +1160,15 @@ onUnmounted(() => {
   gap: 4px !important;
   color: var(--md-on-surface-variant) !important;
   font-size: var(--md-label-medium) !important;
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-weight: 700 !important;
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
   background: transparent !important;
   border: none !important;
   cursor: pointer !important;
@@ -1232,12 +1249,18 @@ onUnmounted(() => {
   place-items: center;
   cursor: pointer;
   position: relative;
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
   box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.08) !important;
 }
 
 .timeline-node-seal {
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-size: 10px !important;
   font-weight: 700 !important;
   line-height: 1 !important;
@@ -1265,12 +1288,18 @@ onUnmounted(() => {
   box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.12) !important;
   padding: 6px 12px !important;
   border-radius: var(--md-radius-xs) !important;
-  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-family: var(--md-font-kai) !important;
   font-size: 13px !important;
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
   z-index: 100;
 }
 
@@ -1360,7 +1389,7 @@ onUnmounted(() => {
 
 /* 古风文字运墨状态呼吸 */
 .inspiration-loading-text {
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-size: 14px !important;
   font-weight: 600 !important;
   color: var(--md-on-surface-variant) !important;

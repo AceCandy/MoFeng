@@ -16,8 +16,10 @@ describe('NovelDetailShell heading semantics', () => {
       '<h2 class="detail-shell__title md-title-large truncate" style="color: var(--md-on-surface)"',
     )
     expect(source).toContain('{{ formattedTitle }}')
-    expect(source).toContain('<button class="md-btn md-btn-outlined md-ripple" @click="goBack">')
-    expect(source).toContain('<button v-if="!isAdmin" class="md-btn md-btn-filled md-ripple" @click="goToWritingDesk">')
+    expect(source).toContain('detail-shell__back-button')
+    expect(source).toContain('detail-shell__write-button')
+    expect(source).toContain('detail-shell__write-label-full')
+    expect(source).toContain('detail-shell__write-label-compact')
     expect(source).toContain('<h2>{{ formattedTitle }}</h2>')
   })
 })

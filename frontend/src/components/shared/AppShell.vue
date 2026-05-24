@@ -571,7 +571,7 @@ onUnmounted(() => {
 /* 昼模式印章：翠玉竹青色，彰显清新白昼 */
 .app-shell__action-badge.is-theme-light {
   background-color: var(--md-success, #3b7a57) !important;
-  color: #ffffff !important;
+  color: var(--md-on-success) !important;
   border: 1px solid var(--md-outline) !important;
   box-shadow: 1.5px 1.5px 0px rgba(59, 122, 87, 0.25) !important;
   transform: rotate(2deg) !important;
@@ -580,7 +580,7 @@ onUnmounted(() => {
 /* 夜模式印章：深沉朱砂红，代表静谧深夜 */
 .app-shell__action-badge.is-theme-dark {
   background-color: var(--md-secondary, #b83c32) !important;
-  color: #ffffff !important;
+  color: var(--md-on-secondary) !important;
   border: 1px solid var(--md-outline) !important;
   box-shadow: 1.5px 1.5px 0px rgba(184, 60, 50, 0.25) !important;
   transform: rotate(-1.5deg) !important;
@@ -602,20 +602,24 @@ onUnmounted(() => {
 .app-shell__top-action-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  height: 32px;
-  padding: 0 14px;
-  border-radius: 2px !important; /* 碑拓直直风骨，微圆 */
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: var(--md-radius-xs) !important;
   border: 1px solid var(--md-outline) !important;
   background-color: var(--md-primary) !important; /* 焦墨底色 */
   color: var(--md-on-primary) !important; /* 熟宣字色 */
-  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-family: var(--md-font-serif);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.08em;
   cursor: pointer;
   box-shadow: 1.5px 1.5px 0px rgba(28, 32, 34, 0.2);
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  transition:
+    background-color 0.2s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1),
+    transform 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .app-shell__top-action-btn:hover {

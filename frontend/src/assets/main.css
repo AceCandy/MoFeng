@@ -1,9 +1,5 @@
 /* AIMETA P=主CSS_全局样式和Tailwind导入|R=全局样式_Tailwind|NR=不含组件样式|E=-|X=internal|A=全局样式|D=tailwindcss|S=dom|RD=./README.ai */
 @import 'tailwindcss';
-@import "@fontsource/noto-serif-sc/400.css";
-@import "@fontsource/noto-serif-sc/500.css";
-@import "@fontsource/noto-serif-sc/600.css";
-@import "@fontsource/noto-serif-sc/700.css";
 
 @plugin "@tailwindcss/typography";
 
@@ -30,7 +26,7 @@
   --md-primary-dark: #111415; /* 漆黑 */
   --md-on-primary: #faf6ed; /* 熟宣 */
   --md-primary-container: #2e5c8a; /* 石青 */
-  --md-on-primary-container: #ffffff;
+  --md-on-primary-container: #faf6ed;
 
   /* Secondary (朱砂) */
   --md-secondary: #b83c32; /* 朱砂 */
@@ -61,8 +57,8 @@
   --md-outline-variant: #dcd2be; /* 墨晕 */
 
   /* Semantic colors */
-  --md-error: #c0392b; /* 丹砂红 */
-  --md-error-strong: #962d22;
+  --md-error: #b85c58; /* 温丹砂 */
+  --md-error-strong: #9e4a47;
   --md-error-container: #fbebea;
   --md-error-text: #7f2f2b;
   --md-error-container-text: #643431;
@@ -82,7 +78,7 @@
   --md-warning-container-text: #5f4a24;
   --md-on-warning: #332710;
   --md-on-warning-container: #5f4a24;
-  
+
   --md-scrim: rgba(28, 32, 34, 0.4);
   --md-scrim-soft: rgba(28, 32, 34, 0.25);
   --md-state-layer-hover: rgba(28, 32, 34, 0.05);
@@ -99,10 +95,14 @@
   --md-tint-success: rgba(59, 122, 87, 0.03);
   --md-tint-warm: rgba(230, 162, 60, 0.03);
 
-  /* Typography */
-  --md-font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Noto Serif CJK SC', 'STSong', 'Songti SC', serif;
-  --md-font-display: 'Noto Serif SC', 'Source Han Serif SC', 'Noto Serif CJK SC', 'STSong', 'Songti SC', serif;
-  --md-font-mono: 'JetBrains Mono', 'Consolas', monospace;
+  /* Typography roles */
+  --md-font-serif: 'Noto Serif SC', 'Source Han Serif SC', 'Noto Serif CJK SC', 'STSong', 'Songti SC', 'SimSun', serif;
+  --md-font-sans: var(--md-font-serif);
+  --md-font-kai: var(--md-font-serif);
+  --md-font-family: var(--md-font-serif);
+  --md-font-display: var(--md-font-serif);
+  --md-font-label: var(--md-font-serif);
+  --md-font-mono: var(--md-font-serif);
 
   /* Type scale */
   --md-display-large: 48px;
@@ -408,7 +408,7 @@ h6 {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 22px;
   border: 1px solid transparent;
   border-radius: var(--md-radius-xs); /* 2px 极窄直角 */
@@ -532,7 +532,11 @@ h6 {
   color: var(--md-on-surface-variant);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all var(--md-duration-short) var(--md-easing-standard);
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard);
 }
 
 .md-icon-btn:hover:not(:disabled) {
@@ -554,7 +558,12 @@ h6 {
   color: var(--md-on-primary);
   box-shadow: var(--md-shadow-primary-2);
   cursor: pointer;
-  transition: all var(--md-duration-medium) var(--md-easing-standard);
+  transition:
+    background-color var(--md-duration-medium) var(--md-easing-standard),
+    border-color var(--md-duration-medium) var(--md-easing-standard),
+    box-shadow var(--md-duration-medium) var(--md-easing-standard),
+    color var(--md-duration-medium) var(--md-easing-standard),
+    transform var(--md-duration-medium) var(--md-easing-standard);
 }
 
 .md-fab:hover:not(:disabled) {
@@ -664,7 +673,11 @@ h6 {
   font-family: var(--md-font-family);
   font-size: var(--md-body-large);
   color: var(--md-on-surface);
-  transition: all var(--md-duration-short) var(--md-easing-standard);
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard);
   outline: none;
 }
 
@@ -716,7 +729,11 @@ h6 {
   font-size: var(--md-body-large);
   color: var(--md-on-surface);
   line-height: 1.8;
-  transition: all var(--md-duration-short) var(--md-easing-standard);
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard);
   outline: none;
 }
 
@@ -756,7 +773,11 @@ h6 {
   color: var(--md-on-surface-variant);
   cursor: pointer;
   position: relative;
-  transition: all var(--md-duration-short) var(--md-easing-standard);
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard);
   text-decoration: none;
 }
 
@@ -813,7 +834,11 @@ h6 {
   font-weight: 500;
   cursor: pointer;
   position: relative;
-  transition: all var(--md-duration-short) var(--md-easing-standard);
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard);
   text-decoration: none;
   text-align: left;
 }
@@ -861,8 +886,11 @@ h6 {
 /* Tabs */
 .md-tabs {
   display: flex;
+  flex-wrap: wrap;
+  gap: var(--md-spacing-2);
   border-bottom: 1px solid var(--md-outline-variant);
-  background-color: var(--md-surface);
+  background-color: transparent;
+  padding-bottom: var(--md-spacing-2);
 }
 
 .md-tab {
@@ -871,38 +899,58 @@ h6 {
   justify-content: center;
   gap: 8px;
   min-width: 90px;
-  height: 48px;
+  min-height: 44px;
   padding: 0 16px;
-  border: none;
-  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-surface-container-low);
   color: var(--md-on-surface-variant);
   font-size: var(--md-title-small);
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
   position: relative;
+  white-space: nowrap;
   transition:
     background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
     color var(--md-duration-short) var(--md-easing-standard);
 }
 
 .md-tab:hover {
-  background-color: color-mix(in srgb, var(--md-primary-dark) 8%, transparent);
+  border-color: var(--md-outline);
+  background-color: var(--md-surface);
   color: var(--md-primary-dark);
+  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.08);
+}
+
+.md-tab:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
+.md-tab:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow: none;
 }
 
 .md-tab.active {
+  border-color: var(--md-outline);
+  background-color: var(--md-surface);
   color: var(--md-primary-dark);
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.12);
 }
 
 .md-tab.active::after {
   content: '';
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background-color: var(--md-primary);
-  border-radius: 3px 3px 0 0;
+  left: 8px;
+  right: 8px;
+  bottom: -3px;
+  height: 2px;
+  background-color: var(--md-secondary);
+  border-radius: var(--md-radius-xs);
 }
 
 /* ============================================
@@ -922,7 +970,11 @@ h6 {
   background-color: var(--md-surface-dim);
   border: 1px solid var(--md-outline-variant);
   color: var(--md-on-surface-variant);
-  transition: all var(--md-duration-short) var(--md-easing-standard);
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard);
   user-select: none;
 }
 
@@ -968,15 +1020,15 @@ button.md-chip,
   color: var(--md-on-surface-variant);
 }
 
-/* 
-   朱砂金石方印 (Vermilion Seal Stamp Tag) 
+/*
+   朱砂金石方印 (Vermilion Seal Stamp Tag)
    为章节审核状态（如已发布、已保存、已完成）打上高古的落款。
 */
 .ds-seal {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: 'STKaiti', 'Kaiti SC', 'STSong', serif; /* 古典批注楷体 */
+  font-family: var(--md-font-kai); /* 古典批注楷体 */
   font-size: var(--md-label-medium);
   font-weight: 600;
   color: var(--md-secondary); /* 朱砂红 */
@@ -996,7 +1048,7 @@ button.md-chip,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: 'STKaiti', 'Kaiti SC', 'STSong', serif;
+  font-family: var(--md-font-kai);
   font-size: var(--md-label-medium);
   font-weight: 600;
   color: var(--md-on-primary); /* 熟宣白 */
@@ -1008,7 +1060,7 @@ button.md-chip,
   box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.2);
 }
 
-/* 触控防范热区 (Touch Target Expansion) 
+/* 触控防范热区 (Touch Target Expansion)
    为精致的古典小标签提供 44px * 44px 的隐式触控响应热区，
    在完全不影响其中式精致小巧物理外观的同时，极大地提升移动端或触屏的点击友好性与 WCAG 无障碍合规性。
 */
@@ -1733,7 +1785,7 @@ button.md-chip,
 }
 
 .app-shell--project-context {
-  grid-template-columns: 72px minmax(0, 1fr);
+  grid-template-columns: 1fr;
   height: var(--app-viewport-unit) !important;
   max-height: var(--app-viewport-unit) !important;
   overflow: hidden !important;
@@ -1784,9 +1836,7 @@ button.md-chip,
   font-size: var(--md-label-medium);
 }
 
-.app-shell--project-context .app-shell__topbar {
-  display: none;
-}
+
 
 .app-shell--project-context .app-shell__main {
   height: 100% !important;
@@ -2031,12 +2081,10 @@ button.md-chip,
     content: none;
   }
 
-  .app-shell--project-context .app-shell__topbar {
-    display: flex;
-  }
+
 
   .app-shell--project-context .app-shell__content {
-    padding: clamp(var(--md-spacing-4), 3vw, var(--md-spacing-8));
+    padding: 0 !important;
   }
 
   .app-shell__mobile-backdrop {
@@ -2204,7 +2252,7 @@ button.md-chip,
    ============================================ */
 .loader {
   border: 4px solid var(--md-surface-container-highest);
-  border-top: 4px solid var(--md-primary);
+  border-top-color: var(--md-primary) !important;
   border-radius: 50%;
   width: 40px;
   height: 40px;
@@ -2268,19 +2316,23 @@ body .chapter-paper {
   border-radius: var(--md-radius-xs) !important;
   border: 3px double var(--md-outline) !important;
   padding: var(--md-spacing-8) !important;
-  background: 
+  background:
     /* 纵向朱砂红信笺界格（38px 循环，高雅轻透明度，护眼润字） */
     repeating-linear-gradient(90deg, transparent, transparent 38px, rgba(184, 60, 50, 0.04) 38px, rgba(184, 60, 50, 0.05) 40px),
     /* 熟宣色温润底色 */
     linear-gradient(var(--md-surface), var(--md-surface)) !important;
   background-attachment: local !important;
   box-shadow: var(--md-elevation-1) !important;
-  transition: all var(--md-duration-medium) var(--md-easing-standard);
+  transition:
+    background-color var(--md-duration-medium) var(--md-easing-standard),
+    border-color var(--md-duration-medium) var(--md-easing-standard),
+    box-shadow var(--md-duration-medium) var(--md-easing-standard),
+    color var(--md-duration-medium) var(--md-easing-standard);
 }
 
 /* 深夜书房暗色模式自适应朱红暗化 */
 :root[data-theme='dark'] body .chapter-paper {
-  background: 
+  background:
     /* 暗砂红格线 */
     repeating-linear-gradient(90deg, transparent, transparent 38px, rgba(140, 36, 28, 0.16) 38px, rgba(140, 36, 28, 0.22) 40px),
     /* 焦墨深夜底色 */
@@ -2290,8 +2342,9 @@ body .chapter-paper {
 /* 章节正文古宋体碑拓骨力展现 */
 body .chapter-prose {
   font-family: var(--md-font-display) !important;
+  font-size: 18px !important;
   letter-spacing: 0.035em !important;
-  font-weight: 500 !important; /* 稿纸正文使用饱满清晰的 500 Medium */
+  font-weight: 600 !important; /* 稿纸正文使用稳重清晰的 600 SemiBold */
   color: var(--md-on-surface) !important;
   max-width: 72ch !important;
   line-height: 2 !important;
@@ -2372,7 +2425,7 @@ body .md-textarea:focus {
   width: 3px !important;
   background-color: var(--md-outline) !important;
   opacity: 0.45 !important;
-  transition: 
+  transition:
     background-color var(--md-duration-short) var(--md-easing-standard),
     opacity var(--md-duration-short) !important;
 }
@@ -2398,7 +2451,7 @@ body .md-textarea:focus {
   border-radius: var(--md-radius-xs) !important;
   border: 1px solid var(--md-outline) !important;
   box-shadow: none !important;
-  transition: 
+  transition:
     border-color var(--md-duration-short) var(--md-easing-standard),
     background-color var(--md-duration-short) var(--md-easing-standard),
     box-shadow var(--md-duration-short) !important;
@@ -2511,7 +2564,7 @@ body .md-textarea:focus {
 .m3-preview-metric,
 .writing-desk-assistant-shell .md-body-medium,
 .writing-desk-assistant-shell .md-body-small {
-  font-family: 'STKaiti', 'Kaiti SC', 'Kaiti TC', 'Kaiti', 'Noto Sans SC', sans-serif !important;
+  font-family: var(--md-font-kai) !important;
 }
 
 /* 批注卡片点缀 */
@@ -2528,7 +2581,7 @@ body .md-spinner,
   height: 44px !important;
   border-radius: 50% !important;
   /* 阴阳太极图案的纯 CSS 渐变实现 */
-  background: 
+  background:
     radial-gradient(circle at 50% 25%, var(--md-primary) 12%, transparent 12%),
     radial-gradient(circle at 50% 75%, var(--md-on-primary) 12%, transparent 12%),
     radial-gradient(circle at 50% 25%, var(--md-on-primary) 25%, transparent 25%),
@@ -2555,7 +2608,7 @@ body .md-spinner,
 body,
 .writing-desk-page {
   /* 空灵山水重雾与飞洒墨迹风竹矢量 (内联轻量 SVG 1.4% 白天超轻柔透明度，极具风骨) */
-  background-image: 
+  background-image:
     /* 左上角与右下角：水墨远山云雾的径向渐变模糊 */
     radial-gradient(circle at 5% 10%, rgba(28, 32, 34, 0.05), transparent 45%),
     radial-gradient(circle at 95% 85%, rgba(46, 92, 138, 0.035), transparent 50%),
@@ -2570,7 +2623,7 @@ body,
 /* 深夜书房暗色模式自适应变暗为黛青焦墨竹影风痕 */
 :root[data-theme='dark'] body,
 :root[data-theme='dark'] .writing-desk-page {
-  background-image: 
+  background-image:
     radial-gradient(circle at 5% 10%, rgba(13, 16, 17, 0.6), transparent 50%),
     radial-gradient(circle at 95% 85%, rgba(46, 92, 138, 0.08), transparent 55%),
     /* 暗色模式下焦墨金石风痕 */
@@ -2602,7 +2655,7 @@ body,
 .writing-sidebar__chapter-row--compact-selected {
   border: 1px solid rgba(184, 60, 50, 0.35) !important;
   /* 宣纸纤维墨拓渐变底纹 */
-  background: 
+  background:
     linear-gradient(135deg, rgba(28, 32, 34, 0.065) 0%, rgba(28, 32, 34, 0.015) 100%),
     repeating-linear-gradient(45deg, rgba(28, 32, 34, 0.01) 0px, rgba(28, 32, 34, 0.01) 1px, transparent 1px, transparent 4px),
     var(--md-surface) !important;
@@ -2614,7 +2667,7 @@ body,
 /* 暗色模式下选中项自适应 */
 :root[data-theme='dark'] .writing-sidebar__chapter-row--compact-selected {
   border: 1px solid rgba(140, 36, 28, 0.45) !important;
-  background: 
+  background:
     linear-gradient(135deg, rgba(229, 222, 201, 0.07) 0%, rgba(229, 222, 201, 0.01) 100%),
     var(--md-surface) !important;
 }
@@ -2655,7 +2708,7 @@ body .chapter-paper {
   width: 100% !important;
   box-sizing: border-box !important;
   position: relative !important;
-  background: 
+  background:
     /* 顶部紫檀木压纸镇尺 (8px 深褐木色压条) */
     linear-gradient(180deg, #2b211a 0px, #2b211a 8px, transparent 8px),
     /* 左右两道朱红信笺笺边线 */
@@ -2675,7 +2728,7 @@ body .chapter-paper {
 }
 
 :root[data-theme='dark'] body .chapter-paper {
-  background: 
+  background:
     linear-gradient(180deg, #1b1612 0px, #1b1612 8px, transparent 8px),
     linear-gradient(90deg, rgba(140, 36, 28, 0.2) 0px, rgba(140, 36, 28, 0.2) 2px, transparent 2px, transparent calc(100% - 2px), rgba(140, 36, 28, 0.2) calc(100% - 2px)),
     linear-gradient(90deg, transparent 33%, rgba(13, 16, 17, 0.18) 33.3%, rgba(255, 255, 255, 0.02) 33.5%, transparent 35%, transparent 65%, rgba(13, 16, 17, 0.18) 65.3%, rgba(255, 255, 255, 0.02) 65.5%, transparent 67%),
@@ -2686,19 +2739,26 @@ body .chapter-paper {
   background-position: top center, center, center, center, center, center !important;
 }
 
-/* 稿纸起笔：朱砂钤印首字下沉 */
-body .chapter-prose p:first-of-type::first-letter {
+/* 稿纸起笔：强制首段首行缩进为0，完美缝合下沉首字闲章间隙 */
+body .chapter-prose p:first-of-type {
+  text-indent: 0 !important;
+}
+
+/* 稿纸起笔：朱砂钤印首字下沉（inline-block 底部对齐方案，首行与印章底边齐平，后续行正常全宽排列） */
+body .chapter-prose .first-stamp-char {
   font-family: var(--md-font-display) !important;
   font-size: 2.85rem !important;
-  float: left !important;
+  display: inline-block !important;
+  vertical-align: bottom !important;
   line-height: 1 !important;
   padding: 6px 7px 5px 7px !important;
-  margin-right: 12px !important;
-  margin-top: 4px !important;
+  margin-right: 10px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
   color: var(--md-secondary) !important;
   font-weight: 700 !important;
   /* 钤印朱泥磨砂背景：径向磨砂杂质效果 */
-  background: 
+  background:
     radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.35) 2%, transparent 8%),
     radial-gradient(circle at 75% 65%, rgba(255, 255, 255, 0.25) 3%, transparent 10%),
     linear-gradient(135deg, rgba(184, 60, 50, 0.09) 0%, rgba(184, 60, 50, 0.04) 100%),
@@ -2709,13 +2769,12 @@ body .chapter-prose p:first-of-type::first-letter {
   box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.15) !important;
   /* 天然错位斜印 */
   transform: rotate(-3deg) !important;
-  display: inline-block !important;
 }
 
 /* 暗色模式首字钤印适配 */
-:root[data-theme='dark'] body .chapter-prose p:first-of-type::first-letter {
+:root[data-theme='dark'] body .chapter-prose .first-stamp-char {
   color: var(--md-primary) !important;
-  background: 
+  background:
     linear-gradient(135deg, rgba(156, 51, 43, 0.28) 0%, rgba(156, 51, 43, 0.15) 100%),
     rgba(156, 51, 43, 0.1) !important;
   border-color: rgba(156, 51, 43, 0.6) !important;
@@ -2755,7 +2814,7 @@ body .chapter-prose p:first-of-type::first-letter {
 .writing-desk-assistant-shell .chat-bubble-ai,
 .writing-desk-assistant-shell .chat-bubble-ai p {
   color: var(--md-secondary) !important; /* 批红 */
-  font-family: 'STKaiti', 'Kaiti SC', 'Kaiti', sans-serif !important;
+  font-family: var(--md-font-kai) !important;
   font-size: var(--md-body-medium) !important;
   line-height: 1.75 !important;
   letter-spacing: 0.04em !important;
@@ -2784,37 +2843,16 @@ body .chapter-prose p:first-of-type::first-letter {
 
 /* 整个工作台大边框装饰 */
 .writing-desk-layout-wrap {
-  border: 1px solid #2b211a !important;
-  border-radius: var(--md-radius-xs) !important;
+  border: none !important; /* 彻底去除大边框黑线 */
   position: relative !important;
   background-color: transparent !important;
 }
 
-/* 纯 CSS 伪元素雕刻的古典“直角黄铜书角扣” */
-.writing-desk-layout-wrap::before {
-  content: '' !important;
-  position: absolute !important;
-  top: -1px !important;
-  left: -1px !important;
-  width: 15px !important;
-  height: 15px !important;
-  border-top: 3px solid #d4af37 !important; /* 亮古铜金 */
-  border-left: 3px solid #d4af37 !important;
-  z-index: 50 !important;
-  pointer-events: none !important;
-}
-
+/* 纯 CSS 伪元素雕刻的古典“直角黄铜书角扣” - 纠偏去除 */
+.writing-desk-layout-wrap::before,
 .writing-desk-layout-wrap::after {
-  content: '' !important;
-  position: absolute !important;
-  bottom: -1px !important;
-  right: -1px !important;
-  width: 15px !important;
-  height: 15px !important;
-  border-bottom: 3px solid #d4af37 !important;
-  border-right: 3px solid #d4af37 !important;
-  z-index: 50 !important;
-  pointer-events: none !important;
+  content: none !important;
+  display: none !important;
 }
 
 /* ============================================
@@ -2845,8 +2883,7 @@ body .chapter-prose p:first-of-type::first-letter {
 .writing-sidebar__chapter-row:active::after {
   transform: scale(3.5) !important;
   opacity: 1 !important;
-  filter: blur(5px) !important;
-  transition: transform 0.65s cubic-bezier(0.1, 0.8, 0.3, 1), opacity 0.5s ease-out, filter 0.6s !important;
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease-out !important;
 }
 
 /* 暗色模式墨晕适配 */
@@ -2919,7 +2956,7 @@ body .md-spinner::before {
 /* 1. 全局大背景升级：注入“墨落惊风雨”狂草“墨風”二字与写意水墨云海巨幅 SVG */
 body,
 .writing-desk-page {
-  background-image: 
+  background-image:
     radial-gradient(circle at 5% 10%, rgba(28, 32, 34, 0.06), transparent 45%),
     radial-gradient(circle at 95% 85%, rgba(46, 92, 138, 0.04), transparent 50%),
     /* 狂草“墨風”大水印、飞洒墨滴与写意风暴气流 SVG */
@@ -2929,7 +2966,7 @@ body,
 
 :root[data-theme='dark'] body,
 :root[data-theme='dark'] .writing-desk-page {
-  background-image: 
+  background-image:
     radial-gradient(circle at 5% 10%, rgba(229, 222, 201, 0.04), transparent 45%),
     radial-gradient(circle at 95% 85%, rgba(74, 107, 83, 0.03), transparent 50%),
     /* 暗色模式下白玉色狂草“墨風”水印 */
@@ -2973,18 +3010,24 @@ body .app-shell__brand-mark::after {
 
 /* 3. 大厅项目卡片 .project-card 大改：重绘为古雅的“线装古籍书卷” */
 body .project-card {
-  background: 
+  background:
+    /* 极致国风脑洞：用背景渐变优雅重绘14px石青书脊和1px分界线，完美清除粗边框AI反模式 */
+    linear-gradient(to right, #2e5c8a 0px, #2e5c8a 14px, var(--md-outline) 14px, var(--md-outline) 15px, transparent 15px),
     /* 宣纸微噪底纹 */
     radial-gradient(circle at 50% 50%, rgba(28, 32, 34, 0.005) 1px, transparent 1px),
     linear-gradient(var(--md-surface), var(--md-surface)) !important;
-  background-size: 8px 8px, 100% 100% !important;
+  background-size: 100% 100%, 8px 8px, 100% 100% !important;
   border: 1px solid var(--md-outline) !important;
-  /* 左侧石青色古典装订书脊 */
-  border-left: 14px solid #2e5c8a !important;
+  padding-left: 36px !important; /* 腾出书脊的物理位置 */
   border-radius: 2px !important;
   position: relative !important;
   box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.05) !important;
-  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 /* 三个红色装订孔 */
@@ -3010,7 +3053,7 @@ body .project-card::after {
   position: absolute !important;
   right: 16px !important;
   top: 16px !important;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-family: var(--md-font-label) !important;
   font-size: 11px !important;
   font-weight: 800 !important;
   color: rgba(184, 60, 50, 0.85) !important;
@@ -3027,7 +3070,9 @@ body .project-card:hover {
   transform: translateY(-2px) translateZ(0) !important;
   border-color: var(--md-primary-light) !important;
   /* 书脊与纸张阴影加深，产生实体书微微被拿起、翻开的视觉厚度 */
-  box-shadow: 4px 4px 0px var(--md-outline), 0 6px 12px rgba(28, 32, 34, 0.08) !important;
+  box-shadow:
+    4px 4px 0px var(--md-outline),
+    1px 1px 0px color-mix(in srgb, var(--md-primary) 14%, transparent) !important;
   background-color: var(--md-surface-bright) !important;
 }
 
@@ -3049,26 +3094,28 @@ body .project-card:hover {
 }
 
 :root[data-theme='dark'] body .project-card:hover {
-  box-shadow: 4px 4px 0px var(--md-outline-variant), 0 6px 12px rgba(13, 16, 17, 0.6) !important;
+  box-shadow:
+    4px 4px 0px var(--md-outline-variant),
+    1px 1px 0px rgba(13, 16, 17, 0.5) !important;
 }
 
 /* 4. 侧边栏大改造：背景融入“檀木冰裂纹格格窗棂”底图，菜单项 Hover 覆写为“毛笔横扫枯笔飞白墨痕” */
 body .app-shell__sidebar {
-  background-image: 
+  background-image:
     /* 檀木雕花窗棂细线 SVG */
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' opacity='0.015'><path d='M0,0 L28,28 M28,0 L0,28 M0,14 L28,14 M14,0 L14,28' stroke='%231c2022' stroke-width='0.6'/></svg>"),
     linear-gradient(var(--md-surface-dim), var(--md-surface-dim)) !important;
 }
 
 :root[data-theme='dark'] body .app-shell__sidebar {
-  background-image: 
+  background-image:
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' opacity='0.008'><path d='M0,0 L28,28 M28,0 L0,28 M0,14 L28,14 M14,0 L14,28' stroke='%23e5dec9' stroke-width='0.6'/></svg>"),
     linear-gradient(var(--md-surface-dim), var(--md-surface-dim)) !important;
 }
 
 /* 菜单项 Hover 毛笔扫墨飞白效果 */
 body .app-shell__nav-item:hover {
-  background: 
+  background:
     /* 毛笔扫过宣纸带有微飞白散边墨痕的 SVG (5% 极低透明度，防止花哨) */
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' opacity='0.05'><path d='M0,10 C15,3 40,17 75,4 C90,8 95,2 100,10 C85,12 55,2 0,10 Z' fill='%231c2022'/></svg>"),
     linear-gradient(135deg, rgba(28, 32, 34, 0.03), rgba(28, 32, 34, 0.01)) !important;
@@ -3078,7 +3125,7 @@ body .app-shell__nav-item:hover {
 
 /* 激活项墨拓效果，右侧隐约带有风吹波纹 */
 body .app-shell__nav-item.is-active {
-  background: 
+  background:
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' opacity='0.08'><path d='M0,10 C15,3 40,17 75,4 C90,8 95,2 100,10 C85,12 55,2 0,10 Z' fill='%231c2022'/></svg>"),
     linear-gradient(135deg, var(--md-primary-light), var(--md-primary)) !important;
   border-color: var(--md-primary-dark) !important;
@@ -3087,7 +3134,7 @@ body .app-shell__nav-item.is-active {
 }
 
 :root[data-theme='dark'] body .app-shell__nav-item:hover {
-  background: 
+  background:
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' opacity='0.04'><path d='M0,10 C15,3 40,17 75,4 C90,8 95,2 100,10 C85,12 55,2 0,10 Z' fill='%23e5dec9'/></svg>"),
     linear-gradient(135deg, rgba(229, 222, 201, 0.04), rgba(229, 222, 201, 0.01)) !important;
   border-color: rgba(229, 222, 201, 0.1) !important;
@@ -3095,7 +3142,7 @@ body .app-shell__nav-item.is-active {
 }
 
 :root[data-theme='dark'] body .app-shell__nav-item.is-active {
-  background: 
+  background:
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' opacity='0.05'><path d='M0,10 C15,3 40,17 75,4 C90,8 95,2 100,10 C85,12 55,2 0,10 Z' fill='%23e5dec9'/></svg>"),
     linear-gradient(135deg, var(--md-primary-light), var(--md-primary)) !important;
   border-color: var(--md-outline) !important;
@@ -3126,7 +3173,7 @@ body .chat-bubble-ai {
   background-color: var(--md-surface) !important;
   border: 1px dashed rgba(184, 60, 50, 0.28) !important;
   border-radius: 2px !important;
-  box-shadow: inset 0 0 10px rgba(184, 60, 50, 0.03) !important;
+  box-shadow: inset 0 0 0 1px rgba(184, 60, 50, 0.04) !important;
   position: relative !important;
 }
 
@@ -3153,8 +3200,8 @@ body .chat-bubble-user {
   color: var(--md-on-primary) !important;
   /* 手撕拓片毛边：使用更温和保守的不规则残碑剪裁，结合扩大 padding 确保文字绝对安全，决不截边 */
   clip-path: polygon(
-    0% 1.5%, 12% 0.5%, 25% 1%, 37% 0.5%, 50% 1.5%, 62% 0.5%, 75% 1%, 87% 0.5%, 100% 1.5%, 
-    99.5% 25%, 100% 50%, 99% 75%, 99.5% 98.5%, 
+    0% 1.5%, 12% 0.5%, 25% 1%, 37% 0.5%, 50% 1.5%, 62% 0.5%, 75% 1%, 87% 0.5%, 100% 1.5%,
+    99.5% 25%, 100% 50%, 99% 75%, 99.5% 98.5%,
     88% 99.5%, 75% 99%, 62% 99.5%, 50% 98.5%, 38% 99.5%, 25% 99%, 12% 99.5%, 0% 98.5%,
     0.5% 75%, 0% 50%, 0.8% 25%
   ) !important;
@@ -3195,15 +3242,17 @@ body .app-shell__topbar {
   display: flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  gap: var(--md-spacing-4) !important;
-  min-height: 84px !important;
+  gap: var(--md-spacing-6) !important; /* 拉开间距 */
+  min-height: 60px !important; /* 顶部高度控制在60px */
   padding: 0 clamp(var(--md-spacing-4), 3vw, var(--md-spacing-8)) !important;
   background:
     radial-gradient(circle at 50% 0%, rgba(46, 92, 138, 0.02), transparent 50%),
     linear-gradient(180deg, var(--md-surface) 60%, var(--md-background) 100%) !important;
   border-bottom: 1px solid var(--md-outline-variant) !important;
-  box-shadow: 0 2px 8px rgba(28, 32, 34, 0.02) !important;
+  box-shadow: 0 1px 0px rgba(28, 32, 34, 0.05) !important;
 }
+
+
 
 /* 桌面端顶栏品牌区 */
 .app-shell__brand-top {
@@ -3242,17 +3291,22 @@ body .app-shell__topbar {
   position: relative !important;
   display: flex !important;
   align-items: center !important;
-  height: 42px !important;
+  height: 38px !important; /* 适度缩减高度以配合60px的顶栏 */
   padding: 0 var(--md-spacing-4) !important;
-  border-radius: 21px !important;
+  border-radius: var(--md-radius-sm) !important;
   font-family: var(--md-font-display) !important;
-  font-size: 0.9rem !important;
+  font-size: 0.88rem !important;
   font-weight: 500 !important;
-  transition: all var(--md-duration-medium) var(--md-easing-standard) !important;
-  border: 1px solid var(--md-outline-variant) !important;
-  background-color: var(--md-surface) !important;
+  transition:
+    background-color var(--md-duration-medium) var(--md-easing-standard),
+    border-color var(--md-duration-medium) var(--md-easing-standard),
+    box-shadow var(--md-duration-medium) var(--md-easing-standard),
+    color var(--md-duration-medium) var(--md-easing-standard),
+    transform var(--md-duration-medium) var(--md-easing-standard) !important;
+  border: 1px solid var(--md-outline) !important; /* 边框使用浅金棕 */
+  background-color: var(--md-surface-dim) !important; /* 背景使用老宣纸色 */
   /* 带有熟宣噪点背景 */
-  background-image: radial-gradient(rgba(28, 32, 34, 0.02) 1px, transparent 0) !important;
+  background-image: radial-gradient(rgba(28, 32, 34, 0.015) 1px, transparent 0) !important;
   background-size: 8px 8px !important;
 }
 
@@ -3260,7 +3314,7 @@ body .app-shell__topbar {
 .app-shell__project-capsule.is-select {
   cursor: pointer !important;
   color: var(--md-primary) !important;
-  box-shadow: 1.5px 1.5px 0px var(--md-outline-variant) !important;
+  box-shadow: 1.5px 1.5px 0px var(--md-outline) !important; /* 投影改用浅金棕 */
 }
 
 /* 选择胶囊的 Hover / Active：松烟墨晕微转角 */
@@ -3319,8 +3373,14 @@ body .app-shell__topbar {
 }
 
 .app-shell__project-tag-info {
-  color: var(--md-on-surface-variant) !important;
-  font-weight: 500 !important;
+  color: #8A7C6E !important; /* 细字灰棕色 */
+  font-weight: 400 !important; /* 细字 */
+  letter-spacing: 0.05em !important;
+  padding: 2px 8px !important;
+  border: 1px solid rgba(138, 124, 110, 0.15) !important; /* 卷轴题签 */
+  border-radius: 4px !important;
+  background-color: rgba(138, 124, 110, 0.04) !important;
+  font-family: var(--md-font-serif) !important;
 }
 
 .app-shell__project-divider {
@@ -3348,7 +3408,7 @@ body .app-shell__topbar {
   background-color: var(--md-surface) !important;
   border: 1px solid var(--md-outline) !important;
   border-radius: var(--md-radius-sm) !important;
-  box-shadow: 
+  box-shadow:
     0 10px 25px -5px rgba(28, 32, 34, 0.1),
     0 8px 10px -6px rgba(28, 32, 34, 0.05),
     3px 3px 0px var(--md-outline-variant) !important;
@@ -3397,7 +3457,11 @@ body .app-shell__topbar {
   color: var(--md-on-surface) !important;
   font-family: var(--md-font-display) !important;
   font-size: 0.88rem !important;
-  transition: all var(--md-duration-short) !important;
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard),
+    transform var(--md-duration-short) var(--md-easing-standard) !important;
   margin-bottom: 2px !important;
   gap: var(--md-spacing-2) !important;
 }
@@ -3434,7 +3498,7 @@ body .app-shell__topbar {
   color: var(--md-secondary) !important;
   font-weight: 600 !important;
   background-color: rgba(184, 60, 50, 0.05) !important;
-  border-left: 2px solid var(--md-secondary) !important;
+  border: 1px solid rgba(184, 60, 50, 0.2) !important;
 }
 
 .app-shell__dropdown-empty {
@@ -3471,7 +3535,10 @@ body .app-shell__topbar {
   font-weight: 500 !important;
   color: var(--md-on-surface-variant) !important;
   cursor: pointer !important;
-  transition: all var(--md-duration-short) !important;
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard),
+    transform var(--md-duration-short) var(--md-easing-standard) !important;
 }
 
 .app-shell__dropdown-action:hover {
@@ -3492,7 +3559,7 @@ body .app-shell__topbar {
   padding: 0 var(--md-spacing-4) !important;
   height: 42px !important;
   color: #0d1011 !important;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  font-family: var(--md-font-label) !important;
   font-size: 0.92rem !important;
   font-weight: 600 !important;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 20' opacity='0.03'><path d='M0,10 C40,0 100,18 160,2 C180,6 190,2 200,10 Z' fill='%231c2022'/></svg>") !important;
@@ -3530,8 +3597,8 @@ body .app-shell__topbar {
 
 :root[data-theme='dark'] .app-shell__project-dropdown {
   border-color: var(--md-outline) !important;
-  box-shadow: 
-    0 10px 25px -5px rgba(0, 0, 0, 0.5),
+  box-shadow:
+    1px 1px 0px rgba(0, 0, 0, 0.35),
     3px 3px 0px var(--md-outline-variant) !important;
   background-image: radial-gradient(rgba(225, 222, 201, 0.02) 1px, transparent 0) !important;
 }
@@ -3546,7 +3613,7 @@ body .app-shell__topbar {
 }
 
 :root[data-theme='dark'] .app-shell__project-welcome-message {
-  color: #ffffff !important;
+  color: #f2ebd9 !important;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 20' opacity='0.03'><path d='M0,10 C40,0 100,18 160,2 C180,6 190,2 200,10 Z' fill='%23e5dec9'/></svg>") !important;
 }
 
@@ -3615,7 +3682,10 @@ body .app-shell__topbar {
 .app-shell__action-btn {
   display: flex !important;
   align-items: center !important;
+  justify-content: center !important;
   gap: 6px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
   text-decoration: none !important;
   border: none !important;
   background: transparent !important;
@@ -3624,15 +3694,20 @@ body .app-shell__topbar {
 }
 
 .app-shell__action-badge {
-  width: 32px !important;
-  height: 32px !important;
+  width: 34px !important;
+  height: 34px !important;
   display: grid !important;
   place-items: center !important;
   font-size: 13px !important;
   font-weight: 700 !important;
   font-family: var(--md-font-display) !important;
   border-radius: 2px !important;
-  transition: all var(--md-duration-short) var(--md-easing-standard) !important;
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard),
+    transform var(--md-duration-short) var(--md-easing-standard) !important;
 }
 
 /* 模型设置：朱泥印 */
@@ -3728,9 +3803,11 @@ body .app-shell__topbar {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  min-height: 72px !important;
+  min-height: 56px !important; /* 窄屏高度控制在56px */
   padding: 0 clamp(var(--md-spacing-3), 2.5vw, var(--md-spacing-6)) !important;
 }
+
+
 
 /* 窄屏下隐藏左侧 Logo 旁的文字，仅保留精致的“墨”字朱泥大方章 */
 @media (max-width: 768px) {
@@ -3817,7 +3894,7 @@ body .app-shell__topbar {
 /* 2. 琥珀蜜蜡印：写作辅助 */
 .app-shell__action-badge.is-assistant {
   background-color: #c58c2c !important;
-  color: #ffffff !important;
+  color: #faf6ed !important;
   border: 1px solid #966418 !important;
   box-shadow: 1.5px 1.5px 0px rgba(197, 140, 44, 0.25) !important;
   transform: rotate(1.5deg) !important;
@@ -3860,10 +3937,15 @@ body .app-shell__topbar {
   display: flex !important;
   align-items: center !important;
   gap: var(--md-spacing-2) !important;
+  min-height: 44px !important;
   padding: 6px 12px !important;
-  border-radius: 16px !important;
+  border-radius: var(--md-radius-sm) !important;
   border: 1px solid transparent !important;
-  transition: all var(--md-duration-short) var(--md-easing-standard) !important;
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard) !important;
 }
 
 .app-shell__user-tag.is-trigger:hover,
@@ -3960,7 +4042,9 @@ body .app-shell__topbar {
   background: transparent !important;
   border: none !important;
   width: 100% !important;
-  transition: all var(--md-duration-short) !important;
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard) !important;
 }
 
 /* Hover 时的松烟朱砂墨晕 */
@@ -4186,7 +4270,7 @@ body .app-shell__topbar {
   background-color: var(--md-surface-container-low) !important;
   border: 1px solid var(--md-outline-variant) !important;
   border-radius: var(--md-radius-sm) !important; /* 严整方折直角风格 */
-  box-shadow: 
+  box-shadow:
     var(--md-elevation-1),
     inset 0 1px 3px rgba(0, 0, 0, 0.05) !important;
   overflow: hidden !important;
@@ -4206,9 +4290,14 @@ body .app-shell__topbar {
   border-radius: 0 !important; /* 方正直角，绝不圆滑 */
   background: transparent !important;
   color: var(--md-on-surface) !important;
-  font-family: "SentyGoldRogue", "Long Cang", "Noto Serif SC", serif !important;
+  font-family: var(--md-font-label) !important;
   font-size: var(--md-title-small) !important;
-  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+  transition:
+    background-color 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1) !important;
   position: relative !important;
   cursor: pointer !important;
 }
@@ -4227,10 +4316,10 @@ body .app-shell__topbar {
 .settings-page.is-in-modal .settings-center__nav-item.is-active,
 .settings-page.is-in-modal .settings-center__nav-item[aria-selected='true'] {
   background-color: var(--md-secondary) !important; /* 新中式朱砂红印泥色 */
-  color: #ffffff !important;
+  color: var(--md-on-secondary) !important;
   font-weight: 700 !important;
-  box-shadow: 
-    inset 0 0 10px rgba(0, 0, 0, 0.2), 
+  box-shadow:
+    inset 0 0 10px rgba(0, 0, 0, 0.2),
     0 1px 3px rgba(184, 60, 50, 0.3) !important;
   border-right-color: transparent !important;
   z-index: 2 !important;
@@ -4266,9 +4355,9 @@ body .app-shell__topbar {
 [data-theme="dark"] .settings-page.is-in-modal .settings-center__nav-item.is-active {
   background-color: #9c332b !important; /* 熟化暗朱砂印泥 */
   color: #f2ebd9 !important; /* 汉白玉熟宣白 */
-  box-shadow: 
-    inset 0 0 12px rgba(0, 0, 0, 0.4), 
-    0 1px 3px rgba(0, 0, 0, 0.5) !important;
+  box-shadow:
+    inset 0 0 6px rgba(0, 0, 0, 0.32),
+    1px 1px 0px rgba(0, 0, 0, 0.35) !important;
 }
 
 .dark-theme .settings-page.is-in-modal .settings-center__nav-item:not(.is-active):hover,
@@ -4305,14 +4394,19 @@ body .app-shell__topbar {
   gap: 8px;
   height: 38px;
   padding: 0 16px 0 8px;
-  border: 1px solid #b83c32;
-  border-radius: var(--md-radius-full, 99px);
-  background-color: #b83c32;
-  color: #ffffff;
+  border: 1px solid var(--md-secondary);
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-secondary);
+  color: var(--md-on-secondary);
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition:
+    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
   margin-right: 6px;
-  box-shadow: 0 2px 6px rgba(184, 60, 50, 0.25);
+  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.2);
 }
 
 .dark .m3-ink-modal-save-btn,
@@ -4320,8 +4414,8 @@ body .app-shell__topbar {
 [data-theme="dark"] .m3-ink-modal-save-btn {
   background-color: #a2352b;
   border-color: #a2352b;
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  color: #f2ebd9;
+  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.35);
 }
 
 .m3-ink-modal-save-badge {
@@ -4330,21 +4424,26 @@ body .app-shell__topbar {
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: var(--md-radius-full);
-  background-color: #ffffff;
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-surface);
   border: 1px solid rgba(184, 60, 50, 0.15);
   color: #b83c32; /* 朱砂红 */
-  font-family: 'Noto Serif SC', '思源宋体', serif;
+  font-family: var(--md-font-serif);
   font-weight: 700;
   font-size: var(--md-label-large);
   box-shadow: inset 0 1px 2px rgba(184, 60, 50, 0.1);
-  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition:
+    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .dark .m3-ink-modal-save-badge,
 .dark-theme .m3-ink-modal-save-badge,
 [data-theme="dark"] .m3-ink-modal-save-badge {
-  background-color: #ffffff;
+  background-color: #f2ebd9;
   color: #a2352b;
 }
 
@@ -4357,14 +4456,14 @@ body .app-shell__topbar {
 .m3-ink-modal-save-btn:hover {
   background-color: #cf4338;
   border-color: #cf4338;
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(184, 60, 50, 0.4);
+  color: var(--md-on-secondary);
+  box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.28);
   transform: translateY(-0.5px);
 }
 
 .m3-ink-modal-save-btn:hover .m3-ink-modal-save-badge {
   transform: rotate(-10deg) scale(1.05);
-  background-color: #ffffff;
+  background-color: var(--md-surface);
   color: #cf4338;
 }
 
@@ -4396,41 +4495,34 @@ body .app-shell__topbar {
   --scrollbar-thumb-hover-color: rgba(245, 238, 217, 0.55); /* 浅素骨黄半透明 */
 }
 
-/* 2. Webkit 浏览器 (Chrome, Safari, Edge) 全局滚动条魔改 */
+/* 2. Webkit 浏览器 (Chrome, Safari, Edge) 全局滚动条 */
 ::-webkit-scrollbar {
-  width: 8px; /* 纵向滚动条宽度 */
-  height: 8px; /* 横向滚动条高度 */
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent !important; /* 轨道完全透明，平时不占用任何视觉空间 */
+  background: transparent !important;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: transparent !important; /* 默认完全透明，平时隐藏 */
-  border-radius: 4px; /* 柔和微圆角，圆润而有风骨 */
-  border: 2px solid transparent !important; /* 配合 background-clip 实现更精致的细条效果 */
+  background-color: transparent !important;
+  border: 2px solid transparent !important;
+  border-radius: var(--md-radius-sm);
   background-clip: padding-box !important;
-  transition: background-color 0.3s ease !important;
+  transition: background-color 0.2s var(--md-easing-standard) !important;
 }
 
-/* 当容器被悬停，或者带有 is-scrolling class 时显示滚动条 */
-*:hover::-webkit-scrollbar-thumb,
-.is-scrolling::-webkit-scrollbar-thumb {
+.overflow-y-auto:hover::-webkit-scrollbar-thumb,
+.overflow-x-auto:hover::-webkit-scrollbar-thumb,
+.overflow-auto:hover::-webkit-scrollbar-thumb,
+.blueprint-scroll:hover::-webkit-scrollbar-thumb,
+.is-scrolling::-webkit-scrollbar-thumb,
+html:hover::-webkit-scrollbar-thumb {
   background-color: var(--scrollbar-thumb-color) !important;
 }
 
-/* 当滑块被 hover 时，呈现更深的墨色 */
 ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--scrollbar-thumb-hover-color) !important;
-}
-
-/* 针对 html (根滚动条) 的特殊样式 */
-html.is-scrolling::-webkit-scrollbar-thumb,
-html::-webkit-scrollbar-thumb:hover {
-  background-color: var(--scrollbar-thumb-color) !important;
-}
-html::-webkit-scrollbar-thumb:hover {
   background-color: var(--scrollbar-thumb-hover-color) !important;
 }
 
@@ -4438,12 +4530,14 @@ html::-webkit-scrollbar-thumb:hover {
 * {
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
-  transition: scrollbar-color 0.3s ease;
 }
 
-/* 悬停或滚动时显示 */
-*:hover,
-*.is-scrolling {
+.overflow-y-auto:hover,
+.overflow-x-auto:hover,
+.overflow-auto:hover,
+.blueprint-scroll:hover,
+.is-scrolling,
+html:hover {
   scrollbar-color: var(--scrollbar-thumb-color) transparent;
 }
 
@@ -4454,8 +4548,8 @@ html::-webkit-scrollbar-thumb:hover {
   opacity: 0 !important;
   width: 4px !important;
   height: 4px !important;
-  transition: 
-    opacity 0.3s var(--md-easing-standard), 
+  transition:
+    opacity 0.3s var(--md-easing-standard),
     background-color 0.3s var(--md-easing-standard) !important;
 }
 

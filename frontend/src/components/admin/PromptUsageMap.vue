@@ -427,7 +427,7 @@ const refetchPrompts = () => {
 }
 
 .prompt-usage code {
-  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-family: var(--md-font-mono);
   font-size: 12px;
 }
 

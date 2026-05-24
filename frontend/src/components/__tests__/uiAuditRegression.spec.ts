@@ -106,7 +106,11 @@ describe('UI audit regressions', () => {
     const auditedPaths = [
       'src/components/BlueprintEditModal.vue',
       'src/components/CustomAlert.vue',
+      'src/assets/blueprint.css',
       'src/components/writing-desk/WDGenerateOutlineModal.vue',
+      'src/assets/main.css',
+      'src/components/shared/NovelDetailShell.vue',
+      'src/components/novel-detail/OverviewSection.vue',
       'src/components/novel-detail/ChaptersSection.vue',
       'src/components/novel-detail/CharactersSection.vue',
       'src/components/novel-detail/ForeshadowingSection.vue',
@@ -116,7 +120,55 @@ describe('UI audit regressions', () => {
     for (const path of auditedPaths) {
       const source = readSource(path)
       expect(source, path).not.toContain('transition-all')
+      expect(source, path).not.toMatch(/transition:\s*all\b/)
     }
+  })
+
+  it('keeps blueprint archive surfaces free of banned visual anti-patterns', () => {
+    const auditedPaths = [
+      'src/assets/main.css',
+      'src/assets/blueprint.css',
+      'src/components/shared/NovelDetailShell.vue',
+      'src/components/novel-detail/OverviewSection.vue',
+      'src/components/novel-detail/WorldSettingSection.vue',
+      'src/components/novel-detail/CharactersSection.vue',
+      'src/components/novel-detail/RelationshipsSection.vue',
+      'src/components/novel-detail/ChapterOutlineSection.vue',
+      'src/components/novel-detail/ChaptersSection.vue',
+      'src/components/novel-detail/EmotionCurveSection.vue',
+      'src/components/novel-detail/ForeshadowingSection.vue',
+    ]
+
+    for (const path of auditedPaths) {
+      const source = readSource(path)
+      expect(source, path).not.toContain('background-clip: text')
+      expect(source, path).not.toContain('backdrop-filter')
+      expect(source, path).not.toMatch(/border-(left|right):\s*(?:[2-9]|[1-9][0-9])px/)
+    }
+  })
+
+  it('keeps the overview blueprint page aligned with the shared archive vocabulary', () => {
+    const overviewSource = readSource('src/components/novel-detail/OverviewSection.vue')
+    const shellSource = readSource('src/components/shared/NovelDetailShell.vue')
+
+    expect(overviewSource).toContain('archive-overview__summary-aside')
+    expect(overviewSource).toContain('aria-label="蓝图资料状态"')
+    expect(overviewSource).toContain('role="meter"')
+    expect(overviewSource).toContain('archive-overview__readiness-card')
+    expect(shellSource).toContain('detail-shell__content-surface--classical')
+    expect(shellSource).not.toContain('detail-shell__content-surface--flat')
+  })
+
+  it('keeps the mobile chapter drawer out of the focus order when closed', () => {
+    const source = readSource('src/components/novel-detail/ChaptersSection.vue')
+
+    expect(source).toContain('<h2 class="sr-only">章节内容</h2>')
+    expect(source).toContain(':aria-hidden="isChapterSidebarVisible ? undefined : \'true\'"')
+    expect(source).toContain(':inert="!isChapterSidebarVisible"')
+    expect(source).toContain(
+      'const isChapterSidebarVisible = computed(() => isDesktopViewport.value || showChapterList.value)',
+    )
+    expect(source).toContain('aria-hidden="true"')
   })
 
   it('keeps auth footer links touch-safe', () => {
@@ -143,6 +195,27 @@ describe('UI audit regressions', () => {
     const darkBackground = readCssCustomProperty(source, ":root[data-theme='dark']", '--md-background')
 
     expect(contrastRatio(darkPrimaryText, darkBackground)).toBeGreaterThanOrEqual(4.5)
+  })
+
+  it('keeps typography roles centralized in design tokens', () => {
+    const css = readSource('src/assets/main.css')
+    const mainSource = readSource('src/main.ts')
+    const bodyBlock = readCssBlock(css, 'body')
+
+    expect(readLightThemeCustomProperty(css, '--md-font-serif')).toContain("'Noto Serif SC'")
+    expect(readLightThemeCustomProperty(css, '--md-font-sans')).toBe('var(--md-font-serif)')
+    expect(readLightThemeCustomProperty(css, '--md-font-kai')).toBe('var(--md-font-serif)')
+    expect(readLightThemeCustomProperty(css, '--md-font-family')).toBe('var(--md-font-serif)')
+    expect(readLightThemeCustomProperty(css, '--md-font-display')).toBe('var(--md-font-serif)')
+    expect(readLightThemeCustomProperty(css, '--md-font-label')).toBe('var(--md-font-serif)')
+    expect(readLightThemeCustomProperty(css, '--md-font-mono')).toBe('var(--md-font-serif)')
+    expect(bodyBlock).toContain('font-family: var(--md-font-family)')
+    expect(css).not.toContain('var(--md-font-serif,')
+    expect(css).not.toContain('var(--md-font-label,')
+    expect(css).not.toContain('Noto Sans SC')
+    expect(css).not.toContain('SentyGoldRogue')
+    expect(mainSource).not.toContain('@fontsource/noto-sans-sc')
+    expect(mainSource).toContain("@fontsource/noto-serif-sc/chinese-simplified-400.css")
   })
 
   it('uses accessible semantic text tokens for light theme status copy', () => {

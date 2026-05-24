@@ -53,17 +53,7 @@
                 >
                   导出
                 </button>
-                <button
-                  type="button"
-                  @click="openVersionDetail"
-                  :disabled="!canViewVersions"
-                  class="md-btn md-btn-text md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--ghost disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  查看版本
-                </button>
               </div>
-
-              <span class="writing-workspace__toolbar-divider" aria-hidden="true"></span>
 
               <div ref="moreMenuRef" class="writing-workspace__more-menu">
                 <button
@@ -115,16 +105,7 @@
                   >
                     导出
                   </button>
-                  <button
-                    :ref="(el) => registerMoreMenuItemRef(el, 2)"
-                    type="button"
-                    role="menuitem"
-                    @click="handleViewVersionFromMore"
-                    :disabled="!canViewVersions"
-                    class="writing-workspace__more-menu-item disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    查看版本
-                  </button>
+
                 </div>
               </div>
             </div>
@@ -233,24 +214,245 @@
 
       <!-- 章节内容展示区 -->
       <div class="writing-workspace__content">
-        <div class="writing-workspace__body">
-          <component
-            ref="bodyComponentRef"
-            :is="currentComponent"
-            v-bind="currentComponentProps"
-            @hideVersionSelector="$emit('hideVersionSelector')"
-            @update:selectedVersionIndex="$emit('update:selectedVersionIndex', $event)"
-            @showVersionDetail="$emit('showVersionDetail', $event)"
-            @confirmVersionSelection="$emit('confirmVersionSelection')"
-            @generateChapter="$emit('generateChapter', $event)"
-            @showVersionSelector="$emit('showVersionSelector')"
-            @regenerateChapter="$emit('regenerateChapter')"
-            @evaluateChapter="$emit('evaluateChapter')"
-            @showEvaluationDetail="$emit('showEvaluationDetail')"
-          />
+          <!-- 章节状态是已完成 (successful) 且有正文内容时，展示正文、版本、评审切换 Tab 页签 -->
+          <div v-if="selectedChapter?.generation_status === 'successful' && hasSelectedChapterContent" class="writing-workspace__tabs-row">
+            <nav class="writing-workspace__tabs" aria-label="章节工作台分区">
+              <button
+                type="button"
+                class="writing-workspace__tab-btn md-ripple"
+                :class="{ 'is-active': activeTab === 'content' }"
+                @click="activeTab = 'content'"
+              >
+                <span class="tab-badge">🎴</span>
+                <span>章节正文</span>
+              </button>
+              <button
+                type="button"
+                class="writing-workspace__tab-btn md-ripple"
+                :class="{ 'is-active': activeTab === 'versions' }"
+                @click="activeTab = 'versions'"
+              >
+                <span class="tab-badge">📜</span>
+                <span>查看版本 ({{ availableVersions.length }})</span>
+              </button>
+              <button
+                type="button"
+                class="writing-workspace__tab-btn md-ripple"
+                :class="{ 'is-active': activeTab === 'evaluation' }"
+                @click="activeTab = 'evaluation'"
+              >
+                <span class="tab-badge">⚖️</span>
+                <span>AI 评审反馈</span>
+              </button>
+            </nav>
+          </div>
+
+          <div class="writing-workspace__body h-full">
+            <!-- 1. 章节正文 Tab 分支 -->
+            <component
+              v-if="activeTab === 'content' || selectedChapter?.generation_status !== 'successful' || !hasSelectedChapterContent"
+              ref="bodyComponentRef"
+              :is="currentComponent"
+              v-bind="currentComponentProps"
+              @hideVersionSelector="$emit('hideVersionSelector')"
+              @update:selectedVersionIndex="$emit('update:selectedVersionIndex', $event)"
+              @showVersionDetail="$emit('showVersionDetail', $event)"
+              @confirmVersionSelection="$emit('confirmVersionSelection')"
+              @generateChapter="$emit('generateChapter', $event)"
+              @showVersionSelector="$emit('showVersionSelector')"
+              @regenerateChapter="$emit('regenerateChapter')"
+              @evaluateChapter="$emit('evaluateChapter')"
+              @showEvaluationDetail="$emit('showEvaluationDetail')"
+            />
+
+            <!-- 2. 历史版本多维平铺查阅面板 -->
+            <div v-else-if="activeTab === 'versions'" class="writing-workspace__versions-panel flex flex-col h-full overflow-hidden">
+              <div class="flex-1 flex min-h-0 divide-x" style="border-color: var(--md-outline-variant)">
+                <!-- 左侧版本卡片列表 -->
+                <div class="w-64 overflow-y-auto pr-4 flex flex-col gap-3">
+                  <div
+                    v-for="(version, index) in availableVersions"
+                    :key="`version-tab-${index}`"
+                    class="writing-workspace__version-tab-card"
+                    :class="{ 'is-active': previewVersionIndex === index }"
+                    @click="previewVersionIndex = index"
+                  >
+                    <div class="flex items-center justify-between">
+                      <span class="version-label">版本 {{ availableVersions.length - index }}</span>
+                      <span class="version-badge">{{ version.style || '标准' }}</span>
+                    </div>
+                    <p class="version-preview-text line-clamp-2">
+                      {{ cleanVersionContent(version.content).substring(0, 50) }}...
+                    </p>
+                    <div class="version-meta">
+                      {{ countNonWhitespaceChars(version.content) }} 字
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 右侧选定版本正文大卷预览 -->
+                <div class="flex-1 overflow-y-auto pl-6 flex flex-col justify-between">
+                  <div class="flex-1 whitespace-pre-wrap leading-relaxed prose max-w-none text-justify" style="color: var(--md-on-surface); font-family: var(--md-font-family);">
+                    <p v-for="(paragraph, pIndex) in previewVersionParagraphs" :key="`para-${pIndex}`" class="mb-4">
+                      {{ paragraph }}
+                    </p>
+                  </div>
+                  <div class="mt-6 pt-4 border-t flex items-center justify-between" style="border-top-color: var(--md-outline-variant)">
+                    <span class="text-sm md-on-surface-variant font-medium">
+                      此版本共 {{ previewVersionWordCount }} 字，风格为【{{ availableVersions[previewVersionIndex]?.style || '标准' }}】
+                    </span>
+                    <button
+                      type="button"
+                      class="md-btn md-btn-filled md-ripple flex items-center gap-2"
+                      style="background-color: var(--md-primary); color: var(--md-on-primary)"
+                      :disabled="isCurrentVersion(previewVersionIndex)"
+                      @click="selectVersionFromTab(previewVersionIndex)"
+                    >
+                      <span>{{ isCurrentVersion(previewVersionIndex) ? '当前正在使用' : '应用此版本为当前正文' }}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. AI 章节评审反馈面板 -->
+            <div v-else-if="activeTab === 'evaluation'" class="writing-workspace__evaluation-panel flex flex-col h-full overflow-y-auto">
+              <div v-if="selectedChapter?.evaluation" class="space-y-6">
+                <!-- 情况 A：解析 JSON 成功 -->
+                <template v-if="parsedEvaluation">
+                  <!-- 格式 1: 含有 best_choice 或 evaluation 的多版本评阅 -->
+                  <div v-if="parsedEvaluation.best_choice || parsedEvaluation.evaluation" class="space-y-6">
+                    <div v-if="parsedEvaluation.best_choice" class="md-card md-card-filled p-4 m3-eval-best-choice-card">
+                      <p class="md-title-small font-semibold m3-eval-best-choice-title">🏆 最佳推荐：版本 {{ parsedEvaluation.best_choice }}</p>
+                      <p class="md-body-small mt-2 m3-eval-best-choice-reason" style="color: var(--md-on-surface)">
+                        {{ parsedEvaluation.reason_for_choice }}
+                      </p>
+                    </div>
+                    <div class="space-y-4">
+                      <div v-for="(evalResult, versionName) in parsedEvaluation.evaluation" :key="versionName" class="md-card md-card-outlined p-4 m3-eval-version-card" style="border: 1px solid var(--md-outline); background: var(--md-surface-container-low)">
+                        <h5 class="md-title-medium font-semibold mb-2" style="font-family: var(--md-font-serif); color: var(--md-secondary)">
+                          版本 {{ String(versionName).replace('version', '') }} 评估
+                        </h5>
+                        <div class="prose prose-sm max-w-none md-on-surface space-y-3">
+                          <div v-if="evalResult.overall_review">
+                            <p class="font-semibold" style="color: var(--md-on-surface)">综合评价:</p>
+                            <p style="color: var(--md-on-surface-variant)">{{ evalResult.overall_review }}</p>
+                          </div>
+                          <div v-if="evalResult.pros && evalResult.pros.length">
+                            <p class="font-semibold" style="color: var(--md-on-surface)">优点:</p>
+                            <ul class="list-disc pl-5 space-y-1" style="color: var(--md-on-surface-variant)">
+                              <li v-for="(pro, i) in evalResult.pros" :key="`pro-${i}`">{{ pro }}</li>
+                            </ul>
+                          </div>
+                          <div v-if="evalResult.cons && evalResult.cons.length">
+                            <p class="font-semibold" style="color: var(--md-on-surface)">缺点:</p>
+                            <ul class="list-disc pl-5 space-y-1" style="color: var(--md-on-surface-variant)">
+                              <li v-for="(con, i) in evalResult.cons" :key="`con-${i}`">{{ con }}</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 格式 2: 含有 scores 或 feedback/decision 的评分评阅 -->
+                  <div v-else-if="parsedEvaluation.scores || parsedEvaluation.feedback || parsedEvaluation.decision" class="space-y-6">
+                    <div v-if="parsedEvaluation.decision" class="md-card md-card-filled p-4 m3-eval-best-choice-card">
+                      <p class="md-title-small font-semibold m3-eval-best-choice-title">⚖️ 评阅大案决策</p>
+                      <p class="md-body-small mt-2" style="color: var(--md-on-surface)">{{ parsedEvaluation.decision }}</p>
+                    </div>
+
+                    <div v-if="parsedEvaluation.scores" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div v-for="(score, key) in parsedEvaluation.scores" :key="key" class="writing-workspace__evaluation-card p-4" style="border: 1px solid var(--md-outline); background: var(--md-surface-container-low)">
+                        <h5 class="dimension-title" style="font-family: var(--md-font-serif); font-weight: bold; color: var(--md-secondary)">
+                          <span class="dimension-mark">✒️</span> {{ key }}
+                        </h5>
+                        <p class="dimension-desc md-display-small font-semibold mt-2" style="color: var(--md-primary)">
+                          {{ score }} <span class="text-sm font-normal text-muted" style="color: var(--md-on-surface-variant)">分</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div v-if="parsedEvaluation.feedback" class="writing-workspace__evaluation-card is-suggestion-card p-4" style="border: 1px solid var(--md-outline); background: var(--md-surface-container-low)">
+                      <h5 class="dimension-title is-suggestion" style="font-family: var(--md-font-serif); font-weight: bold; color: var(--md-secondary)">
+                        <span class="dimension-mark">💡</span> 评阅意见反馈
+                      </h5>
+                      <div class="prose prose-sm max-w-none mt-2 whitespace-pre-wrap" style="color: var(--md-on-surface-variant)" v-html="parseMarkdown(parsedEvaluation.feedback)"></div>
+                    </div>
+                  </div>
+
+                  <!-- 格式 3: 原作者脑补的 summary / dimensions / suggestions 格式 -->
+                  <div v-else class="space-y-6">
+                    <!-- 评审大字号金石综合评价 -->
+                    <div v-if="parsedEvaluation.summary" class="writing-workspace__evaluation-hero">
+                      <div class="hero-seal">
+                        <span>評</span>
+                      </div>
+                      <div class="hero-text">
+                        <h4>本章综合评阅报告</h4>
+                        <p class="md-body-medium">
+                          {{ parsedEvaluation.summary }}
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- 各项维度细分卡片 -->
+                    <div v-if="parsedEvaluation.dimensions" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div
+                        v-for="(item, key) in parsedEvaluation.dimensions"
+                        :key="key"
+                        class="writing-workspace__evaluation-card"
+                      >
+                        <h5 class="dimension-title">
+                          <span class="dimension-mark">✒️</span>
+                          {{ key }}
+                        </h5>
+                        <p class="dimension-desc md-body-small">
+                          {{ item.analysis || item }}
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- 优化改进建议 -->
+                    <div v-if="parsedEvaluation.suggestions" class="writing-workspace__evaluation-card is-suggestion-card">
+                      <h5 class="dimension-title is-suggestion">
+                        <span class="dimension-mark">💡</span>
+                        大案改进意见
+                      </h5>
+                      <ul class="suggestion-list">
+                        <li v-for="(suggestion, sIdx) in parsedEvaluation.suggestions" :key="sIdx">
+                          {{ suggestion }}
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- 情况 B：解析 JSON 失败，直接作为 Markdown/文本渲染 -->
+                <div v-else class="prose prose-sm max-w-none md-on-surface p-6 m3-eval-markdown-container rounded-sm" style="border: 1px dashed var(--md-outline); background: var(--md-surface-container-low)" v-html="parseMarkdown(selectedChapter.evaluation)"></div>
+              </div>
+              <div v-else class="h-full flex flex-col justify-center items-center py-12">
+                <div class="text-center space-y-4 max-w-sm">
+                  <span class="text-4xl">⚖️</span>
+                  <h4 class="md-title-large font-semibold">尚无本章评阅报告</h4>
+                  <p class="md-body-medium md-on-surface-variant">
+                    阁主可呼叫 AI 评阅官，对当前已完成的章节正文进行全方位结构、文笔和剧情连贯性评阅。
+                  </p>
+                  <button
+                    type="button"
+                    class="md-btn md-btn-filled md-ripple"
+                    style="background-color: var(--md-secondary); color: var(--md-on-secondary)"
+                    :disabled="evaluatingChapter !== null"
+                    @click="$emit('evaluateChapter')"
+                  >
+                    <span>{{ evaluatingChapter !== null ? '正在分析评审中...' : '呼叫 AI 评阅官' }}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
 
     <!-- 编辑章节内容模态框 -->
     <div v-if="showEditModal" class="md-dialog-overlay" @click.self="closeEditModal">
@@ -354,6 +556,8 @@ import type {
   NovelProject,
 } from '@/api/novel'
 import { countNonWhitespaceChars } from '@/utils/text'
+import DOMPurify from 'dompurify'
+import { marked } from 'marked'
 import WorkspaceInitial from './workspace/WorkspaceInitial.vue'
 import ChapterGenerating from './workspace/ChapterGenerating.vue'
 import VersionSelector from './workspace/VersionSelector.vue'
@@ -568,7 +772,7 @@ const saveEditedContent = async () => {
   }
 }
 
-const selectedChapter = computed(() => {
+const selectedChapter = computed<Chapter | null>(() => {
   if (!props.project || props.selectedChapterNumber === null) return null
   return (
     props.project.chapters.find((ch) => ch.chapter_number === props.selectedChapterNumber) || null
@@ -1148,6 +1352,109 @@ const currentComponentProps = computed(() => {
     canGenerate: canGenerateChapter(props.selectedChapterNumber),
   }
 })
+
+// ==========================================================================
+// 写作台正文/历史版本/AI评审三合一 Tab 切换区状态与逻辑
+// ==========================================================================
+const activeTab = ref<'content' | 'versions' | 'evaluation'>('content')
+const previewVersionIndex = ref<number>(0)
+
+watch(
+  () => props.selectedChapterNumber,
+  () => {
+    activeTab.value = 'content'
+    previewVersionIndex.value = 0
+  }
+)
+
+watch(
+  () => props.availableVersions,
+  (newVersions) => {
+    if (previewVersionIndex.value >= newVersions.length) {
+      previewVersionIndex.value = 0
+    }
+  },
+  { deep: true }
+)
+
+const previewVersionResolvedContent = computed(() => {
+  const version = props.availableVersions[previewVersionIndex.value]
+  return version ? cleanVersionContent(version.content) : ''
+})
+
+const previewVersionParagraphs = computed(() => {
+  if (!previewVersionResolvedContent.value.trim()) return []
+  return previewVersionResolvedContent.value
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+})
+
+const previewVersionWordCount = computed(() => {
+  return countNonWhitespaceChars(previewVersionResolvedContent.value)
+})
+
+const selectVersionFromTab = (index: number) => {
+  const version = props.availableVersions[index]
+  if (!version || props.selectedChapterNumber === null) return
+  const cleanContent = cleanVersionContent(version.content)
+  emit('editChapter', {
+    chapterNumber: props.selectedChapterNumber,
+    content: cleanContent,
+  })
+  globalAlert.showSuccess('成功应用所选历史版本！')
+  activeTab.value = 'content' // 自动切回正文
+}
+
+const isCurrentVersion = (index: number) => {
+  const version = props.availableVersions[index]
+  if (!version) return false
+  return cleanVersionContent(version.content).trim() === selectedChapterResolvedContent.value.trim()
+}
+
+const parsedEvaluation = computed(() => {
+  const evalStr = selectedChapter.value?.evaluation
+  if (!evalStr) return null
+  try {
+    let data = JSON.parse(evalStr)
+    if (typeof data === 'string') {
+      data = JSON.parse(data)
+    }
+    return data
+  } catch (error) {
+    console.error('Failed to parse evaluation JSON in WDWorkspace:', error)
+    return null
+  }
+})
+
+const parseMarkdown = (text: string | null | undefined): string => {
+  if (!text) return ''
+  try {
+    let cleaned = text
+      .replace(/\\n/g, '\n')
+      .replace(/\\"/g, '"')
+      .replace(/\\'/g, "'")
+      .replace(/\\\\/g, '\\')
+
+    let parsed = ''
+    if (marked && typeof marked.parse === 'function') {
+      parsed = marked.parse(cleaned, { breaks: true }) as string
+    } else if (typeof marked === 'function') {
+      parsed = (marked as any)(cleaned, { breaks: true }) as string
+    } else {
+      parsed = cleaned
+    }
+
+    return DOMPurify.sanitize(parsed, {
+      USE_PROFILES: { html: true },
+    })
+  } catch (error) {
+    console.error('Failed to parse Markdown in WDWorkspace:', error)
+    return DOMPurify.sanitize(text, {
+      USE_PROFILES: { html: true },
+    })
+  }
+}
 </script>
 
 <style scoped>
@@ -1199,39 +1506,40 @@ const currentComponentProps = computed(() => {
 
 .writing-workspace__chapter-no {
   flex-shrink: 0;
-  font-size: clamp(1.2rem, 1.8vw, 1.45rem);
-  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
-  letter-spacing: 0.05em;
+  font-size: 22px;
+  font-family: var(--md-font-serif);
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 /* 极致国风脑洞：将状态标签改造为方直“金石印章方印” */
 .writing-workspace__status-tag {
   display: inline-flex;
   align-items: center;
-  height: 20px;
-  padding: 0 6px;
+  height: 22px;
+  padding: 0 7px;
   border-radius: 0 !important; /* 强制去圆角 */
   border: 1.5px solid transparent;
-  font-size: var(--md-label-small);
-  font-weight: bold;
-  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
-  letter-spacing: 0.05em;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--md-font-serif);
+  letter-spacing: 0.08em;
   white-space: nowrap;
 }
 
 /* 竹青阴刻 */
 .writing-workspace__status-tag--success {
-  color: #ffffff;
-  background-color: #3f6c5d;
-  border-color: #2b5043;
+  color: var(--md-on-primary);
+  background-color: var(--md-success);
+  border-color: var(--md-success-text);
   box-shadow: 1px 1px 0px rgba(63, 108, 93, 0.25);
 }
 
 /* 赭红阴刻 */
 .writing-workspace__status-tag--error {
-  color: #ffffff;
-  background-color: #b83c32;
-  border-color: #8c2820;
+  color: var(--md-on-primary);
+  background-color: var(--md-error);
+  border-color: var(--md-error-text);
   box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.25);
 }
 
@@ -1244,9 +1552,9 @@ const currentComponentProps = computed(() => {
 }
 
 .writing-workspace__status-tag--pending {
-  color: #b83c32;
+  color: var(--md-secondary);
   background-color: rgba(184, 60, 50, 0.03);
-  border-color: #8c2820;
+  border-color: var(--md-secondary);
 }
 
 .writing-workspace__status-tag--idle {
@@ -1257,8 +1565,10 @@ const currentComponentProps = computed(() => {
 
 .writing-workspace__chapter-inline-meta {
   white-space: nowrap;
-  letter-spacing: 0.01em;
-  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  font-family: var(--md-font-serif);
 }
 
 .writing-workspace__title-copy {
@@ -1273,9 +1583,10 @@ const currentComponentProps = computed(() => {
   text-overflow: ellipsis;
   cursor: pointer;
   appearance: none;
-  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
-  font-weight: bold;
-  letter-spacing: 0.02em;
+  font-size: 22px;
+  font-family: var(--md-font-serif);
+  font-weight: 600;
+  letter-spacing: 0.04em;
   transition: color 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -1292,14 +1603,17 @@ const currentComponentProps = computed(() => {
 
 .writing-workspace__summary {
   max-width: 88ch;
-  line-height: 1.6;
+  font-size: 15px;
+  line-height: 1.75;
+  letter-spacing: 0.02em;
   color: var(--md-on-surface-variant);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
-  font-style: italic;
+  font-family: var(--md-font-serif);
+  font-weight: 500;
+  font-style: normal;
   opacity: 0.85;
 }
 
@@ -1360,11 +1674,16 @@ const currentComponentProps = computed(() => {
   border-radius: 0 !important; /* 去除圆角 */
   font-size: var(--md-label-medium);
   letter-spacing: 0.05em;
-  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-family: var(--md-font-serif);
   font-weight: 600;
   border: 1px solid var(--md-outline);
   box-shadow: 1.5px 1.5px 0px var(--md-outline);
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Hover 状态 */
@@ -1486,7 +1805,7 @@ const currentComponentProps = computed(() => {
   background: transparent;
   text-align: left;
   font-size: var(--md-label-medium);
-  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-family: var(--md-font-serif);
   font-weight: 600;
   color: var(--md-on-surface);
   cursor: pointer;
@@ -1518,20 +1837,11 @@ const currentComponentProps = computed(() => {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--md-spacing-6);
+  padding: 0 !important; /* 彻底去除灰色间距，使内部稿纸能够完美顶边铺满 */
   display: flex;
   flex-direction: column;
   gap: var(--md-spacing-4);
   background-color: var(--md-surface);
-  background-image: linear-gradient(
-    180deg,
-    transparent 0px,
-    transparent calc(1.85em - 1px),
-    rgba(63, 108, 93, 0.09) calc(1.85em - 1px),
-    rgba(63, 108, 93, 0.09) 1.85em
-  );
-  background-size: 100% 1.85em;
-  line-height: 1.85em;
 }
 
 .writing-workspace__body {
@@ -1550,7 +1860,7 @@ const currentComponentProps = computed(() => {
 .m3-editor-dialog__header {
   border-bottom: 1px dashed var(--md-outline) !important;
   background-color: var(--md-surface-container-low);
-  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-family: var(--md-font-serif);
 }
 
 .m3-editor-dialog__header h3 {
@@ -1668,5 +1978,261 @@ const currentComponentProps = computed(() => {
     filter: blur(0);
     transform-origin: top right;
   }
+}
+
+/* ==========================================================================
+   三合一 Tab 切换栏样式与中国风金石重塑
+   ========================================================================== */
+.writing-workspace__tabs-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-top: var(--md-spacing-3);
+  border-bottom: 1.5px solid var(--md-outline-variant);
+  padding-bottom: 1px;
+}
+
+.writing-workspace__tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.writing-workspace__tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid var(--md-outline-variant) !important;
+  border-bottom: none !important;
+  border-radius: 4px 4px 0 0 !important; /* 笺片式上圆角 */
+  background-color: rgba(28, 32, 34, 0.015) !important;
+  color: var(--md-on-surface-variant) !important;
+  font-family: var(--md-font-serif);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.writing-workspace__tab-btn:hover {
+  background-color: var(--md-surface-container-low) !important;
+  color: var(--md-primary-dark) !important;
+}
+
+/* 激活的朱砂方章笺条 */
+.writing-workspace__tab-btn.is-active {
+  border: 1.5px solid var(--md-secondary) !important;
+  border-bottom: 1.5px solid var(--md-surface) !important; /* 无缝贴合底线 */
+  background-color: var(--md-surface) !important; /* 熟宣暖白 */
+  color: var(--md-secondary) !important; /* 朱红色 */
+  box-shadow: 0 1.5px 0px var(--md-surface);
+  margin-bottom: -1.5px; /* 压住底线，呈现一体化连卷 */
+  z-index: 10;
+}
+
+.tab-badge {
+  font-size: 14px;
+}
+
+/* 大纲计划概要卡片优化 */
+.writing-workspace__summary {
+  margin: var(--md-spacing-2) 0 0;
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  font-family: var(--md-font-family);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.75;
+  letter-spacing: 0.02em;
+  color: var(--md-on-surface-variant);
+  font-style: normal;
+}
+
+/* ==========================================================================
+   历史版本预览面板
+   ========================================================================== */
+.writing-workspace__versions-panel {
+  height: 100%;
+}
+
+.writing-workspace__version-tab-card {
+  padding: var(--md-spacing-3);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-xs);
+  background-color: rgba(28, 32, 34, 0.01);
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.writing-workspace__version-tab-card:hover {
+  border-color: var(--md-outline);
+  background-color: var(--md-surface-container-low);
+  transform: translateX(2px);
+}
+
+.writing-workspace__version-tab-card.is-active {
+  border-color: var(--md-secondary);
+  background-color: rgba(184, 60, 50, 0.02);
+  box-shadow: inset 2px 0 0 var(--md-secondary);
+}
+
+.writing-workspace__version-tab-card .version-label {
+  font-family: var(--md-font-serif);
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--md-primary-dark);
+}
+
+.writing-workspace__version-tab-card.is-active .version-label {
+  color: var(--md-secondary);
+}
+
+.writing-workspace__version-tab-card .version-badge {
+  font-size: 10.5px;
+  padding: 1px 4px;
+  border-radius: 2px;
+  border: 1px solid var(--md-outline-variant);
+  background-color: var(--md-surface-container);
+  color: var(--md-on-surface-variant);
+}
+
+.version-preview-text {
+  margin: var(--md-spacing-2) 0 4px;
+  color: var(--md-on-surface-variant);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.version-meta {
+  color: var(--md-on-surface-variant);
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+/* ==========================================================================
+   AI 评阅分析面板
+   ========================================================================== */
+.writing-workspace__evaluation-panel {
+  padding-right: var(--md-spacing-2);
+  height: 100%;
+}
+
+.writing-workspace__evaluation-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--md-spacing-4);
+  padding: var(--md-spacing-4);
+  border: 3px double var(--md-outline);
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-surface-container-low); /* 竹纸底 */
+}
+
+.writing-workspace__evaluation-hero .hero-seal {
+  width: 38px;
+  height: 38px;
+  border: 1.5px solid var(--md-secondary);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--md-secondary);
+  font-family: var(--md-font-serif);
+  font-size: 16px;
+  font-weight: bold;
+  background-color: rgba(184, 60, 50, 0.05);
+  flex-shrink: 0;
+  transform: rotate(-10deg);
+  box-shadow: inset 1px 1px 0px rgba(184, 60, 50, 0.2);
+}
+
+.writing-workspace__evaluation-hero .hero-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.writing-workspace__evaluation-hero h4 {
+  margin: 0 0 6px;
+  font-family: var(--md-font-serif);
+  font-weight: bold;
+  font-size: 16px;
+  color: var(--md-primary-dark);
+  letter-spacing: 0.05em;
+}
+
+.writing-workspace__evaluation-hero p {
+  margin: 0;
+  color: var(--md-on-surface);
+  line-height: 1.6;
+}
+
+.writing-workspace__evaluation-card {
+  padding: var(--md-spacing-4);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-surface);
+  transition: border-color 0.2s ease;
+}
+
+.writing-workspace__evaluation-card:hover {
+  border-color: var(--md-outline);
+}
+
+.writing-workspace__evaluation-card .dimension-title {
+  margin: 0 0 var(--md-spacing-3);
+  font-family: var(--md-font-serif);
+  font-weight: 700;
+  font-size: 14.5px;
+  color: var(--md-primary-dark);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 1.5px solid var(--md-outline-variant);
+  padding-bottom: 4px;
+}
+
+.dimension-mark {
+  font-size: 14px;
+}
+
+.dimension-desc {
+  margin: 0;
+  color: var(--md-on-surface);
+  line-height: 1.6;
+  text-justify: inter-character;
+}
+
+.writing-workspace__evaluation-card.is-suggestion-card {
+  border: 1.5px solid var(--md-outline);
+  background-color: var(--md-surface-container-low);
+}
+
+.dimension-title.is-suggestion {
+  color: var(--md-secondary) !important;
+  border-bottom-color: var(--md-outline) !important;
+}
+
+.suggestion-list {
+  margin: 0;
+  padding-left: 20px;
+  list-style-type: decimal;
+  color: var(--md-on-surface);
+  line-height: 1.7;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.suggestion-list li {
+  margin-bottom: 8px;
+}
+
+.suggestion-list li:last-child {
+  margin-bottom: 0;
 }
 </style>

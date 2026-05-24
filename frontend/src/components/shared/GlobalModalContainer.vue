@@ -119,15 +119,15 @@ onUnmounted(() => {
   border-radius: var(--md-radius-md, 6px);
   box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15);
   outline: none;
-  animation: scrollFoldOpen 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  animation: scrollFoldOpen 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 /* 深色模式（深夜书房）适配 */
 :global(.dark) .m3-ink-modal-box {
   background-color: #1a1e20;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 0);
+  background-image: radial-gradient(rgba(242, 235, 217, 0.015) 1px, transparent 0);
   border-color: #3b4245;
-  box-shadow: 4px 4px 0px rgba(0, 0, 0, 0.5);
+  box-shadow: 4px 4px 0px rgba(13, 16, 17, 0.5);
 }
 
 /* 四角古黄铜包角扣 */
@@ -208,8 +208,8 @@ onUnmounted(() => {
   height: 28px;
   border-radius: 4px;
   background-color: var(--md-primary, #b83c32);
-  color: #ffffff;
-  font-family: 'Noto Serif SC', '思源宋体', serif;
+  color: var(--md-on-primary);
+  font-family: var(--md-font-serif);
   font-weight: 700;
   font-size: var(--md-label-large);
   box-shadow: 0 1px 3px rgba(184, 60, 50, 0.2);
@@ -217,7 +217,7 @@ onUnmounted(() => {
 
 .m3-ink-modal-header__title {
   margin: 0;
-  font-family: 'Noto Serif SC', '思源宋体', serif;
+  font-family: var(--md-font-serif);
   font-weight: 700;
   font-size: var(--md-title-medium, 1.25rem);
   color: var(--md-on-surface, #1c2022);
@@ -235,7 +235,11 @@ onUnmounted(() => {
   background-color: transparent;
   color: var(--md-on-surface-variant, #5b6264);
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition:
+    background-color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1),
+    border-color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1),
+    color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1),
+    transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .m3-ink-modal-close-badge {
@@ -248,11 +252,15 @@ onUnmounted(() => {
   background-color: rgba(184, 60, 50, 0.08);
   border: 1px solid rgba(184, 60, 50, 0.35);
   color: #b83c32; /* 朱砂红 */
-  font-family: 'Noto Serif SC', '思源宋体', serif;
+  font-family: var(--md-font-serif);
   font-weight: 700;
   font-size: var(--md-label-large);
   box-shadow: inset 0 1px 2px rgba(184, 60, 50, 0.1);
-  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition:
+    background-color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1),
+    box-shadow 0.25s cubic-bezier(0.25, 0.8, 0.25, 1),
+    color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1),
+    transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .m3-ink-modal-close-text {
@@ -269,7 +277,7 @@ onUnmounted(() => {
 .m3-ink-modal-close-btn:hover .m3-ink-modal-close-badge {
   transform: rotate(-10deg) scale(1.05);
   background-color: #b83c32;
-  color: #ffffff;
+  color: var(--md-on-secondary);
   box-shadow: 0 3px 6px rgba(184, 60, 50, 0.2);
 }
 

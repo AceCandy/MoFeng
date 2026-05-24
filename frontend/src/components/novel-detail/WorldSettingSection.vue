@@ -1,75 +1,121 @@
 <!-- AIMETA P=世界观区_世界设定展示|R=世界观信息|NR=不含编辑功能|E=component:WorldSettingSection|X=ui|A=世界观组件|D=vue|S=dom|RD=./README.ai -->
 <template>
-  <div class="space-y-6">
-    <div class="bg-[var(--md-surface)] rounded-2xl shadow-sm border border-[var(--md-outline-variant)] p-6">
-      <div class="flex items-start justify-between gap-4 mb-4">
-        <h3 class="text-lg font-semibold text-[var(--md-on-surface)]">核心规则</h3>
-        <button
-          v-if="editable"
-          type="button"
-          class="text-[var(--md-on-surface-variant)] hover:text-[var(--md-primary)] transition-colors"
-          @click="emitEdit('world_setting.core_rules', '核心规则', worldSetting.core_rules)">
-          <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
-            <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
+  <div class="blueprint-page world-setting-section">
+    <header class="blueprint-section-header">
+      <div class="blueprint-section-header__main">
+        <span class="blueprint-section-header__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" />
           </svg>
-        </button>
+        </span>
+        <div class="blueprint-section-header__text">
+          <p class="blueprint-kicker">世界蓝图</p>
+          <h2 class="blueprint-title">世界设定</h2>
+          <p class="blueprint-subtitle">集中查看故事规则、关键地点与主要阵营，保证后续章节不偏离基础设定。</p>
+        </div>
       </div>
-      <p class="text-[var(--md-on-surface-variant)] leading-7 whitespace-pre-line">{{ worldSetting.core_rules || '暂无' }}</p>
-    </div>
+    </header>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div class="bg-[var(--md-surface)] rounded-2xl shadow-sm border border-[var(--md-outline-variant)] p-6">
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center text-[var(--md-on-surface)] font-semibold">
-            <svg class="mr-2 text-[var(--md-primary)]" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18"/><path d="M6 18H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h2v7Z"/><path d="M18 18h2a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2h-2v7Z"/></svg>
-            <span>关键地点</span>
+    <section class="blueprint-panel blueprint-panel--paper">
+      <div class="blueprint-panel__body world-setting-section__rules">
+        <div class="world-setting-section__panel-head">
+          <div>
+            <p class="blueprint-kicker">核心规则</p>
+            <h3 class="blueprint-item-title">故事运行边界</h3>
           </div>
           <button
             v-if="editable"
             type="button"
-            class="text-[var(--md-on-surface-variant)] hover:text-[var(--md-primary)] transition-colors"
-            @click="emitEdit('world_setting.key_locations', '关键地点', worldSetting.key_locations)">
-            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            class="blueprint-icon-action"
+            aria-label="编辑核心规则"
+            title="编辑核心规则"
+            @click="emitEdit('world_setting.core_rules', '核心规则', worldSetting.core_rules)"
+          >
+            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
               <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
               <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
             </svg>
           </button>
         </div>
-        <ul class="space-y-4 text-sm text-[var(--md-on-surface-variant)]">
-          <li v-for="(item, index) in locations" :key="index" class="bg-[var(--md-surface-container-low)] border border-[var(--md-outline-variant)] rounded-xl p-4">
-            <strong class="block text-[var(--md-on-surface)] mb-1">{{ item.title }}</strong>
-            <span class="text-xs text-[var(--md-on-surface-variant)] leading-5">{{ item.description }}</span>
-          </li>
-          <li v-if="!locations.length" class="text-[var(--md-on-surface-variant)] text-sm">暂无数据</li>
-        </ul>
+        <p class="blueprint-prose" :class="{ 'world-setting-section__empty': !worldSetting.core_rules }">
+          {{ worldSetting.core_rules || '暂无核心规则。' }}
+        </p>
       </div>
+    </section>
 
-      <div class="bg-[var(--md-surface)] rounded-2xl shadow-sm border border-[var(--md-outline-variant)] p-6">
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center text-[var(--md-on-surface)] font-semibold">
-            <svg class="mr-2 text-[var(--md-primary)]" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            <span>主要阵营</span>
+    <div class="blueprint-card-grid blueprint-card-grid--wide">
+      <section class="blueprint-panel">
+        <div class="blueprint-panel__body">
+          <div class="world-setting-section__panel-head">
+            <div>
+              <p class="blueprint-kicker">空间材料</p>
+              <h3 class="blueprint-item-title">关键地点</h3>
+            </div>
+            <button
+              v-if="editable"
+              type="button"
+              class="blueprint-icon-action"
+              aria-label="编辑关键地点"
+              title="编辑关键地点"
+              @click="emitEdit('world_setting.key_locations', '关键地点', worldSetting.key_locations)"
+            >
+              <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
+              </svg>
+            </button>
           </div>
-          <button
-            v-if="editable"
-            type="button"
-            class="text-[var(--md-on-surface-variant)] hover:text-[var(--md-primary)] transition-colors"
-            @click="emitEdit('world_setting.factions', '主要阵营', worldSetting.factions)">
-            <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
-              <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
-            </svg>
-          </button>
+          <ul v-if="locations.length" class="world-setting-section__list">
+            <li v-for="(item, index) in locations" :key="`${item.title}-${index}`" class="blueprint-item-card">
+              <strong class="blueprint-item-title">{{ item.title }}</strong>
+              <span class="blueprint-item-meta">{{ item.description }}</span>
+            </li>
+          </ul>
+          <div v-else class="blueprint-empty">
+            <div>
+              <p class="blueprint-empty__title">暂无地点</p>
+              <p class="blueprint-empty__desc">补充地点后，章节生成会更容易保持空间连续性。</p>
+            </div>
+          </div>
         </div>
-        <ul class="space-y-4 text-sm text-[var(--md-on-surface-variant)]">
-          <li v-for="(item, index) in factions" :key="index" class="bg-[var(--md-surface-container-low)] border border-[var(--md-outline-variant)] rounded-xl p-4">
-            <strong class="block text-[var(--md-on-surface)] mb-1">{{ item.title }}</strong>
-            <span class="text-xs text-[var(--md-on-surface-variant)] leading-5">{{ item.description }}</span>
-          </li>
-          <li v-if="!factions.length" class="text-[var(--md-on-surface-variant)] text-sm">暂无数据</li>
-        </ul>
-      </div>
+      </section>
+
+      <section class="blueprint-panel">
+        <div class="blueprint-panel__body">
+          <div class="world-setting-section__panel-head">
+            <div>
+              <p class="blueprint-kicker">势力材料</p>
+              <h3 class="blueprint-item-title">主要阵营</h3>
+            </div>
+            <button
+              v-if="editable"
+              type="button"
+              class="blueprint-icon-action"
+              aria-label="编辑主要阵营"
+              title="编辑主要阵营"
+              @click="emitEdit('world_setting.factions', '主要阵营', worldSetting.factions)"
+            >
+              <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
+              </svg>
+            </button>
+          </div>
+          <ul v-if="factions.length" class="world-setting-section__list">
+            <li v-for="(item, index) in factions" :key="`${item.title}-${index}`" class="blueprint-item-card">
+              <strong class="blueprint-item-title">{{ item.title }}</strong>
+              <span class="blueprint-item-meta">{{ item.description }}</span>
+            </li>
+          </ul>
+          <div v-else class="blueprint-empty">
+            <div>
+              <p class="blueprint-empty__title">暂无阵营</p>
+              <p class="blueprint-empty__desc">补充阵营后，冲突、关系和伏笔会更容易归档。</p>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   </div>
 </template>
@@ -101,12 +147,12 @@ const normalizeList = (source: any): ListItem[] => {
         const [title, ...rest] = item.split('：')
         return {
           title: title || item,
-          description: rest.join('：') || '暂无描述'
+          description: rest.join('：') || '暂无描述',
         }
       }
       return {
-        title: item?.name || '未命名',
-        description: item?.description || item?.details || '暂无描述'
+        title: item?.name || item?.title || '未命名',
+        description: item?.description || item?.details || '暂无描述',
       }
     })
   }
@@ -126,6 +172,47 @@ const emitEdit = (field: string, title: string, value: any) => {
 import { defineComponent } from 'vue'
 
 export default defineComponent({
-  name: 'WorldSettingSection'
+  name: 'WorldSettingSection',
 })
 </script>
+
+<style scoped>
+.world-setting-section__rules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-4);
+}
+
+.world-setting-section__panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--md-spacing-4);
+  margin-bottom: var(--md-spacing-4);
+}
+
+.world-setting-section__list {
+  display: grid;
+  gap: var(--md-spacing-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.world-setting-section__list .blueprint-item-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-2);
+}
+
+.world-setting-section__empty {
+  color: var(--md-on-surface-variant);
+  font-style: italic;
+}
+
+@media (max-width: 640px) {
+  .world-setting-section__panel-head {
+    flex-direction: column;
+  }
+}
+</style>

@@ -3,7 +3,9 @@ import { resolve } from 'node:path'
 import process from 'node:process'
 import { gzipSync } from 'node:zlib'
 
+const distDir = resolve(process.cwd(), 'dist')
 const distAssetsDir = resolve(process.cwd(), 'dist/assets')
+const manifestPath = resolve(distDir, '.vite/manifest.json')
 
 const parseNumber = (rawValue, fallbackValue) => {
   const parsed = Number(rawValue)
@@ -47,9 +49,39 @@ const ensureAssetsExist = async () => {
   }
 }
 
-const files = (await ensureAssetsExist()).filter((fileName) =>
-  /\.(js|css)$/u.test(fileName),
-)
+const readManifestAssetFiles = async () => {
+  try {
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
+    const files = new Set()
+
+    for (const entry of Object.values(manifest)) {
+      if (!entry || typeof entry !== 'object') continue
+
+      if (typeof entry.file === 'string') {
+        files.add(entry.file)
+      }
+
+      for (const key of ['css', 'assets']) {
+        if (!Array.isArray(entry[key])) continue
+        for (const fileName of entry[key]) {
+          if (typeof fileName === 'string') {
+            files.add(fileName)
+          }
+        }
+      }
+    }
+
+    return [...files].filter((fileName) => /\.(js|css)$/u.test(fileName))
+  } catch {
+    return null
+  }
+}
+
+// 构建目录可能保留旧 hash 产物；优先使用 Vite manifest 只统计本次构建实际产出的资源。
+const manifestFiles = await readManifestAssetFiles()
+const files = manifestFiles ?? (await ensureAssetsExist())
+  .filter((fileName) => /\.(js|css)$/u.test(fileName))
+  .map((fileName) => `assets/${fileName}`)
 
 if (files.length === 0) {
   throw new Error(`在 ${distAssetsDir} 未找到 JS/CSS 构建产物。`)
@@ -57,7 +89,7 @@ if (files.length === 0) {
 
 const assets = await Promise.all(
   files.map(async (fileName) => {
-    const fullPath = resolve(distAssetsDir, fileName)
+    const fullPath = resolve(distDir, fileName)
     const content = await readFile(fullPath)
     return {
       fileName,

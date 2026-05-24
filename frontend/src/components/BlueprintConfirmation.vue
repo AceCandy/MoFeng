@@ -424,8 +424,8 @@ onUnmounted(() => {
     88% 99.3%, 76% 99.8%, 63% 99.2%, 50% 99.6%, 38% 99.1%, 25% 99.7%, 13% 99.3%, 0% 98.8%,
     0.6% 88%, 0.2% 76%, 0.7% 63%, 0.3% 50%, 0.8% 38%, 0.2% 25%, 0.7% 12%
   ) !important;
-  /* 注入轻透熟宣内阴影，使手撕边缘立体感跃然纸面 */
-  box-shadow: inset 0 0 20px rgba(184, 60, 50, 0.02) !important;
+  /* 用硬边内描线保留宣纸层次，避免大半径模糊阴影造成电子化观感。 */
+  box-shadow: inset 0 0 0 1px rgba(184, 60, 50, 0.04) !important;
 }
 
 /* 引言卡片专属：淡砂晕染，错落雅致 */
@@ -435,7 +435,7 @@ onUnmounted(() => {
     var(--md-surface-container-lowest) 70%, 
     rgba(184, 60, 50, 0.02) 100%
   ) !important;
-  box-shadow: inset 0 0 24px rgba(184, 60, 50, 0.04) !important;
+  box-shadow: inset 0 0 0 1px rgba(184, 60, 50, 0.08) !important;
 }
 
 /* 右上角钤印金石闲章（微倾斜阳刻） */
@@ -450,7 +450,7 @@ onUnmounted(() => {
   justify-content: center;
   border: 2px solid #b83c32;
   color: #b83c32;
-  font-family: var(--md-font-display, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-display) !important;
   font-size: 19px;
   font-weight: 900;
   line-height: 1 !important;
@@ -458,7 +458,13 @@ onUnmounted(() => {
   user-select: none;
   background-color: rgba(184, 60, 50, 0.02);
   box-shadow: inset 0 0 4px rgba(184, 60, 50, 0.08);
-  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    background-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
   z-index: 10;
 }
 
@@ -474,7 +480,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-family: var(--md-font-display, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-display) !important;
   font-size: 17px !important;
   font-weight: 700 !important;
   color: var(--md-primary) !important;
@@ -504,7 +510,7 @@ onUnmounted(() => {
 .blueprint-confirm__card-content :deep(.prose) {
   padding: 0 !important;
   max-width: none !important;
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-size: 15.5px !important;
   color: var(--md-on-surface) !important;
 }
@@ -535,7 +541,8 @@ onUnmounted(() => {
 }
 
 .blueprint-confirm__card-content :deep(blockquote) {
-  border-left: 3px solid var(--md-secondary) !important;
+  border: 1px dashed rgba(184, 60, 50, 0.15) !important;
+  border-left: 1.5px solid var(--md-secondary) !important;
   background-color: rgba(184, 60, 50, 0.02) !important;
   padding: 14px 18px !important;
   margin: 14px 0 !important;
@@ -682,7 +689,7 @@ onUnmounted(() => {
 
 :root[data-theme='dark'] .blueprint-confirm__card {
   background-color: var(--md-surface-dim) !important;
-  box-shadow: inset 0 0 20px rgba(13, 16, 17, 0.3) !important;
+  box-shadow: inset 0 0 0 1px rgba(229, 222, 201, 0.08) !important;
 }
 
 :root[data-theme='dark'] .blueprint-confirm__card--intro {
@@ -691,7 +698,7 @@ onUnmounted(() => {
     var(--md-surface-dim) 70%, 
     rgba(140, 36, 28, 0.03) 100%
   ) !important;
-  box-shadow: inset 0 0 24px rgba(140, 36, 28, 0.05) !important;
+  box-shadow: inset 0 0 0 1px rgba(140, 36, 28, 0.16) !important;
 }
 
 :root[data-theme='dark'] .blueprint-confirm__card-seal {

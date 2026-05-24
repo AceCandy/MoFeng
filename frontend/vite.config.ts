@@ -27,6 +27,7 @@ const frontendAllowedHosts = (process.env.FRONTEND_ALLOWED_HOSTS || 'test.acecan
 const backendProxyHost = process.env.BACKEND_PROXY_HOST || '127.0.0.1'
 const backendPort = Number(process.env.BACKEND_PORT || '8000')
 const isProduction = process.env.NODE_ENV === 'production'
+const enableVueDevTools = !isProduction && process.env.VITE_ENABLE_VUE_DEVTOOLS === 'true'
 
 const naiveUiCoreModuleNames = new Set([
   '_internal',
@@ -100,7 +101,7 @@ export default defineConfig({
   plugins: [
     vue(),
     vueJsx(),
-    !isProduction && vueDevTools(),
+    enableVueDevTools && vueDevTools(),
   ],
   resolve: {
     alias: {
@@ -126,6 +127,7 @@ export default defineConfig({
     }
   },
   build: {
+    manifest: true,
     rollupOptions: {
       output: {
         manualChunks: resolveVendorChunk,

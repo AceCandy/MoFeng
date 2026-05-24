@@ -36,7 +36,7 @@
             </div>
           </div>
 
-          <div class="px-6 pb-6 pt-3">
+          <div class="pl-1 pr-2 pb-6 pt-3">
             <div v-if="project.blueprint?.chapter_outline?.length" class="writing-sidebar__tree">
               <div
                 v-for="(chapter, index) in project.blueprint.chapter_outline"
@@ -55,7 +55,7 @@
                       ? 'writing-sidebar__chapter-row--compact-selected'
                       : 'writing-sidebar__chapter-row--compact-idle',
                   ]"
-                  :style="{ animationDelay: `${index * 40}ms` }"
+                  :style="{ animationDelay: `${Math.min(index * 8, 80)}ms` }"
                 >
                   <div class="writing-sidebar__chapter-main">
                     <div class="writing-sidebar__chapter-index">
@@ -378,7 +378,7 @@ watch(
 }
 
 .writing-sidebar__outline-heading h3 {
-  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-family: var(--md-font-serif);
 }
 
 .writing-sidebar__outline-toolbar {
@@ -392,7 +392,7 @@ watch(
   color: var(--md-on-surface-variant);
   font-size: var(--md-label-medium);
   font-weight: 600;
-  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-family: var(--md-font-serif);
 }
 
 .writing-sidebar__outline-action {
@@ -404,7 +404,11 @@ watch(
   border: 1.5px solid var(--md-outline);
   color: var(--md-on-surface-variant);
   background-color: var(--md-surface-container-low);
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -433,13 +437,13 @@ watch(
 
 .writing-sidebar__tree-item {
   position: relative;
-  padding-left: 11px;
+  padding-left: 10px;
 }
 
 .writing-sidebar__tree-item::before {
   content: '';
   position: absolute;
-  left: 6px;
+  left: 4px;
   top: 0;
   bottom: -4px;
   width: 1px;
@@ -453,9 +457,9 @@ watch(
 .writing-sidebar__tree-item::after {
   content: '';
   position: absolute;
-  left: 6px;
+  left: 4px;
   top: 20px;
-  width: 7px;
+  width: 6px;
   height: 1px;
   background-color: var(--md-outline-variant);
 }
@@ -494,15 +498,17 @@ watch(
 
 /* 选中章节签条 */
 .writing-sidebar__chapter-row--compact-selected {
-  border: 1px solid var(--md-secondary) !important;
-  border-left: 4px solid var(--md-secondary) !important;
-  background-color: rgba(184, 60, 50, 0.03) !important;
-  padding-left: 10px;
+  border: 1.5px solid var(--md-secondary) !important;
+  background-color: rgba(184, 60, 50, 0.04) !important;
+  margin-left: -10px !important; /* 向左平移 10px，使其恰好压在竖红线上 */
+  width: calc(100% + 14px) !important; /* 显式拓宽卡片（向左超出 10px，向右超出 4px），使其绝对宽于普通卡片 */
+  padding-left: 18px !important; /* 增加左侧内边距，精确对齐文字内容与状态点 */
   box-shadow: 2px 2px 0px var(--md-secondary) !important;
+  z-index: 10; /* 确保选中章节盖在连线上，显得更有层次 */
 }
 
 .writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-title {
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-family: var(--md-font-serif);
   color: var(--md-secondary) !important;
   font-weight: bold;
   letter-spacing: 0.03em;
@@ -519,7 +525,7 @@ watch(
   right: 12px;
   top: 50%;
   transform: translateY(-50%) rotate(-6deg);
-  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-family: var(--md-font-serif);
   font-size: 11px;
   font-weight: bold;
   color: rgba(184, 60, 50, 0.82);
@@ -527,7 +533,7 @@ watch(
   padding: 1px 3px;
   line-height: 1;
   background-color: rgba(184, 60, 50, 0.05);
-  animation: seal-stamp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: seal-stamp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
   pointer-events: none;
 }
 
@@ -609,7 +615,7 @@ watch(
 }
 
 .m3-stagger {
-  animation: m3-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: m3-rise 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @media (max-width: 833px) {
@@ -622,7 +628,7 @@ watch(
 @keyframes m3-rise {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -643,15 +649,13 @@ watch(
 @keyframes seal-stamp {
   0% {
     opacity: 0;
-    transform: translateY(-50%) scale(2.3) rotate(-22deg);
-  }
-  75% {
-    opacity: 0.9;
-    transform: translateY(-50%) scale(0.92) rotate(-8deg);
+    transform: translateY(-50%) scale(1.45) rotate(-18deg);
+    filter: blur(2px);
   }
   100% {
     opacity: 1;
     transform: translateY(-50%) scale(1) rotate(-6deg);
+    filter: blur(0);
   }
 }
 
@@ -678,21 +682,4 @@ watch(
   flex-shrink: 0;
 }
 
-/* 自定义极细、高雅的国风半透明水墨滚动条，取代粗糙的系统默认灰色滚动条 */
-.overflow-y-auto::-webkit-scrollbar {
-  width: 5px;
-}
-
-.overflow-y-auto::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.overflow-y-auto::-webkit-scrollbar-thumb {
-  background-color: rgba(28, 32, 34, 0.15); /* 淡淡的半透淡墨滑块 */
-  border-radius: 4px;
-}
-
-.overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(28, 32, 34, 0.35); /* 悬停时渐为松烟墨色 */
-}
 </style>

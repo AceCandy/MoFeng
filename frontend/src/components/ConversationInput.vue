@@ -206,7 +206,13 @@ watch(isManualInput, async (newValue) => {
   border: 1px solid var(--md-outline-variant) !important; /* 初始墨晕细线 */
   background-color: var(--md-surface-container-lowest) !important;
   color: var(--md-on-surface-variant) !important;
-  transition: all var(--md-duration-short) var(--md-easing-standard) !important;
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard),
+    opacity var(--md-duration-short) var(--md-easing-standard),
+    transform var(--md-duration-short) var(--md-easing-standard) !important;
   cursor: pointer;
   box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.03) !important;
 }
@@ -381,7 +387,7 @@ watch(isManualInput, async (newValue) => {
 
 /* 古风文字运墨状态呼吸 */
 .inspiration-loading-text {
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-size: 13.5px !important;
   font-weight: 600 !important;
   color: var(--md-on-surface-variant) !important;

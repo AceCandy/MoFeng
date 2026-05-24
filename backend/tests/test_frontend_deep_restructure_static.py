@@ -666,3 +666,11 @@ def test_vite_dev_server_allows_configured_public_domain():
     assert "test.acecandy.cn" in source
     assert "frontendAllowedHosts" in source
     assert "allowedHosts: frontendAllowedHosts" in source
+
+
+def test_vite_devtools_is_opt_in_to_keep_app_surface_clean():
+    source = _vite_config_source()
+
+    assert "VITE_ENABLE_VUE_DEVTOOLS" in source
+    assert "enableVueDevTools && vueDevTools()" in source
+    assert "!isProduction && vueDevTools()" not in source

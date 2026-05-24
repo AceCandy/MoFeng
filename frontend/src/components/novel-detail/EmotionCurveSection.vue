@@ -1,13 +1,10 @@
 <template>
-  <div class="emotion-curve-section">
+  <div class="emotion-curve-section blueprint-page">
     <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-3">
-        <div
-          class="w-10 h-10 rounded-full flex items-center justify-center emotion-header-icon-container"
-        >
+    <header class="blueprint-section-header">
+      <div class="blueprint-section-header__main">
+        <span class="blueprint-section-header__icon" aria-hidden="true">
           <svg
-            class="w-5 h-5 emotion-header-icon"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -19,14 +16,15 @@
               d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"
             />
           </svg>
-        </div>
-        <div>
-          <h3 class="md-title-medium emotion-title">情感曲线</h3>
-          <p class="md-body-small emotion-subtitle">追踪章节情感变化</p>
+        </span>
+        <div class="blueprint-section-header__text">
+          <p class="blueprint-kicker">分析档案</p>
+          <h2 class="blueprint-title">情感曲线</h2>
+          <p class="blueprint-subtitle">追踪章节情绪强度、主导情感与叙事波动，辅助判断故事节奏是否稳定。</p>
         </div>
       </div>
-      <div class="flex items-center gap-2">
-        <button @click="useAIAnalysis" class="md-btn md-btn-tonal md-ripple" :disabled="isLoading">
+      <div class="blueprint-action-row">
+        <button @click="useAIAnalysis" class="blueprint-button blueprint-button--primary" :disabled="isLoading">
           <svg
             class="w-5 h-5"
             viewBox="0 0 24 24"
@@ -44,12 +42,12 @@
         </button>
         <button
           @click="refreshData"
-          class="md-btn md-btn-text md-ripple refresh-btn"
+          class="blueprint-button refresh-btn"
           :disabled="isLoading"
         >
           <svg
-            class="w-5 h-5 transition-transform"
-            :class="{ 'animate-spin': isLoading }"
+            class="w-5 h-5 emotion-refresh-icon"
+            :class="{ 'is-spinning': isLoading }"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -64,86 +62,81 @@
           刷新
         </button>
       </div>
-    </div>
+    </header>
 
     <!-- Loading State -->
-    <div v-if="isLoading" class="flex flex-col items-center justify-center py-12">
-      <div class="md-spinner"></div>
-      <p class="mt-4 md-body-medium loading-text">
-        分析情感数据中...
-      </p>
+    <div
+      v-if="isLoading"
+      class="blueprint-state blueprint-state--loading"
+      role="status"
+      aria-live="polite"
+    >
+      <div class="blueprint-state__inner">
+        <div class="md-spinner"></div>
+        <p class="blueprint-state__title">分析情感数据中</p>
+        <p class="blueprint-state__desc">正在读取章节情绪强度、主导情感与叙事波动。</p>
+      </div>
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="flex flex-col items-center justify-center py-12">
-      <div
-        class="w-12 h-12 rounded-full flex items-center justify-center mb-4 error-icon-container"
-      >
-        <svg
-          class="w-6 h-6 error-icon"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
+    <div v-else-if="error" class="blueprint-state blueprint-state--error" role="alert">
+      <div class="blueprint-state__inner">
+        <div class="blueprint-state__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+        </div>
+        <p class="blueprint-state__title">情感数据加载失败</p>
+        <p class="blueprint-state__desc">{{ error }}</p>
+        <div class="blueprint-state__actions">
+          <button type="button" @click="refreshData" class="blueprint-button">重试</button>
+        </div>
       </div>
-      <p class="md-body-medium error-text">{{ error }}</p>
-      <button @click="refreshData" class="md-btn md-btn-text md-ripple mt-4">重试</button>
     </div>
 
     <!-- Empty State -->
     <div
       v-else-if="!emotionPoints || emotionPoints.length === 0"
-      class="flex flex-col items-center justify-center py-12"
+      class="blueprint-state blueprint-state--empty"
     >
-      <div
-        class="w-16 h-16 rounded-full flex items-center justify-center mb-4 empty-icon-container"
-      >
-        <svg
-          class="w-8 h-8 empty-icon"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-          />
-        </svg>
+      <div class="blueprint-state__inner">
+        <div class="blueprint-state__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+            />
+          </svg>
+        </div>
+        <p class="blueprint-state__title">暂无情感数据</p>
+        <p class="blueprint-state__desc">生成章节内容后将自动分析情感曲线。</p>
       </div>
-      <p class="md-body-large empty-title">暂无情感数据</p>
-      <p class="md-body-medium empty-desc">
-        生成章节内容后将自动分析情感曲线
-      </p>
     </div>
 
     <!-- Chart Container -->
     <div v-else>
       <!-- Statistics Cards -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div class="md-card md-card-outlined p-4 text-center stat-card">
-          <p class="md-label-medium stat-label">总章节</p>
-          <p class="md-headline-small stat-value">{{ totalChapters }}</p>
+      <div class="blueprint-metric-grid mb-6">
+        <div class="blueprint-metric stat-card">
+          <p class="blueprint-metric__label stat-label">总章节</p>
+          <p class="blueprint-metric__value stat-value">{{ totalChapters }}</p>
         </div>
-        <div class="md-card md-card-outlined p-4 text-center stat-card">
-          <p class="md-label-medium stat-label">平均强度</p>
-          <p class="md-headline-small stat-value">{{ averageIntensity }}</p>
+        <div class="blueprint-metric stat-card">
+          <p class="blueprint-metric__label stat-label">平均强度</p>
+          <p class="blueprint-metric__value stat-value">{{ averageIntensity }}</p>
         </div>
-        <div class="md-card md-card-outlined p-4 text-center stat-card">
-          <p class="md-label-medium stat-label">主导情感</p>
-          <p class="md-headline-small stat-value">{{ dominantEmotion }}</p>
+        <div class="blueprint-metric stat-card">
+          <p class="blueprint-metric__label stat-label">主导情感</p>
+          <p class="blueprint-metric__value stat-value">{{ dominantEmotion }}</p>
         </div>
-        <div class="md-card md-card-outlined p-4 text-center stat-card">
-          <p class="md-label-medium stat-label">情感类型</p>
-          <p class="md-headline-small stat-value">{{ emotionTypeCount }}</p>
+        <div class="blueprint-metric stat-card">
+          <p class="blueprint-metric__label stat-label">情感类型</p>
+          <p class="blueprint-metric__value stat-value">{{ emotionTypeCount }}</p>
         </div>
       </div>
 
@@ -167,7 +160,7 @@
               : {}
           "
         >
-          <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: emotion.color }"></span>
+          <span class="w-2 h-2 rounded-xs" :style="{ backgroundColor: emotion.color }"></span>
           {{ emotion.label }}
           <span v-if="emotionDistribution[emotion.label]" class="ml-1 opacity-70"
             >({{ emotionDistribution[emotion.label] }})</span
@@ -176,7 +169,8 @@
       </div>
 
       <!-- Chart -->
-      <div class="md-card md-card-outlined p-4 chart-card">
+      <div class="blueprint-panel blueprint-panel--paper chart-card">
+        <div class="blueprint-panel__body">
         <p :id="chartSummaryId" class="sr-only">{{ chartA11ySummary }}</p>
         <svg
           class="emotion-curve-svg h-[320px] w-full"
@@ -272,6 +266,7 @@
             </g>
           </g>
         </svg>
+        </div>
       </div>
 
       <!-- Chapter Details List -->
@@ -280,10 +275,10 @@
         <div
           v-for="point in emotionPoints"
           :key="point.chapter_number"
-          class="md-card md-card-outlined p-4 flex items-center gap-4 detail-card"
+          class="blueprint-item-card flex items-center gap-4 detail-card"
         >
           <div
-            class="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+            class="w-10 h-10 rounded-xs border border-[var(--md-outline-variant)] flex items-center justify-center flex-shrink-0"
             :style="{ backgroundColor: getEmotionColor(point.emotion_type) + '20' }"
           >
             <span class="md-label-large" :style="{ color: getEmotionColor(point.emotion_type) }">{{
@@ -570,15 +565,20 @@ const chartLegendColor = (emotionLabel: string) => {
 
 <style scoped>
 .emotion-curve-section {
-  padding: 20px;
-  background-color: var(--md-surface);
-  border-radius: var(--md-radius-lg);
   color: var(--md-on-surface);
 }
 
 .refresh-btn {
   gap: 8px;
   padding: 0 12px;
+}
+
+.emotion-refresh-icon {
+  transition: transform var(--md-duration-short) var(--md-easing-standard);
+}
+
+.emotion-refresh-icon.is-spinning {
+  animation: blueprint-refresh-spin 1s linear infinite;
 }
 
 .md-chip-filter .w-2.h-2 {
@@ -602,40 +602,8 @@ const chartLegendColor = (emotionLabel: string) => {
   color: var(--md-on-surface-variant);
 }
 
-.loading-text {
-  color: var(--md-on-surface-variant);
-}
-
-.error-icon-container {
-  background-color: var(--md-error-container);
-}
-
-.error-icon {
-  color: var(--md-error);
-}
-
-.error-text {
-  color: var(--md-error);
-}
-
-.empty-icon-container {
-  background-color: var(--md-surface-container);
-}
-
-.empty-icon {
-  color: var(--md-on-surface-variant);
-}
-
-.empty-title {
-  color: var(--md-on-surface);
-}
-
-.empty-desc {
-  color: var(--md-on-surface-variant);
-}
-
 .stat-card {
-  border-radius: var(--md-radius-md);
+  text-align: left;
 }
 
 .stat-label {
@@ -647,7 +615,7 @@ const chartLegendColor = (emotionLabel: string) => {
 }
 
 .chart-card {
-  border-radius: var(--md-radius-md);
+  overflow: hidden;
 }
 
 .details-title {
@@ -655,7 +623,16 @@ const chartLegendColor = (emotionLabel: string) => {
 }
 
 .detail-card {
-  border-radius: var(--md-radius-md);
+  border-radius: var(--md-radius-sm);
+}
+
+.emotion-curve-svg {
+  display: block;
+  min-width: 560px;
+}
+
+.chart-card .blueprint-panel__body {
+  overflow-x: auto;
 }
 
 .detail-title {
@@ -671,8 +648,15 @@ const chartLegendColor = (emotionLabel: string) => {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .emotion-refresh-icon.is-spinning,
   .md-spinner {
     animation: none;
+  }
+}
+
+@keyframes blueprint-refresh-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 </style>

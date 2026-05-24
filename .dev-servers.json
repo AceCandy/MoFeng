@@ -1,7 +1,0 @@
-{
-  "backend_pid": 29332,
-  "frontend_pid": 1864,
-  "backend_url": "http://127.0.0.1:8000",
-  "frontend_url": "http://127.0.0.1:5173",
-  "started_at": "2026-03-06T04:43:45.963809+00:00"
-}

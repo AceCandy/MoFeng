@@ -416,7 +416,7 @@ const parsedRelationships = computed(() => {
 }
 
 .blueprint-display__heading {
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-family: var(--md-font-serif);
   font-size: var(--md-headline-small);
   font-weight: 700;
   text-align: center;
@@ -561,7 +561,7 @@ const parsedRelationships = computed(() => {
 }
 
 .bp__header-title {
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-family: var(--md-font-serif);
   font-size: var(--md-headline-medium);
   font-weight: 700;
   color: var(--md-primary-dark); /* 焦墨字色 */
@@ -583,7 +583,7 @@ const parsedRelationships = computed(() => {
   color: var(--md-secondary); /* 朱红色 */
   padding: 3px var(--md-spacing-3);
   border-radius: 2px !important; /* 木刻小微直角 */
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-family: var(--md-font-serif);
   font-size: var(--md-label-medium);
   font-weight: 600;
   box-shadow: 1px 1px 0px rgba(180, 50, 50, 0.1);
@@ -624,7 +624,7 @@ const parsedRelationships = computed(() => {
 }
 
 .bp__section-title {
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-family: var(--md-font-serif);
   font-size: var(--md-title-medium);
   font-weight: 700;
   color: var(--md-primary-dark);
@@ -657,7 +657,7 @@ const parsedRelationships = computed(() => {
 }
 
 .bp__summary-label {
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-family: var(--md-font-serif);
   font-weight: 600;
   color: var(--md-primary-light);
   margin-bottom: var(--md-spacing-2);
@@ -666,7 +666,7 @@ const parsedRelationships = computed(() => {
 }
 
 .bp__summary-quote {
-  font-family: Noto Sans SC, sans-serif;
+  font-family: var(--md-font-family);
   font-size: 16px;
   line-height: 1.8;
   font-weight: 500;
@@ -676,7 +676,7 @@ const parsedRelationships = computed(() => {
 }
 
 .bp__synopsis-text {
-  font-family: Noto Sans SC, sans-serif;
+  font-family: var(--md-font-family);
   font-size: 15px;
   line-height: 1.85;
   color: var(--md-primary-light);
@@ -699,7 +699,7 @@ const parsedRelationships = computed(() => {
 }
 
 .bp__world-rules-title {
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-family: var(--md-font-serif);
   font-weight: 700;
   color: var(--md-primary-dark);
   margin-bottom: var(--md-spacing-3);
@@ -720,7 +720,7 @@ const parsedRelationships = computed(() => {
 }
 
 .bp__world-group-title {
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-family: var(--md-font-serif);
   font-weight: 700;
   color: var(--md-primary-dark);
   margin-bottom: var(--md-spacing-3.5);
@@ -746,7 +746,7 @@ const parsedRelationships = computed(() => {
 }
 
 .bp__world-item-name {
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-family: var(--md-font-serif);
   font-weight: 700;
   color: var(--md-primary-dark);
   margin-bottom: var(--md-spacing-1.5);
@@ -754,7 +754,7 @@ const parsedRelationships = computed(() => {
 }
 
 .bp__world-item-desc {
-  font-family: Noto Sans SC, sans-serif;
+  font-family: var(--md-font-family);
   font-size: var(--md-body-small);
   color: var(--md-primary-light);
   line-height: 1.6;
@@ -773,7 +773,12 @@ const parsedRelationships = computed(() => {
   border-radius: 2px;
   padding: var(--md-spacing-5.5) var(--md-spacing-5);
   box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.04);
-  transition: all 0.25s ease;
+  transition:
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    color 0.25s ease,
+    transform 0.25s ease;
 }
 
 .bp__char-card:hover {
@@ -792,7 +797,7 @@ const parsedRelationships = computed(() => {
 }
 
 .bp__char-name {
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-family: var(--md-font-serif);
   font-size: 17px;
   font-weight: 700;
   color: var(--md-primary-dark);
@@ -806,7 +811,7 @@ const parsedRelationships = computed(() => {
   padding: 2px var(--md-spacing-2.5);
   border-radius: 1px; /* 方正印记 */
   font-size: var(--md-label-small);
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-family: var(--md-font-serif);
   font-weight: 600;
   line-height: 1.1;
   box-shadow: 0.5px 0.5px 0px rgba(180, 50, 50, 0.08);
@@ -831,7 +836,7 @@ const parsedRelationships = computed(() => {
 }
 
 .bp__char-field-label {
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-family: var(--md-font-serif);
   font-weight: 600;
   color: var(--md-primary-light);
   margin-bottom: 2px;
@@ -848,7 +853,7 @@ const parsedRelationships = computed(() => {
 }
 
 .bp__char-desc {
-  font-family: Noto Sans SC, sans-serif;
+  font-family: var(--md-font-family);
   font-size: 14px;
   color: var(--md-primary-light);
   background-color: var(--md-surface);
@@ -884,7 +889,7 @@ const parsedRelationships = computed(() => {
 }
 
 .bp__rel-name {
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-family: var(--md-font-serif);
   font-weight: 600;
   color: var(--md-primary-dark);
   background-color: var(--md-surface);
@@ -931,7 +936,7 @@ const parsedRelationships = computed(() => {
 }
 
 .bp__rel-desc {
-  font-family: Noto Sans SC, sans-serif;
+  font-family: var(--md-font-family);
   font-size: 13.5px;
   color: var(--md-primary-light);
   background-color: var(--md-surface);
@@ -942,7 +947,7 @@ const parsedRelationships = computed(() => {
 }
 
 .bp__rel-desc-label {
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-family: var(--md-font-serif);
   font-weight: 600;
   color: var(--md-primary-dark);
 }
@@ -962,7 +967,12 @@ const parsedRelationships = computed(() => {
   border: 1px solid var(--md-outline-variant);
   border-radius: 2px;
   padding: var(--md-spacing-5) var(--md-spacing-5.5);
-  transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
+  transition:
+    background-color 0.25s cubic-bezier(0.2, 0, 0, 1),
+    border-color 0.25s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.25s cubic-bezier(0.2, 0, 0, 1),
+    color 0.25s cubic-bezier(0.2, 0, 0, 1),
+    transform 0.25s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .bp__chapter-item:hover {
@@ -982,7 +992,7 @@ const parsedRelationships = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-family: var(--md-font-serif);
   font-weight: 700;
   font-size: var(--md-label-large);
   box-shadow: 1.5px 1.5px 0px rgba(28, 32, 34, 0.1);
@@ -1015,7 +1025,7 @@ const parsedRelationships = computed(() => {
 }
 
 .bp__chapter-title {
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-family: var(--md-font-serif);
   font-size: 16px;
   font-weight: 700;
   color: var(--md-primary-dark);
@@ -1024,7 +1034,7 @@ const parsedRelationships = computed(() => {
 }
 
 .bp__chapter-summary {
-  font-family: Noto Sans SC, sans-serif;
+  font-family: var(--md-font-family);
   color: var(--md-primary-light);
   line-height: 1.8;
   font-size: 14.5px;

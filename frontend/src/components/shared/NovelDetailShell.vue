@@ -7,6 +7,88 @@
       'detail-shell--drawer-collapsed': !isSidebarOpen,
     }"
   >
+    <header v-if="isAdmin" class="detail-shell__topbar">
+      <div class="detail-shell__topbar-inner">
+        <button
+          type="button"
+          class="detail-shell__drawer-toggle"
+          :aria-expanded="isSidebarOpen"
+          :aria-label="isSidebarOpen ? '收起蓝图导航' : '展开蓝图导航'"
+          :title="isSidebarOpen ? '收起蓝图导航' : '展开蓝图导航'"
+          aria-controls="novel-detail-blueprint-nav"
+          @click="toggleSidebar"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+          <span class="sr-only">切换小说档案分区导航</span>
+        </button>
+        <button class="md-btn md-btn-outlined md-ripple detail-shell__back-button" @click="goBack">
+          返回
+        </button>
+        <h2 class="detail-shell__title md-title-large truncate" style="color: var(--md-on-surface)">
+          {{ formattedTitle }}
+        </h2>
+        <span v-if="isAdmin" class="detail-shell__mode-chip">管理只读</span>
+        <button
+          v-if="!isAdmin"
+          class="md-btn md-btn-filled md-ripple detail-shell__write-button"
+          @click="goToWritingDesk"
+        >
+          <span class="detail-shell__write-label-full">进入写作台</span>
+          <span class="detail-shell__write-label-compact">写作台</span>
+        </button>
+      </div>
+    </header>
+
+    <section v-if="isAdmin" class="detail-shell__overview-strip" aria-label="当前小说概览">
+      <div class="detail-shell__overview-scroll">
+        <div class="detail-shell__scroll-main">
+          <div class="detail-shell__scroll-header">
+            <div>
+              <p class="detail-shell__kicker">故事蓝图</p>
+              <h2>{{ formattedTitle }}</h2>
+            </div>
+          </div>
+          <p class="detail-shell__scroll-desc">
+            {{ overviewData?.one_sentence_summary || '从侧边分区查看设定、角色、章节与分析材料。' }}
+          </p>
+          <div class="detail-shell__scroll-status">
+            <span class="detail-shell__status-pill" :class="`is-${projectStatus.tone}`">
+              {{ projectStatus.label }}
+            </span>
+            <span class="detail-shell__status-meta">{{ currentChapterLabel }}</span>
+            <span v-if="overviewMeta.updated_at" class="detail-shell__scroll-time">
+              更新于 {{ formatDateTime(overviewMeta.updated_at) }}
+            </span>
+          </div>
+        </div>
+        <dl class="detail-shell__scroll-metrics" aria-label="蓝图统计">
+          <div class="detail-shell__scroll-metric">
+            <dt>角色</dt>
+            <dd>
+              <strong>{{ characterCount }}</strong>
+              <span>主要角色</span>
+            </dd>
+          </div>
+          <div class="detail-shell__scroll-metric">
+            <dt>章节</dt>
+            <dd>
+              <strong>{{ chapterCompleted }}/{{ chapterTotal }}</strong>
+              <span>已完成 / 总大纲</span>
+            </dd>
+          </div>
+          <div class="detail-shell__scroll-metric is-alert">
+            <dt>伏笔</dt>
+            <dd>
+              <strong>{{ foreshadowingOverview.overdue }}</strong>
+              <span>待回收线索</span>
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
     <!-- Main Content -->
     <div class="detail-shell__body">
       <!-- Material 3 Navigation Drawer -->
@@ -77,12 +159,12 @@
                 class="flex flex-col items-center justify-center py-20 sm:py-28 space-y-4"
               >
                 <div
-                  class="w-16 h-16 rounded-full flex items-center justify-center"
+                  class="w-16 h-16 rounded-xs border border-[var(--md-outline-variant)] flex items-center justify-center"
                   style="background-color: var(--md-error-container)"
                 >
                   <svg
                     class="w-8 h-8"
-                    style="color: var(--md-error)"
+                    style="color: var(--md-error-text)"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -217,6 +299,7 @@ import { resolveChapterNumberForEntry } from '@/utils/chapter'
 import { globalAlert } from '@/composables/useAlert'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import BlueprintEditModal from '@/components/BlueprintEditModal.vue'
+import '@/assets/blueprint.css'
 
 interface Props {
   isAdmin?: boolean
@@ -245,7 +328,6 @@ const sections: Array<{ key: SectionKey; label: string }> = [
   { key: 'characters', label: '主要角色' },
   { key: 'relationships', label: '人物关系' },
   { key: 'chapter_outline', label: '章节大纲' },
-  { key: 'chapters', label: '章节内容' },
   { key: 'emotion_curve', label: '情感曲线' },
   { key: 'foreshadowing', label: '伏笔管理' },
 ]
@@ -461,17 +543,8 @@ const componentContainerClass = computed(() => {
 })
 
 const contentCardClass = computed(() => {
-  const classes: string[] = []
-  // 核心：所有设定分区卡片在大屏下一律锁死满屏高度，并在卡片内部平滑滚动，根除全局右侧大滚动条溢出灾难
-  classes.push('detail-shell__content-surface--fill overflow-y-auto')
-  
-  // 概览页OverviewSection内部自带了两个大型双实线长卷，大外壳设为扁平透明托盘以避免重叠；其他页设为统一的双实线装订古籍卡片
-  if (activeSection.value === 'overview') {
-    classes.push('detail-shell__content-surface--flat')
-  } else {
-    classes.push('detail-shell__content-surface--classical')
-  }
-  return classes.join(' ')
+  // 所有蓝图分区共享同一装订外框，概览页不再使用特殊透明托盘。
+  return 'detail-shell__content-surface--fill detail-shell__content-surface--classical overflow-y-auto overscroll-contain'
 })
 
 // 懒加载完整项目（仅在需要编辑时）
@@ -568,7 +641,12 @@ const componentProps = computed(() => {
 
   switch (activeSection.value) {
     case 'overview':
-      return { data: data || null, editable }
+      return {
+        data: data || null,
+        editable,
+        characterCount: characterCount.value,
+        chapterCount: chapterTotal.value,
+      }
     case 'world_setting':
       return { data: data || null, editable }
     case 'characters':
@@ -727,6 +805,9 @@ watch(
   width: 100%;
   background-color: var(--md-surface-dim);
   overflow: hidden; /* 彻底断绝最外层全局大滚动条 */
+  --detail-shell-topbar-height: 3.5rem;
+  --detail-shell-overview-height: 8.75rem;
+  --detail-shell-outer-gap: 1.5rem;
 }
 
 .detail-shell--embedded {
@@ -743,13 +824,31 @@ watch(
 .detail-shell__topbar-inner {
   max-width: 1800px;
   width: 100%;
-  min-height: 4rem;
+  min-height: var(--detail-shell-topbar-height);
   margin: 0 auto;
   padding: 0 1rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   box-sizing: border-box;
+}
+
+.detail-shell__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-shell__back-button,
+.detail-shell__write-button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.detail-shell__write-label-compact {
+  display: none;
 }
 
 .detail-shell__drawer-toggle {
@@ -762,7 +861,7 @@ watch(
   margin-right: var(--md-spacing-2);
   padding: 0 var(--md-spacing-3);
   border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs);
   background-color: var(--md-surface);
   color: var(--md-on-surface-variant);
   font-family: var(--md-font-family);
@@ -802,7 +901,7 @@ watch(
   flex-shrink: 0;
   height: 1.75rem;
   padding: 0 0.625rem;
-  border-radius: 9999px;
+  border-radius: var(--md-radius-xs);
   background-color: color-mix(in srgb, var(--md-secondary-container) 78%, transparent);
   color: var(--md-on-secondary-container);
   font-size: 0.75rem;
@@ -815,8 +914,15 @@ watch(
   position: relative;
   display: flex;
   flex: 1 1 auto;
-  height: 100%;
-  max-height: 100%;
+  min-height: 0;
+  height: calc(
+    var(--app-viewport-unit) - var(--detail-shell-topbar-height) -
+      var(--detail-shell-overview-height) - var(--detail-shell-outer-gap)
+  );
+  max-height: calc(
+    var(--app-viewport-unit) - var(--detail-shell-topbar-height) -
+      var(--detail-shell-overview-height) - var(--detail-shell-outer-gap)
+  );
   width: 100%;
   max-width: 1800px;
   margin: 0 auto;
@@ -827,7 +933,7 @@ watch(
   max-width: 1800px;
   width: 100%;
   margin: 0 auto;
-  padding: 1rem 1rem 0;
+  padding: var(--md-spacing-3) 1rem 0;
   box-sizing: border-box;
 }
 
@@ -840,15 +946,18 @@ watch(
   background-color: var(--md-surface); /* 熟宣底色 */
   box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.15); /* 拓片硬投影 */
   overflow: hidden;
+  height: var(--detail-shell-overview-height);
+  min-height: 0;
 }
 
 /* 左侧总览区 */
 .detail-shell__scroll-main {
-  padding: var(--md-spacing-5) var(--md-spacing-6);
+  min-height: 0;
+  padding: var(--md-spacing-3) var(--md-spacing-5);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  border-right: 1.5px solid var(--md-outline-variant); /* 分割画卷的墨晕细线 */
+  border-right: 1px solid var(--md-outline-variant); /* 分割画卷的墨晕细线 */
 }
 
 .detail-shell__scroll-header {
@@ -861,7 +970,7 @@ watch(
 .detail-shell__kicker {
   margin: 0;
   color: var(--md-primary-light);
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-family: var(--md-font-serif);
   font-size: var(--md-label-medium);
   font-weight: 600;
   letter-spacing: 0.15em;
@@ -871,20 +980,24 @@ watch(
 }
 
 .detail-shell__scroll-main h2 {
-  margin: var(--md-spacing-3) 0 0;
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
-  font-size: clamp(1.4rem, 2.2vw, 1.95rem);
+  margin: var(--md-spacing-2) 0 0;
+  font-family: var(--md-font-serif);
+  font-size: 1.3rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   color: var(--md-primary-dark);
 }
 
 .detail-shell__scroll-desc {
-  margin: var(--md-spacing-3.5) 0;
+  margin: var(--md-spacing-1) 0 var(--md-spacing-2);
   color: var(--md-on-surface-variant);
-  font-family: Noto Sans SC, sans-serif;
-  font-size: 14.5px;
-  line-height: 1.75;
+  font-family: var(--md-font-family);
+  font-size: 13.5px;
+  line-height: 1.5;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .detail-shell__scroll-status {
@@ -902,7 +1015,7 @@ watch(
   justify-content: center;
   height: 28px;
   padding: 0 10px;
-  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-family: var(--md-font-serif);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.1em;
@@ -927,7 +1040,7 @@ watch(
 
 .detail-shell__status-pill.is-done {
   background-color: var(--md-success-container);
-  color: var(--md-success);
+  color: var(--md-success-text);
   border: 1.5px solid var(--md-success);
 }
 
@@ -939,15 +1052,15 @@ watch(
 
 .detail-shell__status-meta {
   color: var(--md-on-surface-variant);
-  font-size: 13.5px;
-  font-family: Noto Sans SC, sans-serif;
+  font-size: 13px;
+  font-family: var(--md-font-family);
   font-weight: 500;
 }
 
 .detail-shell__scroll-time {
   color: var(--md-on-surface-variant);
-  font-size: 12.5px;
-  font-family: Noto Sans SC, sans-serif;
+  font-size: 12px;
+  font-family: var(--md-font-family);
   opacity: 0.75;
   margin-left: auto;
 }
@@ -959,13 +1072,16 @@ watch(
   border: 1px solid var(--md-outline) !important;
   background-color: var(--md-primary) !important;
   color: var(--md-on-primary) !important;
-  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-family: var(--md-font-serif);
   font-weight: 600;
   letter-spacing: 0.08em;
   padding: 0 16px;
   height: 36px;
   box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.2);
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  transition:
+    background-color 0.2s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1),
+    transform 0.2s cubic-bezier(0.2, 0, 0, 1);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -980,18 +1096,35 @@ watch(
 /* 右侧三栏指标区 */
 .detail-shell__scroll-metrics {
   display: grid;
-  grid-template-rows: repeat(3, 1fr); /* 纵向均匀排开 */
+  grid-template-rows: repeat(3, minmax(0, 1fr)); /* 纵向均匀排开 */
   background-color: var(--md-surface-container-low); /* 竹纸底色 */
+  min-height: 0;
+  margin: 0;
 }
 
 .detail-shell__scroll-metric {
   position: relative;
-  padding: var(--md-spacing-4) var(--md-spacing-5);
+  min-height: 0;
+  padding: var(--md-spacing-2) var(--md-spacing-4) var(--md-spacing-2) var(--md-spacing-3);
   display: flex;
   flex-direction: column;
   justify-content: center;
   border-bottom: 1.5px solid var(--md-outline-variant); /* 墨晕细横线 */
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  transition:
+    background-color 0.2s cubic-bezier(0.2, 0, 0, 1),
+    border-color 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.detail-shell__scroll-metric dt,
+.detail-shell__scroll-metric dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.detail-shell__scroll-metric dd {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
 
 .detail-shell__scroll-metric:last-child {
@@ -1001,33 +1134,37 @@ watch(
 .detail-shell__scroll-metric::before {
   content: "";
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 3.5px;
-  background-color: var(--md-outline); /* 左侧竹青色装订线 */
-  transition: background-color 0.2s ease;
+  top: var(--md-spacing-3);
+  right: var(--md-spacing-3);
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--md-outline);
+  background-color: var(--md-surface);
+  transform: rotate(45deg);
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .detail-shell__scroll-metric:hover {
   background-color: color-mix(in srgb, var(--md-surface) 60%, transparent);
 }
 
-.detail-shell__scroll-metric p {
+.detail-shell__scroll-metric dt {
   margin: 0;
-  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  font-family: var(--md-font-serif);
   font-weight: 600;
   letter-spacing: 0.05em;
   color: var(--md-primary-light);
-  font-size: 13.5px;
+  font-size: 12px;
 }
 
 .detail-shell__scroll-metric strong {
-  margin: var(--md-spacing-1.5) 0 var(--md-spacing-1);
+  margin: 0.125rem 0;
   display: block;
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-family: var(--md-font-serif);
   color: var(--md-primary-dark);
-  font-size: clamp(1.4rem, 2vw, 1.8rem);
+  font-size: 1.18rem;
   font-weight: 600;
   line-height: 1.1;
 }
@@ -1035,13 +1172,15 @@ watch(
 .detail-shell__scroll-metric span {
   margin: 0;
   color: var(--md-on-surface-variant);
-  font-size: 12px;
-  font-family: Noto Sans SC, sans-serif;
+  font-size: 11.5px;
+  font-family: var(--md-font-family);
+  line-height: 1.25;
 }
 
 /* 警示性指标（待回收伏笔） */
 .detail-shell__scroll-metric.is-alert::before {
-  background-color: var(--md-secondary); /* 朱砂红竖描 */
+  border-color: var(--md-secondary);
+  background-color: var(--md-secondary-container);
 }
 
 .detail-shell__scroll-metric.is-alert strong {
@@ -1054,13 +1193,13 @@ watch(
   top: 0;
   bottom: 0;
   z-index: 30;
-  width: 16.25rem;
+  width: 14.5rem; /* 侧边栏宽度优化至230px左右 */
   overflow: hidden;
-  /* 极致国风脑洞：侧边栏升级为古籍折子戏熟宣纸帘纹背景 */
-  background-color: var(--md-surface);
-  background-image: repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.008) 0px, rgba(28, 32, 34, 0.008) 1px, transparent 1px, transparent 24px);
-  border-right: 3px double var(--md-outline) !important; /* 精致古籍线装本特有双线边框分割 */
-  box-shadow: 2px 0 6px rgba(28, 32, 34, 0.04);
+  /* 侧边栏升级为老宣纸底色与纸帘帘纹 */
+  background-color: var(--md-surface-dim);
+  background-image: repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.005) 0px, rgba(28, 32, 34, 0.005) 1px, transparent 1px, transparent 24px);
+  border-right: 1.5px solid var(--md-outline-variant) !important; /* 单根墨晕细线分割 */
+  box-shadow: 1px 0 4px rgba(28, 32, 34, 0.02);
   transform: translateX(-100%);
   transition:
     transform 300ms cubic-bezier(0.2, 0, 0, 1),
@@ -1082,27 +1221,28 @@ watch(
 
 .detail-shell__nav {
   height: 100%;
-  padding: var(--md-spacing-3);
+  padding: var(--md-spacing-4) var(--md-spacing-2);
   overflow-y: auto;
 }
 
 .detail-shell__nav-item {
   position: relative;
   width: 100%;
-  min-height: 3.25rem;
+  min-height: 3rem;
   display: flex;
   align-items: center;
   gap: var(--md-spacing-3);
-  padding: var(--md-spacing-3) var(--md-spacing-4);
-  /* 极致国风脑洞：木刻笺条外观 */
-  border-radius: 0 !important; /* 碑拓方直风骨 */
-  border: 1px solid var(--md-outline-variant) !important;
-  background-color: rgba(28, 32, 34, 0.015) !important;
-  color: var(--md-primary-light); /* 松烟色 */
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.06em; /* 碑拓骨力字距 */
+  padding: var(--md-spacing-2) var(--md-spacing-4);
+  /* 古籍目录式扁平书签感 */
+  border-radius: 0 !important;
+  border: none !important;
+  border-bottom: 1.5px solid rgba(28, 32, 34, 0.04) !important; /* 浅墨细线底分隔 */
+  background-color: transparent !important;
+  color: #8A7C6E !important; /* 浅灰棕文字 */
+  font-family: var(--md-font-serif);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
   text-align: left;
   cursor: pointer;
   outline: none;
@@ -1125,7 +1265,6 @@ watch(
   background-color: color-mix(in srgb, var(--md-secondary) 4%, var(--md-surface)) !important;
   box-shadow: 2px 2px 0px var(--md-outline) !important;
   transform: translateX(4px);
-  animation: stone-tremble 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
   color: var(--md-primary-dark) !important;
 }
 
@@ -1136,33 +1275,27 @@ watch(
 
 /* 激活选中的朱砂方印笺条 */
 .detail-shell__nav-item.is-active {
-  border: 1px solid var(--md-secondary) !important;
-  border-left: 4px solid var(--md-secondary) !important;
-  background-color: rgba(184, 60, 50, 0.03) !important;
-  color: var(--md-secondary) !important;
-  padding-left: calc(var(--md-spacing-4) - 3px);
-  box-shadow: 2px 2px 0px var(--md-secondary) !important;
+  border: 1px dashed rgba(184, 60, 50, 0.15) !important;
+  background-color: rgba(184, 60, 50, 0.03) !important; /* 轻微淡红背景 */
+  color: var(--md-secondary) !important; /* 朱红色 */
+  font-weight: 700 !important; /* 文字加粗 */
+  box-shadow: none !important; /* 取消厚重投影 */
 }
 
-/* 激活时在右下角轻微旋转渐显出朱砂阳刻方印 [ 卷 ] */
-.detail-shell__nav-item.is-active::after {
-  content: '卷';
+.detail-shell__nav-item.is-active::before {
+  content: '';
   position: absolute;
-  right: 12px;
+  left: 8px;
   top: 50%;
-  transform: translateY(-50%) rotate(-6deg);
-  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
-  font-size: 11px;
-  font-weight: bold;
-  color: rgba(184, 60, 50, 0.82);
-  border: 1.5px solid rgba(184, 60, 50, 0.82);
-  padding: 1px 3px;
-  line-height: 1;
-  background-color: rgba(184, 60, 50, 0.05);
-  animation: seal-stamp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  width: 6px;
+  height: 6px;
+  border: 1px solid var(--md-secondary);
+  background-color: var(--md-secondary-container);
+  transform: translateY(-50%) rotate(45deg);
   pointer-events: none;
 }
 
+/* 激活时在右下角轻微旋转渐显出朱砂阳刻方印 [ 卷 ] */
 .detail-shell__nav-icon {
   width: 2rem;
   height: 2rem;
@@ -1172,7 +1305,9 @@ watch(
   border-radius: 2px;
   background-color: transparent; /* 去除拼凑感十足的灰色圆背景 */
   color: var(--md-on-surface-variant);
-  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  transition:
+    background-color 0.2s cubic-bezier(0.2, 0, 0, 1),
+    color 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .detail-shell__nav-item.is-active .detail-shell__nav-icon {
@@ -1193,6 +1328,7 @@ watch(
   display: flex;
   flex: 1 1 auto;
   min-width: 0;
+  min-height: 0;
   height: 100%;
   max-height: 100%;
   width: 100%;
@@ -1206,6 +1342,7 @@ watch(
   flex: 1 1 auto;
   align-items: stretch;
   min-width: 0;
+  min-height: 0;
   height: 100%;
   max-height: 100%;
   width: 100%;
@@ -1234,7 +1371,10 @@ watch(
   flex-direction: column;
   padding: var(--md-spacing-6);
   box-sizing: border-box;
-  transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
+  transition:
+    background-color 0.25s cubic-bezier(0.2, 0, 0, 1),
+    border-color 0.25s cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 0.25s cubic-bezier(0.2, 0, 0, 1);
 
   /* 水墨微晕极细滚动条美化，保持纯净宣纸质感并引导高品质滚动 */
   scrollbar-width: thin;
@@ -1252,19 +1392,11 @@ watch(
 
 .detail-shell__content-surface::-webkit-scrollbar-thumb {
   background-color: rgba(60, 80, 70, 0.2);
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs);
 }
 
 .detail-shell__content-surface::-webkit-scrollbar-thumb:hover {
   background-color: rgba(60, 80, 70, 0.45);
-}
-
-/* 概览分区的透明托盘设计，大框套小框的终结者 */
-.detail-shell__content-surface--flat {
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  padding: 0 !important;
 }
 
 /* 其它设定分区的双线古籍装订框大卡片 */
@@ -1279,10 +1411,8 @@ watch(
 
 .detail-shell__content-surface--fill {
   min-height: 0;
-  height: calc(100vh - 2rem);
-  height: calc(var(--app-viewport-unit) - 2rem);
-  max-height: calc(100vh - 2rem);
-  max-height: calc(var(--app-viewport-unit) - 2rem);
+  height: 100%;
+  max-height: 100%;
 }
 
 @media (min-width: 1200px) {
@@ -1290,7 +1420,7 @@ watch(
     position: sticky;
     top: 0;
     bottom: auto;
-    flex: 0 0 16.25rem;
+    flex: 0 0 14.5rem; /* 自适应侧边栏宽度优化至230px左右 */
     height: var(--app-viewport-unit);
     max-height: var(--app-viewport-unit);
     transform: translateX(0);
@@ -1307,41 +1437,169 @@ watch(
 
   /* 顶部横卷长条在大屏下完美的 2rem 左右黄金垂直对齐线 */
   .detail-shell__overview-strip {
-    padding: 1.5rem 2rem 0;
+    padding: var(--md-spacing-3) 2rem 0;
   }
 
   .detail-shell__content-wrap {
-    padding: 1.5rem 2rem 2rem;
+    padding: var(--md-spacing-3) 2rem 1rem;
   }
 
-  .detail-shell__content-surface--fill {
-    height: calc(100vh - 3.5rem);
-    height: calc(var(--app-viewport-unit) - 3.5rem);
-    max-height: calc(100vh - 3.5rem);
-    max-height: calc(var(--app-viewport-unit) - 3.5rem);
+  .detail-shell__body {
+    height: calc(
+      var(--app-viewport-unit) - var(--detail-shell-topbar-height) -
+        var(--detail-shell-overview-height) - var(--detail-shell-outer-gap)
+    );
+    max-height: calc(
+      var(--app-viewport-unit) - var(--detail-shell-topbar-height) -
+        var(--detail-shell-overview-height) - var(--detail-shell-outer-gap)
+    );
+  }
+
+  .detail-shell__scroll-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: none;
+  }
+
+  .detail-shell__scroll-metric {
+    border-right: 1.5px solid var(--md-outline-variant);
+    border-bottom: 0;
+  }
+
+  .detail-shell__scroll-metric:last-child {
+    border-right: 0;
+  }
+}
+
+@media (min-width: 1200px) and (max-height: 700px) {
+  .detail-shell {
+    --detail-shell-overview-height: 7.75rem;
+    --detail-shell-outer-gap: 1rem;
+  }
+
+  .detail-shell__scroll-main {
+    padding-block: var(--md-spacing-2);
+  }
+
+  .detail-shell__scroll-desc {
+    -webkit-line-clamp: 1;
+  }
+
+  .detail-shell__content-surface {
+    padding: var(--md-spacing-5);
   }
 }
 
 @media (min-width: 834px) {
   .detail-shell__content-surface {
-    padding: var(--md-spacing-8);
+    padding: var(--md-spacing-6);
   }
 }
 
 @media (max-width: 1199px) {
-  .detail-shell__overview-strip {
-    grid-template-columns: minmax(0, 1fr);
-    padding: var(--md-spacing-4) var(--md-spacing-4) 0;
+  .detail-shell {
+    --detail-shell-overview-height: 12.5rem;
+    --detail-shell-outer-gap: 1.5rem;
   }
 
-  .detail-shell__overview-metrics {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .detail-shell__overview-strip {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--md-spacing-3) var(--md-spacing-4) 0;
+  }
+
+  .detail-shell__overview-scroll {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .detail-shell__scroll-main {
+    border-right: 0;
+    border-bottom: 1px solid var(--md-outline-variant);
   }
 }
 
 @media (max-width: 833px) {
-  .detail-shell__overview-metrics {
-    grid-template-columns: minmax(0, 1fr);
+  .detail-shell {
+    --detail-shell-overview-height: 11.75rem;
+    --detail-shell-outer-gap: 1rem;
+  }
+
+  .detail-shell__topbar-inner {
+    padding-inline: var(--md-spacing-3);
+    gap: var(--md-spacing-2);
+  }
+
+  .detail-shell__drawer-toggle {
+    margin-right: 0;
+    padding-inline: var(--md-spacing-2);
+  }
+
+  .detail-shell__back-button,
+  .detail-shell__write-button {
+    min-width: 58px;
+    padding-inline: var(--md-spacing-3);
+  }
+
+  .detail-shell__write-label-full {
+    display: none;
+  }
+
+  .detail-shell__write-label-compact {
+    display: inline;
+  }
+
+  .detail-shell__overview-strip {
+    padding: var(--md-spacing-2) var(--md-spacing-4) 0;
+  }
+
+  .detail-shell__scroll-main {
+    padding: var(--md-spacing-3) var(--md-spacing-4) var(--md-spacing-2);
+  }
+
+  .detail-shell__scroll-main h2 {
+    margin-top: var(--md-spacing-1);
+    font-size: 1.15rem;
+  }
+
+  .detail-shell__scroll-desc {
+    -webkit-line-clamp: 1;
+    margin-block: var(--md-spacing-1);
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+
+  .detail-shell__scroll-status {
+    gap: var(--md-spacing-2);
+  }
+
+  .detail-shell__scroll-time {
+    display: none;
+  }
+
+  .detail-shell__scroll-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: none;
+  }
+
+  .detail-shell__scroll-metric {
+    padding: var(--md-spacing-2);
+    border-right: 1.5px solid var(--md-outline-variant);
+    border-bottom: 0;
+  }
+
+  .detail-shell__scroll-metric:last-child {
+    border-right: 0;
+  }
+
+  .detail-shell__scroll-metric::before {
+    top: var(--md-spacing-2);
+    right: var(--md-spacing-2);
+  }
+
+  .detail-shell__scroll-metric strong {
+    font-size: 1rem;
+  }
+
+  .detail-shell__scroll-metric span {
+    font-size: 10.5px;
   }
 }
 
@@ -1383,28 +1641,22 @@ watch(
   box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.08) !important;
 }
 
-/* 动效关键帧 */
-@keyframes stone-tremble {
-  0% { transform: translateX(0); }
-  30% { transform: translateX(5px) rotate(0.4deg); }
-  60% { transform: translateX(3px) rotate(-0.3deg); }
-  80% { transform: translateX(4.5px) rotate(0.1deg); }
-  100% { transform: translateX(4px) rotate(0); }
+/* ==========================================================================
+   修正非管理员视图（作者蓝图工作区）在隐藏重复头部后的满屏高度占比
+   ========================================================================== */
+.detail-shell:not(.detail-shell--embedded) .detail-shell__body {
+  height: 100% !important;
+  max-height: 100% !important;
 }
 
-@keyframes seal-stamp {
-  0% {
-    opacity: 0;
-    transform: translateY(-50%) scale(2.3) rotate(-22deg);
+@media (min-width: 1200px) {
+  .detail-shell:not(.detail-shell--embedded) .detail-shell__body {
+    height: 100% !important;
+    max-height: 100% !important;
   }
-  75% {
-    opacity: 0.9;
-    transform: translateY(-50%) scale(0.92) rotate(-8deg);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(-50%) scale(1) rotate(-6deg);
+  .detail-shell:not(.detail-shell--embedded) .detail-shell__drawer {
+    height: 100% !important;
+    max-height: 100% !important;
   }
 }
-
 </style>

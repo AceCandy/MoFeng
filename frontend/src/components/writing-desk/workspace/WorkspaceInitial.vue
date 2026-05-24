@@ -34,7 +34,7 @@
 }
 
 .m3-initial-title {
-  font-family: var(--md-font-serif, "STSong", "SimSun", serif) !important;
+  font-family: var(--md-font-serif) !important;
   letter-spacing: 0.05em !important;
   color: var(--md-on-surface) !important;
 }

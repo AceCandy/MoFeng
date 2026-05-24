@@ -117,7 +117,7 @@ const bubbleClass = computed(() => {
   /* 显式声明will-change，提前提升图层防止高频重绘卡顿 */
   will-change: filter, transform !important;
   /* 字体使用清隽宋体 */
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-size: 15px !important;
   line-height: 1.6 !important;
   letter-spacing: 0.03em !important;
@@ -130,7 +130,13 @@ const bubbleClass = computed(() => {
   color: var(--md-primary-dark) !important;
   text-decoration: none !important;
   border-bottom: 1px dashed var(--md-primary) !important;
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
   padding-bottom: 1px !important;
 }
 
@@ -146,7 +152,7 @@ const bubbleClass = computed(() => {
   position: absolute !important;
   right: 18px !important;
   top: 14px !important;
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-size: 9px !important;
   font-weight: bold !important;
   color: rgba(184, 60, 50, 0.28) !important;
@@ -169,7 +175,7 @@ const bubbleClass = computed(() => {
   border: 1px solid var(--md-outline) !important;
   /* 朱砂小落款右下硬影 */
   box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.22) !important;
-  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-family: var(--md-font-kai) !important;
   font-size: 15px !important;
   letter-spacing: 0.02em !important;
   animation: ink-fade-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;

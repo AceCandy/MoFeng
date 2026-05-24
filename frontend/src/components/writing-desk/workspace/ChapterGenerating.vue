@@ -847,7 +847,7 @@ onUnmounted(() => {
   }
 
   100% {
-    box-shadow: 0 0 0 10px color-mix(in srgb, var(--md-primary) 0%, transparent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--md-primary) 0%, transparent);
   }
 }
 

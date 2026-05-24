@@ -131,7 +131,7 @@ const assistantButtonLabel = computed(() => {
 .writing-header__title-block h1 {
   max-width: min(58vw, 760px);
   margin: 0;
-  font-family: STSong, Songti SC, Noto Serif CJK SC, Source Han Serif SC, serif;
+  font-family: var(--md-font-serif);
   letter-spacing: 0.05em;
   line-height: 1.25;
 }

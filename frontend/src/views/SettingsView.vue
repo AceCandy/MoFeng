@@ -334,7 +334,7 @@ const handleLLMConfigSaved = async () => {
   flex-direction: column;
   gap: var(--md-spacing-5);
   color: var(--md-on-surface);
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
 }
 
 .settings-hero {
@@ -359,7 +359,7 @@ const handleLLMConfigSaved = async () => {
 }
 
 .settings-hero__stamp {
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-weight: 900;
   color: var(--md-secondary) !important;
   margin-left: 6px;
@@ -370,7 +370,7 @@ const handleLLMConfigSaved = async () => {
   margin: 10px 0 0;
   color: var(--md-on-surface);
   font-size: clamp(1.4rem, 2vw, 1.95rem);
-  font-family: var(--md-font-serif, "STSong", "Songti SC", "SimSun", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-weight: 600;
   letter-spacing: 0.04em;
 }
@@ -380,7 +380,7 @@ const handleLLMConfigSaved = async () => {
   max-width: 72ch;
   color: var(--md-on-surface-variant);
   line-height: 1.7;
-  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-family: var(--md-font-kai) !important;
 }
 
 .settings-hero__status {
@@ -443,7 +443,10 @@ const handleLLMConfigSaved = async () => {
   border-radius: var(--md-radius-xs) !important;
   background-color: var(--md-surface) !important;
   box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.06) !important;
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 .settings-summary__card:hover {
@@ -485,7 +488,9 @@ const handleLLMConfigSaved = async () => {
   font-size: var(--md-title-small);
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 .settings-metrics summary::-webkit-details-marker {
@@ -585,7 +590,11 @@ const handleLLMConfigSaved = async () => {
   color: var(--md-on-surface);
   cursor: pointer;
   text-align: left;
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 .settings-center__nav-item > div {
@@ -610,9 +619,9 @@ const handleLLMConfigSaved = async () => {
 
 .settings-center__nav-item.is-active,
 .settings-center__nav-item[aria-selected='true'] {
-  border-color: transparent !important;
-  border-left: 4px solid var(--md-secondary) !important;
-  background-color: rgba(184, 60, 50, 0.08) !important;
+  border: 1px solid var(--md-secondary) !important;
+  border-left: 1.5px solid var(--md-secondary) !important; /* 金石纤细起落描边，告别AI粗条 */
+  background-color: rgba(184, 60, 50, 0.06) !important;
   color: var(--md-secondary) !important;
   font-weight: 700 !important;
 }
@@ -624,7 +633,7 @@ const handleLLMConfigSaved = async () => {
 /* “词、忆、枢” 终极金石印章 ::after - 初始悬空隐形，防止布局抖动 */
 .settings-center__nav-item::after {
   content: '';
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-weight: 900;
   font-size: 14px;
   color: transparent !important;
@@ -640,7 +649,13 @@ const handleLLMConfigSaved = async () => {
   margin-left: 8px;
   opacity: 0;
   transform: scale(1.1) translateY(-2px); /* 起笔悬空 */
-  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 /* 激活时，红泥落地，徐徐印下 */

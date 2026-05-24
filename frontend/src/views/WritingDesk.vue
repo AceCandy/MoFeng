@@ -113,11 +113,7 @@
               @click="toggleAssistantVisibility"
             >
               <!-- 印信篆字 (阴刻朱砂白文) -->
-              <span class="stamp-seal-char">輔</span>
-              <!-- 墨香字签（展开字条） -->
-              <span class="stamp-seal-text">
-                {{ assistantToggleActive ? '收起辅助' : '辅助信息' }}
-              </span>
+              <span class="stamp-seal-char">{{ assistantToggleActive ? '閉' : '輔' }}</span>
             </button>
           </div>
 
@@ -391,9 +387,7 @@ const projectError = computed(() => {
 
 const useSidebarDrawer = computed(() => viewportWidth.value <= SIDEBAR_DRAWER_BREAKPOINT)
 const useAssistantDrawer = computed(() => viewportWidth.value <= ASSISTANT_DRAWER_BREAKPOINT)
-const shouldRenderAssistantShell = computed(
-  () => useAssistantDrawer.value || isAssistantPanelVisible.value,
-)
+const shouldRenderAssistantShell = computed(() => !!project.value)
 const assistantToggleActive = computed(() =>
   useAssistantDrawer.value ? isAssistantDrawerOpen.value : isAssistantPanelVisible.value,
 )
@@ -1426,7 +1420,7 @@ const handleGenerateOutline = async (numChapters: number) => {
 
 .writing-desk-layout {
   display: grid;
-  grid-template-columns: minmax(250px, 300px) minmax(0, 1fr) minmax(240px, 296px);
+  grid-template-columns: minmax(250px, 300px) minmax(0, 1fr) auto;
   align-items: stretch;
   gap: var(--md-spacing-4);
   height: 100%;
@@ -1436,11 +1430,10 @@ const handleGenerateOutline = async (numChapters: number) => {
 }
 
 .writing-desk-layout--assistant-hidden {
-  grid-template-columns: minmax(250px, 300px) minmax(0, 1fr);
+  grid-template-columns: minmax(250px, 300px) minmax(0, 1fr) auto;
 }
 
 .writing-desk-sidebar-shell,
-.writing-desk-assistant-shell,
 .writing-desk-workspace-shell {
   min-width: 0;
   min-height: 0;
@@ -1448,11 +1441,30 @@ const handleGenerateOutline = async (numChapters: number) => {
 }
 
 .writing-desk-assistant-shell {
-  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  width: 296px;
+  opacity: 1;
+  overflow: hidden !important; /* 强制在过渡中及日常中隐藏外部滚动条，防止闪跳 */
+  will-change: width, opacity, margin-left; /* 开启 GPU 硬件加速，确保100%跑满帧率 */
+  transition:
+    width 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    margin-left 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.writing-desk-assistant-shell > * {
+  width: 296px;
+  flex-shrink: 0;
 }
 
 .writing-desk-assistant-shell.is-collapsed {
-  display: none;
+  display: block !important;
+  width: 0;
+  opacity: 0;
+  margin-left: -16px;
+  pointer-events: none;
 }
 
 .writing-desk-drawer-backdrop {
@@ -1465,13 +1477,26 @@ const handleGenerateOutline = async (numChapters: number) => {
 
 @media (max-width: 1535px) {
   .writing-desk-layout {
-    grid-template-columns: minmax(220px, 276px) minmax(0, 1fr) minmax(220px, 260px);
+    grid-template-columns: minmax(220px, 276px) minmax(0, 1fr) auto;
     width: 100%;
     max-width: none;
   }
 
   .writing-desk-layout--assistant-hidden {
-    grid-template-columns: minmax(220px, 276px) minmax(0, 1fr);
+    grid-template-columns: minmax(220px, 276px) minmax(0, 1fr) auto;
+  }
+
+  .writing-desk-assistant-shell {
+    width: 260px;
+  }
+
+  .writing-desk-assistant-shell > * {
+    width: 260px;
+  }
+
+  .writing-desk-assistant-shell.is-collapsed {
+    width: 0;
+    margin-left: -16px;
   }
 }
 
@@ -1630,15 +1655,14 @@ const handleGenerateOutline = async (numChapters: number) => {
 .writing-desk-seal-stamp {
   position: absolute;
   right: 0;
-  top: 180px;
+  top: 135px;
   z-index: 30; /* 高于工作区，低于弹窗与 drawer 遮罩层 */
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
+  justify-content: center;
   height: 38px;
   width: 38px; /* 默认正方形印章尺寸 */
-  padding: 0 0 0 6px; /* 让印章内容偏左，留出右侧贴边空隙 */
+  padding: 0;
   cursor: pointer;
   border: 1px solid #9c2720;
   border-right: none; /* 右侧贴合分界线，呈无缝盖印状态 */
@@ -1661,11 +1685,9 @@ const handleGenerateOutline = async (numChapters: number) => {
     inset -1px -1px 2px rgba(0, 0, 0, 0.15);
 
   transition:
-    width 0.4s cubic-bezier(0.25, 1, 0.5, 1),
+    transform 0.3s cubic-bezier(0.25, 1, 0.5, 1),
     background 0.3s ease,
     opacity 0.3s ease,
-    border-radius 0.4s ease,
-    padding 0.4s ease,
     box-shadow 0.3s ease;
   overflow: hidden;
   white-space: nowrap;
@@ -1688,11 +1710,9 @@ const handleGenerateOutline = async (numChapters: number) => {
     opacity 0.5s ease;
 }
 
-/* 闲章 Hover 时：优雅向左展卷拉伸，并显现金泥温润流光 */
+/* 闲章 Hover 时：保持宽度恒定，仅作优雅缩放并显金泥温润流光 */
 .writing-desk-seal-stamp:hover {
-  width: 114px; /* 展卷宽度 */
-  border-radius: 8px 0 0 8px / 10px 0 0 10px; /* 展开时保持边缘手工风化微弧 */
-  padding-left: 8px;
+  transform: scale(1.08);
   opacity: 0.98;
   background: linear-gradient(135deg, #d4433b 0%, #b83c32 50%, #b02c25 100%);
   box-shadow:
@@ -1713,42 +1733,22 @@ const handleGenerateOutline = async (numChapters: number) => {
   flex-shrink: 0;
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  border-radius: var(--md-radius-xs);
 
   /* 白文阴刻金石托底，使文字如同在章体上镂空透出底部的宣纸暖白 */
   background-color: rgba(28, 32, 34, 0.15);
-  color: #fff8eb !important; /* 古香古色的泥金白文 */
-  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
+  color: #faf6ed !important; /* 古香古色的泥金白文 */
+  font-family: var(--md-font-serif);
   font-size: 13px;
   font-weight: 800;
   text-shadow: 1px 1px 1px rgba(107, 21, 16, 0.5);
-  border: 1px dashed rgba(255, 255, 255, 0.15);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+  border: 1px dashed rgba(250, 246, 237, 0.18);
+  box-shadow: inset 1px 1px 0px rgba(28, 32, 34, 0.18);
   transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 .writing-desk-seal-stamp:hover .stamp-seal-char {
-  transform: scale(1.08) rotate(15deg); /* 展卷时篆字微偏，增添意趣 */
-}
-
-/* 墨香字签（展卷淡入的宋体标签） */
-.stamp-seal-text {
-  font-family: STSong, Songti SC, Noto Serif CJK SC, serif;
-  font-size: 12px;
-  font-weight: 600;
-  color: #fff8eb !important; /* 泥金字色 */
-  letter-spacing: 0.12em;
-  opacity: 0;
-  transform: translateX(12px);
-  transition:
-    opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1) 0.08s,
-    transform 0.3s cubic-bezier(0.25, 1, 0.5, 1) 0.08s;
-  text-shadow: 1px 1px 1px rgba(107, 21, 16, 0.3);
-}
-
-.writing-desk-seal-stamp:hover .stamp-seal-text {
-  opacity: 0.95;
-  transform: translateX(0);
+  transform: scale(1.08) rotate(15deg); /* 悬停时篆字微偏，增添意趣 */
 }
 
 /* 移动端/窄屏响应式适配：精美贴合于右下角 */
@@ -1764,14 +1764,9 @@ const handleGenerateOutline = async (numChapters: number) => {
   }
 
   .writing-desk-seal-stamp:hover {
-    width: 38px; /* 移动端悬停时保持紧凑的小章状态，避免横向展开遮挡写作界面 */
-    padding-left: 6px;
+    width: 38px;
     border-radius: 6px 0 0 6px / 8px 0 0 8px;
     transform: scale(1.05); /* 仅做轻微点击缩放提示 */
-  }
-
-  .writing-desk-seal-stamp:hover .stamp-seal-text {
-    display: none; /* 移动端在悬停时隐藏字条 */
   }
 }
 

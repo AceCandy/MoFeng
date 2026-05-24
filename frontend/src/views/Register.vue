@@ -350,7 +350,7 @@ onUnmounted(() => {
   margin: 0;
   color: var(--md-on-surface);
   /* 碑拓宋体，字距拉伸 */
-  font-family: var(--md-font-serif, "STSong", "Songti SC", "SimSun", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-size: 28px !important;
   font-weight: 600;
   letter-spacing: 0.06em !important;
@@ -359,7 +359,7 @@ onUnmounted(() => {
 .register-card p {
   margin: var(--md-spacing-2) 0 0;
   color: var(--md-on-surface-variant);
-  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-family: var(--md-font-kai) !important;
   font-size: 14px;
 }
 
@@ -375,7 +375,13 @@ onUnmounted(() => {
   border-color: var(--md-outline) !important;
   background-color: var(--md-surface-container-low) !important;
   font-family: inherit;
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 .md-text-field-input:focus {
@@ -386,7 +392,7 @@ onUnmounted(() => {
 }
 
 .md-text-field-label {
-  font-family: var(--md-font-serif, "STSong", "Songti SC", "SimSun", serif) !important;
+  font-family: var(--md-font-serif) !important;
   color: var(--md-primary-light) !important;
   font-weight: 600 !important;
   letter-spacing: 0.03em;
@@ -411,10 +417,16 @@ onUnmounted(() => {
   border: 1px solid var(--md-outline) !important;
   border-radius: var(--md-radius-xs) !important;
   color: var(--md-on-surface) !important;
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-weight: 600;
   box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.08) !important;
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
   cursor: pointer;
 }
 
@@ -434,7 +446,7 @@ onUnmounted(() => {
   font-size: var(--md-body-medium);
   font-weight: 500;
   text-align: center;
-  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-family: var(--md-font-kai) !important;
 }
 
 .register-feedback {
@@ -465,10 +477,16 @@ onUnmounted(() => {
   border: 1px solid var(--md-outline) !important;
   border-radius: var(--md-radius-xs) !important;
   overflow: hidden;
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-weight: 600 !important;
   letter-spacing: 0.05em;
-  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
   box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.12) !important;
   cursor: pointer;
 }
@@ -513,12 +531,12 @@ onUnmounted(() => {
   justify-content: center;
   gap: var(--md-spacing-1);
   text-align: center;
-  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-family: var(--md-font-kai) !important;
 }
 
 .register-link__cta {
   min-height: 44px;
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   color: var(--md-secondary) !important;
   font-weight: 600;
 }
@@ -536,7 +554,7 @@ onUnmounted(() => {
 }
 
 .register-card--closed h2 {
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   color: var(--md-secondary) !important;
 }
 

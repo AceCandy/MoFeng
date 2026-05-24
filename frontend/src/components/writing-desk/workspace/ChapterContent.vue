@@ -2,24 +2,16 @@
 <template>
   <div class="space-y-6 w-full">
     <article class="chapter-paper">
-      <div class="chapter-paper__header">
-        <Tooltip :text="contentTooltipText" :show-delay="150">
-          <button
-            type="button"
-            class="chapter-paper__title md-title-medium font-semibold"
-            :class="hasChapterContent ? '' : 'opacity-50 cursor-not-allowed'"
-            :disabled="!hasChapterContent"
-            @click="copyChapterContent(selectedChapter)"
-            @mouseleave="resetContentTooltip"
-          >
-            章节内容
-          </button>
-        </Tooltip>
-      </div>
+
       <div class="prose max-w-none">
         <div class="chapter-prose">
           <p v-for="(paragraph, idx) in chapterDisplayParagraphs" :key="`chapter-${idx}`">
-            {{ paragraph }}
+            <template v-if="idx === 0 && paragraph && paragraph.trim().length > 0">
+              <span class="first-stamp-char">{{ paragraph.trim()[0] }}</span>{{ paragraph.trim().slice(1) }}
+            </template>
+            <template v-else>
+              {{ paragraph }}
+            </template>
           </p>
         </div>
       </div>
@@ -195,7 +187,12 @@
             <div class="prose max-w-none">
               <div class="chapter-prose">
                 <p v-for="(paragraph, idx) in optimizedDisplayParagraphs" :key="`optimized-${idx}`">
-                  {{ paragraph }}
+                  <template v-if="idx === 0 && paragraph && paragraph.trim().length > 0">
+                    <span class="first-stamp-char">{{ paragraph.trim()[0] }}</span>{{ paragraph.trim().slice(1) }}
+                  </template>
+                  <template v-else>
+                    {{ paragraph }}
+                  </template>
                 </p>
               </div>
             </div>
@@ -746,11 +743,25 @@ defineExpose({
 
 <style scoped>
 .chapter-paper {
-  padding: var(--md-spacing-5);
-  border: 1px solid var(--md-outline);
-  border-radius: var(--md-radius-md);
-  background-color: var(--md-surface-dim);
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.08);
+  padding: var(--md-spacing-6) var(--md-spacing-8) var(--md-spacing-10); /* 四周大气的国风内缩留白，字不贴边 */
+  border: none !important; /* 彻底去除边框，在顶格拉满时浑然一体 */
+  border-radius: 0 !important; /* 去除圆角以自然铺满红框 */
+  background-color: var(--md-surface) !important; /* 宣纸乳黄质感底色 */
+  /* 极致国风脑洞：正文区融入古典竹青淡墨横线信笺格与空灵祥云水墨底纹双重背景 */
+  background-image:
+    linear-gradient(
+      180deg,
+      transparent 0px,
+      transparent calc(1.85em - 1px),
+      rgba(63, 108, 93, 0.09) calc(1.85em - 1px),
+      rgba(63, 108, 93, 0.09) 1.85em
+    ),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cpath d='M40 25 c-2-5-8-5-10-2 c-4-2-8 1-7 5 c-3 0-5 3-4 6 c1 3 4 3 6 3 h10 c3 0 5-2 5-5 c0-3-2-5-5-5 z' fill='none' stroke='%231c2022' stroke-width='0.7' stroke-opacity='0.018'/%3E%3Cpath d='M15 55 c-1-3-5-3-6-1 c-2-1-5 0-4 3 c-2 0-3 2-2 4 c1 2 2 2 4 2 h6 c2 0 3-1 3-3 c0-2-1-3-3-3 z' fill='none' stroke='%231c2022' stroke-width='0.7' stroke-opacity='0.012'/%3E%3Cpath d='M65 50 c-1-3-5-3-6-1 c-2-1-5 0-4 3 c-2 0-3 2-2 4 c1 2 2 2 4 2 h6 c2 0 3-1 3-3 c0-2-1-3-3-3 z' fill='none' stroke='%231c2022' stroke-width='0.7' stroke-opacity='0.012'/%3E%3C/svg%3E") !important;
+  background-size: 100% 1.85em, 80px 80px !important;
+  background-repeat: repeat, repeat !important;
+  line-height: 1.85em !important;
+  box-shadow: none !important; /* 去除影子，与主工作区合体 */
+  min-height: 100%; /* 纵向和高度完全铺满红框 */
 }
 
 .chapter-paper__header {
@@ -769,7 +780,7 @@ defineExpose({
   text-align: left;
   cursor: pointer;
   appearance: none;
-  font-family: STSong, Songti SC, serif;
+  font-family: var(--md-font-serif);
   font-size: var(--md-headline-small);
   letter-spacing: 0.08em;
   transition: color var(--md-duration-short) var(--md-easing-standard);
@@ -862,7 +873,7 @@ defineExpose({
   border-radius: 999px;
   background: var(--md-primary);
   display: inline-block;
-  animation: optimizer-dot-bounce 0.9s ease-in-out infinite;
+  animation: optimizer-dot-breath 0.9s ease-in-out infinite;
 }
 
 .m3-optimizing-dots i:nth-child(2) {
@@ -939,15 +950,16 @@ defineExpose({
   }
 }
 
-@keyframes optimizer-dot-bounce {
+@keyframes optimizer-dot-breath {
   0%,
-  80%,
   100% {
-    transform: translateY(0);
-    opacity: 0.4;
+    transform: scale(0.92);
+    filter: blur(0.5px);
+    opacity: 0.25;
   }
-  40% {
-    transform: translateY(-2px);
+  50% {
+    transform: scale(1.05);
+    filter: blur(0);
     opacity: 1;
   }
 }

@@ -734,8 +734,7 @@ onUnmounted(() => {
 }
 
 .workspace-hero__panel {
-  border: 1px solid var(--md-outline-variant);
-  border-left: 4px solid var(--md-secondary); /* 朱砂立边描边，熟宣木函感 */
+  border: 3px double var(--md-outline) !important; /* 双线装订框，代替AI 4px粗条 */
   border-radius: 0 !important; /* 彻底直角化 */
   background-color: var(--md-surface-container-low); /* 熟宣/竹纸质感 */
   background-image: 
@@ -747,16 +746,14 @@ onUnmounted(() => {
   gap: var(--md-spacing-4);
   box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.05);
   transition: 
-    border-left-width 0.28s cubic-bezier(0.22, 1, 0.36, 1),
     border-color 0.28s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
-/* Hover 时：朱砂立边加宽，投影微弱聚拢 */
+/* Hover 时：双线框优雅加深为朱砂红 */
 .workspace-hero__panel:hover {
-  border-left-width: 6px !important;
-  border-left-color: var(--md-secondary-dark) !important;
+  border-color: var(--md-secondary) !important;
   box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.12) !important;
 }
 
@@ -1287,7 +1284,11 @@ onUnmounted(() => {
   color: var(--md-secondary) !important; /* 朱砂红字 */
   border: 1px solid var(--md-secondary) !important; /* 朱砂红细线框 */
   box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.2) !important; /* 朱印硬影 */
-  transition: all var(--md-duration-short) var(--md-easing-standard);
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard),
+    transform var(--md-duration-short) var(--md-easing-standard);
 }
 
 .delete-confirm-btn:hover {
@@ -1307,7 +1308,6 @@ onUnmounted(() => {
 
 .md-dialog-overlay {
   background-color: var(--md-scrim) !important;
-  backdrop-filter: blur(4px);
 }
 
 /* 级联 Transition：阻尼回弹的金石印章落纸曲线，模拟钤印动作 */
@@ -1316,7 +1316,7 @@ onUnmounted(() => {
 }
 .md-dialog-overlay-enter-active .md-dialog {
   transition: 
-    transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1), /* 钤印微弱回弹 */
+    transform 0.38s cubic-bezier(0.22, 1, 0.36, 1), /* 平滑起笔入宣，告别AI弹跳 */
     opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1),
     filter 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }

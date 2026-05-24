@@ -204,7 +204,7 @@ const handleLogin = async () => {
 .login-card__header p {
   margin: 0 0 var(--md-spacing-2);
   color: var(--md-secondary); /* 朱砂红小标 */
-  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-family: var(--md-font-kai) !important;
   font-size: var(--md-label-large);
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -214,7 +214,7 @@ const handleLogin = async () => {
   margin: 0;
   color: var(--md-on-surface);
   /* 碑拓宋体，字间距舒展 */
-  font-family: var(--md-font-serif, "STSong", "Songti SC", "SimSun", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-size: 28px !important;
   font-weight: 600;
   letter-spacing: 0.06em !important;
@@ -224,7 +224,7 @@ const handleLogin = async () => {
   display: block;
   margin-top: var(--md-spacing-2);
   color: var(--md-on-surface-variant);
-  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-family: var(--md-font-kai) !important;
   font-size: 14px;
 }
 
@@ -240,7 +240,13 @@ const handleLogin = async () => {
   border-color: var(--md-outline) !important;
   background-color: var(--md-surface-container-low) !important;
   font-family: inherit;
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 .md-text-field-input:focus {
@@ -251,7 +257,7 @@ const handleLogin = async () => {
 }
 
 .md-text-field-label {
-  font-family: var(--md-font-serif, "STSong", "Songti SC", "SimSun", serif) !important;
+  font-family: var(--md-font-serif) !important;
   color: var(--md-primary-light) !important;
   font-weight: 600 !important;
   letter-spacing: 0.03em;
@@ -273,7 +279,7 @@ const handleLogin = async () => {
 
 .login-feedback span {
   overflow-wrap: anywhere;
-  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-family: var(--md-font-kai) !important;
 }
 
 .login-feedback svg,
@@ -298,10 +304,16 @@ const handleLogin = async () => {
   border: 1px solid var(--md-outline) !important;
   border-radius: var(--md-radius-xs) !important;
   overflow: hidden;
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-weight: 600 !important;
   letter-spacing: 0.05em;
-  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
   box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.12) !important;
   cursor: pointer;
 }
@@ -350,7 +362,7 @@ const handleLogin = async () => {
   margin: var(--md-spacing-8) 0;
   color: var(--md-on-surface-variant);
   font-size: var(--md-body-small);
-  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-family: var(--md-font-kai) !important;
 }
 
 .login-divider::before {
@@ -376,12 +388,12 @@ const handleLogin = async () => {
   color: var(--md-on-surface-variant);
   font-size: var(--md-body-medium);
   text-align: center;
-  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-family: var(--md-font-kai) !important;
 }
 
 .login-link__cta {
   min-height: 44px;
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   color: var(--md-secondary) !important;
   font-weight: 600;
 }
@@ -438,7 +450,7 @@ const handleLogin = async () => {
 }
 
 .login-feedback__stamp {
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-weight: 600;
   color: var(--md-secondary) !important;
   margin-right: 4px;

@@ -151,7 +151,7 @@ const handleDelete = () => {
   position: absolute !important;
   right: 16px !important;
   bottom: 60px !important;
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-size: 10px !important;
   font-weight: bold !important;
   color: var(--md-secondary) !important;
@@ -165,7 +165,13 @@ const handleDelete = () => {
   box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15) !important;
   opacity: 0;
   transform: scale(0.7) rotate(-8deg);
-  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
   pointer-events: none;
 }
 
@@ -204,7 +210,7 @@ const handleDelete = () => {
   background: transparent;
   color: var(--md-on-surface);
   /* 使用碑拓宋体 */
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-size: var(--md-title-medium);
   font-weight: 700;
   line-height: 1.35;
@@ -265,7 +271,13 @@ const handleDelete = () => {
   min-width: 0;
   padding-inline: var(--md-spacing-3);
   white-space: nowrap;
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 /* 执笔创作按钮 active 钤印微沉 */
@@ -282,7 +294,13 @@ const handleDelete = () => {
 
 .project-card__delete {
   color: var(--md-error);
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 /* 删除按钮 active 钤印微沉 */

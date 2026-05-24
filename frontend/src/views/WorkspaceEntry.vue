@@ -267,10 +267,16 @@ const goToWorkspace = () => {
 }
 
 .workspace-entry__actions-top .md-btn {
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-weight: 600;
   color: var(--md-primary-light) !important;
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 .workspace-entry__actions-top .md-btn:hover {
@@ -279,7 +285,7 @@ const goToWorkspace = () => {
 
 /* 右上角朱砂小落款印章字标样式 */
 .workspace-entry__icon-txt {
-  font-family: var(--md-font-serif, "STSong", "Songti SC", "SimSun", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-weight: 600;
   color: var(--md-secondary) !important; /* 朱砂红，像一枚落款小印章点醒页面 */
   margin-right: 4px;
@@ -305,7 +311,7 @@ const goToWorkspace = () => {
 
 
 .hero-title {
-  font-family: var(--md-font-serif, "STSong", "Songti SC", "SimSun", serif) !important;
+  font-family: var(--md-font-serif) !important;
   color: var(--md-on-surface) !important;
   letter-spacing: 0.08em !important;
   font-weight: 600 !important;
@@ -314,7 +320,7 @@ const goToWorkspace = () => {
 
 .hero-subtitle {
   color: var(--md-on-surface-variant) !important;
-  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-family: var(--md-font-kai) !important;
   font-size: 16px !important;
   letter-spacing: 0.03em !important;
 }
@@ -356,11 +362,17 @@ const goToWorkspace = () => {
   border: 1px solid var(--md-outline) !important;
   background-color: var(--md-primary) !important;
   color: var(--md-on-primary) !important;
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-weight: 600 !important;
   letter-spacing: 0.05em;
   box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.15) !important;
-  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
   cursor: pointer;
   position: relative;
   overflow: hidden;
@@ -407,10 +419,16 @@ const goToWorkspace = () => {
   border: 1px dashed var(--md-outline) !important;
   background-color: transparent !important;
   color: var(--md-on-surface-variant) !important;
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-weight: 600 !important;
   box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.05) !important;
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
   cursor: pointer;
 }
 
@@ -433,7 +451,7 @@ const goToWorkspace = () => {
 
 .updates-dialog-title {
   color: var(--md-on-surface) !important;
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-weight: 600;
   letter-spacing: 0.05em;
 }
@@ -446,7 +464,7 @@ const goToWorkspace = () => {
 
 .updates-community-text {
   color: var(--md-on-surface) !important;
-  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-family: var(--md-font-kai) !important;
 }
 
 .updates-timeline-connector {
@@ -465,7 +483,7 @@ const goToWorkspace = () => {
 
 .updates-timeline-time {
   color: var(--md-secondary) !important;
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-weight: 600;
 }
 
@@ -480,7 +498,7 @@ const goToWorkspace = () => {
 }
 
 .updates-dialog-actions .md-btn {
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-weight: 600;
 }
 
@@ -504,7 +522,7 @@ const goToWorkspace = () => {
 
 /* 主动作按钮朱砂印章样式 */
 .entry-actions__stamp {
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-weight: 600;
   color: var(--md-secondary) !important;
   margin-right: var(--md-spacing-2);

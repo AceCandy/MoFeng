@@ -197,7 +197,7 @@ useDialogA11y({
 
 .m3-eval-best-choice-title {
   color: var(--md-secondary) !important;
-  font-family: STSong, Songti SC, serif;
+  font-family: var(--md-font-serif);
 }
 
 .m3-eval-best-choice-reason {

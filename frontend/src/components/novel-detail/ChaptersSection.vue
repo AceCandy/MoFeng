@@ -1,18 +1,22 @@
 <!-- AIMETA P=章节区_章节列表展示|R=章节列表_状态|NR=不含编辑功能|E=component:ChaptersSection|X=ui|A=章节组件|D=vue|S=dom|RD=./README.ai -->
 <template>
-  <div class="flex flex-col h-full min-h-0 overflow-hidden relative">
+  <div class="chapters-section blueprint-page blueprint-page--fill flex flex-col h-full min-h-0 overflow-hidden relative">
+    <h2 class="sr-only">章节内容</h2>
     <div class="flex flex-row flex-1 h-full lg:min-h-0 overflow-hidden">
       <!-- 移动端遮罩层 -->
       <div
         v-if="showChapterList"
         class="fixed inset-0 bg-[var(--md-scrim)] z-40 lg:hidden"
+        aria-hidden="true"
         @click="showChapterList = false"
       ></div>
 
       <!-- 章节列表侧边栏 -->
       <aside
-        class="fixed lg:static inset-y-0 left-0 z-50 w-72 lg:w-72 bg-[var(--md-surface)] lg:bg-[var(--md-surface-container-low)] border-r border-[var(--md-outline-variant)] flex flex-col h-full min-h-0 max-h-full overflow-hidden transition-transform duration-300 lg:translate-x-0 shadow-2xl lg:shadow-none"
+        class="chapters-section__sidebar fixed lg:static inset-y-0 left-0 z-50 w-72 lg:w-72 bg-[var(--md-surface)] lg:bg-[var(--md-surface-container-low)] border-r border-[var(--md-outline-variant)] flex flex-col h-full min-h-0 max-h-full overflow-hidden transition-transform duration-300 lg:translate-x-0 shadow-[2px_2px_0px_rgba(28,32,34,0.15)] lg:shadow-none"
         :class="showChapterList ? 'translate-x-0' : '-translate-x-full'"
+        :aria-hidden="isChapterSidebarVisible ? undefined : 'true'"
+        :inert="!isChapterSidebarVisible"
       >
         <div class="px-5 py-4 border-b border-[var(--md-outline-variant)] flex items-center justify-between">
           <h3 class="text-base font-semibold text-[var(--md-on-surface)]">章节</h3>
@@ -22,8 +26,9 @@
           <li v-for="(chapter, index) in chapters" :key="chapter.chapter_number">
             <button
               :ref="(el) => setChapterRef(chapter.chapter_number, el)"
-              class="w-full text-left px-5 py-3 transition-colors duration-200"
+              class="chapters-section__chapter-btn w-full text-left px-5 py-3 transition-colors duration-200"
               :class="selectedChapter?.chapter_number === chapter.chapter_number ? 'bg-[var(--md-primary-container)] text-[var(--md-primary)] font-semibold' : 'hover:bg-[var(--md-surface-container-low)] lg:hover:bg-[var(--md-surface)] text-[var(--md-on-surface)]'"
+              :aria-current="selectedChapter?.chapter_number === chapter.chapter_number ? 'page' : undefined"
               @click="selectChapter(chapter.chapter_number)"
             >
               <div class="flex items-center justify-between gap-3">
@@ -49,7 +54,7 @@
         </ul>
       </aside>
 
-      <section class="flex-1 flex flex-col bg-[var(--md-surface)] h-full min-h-0 max-h-full overflow-hidden relative">
+      <section class="chapters-section__reader flex-1 flex flex-col bg-[var(--md-surface)] h-full min-h-0 max-h-full overflow-hidden relative">
         <!-- 移动端浮动按钮 -->
         <button
           type="button"
@@ -65,29 +70,36 @@
         </button>
 
         <!-- Loading State -->
-        <div v-if="isLoading" class="h-full flex items-center justify-center">
-          <div class="text-center">
-            <div class="w-10 h-10 border-4 border-[var(--md-primary-container)] border-t-[var(--md-primary)] rounded-full animate-spin mx-auto mb-3"></div>
-            <p class="text-sm text-[var(--md-on-surface-variant)]">加载中...</p>
+        <div
+          v-if="isLoading"
+          class="blueprint-state blueprint-state--loading chapters-section__state"
+          role="status"
+          aria-live="polite"
+        >
+          <div class="blueprint-state__inner">
+            <div class="md-spinner mx-auto mb-3"></div>
+            <p class="blueprint-state__title">加载章节材料中</p>
+            <p class="blueprint-state__desc">正在读取正文、版本与评审记录。</p>
           </div>
         </div>
 
         <!-- Error State -->
-        <div v-else-if="error" class="h-full flex items-center justify-center">
-          <div class="text-center">
-            <div class="w-12 h-12 bg-[var(--md-error-container)] rounded-full flex items-center justify-center mx-auto mb-3">
-              <svg class="w-6 h-6 text-[var(--md-error-text)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div v-else-if="error" class="blueprint-state blueprint-state--error chapters-section__state" role="alert">
+          <div class="blueprint-state__inner">
+            <div class="blueprint-state__icon" aria-hidden="true">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <p class="text-sm text-[var(--md-on-surface-variant)]">{{ error }}</p>
+            <p class="blueprint-state__title">章节材料加载失败</p>
+            <p class="blueprint-state__desc">{{ error }}</p>
           </div>
         </div>
 
         <!-- Content -->
         <template v-else-if="selectedChapter">
           <!-- Header with Status and Tabs -->
-          <header class="px-6 py-4 border-b border-[var(--md-outline-variant)] bg-[var(--md-surface-container-low)]">
+          <header class="chapters-section__header px-6 py-4 border-b border-[var(--md-outline-variant)] bg-[var(--md-surface-container-low)]">
             <div class="flex items-start justify-between gap-4 mb-3">
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
@@ -101,7 +113,7 @@
               </div>
               <div class="flex items-center gap-2 flex-wrap justify-end">
                 <button
-                  class="inline-flex items-center gap-1 min-h-[44px] px-3.5 py-2 text-sm font-medium rounded-xs border transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-[var(--md-primary)] focus-visible:outline-offset-2"
+                  class="chapters-section__export-btn inline-flex items-center gap-1 min-h-[44px] px-3.5 py-2 text-sm font-medium rounded-xs border transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-[var(--md-primary)] focus-visible:outline-offset-2"
                   :class="selectedChapter?.content ? 'border-[var(--md-primary-container)] text-[var(--md-on-primary-container)] hover:bg-[var(--md-primary-container)]' : 'border-[var(--md-outline-variant)] text-[var(--md-on-surface-variant)] cursor-not-allowed'"
                   :disabled="!selectedChapter?.content"
                   @click="exportChapterAsTxt"
@@ -120,12 +132,19 @@
             </div>
 
             <!-- Tab Navigation -->
-            <div class="flex gap-2">
+            <div class="chapters-section__tabs flex gap-2" role="tablist" aria-label="章节材料切换">
               <button
                 v-for="tab in tabs"
                 :key="tab.key"
-                @click="activeTab = tab.key"
-                class="px-4 py-2 min-h-[44px] text-sm font-medium rounded-xs border border-transparent transition-[background-color,box-shadow,color] duration-200 focus-visible:outline-2 focus-visible:outline-[var(--md-primary)] focus-visible:outline-offset-2"
+                type="button"
+                role="tab"
+                :id="chapterTabId(tab.key)"
+                :aria-selected="activeTab === tab.key"
+                :aria-controls="chapterTabPanelId(tab.key)"
+                :tabindex="activeTab === tab.key ? 0 : -1"
+                @click="switchChapterTab(tab.key)"
+                @keydown="onChapterTabKeydown(tab.key, $event)"
+                class="chapters-section__tab px-4 py-2 min-h-[44px] text-sm font-medium rounded-xs border border-transparent transition-[background-color,box-shadow,color] duration-200 focus-visible:outline-2 focus-visible:outline-[var(--md-primary)] focus-visible:outline-offset-2"
                 :class="activeTab === tab.key
                   ? 'bg-[var(--md-surface)] text-[var(--md-primary)] border-[var(--md-outline)] shadow-[2px_2px_0px_rgba(28,32,34,0.15)]'
                   : 'text-[var(--md-on-surface-variant)] hover:text-[var(--md-on-surface)] hover:bg-[var(--md-surface-container-lowest)]'"
@@ -141,13 +160,20 @@
           </header>
 
           <!-- Tab Content -->
-          <article class="flex-1 overflow-y-auto min-h-0 overscroll-contain">
+          <article class="chapters-section__content flex-1 overflow-y-auto min-h-0 overscroll-contain">
             <!-- 正文 Tab -->
-            <div v-show="activeTab === 'content'" class="px-2 py-3">
-              <div class="max-w-full space-y-4">
+            <div
+              v-show="activeTab === 'content'"
+              class="px-2 py-3"
+              role="tabpanel"
+              :id="chapterTabPanelId('content')"
+              :aria-labelledby="chapterTabId('content')"
+              tabindex="0"
+            >
+              <div class="chapters-section__panel-stack max-w-full">
                 <!-- Summary Cards -->
                 <div v-if="selectedChapter.summary || selectedChapter.real_summary" class="grid gap-4">
-                  <div v-if="selectedChapter.summary" class="bg-[var(--md-surface-container-low)] border border-[var(--md-outline-variant)] rounded-sm p-4">
+                  <div v-if="selectedChapter.summary" class="chapter-summary-card bg-[var(--md-surface-container-low)] border border-[var(--md-outline-variant)] rounded-sm p-4">
                     <h5 class="text-xs font-semibold text-[var(--md-on-surface)] mb-2 flex items-center gap-1.5">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -156,7 +182,7 @@
                     </h5>
                     <p class="text-sm text-[var(--md-on-surface)] leading-relaxed">{{ selectedChapter.summary }}</p>
                   </div>
-                  <div v-if="selectedChapter.real_summary" class="bg-[var(--md-success-container)] border border-[color-mix(in_oklch,var(--md-success)_20%,transparent)] rounded-sm p-4">
+                  <div v-if="selectedChapter.real_summary" class="chapter-summary-card chapter-summary-card--success bg-[var(--md-success-container)] border border-[color-mix(in_oklch,var(--md-success-text)_20%,transparent)] rounded-sm p-4">
                     <h5 class="text-xs font-semibold text-[var(--md-success-text)] mb-2 flex items-center gap-1.5">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
@@ -168,7 +194,7 @@
                 </div>
 
                 <!-- Main Content -->
-                <div class="prose prose-slate max-w-none p-4 sm:p-6 rounded-sm bg-[var(--md-surface-container-low)]">
+                <div class="chapters-section__prose-card prose prose-slate max-w-none p-4 sm:p-6 rounded-sm bg-[var(--md-surface-container-low)]">
                   <div class="text-base text-[var(--md-on-surface)] leading-8 whitespace-pre-wrap font-serif">
                     {{ selectedChapter.content || '暂无内容' }}
                   </div>
@@ -177,9 +203,16 @@
             </div>
 
             <!-- 版本 Tab -->
-            <div v-show="activeTab === 'versions'" class="px-2 py-3">
+            <div
+              v-show="activeTab === 'versions'"
+              class="px-2 py-3"
+              role="tabpanel"
+              :id="chapterTabPanelId('versions')"
+              :aria-labelledby="chapterTabId('versions')"
+              tabindex="0"
+            >
               <div class="max-w-full">
-                <div v-if="selectedChapter.versions && selectedChapter.versions.length > 0" class="space-y-4">
+                <div v-if="selectedChapter.versions && selectedChapter.versions.length > 0" class="chapters-section__panel-stack">
                   <button v-for="(version, index) in selectedChapter.versions" :key="index"
                     type="button"
                     class="chapter-version-card group"
@@ -204,16 +237,26 @@
                     </span>
                   </button>
                 </div>
-                <div v-else class="text-center py-12 text-[var(--md-on-surface-variant)]">
-                  暂无版本记录
+                <div v-else class="blueprint-empty">
+                  <div>
+                    <p class="blueprint-empty__title">暂无版本记录</p>
+                    <p class="blueprint-empty__desc">章节生成多个版本后，可在这里打开全文对比。</p>
+                  </div>
                 </div>
               </div>
             </div>
 
             <!-- 评审 Tab -->
-            <div v-show="activeTab === 'evaluation'" class="px-2 py-3">
+            <div
+              v-show="activeTab === 'evaluation'"
+              class="px-2 py-3"
+              role="tabpanel"
+              :id="chapterTabPanelId('evaluation')"
+              :aria-labelledby="chapterTabId('evaluation')"
+              tabindex="0"
+            >
               <div class="max-w-full">
-                <div v-if="evaluationData" class="space-y-4">
+                <div v-if="evaluationData" class="chapters-section__panel-stack">
                   <!-- 最佳选择 -->
                   <div v-if="evaluationData.best_choice" class="bg-[var(--md-primary-container)] border border-[var(--md-primary-container)] rounded-sm p-4">
                     <div class="flex items-start gap-4">
@@ -237,7 +280,7 @@
                   </div>
 
                   <!-- 各版本详细评审 -->
-                  <div v-if="evaluationData.evaluation" class="space-y-4">
+                  <div v-if="evaluationData.evaluation" class="chapters-section__panel-stack">
                     <div v-for="(versionEval, versionKey) in evaluationData.evaluation" :key="versionKey"
                       class="border border-[var(--md-outline-variant)] rounded-sm overflow-hidden"
                       :class="isSelectedVersion(versionKey, evaluationData.best_choice) ? 'ring-2 ring-[var(--md-primary-light)]' : ''">
@@ -258,7 +301,7 @@
                       <div class="p-4 space-y-3">
                         <!-- 优点 -->
                         <div v-if="versionEval.pros && versionEval.pros.length > 0"
-                          class="bg-[var(--md-success-container)] border border-[color-mix(in_oklch,var(--md-success)_20%,transparent)] rounded-lg p-3">
+                          class="bg-[var(--md-success-container)] border border-[color-mix(in_oklch,var(--md-success-text)_20%,transparent)] rounded-sm p-3">
                           <h6 class="text-xs font-bold text-[var(--md-success-text)] mb-2 flex items-center gap-1.5">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -268,7 +311,7 @@
                           <ul class="space-y-1.5">
                             <li v-for="(item, idx) in versionEval.pros" :key="idx"
                               class="flex items-start gap-2 text-xs text-[var(--md-success-text)] leading-relaxed">
-                              <span class="w-1 h-1 bg-[var(--md-success)] rounded-full mt-1.5 flex-shrink-0"></span>
+                              <span class="w-1 h-1 bg-[var(--md-success-text)] rounded-xs mt-1.5 flex-shrink-0"></span>
                               <span>{{ item }}</span>
                             </li>
                           </ul>
@@ -276,7 +319,7 @@
 
                         <!-- 缺点 -->
                         <div v-if="versionEval.cons && versionEval.cons.length > 0"
-                          class="bg-[var(--md-error-container)] border border-[color-mix(in_oklch,var(--md-error)_20%,transparent)] rounded-lg p-3">
+                          class="bg-[var(--md-error-container)] border border-[color-mix(in_oklch,var(--md-error-text)_20%,transparent)] rounded-sm p-3">
                           <h6 class="text-xs font-bold text-[var(--md-error-text)] mb-2 flex items-center gap-1.5">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -286,7 +329,7 @@
                           <ul class="space-y-1.5">
                             <li v-for="(item, idx) in versionEval.cons" :key="idx"
                               class="flex items-start gap-2 text-xs text-[var(--md-error-text)] leading-relaxed">
-                              <span class="w-1 h-1 bg-[var(--md-error)] rounded-full mt-1.5 flex-shrink-0"></span>
+                              <span class="w-1 h-1 bg-[var(--md-error-text)] rounded-xs mt-1.5 flex-shrink-0"></span>
                               <span>{{ item }}</span>
                             </li>
                           </ul>
@@ -294,7 +337,7 @@
 
                         <!-- 总体评价 -->
                         <div v-if="versionEval.overall_review"
-                          class="bg-[var(--md-surface-container-low)] border border-[var(--md-outline-variant)] rounded-lg p-3">
+                          class="bg-[var(--md-surface-container-low)] border border-[var(--md-outline-variant)] rounded-sm p-3">
                           <h6 class="text-xs font-bold text-[var(--md-on-surface)] mb-2">总体评价</h6>
                           <p class="text-xs text-[var(--md-on-surface)] leading-relaxed">{{ versionEval.overall_review }}</p>
                         </div>
@@ -303,7 +346,7 @@
                   </div>
 
                   <!-- 简单格式兼容 -->
-                  <div v-else-if="evaluationData.decision || evaluationData.feedback" class="space-y-4">
+                  <div v-else-if="evaluationData.decision || evaluationData.feedback" class="chapters-section__panel-stack">
                     <!-- 评审决策 -->
                     <div v-if="evaluationData.decision" class="bg-[var(--md-primary-container)] border border-[var(--md-primary-container)] rounded-sm p-4">
                       <div class="flex items-center gap-3 mb-4">
@@ -344,13 +387,11 @@
                   </div>
                 </div>
 
-                <div v-else class="text-center py-12">
-                  <div class="w-16 h-16 bg-[var(--md-surface-container)] rounded-xs flex items-center justify-center mx-auto mb-3">
-                    <svg class="w-8 h-8 text-[var(--md-on-surface-variant)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
+                <div v-else class="blueprint-empty">
+                  <div>
+                    <p class="blueprint-empty__title">暂无评审意见</p>
+                    <p class="blueprint-empty__desc">章节完成评审后，这里会展示版本选择、评分与详细反馈。</p>
                   </div>
-                  <p class="text-[var(--md-on-surface-variant)]">暂无评审意见</p>
                 </div>
               </div>
             </div>
@@ -358,12 +399,12 @@
         </template>
 
         <!-- Empty State -->
-        <div v-else class="h-full flex items-center justify-center text-[var(--md-on-surface-variant)]">
-          <div class="text-center">
-            <svg class="w-16 h-16 mx-auto mb-3 text-[var(--md-outline)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
-            <p class="text-sm">请选择章节查看详细内容</p>
+        <div v-else class="chapters-section__empty-state">
+          <div class="blueprint-empty">
+            <div>
+              <p class="blueprint-empty__title">请选择章节</p>
+              <p class="blueprint-empty__desc">从左侧章节列表进入正文、版本和评审材料。</p>
+            </div>
           </div>
         </div>
       </section>
@@ -433,6 +474,8 @@ import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { useNovelChapterDetailQuery } from '@/queries/novel'
 import { useDialogA11y } from '@/composables/useDialogA11y'
+import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
+import { desktopMin } from '@/constants/responsive'
 import { resolveChapterNumberForEntry } from '@/utils/chapter'
 
 interface ChapterItem {
@@ -459,6 +502,8 @@ const props = defineProps<{
 
 const route = useRoute()
 const projectId = route.params.id as string
+const viewport = useResponsiveViewport()
+const isDesktopViewport = computed(() => viewport.width.value >= desktopMin)
 
 const selectedChapterNumber = ref<number | null>(null)
 const chapterQuery = useNovelChapterDetailQuery(
@@ -480,10 +525,13 @@ const error = computed(() => {
   const queryError = chapterQuery.error.value
   return queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null
 })
-const activeTab = ref<'content' | 'versions' | 'evaluation'>('content')
+type ChapterTabKey = 'content' | 'versions' | 'evaluation'
+
+const activeTab = ref<ChapterTabKey>('content')
 
 // 移动端章节列表显示状态
 const showChapterList = ref(false)
+const isChapterSidebarVisible = computed(() => isDesktopViewport.value || showChapterList.value)
 
 // 版本弹窗状态
 const versionModal = ref({
@@ -506,6 +554,36 @@ const tabs = [
   { key: 'versions' as const, label: '版本', badge: true },
   { key: 'evaluation' as const, label: '评审', badge: false }
 ]
+
+const chapterTabId = (key: ChapterTabKey) => `chapter-tab-${key}`
+const chapterTabPanelId = (key: ChapterTabKey) => `chapter-tabpanel-${key}`
+
+const switchChapterTab = (key: ChapterTabKey) => {
+  activeTab.value = key
+}
+
+// 章节材料 Tabs 使用 roving tabindex，键盘用户可用方向键快速切换正文、版本和评审。
+const onChapterTabKeydown = (key: ChapterTabKey, event: KeyboardEvent) => {
+  const keys = tabs.map((tab) => tab.key)
+  const currentIndex = keys.indexOf(key)
+  let nextIndex: number | null = null
+
+  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+    nextIndex = (currentIndex + 1) % keys.length
+  } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+    nextIndex = (currentIndex - 1 + keys.length) % keys.length
+  } else if (event.key === 'Home') {
+    nextIndex = 0
+  } else if (event.key === 'End') {
+    nextIndex = keys.length - 1
+  }
+
+  if (nextIndex === null) return
+  event.preventDefault()
+  const nextKey = keys[nextIndex]
+  switchChapterTab(nextKey)
+  document.getElementById(chapterTabId(nextKey))?.focus()
+}
 
 // 计算字数的辅助函数
 const calculateWordCount = (content: string | null | undefined): number => {
@@ -539,7 +617,7 @@ const getStatusColor = (status: string): string => {
     'failed': 'border-[var(--md-error)] bg-[var(--md-error-container)] text-[var(--md-error-text)]',
     'evaluation_failed': 'border-[var(--md-error)] bg-[var(--md-error-container)] text-[var(--md-error-text)]',
     'waiting_for_confirm': 'border-[var(--md-warning)] bg-[var(--md-warning-container)] text-[var(--md-warning-text)]',
-    'successful': 'border-[var(--md-secondary)] bg-[var(--md-secondary-container)] text-[var(--md-secondary)]'
+    'successful': 'border-[var(--md-secondary)] bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)]'
   }
   return colorMap[status] || 'border-[var(--md-outline-variant)] bg-[var(--md-surface-container)] text-[var(--md-on-surface-variant)]'
 }
@@ -638,10 +716,10 @@ const getScoreColor = (score: number): string => {
 
 // 获取评分条颜色
 const getScoreBarColor = (score: number): string => {
-  if (score >= 8) return 'bg-[var(--md-success)]'
+  if (score >= 8) return 'bg-[var(--md-success-text)]'
   if (score >= 6) return 'bg-[var(--md-primary)]'
-  if (score >= 4) return 'bg-[var(--md-warning)]'
-  return 'bg-[var(--md-error)]'
+  if (score >= 4) return 'bg-[var(--md-warning-text)]'
+  return 'bg-[var(--md-error-text)]'
 }
 
 // 从版本 key 中提取版本号 (version1 -> 1)
@@ -754,6 +832,86 @@ defineExpose({
 </script>
 
 <style scoped>
+.chapters-section {
+  gap: 0;
+}
+
+.chapters-section__sidebar {
+  border-right-color: var(--md-outline-variant) !important;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(28, 32, 34, 0.006) 0,
+      rgba(28, 32, 34, 0.006) 1px,
+      transparent 1px,
+      transparent 24px
+    ),
+    var(--md-surface-container-low) !important;
+}
+
+.chapters-section__chapter-btn {
+  color: var(--md-on-surface);
+}
+
+.chapters-section__chapter-btn:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: -2px;
+}
+
+.chapters-section__reader {
+  background-color: var(--md-surface) !important;
+}
+
+.chapters-section__header {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(28, 32, 34, 0.006) 0,
+      rgba(28, 32, 34, 0.006) 1px,
+      transparent 1px,
+      transparent 28px
+    ),
+    var(--md-surface-container-low) !important;
+}
+
+.chapters-section__export-btn {
+  border-radius: var(--md-radius-xs) !important;
+}
+
+.chapters-section__tabs {
+  flex-wrap: wrap;
+}
+
+.chapters-section__tab {
+  border-radius: var(--md-radius-xs) !important;
+}
+
+.chapters-section__content {
+  padding: var(--md-spacing-3);
+}
+
+.chapters-section__panel-stack {
+  display: grid;
+  gap: var(--md-spacing-4);
+}
+
+.chapter-summary-card,
+.chapters-section__prose-card {
+  border-radius: var(--md-radius-sm) !important;
+}
+
+.chapters-section__prose-card {
+  border: 1px solid var(--md-outline-variant);
+  background-color: var(--md-surface-container-low) !important;
+}
+
+.chapters-section__empty-state {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: var(--md-spacing-5);
+}
+
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -781,7 +939,7 @@ defineExpose({
   padding: 1.25rem;
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-radius-sm, 4px);
-  background-color: transparent;
+  background-color: var(--md-surface-container-low);
   color: inherit;
   text-align: left;
   cursor: pointer;
@@ -793,6 +951,7 @@ defineExpose({
 
 .chapter-version-card:hover {
   border-color: var(--md-primary);
+  background-color: var(--md-surface);
   box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.15);
 }
 
@@ -854,7 +1013,7 @@ defineExpose({
 }
 
 .m3-signet-seal {
-  font-family: 'STSong', 'Songti SC', serif;
+  font-family: var(--md-font-serif);
   font-weight: 700;
   letter-spacing: 0.05em;
   border-style: solid;
@@ -875,6 +1034,10 @@ defineExpose({
 }
 
 @media (max-width: 640px) {
+  .chapters-section__content {
+    padding: var(--md-spacing-2);
+  }
+
   .chapter-version-card__head {
     align-items: flex-start;
     flex-direction: column;

@@ -410,7 +410,7 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
 .admin-eyebrow {
   margin: 0;
   color: var(--md-secondary) !important; /* 朱砂红，像印章般醒目 */
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-size: var(--md-label-large);
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -433,7 +433,7 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
   line-height: 1.7;
   max-width: 72ch;
   /* 备注使用楷体展现水墨感 */
-  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-family: var(--md-font-kai) !important;
   font-size: 15px;
 }
 
@@ -449,7 +449,11 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
   border: 1px solid var(--md-outline) !important; /* 竹青细线 */
   background-color: var(--md-surface-container-low) !important; /* 熟宣暖灰 */
   box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.05) !important;
-  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 .admin-ops__metric:hover {
@@ -462,14 +466,14 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
   margin: 0;
   color: var(--md-on-surface-variant);
   font-size: var(--md-body-small);
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
 }
 
 .admin-ops__metric span {
   margin: 0;
   color: var(--md-on-surface-variant);
   font-size: var(--md-body-small);
-  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-family: var(--md-font-kai) !important;
 }
 
 .admin-ops__metric strong {
@@ -507,7 +511,7 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
 .admin-panel-card header p {
   margin: 6px 0 0;
   color: var(--md-on-surface-variant);
-  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-family: var(--md-font-kai) !important;
   font-size: var(--md-body-small);
 }
 
@@ -527,7 +531,10 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
   border-radius: var(--md-radius-xs) !important; /* 微直角 2px */
   border: 1px solid var(--md-outline-variant) !important;
   background-color: var(--md-surface-container-lowest) !important;
-  transition: all var(--md-duration-short) var(--md-easing-standard);
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard);
 }
 
 .admin-log-list li:hover,
@@ -565,7 +572,7 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
 .admin-empty-hint {
   margin: var(--md-spacing-5) 0 0;
   color: var(--md-on-surface-variant);
-  font-family: var(--md-font-serif, "STKaiti", "Kaiti SC", serif) !important;
+  font-family: var(--md-font-kai) !important;
   font-size: var(--md-body-small);
 }
 
@@ -652,14 +659,17 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
   border-radius: var(--md-radius-xs) !important; /* 2px */
   background-color: transparent;
   color: var(--md-on-surface);
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-size: var(--md-title-small) !important;
   font-weight: 600;
   line-height: 1;
   cursor: pointer;
   white-space: nowrap;
   position: relative;
-  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 .admin-console__nav-item:hover {
@@ -675,8 +685,8 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
 
 .admin-console__nav-item.is-active,
 .admin-console__nav-item[aria-selected='true'] {
-  border-color: transparent !important;
-  border-left: 3px solid var(--md-secondary) !important; /* 朱砂红左描边 */
+  border: 1px dashed rgba(184, 60, 50, 0.15) !important;
+  border-left: 1.5px solid var(--md-secondary) !important; /* 纤细朱砂竖描起笔，干掉AI粗条 */
   background-color: rgba(184, 60, 50, 0.08) !important; /* 晕染熟宣红 */
   color: var(--md-secondary) !important;
 }
@@ -684,7 +694,7 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
 /* “盤、籍、令、卷、誌、樞、鑰” 终极金石印章 ::after - 初始悬空隐形，防止布局抖动 */
 .admin-console__nav-item::after {
   content: '';
-  font-family: var(--md-font-serif, "STSong", "Songti SC", serif) !important;
+  font-family: var(--md-font-serif) !important;
   font-weight: 900;
   font-size: 13px;
   color: transparent !important;
@@ -700,7 +710,13 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
   margin-left: 8px;
   opacity: 0;
   transform: scale(1.15) translateY(-3px); /* 悬空 */
-  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition:
+    background-color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 /* 激活时，红泥落地，徐徐印下 */
