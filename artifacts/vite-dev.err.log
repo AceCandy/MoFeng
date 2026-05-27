@@ -1,0 +1,318 @@
+[2m10:23:48[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mD:/文档/临时workspace/MoFeng/frontend/src/components/writing-desk/WDWorkspace.vue[39m:254:13
+[33m  252 |                <span>历史版本 ({{ availableVersions.length }})</span>
+  253 |              </button>
+  254 |              <button
+      |               ^
+  255 |                type="button"
+  256 |                class="writing-workspace__tab-btn md-ripple"[39m
+      at createCompilerError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1364:17)
+      at emitError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2991:5)
+      at Object.onclosetag (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2350:13)
+      at Tokenizer.stateInClosingTagName (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:785:16)
+      at Tokenizer.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1143:16)
+      at Object.baseParse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3030:13)
+      at Object.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1801:24)
+      at createDescriptor (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:79:42)
+      at handleHotUpdate (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:1475:25)
+[2m10:23:48[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mD:/文档/临时workspace/MoFeng/frontend/src/components/writing-desk/WDWorkspace.vue[39m:254:13
+[33m  252 |                <span>历史版本 ({{ availableVersions.length }})</span>
+  253 |              </button>
+  254 |              <button
+      |               ^
+  255 |                type="button"
+  256 |                class="writing-workspace__tab-btn md-ripple"[39m
+      at createCompilerError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1364:17)
+      at emitError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2991:5)
+      at Object.onclosetag (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2350:13)
+      at Tokenizer.stateInClosingTagName (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:785:16)
+      at Tokenizer.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1143:16)
+      at Object.baseParse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3030:13)
+      at Object.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1801:24)
+      at createDescriptor (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:79:42)
+      at handleHotUpdate (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:1475:25)
+[2m10:23:50[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Element is missing end tag.
+  Plugin: [35mvite:vue[39m
+  File: [36mD:/文档/临时workspace/MoFeng/frontend/src/components/writing-desk/WDWorkspace.vue[39m:254:13
+[33m  252 |                <span>历史版本 ({{ availableVersions.length }})</span>
+  253 |              </button>
+  254 |              <button
+      |               ^
+  255 |                type="button"
+  256 |                class="writing-workspace__tab-btn md-ripple"[39m
+[2m10:23:50[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mD:/文档/临时workspace/MoFeng/frontend/src/components/writing-desk/WDWorkspace.vue[39m:254:13
+[33m  252 |                <span>历史版本 ({{ availableVersions.length }})</span>
+  253 |              </button>
+  254 |              <button
+      |               ^
+  255 |                type="button"
+  256 |                class="writing-workspace__tab-btn md-ripple"[39m
+      at createCompilerError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1364:17)
+      at emitError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2991:5)
+      at Object.onclosetag (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2350:13)
+      at Tokenizer.stateInClosingTagName (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:785:16)
+      at Tokenizer.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1143:16)
+      at Object.baseParse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3030:13)
+      at Object.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1801:24)
+      at createDescriptor (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:79:42)
+      at handleHotUpdate (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:1475:25)
+[2m10:24:10[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Element is missing end tag.
+  Plugin: [35mvite:vue[39m
+  File: [36mD:/文档/临时workspace/MoFeng/frontend/src/components/writing-desk/WDWorkspace.vue[39m:254:13
+[33m  252 |                <span>历史版本 ({{ availableVersions.length }})</span>
+  253 |              </button>
+  254 |              <button
+      |               ^
+  255 |                type="button"
+  256 |                class="writing-workspace__tab-btn md-ripple"[39m
+[2m10:24:10[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mD:/文档/临时workspace/MoFeng/frontend/src/components/writing-desk/WDWorkspace.vue[39m:254:13
+[33m  252 |                <span>历史版本 ({{ availableVersions.length }})</span>
+  253 |              </button>
+  254 |              <button
+      |               ^
+  255 |                type="button"
+  256 |                class="writing-workspace__tab-btn md-ripple"[39m
+      at createCompilerError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1364:17)
+      at emitError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2991:5)
+      at Object.onclosetag (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2350:13)
+      at Tokenizer.stateInClosingTagName (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:785:16)
+      at Tokenizer.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1143:16)
+      at Object.baseParse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3030:13)
+      at Object.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1801:24)
+      at createDescriptor (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:79:42)
+      at handleHotUpdate (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:1475:25)
+[2m10:25:15[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Element is missing end tag.
+  Plugin: [35mvite:vue[39m
+  File: [36mD:/文档/临时workspace/MoFeng/frontend/src/components/writing-desk/WDWorkspace.vue[39m:254:13
+[33m  252 |                <span>历史版本 ({{ availableVersions.length }})</span>
+  253 |              </button>
+  254 |              <button
+      |               ^
+  255 |                type="button"
+  256 |                class="writing-workspace__tab-btn md-ripple"[39m
+[2m10:25:15[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mD:/文档/临时workspace/MoFeng/frontend/src/components/writing-desk/WDWorkspace.vue[39m:254:13
+[33m  252 |                <span>历史版本 ({{ availableVersions.length }})</span>
+  253 |              </button>
+  254 |              <button
+      |               ^
+  255 |                type="button"
+  256 |                class="writing-workspace__tab-btn md-ripple"[39m
+      at createCompilerError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1364:17)
+      at emitError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2991:5)
+      at Object.onclosetag (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2350:13)
+      at Tokenizer.stateInClosingTagName (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:785:16)
+      at Tokenizer.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1143:16)
+      at Object.baseParse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3030:13)
+      at Object.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1801:24)
+      at createDescriptor (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:79:42)
+      at handleHotUpdate (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:1475:25)
+[2m10:25:18[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Element is missing end tag.
+  Plugin: [35mvite:vue[39m
+  File: [36mD:/文档/临时workspace/MoFeng/frontend/src/components/writing-desk/WDWorkspace.vue[39m:254:13
+[33m  252 |                <span>历史版本 ({{ availableVersions.length }})</span>
+  253 |              </button>
+  254 |              <button
+      |               ^
+  255 |                type="button"
+  256 |                class="writing-workspace__tab-btn md-ripple"[39m
+[2m10:25:21[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mD:/文档/临时workspace/MoFeng/frontend/src/components/writing-desk/WDWorkspace.vue[39m:254:13
+[33m  252 |                <span>历史版本 ({{ availableVersions.length }})</span>
+  253 |              </button>
+  254 |              <button
+      |               ^
+  255 |                type="button"
+  256 |                class="writing-workspace__tab-btn md-ripple"[39m
+      at createCompilerError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1364:17)
+      at emitError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2991:5)
+      at Object.onclosetag (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2350:13)
+      at Tokenizer.stateInClosingTagName (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:785:16)
+      at Tokenizer.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1143:16)
+      at Object.baseParse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3030:13)
+      at Object.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1801:24)
+      at createDescriptor (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:79:42)
+      at handleHotUpdate (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:1475:25)
+[2m10:25:25[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Element is missing end tag.
+  Plugin: [35mvite:vue[39m
+  File: [36mD:/文档/临时workspace/MoFeng/frontend/src/components/writing-desk/WDWorkspace.vue[39m:254:13
+[33m  252 |                <span>历史版本 ({{ availableVersions.length }})</span>
+  253 |              </button>
+  254 |              <button
+      |               ^
+  255 |                type="button"
+  256 |                class="writing-workspace__tab-btn md-ripple"[39m
+[2m10:25:26[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mD:/文档/临时workspace/MoFeng/frontend/src/components/writing-desk/WDWorkspace.vue[39m:254:13
+[33m  252 |                <span>历史版本 ({{ availableVersions.length }})</span>
+  253 |              </button>
+  254 |              <button
+      |               ^
+  255 |                type="button"
+  256 |                class="writing-workspace__tab-btn md-ripple"[39m
+      at createCompilerError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1364:17)
+      at emitError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2991:5)
+      at Object.onclosetag (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2350:13)
+      at Tokenizer.stateInClosingTagName (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:785:16)
+      at Tokenizer.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1143:16)
+      at Object.baseParse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3030:13)
+      at Object.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1801:24)
+      at createDescriptor (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:79:42)
+      at handleHotUpdate (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:1475:25)
+[2m10:36:50[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mD:/文档/临时workspace/MoFeng/frontend/src/components/writing-desk/WDWorkspace.vue[39m:254:13
+[33m  252 |                <span>历史版本 ({{ availableVersions.length }})</span>
+  253 |              </button>
+  254 |              <button
+      |               ^
+  255 |                type="button"
+  256 |                class="writing-workspace__tab-btn md-ripple"[39m
+      at createCompilerError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1364:17)
+      at emitError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2991:5)
+      at Object.onclosetag (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2350:13)
+      at Tokenizer.stateInClosingTagName (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:785:16)
+      at Tokenizer.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1143:16)
+      at Object.baseParse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3030:13)
+      at Object.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1801:24)
+      at createDescriptor (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:79:42)
+      at handleHotUpdate (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:1475:25)
+[2m10:36:59[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mD:/文档/临时workspace/MoFeng/frontend/src/components/writing-desk/WDWorkspace.vue[39m:254:13
+[33m  252 |                <span>历史版本 ({{ availableVersions.length }})</span>
+  253 |              </button>
+  254 |              <button
+      |               ^
+  255 |                type="button"
+  256 |                class="writing-workspace__tab-btn md-ripple"[39m
+      at createCompilerError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1364:17)
+      at emitError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2991:5)
+      at Object.onclosetag (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2350:13)
+      at Tokenizer.stateInClosingTagName (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:785:16)
+      at Tokenizer.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1143:16)
+      at Object.baseParse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3030:13)
+      at Object.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1801:24)
+      at createDescriptor (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:79:42)
+      at handleHotUpdate (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:1475:25)
+[2m10:37:29[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mD:/文档/临时workspace/MoFeng/frontend/src/components/writing-desk/WDWorkspace.vue[39m:254:13
+[33m  252 |                <span>历史版本 ({{ availableVersions.length }})</span>
+  253 |              </button>
+  254 |              <button
+      |               ^
+  255 |                type="button"
+  256 |                class="writing-workspace__tab-btn md-ripple"[39m
+      at createCompilerError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1364:17)
+      at emitError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2991:5)
+      at Object.onclosetag (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2350:13)
+      at Tokenizer.stateInClosingTagName (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:785:16)
+      at Tokenizer.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1143:16)
+      at Object.baseParse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3030:13)
+      at Object.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1801:24)
+      at createDescriptor (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:79:42)
+      at handleHotUpdate (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:1475:25)
+[2m10:40:49[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m Pre-transform error: Element is missing end tag.
+  Plugin: [35mvite:vue[39m
+  File: [36mD:/文档/临时workspace/MoFeng/frontend/src/components/writing-desk/WDWorkspace.vue[39m:4:5
+[33m  2  |  <template>
+  3  |    <section class="writing-workspace">
+  4  |      <div class="md-card md-card-outlined writing-workspace__panel">
+     |       ^
+  5  |        <!-- 章节工作区头部 -->
+  6  |        <div v-if="selectedChapterNumber !== null" class="writing-workspace__header">[39m
+[2m10:40:49[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mD:/文档/临时workspace/MoFeng/frontend/src/components/writing-desk/WDWorkspace.vue[39m:4:5
+[33m  2  |  <template>
+  3  |    <section class="writing-workspace">
+  4  |      <div class="md-card md-card-outlined writing-workspace__panel">
+     |       ^
+  5  |        <!-- 章节工作区头部 -->
+  6  |        <div v-if="selectedChapterNumber !== null" class="writing-workspace__header">[39m
+      at createCompilerError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1364:17)
+      at emitError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2991:5)
+      at Object.onclosetag (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2350:13)
+      at Tokenizer.stateInClosingTagName (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:785:16)
+      at Tokenizer.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1143:16)
+      at Object.baseParse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3030:13)
+      at Object.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1801:24)
+      at createDescriptor (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:79:42)
+      at handleHotUpdate (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:1475:25)
+[2m16:46:55[22m [31m[1m[vite][22m[39m [31mInternal server error: Invalid end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mD:/文档/临时workspace/MoFeng/frontend/src/components/writing-desk/WDAssistantPanel.vue[39m:532:1
+[33m  530 |    letter-spacing: 0.02em;
+  531 |  }
+  532 |  </style>
+      |   ^
+  533 |  [39m
+      at createCompilerError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1364:17)
+      at emitError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2991:5)
+      at Object.onclosetag (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2360:9)
+      at Tokenizer.stateInClosingTagName (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:785:16)
+      at Tokenizer.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1143:16)
+      at Object.baseParse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3030:13)
+      at Object.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1801:24)
+      at createDescriptor (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:79:42)
+      at handleHotUpdate (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:1475:25)
+[2m16:46:55[22m [31m[1m[vite][22m[39m [31mInternal server error: Invalid end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mD:/文档/临时workspace/MoFeng/frontend/src/components/writing-desk/WDAssistantPanel.vue[39m:532:1
+[33m  530 |    letter-spacing: 0.02em;
+  531 |  }
+  532 |  </style>
+      |   ^
+  533 |  [39m
+      at createCompilerError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1364:17)
+      at emitError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2991:5)
+      at Object.onclosetag (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2360:9)
+      at Tokenizer.stateInClosingTagName (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:785:16)
+      at Tokenizer.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1143:16)
+      at Object.baseParse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3030:13)
+      at Object.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1801:24)
+      at createDescriptor (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:79:42)
+      at handleHotUpdate (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:1475:25)
+[2m17:02:37[22m [31m[1m[vite][22m[39m [31mInternal server error: Element is missing end tag.[39m
+  Plugin: [35mvite:vue[39m
+  File: [36mD:/文档/临时workspace/MoFeng/frontend/src/components/writing-desk/WDAssistantPanel.vue[39m:93:1
+[33m  91 |  </template>
+  92 |  
+  93 |  <script setup lang="ts">
+     |   ^
+  94 |  import { computed } from 'vue'
+  95 |  import type { Chapter, ChapterOutline, NovelProject } from '@/api/novel'[39m
+      at createCompilerError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1364:17)
+      at emitError (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2991:5)
+      at Object.onend (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:2585:7)
+      at Tokenizer.finish (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1232:14)
+      at Tokenizer.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:1210:10)
+      at Object.baseParse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-core\dist\compiler-core.cjs.js:3030:13)
+      at Object.parse (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-dom\dist\compiler-dom.cjs.js:910:23)
+      at Object.parse$1 [as parse] (D:\文档\临时workspace\MoFeng\frontend\node_modules\@vue\compiler-sfc\dist\compiler-sfc.cjs.js:1801:24)
+      at createDescriptor (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:79:42)
+      at handleHotUpdate (file:///D:/%E6%96%87%E6%A1%A3/%E4%B8%B4%E6%97%B6workspace/MoFeng/frontend/node_modules/@vitejs/plugin-vue/dist/index.js:1475:25)

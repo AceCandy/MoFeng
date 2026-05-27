@@ -7,11 +7,12 @@ const props = withDefaults(
     title?: string
     width?: string
     hideCloseButton?: boolean
+    badgeText?: string
   }>(),
   {
     title: '能力配置',
     width: 'min(92vw, 1100px)',
-    hideCloseButton: false,
+    hideCloseButton: true,
   }
 )
 
@@ -61,8 +62,12 @@ onUnmounted(() => {
       <!-- 弹窗头部：宣纸印签标题 -->
       <header class="m3-ink-modal-header">
         <div class="m3-ink-modal-header__brand">
-          <span class="m3-ink-modal-header__badge">配置</span>
-          <h2 class="m3-ink-modal-header__title">{{ props.title }}</h2>
+          <span v-if="props.badgeText !== '' && props.title" class="m3-ink-modal-header__badge">
+            {{ props.badgeText || props.title.slice(0, 1) }}
+          </span>
+          <h2 class="m3-ink-modal-header__title">
+            {{ props.badgeText !== '' && props.title ? props.title.slice(1) : props.title }}
+          </h2>
         </div>
 
         <div class="m3-ink-modal-header__actions">
@@ -123,6 +128,7 @@ onUnmounted(() => {
 }
 
 /* 深色模式（深夜书房）适配 */
+:global([data-theme='dark']) .m3-ink-modal-box,
 :global(.dark) .m3-ink-modal-box {
   background-color: #1a1e20;
   background-image: radial-gradient(rgba(242, 235, 217, 0.015) 1px, transparent 0);
@@ -173,6 +179,7 @@ onUnmounted(() => {
   border-bottom-right-radius: var(--md-radius-md, 6px);
 }
 
+:global([data-theme='dark']) .m3-ink-modal-corner,
 :global(.dark) .m3-ink-modal-corner {
   border-color: #bfa14c; /* 深色下古铜色略微低调些 */
 }
@@ -189,30 +196,50 @@ onUnmounted(() => {
   border-top-right-radius: var(--md-radius-md, 6px);
 }
 
+:global([data-theme='dark']) .m3-ink-modal-header,
 :global(.dark) .m3-ink-modal-header {
-  border-bottom-color: #2b3032;
-  background-color: rgba(28, 32, 34, 0.5);
+  border-bottom-color: #2b3032 !important;
+  background-color: #141718 !important;
+}
+
+:global([data-theme='dark']) .m3-ink-modal-header__title {
+  color: #f2ebd9 !important;
+}
+
+:global([data-theme='dark']) .m3-ink-modal-close-btn {
+  border-color: #3b4245 !important;
+  color: #a3a9ab !important;
+}
+
+:global([data-theme='dark']) .m3-ink-modal-close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  color: #ffffff !important;
+}
+
+:global([data-theme='dark']) .m3-ink-modal-close-badge {
+  background-color: rgba(184, 60, 50, 0.15) !important;
+  border-color: rgba(184, 60, 50, 0.5) !important;
+  color: #e57267 !important;
 }
 
 .m3-ink-modal-header__brand {
   display: flex;
   align-items: center;
-  gap: var(--md-spacing-3);
+  gap: 2px; /* 让无框描边首字更紧贴后面的标题文字 */
 }
 
 .m3-ink-modal-header__badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 4px;
-  background-color: var(--md-primary, #b83c32);
-  color: var(--md-on-primary);
-  font-family: var(--md-font-serif);
-  font-weight: 700;
-  font-size: var(--md-label-large);
-  box-shadow: 0 1px 3px rgba(184, 60, 50, 0.2);
+  display: inline-block;
+  vertical-align: middle;
+  background-color: transparent !important; /* 去除底色 */
+  color: #b83c32 !important; /* 白天：经典朱砂红（朱批色） */
+  -webkit-text-stroke: none !important; /* 彻底去除描边 */
+  font-family: "STXinwei", "华文新魏", "STLiti", "华文隶书", "LiSu", "隶书", var(--md-font-serif), serif;
+  font-weight: 800; /* 字重适度减小，更显清秀 */
+  font-size: 24px; /* 字号保持 24px，使字形显得清秀 */
+  line-height: 1;
+  border: none !important; /* 彻底去除边框 */
+  box-shadow: none !important;
 }
 
 .m3-ink-modal-header__title {
@@ -315,10 +342,12 @@ onUnmounted(() => {
   background-color: rgba(28, 32, 34, 0.35);
 }
 
+:global([data-theme='dark']) .m3-ink-modal-body::-webkit-scrollbar-thumb,
 :global(.dark) .m3-ink-modal-body::-webkit-scrollbar-thumb {
   background-color: rgba(255, 255, 255, 0.12);
 }
 
+:global([data-theme='dark']) .m3-ink-modal-body::-webkit-scrollbar-thumb:hover,
 :global(.dark) .m3-ink-modal-body::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 255, 255, 0.25);
 }

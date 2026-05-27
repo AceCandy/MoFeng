@@ -3698,9 +3698,9 @@ body .app-shell__topbar {
   height: 34px !important;
   display: grid !important;
   place-items: center !important;
-  font-size: 13px !important;
-  font-weight: 700 !important;
-  font-family: var(--md-font-display) !important;
+  font-size: 16px !important; /* 魏碑大字体，更加炸裂 */
+  font-weight: 800 !important; /* 骨力遒劲 */
+  font-family: "STXinwei", "华文新魏", "STLiti", "华文隶书", "LiSu", "隶书", var(--md-font-display), sans-serif !important;
   border-radius: 2px !important;
   transition:
     background-color var(--md-duration-short) var(--md-easing-standard),
@@ -4388,95 +4388,46 @@ body .app-shell__topbar {
 /* ============================================
    Phase 12: 弹窗右上角「存」字金石朱红方章保存样式
    ============================================ */
-.m3-ink-modal-save-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 38px;
-  padding: 0 16px 0 8px;
-  border: 1px solid var(--md-secondary);
-  border-radius: var(--md-radius-xs);
-  background-color: var(--md-secondary);
-  color: var(--md-on-secondary);
-  cursor: pointer;
-  transition:
-    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
-  margin-right: 6px;
-  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.2);
-}
-
-.dark .m3-ink-modal-save-btn,
-.dark-theme .m3-ink-modal-save-btn,
-[data-theme="dark"] .m3-ink-modal-save-btn {
-  background-color: #a2352b;
-  border-color: #a2352b;
-  color: #f2ebd9;
-  box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.35);
-}
-
-.m3-ink-modal-save-badge {
+.m3-ink-modal-save-badge-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--md-radius-xs);
-  background-color: var(--md-surface);
-  border: 1px solid rgba(184, 60, 50, 0.15);
-  color: #b83c32; /* 朱砂红 */
-  font-family: var(--md-font-serif);
-  font-weight: 700;
-  font-size: var(--md-label-large);
-  box-shadow: inset 0 1px 2px rgba(184, 60, 50, 0.1);
-  transition:
-    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--md-radius-xs); /* 2px */
+  background-color: #b83c32 !important; /* 朱砂红 */
+  color: #faf6ed !important; /* 宣纸白 */
+  border: 1px solid rgba(184, 60, 50, 0.25) !important;
+  font-family: "STXinwei", "华文新魏", "STLiti", "华文隶书", "LiSu", "隶书", var(--md-font-serif), serif !important;
+  font-weight: 800; /* 魏碑粗体 */
+  font-size: 15px; /* 更饱满的炸裂字形 */
+  box-shadow: inset 0 1px 2px rgba(184, 60, 50, 0.15), 0 1px 3px rgba(184, 60, 50, 0.2) !important;
+  cursor: pointer;
+  transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  margin-right: 6px;
 }
 
-.dark .m3-ink-modal-save-badge,
-.dark-theme .m3-ink-modal-save-badge,
-[data-theme="dark"] .m3-ink-modal-save-badge {
-  background-color: #f2ebd9;
-  color: #a2352b;
+[data-theme='dark'] .m3-ink-modal-save-badge-btn,
+.dark .m3-ink-modal-save-badge-btn {
+  background-color: #9c332b !important; /* 暗色下高质感暗朱红印泥 */
+  color: #f2ebd9 !important; /* 熟宣素白 */
+  border: 1px solid rgba(184, 60, 50, 0.4) !important;
+  box-shadow: 0 1.5px 3px rgba(13, 16, 17, 0.4) !important;
 }
 
-.m3-ink-modal-save-text {
-  font-size: var(--md-label-medium);
-  font-weight: 700;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+.m3-ink-modal-save-badge-btn:hover:not(:disabled) {
+  background-color: #cf4338 !important;
+  transform: rotate(-10deg) scale(1.08) !important;
+  box-shadow: 0 3px 6px rgba(184, 60, 50, 0.25) !important;
 }
 
-.m3-ink-modal-save-btn:hover {
-  background-color: #cf4338;
-  border-color: #cf4338;
-  color: var(--md-on-secondary);
-  box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.28);
-  transform: translateY(-0.5px);
+.m3-ink-modal-save-badge-btn:active:not(:disabled) {
+  transform: translateY(1.5px) !important;
 }
 
-.m3-ink-modal-save-btn:hover .m3-ink-modal-save-badge {
-  transform: rotate(-10deg) scale(1.05);
-  background-color: var(--md-surface);
-  color: #cf4338;
-}
-
-/* 物理按压反馈 */
-.m3-ink-modal-save-btn:active {
-  transform: translateY(1px);
-}
-
-.dark .m3-ink-modal-save-btn:hover,
-.dark-theme .m3-ink-modal-save-btn:hover,
-[data-theme="dark"] .m3-ink-modal-save-btn:hover {
-  background-color: #bd3e33;
-  border-color: #bd3e33;
+.m3-ink-modal-save-badge-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ============================================
@@ -4575,3 +4526,90 @@ html:hover {
 .app-shell__dropdown-list.is-scrolling::-webkit-scrollbar-thumb {
   background-color: var(--scrollbar-thumb-color) !important;
 }
+
+/* ============================================
+   墨风全局弹窗与起居菜单金石效果追加
+   ============================================ */
+
+/* 1. 更替密契（修改密码）昼夜黛绿印 */
+.app-shell__action-badge.is-password {
+  background-color: var(--md-success, #3b7a57) !important;
+  color: var(--md-on-success) !important;
+  border: 1px solid #234d35 !important;
+  box-shadow: 1.5px 1.5px 0px rgba(59, 122, 87, 0.25) !important;
+  transform: rotate(1.5deg) !important;
+}
+:root[data-theme='dark'] .app-shell__action-badge.is-password {
+  background-color: #27523a !important;
+  border-color: #173324 !important;
+  box-shadow: 1.5px 1.5px 0px rgba(39, 82, 58, 0.4) !important;
+}
+
+/* 2. 黑夜模式弹窗头部与对比度全局优化 */
+[data-theme='dark'] .m3-ink-modal-box,
+.dark .m3-ink-modal-box {
+  background-color: #1a1e20 !important;
+  background-image: radial-gradient(rgba(242, 235, 217, 0.015) 1px, transparent 0) !important;
+  border-color: #3b4245 !important;
+  box-shadow: 4px 4px 0px rgba(13, 16, 17, 0.5) !important;
+}
+[data-theme='dark'] .m3-ink-modal-corner,
+.dark .m3-ink-modal-corner {
+  border-color: #bfa14c !important;
+}
+[data-theme='dark'] .m3-ink-modal-header,
+.dark .m3-ink-modal-header {
+  border-bottom-color: #2b3032 !important;
+  background-color: #141718 !important;
+}
+[data-theme='dark'] .m3-ink-modal-header__title,
+.dark .m3-ink-modal-header__title {
+  color: #f2ebd9 !important;
+}
+[data-theme='dark'] .m3-ink-modal-close-btn,
+.dark .m3-ink-modal-close-btn {
+  border-color: #3b4245 !important;
+  color: #a3a9ab !important;
+}
+[data-theme='dark'] .m3-ink-modal-close-btn:hover,
+.dark .m3-ink-modal-close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+  color: #ffffff !important;
+}
+[data-theme='dark'] .m3-ink-modal-close-badge,
+.dark .m3-ink-modal-close-badge {
+  background-color: rgba(184, 60, 50, 0.15) !important;
+  border-color: rgba(184, 60, 50, 0.5) !important;
+  color: #e57267 !important;
+}
+[data-theme='dark'] .m3-ink-modal-body::-webkit-scrollbar-thumb,
+.dark .m3-ink-modal-body::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.12) !important;
+}
+[data-theme='dark'] .m3-ink-modal-body::-webkit-scrollbar-thumb:hover,
+.dark .m3-ink-modal-body::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* 3. 全局弹窗首字印签样式：朱砂红字体（白天朱砂红，黑夜暖朱红），无描边，无框 */
+.m3-ink-modal-header__badge {
+  font-family: "STXinwei", "华文新魏", "STLiti", "华文隶书", "LiSu", "隶书", var(--md-font-serif), serif !important;
+  font-weight: 800 !important; /* 降低字重，更加清秀 */
+  font-size: 24px !important; /* 缩小字号 */
+  width: auto !important;
+  height: auto !important;
+  background-color: transparent !important;
+  color: #b83c32 !important; /* 白天：经典朱砂红 */
+  -webkit-text-stroke: none !important; /* 无描边 */
+  border: none !important;
+  box-shadow: none !important;
+}
+[data-theme='dark'] .m3-ink-modal-header__badge,
+.dark .m3-ink-modal-header__badge {
+  background-color: transparent !important;
+  color: #e57267 !important; /* 黑夜：暖朱红，在深色底色背景下极具古风美感与足够对比度 */
+  -webkit-text-stroke: none !important; /* 无描边 */
+  border: none !important;
+  box-shadow: none !important;
+}
+

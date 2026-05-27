@@ -1,0 +1,38 @@
+
+> mofeng@0.0.0 dev
+> vite --host 127.0.0.1 --port 5191 --strictPort
+
+
+  [32m[1mVITE[22m v7.1.9[39m  [2mready in [0m[1m384[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m5191[22m/[39m
+  ➜  Vue DevTools: Open http://127.0.0.1:5191/__devtools__/ as a separate window
+  ➜  Vue DevTools: Press Alt(⌥)+Shift(⇧)+D in App to toggle the Vue DevTools
+[2m07:25:17[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/assets/main.css[22m
+[2m07:25:17[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/assets/main.css[22m
+[2m07:25:17[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/assets/main.css[22m
+[2m07:28:27[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/assets/main.css[22m
+[2m07:28:27[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/assets/main.css[22m
+[2m07:28:27[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/shared/NovelDetailShell.vue?vue&type=style&index=0&scoped=ffd0e2d3&lang.css, /src/assets/main.css[22m
+[2m07:28:27[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/shared/GlobalModalContainer.vue?vue&type=style&index=0&scoped=835e9f31&lang.css, /src/assets/main.css[22m
+[2m07:34:22[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/assets/main.css, /src/assets/blueprint.css[22m
+[2m07:35:09[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/novel-detail/EmotionCurveSection.vue, /src/assets/main.css[22m
+[2m07:35:58[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/assets/main.css[22m
+[2m07:36:33[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/novel-detail/ChaptersSection.vue, /src/assets/main.css[22m
+[2m07:37:24[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/shared/NovelDetailShell.vue, /src/components/shared/NovelDetailShell.vue?vue&type=style&index=0&scoped=ffd0e2d3&lang.css, /src/assets/main.css[22m
+[2m07:37:42[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/novel-detail/EmotionCurveSection.vue?vue&type=style&index=0&scoped=ea85703d&lang.css, /src/assets/main.css[22m
+[2m07:38:41[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/assets/main.css[22m
+[2m07:38:58[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/novel-detail/OverviewSection.vue?vue&type=style&index=0&scoped=2652c9ff&lang.css, /src/assets/main.css[22m
+[2m07:39:12[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/novel-detail/RelationshipsSection.vue?vue&type=style&index=0&scoped=4427af0e&lang.css, /src/assets/main.css[22m
+[2m07:52:55[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/assets/main.css[22m
+[2m07:53:15[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/assets/main.css[22m
+[2m07:54:08[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/assets/main.css[22m
+[2m08:00:41[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/assets/main.css[22m
+[2m08:08:20[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/main.ts[22m
+[2m08:33:32[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/novel-detail/ChaptersSection.vue, /src/assets/main.css[22m
+[2m08:45:06[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/assets/main.css[22m
+[2m08:47:17[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/components/novel-detail/ChaptersSection.vue, /src/assets/main.css[22m
+[2m08:47:31[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/assets/main.css[22m
+[2m09:05:42[22m [36m[1m[vite][22m[39m [32mvite.config.ts changed, restarting server...[39m
+[2m09:05:42[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Re-optimizing dependencies because vite config has changed
+[2m09:05:42[22m [36m[1m[vite][22m[39m server restarted.

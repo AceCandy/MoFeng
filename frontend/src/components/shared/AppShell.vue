@@ -18,10 +18,12 @@ import { globalAlert } from '@/composables/useAlert'
 const SettingsView = defineAsyncComponent(() => import('@/views/SettingsView.vue'))
 const AdminView = defineAsyncComponent(() => import('@/views/AdminView.vue'))
 const PromptUsageMap = defineAsyncComponent(() => import('@/components/admin/PromptUsageMap.vue'))
+const PasswordManagement = defineAsyncComponent(() => import('@/components/admin/PasswordManagement.vue'))
 
 const showSettingsModal = ref(false)
 const showAdminModal = ref(false)
 const showPromptUsageModal = ref(false)
+const showPasswordModal = ref(false)
 const adminInitialTab = ref('statistics')
 
 // 昼夜主题中式切换逻辑
@@ -442,9 +444,9 @@ onUnmounted(() => {
                     :class="{ 'is-active': showAdminModal }"
                     @click.prevent="openAdminModal()"
                   >
-                    <span class="app-shell__action-badge is-admin">管</span>
+                    <span class="app-shell__action-badge is-admin">司</span>
                     <div class="item-text">
-                      <span class="item-title">系统管理</span>
+                      <span class="item-title">司天运营</span>
                       <span class="item-desc">配置全局与用户权限</span>
                     </div>
                   </a>
@@ -457,9 +459,9 @@ onUnmounted(() => {
                     :class="{ 'is-active': showPromptUsageModal }"
                     @click.prevent="openPromptUsageModal"
                   >
-                    <span class="app-shell__action-badge is-prompt">词</span>
+                    <span class="app-shell__action-badge is-prompt">妙</span>
                     <div class="item-text">
-                      <span class="item-title">提示词管理</span>
+                      <span class="item-title">妙笔词林</span>
                       <span class="item-desc">查看阶段与 Prompt 关系</span>
                     </div>
                   </a>
@@ -471,10 +473,24 @@ onUnmounted(() => {
                     :class="{ 'is-active': showSettingsModal }"
                     @click.prevent="showSettingsModal = true; isUserDropdownOpen = false"
                   >
-                    <span class="app-shell__action-badge is-settings">設</span>
+                    <span class="app-shell__action-badge is-settings">乾</span>
                     <div class="item-text">
-                      <span class="item-title">模型设置</span>
+                      <span class="item-title">乾坤万象</span>
                       <span class="item-desc">配置个人大语言模型</span>
+                    </div>
+                  </a>
+
+                  <!-- 修改个人密码 -->
+                  <a
+                    href="javascript:void(0)"
+                    class="app-shell__user-dropdown-item"
+                    :class="{ 'is-active': showPasswordModal }"
+                    @click.prevent="showPasswordModal = true; isUserDropdownOpen = false"
+                  >
+                    <span class="app-shell__action-badge is-password">密</span>
+                    <div class="item-text">
+                      <span class="item-title">更替密契</span>
+                      <span class="item-desc">更新阁主登入凭证</span>
                     </div>
                   </a>
 
@@ -521,21 +537,20 @@ onUnmounted(() => {
     <Teleport to="body">
       <GlobalModalContainer
         v-if="showSettingsModal"
-        title="模型与能力中枢"
-        hide-close-button
+        title="乾坤万象中枢"
+        badge-text="乾"
         @close="handleCloseSettingsModal"
       >
         <template #header-actions>
           <!-- 极具金石质感的「存」字朱红方章保存按钮 -->
           <button
             type="button"
-            class="m3-ink-modal-save-btn"
-            title="保存当前配置"
+            class="m3-ink-modal-save-badge-btn"
+            :title="isSavingSettings ? '正在保存中...' : '保存当前案头配置'"
             :disabled="isSavingSettings"
             @click="triggerSettingsSave"
           >
-            <span class="m3-ink-modal-save-badge">存</span>
-            <span class="m3-ink-modal-save-text">{{ isSavingSettings ? '保存中...' : '保存' }}</span>
+            存
           </button>
         </template>
         <SettingsView ref="settingsViewRef" :is-modal="true" @saved="showSettingsModal = false" />
@@ -543,8 +558,8 @@ onUnmounted(() => {
 
       <GlobalModalContainer
         v-if="showAdminModal"
-        title="系统运营控制台"
-        hide-close-button
+        title="司天监运营台阁"
+        badge-text="司"
         @close="showAdminModal = false"
       >
         <AdminView :is-modal="true" :initial-tab="adminInitialTab" />
@@ -552,11 +567,22 @@ onUnmounted(() => {
 
       <GlobalModalContainer
         v-if="showPromptUsageModal"
-        title="提示词关系总览"
+        title="妙笔词林图谱"
+        badge-text="妙"
         width="min(94vw, 1180px)"
         @close="showPromptUsageModal = false"
       >
         <PromptUsageMap @open-prompt-editor="openPromptEditor" />
+      </GlobalModalContainer>
+
+      <GlobalModalContainer
+        v-if="showPasswordModal"
+        title="更替阁主密契"
+        badge-text="密"
+        width="min(90vw, 540px)"
+        @close="showPasswordModal = false"
+      >
+        <PasswordManagement :is-modal="true" @saved="showPasswordModal = false" />
       </GlobalModalContainer>
     </Teleport>
   </div>

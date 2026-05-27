@@ -55,6 +55,10 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
+
+const emit = defineEmits<{
+  (e: 'saved'): void
+}>()
 import { useQueryClient } from '@tanstack/vue-query'
 import { NAlert } from 'naive-ui/es/alert'
 import { NButton } from 'naive-ui/es/button'
@@ -132,6 +136,7 @@ const handleSubmit = async () => {
     const user = await queryClient.fetchQuery(currentUserQueryOptions(authStore.token))
     authStore.setUser(user)
     resetForm()
+    emit('saved')
     await showAlert('密码已更新，请使用新密码继续操作', 'success')
   } catch (err) {
     formError.value = err instanceof Error ? err.message : '密码更新失败'

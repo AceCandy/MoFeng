@@ -1,0 +1,542 @@
+D:\文档\临时workspace\MoFeng\backend\.venv\Lib\site-packages\langchain_core\utils\pydantic.py:41: UserWarning: Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.
+  from pydantic.v1 import BaseModel as BaseModelV1
+INFO:     Started server process [69348]
+INFO:     Waiting for application startup.
+2026-05-24 07:45:43,766 [WARNING] asyncmy - Can't create database 'arboris-novel'; database exists
+2026-05-24 07:45:43,938 [INFO] app.db.init_db - 数据库表结构已初始化
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+2026-05-24 08:02:54,809 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:06:28,210 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:06:28,484 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:08:22,248 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 08:08:22,670 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:08:22,702 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:39:16,345 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:39:34,960 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:39:54,615 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:39:55,002 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:39:55,010 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:40:26,108 [INFO] app.api.routers.novels - 用户 1 获取项目 =overview 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:40:26,490 [INFO] app.api.routers.novels - 用户 1 查询项目 =overview
+2026-05-24 08:40:26,500 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:40:28,386 [INFO] app.api.routers.novels - 用户 1 查询项目 =world_setting
+2026-05-24 08:40:28,768 [INFO] app.api.routers.novels - 用户 1 获取项目 =world_setting 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:40:28,783 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:40:30,690 [INFO] app.api.routers.novels - 用户 1 查询项目 =characters
+2026-05-24 08:40:30,697 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:40:31,071 [INFO] app.api.routers.novels - 用户 1 获取项目 =characters 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:40:32,952 [INFO] app.api.routers.novels - 用户 1 查询项目 =relationships
+2026-05-24 08:40:33,143 [INFO] app.api.routers.novels - 用户 1 获取项目 =relationships 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:40:33,347 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:40:35,238 [INFO] app.api.routers.novels - 用户 1 查询项目 =chapter_outline
+2026-05-24 08:40:35,429 [INFO] app.api.routers.novels - 用户 1 获取项目 =chapter_outline 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:40:35,634 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:40:37,520 [INFO] app.api.routers.novels - 用户 1 获取项目 =chapters 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:40:37,905 [INFO] app.api.routers.novels - 用户 1 查询项目 =chapters
+2026-05-24 08:40:37,918 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:40:39,795 [INFO] app.api.routers.novels - 用户 1 查询项目 =emotion_curve
+2026-05-24 08:40:39,987 [INFO] app.api.routers.novels - 用户 1 获取项目 =emotion_curve 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:40:40,217 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:40:42,103 [INFO] app.api.routers.novels - 用户 1 查询项目 =foreshadowing
+2026-05-24 08:40:42,295 [INFO] app.api.routers.novels - 用户 1 获取项目 =foreshadowing 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:40:42,491 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:41:09,609 [INFO] app.api.routers.novels - 用户 1 获取项目 =overview 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:41:09,799 [INFO] app.api.routers.novels - 用户 1 查询项目 =overview
+2026-05-24 08:41:10,005 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:41:11,996 [INFO] app.api.routers.novels - 用户 1 获取项目 =world_setting 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:41:12,396 [INFO] app.api.routers.novels - 用户 1 查询项目 =world_setting
+2026-05-24 08:41:12,407 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:41:14,319 [INFO] app.api.routers.novels - 用户 1 查询项目 =characters
+2026-05-24 08:41:14,710 [INFO] app.api.routers.novels - 用户 1 获取项目 =characters 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:41:14,722 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:41:16,587 [INFO] app.api.routers.novels - 用户 1 获取项目 =relationships 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:41:16,782 [INFO] app.api.routers.novels - 用户 1 查询项目 =relationships
+2026-05-24 08:41:16,989 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:41:18,887 [INFO] app.api.routers.novels - 用户 1 查询项目 =chapter_outline
+2026-05-24 08:41:19,288 [INFO] app.api.routers.novels - 用户 1 获取项目 =chapter_outline 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:41:19,308 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:41:21,205 [INFO] app.api.routers.novels - 用户 1 查询项目 =chapters
+2026-05-24 08:41:21,601 [INFO] app.api.routers.novels - 用户 1 获取项目 =chapters 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:41:21,615 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:41:23,529 [INFO] app.api.routers.novels - 用户 1 查询项目 =emotion_curve
+2026-05-24 08:41:23,923 [INFO] app.api.routers.novels - 用户 1 获取项目 =emotion_curve 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:41:23,934 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:41:25,829 [INFO] app.api.routers.novels - 用户 1 查询项目 =foreshadowing
+2026-05-24 08:41:26,228 [INFO] app.api.routers.novels - 用户 1 获取项目 =foreshadowing 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:41:26,239 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:41:48,326 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:41:48,718 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:41:48,732 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:41:50,770 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:41:50,968 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:41:51,187 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:41:51,405 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.WORLD_SETTING 区段
+2026-05-24 08:41:53,358 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:41:53,550 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHARACTERS 区段
+2026-05-24 08:41:53,743 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:41:53,953 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:41:55,961 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:41:56,337 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:41:56,529 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.RELATIONSHIPS 区段
+2026-05-24 08:41:56,553 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:41:58,531 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHAPTER_OUTLINE 区段
+2026-05-24 08:41:58,722 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:41:58,915 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:41:59,119 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:42:01,034 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:42:01,429 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHAPTERS 区段
+2026-05-24 08:42:01,630 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:42:01,646 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:42:03,753 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:42:03,946 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:42:03,966 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:42:06,241 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:42:06,430 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:42:06,442 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:42:34,544 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:42:34,744 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:42:34,959 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:43:34,721 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:43:35,116 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:43:35,132 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:43:37,063 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:43:37,441 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:43:37,633 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.WORLD_SETTING 区段
+2026-05-24 08:43:37,643 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:43:39,539 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:43:39,916 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHARACTERS 区段
+2026-05-24 08:43:40,108 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:43:40,124 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:43:41,986 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:43:42,175 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:43:42,558 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.RELATIONSHIPS 区段
+2026-05-24 08:43:42,568 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:43:44,457 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:43:44,649 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:43:45,026 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHAPTER_OUTLINE 区段
+2026-05-24 08:43:45,037 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:43:46,897 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:43:47,092 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:43:47,474 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHAPTERS 区段
+2026-05-24 08:43:47,489 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:43:49,345 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:43:49,733 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:43:49,745 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:43:52,009 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:43:52,199 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:43:52,230 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:44:13,813 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:44:14,009 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:44:14,227 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:44:16,335 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:44:16,526 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:44:16,715 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.WORLD_SETTING 区段
+2026-05-24 08:44:16,726 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:44:18,626 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:44:18,822 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:44:19,217 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHARACTERS 区段
+2026-05-24 08:44:19,232 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:44:21,161 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:44:21,353 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.RELATIONSHIPS 区段
+2026-05-24 08:44:21,551 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:44:21,757 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:44:23,862 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:44:24,052 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHAPTER_OUTLINE 区段
+2026-05-24 08:44:24,242 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:44:24,260 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:44:26,305 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:44:26,499 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHAPTERS 区段
+2026-05-24 08:44:26,697 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:44:26,711 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:44:28,605 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:44:28,982 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:44:28,991 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:44:31,282 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:44:31,474 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:44:31,711 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:45:35,640 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:45:36,070 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:45:36,088 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:45:38,040 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:45:38,236 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:45:38,622 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.WORLD_SETTING 区段
+2026-05-24 08:45:38,636 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:45:40,538 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:45:40,916 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:45:41,105 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHARACTERS 区段
+2026-05-24 08:45:41,118 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:45:42,965 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:45:43,347 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:45:43,537 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.RELATIONSHIPS 区段
+2026-05-24 08:45:43,556 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:45:45,407 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:45:45,420 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:45:45,609 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHAPTER_OUTLINE 区段
+2026-05-24 08:45:45,799 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:45:47,894 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:45:48,091 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:45:48,479 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHAPTERS 区段
+2026-05-24 08:45:48,491 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:45:50,362 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:45:50,761 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:45:50,963 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 08:45:52,818 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 08:45:53,008 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 08:45:53,207 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:02:44,826 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:02:45,228 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:02:45,246 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:03:44,562 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:03:44,750 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:03:44,952 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:03:47,553 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:03:47,749 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:03:48,142 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.WORLD_SETTING 区段
+2026-05-24 09:03:48,162 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:03:50,749 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:03:50,944 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:03:51,139 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHARACTERS 区段
+2026-05-24 09:03:51,589 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:03:53,974 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:03:54,177 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:03:54,558 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.RELATIONSHIPS 区段
+2026-05-24 09:03:54,570 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:03:57,096 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:03:57,490 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHAPTER_OUTLINE 区段
+2026-05-24 09:03:57,688 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:03:57,718 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:04:00,258 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:04:00,663 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:04:00,865 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHAPTERS 区段
+2026-05-24 09:04:00,874 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:04:03,427 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:04:03,618 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:04:03,820 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:04:06,568 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:04:06,956 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:04:06,968 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:05:44,437 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:05:44,693 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:05:44,898 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:05:45,310 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 09:05:45,321 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:05:45,527 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:08:42,189 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:08:42,685 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:08:42,907 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:09:33,632 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:09:33,826 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:09:34,077 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:09:36,692 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:09:37,072 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:09:37,262 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.WORLD_SETTING 区段
+2026-05-24 09:09:37,278 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:09:39,879 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:09:40,073 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHARACTERS 区段
+2026-05-24 09:09:40,266 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:09:40,478 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:09:43,132 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:09:43,508 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.RELATIONSHIPS 区段
+2026-05-24 09:09:43,698 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:09:43,709 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:09:46,319 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:09:46,702 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:09:46,890 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHAPTER_OUTLINE 区段
+2026-05-24 09:09:46,909 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:09:49,506 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:09:49,709 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHAPTERS 区段
+2026-05-24 09:09:49,905 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:09:50,123 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:09:53,015 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:09:53,217 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:09:53,236 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:09:56,247 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:09:56,436 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:09:56,448 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:53:19,025 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:53:19,284 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 09:53:19,796 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:53:29,305 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:53:50,930 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:53:51,173 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:53:58,867 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 09:53:59,503 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 09:57:09,343 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 09:57:12,134 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:57:15,302 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 09:57:15,643 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 09:57:19,206 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 第 76 章
+2026-05-24 09:57:30,043 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:58:59,292 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 09:58:59,530 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 09:59:00,046 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 09:59:00,563 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:02:48,122 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 10:02:51,231 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:03:50,917 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHARACTERS 区段
+2026-05-24 10:03:52,825 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:08:03,135 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHARACTERS 区段
+2026-05-24 10:08:13,367 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.WORLD_SETTING 区段
+2026-05-24 10:08:21,933 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:08:24,146 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.RELATIONSHIPS 区段
+2026-05-24 10:08:27,562 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHAPTER_OUTLINE 区段
+2026-05-24 10:08:31,881 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHAPTERS 区段
+2026-05-24 10:09:04,129 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:09:23,935 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHAPTER_OUTLINE 区段
+2026-05-24 10:09:35,254 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.RELATIONSHIPS 区段
+2026-05-24 10:09:36,778 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.CHARACTERS 区段
+2026-05-24 10:09:39,615 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:09:43,960 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 10:09:44,853 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 10:09:48,074 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:13:12,894 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.WORLD_SETTING 区段
+2026-05-24 10:13:14,112 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:13:37,244 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.CHAPTER_OUTLINE 区段
+2026-05-24 10:14:29,843 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 10:14:30,076 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:14:30,571 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 10:14:31,095 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:16:24,308 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.CHARACTERS 区段
+2026-05-24 10:16:32,062 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:19:00,030 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.WORLD_SETTING 区段
+2026-05-24 10:19:07,811 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.CHARACTERS 区段
+2026-05-24 10:19:09,512 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.RELATIONSHIPS 区段
+2026-05-24 10:19:22,609 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.CHAPTER_OUTLINE 区段
+2026-05-24 10:19:37,909 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:20:07,731 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.CHAPTERS 区段
+2026-05-24 10:20:08,495 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 10:20:22,658 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 73 章
+2026-05-24 10:20:49,206 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 10:20:49,475 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:20:54,154 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 10:20:54,663 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:20:54,832 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 10:20:56,234 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 10:22:58,366 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 10:22:58,861 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 10:22:59,351 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:22:59,636 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:23:49,237 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 10:23:49,474 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 10:23:49,933 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:23:50,588 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 10:24:11,205 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 10:24:11,738 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 10:24:12,252 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:24:12,335 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 10:25:15,919 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 10:25:16,256 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 10:25:16,609 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 10:25:17,172 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:25:19,131 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 10:25:19,712 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 10:25:21,645 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 10:25:22,472 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:25:26,109 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 10:25:28,014 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 10:25:28,489 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 10:25:28,984 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:36:45,926 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 10:36:45,938 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 10:36:46,429 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:36:48,667 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.CHAPTER_OUTLINE 区段
+2026-05-24 10:36:57,923 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 10:36:58,375 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:36:58,463 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 10:37:27,476 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 10:37:27,703 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 10:37:28,183 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:38:25,194 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 10:38:25,424 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:38:25,483 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 10:41:25,557 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 10:41:25,747 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 10:41:26,013 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 10:42:05,155 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 10:42:05,407 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 10:42:26,728 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 75 章
+2026-05-24 10:42:56,288 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 10:42:57,990 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 74 章
+2026-05-24 10:42:59,872 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 73 章
+2026-05-24 10:45:06,674 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 10:45:06,898 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 10:45:07,425 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 10:45:11,562 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 75 章
+2026-05-24 11:29:30,817 [INFO] app.api.routers.admin - 管理员获取统计数据：小说=2，用户=1，请求=730
+2026-05-24 11:29:31,118 [INFO] app.api.routers.admin - 管理员查看更新日志列表，共 0 条
+2026-05-24 11:29:31,195 [INFO] app.api.routers.admin - 管理员查看项目列表，共 2 个
+2026-05-24 11:29:32,332 [INFO] app.api.routers.admin - 管理员请求提示词列表，共 21 条
+2026-05-24 11:29:34,464 [INFO] app.api.routers.llm_config - 用户 1 获取 LLM 配置包
+2026-05-24 11:34:41,666 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 74 章
+2026-05-24 11:34:45,729 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 75 章
+2026-05-24 11:35:16,123 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 74 章
+2026-05-24 11:35:38,538 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 75 章
+2026-05-24 11:35:54,298 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 71 章
+2026-05-24 11:36:00,910 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 73 章
+2026-05-24 11:36:17,365 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 67 章
+2026-05-24 11:36:20,713 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 11:36:30,796 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 75 章
+2026-05-24 11:41:21,416 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 74 章
+2026-05-24 11:41:24,846 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 72 章
+2026-05-24 11:41:26,447 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 69 章
+2026-05-24 11:41:30,632 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 70 章
+2026-05-24 11:41:35,731 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 71 章
+2026-05-24 11:41:43,128 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 11:41:48,551 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 75 章
+2026-05-24 11:42:11,307 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 74 章
+2026-05-24 11:43:39,814 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 75 章
+2026-05-24 11:43:42,603 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 73 章
+2026-05-24 11:43:50,167 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 74 章
+2026-05-24 11:43:53,091 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 11:45:45,681 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 75 章
+2026-05-24 11:47:01,487 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 11:47:01,848 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 11:47:02,404 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 11:48:33,575 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 11:48:33,815 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 11:48:34,265 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 11:50:32,382 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 11:50:32,394 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 11:50:32,883 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 12:03:19,419 [INFO] app.api.routers.auth - 用户 AceCandy 登录成功，需改密=False
+2026-05-24 12:03:20,034 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 12:03:24,622 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 12:03:25,091 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 12:10:16,544 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 12:10:16,558 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 12:10:17,056 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 12:18:50,866 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 12:18:50,882 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 12:18:51,407 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 14:16:42,283 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 14:16:42,520 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 14:16:43,040 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 14:19:47,313 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 75 章
+2026-05-24 14:19:50,280 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 14:22:39,643 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 75 章
+2026-05-24 14:22:40,724 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 73 章
+2026-05-24 14:22:42,731 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 70 章
+2026-05-24 14:22:44,221 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 69 章
+2026-05-24 14:22:45,285 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 67 章
+2026-05-24 14:22:45,613 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 64 章
+2026-05-24 14:22:46,500 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 60 章
+2026-05-24 14:22:46,760 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 55 章
+2026-05-24 14:22:48,651 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 14:22:48,728 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 14:22:49,154 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 14:22:53,566 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 74 章
+2026-05-24 14:22:54,582 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 71 章
+2026-05-24 14:22:56,611 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 70 章
+2026-05-24 14:23:04,076 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 73 章
+2026-05-24 14:23:07,392 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 75 章
+2026-05-24 14:23:24,729 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 78 章
+2026-05-24 14:23:27,086 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 54 章
+2026-05-24 14:23:27,869 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 45 章
+2026-05-24 14:23:29,565 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 33 章
+2026-05-24 14:23:34,773 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 23 章
+2026-05-24 14:23:37,072 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 8 章
+2026-05-24 14:28:23,149 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 66 章
+2026-05-24 14:28:53,137 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 67 章
+2026-05-24 14:34:56,662 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 68 章
+2026-05-24 14:34:57,704 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 70 章
+2026-05-24 14:34:59,954 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 75 章
+2026-05-24 14:59:34,056 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 15:01:40,982 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 15:01:41,569 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 15:02:01,103 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 75 章
+2026-05-24 15:02:05,725 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 74 章
+2026-05-24 15:02:06,476 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 72 章
+2026-05-24 15:07:39,421 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 15:07:40,096 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 15:07:40,669 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 15:07:40,706 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 15:07:40,713 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 15:07:41,525 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 15:07:45,254 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 15:07:45,607 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 15:07:46,367 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 15:07:46,798 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 15:07:47,035 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 15:07:47,544 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 15:38:05,989 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 15:38:06,033 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 15:38:06,503 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 16:10:03,772 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 16:10:04,573 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 16:10:04,594 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 16:10:04,883 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 16:15:27,354 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 16:15:30,955 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 16:15:31,612 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 16:15:42,809 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 69 章
+2026-05-24 16:15:44,428 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 63 章
+2026-05-24 16:21:42,613 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 16:21:42,783 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 16:21:43,493 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 16:21:43,769 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 16:21:44,076 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 16:21:44,467 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 16:21:49,020 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 73 章
+2026-05-24 16:21:51,956 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 68 章
+2026-05-24 16:23:20,380 [INFO] app.api.routers.novels - 用户 1 查询项目 9f20a79c-280d-407f-b839-1fbdad5cae28
+2026-05-24 16:23:21,336 [INFO] app.api.routers.novels - 用户 1 获取项目 9f20a79c-280d-407f-b839-1fbdad5cae28 的 NovelSectionType.OVERVIEW 区段
+2026-05-24 16:23:21,633 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 16:23:22,308 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 16:23:22,824 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 16:23:23,130 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 16:23:23,425 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 16:23:23,436 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 16:23:23,476 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 16:23:23,940 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 16:23:24,178 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 16:23:24,752 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 16:44:54,971 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 75 章
+2026-05-24 16:45:00,750 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-24 16:45:00,786 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-24 16:45:01,261 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 16:45:05,409 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 74 章
+2026-05-24 17:44:24,179 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 62 章
+2026-05-24 17:44:24,850 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 61 章
+2026-05-24 17:44:29,644 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 64 章
+2026-05-24 17:44:30,033 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 67 章
+2026-05-24 17:44:31,916 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 43 章
+2026-05-24 17:44:32,281 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 36 章
+2026-05-24 17:44:33,222 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 29 章
+2026-05-24 17:44:33,478 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 22 章
+2026-05-24 17:44:34,541 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 20 章
+2026-05-24 17:44:34,983 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 13 章
+2026-05-24 17:44:36,010 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 5 章
+2026-05-24 17:44:36,832 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 1 章
+2026-05-24 17:47:27,184 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 4 章
+2026-05-24 17:47:28,915 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 5 章
+2026-05-24 17:47:39,397 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 6 章
+2026-05-24 17:47:41,133 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 9 章
+2026-05-24 17:47:41,864 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 3 章
+2026-05-24 17:47:42,958 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 10 章
+2026-05-24 17:47:45,017 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 1 章
+2026-05-24 17:47:45,783 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 11 章
+2026-05-24 17:47:46,158 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 14 章
+2026-05-24 17:47:47,154 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 17 章
+2026-05-24 17:47:47,538 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 21 章
+2026-05-24 17:47:48,576 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 25 章
+2026-05-24 17:47:48,953 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 29 章
+2026-05-24 17:47:49,840 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 33 章
+2026-05-24 17:47:50,177 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 37 章
+2026-05-24 22:30:54,854 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 4 章
+2026-05-24 22:30:56,082 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 5 章
+2026-05-24 22:35:34,683 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 4 章
+2026-05-24 22:35:35,249 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 2 章
+2026-05-24 22:35:36,907 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 5 章
+2026-05-24 22:35:37,965 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 3 章
+2026-05-24 22:35:39,005 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 8 章
+2026-05-24 22:35:41,356 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 74 章
+2026-05-24 22:35:42,492 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 22:35:44,251 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 75 章
+2026-05-24 23:18:13,767 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
+2026-05-24 23:18:15,193 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 75 章
+2026-05-24 23:19:18,564 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 72 章
+2026-05-24 23:19:26,797 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 75 章
+2026-05-25 00:20:37,902 [INFO] app.api.routers.novels - 用户 1 获取项目列表，共 2 个
+2026-05-25 00:20:38,185 [INFO] app.api.routers.novels - 用户 1 查询项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631
+2026-05-25 00:20:38,675 [INFO] app.api.routers.novels - 用户 1 获取项目 bc61ff20-c5c8-4dc4-a875-2bc6bae76631 第 76 章
