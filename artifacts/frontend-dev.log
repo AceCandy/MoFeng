@@ -1,5 +1,0 @@
-
-> mofeng@0.0.0 dev
-> vite --host 127.0.0.1 --port 5173
-
-[2m07:45:42[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m Re-optimizing dependencies because vite config has changed
