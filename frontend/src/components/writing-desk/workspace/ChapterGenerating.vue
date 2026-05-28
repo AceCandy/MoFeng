@@ -1,50 +1,21 @@
 <!-- AIMETA P=生成中_章节生成进度|R=进度展示_流式输出|NR=不含生成逻辑|E=component:ChapterGenerating|X=internal|A=生成状态|D=vue|S=dom|RD=./README.ai -->
 <template>
   <section class="chapter-console" aria-label="AI章节生成控制台">
-    <header class="chapter-console__header">
-      <div>
-        <h3 class="chapter-console__title">
-          第{{ chapterNumber }}章：{{ chapterTitle || '未命名章节' }}
-        </h3>
-        <p class="chapter-console__status-line">
-          状态：{{ statusText.status }}
-          <span>·</span>
-          <span>字数：{{ generatedWordCount }} 字</span>
-        </p>
-      </div>
-      <span class="chapter-console__state-badge">{{ statusText.badge }}</span>
-    </header>
-
-    <article class="chapter-console__summary-card">
-      <p class="chapter-console__summary-label">当前摘要</p>
-      <p class="chapter-console__summary-body">"{{ displaySummary }}"</p>
-    </article>
-
-    <article class="chapter-console__task-card">
-      <h4>生成任务状态</h4>
-      <p class="chapter-console__task-title">AI 编辑正在构建第{{ chapterNumber }}章第一版草稿</p>
-      <div class="chapter-console__task-grid">
-        <div>
-          <span>当前阶段</span>
-          <strong>{{ activeStageLabel }}</strong>
+    <article class="chapter-console__pipeline-card" aria-label="生成进度">
+      <header class="chapter-console__pipeline-header-main">
+        <h4>生成进度</h4>
+        <div v-if="props.status && ['generating', 'evaluating', 'selecting'].includes(props.status)" class="chapter-console__pipeline-meta-top">
+          <span class="chapter-console__meta-item">
+            <span class="meta-label">已耗时：</span>
+            <span class="meta-value">{{ elapsedText }}</span>
+          </span>
+          <span class="chapter-console__meta-divider">·</span>
+          <span class="chapter-console__meta-item">
+            <span class="meta-label">预计剩余：</span>
+            <span class="meta-value">{{ etaText }}</span>
+          </span>
         </div>
-        <div>
-          <span>已完成</span>
-          <strong>{{ completedSteps }} / {{ pipelineSteps.length }} 步</strong>
-        </div>
-        <div>
-          <span>预计剩余</span>
-          <strong>{{ etaText }}</strong>
-        </div>
-        <div>
-          <span>已耗时</span>
-          <strong>{{ elapsedText }}</strong>
-        </div>
-      </div>
-    </article>
-
-    <article class="chapter-console__pipeline-card" aria-label="阶段式生成流水线">
-      <h4>阶段式生成流水线</h4>
+      </header>
       <ol class="chapter-console__pipeline">
         <li
           v-for="(item, index) in pipelineSteps"
@@ -54,21 +25,24 @@
             `is-${stepState(item.key, index).tone}`,
             { 'is-current': stepState(item.key, index).tone === 'in-progress' },
           ]"
+          :data-tooltip="STEP_DETAILS[item.key]?.summary || ''"
         >
           <div class="chapter-console__pipeline-marker">
             <span class="chapter-console__dot"></span>
           </div>
           <div class="chapter-console__pipeline-content">
-            <p class="chapter-console__pipeline-title">{{ item.label }}</p>
-            <p class="chapter-console__pipeline-state">{{ stepState(item.key, index).label }}</p>
+            <div class="chapter-console__pipeline-header">
+              <span class="chapter-console__pipeline-title">{{ item.label }}</span>
+              <span
+                v-if="stepState(item.key, index).tone === 'in-progress'"
+                class="chapter-console__pipeline-badge"
+              >
+                进行中
+              </span>
+            </div>
           </div>
         </li>
       </ol>
-    </article>
-
-    <article class="chapter-console__explain-card">
-      <h4>当前阶段说明</h4>
-      <p>{{ stageExplanation }}</p>
     </article>
 
     <article class="chapter-console__preview-card">
@@ -600,7 +574,6 @@ onUnmounted(() => {
 }
 
 .chapter-console__summary-card,
-.chapter-console__task-card,
 .chapter-console__pipeline-card,
 .chapter-console__explain-card,
 .chapter-console__preview-card,
@@ -620,71 +593,106 @@ onUnmounted(() => {
   line-height: 1.8;
 }
 
-.chapter-console__task-card h4,
 .chapter-console__pipeline-card h4,
-.chapter-console__explain-card h4,
 .chapter-console__preview-card h4 {
   margin: 0;
   color: var(--md-on-surface);
   font-size: var(--md-title-medium);
 }
 
-.chapter-console__task-title {
-  margin: var(--md-spacing-2) 0 0;
-  color: var(--md-on-surface);
-  font-weight: 600;
+.chapter-console__pipeline-header-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--md-spacing-2);
 }
 
-.chapter-console__task-grid {
-  margin-top: var(--md-spacing-3);
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--md-spacing-3);
-}
-
-.chapter-console__task-grid div {
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-md);
-  background-color: var(--md-surface-container-low);
-  padding: var(--md-spacing-3);
-}
-
-.chapter-console__task-grid span {
-  display: block;
-  color: var(--md-on-surface-variant);
+.chapter-console__pipeline-meta-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-size: var(--md-body-small);
+  color: var(--md-on-surface-variant);
+  background-color: var(--md-surface-container-low);
+  padding: 4px 12px;
+  border-radius: var(--md-radius-md);
+  border: 1px dashed color-mix(in srgb, var(--md-primary) 20%, var(--md-outline-variant));
 }
 
-.chapter-console__task-grid strong {
-  display: block;
-  margin-top: 5px;
-  color: var(--md-on-surface);
-  font-size: var(--md-label-large);
+.chapter-console__meta-item {
+  display: flex;
+  align-items: center;
+}
+
+.chapter-console__meta-label {
+  color: var(--md-on-surface-variant);
+  opacity: 0.8;
+}
+
+.chapter-console__meta-value {
+  font-weight: 700;
+  color: var(--md-primary-dark);
+}
+
+.chapter-console__meta-divider {
+  color: var(--md-outline);
+  opacity: 0.5;
 }
 
 .chapter-console__pipeline {
-  margin: var(--md-spacing-3) 0 0;
+  margin: var(--md-spacing-4) 0 0;
   padding: 0;
   list-style: none;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
   gap: var(--md-spacing-2);
 }
 
 .chapter-console__pipeline-item {
+  position: relative;
   display: flex;
-  gap: var(--md-spacing-3);
+  flex-direction: column;
   align-items: center;
-  padding: var(--md-spacing-3);
-  border-radius: var(--md-radius-md);
-  border: 1px solid var(--md-outline-variant);
-  background-color: var(--md-surface-container-low);
+  text-align: center;
+  flex: 1;
+  padding: 0 0 14px 0;
+}
+
+.chapter-console__pipeline-item::before {
+  display: none;
+}
+
+.chapter-console__pipeline-item::after {
+  content: '';
+  position: absolute;
+  top: 9px;
+  left: calc(50% + 10px);
+  right: calc(-50% + 10px);
+  height: 2px;
+  background-color: var(--md-outline-variant);
+  z-index: 1;
+}
+
+.chapter-console__pipeline-item:last-child::after {
+  display: none;
+}
+
+.chapter-console__pipeline-item.is-done::after {
+  background-color: var(--md-success);
 }
 
 .chapter-console__pipeline-marker {
   width: 20px;
+  height: 20px;
   display: flex;
+  align-items: center;
   justify-content: center;
+  position: relative;
+  z-index: 2;
+  margin-bottom: 8px;
 }
 
 .chapter-console__dot {
@@ -692,56 +700,121 @@ onUnmounted(() => {
   height: 10px;
   border-radius: 50%;
   background-color: var(--md-outline);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.chapter-console__pipeline-title,
-.chapter-console__pipeline-state {
-  margin: 0;
+.chapter-console__pipeline-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.chapter-console__pipeline-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
 .chapter-console__pipeline-title {
-  color: var(--md-on-surface);
-  font-weight: 600;
+  font-size: var(--md-body-medium);
+  font-weight: 500;
+  color: var(--md-on-surface-variant);
+  transition: color 0.3s ease;
 }
 
-.chapter-console__pipeline-state {
-  margin-top: 3px;
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
+.chapter-console__pipeline-badge {
+  font-size: var(--md-label-small);
+  font-weight: 700;
+  color: var(--md-primary);
+  background-color: color-mix(in srgb, var(--md-primary) 12%, transparent);
+  padding: 2px 6px;
+  border-radius: var(--md-radius-small, 4px);
 }
 
 .chapter-console__pipeline-item.is-done .chapter-console__dot {
   background-color: var(--md-success);
 }
 
-.chapter-console__pipeline-item.is-in-progress {
-  border-color: color-mix(in srgb, var(--md-primary) 34%, var(--md-outline-variant));
-  background-color: color-mix(in srgb, var(--md-primary-container) 58%, var(--md-surface-container-low));
+.chapter-console__pipeline-item.is-done .chapter-console__pipeline-title {
+  color: color-mix(in srgb, var(--md-on-surface) 60%, transparent);
 }
 
 .chapter-console__pipeline-item.is-in-progress .chapter-console__dot {
   background-color: var(--md-primary);
-  animation: pulse-dot 1.3s ease-out infinite;
+  width: 12px;
+  height: 12px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--md-primary) 30%, transparent);
+  animation: pulse-dot 1.5s infinite alternate;
 }
 
-.chapter-console__pipeline-item.is-in-progress .chapter-console__pipeline-state {
-  color: var(--md-on-primary-container);
-}
-
-.chapter-console__pipeline-item.is-failed {
-  border-color: color-mix(in srgb, var(--md-error) 44%, var(--md-outline-variant));
-  background-color: var(--md-error-container);
+.chapter-console__pipeline-item.is-in-progress .chapter-console__pipeline-title {
+  color: var(--md-primary);
+  font-weight: 700;
+  font-size: var(--md-title-small);
 }
 
 .chapter-console__pipeline-item.is-failed .chapter-console__dot {
   background-color: var(--md-error);
 }
 
-.chapter-console__explain-card p {
-  margin: var(--md-spacing-2) 0 0;
-  color: var(--md-on-surface-variant);
-  line-height: 1.7;
+.chapter-console__pipeline-item.is-failed .chapter-console__pipeline-title {
+  color: var(--md-error);
+  font-weight: 700;
 }
+
+/* Tooltip 样式，仅在 PC 端支持 hover 的设备上生效 */
+@media (hover: hover) and (min-width: 834px) {
+  .chapter-console__pipeline-item {
+    cursor: pointer;
+  }
+
+  .chapter-console__pipeline-item[data-tooltip]:hover::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% - 4px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-10px);
+    background-color: var(--md-on-surface);
+    color: var(--md-surface);
+    padding: 8px 12px;
+    border-radius: var(--md-radius-md, 6px);
+    font-size: var(--md-body-small);
+    z-index: 20;
+    box-shadow: var(--md-elevation-3, 0 4px 12px rgba(0, 0, 0, 0.15));
+    pointer-events: none;
+    width: max-content;
+    max-width: 220px;
+    white-space: normal;
+    word-wrap: break-word;
+    line-height: 1.4;
+    text-align: center;
+    opacity: 0;
+    animation: fadeInTooltip 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  .chapter-console__pipeline-item[data-tooltip]:hover::after {
+    content: '';
+    position: absolute;
+    bottom: calc(100% - 4px);
+    left: 50%;
+    transform: translateX(-50%) translateY(2px);
+    border: 6px solid transparent;
+    border-top-color: var(--md-on-surface);
+    z-index: 20;
+    pointer-events: none;
+    opacity: 0;
+    animation: fadeInTooltip 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+}
+
+@keyframes fadeInTooltip {
+  to {
+    opacity: 1;
+  }
+}
+
 
 .chapter-console__preview-card header {
   display: flex;
@@ -870,20 +943,63 @@ onUnmounted(() => {
   }
 }
 
-@media (max-width: 1199px) {
-  .chapter-console__task-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 833px) {
-  .chapter-console__task-grid {
-    grid-template-columns: minmax(0, 1fr);
+  .chapter-console__pipeline {
+    flex-direction: column;
+    gap: 0;
   }
 
-  .chapter-console__header {
-    flex-direction: column;
+  .chapter-console__pipeline-item {
+    flex-direction: row;
     align-items: flex-start;
+    text-align: left;
+    padding: 10px 0 14px 0;
+    flex: none;
+  }
+
+  .chapter-console__pipeline-item::before {
+    display: block;
+    content: '';
+    position: absolute;
+    left: 9px;
+    top: 24px;
+    bottom: -10px;
+    width: 2px;
+    background-color: var(--md-outline-variant);
+    z-index: 1;
+  }
+
+  .chapter-console__pipeline-item:last-child::before {
+    display: none;
+  }
+
+  .chapter-console__pipeline-item.is-done::before {
+    background-color: var(--md-success);
+  }
+
+  .chapter-console__pipeline-item::after {
+    display: none;
+  }
+
+  .chapter-console__pipeline-marker {
+    margin-bottom: 0;
+    margin-top: 2px;
+  }
+
+  .chapter-console__pipeline-content {
+    align-items: flex-start;
+  }
+
+  .chapter-console__pipeline-header {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--md-spacing-2);
+  }
+
+  .chapter-console__pipeline-meta {
+    margin-top: 6px;
+    align-self: flex-start;
+    justify-content: flex-start;
   }
 
   .chapter-console__actions {

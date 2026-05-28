@@ -1,16 +1,18 @@
 <!-- AIMETA P=应用布局_认证后共享外壳|R=全局导航_页面容器|NR=不含业务页面逻辑|E=component:AppShell|X=ui|A=布局组件|D=vue,vue-router,pinia|S=dom|RD=./README.ai -->
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
+import { computed, ref, onMounted, onUnmounted, defineAsyncComponent, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useQueryClient } from '@tanstack/vue-query'
 
 import { clearAuthQueryCache } from '@/queries/auth'
 import { useAuthStore } from '@/stores/auth'
 import {
+  novelQueryKeys,
   useNovelProjectsQuery,
   useNovelProjectQuery,
   useImportNovelMutation,
 } from '@/queries/novel'
+import { useTasksQuery } from '@/queries/tasks'
 import { useNovelStore } from '@/stores/novel'
 import GlobalModalContainer from '@/components/shared/GlobalModalContainer.vue'
 import { globalAlert } from '@/composables/useAlert'
@@ -19,11 +21,13 @@ const SettingsView = defineAsyncComponent(() => import('@/views/SettingsView.vue
 const AdminView = defineAsyncComponent(() => import('@/views/AdminView.vue'))
 const PromptUsageMap = defineAsyncComponent(() => import('@/components/admin/PromptUsageMap.vue'))
 const PasswordManagement = defineAsyncComponent(() => import('@/components/admin/PasswordManagement.vue'))
+const TaskLogPanel = defineAsyncComponent(() => import('@/components/shared/TaskLogPanel.vue'))
 
 const showSettingsModal = ref(false)
 const showAdminModal = ref(false)
 const showPromptUsageModal = ref(false)
 const showPasswordModal = ref(false)
+const showTaskLogModal = ref(false)
 const adminInitialTab = ref('statistics')
 
 // 昼夜主题中式切换逻辑
@@ -50,6 +54,21 @@ const router = useRouter()
 const authStore = useAuthStore()
 const queryClient = useQueryClient()
 const isDropdownOpen = ref(false)
+const { data: rawBackgroundTasks, isFetching: isFetchingTasks } = useTasksQuery()
+const completedOutlineTaskIds = new Set<string>()
+
+const backgroundTasks = computed(() => rawBackgroundTasks.value || [])
+const activeBackgroundTasks = computed(() =>
+  backgroundTasks.value.filter((task) => task.status === 'queued' || task.status === 'running'),
+)
+const failedBackgroundTasks = computed(() =>
+  backgroundTasks.value.filter((task) => task.status === 'failed'),
+)
+const taskIndicatorText = computed(() => {
+  if (activeBackgroundTasks.value.length > 0) return String(activeBackgroundTasks.value.length)
+  if (failedBackgroundTasks.value.length > 0) return '!'
+  return '志'
+})
 
 const novelStore = useNovelStore()
 const isAssistantOpen = computed(() => novelStore.isAssistantPanelVisible)
@@ -68,6 +87,21 @@ const currentProjectId = computed(() => {
 const { data: currentProject } = useNovelProjectQuery(currentProjectId)
 const { data: rawProjects } = useNovelProjectsQuery()
 const projects = computed(() => rawProjects.value || [])
+
+watch(backgroundTasks, (tasks) => {
+  for (const task of tasks) {
+    if (
+      task.task_type === 'chapter_outline' &&
+      task.status === 'succeeded' &&
+      task.project_id &&
+      !completedOutlineTaskIds.has(task.id)
+    ) {
+      completedOutlineTaskIds.add(task.id)
+      void queryClient.invalidateQueries({ queryKey: novelQueryKeys.projects() })
+      void queryClient.invalidateQueries({ queryKey: novelQueryKeys.detail(task.project_id) })
+    }
+  }
+})
 
 const projectTags = computed(() => {
   if (!currentProject.value) return ''
@@ -398,6 +432,21 @@ onUnmounted(() => {
 
         <!-- 右侧操作控制台 (辅助信息印章与水墨折叠下拉) -->
         <div class="app-shell__actions-right">
+          <button
+            type="button"
+            class="app-shell__task-button"
+            :class="{
+              'has-active-task': activeBackgroundTasks.length > 0,
+              'has-failed-task': activeBackgroundTasks.length === 0 && failedBackgroundTasks.length > 0,
+            }"
+            title="查看当前正在执行的任务日志"
+            aria-label="查看当前正在执行的任务日志"
+            @click="showTaskLogModal = true"
+          >
+            <span class="app-shell__task-badge">{{ taskIndicatorText }}</span>
+            <span class="app-shell__task-label">任务</span>
+          </button>
+
           <!-- 昼夜切换中式印章 -->
           <button
             type="button"
@@ -536,6 +585,16 @@ onUnmounted(() => {
     <!-- 全局模型设置与系统管理大弹窗 (案头折纸折子戏) -->
     <Teleport to="body">
       <GlobalModalContainer
+        v-if="showTaskLogModal"
+        title="任务日志"
+        badge-text="务"
+        width="min(94vw, 960px)"
+        @close="showTaskLogModal = false"
+      >
+        <TaskLogPanel :tasks="backgroundTasks" :loading="isFetchingTasks" />
+      </GlobalModalContainer>
+
+      <GlobalModalContainer
         v-if="showSettingsModal"
         title="乾坤万象中枢"
         badge-text="乾"
@@ -592,6 +651,66 @@ onUnmounted(() => {
 /* 昼夜切换中式印章专属样式 */
 .theme-toggle-btn {
   margin-right: 4px;
+}
+
+.app-shell__task-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--md-outline);
+  border-radius: var(--md-radius-xs);
+  background: var(--md-surface-container-low);
+  color: var(--md-on-surface);
+  cursor: pointer;
+  transition:
+    background-color 160ms cubic-bezier(0.2, 0, 0, 1),
+    box-shadow 160ms cubic-bezier(0.2, 0, 0, 1),
+    transform 160ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.app-shell__task-button:hover {
+  background: var(--md-surface-container);
+  box-shadow: 1.5px 1.5px 0 rgba(28, 32, 34, 0.14);
+  transform: translate(-1px, -1px);
+}
+
+.app-shell__task-button:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
+.app-shell__task-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--md-outline);
+  border-radius: var(--md-radius-xs);
+  background: var(--md-surface);
+  color: var(--md-on-surface-variant);
+  font-family: var(--md-font-serif);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.app-shell__task-button.has-active-task .app-shell__task-badge {
+  background: var(--md-warning-container);
+  color: var(--md-on-surface);
+}
+
+.app-shell__task-button.has-failed-task .app-shell__task-badge {
+  background: var(--md-error-container);
+  color: var(--md-error);
+}
+
+.app-shell__task-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 /* 昼模式印章：翠玉竹青色，彰显清新白昼 */

@@ -1357,7 +1357,7 @@ const handleGenerateOutline = async (numChapters: number) => {
   try {
     const startChapter = (project.value.blueprint?.chapter_outline?.length || 0) + 1
     await generateChapterOutlineMutation.mutateAsync({ startChapter, numChapters })
-    globalAlert.showSuccess('新的章节大纲已生成', '操作成功')
+    globalAlert.showSuccess('大纲生成任务已加入后台，可在右上角任务日志查看进度', '任务已提交')
   } catch (error) {
     console.error('生成大纲失败:', error)
     globalAlert.showError(

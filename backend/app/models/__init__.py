@@ -3,6 +3,7 @@
 
 from .admin_setting import AdminSetting
 from .ai_model_config import UserAIModel, UserAIStageRoute, UserModelProvider
+from .background_task import BackgroundTask
 from .llm_config import LLMConfig
 from .novel import (
     BlueprintCharacter,
@@ -54,6 +55,7 @@ from .foreshadowing import (
 __all__ = [
     # 基础模型
     "AdminSetting",
+    "BackgroundTask",
     "UserModelProvider",
     "UserAIModel",
     "UserAIStageRoute",

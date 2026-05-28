@@ -50,7 +50,10 @@ from ...schemas.novel import (
     SelectVersionRequest,
     UpdateChapterOutlineRequest,
 )
+from ...schemas.task import BackgroundTaskResponse
 from ...schemas.user import UserInDB
+from ...services.background_task_service import BackgroundTaskService
+from ...services.chapter_outline_task_runner import run_generate_chapters_outline_task
 from ...services.chapter_context_service import ChapterContextService
 from ...services.chapter_ingest_service import ChapterIngestionService
 from ...services.llm_service import LLMService
@@ -2426,72 +2429,40 @@ async def delete_chapters(
     return await _load_project_schema(novel_service, project_id, current_user.id)
 
 
-@router.post("/novels/{project_id}/chapters/outline", response_model=NovelProjectSchema)
+@router.post("/novels/{project_id}/chapters/outline", response_model=BackgroundTaskResponse, status_code=202)
 async def generate_chapters_outline(
     project_id: str,
     request: GenerateOutlineRequest,
+    background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_session),
     current_user: UserInDB = Depends(get_current_user),
-) -> NovelProjectSchema:
+) -> BackgroundTaskResponse:
     novel_service = NovelService(session)
-    prompt_service = PromptService(session)
-    llm_service = LLMService(session)
+    await novel_service.ensure_project_owner(project_id, current_user.id)
 
-    project = await novel_service.ensure_project_owner(project_id, current_user.id)
-
-    # 获取蓝图信息
-    project_schema = await novel_service._serialize_project(project)
-    blueprint_text = json.dumps(project_schema.blueprint.model_dump(), ensure_ascii=False, indent=2)
-
-    # 获取已有的章节大纲
-    existing_outlines = [
-        f"第{o.chapter_number}章 - {o.title}: {o.summary}"
-        for o in sorted(project.outlines, key=lambda x: x.chapter_number)
-    ]
-    existing_outlines_text = "\n".join(existing_outlines) if existing_outlines else "暂无"
-
-    outline_prompt = await prompt_service.get_prompt("outline_generation")
-    if not outline_prompt:
-        raise HTTPException(status_code=500, detail="未配置大纲生成提示词")
-
-    prompt_input = f"""
-[世界蓝图]
-{blueprint_text}
-
-[已有章节大纲]
-{existing_outlines_text}
-
-[生成任务]
-请从第 {request.start_chapter} 章开始，续写接下来的 {request.num_chapters} 章的大纲。
-要求返回 JSON 格式，包含一个 chapters 数组，每个元素包含 chapter_number, title, summary。
-"""
-
-    response = await llm_service.get_llm_response(
-        system_prompt=outline_prompt,
-        conversation_history=[{"role": "user", "content": prompt_input}],
-        temperature=0.7,
+    task_service = BackgroundTaskService(session)
+    # 后台任务内部仍使用 stage="chapter_outline" 路由到章节大纲模型。
+    task = await task_service.create_task(
         user_id=current_user.id,
-        stage="chapter_outline",
+        project_id=project_id,
+        task_type="chapter_outline",
+        title=f"生成第 {request.start_chapter} 章起的后续大纲",
+        payload={
+            "project_id": project_id,
+            "start_chapter": request.start_chapter,
+            "num_chapters": request.num_chapters,
+        },
+    )
+    background_tasks.add_task(
+        run_generate_chapters_outline_task,
+        task.id,
+        project_id=project_id,
+        user_id=current_user.id,
+        start_chapter=request.start_chapter,
+        num_chapters=request.num_chapters,
     )
 
-    cleaned = remove_think_tags(response)
-    normalized = unwrap_markdown_json(cleaned)
-    try:
-        data = json.loads(normalized)
-        new_outlines = data.get("chapters", [])
-        for item in new_outlines:
-            await novel_service.update_or_create_outline(
-                project_id,
-                item["chapter_number"],
-                item["title"],
-                item["summary"]
-            )
-        await session.commit()
-    except Exception as exc:
-        logger.exception("生成大纲解析失败: %s", exc)
-        raise HTTPException(status_code=500, detail=f"大纲生成失败: {str(exc)}")
-
-    return await _load_project_schema(novel_service, project_id, current_user.id)
+    return task
 
 
 @router.post("/novels/{project_id}/chapters/edit", response_model=NovelProjectSchema)

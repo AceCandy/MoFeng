@@ -6,9 +6,10 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, TypedDict
 
 from fastapi import HTTPException
+from langgraph.graph import END, START, StateGraph
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,6 +53,50 @@ def _clamp_version_count(value: int) -> int:
 WRITER_GENERATION_MAX_TOKENS = 7000
 
 
+class PipelineGraphState(TypedDict, total=False):
+    """LangGraph 节点间传递的高级写作流水线状态。"""
+
+    project_id: str
+    chapter_number: int
+    user_id: int
+    writing_notes: Optional[str]
+    flow_config: Optional[Dict[str, Any]]
+    config: "PipelineConfig"
+    project: Any
+    outline: Any
+    chapter: Any
+    outlines_map: Dict[int, Any]
+    history_context: Dict[str, Any]
+    project_schema: Any
+    blueprint_dict: Dict[str, Any]
+    all_characters: List[str]
+    outline_title: str
+    outline_summary: str
+    chapter_mission: Optional[dict]
+    allowed_new_characters: List[str]
+    visibility_context: Dict[str, Any]
+    writer_blueprint: Dict[str, Any]
+    forbidden_characters: List[str]
+    introduced_characters: List[str]
+    enhanced_flow: Optional[Any]
+    enhanced_context: Optional[Dict[str, Any]]
+    memory_context: Optional[str]
+    project_memory_text: Optional[str]
+    rag_context: Optional[Dict[str, Any]]
+    knowledge_context: Optional[str]
+    rag_stats: Optional[Dict[str, Any]]
+    writer_prompt: str
+    prompt_sections: List[Tuple[str, str]]
+    prompt_input: str
+    version_count: int
+    version_style_hints: List[str]
+    versions: List[Dict[str, Any]]
+    best_version_index: int
+    review_summaries: Dict[str, Any]
+    variants: List[Dict[str, Any]]
+    response: Dict[str, Any]
+
+
 @dataclass
 class PipelineConfig:
     preset: str = "basic"
@@ -76,6 +121,22 @@ class PipelineConfig:
 class PipelineOrchestrator:
     """统一写作流水线编排器。"""
 
+    GRAPH_SEQUENCE = (
+        "initialize_chapter",
+        "collect_context",
+        "generate_chapter_mission",
+        "build_visibility_context",
+        "prepare_enhanced_context",
+        "prepare_memory_context",
+        "prepare_retrieval_context",
+        "build_writer_prompt",
+        "generate_versions",
+        "review_versions",
+        "apply_post_generation_reviews",
+        "persist_versions",
+        "build_response",
+    )
+
     def __init__(self, session: AsyncSession):
         self.session = session
         self.llm_service = LLMService(session)
@@ -93,8 +154,35 @@ class PipelineOrchestrator:
         writing_notes: Optional[str] = None,
         flow_config: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        config = await self._resolve_config(flow_config)
-        project = await self.novel_service.ensure_project_owner(project_id, user_id)
+        initial_state: PipelineGraphState = {
+            "project_id": project_id,
+            "chapter_number": chapter_number,
+            "user_id": user_id,
+            "writing_notes": writing_notes,
+            "flow_config": flow_config,
+        }
+        graph = self._build_generation_graph()
+        final_state = await graph.ainvoke(initial_state)
+        return final_state["response"]
+
+    def _build_generation_graph(self):
+        """构建高级写作 LangGraph，节点顺序完整覆盖原流水线阶段。"""
+        workflow = StateGraph(PipelineGraphState)
+        for node_name in self.GRAPH_SEQUENCE:
+            workflow.add_node(node_name, getattr(self, f"_graph_{node_name}"))
+
+        previous = START
+        for node_name in self.GRAPH_SEQUENCE:
+            workflow.add_edge(previous, node_name)
+            previous = node_name
+        workflow.add_edge(previous, END)
+        return workflow.compile()
+
+    async def _graph_initialize_chapter(self, state: PipelineGraphState) -> PipelineGraphState:
+        config = await self._resolve_config(state.get("flow_config"))
+        project_id = state["project_id"]
+        chapter_number = state["chapter_number"]
+        project = await self.novel_service.ensure_project_owner(project_id, state["user_id"])
 
         outline = await self.novel_service.get_outline(project_id, chapter_number)
         if not outline:
@@ -112,104 +200,138 @@ class PipelineOrchestrator:
         chapter.generation_step_total = 7
         await self.session.commit()
 
-        outlines_map = {item.chapter_number: item for item in project.outlines}
+        return {
+            "config": config,
+            "project": project,
+            "outline": outline,
+            "chapter": chapter,
+            "outlines_map": {item.chapter_number: item for item in project.outlines},
+            "outline_title": outline.title or f"第{outline.chapter_number}章",
+            "outline_summary": outline.summary or "暂无摘要",
+            "writing_notes": state.get("writing_notes") or "无额外写作指令",
+        }
+
+    async def _graph_collect_context(self, state: PipelineGraphState) -> PipelineGraphState:
         history_context = await self._collect_history_context(
-            project_id=project_id,
-            chapter_number=chapter_number,
-            outlines_map=outlines_map,
-            chapters=project.chapters,
-            user_id=user_id,
+            project_id=state["project_id"],
+            chapter_number=state["chapter_number"],
+            outlines_map=state["outlines_map"],
+            chapters=state["project"].chapters,
+            user_id=state["user_id"],
         )
-
-        project_schema = await self.novel_service._serialize_project(project)
+        project_schema = await self.novel_service._serialize_project(state["project"])
         blueprint_dict = self._normalize_blueprint(project_schema.blueprint.model_dump())
-
-        outline_title = outline.title or f"第{outline.chapter_number}章"
-        outline_summary = outline.summary or "暂无摘要"
-        writing_notes = writing_notes or "无额外写作指令"
-
         all_characters = [c.get("name") for c in blueprint_dict.get("characters", []) if c.get("name")]
 
+        return {
+            "history_context": history_context,
+            "project_schema": project_schema,
+            "blueprint_dict": blueprint_dict,
+            "all_characters": all_characters,
+        }
+
+    async def _graph_generate_chapter_mission(self, state: PipelineGraphState) -> PipelineGraphState:
         chapter_mission = await self._generate_chapter_mission(
-            blueprint_dict=blueprint_dict,
-            previous_summary=history_context["previous_summary"],
-            previous_tail=history_context["previous_tail"],
-            outline_title=outline_title,
-            outline_summary=outline_summary,
-            writing_notes=writing_notes,
+            blueprint_dict=state["blueprint_dict"],
+            previous_summary=state["history_context"]["previous_summary"],
+            previous_tail=state["history_context"]["previous_tail"],
+            outline_title=state["outline_title"],
+            outline_summary=state["outline_summary"],
+            writing_notes=state["writing_notes"],
             introduced_characters=[],
-            all_characters=all_characters,
-            user_id=user_id,
+            all_characters=state["all_characters"],
+            user_id=state["user_id"],
         )
+        chapter = state["chapter"]
         chapter.generation_progress = 28
         chapter.generation_step = "director_mission"
         chapter.generation_step_index = 2
         await self.session.commit()
 
-        allowed_new_characters = chapter_mission.get("allowed_new_characters", []) if chapter_mission else []
+        return {
+            "chapter_mission": chapter_mission,
+            "allowed_new_characters": chapter_mission.get("allowed_new_characters", []) if chapter_mission else [],
+        }
 
+    async def _graph_build_visibility_context(self, state: PipelineGraphState) -> PipelineGraphState:
         visibility_context = self.context_builder.build_visibility_context(
-            blueprint=blueprint_dict,
-            completed_summaries=history_context["completed_summaries"],
-            previous_tail=history_context["previous_tail"],
-            outline_title=outline_title,
-            outline_summary=outline_summary,
-            writing_notes=writing_notes,
-            allowed_new_characters=allowed_new_characters,
+            blueprint=state["blueprint_dict"],
+            completed_summaries=state["history_context"]["completed_summaries"],
+            previous_tail=state["history_context"]["previous_tail"],
+            outline_title=state["outline_title"],
+            outline_summary=state["outline_summary"],
+            writing_notes=state["writing_notes"],
+            allowed_new_characters=state["allowed_new_characters"],
         )
-
         writer_blueprint = visibility_context["writer_blueprint"]
         forbidden_characters = visibility_context["forbidden_characters"]
         introduced_characters = visibility_context["introduced_characters"]
 
         logger.info(
             "Pipeline context: project=%s chapter=%s introduced=%d allowed_new=%d forbidden=%d",
-            project_id,
-            chapter_number,
+            state["project_id"],
+            state["chapter_number"],
             len(introduced_characters),
-            len(allowed_new_characters),
+            len(state["allowed_new_characters"]),
             len(forbidden_characters),
         )
 
+        return {
+            "visibility_context": visibility_context,
+            "writer_blueprint": writer_blueprint,
+            "forbidden_characters": forbidden_characters,
+            "introduced_characters": introduced_characters,
+        }
+
+    async def _graph_prepare_enhanced_context(self, state: PipelineGraphState) -> PipelineGraphState:
+        config = state["config"]
         enhanced_flow = None
         enhanced_context = None
         if config.enable_constitution or config.enable_persona or config.enable_foreshadowing or config.enable_faction:
             enhanced_flow = EnhancedWritingFlow(self.session, self.llm_service, self.prompt_service)
             enhanced_context = await enhanced_flow.prepare_writing_context(
-                project_id=project_id,
-                chapter_number=chapter_number,
-                chapter_outline=outline_summary,
+                project_id=state["project_id"],
+                chapter_number=state["chapter_number"],
+                chapter_outline=state["outline_summary"],
             )
 
+        return {"enhanced_flow": enhanced_flow, "enhanced_context": enhanced_context}
+
+    async def _graph_prepare_memory_context(self, state: PipelineGraphState) -> PipelineGraphState:
         memory_context = None
-        if config.enable_memory:
+        if state["config"].enable_memory:
             memory_context = await self._get_memory_context(
-                project_id=project_id,
-                chapter_number=chapter_number,
-                involved_characters=introduced_characters,
+                project_id=state["project_id"],
+                chapter_number=state["chapter_number"],
+                involved_characters=state["introduced_characters"],
             )
 
-        project_memory_text = await self._get_project_memory_text(project_id)
+        return {
+            "memory_context": memory_context,
+            "project_memory_text": await self._get_project_memory_text(state["project_id"]),
+        }
 
+    async def _graph_prepare_retrieval_context(self, state: PipelineGraphState) -> PipelineGraphState:
+        config = state["config"]
         rag_context = None
         knowledge_context = None
         rag_stats = None
         if config.enable_rag:
             if config.rag_mode == "two_stage":
                 knowledge_context, rag_stats = await self._get_two_stage_rag_context(
-                    project_id=project_id,
-                    chapter_number=chapter_number,
-                    writing_notes=writing_notes,
-                    pov_character=self._resolve_pov_character(chapter_mission),
-                    user_id=user_id,
+                    project_id=state["project_id"],
+                    chapter_number=state["chapter_number"],
+                    writing_notes=state["writing_notes"],
+                    pov_character=self._resolve_pov_character(state.get("chapter_mission")),
+                    user_id=state["user_id"],
                 )
             else:
                 rag_context = await self._get_rag_context(
-                    project_id=project_id,
-                    outline_title=outline_title,
-                    outline_summary=outline_summary,
-                    writing_notes=writing_notes,
-                    user_id=user_id,
+                    project_id=state["project_id"],
+                    outline_title=state["outline_title"],
+                    outline_summary=state["outline_summary"],
+                    writing_notes=state["writing_notes"],
+                    user_id=state["user_id"],
                 )
                 rag_stats = {
                     "mode": "simple",
@@ -217,6 +339,13 @@ class PipelineOrchestrator:
                     "summaries": len(rag_context.get("summaries", [])) if rag_context else 0,
                 }
 
+        return {
+            "rag_context": rag_context,
+            "knowledge_context": knowledge_context,
+            "rag_stats": rag_stats,
+        }
+
+    async def _graph_build_writer_prompt(self, state: PipelineGraphState) -> PipelineGraphState:
         writer_prompt = await self.prompt_service.get_prompt("writing_v2")
         if not writer_prompt:
             writer_prompt = await self.prompt_service.get_prompt("writing")
@@ -224,36 +353,52 @@ class PipelineOrchestrator:
             raise HTTPException(status_code=500, detail="缺少写作提示词，请联系管理员配置")
 
         prompt_sections = await self._build_prompt_sections(
-            writer_blueprint=writer_blueprint,
-            previous_summary=history_context["previous_summary"],
-            previous_tail=history_context["previous_tail"],
-            chapter_mission=chapter_mission,
-            rag_context=rag_context,
-            knowledge_context=knowledge_context,
-            outline_title=outline_title,
-            outline_summary=outline_summary,
-            writing_notes=writing_notes,
-            forbidden_characters=forbidden_characters,
-            project_memory_text=project_memory_text,
-            memory_context=memory_context,
+            writer_blueprint=state["writer_blueprint"],
+            previous_summary=state["history_context"]["previous_summary"],
+            previous_tail=state["history_context"]["previous_tail"],
+            chapter_mission=state.get("chapter_mission"),
+            rag_context=state.get("rag_context"),
+            knowledge_context=state.get("knowledge_context"),
+            outline_title=state["outline_title"],
+            outline_summary=state["outline_summary"],
+            writing_notes=state["writing_notes"],
+            forbidden_characters=state["forbidden_characters"],
+            project_memory_text=state.get("project_memory_text"),
+            memory_context=state.get("memory_context"),
         )
 
+        enhanced_flow = state.get("enhanced_flow")
+        enhanced_context = state.get("enhanced_context")
         if enhanced_flow and enhanced_context:
             prompt_sections = enhanced_flow.build_enhanced_prompt_sections(prompt_sections, enhanced_context)
 
         prompt_input = "\n\n".join(f"{title}\n{content}" for title, content in prompt_sections if content)
         logger.debug("Pipeline prompt length: %s chars", len(prompt_input))
+        chapter = state["chapter"]
         chapter.generation_progress = 55
         chapter.generation_step = "draft_generation"
         chapter.generation_step_index = 4
         await self.session.commit()
 
-        version_count = config.version_count
-        version_style_hints = self._resolve_style_hints(enhanced_context, version_count)
+        version_count = state["config"].version_count
+        return {
+            "writer_prompt": writer_prompt,
+            "prompt_sections": prompt_sections,
+            "prompt_input": prompt_input,
+            "version_count": version_count,
+            "version_style_hints": self._resolve_style_hints(enhanced_context, version_count),
+        }
 
+    async def _graph_generate_versions(self, state: PipelineGraphState) -> PipelineGraphState:
         versions: List[Dict[str, Any]] = []
+        version_count = state["version_count"]
         for idx in range(version_count):
-            style_hint = version_style_hints[idx] if idx < len(version_style_hints) else None
+            style_hint = (
+                state["version_style_hints"][idx]
+                if idx < len(state["version_style_hints"])
+                else None
+            )
+            chapter = state["chapter"]
             chapter.generation_progress = 55 + int((idx / max(version_count, 1)) * 25)
             chapter.generation_step = "draft_generation"
             chapter.generation_step_index = 4
@@ -261,21 +406,21 @@ class PipelineOrchestrator:
             versions.append(
                 await self._generate_single_version(
                     index=idx,
-                    prompt_input=prompt_input,
-                    writer_prompt=writer_prompt,
+                    prompt_input=state["prompt_input"],
+                    writer_prompt=state["writer_prompt"],
                     style_hint=style_hint,
-                    project_id=project_id,
-                    chapter_number=chapter_number,
-                    outline_title=outline_title,
-                    outline_summary=outline_summary,
-                    chapter_mission=chapter_mission,
-                    forbidden_characters=forbidden_characters,
-                    allowed_new_characters=allowed_new_characters,
-                    user_id=user_id,
-                    writer_blueprint=writer_blueprint,
-                    memory_context=memory_context,
-                    enhanced_context=enhanced_context,
-                    config=config,
+                    project_id=state["project_id"],
+                    chapter_number=state["chapter_number"],
+                    outline_title=state["outline_title"],
+                    outline_summary=state["outline_summary"],
+                    chapter_mission=state.get("chapter_mission"),
+                    forbidden_characters=state["forbidden_characters"],
+                    allowed_new_characters=state["allowed_new_characters"],
+                    user_id=state["user_id"],
+                    writer_blueprint=state["writer_blueprint"],
+                    memory_context=state.get("memory_context"),
+                    enhanced_context=state.get("enhanced_context"),
+                    config=state["config"],
                 )
             )
             chapter.generation_progress = 55 + int(((idx + 1) / max(version_count, 1)) * 25)
@@ -283,99 +428,121 @@ class PipelineOrchestrator:
             chapter.generation_step_index = 4
             await self.session.commit()
 
+        return {"versions": versions}
+
+    async def _graph_review_versions(self, state: PipelineGraphState) -> PipelineGraphState:
+        chapter = state["chapter"]
         chapter.generation_progress = 86
         chapter.generation_step = "quality_review"
         chapter.generation_step_index = 5
         await self.session.commit()
+
         best_version_index, ai_review_result = await self._run_ai_review(
-            versions=versions,
-            chapter_mission=chapter_mission,
-            user_id=user_id,
-            context={
-                "novel_blueprint": writer_context.get("writer_blueprint") or blueprint_dict,
-                "chapter_outline": {
-                    "chapter_number": chapter_number,
-                    "title": outline_title,
-                    "summary": outline_summary,
-                },
-                "chapter_mission": chapter_mission or {},
-                "previous_chapter": {
-                    "summary": history_context.get("previous_summary", ""),
-                    "tail_excerpt": history_context.get("previous_tail", ""),
-                },
-                "completed_chapters": history_context.get("completed_chapters", []),
-            },
+            versions=state["versions"],
+            chapter_mission=state.get("chapter_mission"),
+            user_id=state["user_id"],
+            context=self._build_review_context(
+                writer_blueprint=state["writer_blueprint"],
+                blueprint_dict=state["blueprint_dict"],
+                chapter_number=state["chapter_number"],
+                outline_title=state["outline_title"],
+                outline_summary=state["outline_summary"],
+                chapter_mission=state.get("chapter_mission"),
+                history_context=state["history_context"],
+            ),
         )
 
         review_summaries: Dict[str, Any] = {}
         if ai_review_result:
             review_summaries["ai_review"] = ai_review_result
 
+        versions = state["versions"]
         if versions:
             best_version_index = max(0, min(best_version_index, len(versions) - 1))
         else:
             best_version_index = 0
 
-        if versions:
-            best_version = versions[best_version_index]
-            best_content = best_version["content"]
+        return {"best_version_index": best_version_index, "review_summaries": review_summaries}
 
-            if enhanced_flow and config.enable_six_dimension:
-                review_result = await enhanced_flow.post_generation_review(
-                    project_id=project_id,
-                    chapter_number=chapter_number,
-                    chapter_title=outline_title,
-                    chapter_content=best_content,
-                    chapter_plan=json.dumps(chapter_mission, ensure_ascii=False) if chapter_mission else None,
-                    previous_summary=history_context["previous_summary"],
-                )
-                review_summaries["enhanced_review"] = review_result
+    async def _graph_apply_post_generation_reviews(self, state: PipelineGraphState) -> PipelineGraphState:
+        versions = state["versions"]
+        if not versions:
+            return {"versions": versions, "review_summaries": state["review_summaries"]}
 
-            if config.enable_self_critique:
-                best_content, critique_summary = await self._run_self_critique(
-                    best_content,
-                    user_id=user_id,
-                    context={
-                        "character_profiles": json.dumps(writer_blueprint.get("characters", []), ensure_ascii=False),
-                        "previous_summary": history_context["previous_summary"],
-                    },
-                )
-                review_summaries["self_critique"] = critique_summary
+        config = state["config"]
+        review_summaries = state["review_summaries"]
+        best_version = versions[state["best_version_index"]]
+        best_content = best_version["content"]
 
-            if config.enable_reader_sim:
-                reader_feedback = await self._run_reader_simulation(
-                    best_content,
-                    chapter_number=chapter_number,
-                    previous_summary=history_context["previous_summary"],
-                    user_id=user_id,
-                )
-                review_summaries["reader_simulator"] = reader_feedback
+        enhanced_flow = state.get("enhanced_flow")
+        if enhanced_flow and config.enable_six_dimension:
+            review_result = await enhanced_flow.post_generation_review(
+                project_id=state["project_id"],
+                chapter_number=state["chapter_number"],
+                chapter_title=state["outline_title"],
+                chapter_content=best_content,
+                chapter_plan=json.dumps(state.get("chapter_mission"), ensure_ascii=False)
+                if state.get("chapter_mission")
+                else None,
+                previous_summary=state["history_context"]["previous_summary"],
+            )
+            review_summaries["enhanced_review"] = review_result
 
-            if config.enable_consistency:
-                best_content, consistency_report = await self._run_consistency_check(
-                    project_id=project_id,
-                    chapter_text=best_content,
-                    user_id=user_id,
-                )
-                review_summaries["consistency"] = consistency_report
+        if config.enable_self_critique:
+            best_content, critique_summary = await self._run_self_critique(
+                best_content,
+                user_id=state["user_id"],
+                context={
+                    "character_profiles": json.dumps(
+                        state["writer_blueprint"].get("characters", []),
+                        ensure_ascii=False,
+                    ),
+                    "previous_summary": state["history_context"]["previous_summary"],
+                },
+            )
+            review_summaries["self_critique"] = critique_summary
 
-            if config.enable_optimizer:
-                best_content, optimizer_report = await self._run_optimizer(best_content, user_id=user_id)
-                review_summaries["optimizer"] = optimizer_report
+        if config.enable_reader_sim:
+            reader_feedback = await self._run_reader_simulation(
+                best_content,
+                chapter_number=state["chapter_number"],
+                previous_summary=state["history_context"]["previous_summary"],
+                user_id=state["user_id"],
+            )
+            review_summaries["reader_simulator"] = reader_feedback
 
-            if config.enable_enrichment:
-                best_content, enrichment_report = await self._run_enrichment(
-                    best_content,
-                    user_id=user_id,
-                )
-                if enrichment_report:
-                    review_summaries["enrichment"] = enrichment_report
+        if config.enable_consistency:
+            best_content, consistency_report = await self._run_consistency_check(
+                project_id=state["project_id"],
+                chapter_text=best_content,
+                user_id=state["user_id"],
+            )
+            review_summaries["consistency"] = consistency_report
 
-            best_version["content"] = best_content
-            best_version.setdefault("metadata", {})["review_summaries"] = review_summaries
+        if config.enable_optimizer:
+            best_content, optimizer_report = await self._run_optimizer(
+                best_content,
+                user_id=state["user_id"],
+            )
+            review_summaries["optimizer"] = optimizer_report
 
+        if config.enable_enrichment:
+            best_content, enrichment_report = await self._run_enrichment(
+                best_content,
+                user_id=state["user_id"],
+            )
+            if enrichment_report:
+                review_summaries["enrichment"] = enrichment_report
+
+        best_version["content"] = best_content
+        best_version.setdefault("metadata", {})["review_summaries"] = review_summaries
+        return {"versions": versions, "review_summaries": review_summaries}
+
+    async def _graph_persist_versions(self, state: PipelineGraphState) -> PipelineGraphState:
+        versions = state["versions"]
         contents = [v.get("content", "") for v in versions]
         metadata = [v.get("metadata") for v in versions]
+        chapter = state["chapter"]
         chapter.generation_progress = 96
         chapter.generation_step = "persist_versions"
         chapter.generation_step_index = 6
@@ -384,26 +551,33 @@ class PipelineOrchestrator:
 
         variants = []
         for idx, version_model in enumerate(versions_models):
-            variant = {
-                "index": idx,
-                "version_id": version_model.id,
-                "content": versions[idx].get("content", ""),
-                "metadata": versions[idx].get("metadata"),
-            }
-            variants.append(variant)
+            variants.append(
+                {
+                    "index": idx,
+                    "version_id": version_model.id,
+                    "content": versions[idx].get("content", ""),
+                    "metadata": versions[idx].get("metadata"),
+                }
+            )
 
+        return {"variants": variants}
+
+    async def _graph_build_response(self, state: PipelineGraphState) -> PipelineGraphState:
+        config = state["config"]
         return {
-            "project_id": project_id,
-            "chapter_number": chapter_number,
-            "preset": config.preset,
-            "best_version_index": best_version_index,
-            "variants": variants,
-            "review_summaries": review_summaries,
-            "debug_metadata": {
-                "version_count": version_count,
-                "stages": self._build_stage_flags(config),
-                "retrieval_stats": rag_stats,
-            },
+            "response": {
+                "project_id": state["project_id"],
+                "chapter_number": state["chapter_number"],
+                "preset": config.preset,
+                "best_version_index": state["best_version_index"],
+                "variants": state["variants"],
+                "review_summaries": state["review_summaries"],
+                "debug_metadata": {
+                    "version_count": state["version_count"],
+                    "stages": self._build_stage_flags(config),
+                    "retrieval_stats": state.get("rag_stats"),
+                },
+            }
         }
 
     async def _resolve_config(self, flow_config: Optional[Dict[str, Any]]) -> PipelineConfig:
@@ -791,6 +965,33 @@ class PipelineOrchestrator:
         if not chapter_mission:
             return None
         return chapter_mission.get("pov") or chapter_mission.get("pov_character")
+
+    @staticmethod
+    def _build_review_context(
+        *,
+        writer_blueprint: Dict[str, Any],
+        blueprint_dict: Dict[str, Any],
+        chapter_number: int,
+        outline_title: str,
+        outline_summary: str,
+        chapter_mission: Optional[dict],
+        history_context: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """构建 AI 评审上下文，优先使用写作可见性裁剪后的蓝图。"""
+        return {
+            "novel_blueprint": writer_blueprint or blueprint_dict,
+            "chapter_outline": {
+                "chapter_number": chapter_number,
+                "title": outline_title,
+                "summary": outline_summary,
+            },
+            "chapter_mission": chapter_mission or {},
+            "previous_chapter": {
+                "summary": history_context.get("previous_summary", ""),
+                "tail_excerpt": history_context.get("previous_tail", ""),
+            },
+            "completed_chapters": history_context.get("completed_chapters", []),
+        }
 
     async def _generate_single_version(
         self,

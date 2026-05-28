@@ -1,6 +1,6 @@
 # Agent 核心流程
 
-本文整理 MoFeng（墨风）当前项目里的 AI Agent 核心执行链路。这里的 “Agent” 不是单独的 `Agent` 类，也不是 LangChain Agent，而是由 API 入口、提示词、上下文构建、模型阶段路由、生成/评审/定稿服务共同组成的小说创作智能体流水线。
+本文整理 MoFeng（墨风）当前项目里的 AI Agent 核心执行链路。这里的 “Agent” 不是单独的 `Agent` 类，也不是 LangChain Agent；高级章节生成路径由 LangGraph 状态图承载阶段编排，业务能力仍由 API 入口、提示词、上下文构建、模型阶段路由、生成/评审/定稿服务共同组成。
 
 整理日期：2026-05-11
 
@@ -26,7 +26,7 @@
 
 - `backend/app/api/routers/novels.py`：概念对话、蓝图生成。
 - `backend/app/api/routers/writer.py`：普通章节生成、版本选择、评审、定稿入口。
-- `backend/app/services/pipeline_orchestrator.py`：高级章节生成统一编排器。
+- `backend/app/services/pipeline_orchestrator.py`：高级章节生成 LangGraph 状态图编排器。
 - `backend/app/services/llm_service.py`：模型调用、流式输出、向量生成、阶段路由解析。
 - `backend/app/services/prompt_service.py`：提示词缓存和读取。
 - `backend/app/services/writer_context_builder.py`：写作可见性过滤。
@@ -309,7 +309,7 @@ SystemConfig writer.chapter_versions
 
 核心服务：`PipelineOrchestrator.generate_chapter`
 
-高级编排器和普通生成共用基本思想，但把上下文、增强能力、评审、后处理集中在服务层。请求体里的 `flow_config` 对应 `FlowConfig`：
+高级编排器和普通生成共用基本思想，但高级路径已通过 LangGraph `StateGraph` 显式串联各阶段节点，把上下文、增强能力、评审、后处理集中在服务层。请求体里的 `flow_config` 对应 `FlowConfig`：
 
 ```python
 class FlowConfig(BaseModel):
@@ -337,20 +337,20 @@ class FlowConfig(BaseModel):
 
 ```text
 PipelineOrchestrator.generate_chapter
-  -> _resolve_config
-  -> ensure_project_owner / get_outline / get_or_create_chapter
-  -> _collect_history_context
-  -> _generate_chapter_mission
-  -> WriterContextBuilder.build_visibility_context
-  -> EnhancedWritingFlow.prepare_writing_context（按配置）
-  -> MemoryLayerService.get_memory_context（按配置）
-  -> _get_rag_context 或 _get_two_stage_rag_context
-  -> _build_prompt_sections
-  -> _generate_single_version
-  -> _run_ai_review
-  -> 可选 self_critique / reader_sim / consistency / optimizer / enrichment
-  -> replace_chapter_versions
-  -> 返回 variants + review_summaries + debug_metadata
+  -> LangGraph ainvoke(initial_state)
+  -> initialize_chapter：解析配置，校验项目和章节纲要，初始化章节生成状态
+  -> collect_context：收集历史摘要、上一章结尾、蓝图和角色列表
+  -> generate_chapter_mission：生成章节导演脚本
+  -> build_visibility_context：裁剪写作可见蓝图和禁止角色
+  -> prepare_enhanced_context：按配置准备 constitution / persona / foreshadowing / faction
+  -> prepare_memory_context：按配置读取记忆层和项目长期记忆
+  -> prepare_retrieval_context：执行 simple RAG 或 two_stage RAG
+  -> build_writer_prompt：读取写作提示词并拼装 prompt_sections
+  -> generate_versions：生成版本，并执行护栏、JSON 提取、字数压缩
+  -> review_versions：多版本 AI 评审
+  -> apply_post_generation_reviews：可选 self_critique / reader_sim / consistency / optimizer / enrichment
+  -> persist_versions：replace_chapter_versions
+  -> build_response：返回 variants + review_summaries + debug_metadata
 ```
 
 ### 6.3 RAG 模式差异
@@ -468,7 +468,7 @@ KnowledgeRetrievalService.retrieve_and_filter
 
 ## 10. 当前实现注意点
 
-1. `PipelineOrchestrator.generate_chapter` 中构造 AI 评审上下文时使用了 `writer_context.get("writer_blueprint")`，但当前文件内未发现 `writer_context` 变量定义。这里疑似应使用 `visibility_context` 或前面得到的 `writer_blueprint`。该问题会影响 `POST /api/writer/advanced/generate` 的高级编排路径，本文档只记录现状，没有修改代码。
+1. `PipelineOrchestrator.generate_chapter` 当前通过 LangGraph 状态图执行高级章节生成；AI 评审上下文由 `_build_review_context` 构建，优先使用可见性裁剪后的 `writer_blueprint`。
 
 2. 前端当前章节生成入口仍是普通路径 `POST /api/writer/novels/{project_id}/chapters/generate`，不是高级编排器路径。
 

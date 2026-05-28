@@ -213,8 +213,8 @@ class DeleteChapterRequest(BaseModel):
 
 
 class GenerateOutlineRequest(BaseModel):
-    start_chapter: int
-    num_chapters: int
+    start_chapter: int = Field(..., ge=1)
+    num_chapters: int = Field(..., ge=1, le=20)
 
 
 class BlueprintPatch(BaseModel):

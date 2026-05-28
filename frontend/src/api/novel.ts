@@ -3,9 +3,11 @@ import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
 import { API_BASE_URL, API_PREFIX } from './base'
 import { HttpRequestError, requestJson, requestRaw, type HttpRequestOptions } from './http'
+import type { BackgroundTask } from './tasks'
 
 const DEFAULT_NOVEL_REQUEST_TIMEOUT_MS = 60_000
 const BLUEPRINT_GENERATION_TIMEOUT_MS = 480_000
+const CHAPTER_GENERATION_TIMEOUT_MS = 660_000
 
 // 统一的请求处理函数
 const request = async <T = any>(url: string, options: HttpRequestOptions = {}) => {
@@ -480,7 +482,8 @@ export class NovelAPI {
   static async generateChapter(projectId: string, chapterNumber: number): Promise<NovelProject> {
     return request(`${WRITER_BASE}/${projectId}/chapters/generate`, {
       method: 'POST',
-      body: JSON.stringify({ chapter_number: chapterNumber })
+      body: JSON.stringify({ chapter_number: chapterNumber }),
+      timeoutMs: CHAPTER_GENERATION_TIMEOUT_MS,
     })
   }
 
@@ -540,7 +543,7 @@ export class NovelAPI {
     projectId: string,
     startChapter: number,
     numChapters: number
-  ): Promise<NovelProject> {
+  ): Promise<BackgroundTask> {
     return request(`${WRITER_BASE}/${projectId}/chapters/outline`, {
       method: 'POST',
       body: JSON.stringify({

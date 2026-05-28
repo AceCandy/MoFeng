@@ -25,6 +25,7 @@ import {
   type OptimizeResponse,
 } from '@/api/novel'
 import { AdminAPI, type Chapter as AdminChapter } from '@/api/admin'
+import { tasksQueryKeys } from '@/queries/tasks'
 
 type ProjectIdSource = MaybeRefOrGetter<string | null | undefined>
 type ChapterNumberSource = MaybeRefOrGetter<number | null | undefined>
@@ -567,7 +568,7 @@ export function useDeleteChapterMutation(projectId: ProjectIdSource) {
 }
 
 export function useGenerateChapterOutlineMutation(projectId: ProjectIdSource) {
-  const { setProjectCache, refreshProjectQueries } = useNovelMutationRefresh(projectId)
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (payload: { startChapter: number; numChapters: number }) =>
@@ -576,9 +577,8 @@ export function useGenerateChapterOutlineMutation(projectId: ProjectIdSource) {
         payload.startChapter,
         payload.numChapters,
       ),
-    onSuccess: async (project) => {
-      setProjectCache(project)
-      await refreshProjectQueries(project.id)
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: tasksQueryKeys.all })
     },
   })
 }
