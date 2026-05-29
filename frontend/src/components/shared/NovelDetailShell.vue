@@ -147,7 +147,7 @@
                 v-if="isSectionLoading"
                 class="flex flex-col items-center justify-center py-20 sm:py-28"
               >
-                <div class="md-spinner"></div>
+                <div class="md-spinner"><span></span></div>
                 <p class="mt-4 md-body-medium" style="color: var(--md-on-surface-variant)">
                   加载中...
                 </p>

@@ -72,7 +72,7 @@
       aria-live="polite"
     >
       <div class="blueprint-state__inner">
-        <div class="md-spinner"></div>
+        <div class="md-spinner"><span></span></div>
         <p class="blueprint-state__title">分析情感数据中</p>
         <p class="blueprint-state__desc">正在读取章节情绪强度、主导情感与叙事波动。</p>
       </div>

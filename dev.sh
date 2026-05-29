@@ -131,7 +131,7 @@ is_port_available() {
   if "$port_check_python" - <<PY >/dev/null 2>&1
 import socket
 sock = socket.socket()
-sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+# 不启用 SO_REUSEADDR，避免 macOS 上把已有 127.0.0.1 监听误判为 0.0.0.0 可用。
 try:
     sock.bind(("$host", $port))
 except OSError:

@@ -1,110 +1,188 @@
 <!-- AIMETA P=提示词管理_AI提示模板管理|R=提示词CRUD|NR=不含模型调用|E=component:PromptManagement|X=ui|A=管理组件|D=vue|S=dom,net|RD=./README.ai -->
 <template>
   <section class="admin-panel admin-panel--list">
-    <div class="admin-panel__header admin-panel__header--toolbar">
-      <n-space :size="12" class="admin-panel__actions">
-        <n-button quaternary size="small" @click="fetchPrompts" :loading="loading">
-          刷新
-        </n-button>
-        <n-button type="primary" size="small" @click="openCreateModal">
-          新建 Prompt
-        </n-button>
-      </n-space>
-    </div>
-
     <div class="admin-panel__body">
       <n-alert v-if="error" type="error" closable @close="error = null">
         {{ error }}
       </n-alert>
 
       <n-spin :show="loading">
-        <div class="admin-table-shell prompt-layout" :class="{ mobile: isMobile }">
-          <div class="prompt-sidebar">
-            <div class="sidebar-header">
-              <span class="sidebar-title">Prompt 列表</span>
-              <n-tag size="small" type="info" round>{{ prompts.length }}</n-tag>
+        <div class="admin-ops">
+          <div class="admin-ops__summary">
+            <div class="admin-ops__copy">
+              <h2>提示词管理中心</h2>
+              <p>按唯一标识维护系统 Prompt 模板，编辑前先确认标签、用途和正文完整度。</p>
             </div>
-            <n-scrollbar class="prompt-scroll">
-              <n-empty v-if="!prompts.length && !loading" description="暂无提示词" />
-              <div v-else class="prompt-list">
-                <button
-                  v-for="prompt in prompts"
-                  :key="prompt.id"
-                  type="button"
-                  :class="['prompt-list-item', { active: selectedPrompt?.id === prompt.id }]"
-                  @click="selectPrompt(prompt)"
-                >
-                  <div class="prompt-item-main">
-                    <span class="prompt-item-title">{{ prompt.title || prompt.name }}</span>
-                    <span class="prompt-item-key">{{ prompt.name }}</span>
-                  </div>
-                  <n-tag
-                    v-if="prompt.tags?.length"
-                    size="tiny"
-                    round
-                    :type="selectedPrompt?.id === prompt.id ? 'success' : 'info'"
-                  >
-                    {{ prompt.tags.length }} 标签
-                  </n-tag>
-                  <span v-else class="prompt-item-meta">无标签</span>
-                </button>
-              </div>
-            </n-scrollbar>
+            <n-space :size="12" class="admin-panel__actions admin-ops__toolbar">
+              <n-button quaternary size="small" @click="fetchPrompts" :loading="loading">
+                刷新
+              </n-button>
+              <n-button type="primary" size="small" @click="openCreateModal">
+                新建 Prompt
+              </n-button>
+            </n-space>
           </div>
 
-          <div class="prompt-editor">
-            <div v-if="!selectedPrompt" class="empty-editor">
-              <n-empty description="请选择一个提示词以编辑" />
-            </div>
-            <div v-else class="editor-content">
-              <n-form label-placement="top" :model="editForm">
-                <n-form-item label="唯一标识">
-                  <n-input v-model:value="editForm.name" disabled />
-                </n-form-item>
-                <n-form-item label="标题">
-                  <n-input
-                    v-model:value="editForm.title"
-                    placeholder="用于后台识别的标题，可为空"
-                  />
-                </n-form-item>
-                <n-form-item label="标签">
-                  <n-dynamic-tags
-                    v-model:value="editForm.tags"
-                    size="small"
-                    placeholder="输入标签后回车"
-                  />
-                </n-form-item>
-                <n-form-item label="提示词内容">
-                  <n-input
-                    v-model:value="editForm.content"
-                    type="textarea"
-                    :autosize="{ minRows: isMobile ? 8 : 16, maxRows: 40 }"
-                    placeholder="请输入完整的提示词内容..."
-                    class="prompt-textarea"
-                  />
-                </n-form-item>
-              </n-form>
-              <n-space justify="end">
-                <n-popconfirm
-                  v-if="selectedPrompt"
-                  placement="bottom"
-                  positive-text="删除"
-                  negative-text="取消"
-                  type="error"
-                  @positive-click="deletePrompt"
-                >
-                  <template #trigger>
-                    <n-button type="error" quaternary :loading="deleting">
-                      删除
-                    </n-button>
-                  </template>
-                  确认删除该 Prompt？
-                </n-popconfirm>
-                <n-button type="primary" :loading="saving" @click="savePrompt">
-                  保存修改
-                </n-button>
-              </n-space>
-            </div>
+          <div class="admin-ops__metrics">
+            <article class="admin-ops__metric">
+              <p>Prompt 总数</p>
+              <strong>{{ prompts.length }}</strong>
+              <span>可维护模板</span>
+            </article>
+            <article class="admin-ops__metric">
+              <p>已打标签</p>
+              <strong>{{ taggedPrompts.length }}</strong>
+              <span>便于场景归档</span>
+            </article>
+            <article class="admin-ops__metric">
+              <p>当前标签</p>
+              <strong>{{ editForm.tags.length }}</strong>
+              <span>{{ selectedPrompt ? '已选 Prompt' : '未选择' }}</span>
+            </article>
+            <article class="admin-ops__metric">
+              <p>正文长度</p>
+              <strong>{{ selectedPromptContentLength }}</strong>
+              <span>当前模板字符数</span>
+            </article>
+          </div>
+
+          <div class="admin-ops__grid">
+            <article class="admin-panel-card admin-panel-card--wide">
+              <header>
+                <div>
+                  <h3>模板编辑台</h3>
+                  <p>左侧选择模板，右侧维护标题、标签和正文。</p>
+                </div>
+                <n-tag size="small" type="info" :bordered="false">{{ prompts.length }} 条</n-tag>
+              </header>
+              <div class="admin-table-shell prompt-layout" :class="{ mobile: isMobile }">
+                <div class="prompt-sidebar">
+                  <div class="sidebar-header">
+                    <span class="sidebar-title">Prompt 列表</span>
+                    <n-tag size="small" type="info" round>{{ prompts.length }}</n-tag>
+                  </div>
+                  <n-scrollbar class="prompt-scroll">
+                    <n-empty v-if="!prompts.length && !loading" description="暂无提示词" />
+                    <div v-else class="prompt-list">
+                      <button
+                        v-for="prompt in prompts"
+                        :key="prompt.id"
+                        type="button"
+                        :class="['prompt-list-item', { active: selectedPrompt?.id === prompt.id }]"
+                        @click="selectPrompt(prompt)"
+                      >
+                        <div class="prompt-item-main">
+                          <span class="prompt-item-title">{{ prompt.title || prompt.name }}</span>
+                          <span class="prompt-item-key">{{ prompt.name }}</span>
+                        </div>
+                        <n-tag
+                          v-if="prompt.tags?.length"
+                          size="tiny"
+                          round
+                          :type="selectedPrompt?.id === prompt.id ? 'success' : 'info'"
+                        >
+                          {{ prompt.tags.length }} 标签
+                        </n-tag>
+                        <span v-else class="prompt-item-meta">无标签</span>
+                      </button>
+                    </div>
+                  </n-scrollbar>
+                </div>
+
+                <div class="prompt-editor">
+                  <div v-if="!selectedPrompt" class="empty-editor">
+                    <n-empty description="请选择一个提示词以编辑" />
+                  </div>
+                  <div v-else class="editor-content">
+                    <n-form label-placement="top" :model="editForm">
+                      <n-form-item label="唯一标识">
+                        <n-input v-model:value="editForm.name" disabled />
+                      </n-form-item>
+                      <n-form-item label="标题">
+                        <n-input
+                          v-model:value="editForm.title"
+                          placeholder="用于后台识别的标题，可为空"
+                        />
+                      </n-form-item>
+                      <n-form-item label="标签">
+                        <n-dynamic-tags
+                          v-model:value="editForm.tags"
+                          size="small"
+                          placeholder="输入标签后回车"
+                        />
+                      </n-form-item>
+                      <n-form-item label="提示词内容">
+                        <n-input
+                          v-model:value="editForm.content"
+                          type="textarea"
+                          :autosize="{ minRows: isMobile ? 8 : 16, maxRows: 40 }"
+                          placeholder="请输入完整的提示词内容..."
+                          class="prompt-textarea"
+                        />
+                      </n-form-item>
+                    </n-form>
+                    <n-space justify="end">
+                      <n-popconfirm
+                        v-if="selectedPrompt"
+                        placement="bottom"
+                        positive-text="删除"
+                        negative-text="取消"
+                        type="error"
+                        @positive-click="deletePrompt"
+                      >
+                        <template #trigger>
+                          <n-button type="error" quaternary :loading="deleting">
+                            删除
+                          </n-button>
+                        </template>
+                        确认删除该 Prompt？
+                      </n-popconfirm>
+                      <n-button type="primary" :loading="saving" @click="savePrompt">
+                        保存修改
+                      </n-button>
+                    </n-space>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="admin-panel-card">
+              <header>
+                <div>
+                  <h3>标签巡检</h3>
+                  <p>未打标签的模板更难排查调用边界。</p>
+                </div>
+              </header>
+              <ul class="admin-insight-list prompt-status-list">
+                <li>
+                  <strong>{{ taggedPrompts.length }} 条已打标签</strong>
+                  <span>保留清晰用途和阶段归属。</span>
+                </li>
+                <li>
+                  <strong>{{ untaggedPrompts.length }} 条未打标签</strong>
+                  <span>建议补充标签减少维护成本。</span>
+                </li>
+              </ul>
+            </article>
+
+            <article class="admin-panel-card">
+              <header>
+                <div>
+                  <h3>当前模板</h3>
+                  <p>保存前确认唯一标识不变，正文不能为空。</p>
+                </div>
+              </header>
+              <ul class="admin-insight-list prompt-status-list">
+                <li>
+                  <strong>{{ selectedPrompt?.name || '未选择' }}</strong>
+                  <span>{{ selectedPrompt?.title || '选择一个 Prompt 后查看标题' }}</span>
+                </li>
+                <li>
+                  <strong>{{ selectedPromptContentLength }} 字符</strong>
+                  <span>当前正文长度。</span>
+                </li>
+              </ul>
+            </article>
           </div>
         </div>
       </n-spin>
@@ -178,6 +256,8 @@ const updatePromptMutation = useUpdateAdminPromptMutation()
 const deletePromptMutation = useDeleteAdminPromptMutation()
 const prompts = computed<PromptItem[]>(() => promptsQuery.data.value ?? [])
 const selectedPrompt = ref<PromptItem | null>(null)
+const taggedPrompts = computed(() => prompts.value.filter((prompt) => (prompt.tags?.length ?? 0) > 0))
+const untaggedPrompts = computed(() => prompts.value.filter((prompt) => !(prompt.tags?.length)))
 const loading = computed(() => promptsQuery.isLoading.value || promptsQuery.isFetching.value)
 const saving = computed(() => updatePromptMutation.isPending.value)
 const deleting = computed(() => deletePromptMutation.isPending.value)
@@ -199,6 +279,7 @@ const editForm = reactive({
   content: '',
   tags: [] as string[]
 })
+const selectedPromptContentLength = computed(() => editForm.content.trim().length)
 
 const createModalVisible = ref(false)
 const createForm = reactive<PromptCreatePayload>({
@@ -408,6 +489,7 @@ const createPrompt = async () => {
   align-items: stretch;
   gap: 20px;
   min-height: 420px;
+  margin-top: var(--md-spacing-4);
 }
 
 .prompt-layout.mobile {
@@ -421,7 +503,7 @@ const createPrompt = async () => {
   flex-direction: column;
   background-color: var(--md-surface-container-low);
   border: 1px solid var(--md-outline-variant);
-  border-radius: 14px;
+  border-radius: var(--md-radius-lg);
   padding: 12px;
 }
 
@@ -463,7 +545,7 @@ const createPrompt = async () => {
 .prompt-list-item {
   width: 100%;
   border: 1px solid var(--md-outline-variant);
-  border-radius: 10px;
+  border-radius: var(--md-radius-sm);
   background-color: var(--md-surface);
   padding: 10px 12px;
   display: flex;
@@ -558,6 +640,24 @@ const createPrompt = async () => {
 
 .prompt-modal {
   max-width: min(720px, 90vw);
+}
+
+.prompt-status-list strong,
+.prompt-status-list span {
+  display: block;
+}
+
+.prompt-status-list strong {
+  color: var(--md-on-surface);
+  font-size: var(--md-label-large);
+  overflow-wrap: anywhere;
+}
+
+.prompt-status-list span {
+  margin-top: 4px;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-small);
+  line-height: 1.5;
 }
 
 @media (max-width: 1199px) {

@@ -105,7 +105,7 @@
       aria-live="polite"
     >
       <div class="blueprint-state__inner">
-        <div class="md-spinner"></div>
+        <div class="md-spinner"><span></span></div>
         <p class="blueprint-state__title">加载伏笔数据中</p>
         <p class="blueprint-state__desc">正在整理线索的埋设、回收与逾期状态。</p>
       </div>

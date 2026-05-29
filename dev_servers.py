@@ -128,7 +128,7 @@ def _ensure_backend_environment(repo_root: Path, backend_dir: Path) -> str:
 
 def _is_port_available(host: str, port: int) -> bool:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    # 不启用 SO_REUSEADDR，避免 macOS 上把已有 127.0.0.1 监听误判为 0.0.0.0 可用。
     try:
         sock.bind((host, port))
     except OSError:

@@ -1,12 +1,6 @@
 <!-- AIMETA P=统计面板_系统使用统计|R=统计图表|NR=不含数据修改|E=component:Statistics|X=ui|A=统计组件|D=vue|S=dom,net|RD=./README.ai -->
 <template>
   <section class="admin-panel statistics-panel">
-    <div class="admin-panel__header admin-panel__header--toolbar">
-      <n-button quaternary size="small" @click="fetchStats" :loading="loading">
-        刷新
-      </n-button>
-    </div>
-
     <div class="admin-panel__body">
       <n-alert v-if="error" type="error" closable @close="error = null" style="margin-bottom: var(--md-spacing-4);">
         {{ error }}
@@ -14,14 +8,10 @@
 
       <n-spin :show="loading">
         <div class="admin-ops">
-          <div class="admin-ops__hero">
-            <div>
-              <p class="admin-eyebrow">系统运营控制台</p>
-              <h2>数据总览</h2>
-              <p>
-                统一查看平台规模、项目活跃度与日志流，快速定位当前需要处理的运营动作。
-              </p>
-            </div>
+          <div class="admin-ops__toolbar">
+            <n-button quaternary size="small" @click="fetchStats" :loading="loading" class="admin-ops__refresh-btn">
+              刷新
+            </n-button>
           </div>
 
           <div class="admin-ops__metrics">
@@ -246,9 +236,14 @@ watch(
   gap: var(--md-spacing-4);
 }
 
-.admin-panel__header {
+.admin-ops__toolbar {
   display: flex;
   justify-content: flex-end;
+  margin-bottom: calc(-1 * var(--md-spacing-2));
+}
+
+.admin-ops__refresh-btn {
+  flex-shrink: 0;
 }
 
 .admin-ops {
@@ -269,36 +264,6 @@ watch(
 :global(.dark) .admin-ops {
   border-color: var(--md-outline) !important;
   box-shadow: 4px 4px 0px rgba(13, 16, 17, 0.5) !important;
-}
-
-.admin-eyebrow {
-  margin: 0;
-  color: var(--md-secondary) !important; /* 朱砂红，像印章般醒目 */
-  font-family: var(--md-font-serif) !important;
-  font-size: var(--md-label-large);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.admin-ops h2 {
-  margin: 10px 0 0;
-  font-size: clamp(1.4rem, 2vw, 1.95rem);
-  color: var(--md-on-surface);
-  /* 宋体大标题与字距拉伸规则 */
-  font-family: var(--md-font-display) !important;
-  letter-spacing: 0.06em !important;
-  font-weight: 600 !important;
-}
-
-.admin-ops p {
-  margin: var(--md-spacing-3) 0 0;
-  color: var(--md-on-surface-variant);
-  line-height: 1.7;
-  max-width: 72ch;
-  /* 备注使用楷体展现水墨感 */
-  font-family: var(--md-font-kai) !important;
-  font-size: 15px;
 }
 
 .admin-ops__metrics {
@@ -493,7 +458,7 @@ watch(
   font-family: var(--md-font-mono);
 }
 
-@media (max-width: 1199px) {
+@media (max-width: 960px) {
   .admin-ops__metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -507,7 +472,7 @@ watch(
   }
 }
 
-@media (max-width: 833px) {
+@media (max-width: 600px) {
   .admin-ops {
     padding: var(--md-spacing-4);
     border-radius: var(--md-radius-sm) !important;

@@ -14,6 +14,13 @@
 :root,
 :root[data-theme='light'] {
   color-scheme: light;
+  /* 水墨扩散加载设计 Token (白天) */
+  --ink-core: #1f1f1f;
+  --ink-mid: rgba(31, 31, 31, 0.45);
+  --ink-soft: rgba(31, 31, 31, 0.08);
+  --ink-shadow: transparent;
+  --ink-accent: #b3261e;
+
   /* 墨风国风配色系统 */
   --md-google-blue: #2e5c8a; /* 石青 */
   --md-google-red: #b83c32; /* 朱砂 */
@@ -178,6 +185,12 @@
 
 :root[data-theme='dark'] {
   color-scheme: dark;
+  /* 水墨扩散加载设计 Token (黑夜) */
+  --ink-core: #d8c7a3;
+  --ink-mid: rgba(216, 199, 163, 0.34);
+  --ink-soft: rgba(216, 199, 163, 0.07);
+  --ink-shadow: rgba(216, 199, 163, 0.2);
+  --ink-accent: #c9473f;
 
   /* 深夜书房 Midnight Study 暗色模式 */
   --md-primary: #e5dec9; /* 素骨黄，温润高可读 */
@@ -1970,6 +1983,156 @@ button.md-chip,
   flex-wrap: wrap;
 }
 
+:where(.admin-ops) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-5);
+  padding: clamp(var(--md-spacing-5), 4vw, var(--md-spacing-8));
+  border: 3px double var(--md-outline);
+  border-radius: var(--md-radius-sm);
+  background-color: var(--md-surface);
+  box-shadow: 4px 4px 0 rgba(28, 32, 34, 0.15);
+}
+
+:where(.admin-ops__summary) {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--md-spacing-4);
+  flex-wrap: wrap;
+}
+
+:where(.admin-ops__copy) {
+  max-width: 760px;
+  min-width: 0;
+}
+
+:where(.admin-ops__copy h2) {
+  margin: 0;
+  color: var(--md-on-surface);
+  font-family: var(--md-font-display);
+  font-size: var(--md-headline-medium);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.05em;
+}
+
+:where(.admin-ops__copy p) {
+  margin: var(--md-spacing-2) 0 0;
+  color: var(--md-on-surface-variant);
+  font-family: var(--md-font-kai);
+  font-size: var(--md-body-large);
+  line-height: 1.6;
+}
+
+:where(.admin-ops__toolbar) {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--md-spacing-2);
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
+:where(.admin-ops__metrics) {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--md-spacing-4);
+}
+
+:where(.admin-ops__metric) {
+  padding: var(--md-spacing-4);
+  border: 1px solid var(--md-outline);
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-surface-container-low);
+  box-shadow: 2px 2px 0 rgba(28, 32, 34, 0.05);
+  min-width: 0;
+}
+
+:where(.admin-ops__metric p) {
+  margin: 0;
+  color: var(--md-on-surface-variant);
+  font-family: var(--md-font-serif);
+  font-size: var(--md-body-small);
+}
+
+:where(.admin-ops__metric strong) {
+  display: block;
+  margin: var(--md-spacing-2) 0 5px;
+  color: var(--md-primary);
+  font-family: var(--md-font-mono);
+  font-size: var(--md-display-small);
+  font-weight: 600;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+:where(.admin-ops__metric span) {
+  display: block;
+  color: var(--md-on-surface-variant);
+  font-family: var(--md-font-kai);
+  font-size: var(--md-body-small);
+  line-height: 1.45;
+}
+
+:where(.admin-ops__grid) {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--md-spacing-4);
+}
+
+:where(.admin-panel-card) {
+  min-width: 0;
+  padding: var(--md-spacing-4);
+  border: 3px double var(--md-outline);
+  border-radius: var(--md-radius-sm);
+  background-color: var(--md-surface);
+  box-shadow: 3px 3px 0 rgba(28, 32, 34, 0.08);
+}
+
+:where(.admin-panel-card--wide) {
+  grid-column: 1 / -1;
+}
+
+:where(.admin-panel-card header) {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--md-spacing-3);
+  flex-wrap: wrap;
+}
+
+:where(.admin-panel-card h3) {
+  margin: 0;
+  color: var(--md-on-surface);
+  font-family: var(--md-font-display);
+  font-size: var(--md-title-medium);
+  letter-spacing: 0.05em;
+}
+
+:where(.admin-panel-card header p) {
+  margin: 6px 0 0;
+  color: var(--md-on-surface-variant);
+  font-family: var(--md-font-kai);
+  font-size: var(--md-body-small);
+}
+
+:where(.admin-insight-list) {
+  margin: var(--md-spacing-4) 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-2);
+}
+
+:where(.admin-insight-list li) {
+  padding: var(--md-spacing-3);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-surface-container-lowest);
+}
+
 :where(.admin-table-shell) {
   overflow: hidden;
   border: 1px solid var(--md-outline-variant);
@@ -1993,6 +2156,28 @@ button.md-chip,
 }
 
 @media (max-width: 833px) {
+  :where(.admin-ops) {
+    padding: var(--md-spacing-4);
+  }
+
+  :where(.admin-ops__summary) {
+    flex-direction: column;
+  }
+
+  :where(.admin-ops__toolbar) {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  :where(.admin-ops__toolbar) > * {
+    flex: 1 1 100%;
+  }
+
+  :where(.admin-ops__metrics),
+  :where(.admin-ops__grid) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   :where(.admin-panel__header) {
     align-items: stretch;
     flex-direction: column;
@@ -2553,6 +2738,160 @@ body .md-textarea:focus {
   color: var(--md-primary) !important;
 }
 
+/* 2.6 Naive UI 按钮全局魔改 (n-button) */
+.n-button {
+  --n-font-family: var(--md-font-family) !important;
+  --n-font-weight: 500 !important;
+  --n-border-radius: var(--md-radius-xs) !important;
+  transition:
+    background-color var(--md-duration-medium) var(--md-easing-standard),
+    border-color var(--md-duration-medium) var(--md-easing-standard),
+    color var(--md-duration-medium) var(--md-easing-standard),
+    box-shadow var(--md-duration-medium) var(--md-easing-standard) !important;
+}
+
+/* 1. Default (outlined 风格) */
+.n-button.n-button--default-type:not(.n-button--quaternary):not(.n-button--tertiary):not(.n-button--secondary) {
+  --n-color: transparent !important;
+  --n-color-hover: var(--md-surface-dim) !important;
+  --n-color-pressed: var(--md-surface-container) !important;
+  --n-color-focus: transparent !important;
+  --n-text-color: var(--md-primary) !important;
+  --n-text-color-hover: var(--md-primary-dark) !important;
+  --n-text-color-pressed: var(--md-primary-dark) !important;
+  --n-text-color-focus: var(--md-primary) !important;
+  --n-border: 1px solid var(--md-outline) !important;
+  --n-border-hover: 1px solid var(--md-primary) !important;
+  --n-border-pressed: 1px solid var(--md-primary) !important;
+  --n-border-focus: 1px solid var(--md-primary) !important;
+}
+
+/* 2. Primary (filled 风格) */
+.n-button.n-button--primary-type {
+  --n-color: var(--md-primary) !important;
+  --n-color-hover: var(--md-primary-dark) !important;
+  --n-color-pressed: var(--md-primary-dark) !important;
+  --n-color-focus: var(--md-primary) !important;
+  --n-text-color: var(--md-on-primary) !important;
+  --n-text-color-hover: var(--md-on-primary) !important;
+  --n-text-color-pressed: var(--md-on-primary) !important;
+  --n-text-color-focus: var(--md-on-primary) !important;
+  --n-border: 1px solid var(--md-outline) !important;
+  --n-border-hover: 1px solid var(--md-primary) !important;
+  --n-border-pressed: 1px solid var(--md-primary) !important;
+  --n-border-focus: 1px solid var(--md-primary) !important;
+  box-shadow: var(--md-shadow-primary-1) !important;
+}
+.n-button.n-button--primary-type:active {
+  box-shadow: none !important;
+  transform: translate(1px, 1px) !important;
+}
+
+/* 3. Secondary 按钮 (使用 container 暖灰背景) */
+.n-button.n-button--secondary {
+  --n-color: var(--md-surface-container-low) !important;
+  --n-color-hover: var(--md-surface-container) !important;
+  --n-color-pressed: var(--md-surface-container-high) !important;
+  --n-color-focus: var(--md-surface-container-low) !important;
+  --n-text-color: var(--md-primary) !important;
+  --n-text-color-hover: var(--md-primary-dark) !important;
+  --n-text-color-pressed: var(--md-primary-dark) !important;
+  --n-text-color-focus: var(--md-primary) !important;
+  --n-border: 1px solid var(--md-outline-variant) !important;
+  --n-border-hover: 1px solid var(--md-outline) !important;
+  --n-border-pressed: 1px solid var(--md-outline) !important;
+  --n-border-focus: 1px solid var(--md-outline-variant) !important;
+}
+
+/* 4. Quaternary / Tertiary 按钮 (无背景/边框文字按钮) */
+.n-button.n-button--quaternary,
+.n-button.n-button--tertiary {
+  --n-color: transparent !important;
+  --n-color-hover: var(--md-state-layer-hover) !important;
+  --n-color-pressed: var(--md-state-layer-pressed) !important;
+  --n-color-focus: transparent !important;
+  --n-text-color: var(--md-primary) !important;
+  --n-text-color-hover: var(--md-primary-dark) !important;
+  --n-text-color-pressed: var(--md-primary-dark) !important;
+  --n-text-color-focus: var(--md-primary) !important;
+  --n-border: 1px solid transparent !important;
+  --n-border-hover: 1px solid transparent !important;
+  --n-border-pressed: 1px solid transparent !important;
+  --n-border-focus: 1px solid transparent !important;
+}
+
+/* 5. Error 语义按钮 */
+.n-button.n-button--error-type {
+  --n-color: var(--md-error) !important;
+  --n-color-hover: var(--md-error-strong, var(--md-error)) !important;
+  --n-color-pressed: var(--md-error-strong, var(--md-error)) !important;
+  --n-color-focus: var(--md-error) !important;
+  --n-text-color: var(--md-on-error) !important;
+  --n-text-color-hover: var(--md-on-error) !important;
+  --n-text-color-pressed: var(--md-on-error) !important;
+  --n-text-color-focus: var(--md-on-error) !important;
+  --n-border: 1px solid var(--md-error) !important;
+  --n-border-hover: 1px solid var(--md-error-strong, var(--md-error)) !important;
+  --n-border-pressed: 1px solid var(--md-error-strong, var(--md-error)) !important;
+  --n-border-focus: 1px solid var(--md-error) !important;
+}
+
+.n-button.n-button--error-type.n-button--secondary {
+  --n-color: var(--md-error-container) !important;
+  --n-color-hover: var(--md-error-container) !important;
+  --n-color-pressed: var(--md-error-container) !important;
+  --n-color-focus: var(--md-error-container) !important;
+  --n-text-color: var(--md-error-text) !important;
+  --n-text-color-hover: var(--md-error-text) !important;
+  --n-text-color-pressed: var(--md-error-text) !important;
+  --n-text-color-focus: var(--md-error-text) !important;
+  --n-border: 1px solid transparent !important;
+}
+
+.n-button.n-button--error-type.n-button--quaternary {
+  --n-color: transparent !important;
+  --n-color-hover: var(--md-state-layer-hover) !important;
+  --n-color-pressed: var(--md-state-layer-pressed) !important;
+  --n-text-color: var(--md-error) !important;
+  --n-text-color-hover: var(--md-error-strong, var(--md-error)) !important;
+  --n-text-color-pressed: var(--md-error-strong, var(--md-error)) !important;
+  --n-text-color-focus: var(--md-error) !important;
+}
+
+/* 6. Success 语义按钮 */
+.n-button.n-button--success-type {
+  --n-color: var(--md-success) !important;
+  --n-color-hover: var(--md-success) !important;
+  --n-color-pressed: var(--md-success) !important;
+  --n-color-focus: var(--md-success) !important;
+  --n-text-color: var(--md-on-success) !important;
+  --n-text-color-hover: var(--md-on-success) !important;
+  --n-text-color-pressed: var(--md-on-success) !important;
+  --n-text-color-focus: var(--md-on-success) !important;
+  --n-border: 1px solid var(--md-success) !important;
+}
+
+.n-button.n-button--success-type.n-button--secondary {
+  --n-color: var(--md-success-container) !important;
+  --n-color-hover: var(--md-success-container) !important;
+  --n-color-pressed: var(--md-success-container) !important;
+  --n-text-color: var(--md-success-text) !important;
+  --n-text-color-hover: var(--md-success-text) !important;
+  --n-text-color-pressed: var(--md-success-text) !important;
+  --n-text-color-focus: var(--md-success-text) !important;
+  --n-border: 1px solid transparent !important;
+}
+
+.n-button.n-button--success-type.n-button--quaternary {
+  --n-color: transparent !important;
+  --n-color-hover: var(--md-state-layer-hover) !important;
+  --n-color-pressed: var(--md-state-layer-pressed) !important;
+  --n-text-color: var(--md-success) !important;
+  --n-text-color-hover: var(--md-success) !important;
+  --n-text-color-pressed: var(--md-success) !important;
+  --n-text-color-focus: var(--md-success) !important;
+}
+
 /* ============================================
    3. 特色手抄书法朱批与水墨太极加载
    ============================================ */
@@ -2573,22 +2912,100 @@ body .md-textarea:focus {
   letter-spacing: 0.06em !important;
 }
 
-/* 水墨阴阳太极旋转加载动画（替代现代圆圈加载，极具国风神韵） */
+/* 水墨扩散加载动画（水墨洇染，三层交替渐隐扩散） */
+body .md-spinner {
+  position: relative !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
 body .md-spinner,
 .n-spin-body {
+  width: 160px !important;
+  height: 160px !important;
+  background: transparent !important;
   border: none !important;
-  width: 44px !important;
-  height: 44px !important;
+  box-shadow: none !important;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* 隐藏独立的 n-spin 默认 SVG，但允许 .n-spin-body 内部的 SVG 显示并作为第一波水墨扩散层 */
+.n-spin svg {
+  display: none !important;
+}
+
+.n-spin-body svg {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* 隐藏 Naive UI 默认 SVG 内部的所有具体子线条元素，保持其为干净的容器 */
+.n-spin-body svg * {
+  display: none !important;
+}
+
+/* 三层水墨扩散波的公共样式与径向渐变 */
+body .md-spinner span,
+.n-spin-body svg,
+body .md-spinner::before,
+.n-spin-body::before,
+body .md-spinner::after,
+.n-spin-body::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
   border-radius: 50% !important;
-  /* 阴阳太极图案的纯 CSS 渐变实现 */
-  background:
-    radial-gradient(circle at 50% 25%, var(--md-primary) 12%, transparent 12%),
-    radial-gradient(circle at 50% 75%, var(--md-on-primary) 12%, transparent 12%),
-    radial-gradient(circle at 50% 25%, var(--md-on-primary) 25%, transparent 25%),
-    radial-gradient(circle at 50% 75%, var(--md-primary) 25%, transparent 25%),
-    linear-gradient(90deg, var(--md-primary) 50%, var(--md-on-primary) 50%) !important;
-  box-shadow: 2px 2px 5px rgba(28, 32, 34, 0.12) !important;
-  animation: md-spin 2.2s linear infinite !important;
+  background: radial-gradient(
+    circle,
+    var(--ink-core) 0%,
+    var(--ink-mid) 36%,
+    var(--ink-soft) 62%,
+    transparent 76%
+  ) !important;
+  filter: blur(2px) drop-shadow(0 0 16px var(--ink-shadow)) !important;
+  animation: inkSpread 1.8s ease-in-out infinite !important;
+  transform-origin: center !important;
+}
+
+/* 第一层扩散波（无延迟） */
+body .md-spinner span,
+.n-spin-body svg {
+  animation-delay: 0s !important;
+}
+
+/* 第二层扩散波（延迟 0.38s，并带有初始状态的 scale） */
+body .md-spinner::before,
+.n-spin-body::before {
+  animation-delay: 0.38s !important;
+  opacity: 0.68;
+  transform: scale(0.72);
+}
+
+/* 第三层扩散波（延迟 0.76s，并带有初始状态的 scale） */
+body .md-spinner::after,
+.n-spin-body::after {
+  animation-delay: 0.76s !important;
+  opacity: 0.44;
+  transform: scale(0.48);
+}
+
+@keyframes inkSpread {
+  0% {
+    transform: scale(0.16) rotate(0deg);
+    opacity: 0.96;
+  }
+  45% {
+    transform: scale(0.92) rotate(16deg);
+    opacity: 0.48;
+  }
+  100% {
+    transform: scale(1.35) rotate(28deg);
+    opacity: 0;
+  }
 }
 
 /* 优化正在生成中的过渡水墨呼吸动画 */
@@ -2897,23 +3314,7 @@ body .md-spinner {
   position: relative !important;
 }
 
-body .md-spinner::before {
-  content: '' !important;
-  position: absolute !important;
-  inset: -6px !important;
-  border-radius: 50% !important;
-  /* 飞舞在太极外圈的泼墨风暴气旋环线 */
-  border: 2px dashed rgba(28, 32, 34, 0.22) !important;
-  border-top-color: transparent !important;
-  border-bottom-color: transparent !important;
-  animation: md-spin 1.4s ease-in-out infinite !important;
-}
-
-:root[data-theme='dark'] body .md-spinner::before {
-  border-color: rgba(229, 222, 201, 0.18) !important;
-  border-top-color: transparent !important;
-  border-bottom-color: transparent !important;
-}
+/* 已移除太极外圈气旋，统一使用水墨扩散动画 */
 
 /* ============================================
    7. 顶部 Header 注入「墨風」专属金石篆印 LOGO
@@ -4612,4 +5013,3 @@ html:hover {
   border: none !important;
   box-shadow: none !important;
 }
-

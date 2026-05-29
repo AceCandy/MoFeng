@@ -77,7 +77,7 @@
           aria-live="polite"
         >
           <div class="blueprint-state__inner">
-            <div class="md-spinner mx-auto mb-3"></div>
+            <div class="md-spinner mx-auto mb-3"><span></span></div>
             <p class="blueprint-state__title">加载章节材料中</p>
             <p class="blueprint-state__desc">正在读取正文、版本与评审记录。</p>
           </div>

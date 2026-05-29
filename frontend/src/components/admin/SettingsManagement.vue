@@ -1,328 +1,372 @@
 <!-- AIMETA P=设置管理_系统设置界面|R=系统配置表单|NR=不含用户设置|E=component:SettingsManagement|X=ui|A=设置组件|D=vue|S=dom,net|RD=./README.ai -->
 <template>
-  <n-space vertical size="large" class="admin-settings">
-    <n-card :bordered="false" class="overview-card">
-      <div class="overview-header">
-        <div class="overview-copy">
-          <h3 class="overview-title">系统配置中心</h3>
-          <p class="overview-subtitle">
-            常用配置建议通过下方快捷卡片维护，避免误改关键键值；复杂配置可在表格中检索和编辑。
-          </p>
+  <section class="admin-panel admin-settings">
+    <div class="admin-panel__body">
+      <div class="admin-ops">
+        <div class="admin-ops__summary">
+          <div class="admin-ops__copy">
+            <h2>系统配置中心</h2>
+            <p>常用配置通过快捷卡片维护，复杂键值在表格中检索和编辑，避免误改关键项。</p>
+          </div>
+          <n-space class="admin-ops__toolbar" :size="8">
+            <n-tag type="success" :bordered="false">配置总数 {{ configs.length }}</n-tag>
+            <n-tag type="warning" :bordered="false">托管项 {{ managedConfigs.length }}</n-tag>
+            <n-tag :bordered="false">普通项 {{ customConfigsCount }}</n-tag>
+          </n-space>
         </div>
-        <n-space class="overview-tags" :size="8">
-          <n-tag type="success" :bordered="false">配置总数 {{ configs.length }}</n-tag>
-          <n-tag type="warning" :bordered="false">托管项 {{ managedConfigs.length }}</n-tag>
-          <n-tag :bordered="false">普通项 {{ customConfigsCount }}</n-tag>
-        </n-space>
-      </div>
-    </n-card>
 
-    <div class="meta-grid">
-      <n-card :bordered="false" class="meta-card">
-        <template #header>
-          <div class="card-header">
-            <div>
-              <span class="card-title">配置健康状态</span>
-              <p class="card-subtitle">快速确认关键配置是否处于可用状态。</p>
-            </div>
-          </div>
-        </template>
-        <div class="health-grid">
-          <div class="health-item">
-            <div class="health-label">章节候选版本数</div>
-            <div class="health-value">{{ chapterVersionCount }}</div>
-            <n-tag :type="chapterVersionHealthy ? 'success' : 'error'" :bordered="false">
-              {{ chapterVersionHealthy ? '有效' : '异常' }}
-            </n-tag>
-          </div>
-          <div class="health-item">
-            <div class="health-label">章节目标字数</div>
-            <div class="health-value">{{ chapterWordLimit }}</div>
-            <n-tag :type="chapterWordLimitHealthy ? 'success' : 'error'" :bordered="false">
-              {{ chapterWordLimitHealthy ? '有效' : '过低' }}
-            </n-tag>
-          </div>
-          <div class="health-item">
-            <div class="health-label">版本信息源地址</div>
-            <div class="health-value health-value-url" :title="normalizedVersionInfoUrl || '未配置'">
-              {{ normalizedVersionInfoUrl || '未配置' }}
-            </div>
-            <n-tag :type="versionSourceHealthy ? 'success' : 'warning'" :bordered="false">
-              {{ versionSourceHealthy ? '可解析 URL' : '待配置' }}
-            </n-tag>
-          </div>
-          <div class="health-item">
-            <div class="health-label">远程版本状态</div>
-            <div class="health-value">{{ remoteVersion || '未检测' }}</div>
-            <n-tag :type="versionSyncTagType" :bordered="false">
-              {{ versionSyncText }}
-            </n-tag>
-          </div>
+        <div class="admin-ops__metrics">
+          <article class="admin-ops__metric">
+            <p>配置总数</p>
+            <strong>{{ configs.length }}</strong>
+            <span>当前系统键值项</span>
+          </article>
+          <article class="admin-ops__metric">
+            <p>托管配置</p>
+            <strong>{{ managedConfigs.length }}</strong>
+            <span>建议通过快捷卡片维护</span>
+          </article>
+          <article class="admin-ops__metric">
+            <p>普通配置</p>
+            <strong>{{ customConfigsCount }}</strong>
+            <span>可在表格中编辑</span>
+          </article>
+          <article class="admin-ops__metric">
+            <p>版本状态</p>
+            <strong>{{ versionSyncText }}</strong>
+            <span>远程版本检查结果</span>
+          </article>
         </div>
-      </n-card>
-    </div>
 
-    <div class="top-settings-grid">
-      <n-card :bordered="false" class="top-settings-card">
-        <template #header>
-          <div class="card-header">
-            <div>
-              <span class="card-title">章节生成版本数</span>
-              <p class="card-subtitle">控制每章候选草稿数量，影响生成时长与候选对比空间。</p>
+        <div class="admin-ops__grid">
+          <article class="admin-panel-card admin-panel-card--wide">
+            <header>
+              <div>
+                <h3>配置健康状态</h3>
+                <p>快速确认关键配置是否处于可用状态。</p>
+              </div>
+            </header>
+            <div class="health-grid settings-health-grid">
+              <div class="health-item">
+                <div class="health-label">章节候选版本数</div>
+                <div class="health-value">{{ chapterVersionCount }}</div>
+                <n-tag :type="chapterVersionHealthy ? 'success' : 'error'" :bordered="false">
+                  {{ chapterVersionHealthy ? '有效' : '异常' }}
+                </n-tag>
+              </div>
+              <div class="health-item">
+                <div class="health-label">章节目标字数</div>
+                <div class="health-value">{{ chapterWordLimit }}</div>
+                <n-tag :type="chapterWordLimitHealthy ? 'success' : 'error'" :bordered="false">
+                  {{ chapterWordLimitHealthy ? '有效' : '过低' }}
+                </n-tag>
+              </div>
+              <div class="health-item">
+                <div class="health-label">版本信息源地址</div>
+                <div
+                  class="health-value health-value-url"
+                  :title="normalizedVersionInfoUrl || '未配置'"
+                >
+                  {{ normalizedVersionInfoUrl || '未配置' }}
+                </div>
+                <n-tag :type="versionSourceHealthy ? 'success' : 'warning'" :bordered="false">
+                  {{ versionSourceHealthy ? '可解析 URL' : '待配置' }}
+                </n-tag>
+              </div>
+              <div class="health-item">
+                <div class="health-label">远程版本状态</div>
+                <div class="health-value">{{ remoteVersion || '未检测' }}</div>
+                <n-tag :type="versionSyncTagType" :bordered="false">
+                  {{ versionSyncText }}
+                </n-tag>
+              </div>
             </div>
-            <n-tag :bordered="false" type="info">托管项</n-tag>
-          </div>
-        </template>
-        <n-spin :show="configLoading || chapterVersionSaving">
-          <n-alert v-if="chapterVersionError" type="error" closable @close="chapterVersionError = null">
-            {{ chapterVersionError }}
-          </n-alert>
-          <n-form label-placement="top" class="version-form">
-            <n-form-item label="每章生成候选版本数量（仅支持 1 或 2）">
-              <n-input-number
-                v-model:value="chapterVersionCount"
-                :min="1"
-                :max="2"
-                :step="1"
-                :precision="0"
-                placeholder="请输入 1 或 2"
-              />
-            </n-form-item>
-            <div class="form-hint">
-              优先级：系统配置 <code>writer.chapter_versions</code> &gt; 环境变量 <code>WRITER_CHAPTER_VERSION_COUNT</code>
-            </div>
-            <n-space justify="end">
-              <n-button type="primary" :loading="chapterVersionSaving" @click="saveChapterVersionCount">
-                保存设置
-              </n-button>
-            </n-space>
-          </n-form>
-        </n-spin>
-      </n-card>
+          </article>
+        </div>
 
-      <n-card :bordered="false" class="top-settings-card">
-        <template #header>
-          <div class="card-header">
-            <div>
-              <span class="card-title">章节字数限制</span>
-              <p class="card-subtitle">控制当前章节生成提示里的目标字数，影响正文篇幅。</p>
-            </div>
-            <n-tag :bordered="false" type="info">托管项</n-tag>
-          </div>
-        </template>
-        <n-spin :show="configLoading || chapterWordLimitSaving">
-          <n-alert v-if="chapterWordLimitError" type="error" closable @close="chapterWordLimitError = null">
-            {{ chapterWordLimitError }}
-          </n-alert>
-          <n-form label-placement="top" class="version-form">
-            <n-form-item label="每章目标字数（建议不低于 2200）">
-              <n-input-number
-                v-model:value="chapterWordLimit"
-                :min="2200"
-                :step="100"
-                :precision="0"
-                placeholder="请输入目标字数"
-              />
-            </n-form-item>
-            <div class="form-hint">
-              优先级：系统配置 <code>writer.chapter_word_limit</code> &gt; 环境变量 <code>WRITER_CHAPTER_WORD_LIMIT</code>
-            </div>
-            <n-space justify="end">
-              <n-button type="primary" :loading="chapterWordLimitSaving" @click="saveChapterWordLimit">
-                保存设置
-              </n-button>
-            </n-space>
-          </n-form>
-        </n-spin>
-      </n-card>
-
-      <n-card :bordered="false" class="top-settings-card">
-        <template #header>
-          <div class="card-header">
-            <div>
-              <span class="card-title">版本检查源</span>
-              <p class="card-subtitle">配置远程版本 JSON，支持一键检测本地与远程版本差异。</p>
-            </div>
-            <n-tag :bordered="false" type="info">托管项</n-tag>
-          </div>
-        </template>
-        <n-spin :show="configLoading || versionSourceSaving">
-          <n-alert v-if="versionSourceError" type="error" closable @close="versionSourceError = null">
-            {{ versionSourceError }}
-          </n-alert>
-          <n-form label-placement="top" class="version-form">
-            <n-form-item label="版本信息 JSON 地址（必填）">
-              <n-input
-                v-model:value="versionInfoUrl"
-                placeholder="https://raw.githubusercontent.com/.../version-info.json"
-              />
-            </n-form-item>
-            <div class="form-hint">
-              优先级：系统配置 <code>updates.version_info_url</code> &gt; 环境变量 <code>VERSION_INFO_URL</code>
-            </div>
-            <div class="version-compare-panel">
-              <div class="compare-row">
-                <span>本地版本：</span>
-                <code>{{ localVersion }}</code>
+        <div class="top-settings-grid">
+          <n-card :bordered="false" class="top-settings-card">
+            <template #header>
+              <div class="card-header">
+                <div>
+                  <span class="card-title">章节生成版本数</span>
+                  <p class="card-subtitle">控制每章候选草稿数量，影响生成时长与候选对比空间。</p>
+                </div>
+                <n-tag :bordered="false" type="info">托管项</n-tag>
               </div>
-              <div class="compare-row">
-                <span>远程版本：</span>
-                <code v-if="remoteVersion">{{ remoteVersion }}</code>
-                <span v-else class="compare-empty">
-                  {{ versionCheckLoading ? '正在解析 JSON...' : '未解析到版本号' }}
-                </span>
-              </div>
-              <div v-if="remoteVersionSource" class="compare-meta">
-                来源：<code>{{ remoteVersionSource }}</code>
-              </div>
-              <div v-if="remoteBuildTimeBeijing" class="compare-meta">
-                构建时间：{{ remoteBuildTimeBeijing }}
-              </div>
-              <div v-if="versionCheckError" class="compare-result compare-error">
-                {{ versionCheckError }}
-              </div>
-              <div
-                v-else-if="remoteVersion"
-                :class="['compare-result', hasNewVersion ? 'compare-new' : 'compare-same']"
+            </template>
+            <n-spin :show="configLoading || chapterVersionSaving">
+              <n-alert
+                v-if="chapterVersionError"
+                type="error"
+                closable
+                @close="chapterVersionError = null"
               >
-                {{ hasNewVersion ? '检测到版本差异，可能有新版本可用' : '远程与本地版本一致' }}
-              </div>
-            </div>
-            <n-space justify="end">
-              <n-button :loading="versionCheckLoading" @click="handleCheckVersionSource">
-                检查版本
-              </n-button>
-              <n-button type="primary" :loading="versionSourceSaving" @click="saveVersionSources">
-                保存地址
-              </n-button>
-            </n-space>
-          </n-form>
-        </n-spin>
-      </n-card>
-    </div>
+                {{ chapterVersionError }}
+              </n-alert>
+              <n-form label-placement="top" class="version-form">
+                <n-form-item label="每章生成候选版本数量（仅支持 1 或 2）">
+                  <n-input-number
+                    v-model:value="chapterVersionCount"
+                    :min="1"
+                    :max="2"
+                    :step="1"
+                    :precision="0"
+                    placeholder="请输入 1 或 2"
+                  />
+                </n-form-item>
+                <div class="form-hint">
+                  优先级：系统配置 <code>writer.chapter_versions</code> &gt; 环境变量
+                  <code>WRITER_CHAPTER_VERSION_COUNT</code>
+                </div>
+                <n-space justify="end">
+                  <n-button
+                    type="primary"
+                    :loading="chapterVersionSaving"
+                    @click="saveChapterVersionCount"
+                  >
+                    保存设置
+                  </n-button>
+                </n-space>
+              </n-form>
+            </n-spin>
+          </n-card>
 
-    <section class="admin-panel settings-table-panel" aria-labelledby="system-config-title">
-      <div class="admin-panel__header">
-        <div>
-          <h3 id="system-config-title" class="admin-panel__title">系统配置</h3>
-          <p class="admin-panel__subtitle">支持按 Key、值、描述检索；托管项已在表格中高亮。</p>
+          <n-card :bordered="false" class="top-settings-card">
+            <template #header>
+              <div class="card-header">
+                <div>
+                  <span class="card-title">章节字数限制</span>
+                  <p class="card-subtitle">控制当前章节生成提示里的目标字数，影响正文篇幅。</p>
+                </div>
+                <n-tag :bordered="false" type="info">托管项</n-tag>
+              </div>
+            </template>
+            <n-spin :show="configLoading || chapterWordLimitSaving">
+              <n-alert
+                v-if="chapterWordLimitError"
+                type="error"
+                closable
+                @close="chapterWordLimitError = null"
+              >
+                {{ chapterWordLimitError }}
+              </n-alert>
+              <n-form label-placement="top" class="version-form">
+                <n-form-item label="每章目标字数（建议不低于 2200）">
+                  <n-input-number
+                    v-model:value="chapterWordLimit"
+                    :min="2200"
+                    :step="100"
+                    :precision="0"
+                    placeholder="请输入目标字数"
+                  />
+                </n-form-item>
+                <div class="form-hint">
+                  优先级：系统配置 <code>writer.chapter_word_limit</code> &gt; 环境变量
+                  <code>WRITER_CHAPTER_WORD_LIMIT</code>
+                </div>
+                <n-space justify="end">
+                  <n-button
+                    type="primary"
+                    :loading="chapterWordLimitSaving"
+                    @click="saveChapterWordLimit"
+                  >
+                    保存设置
+                  </n-button>
+                </n-space>
+              </n-form>
+            </n-spin>
+          </n-card>
+
+          <n-card :bordered="false" class="top-settings-card">
+            <template #header>
+              <div class="card-header">
+                <div>
+                  <span class="card-title">版本检查源</span>
+                  <p class="card-subtitle">配置远程版本 JSON，支持一键检测本地与远程版本差异。</p>
+                </div>
+                <n-tag :bordered="false" type="info">托管项</n-tag>
+              </div>
+            </template>
+            <n-spin :show="configLoading || versionSourceSaving">
+              <n-alert
+                v-if="versionSourceError"
+                type="error"
+                closable
+                @close="versionSourceError = null"
+              >
+                {{ versionSourceError }}
+              </n-alert>
+              <n-form label-placement="top" class="version-form">
+                <n-form-item label="版本信息 JSON 地址（必填）">
+                  <n-input
+                    v-model:value="versionInfoUrl"
+                    placeholder="https://raw.githubusercontent.com/.../version-info.json"
+                  />
+                </n-form-item>
+                <div class="form-hint">
+                  优先级：系统配置 <code>updates.version_info_url</code> &gt; 环境变量
+                  <code>VERSION_INFO_URL</code>
+                </div>
+                <div class="version-compare-panel">
+                  <div class="compare-row">
+                    <span>本地版本：</span>
+                    <code>{{ localVersion }}</code>
+                  </div>
+                  <div class="compare-row">
+                    <span>远程版本：</span>
+                    <code v-if="remoteVersion">{{ remoteVersion }}</code>
+                    <span v-else class="compare-empty">
+                      {{ versionCheckLoading ? '正在解析 JSON...' : '未解析到版本号' }}
+                    </span>
+                  </div>
+                  <div v-if="remoteVersionSource" class="compare-meta">
+                    来源：<code>{{ remoteVersionSource }}</code>
+                  </div>
+                  <div v-if="remoteBuildTimeBeijing" class="compare-meta">
+                    构建时间：{{ remoteBuildTimeBeijing }}
+                  </div>
+                  <div v-if="versionCheckError" class="compare-result compare-error">
+                    {{ versionCheckError }}
+                  </div>
+                  <div
+                    v-else-if="remoteVersion"
+                    :class="['compare-result', hasNewVersion ? 'compare-new' : 'compare-same']"
+                  >
+                    {{ hasNewVersion ? '检测到版本差异，可能有新版本可用' : '远程与本地版本一致' }}
+                  </div>
+                </div>
+                <n-space justify="end">
+                  <n-button :loading="versionCheckLoading" @click="handleCheckVersionSource">
+                    检查版本
+                  </n-button>
+                  <n-button
+                    type="primary"
+                    :loading="versionSourceSaving"
+                    @click="saveVersionSources"
+                  >
+                    保存地址
+                  </n-button>
+                </n-space>
+              </n-form>
+            </n-spin>
+          </n-card>
         </div>
-        <n-button type="primary" size="small" @click="openCreateModal">
-          新增配置
-        </n-button>
-      </div>
 
-      <div class="admin-panel__body">
-        <n-spin :show="configLoading">
-          <n-alert v-if="configError" type="error" closable @close="configError = null">
-            {{ configError }}
-          </n-alert>
-          <n-alert type="warning" class="risk-alert">
-            删除配置会立即影响系统行为。托管项建议通过上方快捷卡片调整，不建议在表格中直接删除。
-          </n-alert>
-
-          <div class="table-toolbar">
-            <n-input
-              v-model:value="configKeyword"
-              clearable
-              class="toolbar-search"
-              placeholder="搜索 Key / 值 / 描述"
-            />
-            <n-switch v-model:value="managedOnly">
-              <template #checked>仅托管项</template>
-              <template #unchecked>仅托管项</template>
-            </n-switch>
-            <n-switch v-model:value="managedFirst">
-              <template #checked>托管优先排序</template>
-              <template #unchecked>托管优先排序</template>
-            </n-switch>
+        <section class="admin-panel settings-table-panel" aria-labelledby="system-config-title">
+          <div class="admin-panel__header">
+            <div>
+              <h3 id="system-config-title" class="admin-panel__title">系统配置</h3>
+              <p class="admin-panel__subtitle">支持按 Key、值、描述检索；托管项已在表格中高亮。</p>
+            </div>
+            <n-button type="primary" size="small" @click="openCreateModal"> 新增配置 </n-button>
           </div>
 
-          <n-empty
-            v-if="!configLoading && !filteredConfigs.length"
-            :description="configKeyword || managedOnly ? '没有匹配的配置项' : '暂无配置项'"
-          />
+          <div class="admin-panel__body">
+            <n-spin :show="configLoading">
+              <n-alert v-if="configError" type="error" closable @close="configError = null">
+                {{ configError }}
+              </n-alert>
+              <n-alert type="warning" class="risk-alert">
+                删除配置会立即影响系统行为。托管项建议通过上方快捷卡片调整，不建议在表格中直接删除。
+              </n-alert>
 
-          <div v-else-if="isMobile" class="settings-config-mobile-list" role="list">
-            <article
-              v-for="config in filteredConfigs"
-              :key="config.key"
-              class="settings-config-mobile-card"
-              :class="{ 'is-managed': isManagedConfigKey(config.key) }"
-              role="listitem"
-            >
-              <div class="settings-config-mobile-card__head">
-                <code class="key-code">{{ config.key }}</code>
-                <n-tag
-                  v-if="isManagedConfigKey(config.key)"
-                  type="info"
-                  size="small"
-                  :bordered="false"
-                >
-                  托管
-                </n-tag>
-                <n-tag v-else size="small" :bordered="false">
-                  {{ getConfigDomain(config.key) }}
-                </n-tag>
+              <div class="table-toolbar">
+                <n-input
+                  v-model:value="configKeyword"
+                  clearable
+                  class="toolbar-search"
+                  placeholder="搜索 Key / 值 / 描述"
+                />
+                <n-switch v-model:value="managedOnly">
+                  <template #checked>仅托管项</template>
+                  <template #unchecked>仅托管项</template>
+                </n-switch>
+                <n-switch v-model:value="managedFirst">
+                  <template #checked>托管优先排序</template>
+                  <template #unchecked>托管优先排序</template>
+                </n-switch>
               </div>
-              <dl class="settings-config-mobile-card__meta">
-                <div>
-                  <dt>值</dt>
-                  <dd :title="config.value">{{ config.value || '—' }}</dd>
-                </div>
-                <div>
-                  <dt>描述</dt>
-                  <dd>{{ config.description || '—' }}</dd>
-                </div>
-              </dl>
-              <div class="settings-config-mobile-card__actions">
-                <n-button
-                  size="small"
-                  type="primary"
-                  tertiary
-                  @click="openEditModal(config)"
+
+              <n-empty
+                v-if="!configLoading && !filteredConfigs.length"
+                :description="configKeyword || managedOnly ? '没有匹配的配置项' : '暂无配置项'"
+              />
+
+              <div v-else-if="isMobile" class="settings-config-mobile-list" role="list">
+                <article
+                  v-for="config in filteredConfigs"
+                  :key="config.key"
+                  class="settings-config-mobile-card"
+                  :class="{ 'is-managed': isManagedConfigKey(config.key) }"
+                  role="listitem"
                 >
-                  编辑
-                </n-button>
-                <n-popconfirm
-                  positive-text="删除"
-                  negative-text="取消"
-                  type="error"
-                  placement="left"
-                  @positive-click="deleteConfig(config.key)"
-                >
-                  <template #default>
-                    {{
-                      isManagedConfigKey(config.key)
-                        ? '该项属于托管配置，建议优先使用上方快捷设置。确认删除？'
-                        : '确认删除该配置项？'
-                    }}
-                  </template>
-                  <template #trigger>
-                    <n-button size="small" type="error" quaternary>
-                      删除
+                  <div class="settings-config-mobile-card__head">
+                    <code class="key-code">{{ config.key }}</code>
+                    <n-tag
+                      v-if="isManagedConfigKey(config.key)"
+                      type="info"
+                      size="small"
+                      :bordered="false"
+                    >
+                      托管
+                    </n-tag>
+                    <n-tag v-else size="small" :bordered="false">
+                      {{ getConfigDomain(config.key) }}
+                    </n-tag>
+                  </div>
+                  <dl class="settings-config-mobile-card__meta">
+                    <div>
+                      <dt>值</dt>
+                      <dd :title="config.value">{{ config.value || '—' }}</dd>
+                    </div>
+                    <div>
+                      <dt>描述</dt>
+                      <dd>{{ config.description || '—' }}</dd>
+                    </div>
+                  </dl>
+                  <div class="settings-config-mobile-card__actions">
+                    <n-button size="small" type="primary" tertiary @click="openEditModal(config)">
+                      编辑
                     </n-button>
-                  </template>
-                </n-popconfirm>
+                    <n-popconfirm
+                      positive-text="删除"
+                      negative-text="取消"
+                      type="error"
+                      placement="left"
+                      @positive-click="deleteConfig(config.key)"
+                    >
+                      <template #default>
+                        {{
+                          isManagedConfigKey(config.key)
+                            ? '该项属于托管配置，建议优先使用上方快捷设置。确认删除？'
+                            : '确认删除该配置项？'
+                        }}
+                      </template>
+                      <template #trigger>
+                        <n-button size="small" type="error" quaternary> 删除 </n-button>
+                      </template>
+                    </n-popconfirm>
+                  </div>
+                </article>
               </div>
-            </article>
-          </div>
 
-          <div v-else class="admin-table-shell">
-            <n-data-table
-              :columns="columns"
-              :data="filteredConfigs"
-              :loading="configLoading"
-              :bordered="false"
-              :row-key="rowKey"
-              :row-class-name="tableRowClassName"
-              class="config-table"
-            />
+              <div v-else class="settings-table-shell">
+                <MofengTable
+                  :columns="columns"
+                  :data="filteredConfigs"
+                  :loading="configLoading"
+                  :row-key="rowKey"
+                  :row-class-name="tableRowClassName"
+                  class="config-table"
+                />
+              </div>
+            </n-spin>
           </div>
-        </n-spin>
+        </section>
       </div>
-    </section>
-  </n-space>
+    </div>
+  </section>
 
   <n-modal
     v-model:show="configModalVisible"
@@ -349,9 +393,7 @@
     <template #footer>
       <n-space justify="end">
         <n-button quaternary @click="closeConfigModal">取消</n-button>
-        <n-button type="primary" :loading="configSaving" @click="submitConfig">
-          保存
-        </n-button>
+        <n-button type="primary" :loading="configSaving" @click="submitConfig"> 保存 </n-button>
       </n-space>
     </template>
   </n-modal>
@@ -362,7 +404,7 @@ import { computed, h, onMounted, reactive, ref, watch } from 'vue'
 import { NAlert } from 'naive-ui/es/alert'
 import { NButton } from 'naive-ui/es/button'
 import { NCard } from 'naive-ui/es/card'
-import { NDataTable } from 'naive-ui/es/data-table'
+import MofengTable from '@/components/shared/MofengTable.vue'
 import { NEmpty } from 'naive-ui/es/empty'
 import { NForm, NFormItem } from 'naive-ui/es/form'
 import { NInput } from 'naive-ui/es/input'
@@ -378,7 +420,7 @@ import type { DataTableColumns } from 'naive-ui'
 import type {
   SystemConfig,
   SystemConfigUpdatePayload,
-  SystemConfigUpsertPayload
+  SystemConfigUpsertPayload,
 } from '@/api/admin'
 import { normalizeComparableVersion } from '@/api/version'
 import { useAlert } from '@/composables/useAlert'
@@ -413,7 +455,7 @@ const MANAGED_CONFIG_KEYS = new Set<string>([
   LEGACY_WRITER_VERSION_CONFIG_KEY,
   WRITER_WORD_LIMIT_CONFIG_KEY,
   VERSION_INFO_URL_CONFIG_KEY,
-  LEGACY_VERSION_INFO_URL_CONFIG_KEY
+  LEGACY_VERSION_INFO_URL_CONFIG_KEY,
 ])
 
 const chapterVersionCount = ref<number>(MIN_CHAPTER_VERSION_COUNT)
@@ -425,7 +467,7 @@ const chapterWordLimitError = ref<string | null>(null)
 const versionInfoUrl = ref('')
 const versionSourceSaving = ref(false)
 const versionSourceError = ref<string | null>(null)
-const localVersion = ((import.meta.env.VITE_APP_VERSION as string | undefined)?.trim()) || 'dev'
+const localVersion = (import.meta.env.VITE_APP_VERSION as string | undefined)?.trim() || 'dev'
 const remoteVersion = ref<string | null>(null)
 const remoteVersionSource = ref<string | null>(null)
 const remoteBuildTimeBeijing = ref<string | null>(null)
@@ -458,7 +500,7 @@ const viewport = useResponsiveViewport()
 const configForm = reactive<SystemConfig>({
   key: '',
   value: '',
-  description: ''
+  description: '',
 })
 
 const rowKey = (row: SystemConfig) => row.key
@@ -466,14 +508,18 @@ const rowKey = (row: SystemConfig) => row.key
 const modalTitle = computed(() => (isCreateMode.value ? '新增配置项' : '编辑配置项'))
 const isMobile = computed(() => viewport.width.value <= mobileMax)
 const managedConfigs = computed(() => configs.value.filter((item) => isManagedConfigKey(item.key)))
-const customConfigsCount = computed(() => Math.max(0, configs.value.length - managedConfigs.value.length))
+const customConfigsCount = computed(() =>
+  Math.max(0, configs.value.length - managedConfigs.value.length),
+)
 const normalizedVersionInfoUrl = computed(() => normalizeConfigText(versionInfoUrl.value))
 const chapterVersionHealthy = computed(
-  () => chapterVersionCount.value >= MIN_CHAPTER_VERSION_COUNT && chapterVersionCount.value <= MAX_CHAPTER_VERSION_COUNT
+  () =>
+    chapterVersionCount.value >= MIN_CHAPTER_VERSION_COUNT &&
+    chapterVersionCount.value <= MAX_CHAPTER_VERSION_COUNT,
 )
 const chapterWordLimitHealthy = computed(() => chapterWordLimit.value >= MIN_CHAPTER_WORD_LIMIT)
 const versionSourceHealthy = computed(
-  () => normalizedVersionInfoUrl.value.length > 0 && isHttpUrl(normalizedVersionInfoUrl.value)
+  () => normalizedVersionInfoUrl.value.length > 0 && isHttpUrl(normalizedVersionInfoUrl.value),
 )
 const versionSyncTagType = computed<'default' | 'warning' | 'success' | 'error'>(() => {
   if (versionCheckLoading.value) {
@@ -525,7 +571,9 @@ const hasNewVersion = computed(() => {
   if (!remoteVersion.value) {
     return false
   }
-  return normalizeComparableVersion(remoteVersion.value) !== normalizeComparableVersion(localVersion)
+  return (
+    normalizeComparableVersion(remoteVersion.value) !== normalizeComparableVersion(localVersion)
+  )
 })
 
 const normalizeChapterVersionCount = (value: unknown): number => {
@@ -574,9 +622,7 @@ const resetVersionCheckResult = () => {
   versionCheckError.value = null
 }
 
-const checkVersionSource = async (
-  options: { silentIfInvalid?: boolean } = {},
-) => {
+const checkVersionSource = async (options: { silentIfInvalid?: boolean } = {}) => {
   const { silentIfInvalid = false } = options
   const normalizedVersionInfoUrl = normalizeConfigText(versionInfoUrl.value)
   resetVersionCheckResult()
@@ -602,24 +648,26 @@ const checkVersionSource = async (
       throw result.error
     }
     const payload = (result.data ?? {}) as RemoteVersionResponse
-    const parsedVersion = typeof payload?.version === 'string'
-      ? normalizeConfigText(payload.version)
-      : ''
+    const parsedVersion =
+      typeof payload?.version === 'string' ? normalizeConfigText(payload.version) : ''
     remoteVersion.value = parsedVersion || null
-    remoteVersionSource.value = typeof payload?.source === 'string'
-      ? (normalizeConfigText(payload.source) || null)
-      : null
-    remoteBuildTimeBeijing.value = typeof payload?.build_time_beijing === 'string'
-      ? (normalizeConfigText(payload.build_time_beijing) || null)
-      : null
+    remoteVersionSource.value =
+      typeof payload?.source === 'string' ? normalizeConfigText(payload.source) || null : null
+    remoteBuildTimeBeijing.value =
+      typeof payload?.build_time_beijing === 'string'
+        ? normalizeConfigText(payload.build_time_beijing) || null
+        : null
 
     if (!remoteVersion.value) {
       const errors = Array.isArray(payload?.errors)
-        ? payload.errors.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+        ? payload.errors.filter(
+            (item): item is string => typeof item === 'string' && item.trim().length > 0,
+          )
         : []
-      versionCheckError.value = errors.length > 0
-        ? `已请求版本源，但未解析到版本号：${errors.join('；')}`
-        : '已请求版本源，但未解析到版本号'
+      versionCheckError.value =
+        errors.length > 0
+          ? `已请求版本源，但未解析到版本号：${errors.join('；')}`
+          : '已请求版本源，但未解析到版本号'
     }
   } catch (err) {
     versionCheckError.value = err instanceof Error ? `版本解析失败：${err.message}` : '版本解析失败'
@@ -646,8 +694,9 @@ const syncChapterWordLimitFromConfigs = () => {
 }
 
 const syncVersionSourceFromConfigs = () => {
-  const versionInfoConfig = configs.value.find((item) => item.key === VERSION_INFO_URL_CONFIG_KEY)
-    || configs.value.find((item) => item.key === LEGACY_VERSION_INFO_URL_CONFIG_KEY)
+  const versionInfoConfig =
+    configs.value.find((item) => item.key === VERSION_INFO_URL_CONFIG_KEY) ||
+    configs.value.find((item) => item.key === LEGACY_VERSION_INFO_URL_CONFIG_KEY)
   versionInfoUrl.value = normalizeConfigText(versionInfoConfig?.value)
 }
 
@@ -671,7 +720,7 @@ const saveChapterVersionCount = async () => {
       key: WRITER_VERSION_CONFIG_KEY,
       data: {
         value: String(normalized),
-        description: '每次生成章节的候选版本数量（支持 1~2）。'
+        description: '每次生成章节的候选版本数量（支持 1~2）。',
       },
     })
     await fetchConfigs()
@@ -695,7 +744,7 @@ const saveChapterWordLimit = async () => {
       key: WRITER_WORD_LIMIT_CONFIG_KEY,
       data: {
         value: String(normalized),
-        description: '章节正文生成目标字数，建议不低于 2200。'
+        description: '章节正文生成目标字数，建议不低于 2200。',
       },
     })
     await fetchConfigs()
@@ -729,7 +778,7 @@ const saveVersionSources = async () => {
   try {
     const infoConfigPayload: SystemConfigUpsertPayload = {
       value: normalizedVersionInfoUrl,
-      description: '远程版本信息 JSON 地址，供 /api/updates/remote-version 优先读取。'
+      description: '远程版本信息 JSON 地址，供 /api/updates/remote-version 优先读取。',
     }
     await upsertSystemConfigMutation.mutateAsync({
       key: VERSION_INFO_URL_CONFIG_KEY,
@@ -785,11 +834,15 @@ const submitConfig = async () => {
   }
 
   if (
-    normalizedKey === WRITER_VERSION_CONFIG_KEY
-    || normalizedKey === LEGACY_WRITER_VERSION_CONFIG_KEY
+    normalizedKey === WRITER_VERSION_CONFIG_KEY ||
+    normalizedKey === LEGACY_WRITER_VERSION_CONFIG_KEY
   ) {
     const parsed = Number.parseInt(normalizedValue, 10)
-    if (!Number.isFinite(parsed) || parsed < MIN_CHAPTER_VERSION_COUNT || parsed > MAX_CHAPTER_VERSION_COUNT) {
+    if (
+      !Number.isFinite(parsed) ||
+      parsed < MIN_CHAPTER_VERSION_COUNT ||
+      parsed > MAX_CHAPTER_VERSION_COUNT
+    ) {
       showAlert('章节版本数仅支持设置为 1 或 2', 'error')
       return
     }
@@ -804,8 +857,8 @@ const submitConfig = async () => {
   }
 
   if (
-    normalizedKey === VERSION_INFO_URL_CONFIG_KEY
-    || normalizedKey === LEGACY_VERSION_INFO_URL_CONFIG_KEY
+    normalizedKey === VERSION_INFO_URL_CONFIG_KEY ||
+    normalizedKey === LEGACY_VERSION_INFO_URL_CONFIG_KEY
   ) {
     if (!isHttpUrl(normalizedValue)) {
       showAlert('版本地址必须是 http/https URL', 'error')
@@ -819,7 +872,7 @@ const submitConfig = async () => {
         key: normalizedKey,
         data: {
           value: normalizedValue,
-          description: configForm.description || undefined
+          description: configForm.description || undefined,
         },
       })
     } else {
@@ -827,7 +880,7 @@ const submitConfig = async () => {
         key: configForm.key,
         data: {
           value: normalizedValue,
-          description: configForm.description || undefined
+          description: configForm.description || undefined,
         } as SystemConfigUpdatePayload,
       })
     }
@@ -870,14 +923,14 @@ const columns: DataTableColumns<SystemConfig> = [
             isManagedConfigKey(row.key)
               ? h(NTag, { type: 'info', size: 'small', bordered: false }, { default: () => '托管' })
               : h(
-                NTag,
-                { size: 'small', bordered: false },
-                { default: () => getConfigDomain(row.key) }
-              )
-          ]
-        }
+                  NTag,
+                  { size: 'small', bordered: false },
+                  { default: () => getConfigDomain(row.key) },
+                ),
+          ],
+        },
       )
-    }
+    },
   },
   {
     title: '值',
@@ -887,11 +940,11 @@ const columns: DataTableColumns<SystemConfig> = [
         'span',
         {
           class: 'value-text',
-          title: row.value
+          title: row.value,
         },
-        row.value
+        row.value,
       )
-    }
+    },
   },
   {
     title: '描述',
@@ -899,7 +952,7 @@ const columns: DataTableColumns<SystemConfig> = [
     ellipsis: { tooltip: true },
     render(row) {
       return row.description || '—'
-    }
+    },
   },
   {
     title: '操作',
@@ -918,9 +971,9 @@ const columns: DataTableColumns<SystemConfig> = [
                 size: 'small',
                 type: 'primary',
                 tertiary: true,
-                onClick: () => openEditModal(row)
+                onClick: () => openEditModal(row),
               },
-              { default: () => '编辑' }
+              { default: () => '编辑' },
             ),
             h(
               NPopconfirm,
@@ -929,25 +982,26 @@ const columns: DataTableColumns<SystemConfig> = [
                 'negative-text': '取消',
                 type: 'error',
                 placement: 'left',
-                onPositiveClick: () => deleteConfig(row.key)
+                onPositiveClick: () => deleteConfig(row.key),
               },
               {
-                default: () => (isManagedConfigKey(row.key)
-                  ? '该项属于托管配置，建议优先使用上方快捷设置。确认删除？'
-                  : '确认删除该配置项？'),
+                default: () =>
+                  isManagedConfigKey(row.key)
+                    ? '该项属于托管配置，建议优先使用上方快捷设置。确认删除？'
+                    : '确认删除该配置项？',
                 trigger: () =>
                   h(
                     NButton,
                     { size: 'small', type: 'error', quaternary: true },
-                    { default: () => '删除' }
-                  )
-              }
-            )
-          ]
-        }
+                    { default: () => '删除' },
+                  ),
+              },
+            ),
+          ],
+        },
       )
-    }
-  }
+    },
+  },
 ]
 
 watch(
@@ -981,7 +1035,7 @@ onMounted(() => {
 .overview-card {
   background-color: var(--md-surface-container-low);
   border: 1px solid var(--md-outline-variant);
-  border-radius: 16px;
+  border-radius: var(--md-radius-lg);
 }
 
 .overview-header {
@@ -1022,7 +1076,7 @@ onMounted(() => {
   overflow: hidden;
   background-color: var(--md-surface-container);
   border: 1px solid var(--md-outline-variant);
-  border-radius: 16px;
+  border-radius: var(--md-radius-lg);
 }
 
 .health-grid {
@@ -1033,7 +1087,7 @@ onMounted(() => {
 
 .health-item {
   border: 1px solid var(--md-outline-variant);
-  border-radius: 10px;
+  border-radius: var(--md-radius-sm);
   padding: 10px 12px;
   background-color: var(--md-surface);
   min-width: 0;
@@ -1061,6 +1115,11 @@ onMounted(() => {
   text-overflow: ellipsis;
 }
 
+.settings-health-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: var(--md-spacing-4);
+}
+
 .top-settings-grid {
   display: grid;
   gap: 16px;
@@ -1071,7 +1130,7 @@ onMounted(() => {
   height: 100%;
   background-color: var(--md-surface-container);
   border: 1px solid var(--md-outline-variant);
-  border-radius: 16px;
+  border-radius: var(--md-radius-lg);
 }
 
 .card-header {
@@ -1109,7 +1168,7 @@ onMounted(() => {
   margin: 4px 0 12px;
   padding: 10px 12px;
   border: 1px solid var(--md-outline-variant);
-  border-radius: 10px;
+  border-radius: var(--md-radius-sm);
   background-color: var(--md-surface-container-low);
 }
 
@@ -1172,10 +1231,14 @@ onMounted(() => {
   background-color: var(--md-primary-container);
   color: var(--md-on-primary-container);
   border: 1px solid var(--md-outline-variant);
-  border-radius: 8px;
+  border-radius: var(--md-radius-xs);
   padding: 2px 6px;
   font-size: 0.8125rem;
   word-break: break-all;
+}
+
+.settings-table-shell {
+  margin-top: var(--md-spacing-4);
 }
 
 .value-text {
@@ -1198,7 +1261,7 @@ onMounted(() => {
 
 .settings-config-mobile-card {
   border: 1px solid var(--md-outline-variant);
-  border-radius: 12px;
+  border-radius: var(--md-radius-lg);
   padding: 12px;
   background-color: var(--md-surface);
 }
@@ -1251,7 +1314,17 @@ onMounted(() => {
   max-width: min(640px, 92vw);
 }
 
+@media (max-width: 1199px) {
+  .settings-health-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 833px) {
+  .settings-health-grid {
+    grid-template-columns: 1fr;
+  }
+
   .meta-grid {
     grid-template-columns: 1fr;
   }

@@ -6,7 +6,7 @@
       <!-- 加载状态 -->
       <div v-if="projectLoading" class="h-full flex justify-center items-center">
         <div class="text-center">
-          <div class="md-spinner mx-auto mb-4"></div>
+          <div class="md-spinner mx-auto mb-4"><span></span></div>
           <p class="md-body-medium md-on-surface-variant">正在加载项目数据...</p>
         </div>
       </div>
