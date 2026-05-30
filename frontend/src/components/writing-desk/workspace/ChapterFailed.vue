@@ -27,16 +27,7 @@
           :disabled="generatingChapter === chapterNumber"
           class="md-btn md-btn-filled md-ripple disabled:opacity-50"
         >
-          {{ generatingChapter === chapterNumber ? '重试中...' : '重试当前阶段' }}
-        </button>
-        <button type="button" class="md-btn md-btn-outlined md-ripple" @click="switchBackupModel">
-          换用备用模型
-        </button>
-        <button type="button" class="md-btn md-btn-outlined md-ripple" @click="retryWithShortContext">
-          缩短上下文后重试
-        </button>
-        <button type="button" class="md-btn md-btn-tonal md-ripple" @click="saveGeneratedFragment">
-          保存已生成片段
+          {{ generatingChapter === chapterNumber ? '重试中...' : '重试生成本章' }}
         </button>
       </div>
 
@@ -51,26 +42,20 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { globalAlert } from '@/composables/useAlert'
 
 interface Props {
   chapterNumber: number
   generatingChapter: number | null
   generationStatus?: string | null
   generationStep?: string | null
-  chapterContentPreview?: string | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
   generationStatus: 'failed',
   generationStep: '',
-  chapterContentPreview: '',
 })
 
 defineEmits(['generateChapter'])
-
-const router = useRouter()
 
 const failureScenario = computed(() => {
   const step = (props.generationStep || '').toLowerCase()
@@ -78,7 +63,7 @@ const failureScenario = computed(() => {
   if (props.generationStatus === 'evaluation_failed') {
     return {
       title: '质量评审未通过',
-      description: '当前草稿在一致性或质量评分上未通过，可以重试评审或换模型生成。',
+      description: '当前草稿在一致性或质量评分上未通过，可以重新生成本章后再评审。',
     }
   }
 
@@ -92,50 +77,22 @@ const failureScenario = computed(() => {
   if (step.includes('context') || step.includes('length') || step.includes('token')) {
     return {
       title: '上下文过长',
-      description: '本章输入上下文超出稳定范围，建议缩短前文摘要后重试。',
+      description: '本章输入上下文超出稳定范围，请精简前文摘要后再点击重试。',
     }
   }
 
   if (step.includes('persist') || step.includes('save')) {
     return {
       title: '保存失败',
-      description: '草稿已经生成，但写入版本库失败。建议先保存片段再重试。',
+      description: '草稿生成后写入版本库失败，请确认当前章节状态后再点击重试生成。',
     }
   }
 
   return {
     title: '生成流程中断',
-    description: '本轮草稿生成未完成，可直接重试当前阶段。',
+    description: '本轮草稿生成未完成，可直接重试本章生成。',
   }
 })
-
-const switchBackupModel = async () => {
-  await globalAlert.showAlert('已为你打开模型设置页，请选择备用模型后返回重试。', 'info', '切换模型')
-  router.push('/settings')
-}
-
-const retryWithShortContext = async () => {
-  await globalAlert.showAlert(
-    '建议先在章节摘要中精简前文信息，保留关键人物、冲突和目标后再重试。',
-    'info',
-    '缩短上下文建议',
-  )
-}
-
-const saveGeneratedFragment = async () => {
-  const fragment = (props.chapterContentPreview || '').trim()
-  if (!fragment) {
-    await globalAlert.showAlert('当前没有可保存的正文片段。', 'info', '暂无片段')
-    return
-  }
-
-  try {
-    await navigator.clipboard.writeText(fragment)
-    await globalAlert.showSuccess('已复制已生成片段，你可以先粘贴保存后再重试。', '片段已保存')
-  } catch {
-    await globalAlert.showError('复制失败，请手动选中文本保存。', '保存片段失败')
-  }
-}
 </script>
 
 <style scoped>
@@ -198,8 +155,12 @@ const saveGeneratedFragment = async () => {
 .chapter-failed__actions {
   margin-top: var(--md-spacing-4);
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--md-spacing-2);
+}
+
+.chapter-failed__actions .md-btn {
+  min-height: 44px;
 }
 
 .chapter-failed__detail {
@@ -220,9 +181,4 @@ const saveGeneratedFragment = async () => {
   font-size: var(--md-body-small);
 }
 
-@media (max-width: 640px) {
-  .chapter-failed__actions {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
 </style>

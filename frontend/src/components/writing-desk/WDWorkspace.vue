@@ -1343,7 +1343,6 @@ const currentComponentProps = computed(() => {
       generatingChapter: props.generatingChapter,
       generationStatus: selectedChapter.value?.generation_status ?? 'failed',
       generationStep: selectedChapter.value?.generation_step ?? null,
-      chapterContentPreview: cleanVersionContent(selectedChapter.value?.content || ''),
     }
   }
   return {

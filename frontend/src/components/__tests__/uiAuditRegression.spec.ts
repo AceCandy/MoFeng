@@ -223,6 +223,19 @@ describe('UI audit regressions', () => {
     expect(css).not.toMatch(/\.app-shell__project-welcome-message[\s\S]*?data:image/)
   })
 
+  it('keeps failed chapter recovery focused on the real retry action', () => {
+    const source = readSource('src/components/writing-desk/workspace/ChapterFailed.vue')
+    const buttonCount = source.match(/<button\b/g)?.length ?? 0
+
+    expect(buttonCount).toBe(1)
+    expect(source).toContain('@click="$emit(\'generateChapter\', chapterNumber)"')
+    expect(source).toContain('重试生成本章')
+    expect(source).not.toContain('换用备用模型')
+    expect(source).not.toContain('缩短上下文后重试')
+    expect(source).not.toContain('保存已生成片段')
+    expect(source).not.toContain('保存片段')
+  })
+
   it('keeps the overview blueprint page aligned with the shared archive vocabulary', () => {
     const overviewSource = readSource('src/components/novel-detail/OverviewSection.vue')
     const shellSource = readSource('src/components/shared/NovelDetailShell.vue')
