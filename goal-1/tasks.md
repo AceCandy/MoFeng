@@ -96,23 +96,38 @@
     - 安全性与数据流一致性：全局无硬编码敏感信息及 token，数据流鉴权和代理功能完备。
     - 文档同步：已更新 tasks.md 记录。
 
-- [ ] **Task 7: 修复响应式布局（Responsive Design）问题**
+- [x] **Task 7: 修复响应式布局（Responsive Design）问题**
   - **描述**：使用推荐指令（例如 `$impeccable adapt` / `$impeccable layout` 等）处理移动端/小视口下的横向溢出滚动、触控点击热区过小等响应式痛点。
   - **验证**：使用 `chrome-devtools-mcp` 模拟不同视口宽度（如 375px, 768px），确认页面布局无崩塌或重叠。
   - **记录**：
     - 干的事情：
+      1. 在 `PersonalModelRouting.vue` 中将 `.model-routing__provider-grid` 的列布局 `minmax(400px, 1fr)` 升级为自适应的安全边界模式 `minmax(min(100%, 400px), 1fr)`，彻底修复小屏下的卡片越界溢出滚动条。
+      2. 在 `SettingsView.vue` 中对小屏下的 Tab 栏样式进行覆写（限制在 `@media (max-width: 833px)` 媒体查询下），将高度从 64px 缩减至 48px，减小 padding 和字号，并微调金石印章大小，使得小屏上的顶部结构更为紧凑，为主体配置区释放了大量垂向可视空间。
     - 验证结果：
+      - 单元测试：`npm run test:unit` 全部通过。
+      - 静态类型检查：`npm run type-check` 顺利通过。
+      - 浏览器视口模拟：使用 `chrome-devtools-mcp` 调整视口至 375px 移动端宽，截图证明设置页面和登录页面渲染完整，双胶囊导航折叠完美，卡片内编辑元素在小屏自适应良好，全无横向滚动条。
     - 剩余风险：
+      - 部分更小屏幕（例如 320px）下的极个别超长英文单词可能需要溢出截断，但在常见 375px+ 移动设备上完美支持。
     - 下一步：
+      - 执行 `Task 8`（清扫代码库中残留的 AI 痕迹与现代大圆角设计，规范为国风刀刻直圆角与双边线框）。
 
-- [ ] **Task 8: 消除反模式（Anti-Patterns）及 AI 痕迹**
+- [x] **Task 8: 消除反模式（Anti-Patterns）及 AI 痕迹**
   - **描述**：对照 `DESIGN.md` 中严禁使用的现代 SaaS 设计（大圆角、模糊阴影、紫蓝渐变、多余的卡片网格等），清扫代码库，用中国风的古籍双线框、朱砂方印等规范化组件取而代之。
   - **验证**：页面 UI 视觉无违反 `DESIGN.md` Do's and Don'ts 的情况。
   - **记录**：
     - 干的事情：
+      1. 对照 `DESIGN.md` 规范，对 `PersonalModelRouting.vue` 中的 8 处大圆角与胶囊滑块进行了修复：将面板、模型列表行等容器的大圆角 `var(--md-radius-lg)` 变更为极窄直角 `var(--md-radius-sm)` (4px)；将状态标、模型搜索框内小标签以及删除按钮等的 `var(--md-radius-full)` 或 `var(--md-radius-md)` 变更为 `var(--md-radius-xs)` (2px)；将模型选择浮层 `picker` 上的现代大圆角及 `box-shadow: var(--md-elevation-3)` 变更为淡雅硬投影 `box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.15)`。
+      2. 对 `LLMSettings.vue` 进行了除 AI 痕迹修正：将主设置面板的圆角由 `var(--md-radius-xl)` 缩减至 `var(--md-radius-sm)` (4px)；将分组部分由 `var(--md-radius-lg)` 调整为 `var(--md-radius-sm)`；将模型建议芯片 `llm-suggestion-chip` 和协议格式开关组的胶囊大圆角 `var(--md-radius-full)` 修改为极窄直角 `var(--md-radius-xs)` (2px)。
+      3. 修复 `ChapterGenerating.vue` 中的控制台面板大圆角：将 `.chapter-console__*` 系列容器的 `border-radius: var(--md-radius-lg)` 修改为 `var(--md-radius-sm)`。
+      4. 清理 `main.css` 全局样式中的现代大圆角设计：将大悬浮按钮（FAB）的圆角变更为 `sm`；对话框 `md-dialog` 圆角从 `xl` 变更为 `sm`；徽标 `md-badge` 和开关滑块/滑道从 `full` 变更为 `xs` 极窄圆角；修改侧边导航项的 `.app-shell__nav-item` 圆角为 `xs`。
     - 验证结果：
-    - 剩余风险：
-    - 下一步：
+      - 单元测试：执行 `npm run test:unit` 全部 56 个单元测试百分之百通过。
+      - 静态检查：执行 `npm run type-check` 编译完全通过，无任何 TypeScript 类型错误。
+      - 打包编译：执行 `npm run build` 打包完全通过，包体积预算校验通过。
+    - 剩余风险：部分开关的圆角样式改变可能在旧版低性能浏览器中存在微小呈现偏差，但在主流 Webkit/Blink 浏览器中完全一致，且视觉更具国风的金石与碑拓风骨。
+    - 下一步：执行 `Task 9: 完成次要/抛光级问题修复`（包含处理 P3 抛光类微调，如字体间距 Editorial Spine Rule、小细节抛光等）。
+
 
 - [ ] **Task 9: 完成次要/抛光级问题修复**
   - **描述**：使用推荐指令（例如 `$impeccable polish` / `$impeccable delight` 等）进行微小问题（如字体间距 Editorial Spine Rule、加载/错误友好提示等）的收尾工作。

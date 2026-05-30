@@ -723,7 +723,7 @@ const selectEmbeddingModel = (model: string) => {
 
 <style scoped>
 .llm-settings {
-  border-radius: var(--md-radius-xl);
+  border-radius: var(--md-radius-sm);
   padding: var(--md-spacing-6);
 }
 
@@ -756,7 +756,7 @@ const selectEmbeddingModel = (model: string) => {
 }
 
 .llm-settings__section {
-  border-radius: var(--md-radius-lg);
+  border-radius: var(--md-radius-sm);
   padding: var(--md-spacing-4);
   overflow: visible;
 }
@@ -874,7 +874,7 @@ const selectEmbeddingModel = (model: string) => {
   align-items: center;
   justify-content: center;
   border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs);
   background-color: var(--md-surface);
   color: var(--md-on-surface);
   min-height: 44px;
@@ -907,7 +907,7 @@ const selectEmbeddingModel = (model: string) => {
 .llm-format-switch__group {
   display: inline-flex;
   border: 1px solid var(--md-outline);
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs);
   overflow: hidden;
 }
 

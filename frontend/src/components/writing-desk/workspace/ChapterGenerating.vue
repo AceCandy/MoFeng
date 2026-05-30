@@ -532,7 +532,7 @@ onUnmounted(() => {
 .chapter-console__preview-card,
 .chapter-console__log {
   border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-lg);
+  border-radius: var(--md-radius-sm);
   background: color-mix(in srgb, var(--md-surface) 96%, transparent);
   box-shadow: var(--md-elevation-1);
 }

@@ -1492,7 +1492,7 @@ defineExpose({
 
 .model-routing__panel {
   border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-lg);
+  border-radius: var(--md-radius-sm);
   padding: var(--md-spacing-4);
   background: var(--md-surface);
 }
@@ -1536,7 +1536,7 @@ defineExpose({
 
 .model-routing__provider-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
   gap: var(--md-spacing-3);
 }
 
@@ -1605,7 +1605,7 @@ defineExpose({
   display: inline-flex;
   align-items: center;
   min-height: 26px;
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs);
   padding: 0 10px;
   font-size: var(--md-label-small);
   font-weight: 600;
@@ -1656,10 +1656,10 @@ defineExpose({
   max-height: 420px;
   overflow: auto;
   border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-lg);
+  border-radius: var(--md-radius-sm);
   padding: var(--md-spacing-3);
   background: var(--md-surface);
-  box-shadow: var(--md-elevation-3);
+  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.15);
 }
 
 .model-routing__picker-head,
@@ -1688,7 +1688,7 @@ defineExpose({
 .model-routing__picker-row {
   min-height: 44px;
   border: 1px solid transparent;
-  border-radius: var(--md-radius-md);
+  border-radius: var(--md-radius-xs);
   padding: var(--md-spacing-2) var(--md-spacing-3);
   color: var(--md-on-surface);
   cursor: pointer;
@@ -1724,7 +1724,7 @@ defineExpose({
 
 .model-routing__picker-model-name > small {
   flex: 0 0 auto;
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs);
   padding: 2px 6px;
   background: var(--md-surface);
   color: var(--md-primary-dark);
@@ -1799,7 +1799,7 @@ defineExpose({
 .model-routing__model-row {
   width: 100%;
   border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-md);
+  border-radius: var(--md-radius-sm);
   background: var(--md-surface);
   color: var(--md-on-surface);
   padding: var(--md-spacing-3);
@@ -1863,7 +1863,7 @@ defineExpose({
     color var(--md-duration-short) var(--md-easing-standard),
     opacity var(--md-duration-short) var(--md-easing-standard),
     transform var(--md-duration-short) var(--md-easing-standard);
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs);
 }
 
 .model-routing__delete-btn::before {
@@ -2051,7 +2051,7 @@ defineExpose({
   gap: var(--md-spacing-2);
   padding: var(--md-spacing-5);
   border: 1px dashed var(--md-outline);
-  border-radius: var(--md-radius-lg);
+  border-radius: var(--md-radius-sm);
   background: var(--md-surface);
 }
 

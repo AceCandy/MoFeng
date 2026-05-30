@@ -596,7 +596,7 @@ h6 {
 .md-fab-large {
   width: 80px;
   height: 80px;
-  border-radius: var(--md-radius-lg);
+  border-radius: var(--md-radius-sm);
 }
 
 .md-fab-extended {
@@ -1117,7 +1117,7 @@ button.md-chip,
 
 .md-dialog {
   background-color: var(--md-surface);
-  border-radius: var(--md-radius-xl);
+  border-radius: var(--md-radius-sm);
   box-shadow: var(--md-elevation-3);
   min-width: 280px;
   max-width: 560px;
@@ -1343,7 +1343,7 @@ button.md-chip,
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs);
   background-color: var(--md-error);
   color: var(--md-on-error);
   font-size: 11px;
@@ -1372,7 +1372,7 @@ button.md-chip,
 .md-switch-track {
   width: 100%;
   height: 100%;
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs);
   background-color: var(--md-surface-container-highest);
   border: 2px solid var(--md-outline);
   transition:
@@ -1386,7 +1386,7 @@ button.md-chip,
   left: 4px;
   width: 24px;
   height: 24px;
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs);
   background-color: var(--md-outline);
   transform: translateY(-50%) scale(0.67);
   transition:
@@ -1831,7 +1831,7 @@ button.md-chip,
   height: 48px;
   justify-content: center;
   padding: 0;
-  border-radius: var(--md-radius-lg);
+  border-radius: var(--md-radius-xs);
 }
 
 .app-shell--project-context .app-shell__account {

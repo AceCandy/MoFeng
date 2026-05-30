@@ -737,6 +737,26 @@ const handleLLMConfigSaved = async () => {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .settings-center__nav-item {
+    min-height: 48px !important;
+    padding: 6px var(--md-spacing-3) !important;
+  }
+
+  .settings-center__nav-item-label {
+    font-size: var(--md-body-medium) !important;
+  }
+
+  .settings-center__nav-item small {
+    font-size: 10px !important;
+  }
+
+  .settings-center__nav-item::after {
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 11px !important;
+    margin-left: 4px !important;
+  }
+
   .settings-center__panel {
     padding: var(--md-spacing-4);
   }
