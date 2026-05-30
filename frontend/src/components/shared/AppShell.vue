@@ -779,4 +779,21 @@ onUnmounted(() => {
   width: 14px;
   height: 14px;
 }
+
+/* 扫墨枯笔飞白墨迹/山水泼墨背景装饰移至组件内 */
+.app-shell__dropdown-item:hover {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' opacity='0.08'><path d='M0,10 C20,2 50,18 80,4 C90,8 95,2 100,10 Z' fill='%23b83c32'/></svg>") !important;
+}
+
+.app-shell__project-welcome-message {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 20' opacity='0.03'><path d='M0,10 C40,0 100,18 160,2 C180,6 190,2 200,10 Z' fill='%231c2022'/></svg>") !important;
+}
+
+:root[data-theme='dark'] .app-shell__dropdown-item:hover {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' opacity='0.08'><path d='M0,10 C20,2 50,18 80,4 C90,8 95,2 100,10 Z' fill='%239c332b'/></svg>") !important;
+}
+
+:root[data-theme='dark'] .app-shell__project-welcome-message {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 20' opacity='0.03'><path d='M0,10 C40,0 100,18 160,2 C180,6 190,2 200,10 Z' fill='%23e5dec9'/></svg>") !important;
+}
 </style>
