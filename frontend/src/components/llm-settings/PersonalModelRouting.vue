@@ -1788,6 +1788,7 @@ defineExpose({
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
+  letter-spacing: 0.03em;
   white-space: nowrap;
   border: 1px solid rgba(184, 60, 50, 0.2);
   margin-left: 4px;
