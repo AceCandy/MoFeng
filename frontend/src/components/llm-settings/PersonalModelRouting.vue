@@ -310,6 +310,7 @@
                   type="button"
                   class="model-routing__provider-delete"
                   :disabled="isSavingProvider"
+                  :aria-label="`删除供应商 ${provider.name}`"
                   @click="deleteProviderFromCard(provider)"
                 >
                   删除供应商
@@ -1865,6 +1866,15 @@ defineExpose({
   border-radius: var(--md-radius-full);
 }
 
+.model-routing__delete-btn::before {
+  content: '';
+  position: absolute;
+  top: -11px;
+  bottom: -11px;
+  left: -11px;
+  right: -11px;
+}
+
 .model-routing__selected-chip:hover .model-routing__delete-btn {
   opacity: 1;
   transform: translateY(-50%) scale(1);
@@ -1878,6 +1888,7 @@ defineExpose({
 }
 
 .model-routing__toggle {
+  position: relative;
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-radius-xs);
   min-width: 48px;
@@ -1898,6 +1909,15 @@ defineExpose({
   background: transparent;
   color: var(--md-on-surface-variant);
   z-index: 2;
+}
+
+.model-routing__toggle::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  left: -4px;
+  right: -4px;
 }
 
 .model-routing__toggle:disabled,
@@ -1926,6 +1946,7 @@ defineExpose({
 }
 
 .model-routing__provider-delete {
+  position: relative;
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-radius-xs);
   min-width: 48px;
@@ -1948,6 +1969,15 @@ defineExpose({
   z-index: 2;
 }
 
+.model-routing__provider-delete::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  left: -4px;
+  right: -4px;
+}
+
 .model-routing__provider-delete:hover:not(:disabled) {
   opacity: 1;
   background: var(--md-secondary, #B83C32);
@@ -1957,11 +1987,13 @@ defineExpose({
 }
 
 .model-routing__check {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--md-spacing-2);
   color: var(--md-on-surface);
   font-size: var(--md-body-medium);
+  min-height: 44px;
+  cursor: pointer;
 }
 
 .model-routing__check input,
@@ -2129,6 +2161,7 @@ defineExpose({
 
 /* 拉取模型：朱砂印章主按钮 */
 .model-routing__provider-actions .md-btn-tonal {
+  position: relative;
   border: 1px solid rgba(184, 60, 50, 0.35);
   border-radius: var(--md-radius-xs) !important;
   background: var(--md-secondary, #B83C32) !important;
@@ -2153,6 +2186,15 @@ defineExpose({
   justify-content: center;
 }
 
+.model-routing__provider-actions .md-btn-tonal::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  left: -4px;
+  right: -4px;
+}
+
 .model-routing__provider-actions .md-btn-tonal:hover:not(:disabled) {
   background: #C0392B !important;
   box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.35);
@@ -2173,6 +2215,7 @@ defineExpose({
 
 /* 编辑供应商：次级古籍框线按钮 */
 .model-routing__provider-actions .md-btn-text {
+  position: relative;
   border: 1px solid var(--md-outline);
   border-radius: var(--md-radius-xs) !important;
   background: transparent !important;
@@ -2194,6 +2237,15 @@ defineExpose({
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.model-routing__provider-actions .md-btn-text::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  left: -4px;
+  right: -4px;
 }
 
 .model-routing__provider-actions .md-btn-text:hover {
