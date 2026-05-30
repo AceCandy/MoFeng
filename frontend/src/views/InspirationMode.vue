@@ -1021,37 +1021,7 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-@keyframes ink-dot-breath {
-  0%, 100% {
-    opacity: 0.2;
-    transform: scale(0.8);
-    filter: blur(1px);
-  }
-  40% {
-    opacity: 0.9;
-    transform: scale(1.15);
-    filter: blur(0);
-  }
-}
 
-/* 钤印动效 */
-@keyframes ink-seal-press {
-  0% {
-    opacity: 0;
-    transform: scale(1.3) translateY(-4px);
-    filter: blur(1.5px);
-  }
-  65% {
-    opacity: 0.95;
-    transform: scale(0.92) translateY(1.5px);
-    filter: blur(0);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-    filter: blur(0);
-  }
-}
 
 @media (max-width: 1199px) {
   .inspiration-chat {
@@ -1098,18 +1068,7 @@ onUnmounted(() => {
   color: var(--md-on-surface-variant);
 }
 
-@keyframes ink-fade-in {
-  0% {
-    opacity: 0;
-    transform: translateY(6px);
-    filter: blur(4px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-    filter: blur(0);
-  }
-}
+
 
 .inspiration-ai-bubble-loading {
   background-color: var(--md-surface) !important;
@@ -1134,19 +1093,16 @@ onUnmounted(() => {
 .ink-stage-leave-active {
   transition: 
     opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-    filter 0.4s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .ink-stage-enter-from {
   opacity: 0;
-  filter: blur(8px);
   transform: translateY(12px) scale(0.995);
 }
 
 .ink-stage-leave-to {
   opacity: 0;
-  filter: blur(4px);
   transform: translateY(-8px) scale(0.995);
 }
 
@@ -1341,50 +1297,14 @@ onUnmounted(() => {
 /* 焦墨松烟 */
 .ink-bloom-dot--black {
   background-color: var(--md-primary) !important;
-  animation: ink-bloom-black 2.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+  animation: ink-spread-black 2.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
 }
 
 /* 润以朱砂 */
 .ink-bloom-dot--red {
   background-color: var(--md-secondary) !important;
-  animation: ink-bloom-red 2.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+  animation: ink-spread-red 2.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
   animation-delay: 1.1s;
-}
-
-@keyframes ink-bloom-black {
-  0% {
-    transform: scale(0.2) translate(0, 0);
-    filter: blur(1px);
-    opacity: 0.9;
-  }
-  50% {
-    transform: scale(1.8) translate(-2px, -1px);
-    filter: blur(6px);
-    opacity: 0.35;
-  }
-  100% {
-    transform: scale(2.8) translate(-4px, -2px);
-    filter: blur(12px);
-    opacity: 0;
-  }
-}
-
-@keyframes ink-bloom-red {
-  0% {
-    transform: scale(0.2) translate(0, 0);
-    filter: blur(1px);
-    opacity: 0.8;
-  }
-  50% {
-    transform: scale(1.6) translate(2px, 1px);
-    filter: blur(5px);
-    opacity: 0.3;
-  }
-  100% {
-    transform: scale(2.5) translate(4px, 2px);
-    filter: blur(10px);
-    opacity: 0;
-  }
 }
 
 /* 古风文字运墨状态呼吸 */
@@ -1398,14 +1318,79 @@ onUnmounted(() => {
   text-shadow: 0.5px 0.5px 0px rgba(28, 32, 34, 0.05) !important;
 }
 
+@keyframes ink-dot-breath {
+  0%, 100% {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 0.9;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes ink-seal-press {
+  0% {
+    opacity: 0;
+    transform: scale(1.3) translateY(-4px);
+  }
+  65% {
+    opacity: 0.95;
+    transform: scale(0.92) translateY(1.5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes ink-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ink-spread-black {
+  0% {
+    transform: scale(0.2) translate(0, 0);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.8) translate(-2px, -1px);
+    opacity: 0.35;
+  }
+  100% {
+    transform: scale(2.8) translate(-4px, -2px);
+    opacity: 0;
+  }
+}
+
+@keyframes ink-spread-red {
+  0% {
+    transform: scale(0.2) translate(0, 0);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.6) translate(2px, 1px);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(2.5) translate(4px, 2px);
+    opacity: 0;
+  }
+}
+
 @keyframes ink-text-breath {
   0% {
     opacity: 0.45;
-    filter: blur(0.6px);
   }
   100% {
     opacity: 0.95;
-    filter: blur(0px);
   }
 }
 </style>

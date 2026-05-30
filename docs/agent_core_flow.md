@@ -1,6 +1,6 @@
 # Agent 核心流程
 
-本文整理 MoFeng（墨风）当前项目里的 AI Agent 核心执行链路。这里的 “Agent” 不是单独的 `Agent` 类，也不是 LangChain Agent；高级章节生成路径由 LangGraph 状态图承载阶段编排，业务能力仍由 API 入口、提示词、上下文构建、模型阶段路由、生成/评审/定稿服务共同组成。
+本文整理 MoFeng（墨风）当前项目里的 AI Agent 核心执行链路。这里的 “Agent” 不是单独的 `Agent` 类，也不是 LangChain Agent；章节生成主路径由 LangGraph 状态图承载阶段编排，业务能力仍由 API 入口、提示词、上下文构建、模型阶段路由、生成/评审/定稿服务共同组成。
 
 整理日期：2026-05-11
 
@@ -25,8 +25,8 @@
 最核心的后端文件：
 
 - `backend/app/api/routers/novels.py`：概念对话、蓝图生成。
-- `backend/app/api/routers/writer.py`：普通章节生成、版本选择、评审、定稿入口。
-- `backend/app/services/pipeline_orchestrator.py`：高级章节生成 LangGraph 状态图编排器。
+- `backend/app/api/routers/writer.py`：章节生成入口、版本选择、评审、定稿入口；普通生成接口会委托 LangGraph 编排器。
+- `backend/app/services/pipeline_orchestrator.py`：章节生成 LangGraph 状态图编排器。
 - `backend/app/services/llm_service.py`：模型调用、流式输出、向量生成、阶段路由解析。
 - `backend/app/services/prompt_service.py`：提示词缓存和读取。
 - `backend/app/services/writer_context_builder.py`：写作可见性过滤。
@@ -44,7 +44,7 @@
 | 概念对话 | `POST /api/novels/{project_id}/concept/converse` | 和概念设计师对话，收集创作设定 | `novels.py#converse_with_concept` |
 | 流式概念对话 | `POST /api/novels/{project_id}/concept/converse/stream` | SSE 返回 `ai_message` 增量 | `novels.py#converse_with_concept_stream` |
 | 蓝图生成 | `POST /api/novels/{project_id}/blueprint/generate` | 把概念对话整理为小说蓝图 | `novels.py#generate_blueprint` |
-| 普通章节生成 | `POST /api/writer/novels/{project_id}/chapters/generate` | 前端当前主用的章节生成路径 | `writer.py#generate_chapter` |
+| 普通章节生成 | `POST /api/writer/novels/{project_id}/chapters/generate` | 前端当前主用路径，后端委托 `PipelineOrchestrator` 的 basic 配置 | `writer.py#generate_chapter` |
 | 高级章节生成 | `POST /api/writer/advanced/generate` | 通过 `PipelineOrchestrator` 统一编排更多增强能力 | `writer.py#advanced_generate_chapter` |
 | 版本选择 | `POST /api/writer/novels/{project_id}/chapters/select` | 选定候选版本并写入向量库 | `writer.py#select_chapter_version` |
 | 章节评审 | `POST /api/writer/novels/{project_id}/chapters/evaluate` | 对候选版本或选中版本做 AI 评审 | `writer.py#evaluate_chapter` |
@@ -53,11 +53,11 @@
 
 前端当前绑定情况：
 
-- `frontend/src/api/novel.ts#generateChapter` 调用普通章节生成接口。
+- `frontend/src/api/novel.ts#generateChapter` 调用普通章节生成接口；后端会进入 LangGraph 编排器。
 - `frontend/src/api/novel.ts#evaluateChapter` 调用章节评审接口。
 - `frontend/src/api/novel.ts#selectChapterVersion` 调用版本选择接口。
 - `frontend/src/api/novel.ts#OptimizerAPI` 调用优化接口。
-- 代码中暂未发现前端直接调用 `POST /api/writer/advanced/generate`。
+- 代码中暂未发现前端直接调用 `POST /api/writer/advanced/generate`，该入口主要用于显式传入增强配置。
 
 ---
 
@@ -180,7 +180,7 @@ ChapterContextService / ChapterIngestionService
 
 入口：`POST /api/writer/novels/{project_id}/chapters/generate`
 
-这是前端当前主用路径，核心代码在 `writer.py#generate_chapter`。
+这是前端当前主用路径。`writer.py#generate_chapter` 只负责保持旧接口契约、传入 basic 配置并返回最新项目结构；真正的上下文收集、RAG、写作、评审和版本入库都由 `PipelineOrchestrator.generate_chapter` 的 LangGraph 节点执行。
 
 ```text
 1. 初始化章节状态
@@ -191,7 +191,7 @@ ChapterContextService / ChapterIngestionService
 6. 拼接写作 Prompt
 7. L3 Writer 生成 1-2 个候选版本
 8. Guardrails 检查并尝试重写
-9. 必要时压缩到目标字数
+9. 必要时补写到最低字数并压缩到目标字数
 10. 多版本时 AIReviewService 评审选优
 11. 写入 ChapterVersion
 12. 返回最新 NovelProjectSchema
@@ -276,8 +276,9 @@ ChapterContextService / ChapterIngestionService
 3. `ChapterGuardrails.check` 检查禁止角色、POV 等违规。
 4. 若违规，读取 `rewrite_guardrails` 提示词并尝试自动重写。
 5. 从模型 JSON 包裹中提取正文，避免把结构化包装写入正文。
-6. 如果超出目标字数，调用压缩提示词做一次只删减不扩写的压缩。
-7. 写入 `ChapterVersion`，并把 guardrail、word_limit、chapter_mission 等放进 metadata。
+6. 如果低于最低字数，调用补写提示词做最多三轮扩展。
+7. 如果超出目标字数，调用压缩提示词做一次只删减不扩写的压缩。
+8. 写入 `ChapterVersion`，并把 guardrail、word_limit、chapter_mission 等放进 metadata。
 
 候选版本数来自：
 
@@ -303,13 +304,16 @@ SystemConfig writer.chapter_versions
 
 ---
 
-## 6. 高级章节编排器
+## 6. LangGraph 章节编排器
 
-入口：`POST /api/writer/advanced/generate`
+入口：
+
+- `POST /api/writer/novels/{project_id}/chapters/generate`：前端主用入口，使用 basic 配置。
+- `POST /api/writer/advanced/generate`：高级入口，可传入 `flow_config`。
 
 核心服务：`PipelineOrchestrator.generate_chapter`
 
-高级编排器和普通生成共用基本思想，但高级路径已通过 LangGraph `StateGraph` 显式串联各阶段节点，把上下文、增强能力、评审、后处理集中在服务层。请求体里的 `flow_config` 对应 `FlowConfig`：
+编排器通过 LangGraph `StateGraph` 显式串联各阶段节点，把上下文、增强能力、评审、后处理集中在服务层。普通生成入口会固定传入 `preset=basic` 和 `enable_rag=True`；高级入口请求体里的 `flow_config` 对应 `FlowConfig`：
 
 ```python
 class FlowConfig(BaseModel):
@@ -346,7 +350,7 @@ PipelineOrchestrator.generate_chapter
   -> prepare_memory_context：按配置读取记忆层和项目长期记忆
   -> prepare_retrieval_context：执行 simple RAG 或 two_stage RAG
   -> build_writer_prompt：读取写作提示词并拼装 prompt_sections
-  -> generate_versions：生成版本，并执行护栏、JSON 提取、字数压缩
+  -> generate_versions：生成版本，并执行护栏、JSON 提取、字数补写/压缩
   -> review_versions：多版本 AI 评审
   -> apply_post_generation_reviews：可选 self_critique / reader_sim / consistency / optimizer / enrichment
   -> persist_versions：replace_chapter_versions
@@ -468,11 +472,11 @@ KnowledgeRetrievalService.retrieve_and_filter
 
 ## 10. 当前实现注意点
 
-1. `PipelineOrchestrator.generate_chapter` 当前通过 LangGraph 状态图执行高级章节生成；AI 评审上下文由 `_build_review_context` 构建，优先使用可见性裁剪后的 `writer_blueprint`。
+1. `PipelineOrchestrator.generate_chapter` 当前通过 LangGraph 状态图执行章节生成主路径；AI 评审上下文由 `_build_review_context` 构建，优先使用可见性裁剪后的 `writer_blueprint`。
 
-2. 前端当前章节生成入口仍是普通路径 `POST /api/writer/novels/{project_id}/chapters/generate`，不是高级编排器路径。
+2. 前端当前章节生成入口仍是普通路径 `POST /api/writer/novels/{project_id}/chapters/generate`，但该接口已经委托到 `PipelineOrchestrator`。
 
-3. 普通路径和高级编排器存在一定重复逻辑：Director、可见性过滤、RAG、护栏、压缩、多版本评审都有两套实现。后续若要改 Agent 行为，需要确认改的是前端实际调用路径，还是后端高级编排路径。
+3. Director、可见性过滤、RAG、护栏、字数补写/压缩、多版本评审已经收敛到 `PipelineOrchestrator`；后续改章节生成 Agent 行为时，应优先修改该编排器或其依赖服务。
 
 4. `LLMService` 已禁止系统默认模型回退。任何 Agent 能力在用户未配置可用 LLM 模型或向量模型时，都会返回 400 配置错误。
 
@@ -481,7 +485,7 @@ KnowledgeRetrievalService.retrieve_and_filter
 ## 11. 改动 Agent 流程时的建议落点
 
 - 改模型选择/阶段路由：优先看 `llm_config_service.py` 和 `llm_service.py`。
-- 改章节生成 Prompt 输入结构：优先看 `writer.py#generate_chapter`，如果启用高级入口，再同步看 `pipeline_orchestrator.py#_build_prompt_sections`。
+- 改章节生成 Prompt 输入结构：优先看 `pipeline_orchestrator.py#_build_prompt_sections`。
 - 改防剧透/角色可见性：看 `writer_context_builder.py`。
 - 改 RAG：简单模式看 `chapter_context_service.py`，两层模式看 `knowledge_retrieval_service.py`。
 - 改评审和选优：看 `ai_review_service.py`。

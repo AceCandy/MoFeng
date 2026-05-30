@@ -108,7 +108,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   padding: var(--md-spacing-4);
-  background-color: rgba(18, 22, 23, 0.75);
+  background-color: color-mix(in srgb, var(--md-primary-dark) 76%, transparent);
   animation: inkFadeIn 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
 }
 
@@ -117,12 +117,12 @@ onUnmounted(() => {
   max-height: 88vh;
   display: flex;
   flex-direction: column;
-  background-color: var(--md-surface-bright, #faf9f2);
-  background-image: radial-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 0);
+  background-color: var(--md-surface-bright);
+  background-image: radial-gradient(color-mix(in srgb, var(--md-primary) 3%, transparent) 1px, transparent 0);
   background-size: 4px 4px; /* 模拟宣纸极细砂感 */
-  border: 3px double #1c2022; /* 古籍经典焦墨双线 */
-  border-radius: var(--md-radius-md, 6px);
-  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15);
+  border: 3px double var(--md-primary); /* 古籍经典焦墨双线 */
+  border-radius: var(--md-radius-md);
+  box-shadow: var(--md-shadow-primary-1);
   outline: none;
   animation: scrollFoldOpen 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
@@ -130,10 +130,10 @@ onUnmounted(() => {
 /* 深色模式（深夜书房）适配 */
 :global([data-theme='dark']) .m3-ink-modal-box,
 :global(.dark) .m3-ink-modal-box {
-  background-color: #1a1e20;
-  background-image: radial-gradient(rgba(242, 235, 217, 0.015) 1px, transparent 0);
-  border-color: #3b4245;
-  box-shadow: 4px 4px 0px rgba(13, 16, 17, 0.5);
+  background-color: var(--md-surface);
+  background-image: radial-gradient(color-mix(in srgb, var(--md-on-surface) 2%, transparent) 1px, transparent 0);
+  border-color: var(--md-outline);
+  box-shadow: var(--md-elevation-3);
 }
 
 /* 四角古黄铜包角扣 */
@@ -141,7 +141,7 @@ onUnmounted(() => {
   position: absolute;
   width: 14px;
   height: 14px;
-  border: 2.5px solid #d4af37; /* 仿古黄铜金 */
+  border: 2.5px solid var(--md-warning); /* 仿古黄铜金 */
   pointer-events: none;
   z-index: 10;
   opacity: 0.85;
@@ -181,7 +181,7 @@ onUnmounted(() => {
 
 :global([data-theme='dark']) .m3-ink-modal-corner,
 :global(.dark) .m3-ink-modal-corner {
-  border-color: #bfa14c; /* 深色下古铜色略微低调些 */
+  border-color: var(--md-warning); /* 深色下古铜色略微低调些 */
 }
 
 /* 头部样式 */
@@ -190,36 +190,36 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: var(--md-spacing-4) var(--md-spacing-5);
-  border-bottom: 1.5px solid #e7e5d9;
-  background-color: rgba(246, 245, 236, 0.5);
-  border-top-left-radius: var(--md-radius-md, 6px);
-  border-top-right-radius: var(--md-radius-md, 6px);
+  border-bottom: 1.5px solid var(--md-outline-variant);
+  background-color: color-mix(in srgb, var(--md-surface-container-low) 54%, transparent);
+  border-top-left-radius: var(--md-radius-md);
+  border-top-right-radius: var(--md-radius-md);
 }
 
 :global([data-theme='dark']) .m3-ink-modal-header,
 :global(.dark) .m3-ink-modal-header {
-  border-bottom-color: #2b3032 !important;
-  background-color: #141718 !important;
+  border-bottom-color: var(--md-outline-variant) !important;
+  background-color: var(--md-surface-dim) !important;
 }
 
 :global([data-theme='dark']) .m3-ink-modal-header__title {
-  color: #f2ebd9 !important;
+  color: var(--md-on-surface) !important;
 }
 
 :global([data-theme='dark']) .m3-ink-modal-close-btn {
-  border-color: #3b4245 !important;
-  color: #a3a9ab !important;
+  border-color: var(--md-outline) !important;
+  color: var(--md-on-surface-variant) !important;
 }
 
 :global([data-theme='dark']) .m3-ink-modal-close-btn:hover {
-  background-color: rgba(255, 255, 255, 0.04) !important;
-  color: #ffffff !important;
+  background-color: var(--md-state-layer-hover) !important;
+  color: var(--md-on-surface) !important;
 }
 
 :global([data-theme='dark']) .m3-ink-modal-close-badge {
-  background-color: rgba(184, 60, 50, 0.15) !important;
-  border-color: rgba(184, 60, 50, 0.5) !important;
-  color: #e57267 !important;
+  background-color: color-mix(in srgb, var(--md-secondary) 16%, transparent) !important;
+  border-color: color-mix(in srgb, var(--md-secondary) 50%, transparent) !important;
+  color: var(--md-secondary-light) !important;
 }
 
 .m3-ink-modal-header__brand {
@@ -232,7 +232,7 @@ onUnmounted(() => {
   display: inline-block;
   vertical-align: middle;
   background-color: transparent !important; /* 去除底色 */
-  color: #b83c32 !important; /* 白天：经典朱砂红（朱批色） */
+  color: var(--md-secondary) !important; /* 白天：经典朱砂红（朱批色） */
   -webkit-text-stroke: none !important; /* 彻底去除描边 */
   font-family: "STXinwei", "华文新魏", "STLiti", "华文隶书", "LiSu", "隶书", var(--md-font-serif), serif;
   font-weight: 800; /* 字重适度减小，更显清秀 */
@@ -246,8 +246,8 @@ onUnmounted(() => {
   margin: 0;
   font-family: var(--md-font-serif);
   font-weight: 700;
-  font-size: var(--md-title-medium, 1.25rem);
-  color: var(--md-on-surface, #1c2022);
+  font-size: var(--md-title-medium);
+  color: var(--md-on-surface);
 }
 
 /* 朱砂钤印关闭按钮 */
@@ -257,10 +257,10 @@ onUnmounted(() => {
   gap: 8px;
   height: 38px;
   padding: 0 12px 0 6px;
-  border: 1px dashed var(--md-outline-variant, #e7e5d9);
-  border-radius: var(--md-radius-xs, 2px);
+  border: 1px dashed var(--md-outline-variant);
+  border-radius: var(--md-radius-xs);
   background-color: transparent;
-  color: var(--md-on-surface-variant, #5b6264);
+  color: var(--md-on-surface-variant);
   cursor: pointer;
   transition:
     background-color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1),
@@ -275,14 +275,14 @@ onUnmounted(() => {
   justify-content: center;
   width: 26px;
   height: 26px;
-  border-radius: var(--md-radius-xs, 2px);
-  background-color: rgba(184, 60, 50, 0.08);
-  border: 1px solid rgba(184, 60, 50, 0.35);
-  color: #b83c32; /* 朱砂红 */
+  border-radius: var(--md-radius-xs);
+  background-color: color-mix(in srgb, var(--md-secondary) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--md-secondary) 35%, transparent);
+  color: var(--md-secondary); /* 朱砂红 */
   font-family: var(--md-font-serif);
   font-weight: 700;
   font-size: var(--md-label-large);
-  box-shadow: inset 0 1px 2px rgba(184, 60, 50, 0.1);
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--md-secondary) 10%, transparent);
   transition:
     background-color 0.25s cubic-bezier(0.25, 0.8, 0.25, 1),
     box-shadow 0.25s cubic-bezier(0.25, 0.8, 0.25, 1),
@@ -296,16 +296,16 @@ onUnmounted(() => {
 }
 
 .m3-ink-modal-close-btn:hover {
-  background-color: rgba(184, 60, 50, 0.03);
-  border-color: rgba(184, 60, 50, 0.3);
-  color: #b83c32;
+  background-color: color-mix(in srgb, var(--md-secondary) 3%, transparent);
+  border-color: color-mix(in srgb, var(--md-secondary) 30%, transparent);
+  color: var(--md-secondary);
 }
 
 .m3-ink-modal-close-btn:hover .m3-ink-modal-close-badge {
   transform: rotate(-10deg) scale(1.05);
-  background-color: #b83c32;
+  background-color: var(--md-secondary);
   color: var(--md-on-secondary);
-  box-shadow: 0 3px 6px rgba(184, 60, 50, 0.2);
+  box-shadow: var(--md-shadow-primary-2);
 }
 
 /* 按钮物理按压交互 */
@@ -320,8 +320,8 @@ onUnmounted(() => {
   min-height: 0;
   padding: var(--md-spacing-4) var(--md-spacing-5) var(--md-spacing-5);
   /* 使用古典淡宣线分隔 */
-  border-bottom-left-radius: var(--md-radius-md, 6px);
-  border-bottom-right-radius: var(--md-radius-md, 6px);
+  border-bottom-left-radius: var(--md-radius-md);
+  border-bottom-right-radius: var(--md-radius-md);
 }
 
 /* 极精细水墨滚动条 */
@@ -334,22 +334,22 @@ onUnmounted(() => {
 }
 
 .m3-ink-modal-body::-webkit-scrollbar-thumb {
-  background-color: rgba(28, 32, 34, 0.15);
+  background-color: color-mix(in srgb, var(--md-primary) 15%, transparent);
   border-radius: var(--md-radius-full);
 }
 
 .m3-ink-modal-body::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(28, 32, 34, 0.35);
+  background-color: color-mix(in srgb, var(--md-primary) 35%, transparent);
 }
 
 :global([data-theme='dark']) .m3-ink-modal-body::-webkit-scrollbar-thumb,
 :global(.dark) .m3-ink-modal-body::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.12);
+  background-color: color-mix(in srgb, var(--md-on-surface) 12%, transparent);
 }
 
 :global([data-theme='dark']) .m3-ink-modal-body::-webkit-scrollbar-thumb:hover,
 :global(.dark) .m3-ink-modal-body::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.25);
+  background-color: color-mix(in srgb, var(--md-on-surface) 25%, transparent);
 }
 
 /* 动效：水墨淡入与卷轴缓缓弹开 */

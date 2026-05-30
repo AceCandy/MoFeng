@@ -37,6 +37,7 @@
 
   /* Secondary (朱砂) */
   --md-secondary: #b83c32; /* 朱砂 */
+  --md-secondary-readable: #b83c32;
   --md-secondary-light: #d85247;
   --md-secondary-dark: #8c241c;
   --md-on-secondary: #faf6ed;
@@ -202,6 +203,7 @@
 
   /* Secondary (朱砂暗化) */
   --md-secondary: #9c332b;
+  --md-secondary-readable: #ff7b6e;
   --md-secondary-light: #b8433a;
   --md-secondary-dark: #73221c;
   --md-on-secondary: #e5dec9;
@@ -3692,6 +3694,7 @@ body .app-shell__topbar {
   position: relative !important;
   display: flex !important;
   align-items: center !important;
+  min-height: 44px !important;
   height: 38px !important; /* 适度缩减高度以配合60px的顶栏 */
   padding: 0 var(--md-spacing-4) !important;
   border-radius: var(--md-radius-sm) !important;
@@ -3853,6 +3856,7 @@ body .app-shell__topbar {
 .app-shell__dropdown-item {
   display: flex !important;
   align-items: center !important;
+  min-height: 44px !important;
   padding: var(--md-spacing-2) var(--md-spacing-3) !important;
   border-radius: var(--md-radius-xs) !important;
   color: var(--md-on-surface) !important;
@@ -3928,6 +3932,7 @@ body .app-shell__topbar {
   align-items: center !important;
   justify-content: center !important;
   gap: 6px !important;
+  min-height: 44px !important;
   padding: var(--md-spacing-2) !important;
   border-radius: var(--md-radius-xs) !important;
   font-family: var(--md-font-display) !important;

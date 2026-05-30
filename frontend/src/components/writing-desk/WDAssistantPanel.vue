@@ -336,7 +336,7 @@ const risks = computed(() => {
   align-items: center;
   padding: var(--md-spacing-2) var(--md-spacing-3);
   background-color: color-mix(in srgb, var(--md-secondary) 6%, var(--md-surface-dim)); /* 微红题签底色 */
-  border-left: 3px solid var(--md-secondary); /* 左侧朱砂描红题签线 */
+  border: 1px solid color-mix(in srgb, var(--md-secondary) 36%, var(--md-outline)); /* 全边框题签，避免侧边色条 */
   border-radius: var(--md-radius-xs);
   margin-bottom: var(--md-spacing-3);
 }
@@ -433,7 +433,7 @@ const risks = computed(() => {
   display: flex;
   align-items: center;
   background-color: color-mix(in srgb, var(--md-secondary) 6%, var(--md-surface-dim)); /* 题签微红浅底 */
-  border-left: 3px solid var(--md-secondary); /* 左侧朱砂题签侧线 */
+  border: 1px solid color-mix(in srgb, var(--md-secondary) 36%, var(--md-outline)); /* 全边框题签，避免侧边色条 */
   border-radius: var(--md-radius-xs);
 }
 

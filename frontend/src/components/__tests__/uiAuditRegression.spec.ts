@@ -108,8 +108,11 @@ describe('UI audit regressions', () => {
       'src/components/CustomAlert.vue',
       'src/assets/blueprint.css',
       'src/components/writing-desk/WDGenerateOutlineModal.vue',
+      'src/components/writing-desk/workspace/ChapterGenerating.vue',
       'src/assets/main.css',
+      'src/components/shared/MofengTable.vue',
       'src/components/shared/NovelDetailShell.vue',
+      'src/components/admin/UserManagement.vue',
       'src/components/novel-detail/OverviewSection.vue',
       'src/components/novel-detail/ChaptersSection.vue',
       'src/components/novel-detail/CharactersSection.vue',
@@ -137,6 +140,7 @@ describe('UI audit regressions', () => {
       'src/components/novel-detail/ChaptersSection.vue',
       'src/components/novel-detail/EmotionCurveSection.vue',
       'src/components/novel-detail/ForeshadowingSection.vue',
+      'src/components/writing-desk/WDAssistantPanel.vue',
     ]
 
     for (const path of auditedPaths) {
@@ -145,6 +149,78 @@ describe('UI audit regressions', () => {
       expect(source, path).not.toContain('backdrop-filter')
       expect(source, path).not.toMatch(/border-(left|right):\s*(?:[2-9]|[1-9][0-9])px/)
     }
+  })
+
+  it('keeps shared pagination controls touch-safe', () => {
+    const source = readSource('src/components/shared/MofengTable.vue')
+    const paginationItemBlock = readCssBlock(source, ':deep(.n-pagination-item)')
+
+    expect(paginationItemBlock).toContain('height: 44px')
+    expect(paginationItemBlock).toContain('min-width: 44px')
+    expect(paginationItemBlock).not.toContain('height: 28px')
+    expect(paginationItemBlock).not.toContain('min-width: 28px')
+  })
+
+  it('keeps shared modal styling centralized and tokenized', () => {
+    const modalSource = readSource('src/components/shared/GlobalModalContainer.vue')
+    const globalCss = readSource('src/assets/main.css')
+
+    expect(modalSource).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
+    expect(modalSource).not.toMatch(/rgba?\(/)
+    expect(globalCss).not.toMatch(/\[data-theme='dark'\]\s+\.m3-ink-modal/)
+  })
+
+  it('keeps high-frequency loading motion off blur filters', () => {
+    const auditedMotionPaths = [
+      'src/views/InspirationMode.vue',
+      'src/components/ConversationInput.vue',
+      'src/components/writing-desk/workspace/ChapterGenerating.vue',
+    ]
+
+    for (const path of auditedMotionPaths) {
+      const source = readSource(path)
+      expect(source, path).not.toMatch(/filter:\s*blur/)
+      expect(source, path).not.toMatch(/transition:\s*(?:[^;{}]|\n)*\bfilter\b(?:[^;{}]|\n)*;/)
+    }
+  })
+
+  it('keeps high-frequency loading motion on transform and opacity only', () => {
+    const auditedMotionPaths = [
+      'src/views/InspirationMode.vue',
+      'src/components/ConversationInput.vue',
+      'src/components/writing-desk/workspace/ChapterGenerating.vue',
+    ]
+
+    for (const path of auditedMotionPaths) {
+      const source = readSource(path)
+      expect(source, path).not.toMatch(/@keyframes[\s\S]*?box-shadow\s*:/)
+      expect(source, path).not.toMatch(/animation:\s*[^;]*(?:pulse|bloom)[^;]*infinite/)
+    }
+  })
+
+  it('keeps app shell project dropdown controls semantic and touch-safe', () => {
+    const source = readSource('src/components/shared/AppShell.vue')
+    const css = readSource('src/assets/main.css')
+    const capsuleBlock = readCssBlock(css, '.app-shell__project-capsule')
+    const dropdownItemBlock = readCssBlock(css, '.app-shell__dropdown-item')
+    const dropdownActionBlock = readCssBlock(css, '.app-shell__dropdown-action')
+
+    expect(source).toContain('<button')
+    expect(source).toContain('type="button"')
+    expect(source).toContain(':aria-expanded="isDropdownOpen"')
+    expect(source).toContain('aria-controls="app-shell-project-menu"')
+    expect(source).not.toContain('class="app-shell__dropdown-action" @click')
+    expect(source).not.toContain('@click="isDropdownOpen = !isDropdownOpen"')
+    expect(capsuleBlock).toContain('min-height: 44px')
+    expect(dropdownItemBlock).toContain('min-height: 44px')
+    expect(dropdownActionBlock).toContain('min-height: 44px')
+  })
+
+  it('keeps app shell decorative data urls out of the main css budget path', () => {
+    const css = readSource('src/assets/main.css')
+
+    expect(css).not.toMatch(/\.app-shell__dropdown-item:hover[\s\S]*?data:image/)
+    expect(css).not.toMatch(/\.app-shell__project-welcome-message[\s\S]*?data:image/)
   })
 
   it('keeps the overview blueprint page aligned with the shared archive vocabulary', () => {
@@ -197,6 +273,18 @@ describe('UI audit regressions', () => {
     expect(contrastRatio(darkPrimaryText, darkBackground)).toBeGreaterThanOrEqual(4.5)
   })
 
+  it('keeps dark vermilion text token contrast at WCAG AA level', () => {
+    const source = readSource('src/assets/main.css')
+    const darkSecondaryText = readCssCustomProperty(source, ":root[data-theme='dark']", '--md-secondary-readable')
+    const darkSurface = readCssCustomProperty(source, ":root[data-theme='dark']", '--md-surface')
+    const darkBackground = readCssCustomProperty(source, ":root[data-theme='dark']", '--md-background')
+    const loginSource = readSource('src/views/Login.vue')
+
+    expect(contrastRatio(darkSecondaryText, darkSurface)).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(darkSecondaryText, darkBackground)).toBeGreaterThanOrEqual(4.5)
+    expect(loginSource).toContain('color: var(--md-secondary-readable)')
+  })
+
   it('keeps typography roles centralized in design tokens', () => {
     const css = readSource('src/assets/main.css')
     const mainSource = readSource('src/main.ts')
@@ -216,6 +304,9 @@ describe('UI audit regressions', () => {
     expect(css).not.toContain('SentyGoldRogue')
     expect(mainSource).not.toContain('@fontsource/noto-sans-sc')
     expect(mainSource).toContain("@fontsource/noto-serif-sc/chinese-simplified-400.css")
+    expect(mainSource).toContain("@fontsource/noto-serif-sc/chinese-simplified-600.css")
+    expect(mainSource).not.toContain("@fontsource/noto-serif-sc/chinese-simplified-500.css")
+    expect(mainSource).not.toContain("@fontsource/noto-serif-sc/chinese-simplified-700.css")
   })
 
   it('uses accessible semantic text tokens for light theme status copy', () => {

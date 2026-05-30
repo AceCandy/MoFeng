@@ -720,11 +720,9 @@ onUnmounted(() => {
 @keyframes ink-skeleton-breath {
   0%, 100% {
     opacity: 0.38;
-    filter: blur(0.5px);
   }
   50% {
     opacity: 0.85;
-    filter: blur(0);
   }
 }
 
@@ -1336,7 +1334,6 @@ onUnmounted(() => {
 }
 .md-dialog-overlay-enter-from .md-dialog {
   transform: scale(1.04) translateY(-12px) !important;
-  filter: blur(4px) !important;
   opacity: 0 !important;
 }
 
@@ -1346,7 +1343,6 @@ onUnmounted(() => {
 }
 .md-dialog-overlay-leave-to .md-dialog {
   transform: scale(0.97) translateY(6px) !important;
-  filter: blur(2px) !important;
   opacity: 0 !important;
 }
 
@@ -1361,13 +1357,11 @@ onUnmounted(() => {
 
 .ink-fade-enter-from {
   opacity: 0 !important;
-  filter: blur(5px) !important;
   transform: translateY(8px) !important;
 }
 
 .ink-fade-leave-to {
   opacity: 0 !important;
-  filter: blur(3px) !important;
   transform: translateY(-4px) !important;
 }
 </style>

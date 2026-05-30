@@ -162,7 +162,14 @@ class PipelineOrchestrator:
             "flow_config": flow_config,
         }
         graph = self._build_generation_graph()
-        final_state = await graph.ainvoke(initial_state)
+        try:
+            final_state = await graph.ainvoke(initial_state)
+        except HTTPException:
+            await self._mark_generation_failed(project_id=project_id, chapter_number=chapter_number)
+            raise
+        except Exception:
+            await self._mark_generation_failed(project_id=project_id, chapter_number=chapter_number)
+            raise
         return final_state["response"]
 
     def _build_generation_graph(self):
@@ -177,6 +184,37 @@ class PipelineOrchestrator:
             previous = node_name
         workflow.add_edge(previous, END)
         return workflow.compile()
+
+    async def _mark_generation_failed(self, *, project_id: str, chapter_number: int) -> None:
+        """生成图中任一节点失败后，把已初始化章节收敛到 failed。"""
+        try:
+            await self.session.rollback()
+        except Exception:
+            pass
+
+        try:
+            result = await self.session.execute(
+                select(Chapter).where(
+                    Chapter.project_id == project_id,
+                    Chapter.chapter_number == chapter_number,
+                )
+            )
+            chapter = result.scalars().first()
+            if not chapter:
+                return
+
+            chapter.status = "failed"
+            chapter.generation_progress = 0
+            chapter.generation_step = "failed"
+            chapter.generation_step_index = 0
+            chapter.generation_step_total = 7
+            await self.session.commit()
+        except Exception:
+            logger.exception(
+                "Pipeline 项目 %s 第 %s 章标记 failed 失败",
+                project_id,
+                chapter_number,
+            )
 
     async def _graph_initialize_chapter(self, state: PipelineGraphState) -> PipelineGraphState:
         config = await self._resolve_config(state.get("flow_config"))
@@ -685,6 +723,7 @@ class PipelineOrchestrator:
                     temperature=0.15,
                     user_id=user_id,
                     timeout=180.0,
+                    stage="summary_memory",
                 )
                 existing.real_summary = remove_think_tags(summary)
                 await self.session.commit()
@@ -777,6 +816,7 @@ class PipelineOrchestrator:
                 temperature=0.3,
                 user_id=user_id,
                 timeout=120.0,
+                stage="chapter_mission",
             )
             cleaned = remove_think_tags(response)
             normalized = unwrap_markdown_json(cleaned)
@@ -1047,6 +1087,7 @@ class PipelineOrchestrator:
                 timeout=600.0,
                 response_format=None,
                 max_tokens=WRITER_GENERATION_MAX_TOKENS,
+                stage="chapter_writing",
             )
             cleaned = remove_think_tags(response)
             content = unwrap_markdown_json(cleaned)
@@ -1084,9 +1125,41 @@ class PipelineOrchestrator:
         if parsed_json is not None:
             metadata["parsed_json"] = parsed_json
 
-        resolved_content = extracted_text or content
-        target_word_count, _minimum_word_count = await resolve_word_count_requirements(
+        resolved_content = extracted_text
+        if not resolved_content and isinstance(content, str):
+            stripped = content.strip()
+            if stripped:
+                looks_like_json = (
+                    (stripped.startswith("{") and stripped.endswith("}"))
+                    or (stripped.startswith("[") and stripped.endswith("]"))
+                )
+                # 避免把无法提取正文的结构化包装直接写入章节正文。
+                if not looks_like_json or parsed_json is None:
+                    resolved_content = stripped
+
+        if not resolved_content:
+            logger.error(
+                "Pipeline 项目 %s 第 %s 章版本 %s 未提取到正文: preview=%s",
+                project_id,
+                chapter_number,
+                index + 1,
+                (content or "")[:400],
+            )
+            raise HTTPException(
+                status_code=502,
+                detail=f"生成章节第 {index + 1} 个版本失败：模型未返回有效正文，请重试。",
+            )
+
+        target_word_count, minimum_word_count = await resolve_word_count_requirements(
             SystemConfigRepository(self.session)
+        )
+        resolved_content = await self._expand_chapter_to_minimum_word_count(
+            content=resolved_content,
+            minimum_word_count=minimum_word_count,
+            target_word_count=target_word_count,
+            user_id=user_id,
+            chapter_number=chapter_number,
+            version_index=index + 1,
         )
         resolved_content = await self._compress_chapter_to_word_limit(
             content=resolved_content,
@@ -1095,9 +1168,29 @@ class PipelineOrchestrator:
             chapter_number=chapter_number,
             version_index=index + 1,
         )
+        actual_word_count = count_chapter_words(resolved_content)
+        minimum_acceptable_word_count = int(minimum_word_count * 0.85)
+        if actual_word_count < minimum_acceptable_word_count:
+            logger.error(
+                "Pipeline 第 %s 章版本 %s 字数严重不足，终止入库: actual=%s minimum=%s acceptable=%s target=%s",
+                chapter_number,
+                index + 1,
+                actual_word_count,
+                minimum_word_count,
+                minimum_acceptable_word_count,
+                target_word_count,
+            )
+            raise HTTPException(
+                status_code=502,
+                detail=(
+                    f"生成章节第 {index + 1} 个版本失败：字数仅 {actual_word_count}，"
+                    f"低于最低要求 {minimum_word_count}（容错阈值 {minimum_acceptable_word_count}）。请重试。"
+                ),
+            )
         metadata["word_limit"] = {
             "target": target_word_count,
-            "actual": count_chapter_words(resolved_content),
+            "minimum": minimum_word_count,
+            "actual": actual_word_count,
         }
 
         return {
@@ -1105,6 +1198,116 @@ class PipelineOrchestrator:
             "content": resolved_content,
             "metadata": metadata,
         }
+
+    async def _expand_chapter_to_minimum_word_count(
+        self,
+        *,
+        content: str,
+        minimum_word_count: int,
+        target_word_count: int,
+        user_id: int,
+        chapter_number: int,
+        version_index: int,
+    ) -> str:
+        """当版本正文明显偏短时，做循环补写兜底，避免异常短稿入库。"""
+        max_attempts = 3
+        best_content = (content or "").strip()
+        best_word_count = count_chapter_words(best_content)
+        if best_word_count >= minimum_word_count:
+            return best_content
+
+        logger.info(
+            "Pipeline 第 %s 章版本 %s 低于最小字数，开始循环补写: current=%s minimum=%s target=%s attempts=%s",
+            chapter_number,
+            version_index,
+            best_word_count,
+            minimum_word_count,
+            target_word_count,
+            max_attempts,
+        )
+        current_content = best_content
+        current_word_count = best_word_count
+
+        for attempt in range(1, max_attempts + 1):
+            prompt = f"""
+请在不改变主线剧情与关键事件的前提下，对下面章节做补写扩展。
+
+目标要求：
+- 扩展后字数目标约 {target_word_count} 字，至少不少于 {minimum_word_count} 字。
+- 补充环境、动作、心理和过渡细节，但不得新增与主线冲突的新设定。
+- 保持人物关系、时间顺序和结尾钩子不变。
+- 直接输出补写后的完整章节正文，不要解释，不要输出 JSON。
+
+当前正文（约 {current_word_count} 字）：
+{current_content}
+""".strip()
+            try:
+                response = await self.llm_service.get_llm_response(
+                    system_prompt="你是网文章节润色编辑，负责在不改剧情主线的前提下补写细节。",
+                    conversation_history=[{"role": "user", "content": prompt}],
+                    temperature=0.4,
+                    user_id=user_id,
+                    timeout=300.0,
+                    response_format=None,
+                    max_tokens=WRITER_GENERATION_MAX_TOKENS,
+                    stage="chapter_enrichment",
+                )
+                enriched = unwrap_markdown_json(remove_think_tags(response)).strip()
+                if not enriched:
+                    logger.warning(
+                        "Pipeline 第 %s 章版本 %s 第 %s 次补写返回空内容，沿用当前文本",
+                        chapter_number,
+                        version_index,
+                        attempt,
+                    )
+                    continue
+
+                enriched_word_count = count_chapter_words(enriched)
+                if enriched_word_count > best_word_count:
+                    best_content = enriched
+                    best_word_count = enriched_word_count
+
+                if enriched_word_count <= current_word_count:
+                    logger.warning(
+                        "Pipeline 第 %s 章版本 %s 第 %s 次补写未增量: before=%s after=%s",
+                        chapter_number,
+                        version_index,
+                        attempt,
+                        current_word_count,
+                        enriched_word_count,
+                    )
+                    continue
+
+                current_content = enriched
+                current_word_count = enriched_word_count
+                if current_word_count >= minimum_word_count:
+                    logger.info(
+                        "Pipeline 第 %s 章版本 %s 第 %s 次补写达标: after=%s minimum=%s",
+                        chapter_number,
+                        version_index,
+                        attempt,
+                        current_word_count,
+                        minimum_word_count,
+                    )
+                    return current_content
+            except Exception as exc:
+                logger.warning(
+                    "Pipeline 第 %s 章版本 %s 第 %s 次补写失败，继续尝试: %s",
+                    chapter_number,
+                    version_index,
+                    attempt,
+                    exc,
+                )
+
+        if best_word_count < minimum_word_count:
+            logger.warning(
+                "Pipeline 第 %s 章版本 %s 多轮补写后仍低于最小字数: final=%s minimum=%s",
+                chapter_number,
+                version_index,
+                best_word_count,
+                minimum_word_count,
+            )
+        return best_content
 
     async def _compress_chapter_to_word_limit(
         self,
@@ -1148,6 +1351,7 @@ class PipelineOrchestrator:
                 timeout=300.0,
                 response_format=None,
                 max_tokens=WRITER_GENERATION_MAX_TOKENS,
+                stage="chapter_compression",
             )
             compressed = unwrap_markdown_json(remove_think_tags(response)).strip()
             return compressed or content
@@ -1232,6 +1436,7 @@ class PipelineOrchestrator:
                 timeout=300.0,
                 response_format=None,
                 max_tokens=WRITER_GENERATION_MAX_TOKENS,
+                stage="chapter_rewrite",
             )
             cleaned = remove_think_tags(response)
             return cleaned
@@ -1433,6 +1638,7 @@ class PipelineOrchestrator:
                     temperature=0.7,
                     user_id=user_id,
                     timeout=600.0,
+                    stage="chapter_optimization",
                 )
                 cleaned = remove_think_tags(response)
                 normalized = unwrap_markdown_json(cleaned)

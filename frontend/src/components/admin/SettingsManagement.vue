@@ -1345,4 +1345,11 @@ onMounted(() => {
     min-width: 100%;
   }
 }
+
+/* 黑色主题及白色主题下表单文字可见度增强 */
+:deep(.n-form-item-label) {
+  color: var(--md-on-surface) !important;
+  font-weight: 600 !important;
+  transition: color var(--md-duration-medium) var(--md-easing-standard) !important;
+}
 </style>

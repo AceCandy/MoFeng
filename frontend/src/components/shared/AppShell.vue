@@ -54,6 +54,9 @@ const router = useRouter()
 const authStore = useAuthStore()
 const queryClient = useQueryClient()
 const isDropdownOpen = ref(false)
+const toggleDropdown = () => {
+  isDropdownOpen.value = !isDropdownOpen.value
+}
 const { data: rawBackgroundTasks, isFetching: isFetchingTasks } = useTasksQuery()
 const completedOutlineTaskIds = new Set<string>()
 
@@ -301,55 +304,76 @@ onUnmounted(() => {
             ref="capsuleRef"
             class="app-shell__project-capsule is-select"
             :class="{ 'is-active': isDropdownOpen }"
-            @click="isDropdownOpen = !isDropdownOpen"
           >
-            <span class="app-shell__project-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
-            </span>
-            <span class="app-shell__project-title">
-              {{ currentProject ? (currentProject.title || '未命名书卷') : '选择案头画卷...' }}
-            </span>
-            <span class="app-shell__project-arrow" :class="{ 'is-open': isDropdownOpen }">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </span>
-
-            <!-- 水墨风微粒下拉菜单 -->
-            <transition name="fade">
-              <div v-if="isDropdownOpen" class="app-shell__project-dropdown" @click.stop>
-                <div class="app-shell__dropdown-header">阁主已存书卷</div>
-                <div class="app-shell__dropdown-list">
-                  <div 
-                    v-for="proj in projects" 
-                    :key="proj.id" 
-                    class="app-shell__dropdown-item"
-                    :class="{ 'is-active': proj.id === currentProjectId }"
-                    @click="selectProject(proj)"
+            <button
+              type="button"
+              class="app-shell__project-trigger"
+              :aria-expanded="isDropdownOpen"
+              aria-controls="app-shell-project-menu"
+              @click="toggleDropdown"
+              style="display: flex; align-items: center; background: none; border: none; padding: 0; color: inherit; font: inherit; cursor: pointer; width: 100%; height: 100%; outline: none;"
+            >
+              <span class="app-shell__project-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </span>
+              <span class="app-shell__project-title">
+                {{ currentProject ? (currentProject.title || '未命名书卷') : '选择案头画卷...' }}
+              </span>
+              <span class="app-shell__project-arrow" :class="{ 'is-open': isDropdownOpen }">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </span>
+            </button>
+ 
+             <!-- 水墨风微粒下拉菜单 -->
+             <transition name="fade">
+              <div 
+                v-if="isDropdownOpen" 
+                id="app-shell-project-menu"
+                class="app-shell__project-dropdown" 
+                @click.stop
+              >
+                 <div class="app-shell__dropdown-header">阁主已存书卷</div>
+                 <div class="app-shell__dropdown-list">
+                   <div 
+                     v-for="proj in projects" 
+                     :key="proj.id" 
+                     class="app-shell__dropdown-item"
+                     :class="{ 'is-active': proj.id === currentProjectId }"
+                     @click="selectProject(proj)"
+                   >
+                     <span class="item-mark">📖</span>
+                     <span class="item-title">{{ proj.title || '未命名书卷' }}</span>
+                   </div>
+                   <div v-if="projects.length === 0" class="app-shell__dropdown-empty">
+                     案头尚无书卷，请点击下方开启创作
+                   </div>
+                 </div>
+                 <div class="app-shell__dropdown-divider"></div>
+                 <div class="app-shell__dropdown-actions">
+                  <button
+                    type="button"
+                    class="app-shell__dropdown-action"
+                    @click="selectInspiration"
                   >
-                    <span class="item-mark">📖</span>
-                    <span class="item-title">{{ proj.title || '未命名书卷' }}</span>
-                  </div>
-                  <div v-if="projects.length === 0" class="app-shell__dropdown-empty">
-                    案头尚无书卷，请点击下方开启创作
-                  </div>
-                </div>
-                <div class="app-shell__dropdown-divider"></div>
-                <div class="app-shell__dropdown-actions">
-                  <div class="app-shell__dropdown-action" @click="selectInspiration">
                     <span class="action-icon">💡</span>
                     <span>灵感启航</span>
-                  </div>
-                  <div class="app-shell__dropdown-action" @click="triggerImport">
+                  </button>
+                  <button
+                    type="button"
+                    class="app-shell__dropdown-action"
+                    @click="triggerImport"
+                  >
                     <span class="action-icon">📥</span>
                     <span>导入卷轴</span>
-                  </div>
-                </div>
-              </div>
-            </transition>
-          </div>
+                  </button>
+                 </div>
+               </div>
+             </transition>
+           </div>
 
           <!-- 胶囊二：当前作品的多维成就与状态 (始终保留常驻展示) -->
           <div v-if="currentProject && projectStats" class="app-shell__project-capsule is-status">

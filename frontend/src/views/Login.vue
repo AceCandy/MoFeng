@@ -203,7 +203,7 @@ const handleLogin = async () => {
 
 .login-card__header p {
   margin: 0 0 var(--md-spacing-2);
-  color: var(--md-secondary); /* 朱砂红小标 */
+  color: var(--md-secondary-readable); /* 朱砂红小标 */
   font-family: var(--md-font-kai) !important;
   font-size: var(--md-label-large);
   font-weight: 600;
@@ -291,7 +291,7 @@ const handleLogin = async () => {
 }
 
 .login-feedback svg {
-  color: var(--md-secondary);
+  color: var(--md-secondary-readable);
 }
 
 /* 焦墨按钮与动态水墨晕染Hover特效 */
@@ -394,7 +394,7 @@ const handleLogin = async () => {
 .login-link__cta {
   min-height: 44px;
   font-family: var(--md-font-serif) !important;
-  color: var(--md-secondary) !important;
+  color: var(--md-secondary-readable) !important;
   font-weight: 600;
 }
 
@@ -452,7 +452,7 @@ const handleLogin = async () => {
 .login-feedback__stamp {
   font-family: var(--md-font-serif) !important;
   font-weight: 600;
-  color: var(--md-secondary) !important;
+  color: var(--md-secondary-readable) !important;
   margin-right: 4px;
   user-select: none;
 }

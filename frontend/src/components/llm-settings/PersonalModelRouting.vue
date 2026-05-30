@@ -1782,8 +1782,8 @@ defineExpose({
   justify-content: center;
   border-radius: 1px;
   padding: 1px 4px;
-  background: var(--md-secondary, #B83C32);
-  color: var(--md-on-primary, #FAF6ED);
+  background: var(--md-secondary);
+  color: var(--md-on-primary);
   font-family: var(--md-font-display);
   font-size: 10px;
   font-weight: 700;
@@ -1845,7 +1845,7 @@ defineExpose({
   transform: translateY(-50%) scale(0.8);
   border: none;
   background: transparent;
-  color: var(--md-secondary, #B83C32);
+  color: var(--md-secondary);
   cursor: pointer;
   font-size: 16px;
   line-height: 1;
@@ -1882,7 +1882,7 @@ defineExpose({
 }
 
 .model-routing__delete-btn:hover {
-  color: var(--md-error, #C0392B);
+  color: var(--md-error);
   transform: translateY(-50%) scale(1.15) !important;
   text-shadow: 1px 1px 0px rgba(184, 60, 50, 0.2);
 }
@@ -1980,8 +1980,8 @@ defineExpose({
 
 .model-routing__provider-delete:hover:not(:disabled) {
   opacity: 1;
-  background: var(--md-secondary, #B83C32);
-  color: var(--md-on-primary, #FAF6ED);
+  background: var(--md-secondary);
+  color: var(--md-on-primary);
   border-color: rgba(184, 60, 50, 0.3);
   box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.2);
 }
@@ -2164,8 +2164,8 @@ defineExpose({
   position: relative;
   border: 1px solid rgba(184, 60, 50, 0.35);
   border-radius: var(--md-radius-xs) !important;
-  background: var(--md-secondary, #B83C32) !important;
-  color: var(--md-on-primary, #FAF6ED) !important;
+  background: var(--md-secondary) !important;
+  color: var(--md-on-primary) !important;
   font-family: var(--md-font-label);
   font-size: 12px;
   font-weight: 600;
@@ -2196,7 +2196,7 @@ defineExpose({
 }
 
 .model-routing__provider-actions .md-btn-tonal:hover:not(:disabled) {
-  background: #C0392B !important;
+  background: var(--md-error-strong) !important;
   box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.35);
 }
 
@@ -2219,7 +2219,7 @@ defineExpose({
   border: 1px solid var(--md-outline);
   border-radius: var(--md-radius-xs) !important;
   background: transparent !important;
-  color: var(--md-primary, #1C2022) !important;
+  color: var(--md-primary) !important;
   font-family: var(--md-font-label);
   font-size: 12px;
   font-weight: 600;
@@ -2285,7 +2285,7 @@ defineExpose({
 }
 
 .model-routing__inline-cancel:hover {
-  color: var(--md-secondary, #B83C32);
+  color: var(--md-secondary);
 }
 
 .model-routing__inline-form {

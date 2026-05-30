@@ -650,12 +650,10 @@ watch(
   0% {
     opacity: 0;
     transform: translateY(-50%) scale(1.45) rotate(-18deg);
-    filter: blur(2px);
   }
   100% {
     opacity: 1;
     transform: translateY(-50%) scale(1) rotate(-6deg);
-    filter: blur(0);
   }
 }
 

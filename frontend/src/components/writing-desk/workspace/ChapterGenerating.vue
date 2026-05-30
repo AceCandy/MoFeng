@@ -700,7 +700,10 @@ onUnmounted(() => {
   height: 10px;
   border-radius: 50%;
   background-color: var(--md-outline);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .chapter-console__pipeline-content {
@@ -743,10 +746,22 @@ onUnmounted(() => {
 
 .chapter-console__pipeline-item.is-in-progress .chapter-console__dot {
   background-color: var(--md-primary);
-  width: 12px;
-  height: 12px;
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--md-primary) 30%, transparent);
-  animation: pulse-dot 1.5s infinite alternate;
+  transform: scale(1.2);
+  position: relative;
+}
+
+.chapter-console__pipeline-item.is-in-progress .chapter-console__dot::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: var(--md-primary);
+  animation: dot-ripple 1.5s infinite ease-out;
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 .chapter-console__pipeline-item.is-in-progress .chapter-console__pipeline-title {
@@ -809,11 +824,7 @@ onUnmounted(() => {
   }
 }
 
-@keyframes fadeInTooltip {
-  to {
-    opacity: 1;
-  }
-}
+
 
 
 .chapter-console__preview-card header {
@@ -914,27 +925,7 @@ onUnmounted(() => {
   border-color: color-mix(in srgb, var(--md-success) 28%, var(--md-outline-variant));
 }
 
-@keyframes pulse-dot {
-  0% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--md-primary) 35%, transparent);
-  }
 
-  100% {
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--md-primary) 0%, transparent);
-  }
-}
-
-@keyframes blink-cursor {
-  0%,
-  49% {
-    opacity: 1;
-  }
-
-  50%,
-  100% {
-    opacity: 0;
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   .chapter-console__pipeline-item.is-in-progress .chapter-console__dot,
@@ -1008,6 +999,36 @@ onUnmounted(() => {
 
   .chapter-console__actions .md-btn {
     width: 100%;
+  }
+}
+
+@keyframes fadeInTooltip {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dot-ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@keyframes blink-cursor {
+  0%,
+  49% {
+    opacity: 1;
+  }
+
+  50%,
+  100% {
+    opacity: 0;
   }
 }
 </style>

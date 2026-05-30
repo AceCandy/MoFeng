@@ -186,12 +186,10 @@ const bubbleClass = computed(() => {
   0% {
     opacity: 0;
     transform: translateY(8px);
-    filter: blur(8px); /* 起笔淡墨模糊 */
   }
   100% {
     opacity: 1;
     transform: translateY(0);
-    filter: blur(0);
   }
 }
 </style>

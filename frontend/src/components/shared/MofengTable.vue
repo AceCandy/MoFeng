@@ -97,9 +97,9 @@ defineOptions({
 
 /* 分页按钮中式方章化 */
 :deep(.n-pagination-item) {
-  height: 28px !important;
-  min-width: 28px !important;
-  line-height: 26px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  line-height: 42px !important;
   border: 1px solid var(--md-outline) !important;
   border-radius: var(--md-radius-xs) !important;
   font-family: var(--md-font-display) !important;
@@ -107,11 +107,15 @@ defineOptions({
   font-weight: 500 !important;
   background-color: var(--md-surface-container-lowest) !important;
   color: var(--md-on-surface) !important;
-  transition: all var(--md-duration-short) var(--md-easing-standard) !important;
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard) !important;
   display: inline-flex !important;
   justify-content: center !important;
   align-items: center !important;
-  padding: 0 6px !important;
+  padding: 0 10px !important;
   cursor: pointer !important;
 }
 

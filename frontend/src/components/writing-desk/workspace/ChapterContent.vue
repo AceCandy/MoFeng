@@ -954,12 +954,10 @@ defineExpose({
   0%,
   100% {
     transform: scale(0.92);
-    filter: blur(0.5px);
     opacity: 0.25;
   }
   50% {
     transform: scale(1.05);
-    filter: blur(0);
     opacity: 1;
   }
 }

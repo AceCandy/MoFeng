@@ -154,88 +154,82 @@
     </div>
 
     <!-- Create/Edit User Modal -->
-    <n-modal
-      v-model:show="showModal"
-      preset="card"
-      :closable="false"
-      :mask-closable="true"
-      :style="{ width: 'min(500px, 92vw)' }"
-      class="custom-mofeng-modal"
-    >
-      <template #header>
-        <div class="custom-modal-header">
-          <span class="custom-modal-title">
-            <span class="title-first-char">{{ modalTitleFirstChar }}</span>{{ modalTitleRest }}
-          </span>
-          <n-button
-            type="primary"
-            class="custom-save-btn"
-            :loading="submitting"
+    <Teleport to="body">
+      <GlobalModalContainer
+        v-if="showModal"
+        :title="isEditMode ? `编辑用户 · ${formModel.username}` : '新建用户'"
+        :badge-text="isEditMode ? '编' : '新'"
+        width="min(500px, 92vw)"
+        @close="showModal = false"
+      >
+        <template #header-actions>
+          <button
+            type="button"
+            class="m3-ink-modal-save-badge-btn"
+            :disabled="submitting"
             @click="handleSubmit"
           >
             存
-          </n-button>
-        </div>
-      </template>
+          </button>
+        </template>
 
-      <n-form
-        ref="formRef"
-        :model="formModel"
-        :rules="rules"
-        label-placement="left"
-        label-width="80"
-        require-mark-placement="right-hanging"
-      >
-        <n-form-item label="用户名" path="username">
-          <span class="static-value-text" v-if="isEditMode">{{ formModel.username }}</span>
-          <n-input
-            v-else
-            v-model:value="formModel.username"
-            placeholder="请输入用户名"
-            :input-props="{ autocomplete: 'off' }"
-          />
-        </n-form-item>
-        <n-form-item label="邮箱" path="email">
-          <span class="static-value-text" v-if="isEditMode">{{ formModel.email || '未设置' }}</span>
-          <n-input
-            v-else
-            v-model:value="formModel.email"
-            placeholder="请输入邮箱（可选）"
-            :input-props="{ autocomplete: 'off' }"
-          />
-        </n-form-item>
-        <n-form-item
-          label="密码"
-          path="password"
-          :rule="
-            isEditMode ? [{ min: 6, message: '密码至少 6 个字符', trigger: 'blur' }] : passwordRules
-          "
+        <n-form
+          ref="formRef"
+          :model="formModel"
+          :rules="rules"
+          label-placement="left"
+          label-width="80"
+          require-mark-placement="right-hanging"
         >
-          <n-input
-            v-model:value="formModel.password"
-            type="password"
-            show-password-on="click"
-            :placeholder="isEditMode ? '不修改请留空' : '请输入密码'"
-            :input-props="{ autocomplete: 'new-password' }"
-          />
-        </n-form-item>
-        
-        <div class="form-row-inline">
-          <n-form-item label="权限" path="is_admin" class="form-col-inline">
-            <n-switch v-model:value="formModel.is_admin" :disabled="!isEditMode">
-              <template #checked>管理员</template>
-              <template #unchecked>普通用户</template>
-            </n-switch>
+          <n-form-item label="用户名" path="username" v-if="!isEditMode">
+            <n-input
+              v-model:value="formModel.username"
+              placeholder="请输入用户名"
+              :input-props="{ autocomplete: 'off' }"
+            />
           </n-form-item>
-          <n-form-item label="状态" path="is_active" class="form-col-inline">
-            <n-switch v-model:value="formModel.is_active">
-              <template #checked>激活</template>
-              <template #unchecked>禁用</template>
-            </n-switch>
+          <n-form-item label="邮箱" path="email">
+            <span class="static-value-text" v-if="isEditMode">{{ formModel.email || '未设置' }}</span>
+            <n-input
+              v-else
+              v-model:value="formModel.email"
+              placeholder="请输入邮箱（可选）"
+              :input-props="{ autocomplete: 'off' }"
+            />
           </n-form-item>
-        </div>
-      </n-form>
-    </n-modal>
+          <n-form-item
+            label="密码"
+            path="password"
+            :rule="
+              isEditMode ? [{ min: 6, message: '密码至少 6 个字符', trigger: 'blur' }] : passwordRules
+            "
+          >
+            <n-input
+              v-model:value="formModel.password"
+              type="password"
+              show-password-on="click"
+              :placeholder="isEditMode ? '不修改请留空' : '请输入密码'"
+              :input-props="{ autocomplete: 'new-password' }"
+            />
+          </n-form-item>
+          
+          <div class="form-row-inline">
+            <n-form-item label="权限" path="is_admin" class="form-col-inline">
+              <n-switch v-model:value="formModel.is_admin" :disabled="!isEditMode">
+                <template #checked>管理员</template>
+                <template #unchecked>普通用户</template>
+              </n-switch>
+            </n-form-item>
+            <n-form-item label="状态" path="is_active" class="form-col-inline">
+              <n-switch v-model:value="formModel.is_active">
+                <template #checked>激活</template>
+                <template #unchecked>禁用</template>
+              </n-switch>
+            </n-form-item>
+          </div>
+        </n-form>
+      </GlobalModalContainer>
+    </Teleport>
   </section>
 </template>
 
@@ -245,10 +239,10 @@ import { NAlert } from 'naive-ui/es/alert'
 import { NButton } from 'naive-ui/es/button'
 import { NEmpty } from 'naive-ui/es/empty'
 import MofengTable from '@/components/shared/MofengTable.vue'
+import GlobalModalContainer from '@/components/shared/GlobalModalContainer.vue'
 import { NForm, NFormItem } from 'naive-ui/es/form'
 import { NInput } from 'naive-ui/es/input'
 import { useMessage } from 'naive-ui/es/message'
-import { NModal } from 'naive-ui/es/modal'
 import { NPopconfirm } from 'naive-ui/es/popconfirm'
 import { NSpace } from 'naive-ui/es/space'
 import { NSpin } from 'naive-ui/es/spin'
@@ -461,9 +455,6 @@ const filteredUsers = computed(() => {
   )
 })
 
-const modalTitleFirstChar = computed(() => (isEditMode.value ? '编' : '新'))
-const modalTitleRest = computed(() => (isEditMode.value ? `辑用户 · ${formModel.username}` : '建用户'))
-
 const rowKey = (row: AdminUser) => row.id
 
 const fetchUsers = () => {
@@ -583,7 +574,11 @@ const handleSubmit = () => {
   border: 1px solid var(--md-outline) !important; /* 竹青细线 */
   background-color: var(--md-surface-container-low) !important; /* 熟宣暖灰 */
   box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.05) !important;
-  transition: all var(--md-duration-medium) var(--md-easing-standard) !important;
+  transition:
+    background-color var(--md-duration-medium) var(--md-easing-standard),
+    border-color var(--md-duration-medium) var(--md-easing-standard),
+    box-shadow var(--md-duration-medium) var(--md-easing-standard),
+    transform var(--md-duration-medium) var(--md-easing-standard) !important;
 }
 
 .metric-card:hover {
@@ -643,7 +638,10 @@ const handleSubmit = () => {
 
 .filterable-item {
   cursor: pointer;
-  transition: all var(--md-duration-short) var(--md-easing-standard);
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard);
 }
 
 .filterable-item:hover {
@@ -687,29 +685,7 @@ const handleSubmit = () => {
   color: var(--md-on-surface);
 }
 
-/* 乾坤万象中枢定制：弹窗自定义 Header */
-.custom-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  padding-bottom: var(--md-spacing-3);
-  border-bottom: 1px dashed var(--md-outline-variant);
-}
 
-.custom-modal-title {
-  font-family: var(--md-font-display);
-  font-size: var(--md-title-large);
-  color: var(--md-primary); /* 在暗色模式下会自动使用素骨黄，明色下使用松烟 */
-  letter-spacing: 0.05em;
-  font-weight: 600;
-}
-
-/* 乾坤万象风格首字朱红 */
-.title-first-char {
-  color: var(--md-secondary) !important; /* 朱砂红 */
-  margin-right: 2px;
-}
 
 /* 黑色主题及白色主题下表单文字可见度增强 */
 :deep(.n-form-item-label) {
@@ -740,45 +716,7 @@ const handleSubmit = () => {
   min-width: 0;
 }
 
-/* “存”字印章式红色小方章按钮 */
-.custom-save-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  padding: 0;
-  border-radius: var(--md-radius-xs) !important; /* 2px */
-  background-color: var(--md-secondary) !important; /* 朱砂红 */
-  color: var(--md-on-primary) !important;
-  font-family: var(--md-font-display) !important;
-  font-size: var(--md-label-large) !important;
-  font-weight: bold !important;
-  border: 1px solid var(--md-outline) !important;
-  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.25) !important;
-  cursor: pointer;
-  transition: all var(--md-duration-short) var(--md-easing-standard) !important;
-}
 
-.custom-save-btn:hover:not(:disabled) {
-  background-color: var(--md-secondary-light) !important;
-  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.35) !important;
-  transform: translate(-0.5px, -0.5px);
-}
-
-.custom-save-btn:active:not(:disabled) {
-  transform: translate(0.5px, 0.5px);
-  box-shadow: none !important;
-}
-
-/* 自定义 Modal 单线框化，去除冗余双线 */
-:deep(.custom-mofeng-modal) {
-  border: 1px solid var(--md-outline) !important;
-  border-radius: var(--md-radius-sm) !important; /* 4px */
-  background-color: var(--md-surface) !important;
-  box-shadow: var(--md-elevation-3) !important;
-}
 
 .table-card-header {
   display: flex;

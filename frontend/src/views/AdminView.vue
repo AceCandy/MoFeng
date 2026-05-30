@@ -366,17 +366,14 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
   0% {
     opacity: 0;
     transform: scale(1.3) translateY(-4px);
-    filter: blur(1.5px);
   }
   65% {
     opacity: 0.95;
     transform: scale(0.92) translateY(1.5px); /* 下压 */
-    filter: blur(0);
   }
   100% {
     opacity: 1;
     transform: scale(1) translateY(0); /* 轻微回弹起笔 */
-    filter: blur(0);
   }
 }
 

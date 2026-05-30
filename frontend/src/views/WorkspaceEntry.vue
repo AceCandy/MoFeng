@@ -511,12 +511,10 @@ const goToWorkspace = () => {
   0% {
     opacity: 0;
     transform: translateY(8px);
-    filter: blur(8px); /* 起笔淡墨模糊 */
   }
   100% {
     opacity: 1;
     transform: translateY(0);
-    filter: blur(0);
   }
 }
 
@@ -595,13 +593,11 @@ const goToWorkspace = () => {
 
 .dialog-fade-enter-from .workspace-entry__dialog {
   transform: scale(0.96) translateY(10px);
-  filter: blur(4px); /* 刚出现时微模糊 */
   opacity: 0;
 }
 
 .dialog-fade-leave-to .workspace-entry__dialog {
   transform: scale(0.98) translateY(-6px);
-  filter: blur(2px);
   opacity: 0;
 }
 </style>

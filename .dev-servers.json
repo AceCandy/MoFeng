@@ -1,0 +1,9 @@
+{
+  "backend_pid": 42156,
+  "frontend_pid": 78020,
+  "backend_url": "http://0.0.0.0:8000",
+  "frontend_url": "http://0.0.0.0:5173",
+  "local_frontend_url": "http://127.0.0.1:5173",
+  "local_api_proxy": "http://127.0.0.1:8000/api",
+  "started_at": "2026-05-30T11:04:03.533927+00:00"
+}

@@ -758,12 +758,10 @@ const handleLLMConfigSaved = async () => {
   from {
     opacity: 0;
     transform: translateY(-8px) scaleY(0.95);
-    filter: blur(4px); /* 起笔淡墨模糊 */
   }
   to {
     opacity: 1;
     transform: translateY(0) scaleY(1);
-    filter: blur(0);
   }
 }
 </style>

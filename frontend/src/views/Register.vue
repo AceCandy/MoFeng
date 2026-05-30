@@ -596,13 +596,11 @@ onUnmounted(() => {
 
 .ink-fade-enter-from {
   opacity: 0;
-  filter: blur(6px); /* 起笔淡墨模糊 */
   transform: translateY(4px);
 }
 
 .ink-fade-leave-to {
   opacity: 0;
-  filter: blur(4px);
   transform: translateY(-4px);
 }
 </style>

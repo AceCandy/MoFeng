@@ -1969,13 +1969,11 @@ const parseMarkdown = (text: string | null | undefined): string => {
   from {
     opacity: 0;
     transform: scaleY(0.8) translateY(-8px);
-    filter: blur(4px);
     transform-origin: top right;
   }
   to {
     opacity: 1;
     transform: scaleY(1) translateY(0);
-    filter: blur(0);
     transform-origin: top right;
   }
 }

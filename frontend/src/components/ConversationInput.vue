@@ -339,50 +339,14 @@ watch(isManualInput, async (newValue) => {
 /* 焦墨松烟 */
 .ink-bloom-dot--black {
   background-color: var(--md-primary) !important;
-  animation: ink-bloom-black 2.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+  animation: ink-spread-black 2.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
 }
 
 /* 润以朱砂 */
 .ink-bloom-dot--red {
   background-color: var(--md-secondary) !important;
-  animation: ink-bloom-red 2.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+  animation: ink-spread-red 2.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
   animation-delay: 1.1s;
-}
-
-@keyframes ink-bloom-black {
-  0% {
-    transform: scale(0.2) translate(0, 0);
-    filter: blur(0.8px);
-    opacity: 0.9;
-  }
-  50% {
-    transform: scale(1.8) translate(-1.5px, -0.8px);
-    filter: blur(4px);
-    opacity: 0.35;
-  }
-  100% {
-    transform: scale(2.6) translate(-3px, -1.5px);
-    filter: blur(8px);
-    opacity: 0;
-  }
-}
-
-@keyframes ink-bloom-red {
-  0% {
-    transform: scale(0.2) translate(0, 0);
-    filter: blur(0.8px);
-    opacity: 0.8;
-  }
-  50% {
-    transform: scale(1.6) translate(1.5px, 0.8px);
-    filter: blur(3.5px);
-    opacity: 0.3;
-  }
-  100% {
-    transform: scale(2.3) translate(3px, 1.5px);
-    filter: blur(7px);
-    opacity: 0;
-  }
 }
 
 /* 古风文字运墨状态呼吸 */
@@ -396,14 +360,42 @@ watch(isManualInput, async (newValue) => {
   text-shadow: 0.5px 0.5px 0px rgba(28, 32, 34, 0.04) !important;
 }
 
+@keyframes ink-spread-black {
+  0% {
+    transform: scale(0.2) translate(0, 0);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.8) translate(-1.5px, -0.8px);
+    opacity: 0.35;
+  }
+  100% {
+    transform: scale(2.6) translate(-3px, -1.5px);
+    opacity: 0;
+  }
+}
+
+@keyframes ink-spread-red {
+  0% {
+    transform: scale(0.2) translate(0, 0);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.6) translate(1.5px, 0.8px);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(2.3) translate(3px, 1.5px);
+    opacity: 0;
+  }
+}
+
 @keyframes ink-text-breath {
   0% {
     opacity: 0.45;
-    filter: blur(0.5px);
   }
   100% {
     opacity: 0.95;
-    filter: blur(0px);
   }
 }
 </style>
