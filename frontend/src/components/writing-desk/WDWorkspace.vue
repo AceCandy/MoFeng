@@ -34,7 +34,12 @@
               {{ selectedChapterOutline?.summary || '暂无章节描述' }}
             </p>
           </div>
-          <aside class="writing-workspace__toolbar" role="toolbar" aria-label="章节操作">
+          <aside
+            v-if="shouldShowChapterToolbar"
+            class="writing-workspace__toolbar"
+            role="toolbar"
+            aria-label="章节操作"
+          >
             <div class="writing-workspace__toolbar-row writing-workspace__toolbar-row--utility">
               <div class="writing-workspace__toolbar-group writing-workspace__toolbar-group--utility">
                 <button
@@ -259,6 +264,7 @@
               @showVersionDetail="$emit('showVersionDetail', $event)"
               @confirmVersionSelection="$emit('confirmVersionSelection')"
               @generateChapter="$emit('generateChapter', $event)"
+              @selectChapter="$emit('selectChapter', $event)"
               @showVersionSelector="$emit('showVersionSelector')"
               @regenerateChapter="$emit('regenerateChapter')"
               @evaluateChapter="$emit('evaluateChapter')"
@@ -587,6 +593,7 @@ const emit = defineEmits([
   'showVersionDetail',
   'confirmVersionSelection',
   'generateChapter',
+  'selectChapter',
   'showVersionSelector',
   'showEvaluationDetail',
   'fetchChapterStatus',
@@ -828,6 +835,40 @@ const hasSelectedChapterContent = computed(() => {
 })
 
 const selectedChapterWordCount = computed(() => countNonWhitespaceChars(selectedChapterResolvedContent.value))
+
+const lockedPrerequisiteChapterNumber = computed(() => {
+  if (props.selectedChapterNumber === null || !props.project?.blueprint?.chapter_outline) {
+    return null
+  }
+
+  const chaptersByNumber = new Map(
+    (props.project.chapters ?? []).map((chapter) => [chapter.chapter_number, chapter]),
+  )
+  const sortedOutlines = [...props.project.blueprint.chapter_outline].sort(
+    (left, right) => left.chapter_number - right.chapter_number,
+  )
+
+  // 未解锁的核心规则：当前章之前必须全部生成成功，才允许推进当前章。
+  for (const outline of sortedOutlines) {
+    if (outline.chapter_number >= props.selectedChapterNumber) break
+    const chapter = chaptersByNumber.get(outline.chapter_number)
+    if (chapter?.generation_status !== 'successful') {
+      return outline.chapter_number
+    }
+  }
+
+  return null
+})
+
+const isSelectedChapterLocked = computed(() => {
+  if (props.selectedChapterNumber === null) return false
+  if (lockedPrerequisiteChapterNumber.value === null) return false
+  if (hasSelectedChapterContent.value) return false
+  const status = selectedChapter.value?.generation_status
+  return status !== 'failed' && status !== 'evaluation_failed' && status !== 'waiting_for_confirm'
+})
+
+const shouldShowChapterToolbar = computed(() => !isSelectedChapterLocked.value)
 
 const chapterStatusLabel = computed(() => {
   const status = selectedChapter.value?.generation_status
@@ -1349,6 +1390,7 @@ const currentComponentProps = computed(() => {
     chapterNumber: props.selectedChapterNumber,
     generatingChapter: props.generatingChapter,
     canGenerate: canGenerateChapter(props.selectedChapterNumber),
+    lockedPrerequisiteChapterNumber: lockedPrerequisiteChapterNumber.value,
   }
 })
 

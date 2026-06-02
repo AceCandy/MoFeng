@@ -99,6 +99,7 @@
               @show-version-detail="showVersionDetail"
               @confirm-version-selection="confirmVersionSelection"
               @generate-chapter="generateChapter"
+              @select-chapter="selectChapter"
               @show-evaluation-detail="openEvaluationDetailModal"
               @fetch-chapter-status="fetchChapterStatus"
               @edit-chapter="editChapterContent"
