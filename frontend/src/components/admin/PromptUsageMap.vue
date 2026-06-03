@@ -5,7 +5,7 @@
       <div>
         <p class="prompt-usage__eyebrow">Prompt Usage Map</p>
         <h3>阶段与提示词关系</h3>
-        <p>按实际调用点整理 AI 阶段、Prompt 名称、用途和当前数据库状态。</p>
+        <p>按实际调用点整理 AI 阶段、Prompt 名称、用途和当前数据库状态；点击 Prompt 名称可展开正文预览。</p>
       </div>
       <div class="prompt-usage__actions">
         <button type="button" class="prompt-usage__button" @click="refetchPrompts">
@@ -80,15 +80,30 @@
 
           <div class="prompt-usage__prompts">
             <template v-if="item.promptNames.length">
-              <span
+              <template
                 v-for="promptName in item.promptNames"
                 :key="promptName"
-                class="prompt-usage__prompt-chip"
-                :class="{ 'is-missing': !promptMap.has(promptName) }"
-                :title="promptMap.has(promptName) ? '数据库中存在' : '数据库中缺失'"
               >
-                {{ promptName }}
-              </span>
+                <button
+                  v-if="promptMap.has(promptName)"
+                  type="button"
+                  class="prompt-usage__prompt-chip"
+                  :class="{ 'is-expanded': isPromptExpanded(item, promptName) }"
+                  :aria-expanded="isPromptExpanded(item, promptName)"
+                  :aria-controls="isPromptExpanded(item, promptName) ? promptPreviewId(item, promptName) : undefined"
+                  :title="isPromptExpanded(item, promptName) ? '收起提示词正文' : '展开提示词正文'"
+                  @click="togglePromptPreview(item, promptName)"
+                >
+                  {{ promptName }}
+                </button>
+                <span
+                  v-else
+                  class="prompt-usage__prompt-chip is-missing"
+                  title="数据库中缺失"
+                >
+                  {{ promptName }}
+                </span>
+              </template>
             </template>
             <span v-else class="prompt-usage__inline-chip">内置提示词</span>
             <span
@@ -101,6 +116,18 @@
           </div>
 
           <p class="prompt-usage__purpose">{{ item.purpose }}</p>
+          <div
+            v-for="prompt in expandedPromptsForItem(item)"
+            :id="promptPreviewId(item, prompt.name)"
+            :key="prompt.name"
+            class="prompt-usage__preview"
+          >
+            <div class="prompt-usage__preview-header">
+              <strong>{{ prompt.title || prompt.name }}</strong>
+              <span>{{ prompt.content.length }} 字符</span>
+            </div>
+            <pre>{{ prompt.content }}</pre>
+          </div>
           <code class="prompt-usage__entry">{{ item.entry }}</code>
         </article>
       </section>
@@ -122,6 +149,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
+import type { PromptItem } from '@/api/admin'
 import { PROMPT_USAGE_ITEMS, type PromptUsageItem } from '@/constants/promptUsage'
 import { useAdminPromptsQuery } from '@/queries/admin'
 
@@ -132,6 +160,7 @@ const emit = defineEmits<{
 const promptsQuery = useAdminPromptsQuery()
 const searchText = ref('')
 const showMissingOnly = ref(false)
+const expandedPromptKeys = ref<Set<string>>(new Set())
 
 const prompts = computed(() => promptsQuery.data.value ?? [])
 const loading = computed(() => promptsQuery.isLoading.value || promptsQuery.isFetching.value)
@@ -157,6 +186,33 @@ const unusedPrompts = computed(() =>
 
 const hasMissingPrompt = (item: PromptUsageItem) => {
   return item.promptNames.some((name) => !promptMap.value.has(name))
+}
+
+const promptPreviewKey = (item: PromptUsageItem, promptName: string) => `${item.id}:${promptName}`
+
+const promptPreviewId = (item: PromptUsageItem, promptName: string) =>
+  `prompt-preview-${item.id}-${promptName.replace(/[^a-zA-Z0-9_-]/g, '-')}`
+
+const isPromptExpanded = (item: PromptUsageItem, promptName: string) => {
+  return expandedPromptKeys.value.has(promptPreviewKey(item, promptName))
+}
+
+const togglePromptPreview = (item: PromptUsageItem, promptName: string) => {
+  const key = promptPreviewKey(item, promptName)
+  const nextKeys = new Set(expandedPromptKeys.value)
+  if (nextKeys.has(key)) {
+    nextKeys.delete(key)
+  } else {
+    nextKeys.add(key)
+  }
+  expandedPromptKeys.value = nextKeys
+}
+
+const expandedPromptsForItem = (item: PromptUsageItem): PromptItem[] => {
+  return item.promptNames
+    .filter((promptName) => isPromptExpanded(item, promptName))
+    .map((promptName) => promptMap.value.get(promptName))
+    .filter((prompt): prompt is PromptItem => Boolean(prompt))
 }
 
 const filteredUsageItems = computed(() => {
@@ -453,6 +509,23 @@ const refetchPrompts = () => {
   font-weight: 700;
 }
 
+button.prompt-usage__prompt-chip {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button.prompt-usage__prompt-chip:hover,
+button.prompt-usage__prompt-chip.is-expanded {
+  border-color: var(--md-primary);
+  background: var(--md-surface-container-high);
+  color: var(--md-primary);
+}
+
+button.prompt-usage__prompt-chip:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--md-primary) 34%, transparent);
+  outline-offset: 2px;
+}
+
 .prompt-usage__prompt-chip.is-missing {
   border-color: var(--md-warning);
   background: var(--md-warning-container);
@@ -473,6 +546,45 @@ const refetchPrompts = () => {
   color: var(--md-on-surface);
   font-size: 13px;
   line-height: 1.6;
+}
+
+.prompt-usage__preview {
+  grid-column: 1 / -1;
+  padding-top: 12px;
+  border-top: 1px solid var(--md-outline-variant);
+}
+
+.prompt-usage__preview-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.prompt-usage__preview-header strong {
+  font-size: 13px;
+}
+
+.prompt-usage__preview-header span {
+  color: var(--md-on-surface-variant);
+  font-size: 12px;
+}
+
+.prompt-usage__preview pre {
+  max-height: 280px;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 4px;
+  background: var(--md-surface-container-low);
+  color: var(--md-on-surface);
+  font-family: var(--md-font-family);
+  font-size: 13px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .prompt-usage__entry {

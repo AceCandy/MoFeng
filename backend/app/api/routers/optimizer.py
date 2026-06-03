@@ -17,6 +17,7 @@ from ...db.session import get_session
 from ...models.novel import ChapterVersion
 from ...schemas.novel import ChapterGenerationStatus
 from ...schemas.user import UserInDB
+from ...services.chapter_word_count_settings import count_chapter_words
 from ...services.llm_service import LLMService
 from ...services.novel_service import NovelService
 from ...services.prompt_service import PromptService
@@ -34,41 +35,6 @@ _NOTES_FIELD_RE = re.compile(
     r'"optimization_notes"\s*:\s*"(?P<value>(?:\\.|[^"\\])*)"',
     re.DOTALL,
 )
-
-
-DEFAULT_RECOMMENDED_VERSION_PROMPT = """# 小说推荐版本优化专家
-
-你是一位资深小说编辑。你的任务是根据 AI 评审结论，对推荐版本进行一次整体优化。
-
-## 工作要求
-- 保留原章节的核心剧情、人物关系和关键信息
-- 严格参考评审建议，优先修复被指出的问题
-- 保留推荐版本已经成立的优点，不要为了修改而重写全部内容
-- 输出必须是优化后的完整章节正文，不要写解释过程，不要附加分析段落
-- 如果评审建议与正文冲突，以让正文更完整、更自然、更可读为准
-
-## 输入格式
-```json
-{
-  "source_content": "推荐版本正文",
-  "review_summary": "评审建议摘要",
-  "version_number": 1,
-  "version_review": {
-    "overall_review": "综合评价",
-    "pros": ["优点1"],
-    "cons": ["缺点1"]
-  }
-}
-```
-
-## 输出格式
-```json
-{
-  "optimized_content": "优化后的完整章节正文",
-  "optimization_notes": "本次优化重点"
-}
-```
-"""
 
 
 def _decode_json_string_fragment(fragment: str) -> Optional[str]:
@@ -217,50 +183,6 @@ DIMENSION_PROMPT_MAP = {
     "rhythm": "optimize_rhythm"
 }
 
-DEFAULT_RHYTHM_PROMPT = """# 节奏韵律优化专家
-
-你是一位专注于小说节奏和韵律的编辑大师。你的任务是优化文章的节奏感，让阅读体验更加流畅和沉浸。
-
-## 优化原则
-
-### 1. 句子长度变化
-- 长短句交替，像呼吸一样自然
-- 紧张时用短句，舒缓时用长句
-- 避免连续多个相同长度的句子
-
-### 2. 段落节奏
-- 重要情节放慢，细致描写
-- 过渡情节加快，简洁带过
-- 高潮部分可以用单句成段
-
-### 3. 标点符号
-- 善用省略号表示思绪飘散
-- 用破折号表示突然转念
-- 感叹号要克制使用
-
-### 4. 韵律感
-- 注意句尾的音节变化
-- 避免重复的句式结构
-- 适当使用排比增强气势
-
-## 输入格式
-```json
-{
-  "original_content": "需要优化的章节内容",
-  "additional_notes": "额外优化指令"
-}
-```
-
-## 输出格式
-```json
-{
-  "optimized_content": "优化后的完整章节内容",
-  "optimization_notes": "优化说明"
-}
-```
-"""
-
-
 @router.post("/optimize", response_model=OptimizeResponse)
 async def optimize_chapter(
     request: OptimizeRequest,
@@ -298,13 +220,10 @@ async def optimize_chapter(
     optimizer_prompt = await prompt_service.get_prompt(prompt_name)
 
     if not optimizer_prompt:
-        if request.dimension == "rhythm":
-            optimizer_prompt = DEFAULT_RHYTHM_PROMPT
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail=f"缺少{request.dimension}优化提示词，请联系管理员配置 '{prompt_name}' 提示词"
-            )
+        raise HTTPException(
+            status_code=500,
+            detail=f"缺少{request.dimension}优化提示词，请联系管理员配置 '{prompt_name}' 提示词"
+        )
 
     character_dna = {}
     if request.dimension == "psychology":
@@ -398,7 +317,10 @@ async def optimize_recommended_version(
 
     optimizer_prompt = await prompt_service.get_prompt("optimize_recommended_version")
     if not optimizer_prompt:
-        optimizer_prompt = DEFAULT_RECOMMENDED_VERSION_PROMPT
+        raise HTTPException(
+            status_code=500,
+            detail="缺少推荐版本优化提示词，请联系管理员配置 'optimize_recommended_version' 提示词",
+        )
 
     optimize_input = {
         "source_content": source_content,
@@ -507,7 +429,7 @@ async def apply_optimization(
     chapter.generation_step = "completed"
     chapter.generation_step_index = 7
     chapter.generation_step_total = 7
-    chapter.word_count = len(resolved_optimized_content or "")
+    chapter.word_count = count_chapter_words(resolved_optimized_content or "")
 
     try:
         from .writer import _sync_foreshadowings_for_chapter

@@ -106,6 +106,7 @@ from ..schemas.novel import (
     NovelSectionResponse,
     NovelSectionType,
 )
+from .chapter_word_count_settings import count_chapter_words
 
 logger = logging.getLogger(__name__)
 
@@ -583,7 +584,7 @@ class NovelService:
         chapter.generation_step = "completed"
         chapter.generation_step_index = 7
         chapter.generation_step_total = 7
-        chapter.word_count = len(selected.content or "")
+        chapter.word_count = count_chapter_words(selected.content or "")
         await self.session.commit()
         await self.session.refresh(chapter)
         await self._touch_project(chapter.project_id)

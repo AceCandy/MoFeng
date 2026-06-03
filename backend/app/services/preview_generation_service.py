@@ -23,6 +23,12 @@ class PreviewGenerationService:
         self.llm_service = llm_service
         self.prompt_service = prompt_service
 
+    async def _require_prompt(self, name: str) -> str:
+        prompt = await self.prompt_service.get_prompt(name)
+        if not prompt:
+            raise RuntimeError(f"缺少提示词配置: {name}")
+        return prompt
+
     async def generate_preview(
         self,
         project_id: str,
@@ -40,58 +46,26 @@ class PreviewGenerationService:
         Returns:
             包含预览内容、关键情节点、预期效果的字典
         """
-        prompt = f"""你是一位资深网文作者，现在需要为第 {chapter_number} 章生成一个简短的"章节预览"。
-
-[蓝图上下文]
-{blueprint_context[:3000]}
-
-[情绪曲线指导]
-{emotion_context}
-
-[记忆层上下文]
-{memory_context[:2000]}
-
-[本章大纲]
-标题：{outline.get('title', '')}
-摘要：{outline.get('summary', '')}
-
-[风格提示]
-{style_hint or '无特殊要求'}
-
-请生成一个 500 字左右的"章节预览"，包含：
-1. 开场设定（时间、地点、人物状态）
-2. 3-5 个关键情节点（按顺序）
-3. 章节结尾的钩子设计
-4. 预期的读者情绪变化
-
-以 JSON 格式输出：
-```json
-{{
-  "preview_text": "500字左右的章节预览正文",
-  "key_plot_points": [
-    {{
-      "order": 1,
-      "description": "情节点描述",
-      "purpose": "这个情节点的作用",
-      "emotion_target": "预期读者情绪"
-    }}
-  ],
-  "opening": {{
-    "time": "时间设定",
-    "location": "地点",
-    "character_states": ["角色1的状态", "角色2的状态"]
-  }},
-  "ending_hook": {{
-    "type": "悬念/冲突/期待/情感",
-    "description": "钩子描述"
-  }},
-  "expected_emotions": ["情绪1", "情绪2", "情绪3"]
-}}
-```"""
+        system_prompt = await self._require_prompt("chapter_preview_generate")
+        prompt = json.dumps(
+            {
+                "project_id": project_id,
+                "chapter_number": chapter_number,
+                "blueprint_context": blueprint_context[:3000],
+                "emotion_context": emotion_context,
+                "memory_context": memory_context[:2000],
+                "outline": {
+                    "title": outline.get("title", ""),
+                    "summary": outline.get("summary", ""),
+                },
+                "style_hint": style_hint or "",
+            },
+            ensure_ascii=False,
+        )
 
         try:
             response = await self.llm_service.get_llm_response(
-                system_prompt="你是一位资深网文作者，擅长规划章节结构。请严格按照 JSON 格式输出。",
+                system_prompt=system_prompt,
                 conversation_history=[{"role": "user", "content": prompt}],
                 temperature=0.7,
                 user_id=user_id,
@@ -129,54 +103,23 @@ class PreviewGenerationService:
         Returns:
             包含评分、问题、建议的字典
         """
-        prompt = f"""评估以下章节预览的质量。
-
-[章节大纲]
-标题：{outline.get('title', '')}
-摘要：{outline.get('summary', '')}
-
-[情绪曲线要求]
-{emotion_context}
-
-[章节预览]
-{preview.get('preview_text', '')}
-
-[关键情节点]
-{json.dumps(preview.get('key_plot_points', []), ensure_ascii=False, indent=2)}
-
-请评估以下方面：
-1. 是否符合大纲要求
-2. 情节点安排是否合理
-3. 情绪节奏是否符合曲线要求
-4. 钩子设计是否有效
-5. 是否存在明显问题
-
-以 JSON 格式输出：
-```json
-{{
-  "overall_score": 1-100,
-  "scores": {{
-    "outline_compliance": 1-100,
-    "plot_arrangement": 1-100,
-    "emotion_rhythm": 1-100,
-    "hook_effectiveness": 1-100
-  }},
-  "issues": [
-    {{
-      "severity": "critical/warning/minor",
-      "description": "问题描述",
-      "suggestion": "修改建议"
-    }}
-  ],
-  "approved": true/false,
-  "revision_needed": true/false,
-  "revision_suggestions": ["修改建议1", "修改建议2"]
-}}
-```"""
+        system_prompt = await self._require_prompt("chapter_preview_evaluate")
+        prompt = json.dumps(
+            {
+                "outline": {
+                    "title": outline.get("title", ""),
+                    "summary": outline.get("summary", ""),
+                },
+                "emotion_context": emotion_context,
+                "preview_text": preview.get("preview_text", ""),
+                "key_plot_points": preview.get("key_plot_points", []),
+            },
+            ensure_ascii=False,
+        )
 
         try:
             response = await self.llm_service.get_llm_response(
-                system_prompt="你是一位资深网文编辑，擅长评估章节结构。请严格按照 JSON 格式输出。",
+                system_prompt=system_prompt,
                 conversation_history=[{"role": "user", "content": prompt}],
                 temperature=0.3,
                 user_id=user_id,
@@ -223,51 +166,28 @@ class PreviewGenerationService:
         Returns:
             完整的章节正文
         """
-        prompt = f"""你是一位资深网文作者，现在需要将章节预览扩写成完整的章节正文。
-
-[蓝图上下文]
-{blueprint_context[:3000]}
-
-[记忆层上下文]
-{memory_context[:2000]}
-
-[章节大纲]
-标题：{outline.get('title', '')}
-摘要：{outline.get('summary', '')}
-
-[章节预览]
-{preview.get('preview_text', '')}
-
-[关键情节点]
-{json.dumps(preview.get('key_plot_points', []), ensure_ascii=False, indent=2)}
-
-[开场设定]
-{json.dumps(preview.get('opening', {}), ensure_ascii=False, indent=2)}
-
-[结尾钩子]
-{json.dumps(preview.get('ending_hook', {}), ensure_ascii=False, indent=2)}
-
-[风格提示]
-{style_hint or '无特殊要求'}
-
-[目标字数]
-{target_word_count} 字左右
-
-请严格按照预览中的情节点顺序，扩写成完整的章节正文。
-
-写作要求：
-1. 必须包含预览中的所有关键情节点
-2. 开场必须符合设定的时间、地点、人物状态
-3. 结尾必须实现设计的钩子
-4. 使用镜头语言，多写动作、对话、感官描写
-5. 禁止总结性结尾，禁止"他知道..."、"他明白..."等全知视角
-6. 禁止使用"值得注意的是"、"总而言之"等 AI 典型词汇
-
-直接输出章节正文，不要输出 JSON 或其他格式。"""
+        system_prompt = await self._require_prompt("chapter_preview_expand")
+        prompt = json.dumps(
+            {
+                "blueprint_context": blueprint_context[:3000],
+                "memory_context": memory_context[:2000],
+                "outline": {
+                    "title": outline.get("title", ""),
+                    "summary": outline.get("summary", ""),
+                },
+                "preview_text": preview.get("preview_text", ""),
+                "key_plot_points": preview.get("key_plot_points", []),
+                "opening": preview.get("opening", {}),
+                "ending_hook": preview.get("ending_hook", {}),
+                "style_hint": style_hint or "",
+                "target_word_count": target_word_count,
+            },
+            ensure_ascii=False,
+        )
 
         try:
             response = await self.llm_service.get_llm_response(
-                system_prompt="你是一位资深网文作者，文笔流畅，擅长写出让读者欲罢不能的章节。",
+                system_prompt=system_prompt,
                 conversation_history=[{"role": "user", "content": prompt}],
                 temperature=0.8,
                 user_id=user_id,

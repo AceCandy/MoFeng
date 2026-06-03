@@ -49,18 +49,6 @@ IMPORTANT: 你的回复必须是合法的 JSON 对象，并严格包含以下字
 不要输出额外的文本或解释。
 """
 
-BLUEPRINT_JSON_REPAIR_PROMPT = """
-你是 JSON 语法修复器。请把用户提供的小说蓝图内容修复为一个合法 JSON 对象。
-
-要求：
-1. 只修复 JSON 语法问题，例如缺逗号、未转义换行、Markdown 包裹、尾随说明文字。
-2. 不要改写剧情内容，不要新增解释，不要输出 Markdown。
-3. 输出必须是一个 JSON 对象，并保留这些顶层字段：
-title, target_audience, genre, style, tone, one_sentence_summary,
-full_synopsis, world_setting, characters, relationships, chapter_outline。
-"""
-
-
 def _ensure_prompt(prompt: str | None, name: str) -> str:
     if not prompt:
         raise HTTPException(status_code=500, detail=f"未配置名为 {name} 的提示词，请联系管理员")
@@ -82,6 +70,7 @@ async def _parse_blueprint_json_with_repair(
     project_id: str,
     user_id: int,
     llm_service: LLMService,
+    prompt_service: PromptService,
     blueprint_raw: str,
 ) -> Dict[str, Any]:
     """先直接解析蓝图 JSON，失败后让模型只做一次语法修复。"""
@@ -97,20 +86,21 @@ async def _parse_blueprint_json_with_repair(
             blueprint_raw[:500],
         )
 
-    repair_input = f"""
-下面是一段 AI 生成的小说蓝图，但它不是合法 JSON。
-请只修复 JSON 语法，不要解释。
-
-解析错误：
-{parse_error}
-
-待修复内容：
-{blueprint_raw}
-""".strip()
+    repair_prompt = _ensure_prompt(
+        await prompt_service.get_prompt("blueprint_json_repair"),
+        "blueprint_json_repair",
+    )
+    repair_input = json.dumps(
+        {
+            "parse_error": str(parse_error),
+            "blueprint_raw": blueprint_raw,
+        },
+        ensure_ascii=False,
+    )
 
     try:
         repaired_raw = await llm_service.get_llm_response(
-            system_prompt=BLUEPRINT_JSON_REPAIR_PROMPT,
+            system_prompt=repair_prompt,
             conversation_history=[{"role": "user", "content": repair_input}],
             temperature=0.0,
             user_id=user_id,
@@ -540,6 +530,7 @@ async def generate_blueprint(
         project_id=project_id,
         user_id=current_user.id,
         llm_service=llm_service,
+        prompt_service=prompt_service,
         blueprint_raw=blueprint_raw,
     )
 

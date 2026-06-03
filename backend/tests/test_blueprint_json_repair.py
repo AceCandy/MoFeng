@@ -5,6 +5,12 @@ import pytest
 from app.api.routers.novels import _parse_blueprint_json_with_repair
 
 
+class DummyPromptService:
+    async def get_prompt(self, name: str):
+        assert name == "blueprint_json_repair"
+        return "修复 JSON，且只输出合法 JSON 对象。"
+
+
 @pytest.mark.asyncio
 async def test_parse_blueprint_json_uses_raw_json_without_repair():
     llm_service = AsyncMock()
@@ -13,6 +19,7 @@ async def test_parse_blueprint_json_uses_raw_json_without_repair():
         project_id="project-1",
         user_id=7,
         llm_service=llm_service,
+        prompt_service=DummyPromptService(),
         blueprint_raw='```json\n{"title": "测试蓝图"}\n```',
     )
 
@@ -43,6 +50,7 @@ async def test_parse_blueprint_json_repairs_malformed_json_once():
         project_id="project-1",
         user_id=7,
         llm_service=llm_service,
+        prompt_service=DummyPromptService(),
         blueprint_raw='{"title": "缺逗号"\n "target_audience": "读者"}',
     )
 

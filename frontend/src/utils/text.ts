@@ -8,3 +8,13 @@ export function countNonWhitespaceChars(text: string | null | undefined): number
   if (!text) return 0
   return text.replace(/\s/g, '').length
 }
+
+export function resolveChapterDisplayWordCount(
+  content: string | null | undefined,
+  persistedWordCount: number | null | undefined,
+): number {
+  const contentWordCount = countNonWhitespaceChars(content)
+  if (contentWordCount > 0) return contentWordCount
+  if (typeof persistedWordCount === 'number' && persistedWordCount >= 0) return persistedWordCount
+  return 0
+}

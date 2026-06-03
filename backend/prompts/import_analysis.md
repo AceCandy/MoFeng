@@ -5,7 +5,18 @@
 分析用户上传的小说内容，提取元数据、世界观、角色信息、人物关系，并生成章节大纲。
 
 # Input
-你将接收到小说的一部分内容（通常是前几章）以及完整的章节标题列表。
+你将接收到一个 JSON 对象：
+
+```json
+{
+  "story_overview_sample": "全书均匀采样的章节片段，用于分析剧情脉络、世界观和大纲",
+  "character_highlights": "针对高频潜在角色提取的出场片段，用于辅助角色档案生成",
+  "potential_characters": ["潜在角色名"],
+  "verified_characters": ["预先确认真实存在的角色名"],
+  "chapter_titles": ["章节标题"],
+  "chapter_title_count": 100
+}
+```
 
 # Output Format
 请严格按照以下 JSON 格式输出：
@@ -65,9 +76,13 @@
 # Rules
 1. **Extraction**: 基于提供的文本提取信息。如果信息不足，请根据现有内容进行合理的推断和补全，保持逻辑自洽。
 2. **Characters**: 请尽可能完整地提取所有出场角色，包括主要角色和重要的次要角色。
-3. **World Setting**: 
+   - `verified_characters` 中的每一个角色都必须生成详细档案。
+   - 如果在 `story_overview_sample` 中找不到该角色的信息，请去 `character_highlights` 里找。
+   - 如果仍找不到详细信息，请根据有限上下文合理推断，或保留为“未知”，但不要把已确认角色从名单中剔除。
+   - 除了已确认名单，如果你发现其他重要角色，也请一并补充。
+3. **World Setting**:
    - **关键地点 (key_locations) 和 主要阵营 (factions) 必须包含详细的 `description`。**
    - **严禁**只返回名字而将描述留空。如果原文未直接描写，请根据上下文推断其性质、环境或作用。
    - 描述应不少于 20 字。
-4. **Outlines**: `chapter_outline` 必须包含提供的所有章节。对于没有提供正文但有标题的章节，仅根据标题推测摘要；对于有正文的章节，根据正文生成摘要。
+4. **Outlines**: `chapter_outline` 必须覆盖 `chapter_titles` 中提供的章节。对于没有提供正文但有标题的章节，仅根据标题推测摘要；对于有正文的章节，根据正文生成摘要。
 5. **Format**: 必须返回合法的 JSON，不要包含 Markdown 代码块标记。

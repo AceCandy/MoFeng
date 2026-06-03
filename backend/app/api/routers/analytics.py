@@ -440,32 +440,16 @@ async def analyze_emotion_with_ai(
     if not chapter_summaries:
         raise HTTPException(status_code=400, detail="没有可分析的章节")
     
-    # 使用AI分析
     llm_service = LLMService(session)
-    
-    prompt = f"""请分析以下小说章节的情感走向，为每个章节返回情感类型和强度。
-
-章节列表：
-{chr(10).join(chapter_summaries)}
-
-请以JSON格式返回，格式如下：
-{{
-  "chapters": [
-    {{
-      "chapter_number": 1,
-      "emotion_type": "喜悦/悲伤/愤怒/恐惧/惊讶/平静",
-      "intensity": 1-10的数字,
-      "narrative_phase": "事件/势力/挑衅1/挑衅2/挑衅3/回击1/回击2/回击3/回击4/过渡",
-      "description": "简短的情感描述"
-    }}
-  ]
-}}
-
-只返回JSON，不要其他内容。"""
+    prompt_service = PromptService(session)
+    system_prompt = await prompt_service.get_prompt("emotion_analysis")
+    if not system_prompt:
+        raise HTTPException(status_code=500, detail="缺少情感分析提示词，请联系管理员配置 'emotion_analysis' 提示词")
+    prompt = json.dumps({"chapters": chapter_summaries}, ensure_ascii=False)
 
     try:
         response = await llm_service.get_llm_response(
-            system_prompt="你是一个专业的小说情感分析师。",
+            system_prompt=system_prompt,
             conversation_history=[{"role": "user", "content": prompt}],
             temperature=0.3,
             user_id=current_user.id,

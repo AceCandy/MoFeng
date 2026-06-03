@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from app.api.routers import optimizer, writer
+from app.services.chapter_word_count_settings import count_chapter_words
 
 
 @pytest.mark.asyncio
@@ -45,14 +46,14 @@ async def test_apply_optimization_passes_current_user_id_to_foreshadowing_sync(m
         request=optimizer.ApplyOptimizationRequest(
             project_id="project-1",
             chapter_number=3,
-            optimized_content="新内容",
+            optimized_content="新\n 内 容",
         ),
         session=session,
         current_user=current_user,
     )
 
     assert result["status"] == "success"
-    assert selected_version.content == "新内容"
-    assert chapter.word_count == len("新内容")
+    assert selected_version.content == "新\n 内 容"
+    assert chapter.word_count == count_chapter_words("新\n 内 容")
     assert sync_mock.await_count == 1
     assert sync_mock.await_args.kwargs["user_id"] == current_user.id

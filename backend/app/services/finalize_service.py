@@ -21,6 +21,7 @@ from ..models.project_memory import ProjectMemory, ChapterSnapshot
 from ..models.memory_layer import CharacterState
 from ..models.novel import Chapter, ChapterVersion, NovelProject
 from ..models.chapter_blueprint import ChapterBlueprint
+from .chapter_word_count_settings import count_chapter_words
 from .llm_service import LLMService
 from .vector_store_service import VectorStoreService
 
@@ -240,7 +241,7 @@ class FinalizeService:
                 character_states=new_state,
                 plot_arcs=new_plot_arcs or project_memory.plot_arcs,
                 chapter_summary=chapter_summary,
-                word_count=len(chapter_text)
+                word_count=count_chapter_words(chapter_text)
             )
             result["updates"]["snapshot"] = "created"
             

@@ -144,6 +144,7 @@ import type { ComponentPublicInstance } from 'vue'
 import type { NovelProject } from '@/api/novel'
 import Tooltip from '@/components/Tooltip.vue'
 import { findNearestIncompleteChapterNumber, isChapterCompletedStatus } from '@/utils/chapter'
+import { resolveChapterDisplayWordCount } from '@/utils/text'
 
 interface Props {
   project: NovelProject
@@ -266,8 +267,7 @@ const isChapterSelecting = (chapterNumber: number) => {
 const getChapterWordCount = (chapterNumber: number): number => {
   const chapter = chapterByNumber.value.get(chapterNumber)
   if (!chapter) return 0
-  if (typeof chapter.word_count === 'number' && chapter.word_count >= 0) return chapter.word_count
-  return (chapter.content || '').replace(/\s+/g, '').length
+  return resolveChapterDisplayWordCount(chapter.content, chapter.word_count)
 }
 
 const getChapterTag = (chapterNumber: number): string => {

@@ -327,27 +327,16 @@ class ImportService:
         阶段一：角色普查。
         只负责从潜在名单中筛选出真实存在的角色名，不做详细分析。
         """
-        system_prompt = """
-        你是一个严谨的网文角色鉴别师。
-        任务：根据提供的【潜在角色名单】和【角色高光片段】，甄别出其中真正的角色。
-        
-        判断标准：
-        1. 必须是具体的人物（排除地名、物品名、通用称呼如“师兄”、“掌门”等泛指）。
-        2. 在高光片段中有明确的对话、动作或被他人提及。
-        
-        输出要求：
-        仅返回一个 JSON 字符串列表，包含所有确认的角色名。
-        例如：["张三", "李四", "王五"]
-        不要输出任何其他解释或字段。
-        """
-        
-        user_content = f"""
-【潜在角色名单】
-{", ".join(potential_characters)}
-
-【参考证据：角色高光片段】
-{char_highlights}
-"""
+        system_prompt = await self.prompt_service.get_prompt("import_character_filter")
+        if not system_prompt:
+            raise HTTPException(status_code=500, detail="缺少导入角色鉴别提示词，请联系管理员配置 'import_character_filter'")
+        user_content = json.dumps(
+            {
+                "potential_characters": potential_characters,
+                "character_highlights": char_highlights,
+            },
+            ensure_ascii=False,
+        )
         messages = [{"role": "user", "content": user_content}]
         
         try:
@@ -387,62 +376,20 @@ class ImportService:
     async def _analyze_content(self, user_id: int, sample_text: str, chapter_titles: List[str], potential_characters: List[str] = [], char_highlights: str = "", verified_characters: List[str] = []) -> Blueprint:
         prompt_template = await self.prompt_service.get_prompt("import_analysis")
         if not prompt_template:
-            # Fallback prompt if file not found in DB
-            prompt_template = """
-            你是一个专业的网文编辑。请根据提供的小说样本和目录，分析并提取小说信息。
-            返回 JSON 格式，包含：title, one_sentence_summary, full_synopsis, world_setting (core_rules, key_locations, factions, magic_system), characters, relationships, chapter_outline。
-            注意 world_setting 的 key 必须是 core_rules 和 key_locations。
-            请尽可能完整地提取所有出场角色，包括主要角色和重要的次要角色。
-            """
+            raise HTTPException(status_code=500, detail="缺少导入分析提示词，请联系管理员配置 'import_analysis'")
         
-        # 构造参考信息
-        # 1. 潜在角色列表
-        potential_chars_str = ", ".join(potential_characters) if potential_characters else "无"
-        
-        # 2. 章节目录 (提供更多，例如前500章)
-        chapters_preview = "\n".join(chapter_titles[:500])
-        if len(chapter_titles) > 500:
-            chapters_preview += f"\n... (共 {len(chapter_titles)} 章)"
-
-        # 3. 确定的角色名单 (Stringify)
-        verified_chars_str = ", ".join(verified_characters) if verified_characters else "无 (请自行分析)"
-
-        system_prompt = f"""
-{prompt_template}
-
-【输入数据说明】
-用户提供的输入分为两部分：
-1. **剧情概览样本**：全书均匀采样的章节片段，用于分析剧情脉络、世界观和大纲。
-2. **角色高光片段集**：针对全书出现频率较高的潜在角色专门提取的“出场片段”。这些片段是专门为了辅助你提取角色而提供的。
-
-【任务要求】
-1. **强制性角色档案生成**：
-   我们已经预先确认了以下角色在书中真实存在：
-   【{verified_chars_str}】
-   
-   请你**必须**为上述列表中的**每一个**角色生成详细档案（性格、外貌、目标等）。
-   - 如果在“剧情概览样本”中找不到该角色的信息，请去“角色高光片段集”里找。
-   - 如果还是找不到详细信息，请根据有限的上下文进行合理推断，或保留为“未知”，但**绝不要**将该角色从名单中剔除。
-   - 除了上述名单，如果你发现了其他重要角色，也请一并补充。
-
-2. **世界观与剧情**：请基于“剧情概览样本”进行常规分析。
-
-【参考信息】
-1. 潜在角色名录（线索）：
-{potential_chars_str}
-
-2. 章节目录概览：
-{chapters_preview}
-"""
-        
-        # 构造 prompt
-        user_content = f"""
-=== PART 1: 剧情概览样本 (Story Overview) ===
-{sample_text}
-
-=== PART 2: 角色高光片段集 (Character Highlights) ===
-{char_highlights}
-"""
+        system_prompt = prompt_template
+        user_content = json.dumps(
+            {
+                "story_overview_sample": sample_text,
+                "character_highlights": char_highlights,
+                "potential_characters": potential_characters,
+                "verified_characters": verified_characters,
+                "chapter_titles": chapter_titles[:500],
+                "chapter_title_count": len(chapter_titles),
+            },
+            ensure_ascii=False,
+        )
         messages = [{"role": "user", "content": user_content}]
         
         try:

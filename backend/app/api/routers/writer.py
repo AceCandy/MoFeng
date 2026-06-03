@@ -51,6 +51,7 @@ from ...schemas.novel import (
 from ...schemas.task import BackgroundTaskResponse
 from ...schemas.user import UserInDB
 from ...services.background_task_service import BackgroundTaskService
+from ...services.chapter_word_count_settings import count_chapter_words
 from ...services.chapter_outline_task_runner import run_generate_chapters_outline_task
 from ...services.chapter_ingest_service import ChapterIngestionService
 from ...services.llm_service import LLMService
@@ -407,40 +408,21 @@ async def _refine_foreshadowing_candidates_with_llm(
         }
         for idx, candidate in enumerate(limited_candidates)
     ]
-    prompt = f"""
-你是长篇小说伏笔编辑，只保留真正有后续叙事价值的伏笔。
-
-判定标准：
-- 保留会制造明确悬念、承诺、异常线索、身份/真相问题，或后文需要兑现的信息。
-- 删除普通心理描写、气氛描写、一次性动作、泛泛疑问、普通计划、重复背景信息。
-- 数量必须克制；没有足够意义就返回空数组。
-- 每章最多保留 {MAX_AUTO_FORESHADOWINGS_PER_CHAPTER} 个，优先保留最强的。
-- 不要创造候选之外的新伏笔。
-
-输出 JSON：
-{{
-  "items": [
-    {{
-      "id": 0,
-      "keep": true,
-      "type": "mystery|question|clue|setup",
-      "importance": "major|minor|subtle",
-      "keywords": ["2到6字关键词"],
-      "confidence": 0.0
-    }}
-  ]
-}}
-
-第 {chapter_number} 章候选：
-{json.dumps(candidate_payload, ensure_ascii=False)}
-
-章节内容节选：
-{content[:4000]}
-""".strip()
-
     try:
+        system_prompt = await PromptService(session).get_prompt("foreshadowing_candidate_review")
+        if not system_prompt:
+            raise RuntimeError("缺少提示词配置: foreshadowing_candidate_review")
+        prompt = json.dumps(
+            {
+                "chapter_number": chapter_number,
+                "max_items": MAX_AUTO_FORESHADOWINGS_PER_CHAPTER,
+                "candidates": candidate_payload,
+                "content_excerpt": content[:4000],
+            },
+            ensure_ascii=False,
+        )
         response = await LLMService(session).get_llm_response(
-            system_prompt="你只输出合法 JSON，不输出解释。",
+            system_prompt=system_prompt,
             conversation_history=[{"role": "user", "content": prompt}],
             temperature=0.1,
             user_id=user_id,
@@ -522,36 +504,20 @@ async def _judge_foreshadowing_status_with_llm(
                 "keywords": fs.keywords or [],
             }
         )
-    prompt = f"""
-你是长篇小说伏笔编辑，判断本章是否真正推进或回收历史伏笔。
-
-状态只能选择：
-- revealed：本章明确给出答案、真相、兑现承诺，读者能确认该伏笔已回收。
-- developing：本章只是重新提及、强化、给出新线索，但还没有真正回收。
-- unchanged：只是词语重复、氛围相似、无关提及，不能算推进或回收。
-
-要求：
-- 不要因为出现关键词就判定回收。
-- 回收必须有语义上的解释、揭示、兑现或因果闭合。
-- 输出 JSON，不要解释。
-
-输出 JSON：
-{{
-  "items": [
-    {{"id": 1, "status": "revealed|developing|unchanged"}}
-  ]
-}}
-
-第 {chapter_number} 章内容节选：
-{content[:5000]}
-
-历史伏笔：
-{json.dumps(payload, ensure_ascii=False)}
-""".strip()
-
     try:
+        system_prompt = await PromptService(session).get_prompt("foreshadowing_status_judge")
+        if not system_prompt:
+            raise RuntimeError("缺少提示词配置: foreshadowing_status_judge")
+        prompt = json.dumps(
+            {
+                "chapter_number": chapter_number,
+                "content_excerpt": content[:5000],
+                "foreshadowings": payload,
+            },
+            ensure_ascii=False,
+        )
         response = await LLMService(session).get_llm_response(
-            system_prompt="你只输出合法 JSON，不输出解释。",
+            system_prompt=system_prompt,
             conversation_history=[{"role": "user", "content": prompt}],
             temperature=0.1,
             user_id=user_id,
@@ -874,7 +840,7 @@ async def _finalize_chapter_async(
         chapter.generation_step = "completed"
         chapter.generation_step_index = 7
         chapter.generation_step_total = 7
-        chapter.word_count = len(selected_version.content or "")
+        chapter.word_count = count_chapter_words(selected_version.content or "")
         await session.commit()
 
         vector_store = None
@@ -1014,7 +980,7 @@ async def finalize_chapter(
     chapter.generation_step = "completed"
     chapter.generation_step_index = 7
     chapter.generation_step_total = 7
-    chapter.word_count = len(selected_version.content or "")
+    chapter.word_count = count_chapter_words(selected_version.content or "")
     await session.commit()
 
     vector_store = None
@@ -1427,7 +1393,7 @@ async def edit_chapter_content(
     chapter.generation_step = "completed"
     chapter.generation_step_index = 7
     chapter.generation_step_total = 7
-    chapter.word_count = len(request.content or "")
+    chapter.word_count = count_chapter_words(request.content or "")
     await session.commit()
 
     background_tasks.add_task(
@@ -1486,7 +1452,7 @@ async def edit_chapter_content_fast(
     chapter.generation_step = "completed"
     chapter.generation_step_index = 7
     chapter.generation_step_total = 7
-    chapter.word_count = len(request.content or "")
+    chapter.word_count = count_chapter_words(request.content or "")
     await session.commit()
 
     background_tasks.add_task(

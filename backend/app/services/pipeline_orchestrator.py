@@ -1397,21 +1397,22 @@ class PipelineOrchestrator:
             current_word_count,
             target_word_count,
         )
-        prompt = f"""
-请把下面小说章节压缩到约 {target_word_count} 字，最多不得超过 {int(target_word_count * 1.1)} 字。
-
-要求：
-- 只删减冗余描写、重复心理活动、过密铺垫，不新增剧情。
-- 保留关键事件、人物关系、冲突转折和结尾钩子。
-- 直接输出压缩后的章节正文，不要解释，不要输出 JSON。
-
-原文字数约 {current_word_count} 字：
-{content}
-""".strip()
+        system_prompt = await self.prompt_service.get_prompt("chapter_compression")
+        if not system_prompt:
+            raise RuntimeError("缺少提示词，请联系管理员配置 'chapter_compression'")
+        prompt = json.dumps(
+            {
+                "target_word_count": target_word_count,
+                "maximum_word_count": int(target_word_count * 1.1),
+                "current_word_count": current_word_count,
+                "content": content,
+            },
+            ensure_ascii=False,
+        )
 
         try:
             response = await self.llm_service.get_llm_response(
-                system_prompt="你是小说章节压缩编辑，只做删减压缩，不新增剧情。",
+                system_prompt=system_prompt,
                 conversation_history=[{"role": "user", "content": prompt}],
                 temperature=0.2,
                 user_id=user_id,
