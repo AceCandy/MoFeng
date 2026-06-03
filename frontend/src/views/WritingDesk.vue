@@ -298,7 +298,11 @@ import { useDialogA11y } from '@/composables/useDialogA11y'
 import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
 import { desktopMin, mobileMax } from '@/constants/responsive'
 import { countNonWhitespaceChars } from '@/utils/text'
-import { resolveChapterNumberForEntry, resolveChapterNumberForProjectEntry } from '@/utils/chapter'
+import {
+  formatChapterGenerationError,
+  resolveChapterNumberForEntry,
+  resolveChapterNumberForProjectEntry,
+} from '@/utils/chapter'
 import { useNovelStore } from '@/stores/novel'
 import WDSidebar from '@/components/writing-desk/WDSidebar.vue'
 import WDWorkspace from '@/components/writing-desk/WDWorkspace.vue'
@@ -1133,20 +1137,19 @@ const generateChapter = async (chapterNumber: number) => {
     }
   } catch (error) {
     console.error('生成章节失败:', error)
+    const failureMessage = formatChapterGenerationError(error)
 
     // 错误状态的本地更新仍然是必要的，以立即反映UI
     if (project.value?.chapters) {
       const chapter = project.value.chapters.find((ch) => ch.chapter_number === chapterNumber)
       if (chapter) {
         chapter.generation_status = 'failed'
+        chapter.generation_step = failureMessage
         chapter.status_updated_at = new Date().toISOString()
       }
     }
 
-    globalAlert.showError(
-      `生成章节失败: ${error instanceof Error ? error.message : '未知错误'}`,
-      '生成失败',
-    )
+    globalAlert.showError(failureMessage, '生成失败')
   } finally {
     generatingChapter.value = null
   }

@@ -12,6 +12,7 @@ from fastapi import HTTPException
 from langgraph.graph import END, START, StateGraph
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ..core.config import settings
 from ..models.novel import Chapter
@@ -62,10 +63,6 @@ class PipelineGraphState(TypedDict, total=False):
     writing_notes: Optional[str]
     flow_config: Optional[Dict[str, Any]]
     config: "PipelineConfig"
-    project: Any
-    outline: Any
-    chapter: Any
-    outlines_map: Dict[int, Any]
     history_context: Dict[str, Any]
     project_schema: Any
     blueprint_dict: Dict[str, Any]
@@ -216,48 +213,97 @@ class PipelineOrchestrator:
                 chapter_number,
             )
 
+    async def _load_generation_project_schema(self, project_id: str, user_id: int):
+        """显式重新加载项目快照，避免复用跨 commit 的 ORM 关系对象。"""
+        return await self.novel_service.get_project_schema(project_id, user_id)
+
+    async def _get_chapter_for_update(self, *, project_id: str, chapter_number: int) -> Chapter:
+        stmt = select(Chapter).where(
+            Chapter.project_id == project_id,
+            Chapter.chapter_number == chapter_number,
+        )
+        result = await self.session.execute(stmt)
+        chapter = result.scalars().first()
+        if chapter:
+            return chapter
+        return await self.novel_service.get_or_create_chapter(project_id, chapter_number)
+
+    async def _set_chapter_generation_state(
+        self,
+        *,
+        project_id: str,
+        chapter_number: int,
+        progress: int,
+        step: str,
+        step_index: int,
+        status: Optional[str] = None,
+        step_total: Optional[int] = None,
+        started_at: Optional[datetime] = None,
+        reset_selected_version: bool = False,
+    ) -> Chapter:
+        """用显式查询更新章节状态，避免 LangGraph state 保存旧 ORM 实体。"""
+        chapter = await self._get_chapter_for_update(
+            project_id=project_id,
+            chapter_number=chapter_number,
+        )
+        if reset_selected_version:
+            chapter.real_summary = None
+            chapter.selected_version_id = None
+            chapter.selected_version = None
+        if status is not None:
+            chapter.status = status
+        if started_at is not None:
+            chapter.generation_started_at = started_at
+        chapter.generation_progress = progress
+        chapter.generation_step = step
+        chapter.generation_step_index = step_index
+        if step_total is not None:
+            chapter.generation_step_total = step_total
+        await self.session.commit()
+        return chapter
+
     async def _graph_initialize_chapter(self, state: PipelineGraphState) -> PipelineGraphState:
         config = await self._resolve_config(state.get("flow_config"))
         project_id = state["project_id"]
         chapter_number = state["chapter_number"]
-        project = await self.novel_service.ensure_project_owner(project_id, state["user_id"])
+        await self.novel_service.ensure_project_owner(project_id, state["user_id"])
 
         outline = await self.novel_service.get_outline(project_id, chapter_number)
         if not outline:
             raise HTTPException(status_code=404, detail="蓝图中未找到对应章节纲要")
 
-        chapter = await self.novel_service.get_or_create_chapter(project_id, chapter_number)
-        chapter.real_summary = None
-        chapter.selected_version_id = None
-        chapter.selected_version = None
-        chapter.status = "generating"
-        chapter.generation_started_at = datetime.now(CN_TIMEZONE)
-        chapter.generation_progress = 3
-        chapter.generation_step = "context_prep"
-        chapter.generation_step_index = 1
-        chapter.generation_step_total = 7
-        await self.session.commit()
+        await self._set_chapter_generation_state(
+            project_id=project_id,
+            chapter_number=chapter_number,
+            status="generating",
+            progress=3,
+            step="context_prep",
+            step_index=1,
+            step_total=7,
+            started_at=datetime.now(CN_TIMEZONE),
+            reset_selected_version=True,
+        )
 
         return {
             "config": config,
-            "project": project,
-            "outline": outline,
-            "chapter": chapter,
-            "outlines_map": {item.chapter_number: item for item in project.outlines},
             "outline_title": outline.title or f"第{outline.chapter_number}章",
             "outline_summary": outline.summary or "暂无摘要",
             "writing_notes": state.get("writing_notes") or "无额外写作指令",
         }
 
     async def _graph_collect_context(self, state: PipelineGraphState) -> PipelineGraphState:
+        project_schema = await self._load_generation_project_schema(
+            state["project_id"],
+            state["user_id"],
+        )
+        outlines = project_schema.blueprint.chapter_outline if project_schema.blueprint else []
+        outlines_map = {item.chapter_number: item for item in outlines}
         history_context = await self._collect_history_context(
             project_id=state["project_id"],
             chapter_number=state["chapter_number"],
-            outlines_map=state["outlines_map"],
-            chapters=state["project"].chapters,
+            outlines_map=outlines_map,
             user_id=state["user_id"],
         )
-        project_schema = await self.novel_service._serialize_project(state["project"])
         blueprint_dict = self._normalize_blueprint(project_schema.blueprint.model_dump())
         all_characters = [c.get("name") for c in blueprint_dict.get("characters", []) if c.get("name")]
 
@@ -280,11 +326,13 @@ class PipelineOrchestrator:
             all_characters=state["all_characters"],
             user_id=state["user_id"],
         )
-        chapter = state["chapter"]
-        chapter.generation_progress = 28
-        chapter.generation_step = "director_mission"
-        chapter.generation_step_index = 2
-        await self.session.commit()
+        await self._set_chapter_generation_state(
+            project_id=state["project_id"],
+            chapter_number=state["chapter_number"],
+            progress=28,
+            step="director_mission",
+            step_index=2,
+        )
 
         return {
             "chapter_mission": chapter_mission,
@@ -412,11 +460,13 @@ class PipelineOrchestrator:
 
         prompt_input = "\n\n".join(f"{title}\n{content}" for title, content in prompt_sections if content)
         logger.debug("Pipeline prompt length: %s chars", len(prompt_input))
-        chapter = state["chapter"]
-        chapter.generation_progress = 55
-        chapter.generation_step = "draft_generation"
-        chapter.generation_step_index = 4
-        await self.session.commit()
+        await self._set_chapter_generation_state(
+            project_id=state["project_id"],
+            chapter_number=state["chapter_number"],
+            progress=55,
+            step="draft_generation",
+            step_index=4,
+        )
 
         version_count = state["config"].version_count
         return {
@@ -436,11 +486,13 @@ class PipelineOrchestrator:
                 if idx < len(state["version_style_hints"])
                 else None
             )
-            chapter = state["chapter"]
-            chapter.generation_progress = 55 + int((idx / max(version_count, 1)) * 25)
-            chapter.generation_step = "draft_generation"
-            chapter.generation_step_index = 4
-            await self.session.commit()
+            await self._set_chapter_generation_state(
+                project_id=state["project_id"],
+                chapter_number=state["chapter_number"],
+                progress=55 + int((idx / max(version_count, 1)) * 25),
+                step="draft_generation",
+                step_index=4,
+            )
             versions.append(
                 await self._generate_single_version(
                     index=idx,
@@ -461,19 +513,24 @@ class PipelineOrchestrator:
                     config=state["config"],
                 )
             )
-            chapter.generation_progress = 55 + int(((idx + 1) / max(version_count, 1)) * 25)
-            chapter.generation_step = "draft_generation"
-            chapter.generation_step_index = 4
-            await self.session.commit()
+            await self._set_chapter_generation_state(
+                project_id=state["project_id"],
+                chapter_number=state["chapter_number"],
+                progress=55 + int(((idx + 1) / max(version_count, 1)) * 25),
+                step="draft_generation",
+                step_index=4,
+            )
 
         return {"versions": versions}
 
     async def _graph_review_versions(self, state: PipelineGraphState) -> PipelineGraphState:
-        chapter = state["chapter"]
-        chapter.generation_progress = 86
-        chapter.generation_step = "quality_review"
-        chapter.generation_step_index = 5
-        await self.session.commit()
+        await self._set_chapter_generation_state(
+            project_id=state["project_id"],
+            chapter_number=state["chapter_number"],
+            progress=86,
+            step="quality_review",
+            step_index=5,
+        )
 
         best_version_index, ai_review_result = await self._run_ai_review(
             versions=state["versions"],
@@ -580,11 +637,13 @@ class PipelineOrchestrator:
         versions = state["versions"]
         contents = [v.get("content", "") for v in versions]
         metadata = [v.get("metadata") for v in versions]
-        chapter = state["chapter"]
-        chapter.generation_progress = 96
-        chapter.generation_step = "persist_versions"
-        chapter.generation_step_index = 6
-        await self.session.commit()
+        chapter = await self._set_chapter_generation_state(
+            project_id=state["project_id"],
+            chapter_number=state["chapter_number"],
+            progress=96,
+            step="persist_versions",
+            step_index=6,
+        )
         versions_models = await self.novel_service.replace_chapter_versions(chapter, contents, metadata)
 
         variants = []
@@ -703,7 +762,6 @@ class PipelineOrchestrator:
         project_id: str,
         chapter_number: int,
         outlines_map: Dict[int, Any],
-        chapters: List[Chapter],
         user_id: int,
     ) -> Dict[str, Any]:
         completed_summaries = []
@@ -711,10 +769,19 @@ class PipelineOrchestrator:
         latest_prev_number = -1
         previous_summary_text = ""
         previous_tail_excerpt = ""
+        stmt = (
+            select(Chapter)
+            .options(selectinload(Chapter.selected_version))
+            .where(
+                Chapter.project_id == project_id,
+                Chapter.chapter_number < chapter_number,
+            )
+            .order_by(Chapter.chapter_number)
+        )
+        result = await self.session.execute(stmt)
+        chapters = result.scalars().all()
 
         for existing in chapters:
-            if existing.chapter_number >= chapter_number:
-                continue
             if existing.selected_version is None or not existing.selected_version.content:
                 continue
             if not existing.real_summary:

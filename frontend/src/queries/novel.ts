@@ -330,8 +330,19 @@ export function useNovelMutationRefresh(projectId?: ProjectIdSource) {
         if (!currentProject) {
           return currentProject
         }
-        upsertChapter(currentProject, chapter)
-        return currentProject
+        const chaptersCopy = [...(currentProject.chapters || [])]
+        const index = chaptersCopy.findIndex((item) => item.chapter_number === chapter.chapter_number)
+        if (index >= 0) {
+          chaptersCopy[index] = chapter
+        } else {
+          chaptersCopy.push(chapter)
+        }
+        chaptersCopy.sort((left, right) => left.chapter_number - right.chapter_number)
+
+        return {
+          ...currentProject,
+          chapters: chaptersCopy,
+        }
       },
     )
     queryClient.setQueryData(

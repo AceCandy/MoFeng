@@ -42,6 +42,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { formatChapterGenerationError } from '@/utils/chapter'
 
 interface Props {
   chapterNumber: number
@@ -57,8 +58,23 @@ const props = withDefaults(defineProps<Props>(), {
 
 defineEmits(['generateChapter'])
 
+const failureReason = computed(() => {
+  const step = (props.generationStep || '').trim()
+  if (!step || /^[a-z_]+(?:\|.*)?$/i.test(step)) {
+    return ''
+  }
+  return formatChapterGenerationError(step)
+})
+
 const failureScenario = computed(() => {
   const step = (props.generationStep || '').toLowerCase()
+
+  if (failureReason.value) {
+    return {
+      title: '已定位错误原因',
+      description: failureReason.value,
+    }
+  }
 
   if (props.generationStatus === 'evaluation_failed') {
     return {

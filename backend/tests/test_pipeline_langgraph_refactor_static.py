@@ -1,5 +1,13 @@
 from pathlib import Path
 
+import pytest
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import StaticPool
+
+from app.api.routers.writer import _build_generation_failure_detail
+from app.db.base import Base
+from app.models import Chapter, ChapterOutline, ChapterVersion, NovelBlueprint, NovelProject
+from app.models.user import User
 from app.services.pipeline_orchestrator import PipelineConfig, PipelineOrchestrator
 
 
@@ -130,6 +138,24 @@ def test_regular_generate_endpoint_delegates_to_langgraph_pipeline() -> None:
         assert legacy_marker not in block
 
 
+def test_regular_generate_endpoint_exposes_runtime_error_detail() -> None:
+    block = _writer_generate_block()
+
+    assert "_build_generation_failure_detail(exc)" in block
+    assert 'detail="生成章节失败，请重试。"' not in block
+
+
+def test_generation_failure_detail_keeps_reason_and_redacts_secrets() -> None:
+    detail = _build_generation_failure_detail(
+        RuntimeError("阶段 chapter_writing 使用的供应商缺少 API Key")
+    )
+    secret_detail = _build_generation_failure_detail(RuntimeError("api_key=sk-live-secret 请求失败"))
+
+    assert detail == "生成章节失败：阶段 chapter_writing 使用的供应商缺少 API Key"
+    assert "sk-live-secret" not in secret_detail
+    assert "api_key=[已隐藏]" in secret_detail
+
+
 def test_langgraph_pipeline_preserves_stage_routing_keys() -> None:
     source = _source()
 
@@ -160,3 +186,86 @@ def test_langgraph_pipeline_marks_chapter_failed_on_runtime_error() -> None:
     assert "await self._mark_generation_failed(" in source
     assert 'chapter.status = "failed"' in source
     assert 'chapter.generation_step = "failed"' in source
+
+
+def test_pipeline_state_does_not_reuse_orm_entities_across_commits() -> None:
+    source = _source()
+
+    assert '"project": project' not in source
+    assert '"chapter": chapter' not in source
+    assert 'state["project"].chapters' not in source
+    assert "_serialize_project(state[\"project\"])" not in source
+    assert "chapters: List[Chapter]" not in source
+    assert "await self._set_chapter_generation_state(" in source
+    assert "await self._load_generation_project_schema(" in source
+    assert "selectinload(Chapter.selected_version)" in source
+
+
+@pytest.mark.asyncio
+async def test_collect_history_context_loads_selected_version_with_async_session() -> None:
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async with session_factory() as session:
+        project_id = "project-history-context"
+        session.add(User(id=1, username="writer", hashed_password="secret"))
+        session.add(
+            NovelProject(
+                id=project_id,
+                user_id=1,
+                title="测试小说",
+                initial_prompt="测试提示",
+            )
+        )
+        session.add(NovelBlueprint(project_id=project_id, title="测试小说"))
+        outline = ChapterOutline(
+            project_id=project_id,
+            chapter_number=1,
+            title="旧章",
+            summary="旧章概要",
+        )
+        session.add(outline)
+        previous_chapter = Chapter(
+            project_id=project_id,
+            chapter_number=1,
+            real_summary="旧章摘要",
+            status="successful",
+        )
+        session.add(previous_chapter)
+        await session.flush()
+        selected_version = ChapterVersion(
+            chapter_id=previous_chapter.id,
+            version_label="v1",
+            content="前序正文开头。\n前序正文结尾。",
+        )
+        session.add(selected_version)
+        await session.flush()
+        previous_chapter.selected_version_id = selected_version.id
+        await session.commit()
+
+        orchestrator = PipelineOrchestrator(session)
+        history = await orchestrator._collect_history_context(
+            project_id=project_id,
+            chapter_number=2,
+            outlines_map={1: outline},
+            user_id=1,
+        )
+
+        assert history["completed_chapters"] == [
+            {
+                "chapter_number": 1,
+                "title": "旧章",
+                "summary": "旧章摘要",
+            }
+        ]
+        assert history["previous_summary"] == "旧章摘要"
+        assert history["previous_tail"] == "前序正文开头。\n前序正文结尾。"
+
+    await engine.dispose()

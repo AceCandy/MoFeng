@@ -537,6 +537,12 @@ onUnmounted(() => {
   box-shadow: var(--md-elevation-1);
 }
 
+.chapter-console__pipeline-card {
+  position: relative;
+  z-index: 5;
+  overflow: visible !important;
+}
+
 .chapter-console__header {
   padding: var(--md-spacing-4);
   display: flex;
@@ -649,6 +655,7 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: flex-start;
   gap: var(--md-spacing-2);
+  overflow: visible !important;
 }
 
 .chapter-console__pipeline-item {
@@ -659,6 +666,12 @@ onUnmounted(() => {
   text-align: center;
   flex: 1;
   padding: 0 0 14px 0;
+  overflow: visible;
+  transition: z-index 0.2s ease;
+}
+
+.chapter-console__pipeline-item:hover {
+  z-index: 10;
 }
 
 .chapter-console__pipeline-item::before {
@@ -682,6 +695,19 @@ onUnmounted(() => {
 
 .chapter-console__pipeline-item.is-done::after {
   background-color: var(--md-success);
+}
+
+.chapter-console__pipeline-item.is-in-progress::after {
+  background: linear-gradient(
+    90deg,
+    var(--md-success) 0%,
+    var(--md-primary) 30%,
+    rgba(255, 255, 255, 0.95) 50%,
+    var(--md-primary) 70%,
+    var(--md-outline-variant) 100%
+  );
+  background-size: 200% 100%;
+  animation: line-flow 2s infinite linear;
 }
 
 .chapter-console__pipeline-marker {
@@ -968,6 +994,19 @@ onUnmounted(() => {
     background-color: var(--md-success);
   }
 
+  .chapter-console__pipeline-item.is-in-progress::before {
+    background: linear-gradient(
+      180deg,
+      var(--md-success) 0%,
+      var(--md-primary) 30%,
+      rgba(255, 255, 255, 0.95) 50%,
+      var(--md-primary) 70%,
+      var(--md-outline-variant) 100%
+    );
+    background-size: 100% 200%;
+    animation: line-flow-vertical 2s infinite linear;
+  }
+
   .chapter-console__pipeline-item::after {
     display: none;
   }
@@ -1029,6 +1068,24 @@ onUnmounted(() => {
   50%,
   100% {
     opacity: 0;
+  }
+}
+
+@keyframes line-flow {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+@keyframes line-flow-vertical {
+  0% {
+    background-position: 0 200%;
+  }
+  100% {
+    background-position: 0 0;
   }
 }
 </style>

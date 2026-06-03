@@ -191,6 +191,34 @@ export function normalizeOptimizeResult(
   }
 }
 
+const CHAPTER_GENERATION_ERROR_FALLBACK = '未收到具体错误信息，请查看后端日志或稍后重试。'
+
+/**
+ * 生成失败弹窗只展示真实原因，避免把“生成章节失败”前缀重复拼接。
+ */
+export function formatChapterGenerationError(error: unknown): string {
+  const rawMessage =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : ''
+  let message = rawMessage.trim()
+
+  if (!message) {
+    return CHAPTER_GENERATION_ERROR_FALLBACK
+  }
+
+  message = message.replace(/^生成章节失败[：:]\s*生成章节失败[，,]?\s*/u, '生成章节失败，')
+
+  const specificReason = message.match(/^生成章节失败[：:]\s*(.+)$/u)?.[1]?.trim()
+  if (specificReason) {
+    return specificReason
+  }
+
+  return message
+}
+
 /**
  * 解析评估报告负载
  */

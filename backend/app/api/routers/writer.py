@@ -111,6 +111,26 @@ async def _load_project_schema(service: NovelService, project_id: str, user_id: 
     return await service.get_project_schema(project_id, user_id)
 
 
+def _build_generation_failure_detail(exc: Exception, max_length: int = 300) -> str:
+    """保留章节生成失败根因，同时避免把敏感配置原样回传给前端。"""
+    raw_detail = str(exc).strip() or exc.__class__.__name__
+    normalized = re.sub(r"\s+", " ", raw_detail).strip()
+    if not normalized:
+        return "生成章节失败：未收到具体错误信息，请查看后端日志。"
+
+    redacted = re.sub(
+        r"(?i)\b(api[_-]?key|authorization|bearer|token|secret|password)\b(\s*[=:]\s*)([^,\s;]+)",
+        r"\1\2[已隐藏]",
+        normalized,
+    )
+    if len(redacted) > max_length:
+        redacted = redacted[:max_length].rstrip() + "..."
+
+    if redacted.startswith("生成章节失败"):
+        return redacted
+    return f"生成章节失败：{redacted}"
+
+
 def _extract_tail_excerpt(text: Optional[str], limit: int = 500) -> str:
     """截取章节结尾文本，默认保留 500 字。"""
     if not text:
@@ -1065,7 +1085,7 @@ async def generate_chapter(
             request.chapter_number,
             exc,
         )
-        raise HTTPException(status_code=500, detail="生成章节失败，请重试。") from exc
+        raise HTTPException(status_code=500, detail=_build_generation_failure_detail(exc)) from exc
 
 
 @router.post("/novels/{project_id}/chapters/select", response_model=NovelProjectSchema)

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   findNearestIncompleteChapterNumber,
+  formatChapterGenerationError,
   isChapterCompletedStatus,
   resolveChapterNumberForEntry,
   resolveChapterNumberForProjectEntry,
@@ -96,5 +97,25 @@ describe('chapter entry resolving', () => {
         chapters: [],
       }),
     ).toBe(3)
+  })
+})
+
+describe('chapter generation error formatting', () => {
+  it('removes duplicated chapter generation failure prefixes', () => {
+    const error = new Error('生成章节失败，请重试。')
+
+    expect(formatChapterGenerationError(error)).toBe('生成章节失败，请重试。')
+  })
+
+  it('keeps the specific backend failure reason visible', () => {
+    const error = new Error('生成章节失败：阶段 chapter_writing 使用的供应商缺少 API Key')
+
+    expect(formatChapterGenerationError(error)).toBe(
+      '阶段 chapter_writing 使用的供应商缺少 API Key',
+    )
+  })
+
+  it('uses an actionable fallback when the error has no readable message', () => {
+    expect(formatChapterGenerationError(null)).toBe('未收到具体错误信息，请查看后端日志或稍后重试。')
   })
 })
