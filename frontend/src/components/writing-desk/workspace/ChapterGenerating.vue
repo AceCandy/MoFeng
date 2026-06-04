@@ -62,13 +62,13 @@
             ></path>
           </svg>
         </div>
-        <div>
+        <div class="chapter-console__failed-title-row">
           <h4>第{{ chapterNumber }}章生成异常</h4>
-          <p class="chapter-console__failed-subtitle">已定位错误原因</p>
+          <span class="chapter-console__failed-reason-inline">
+            <strong>{{ failureScenario.title }}：</strong>{{ failureScenario.description }}
+          </span>
         </div>
       </div>
-
-      <p class="chapter-console__failed-desc">{{ failureScenario.description }}</p>
 
       <div class="chapter-console__failed-actions">
         <button
@@ -316,10 +316,24 @@ const parsedStepPayload = computed(() => parseStepPayload(props.generationStep))
 
 const failureReason = computed(() => {
   const step = (props.generationStep || '').trim()
-  if (!step || /^[a-z_]+(?:\|.*)?$/i.test(step)) {
+  if (!step) {
     return ''
   }
-  return formatChapterGenerationError(step)
+
+  const parsed = parseStepPayload(step)
+  let rawError = step
+  if (parsed.meta.error) {
+    rawError = parsed.meta.error
+  } else if (parsed.baseKey && pipelineSteps.some((item) => item.key === parsed.baseKey)) {
+    const pipeIdx = step.indexOf('|')
+    if (pipeIdx >= 0) {
+      rawError = step.slice(pipeIdx + 1)
+    }
+  } else if (/^[a-z_]+(?:\|.*)?$/i.test(step)) {
+    return ''
+  }
+
+  return formatChapterGenerationError(rawError)
 })
 
 const failureScenario = computed(() => {
@@ -1222,20 +1236,38 @@ onUnmounted(() => {
   margin: 0;
   color: var(--md-on-surface);
   font-size: var(--md-title-medium);
+  white-space: nowrap;
 }
 
-.chapter-console__failed-subtitle {
-  margin: 4px 0 0;
+.chapter-console__failed-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--md-spacing-2);
+  flex: 1;
+}
+
+.chapter-console__failed-reason-inline {
   color: var(--md-error);
-  font-size: var(--md-body-small);
-  font-weight: 600;
+  font-size: var(--md-body-medium);
+  font-weight: 500;
+  margin-left: 12px;
+  background-color: color-mix(in srgb, var(--md-error) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--md-error) 18%, transparent);
+  padding: 6px 12px;
+  border-radius: var(--md-radius-md, 4px);
+  line-height: 1.5;
 }
 
-.chapter-console__failed-desc {
-  margin: var(--md-spacing-3) 0 0;
-  color: var(--md-on-surface-variant);
-  line-height: 1.7;
-  font-size: var(--md-body-medium);
+@media (max-width: 833px) {
+  .chapter-console__failed-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .chapter-console__failed-reason-inline {
+    margin-left: 0;
+    margin-top: 6px;
+  }
 }
 
 .chapter-console__failed-actions {
