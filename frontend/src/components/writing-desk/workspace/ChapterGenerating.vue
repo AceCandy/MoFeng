@@ -329,8 +329,13 @@ const failureReason = computed(() => {
     if (pipeIdx >= 0) {
       rawError = step.slice(pipeIdx + 1)
     }
-  } else if (/^[a-z_]+(?:\|.*)?$/i.test(step)) {
-    return ''
+  }
+
+  // 仅在非明确失败状态下，才利用正则过滤标准运行步骤名
+  if (props.status !== 'failed') {
+    if (/^[a-z_]+(?:\|.*)?$/i.test(step)) {
+      return ''
+    }
   }
 
   return formatChapterGenerationError(rawError)
