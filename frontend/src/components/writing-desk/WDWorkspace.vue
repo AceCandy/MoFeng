@@ -1000,7 +1000,7 @@ const currentComponent = computed(() => {
 
   const status = selectedChapter.value?.generation_status
   const shouldRenderGenerating =
-    (isInProgressStatus(status) || isGeneratingInFlight.value) &&
+    (isInProgressStatus(status) || isGeneratingInFlight.value || status === 'failed') &&
     !(status === 'successful' && hasSelectedChapterContent.value)
   if (shouldRenderGenerating) {
     return ChapterGenerating // Use a generic "in-progress" component
@@ -1331,11 +1331,12 @@ const currentComponentProps = computed(() => {
   }
   const status = selectedChapter.value?.generation_status
   const isBackendInProgress = isInProgressStatus(status)
+  const isFailed = status === 'failed'
   const shouldRenderGenerating =
-    (isBackendInProgress || isGeneratingInFlight.value) &&
+    (isBackendInProgress || isGeneratingInFlight.value || isFailed) &&
     !(status === 'successful' && hasSelectedChapterContent.value)
   if (shouldRenderGenerating) {
-    const renderStatus = isBackendInProgress ? status : 'generating'
+    const renderStatus = (isBackendInProgress || isFailed) ? status : 'generating'
     return {
       chapterNumber: props.selectedChapterNumber,
       chapterTitle: selectedChapterOutline.value?.title || '',
@@ -1345,7 +1346,7 @@ const currentComponentProps = computed(() => {
       generationProgress: isBackendInProgress
         ? (selectedChapter.value?.generation_progress ?? null)
         : null,
-      generationStep: isBackendInProgress ? (selectedChapter.value?.generation_step ?? null) : null,
+      generationStep: (isBackendInProgress || isFailed) ? (selectedChapter.value?.generation_step ?? null) : null,
       generationStepIndex: isBackendInProgress
         ? (selectedChapter.value?.generation_step_index ?? null)
         : null,
@@ -1358,6 +1359,7 @@ const currentComponentProps = computed(() => {
       statusUpdatedAt: isBackendInProgress
         ? (selectedChapter.value?.status_updated_at ?? null)
         : null,
+      generatingChapter: props.generatingChapter,
     }
   }
 

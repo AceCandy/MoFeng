@@ -50,7 +50,46 @@
       </ol>
     </article>
 
-    <article class="chapter-console__preview-card">
+    <!-- 失败状态展示错误卡片 -->
+    <article v-if="props.status === 'failed'" class="chapter-console__failed-card">
+      <div class="chapter-console__failed-head">
+        <div class="chapter-console__failed-icon-wrap">
+          <svg class="chapter-console__failed-icon" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+              clip-rule="evenodd"
+            ></path>
+          </svg>
+        </div>
+        <div>
+          <h4>第{{ chapterNumber }}章生成异常</h4>
+          <p class="chapter-console__failed-subtitle">已定位错误原因</p>
+        </div>
+      </div>
+
+      <p class="chapter-console__failed-desc">{{ failureScenario.description }}</p>
+
+      <div class="chapter-console__failed-actions">
+        <button
+          type="button"
+          @click="emit('generateChapter', chapterNumber)"
+          :disabled="generatingChapter === chapterNumber"
+          class="md-btn md-btn-filled md-ripple disabled:opacity-50"
+        >
+          {{ generatingChapter === chapterNumber ? '重试中...' : '重试生成本章' }}
+        </button>
+      </div>
+
+      <details class="chapter-console__failed-detail">
+        <summary>查看错误上下文</summary>
+        <p>状态：{{ status }}</p>
+        <p>阶段：{{ generationStep || '未知阶段' }}</p>
+      </details>
+    </article>
+
+    <!-- 正常生成中状态展示草稿预览卡片 -->
+    <article v-else class="chapter-console__preview-card">
       <header>
         <h4>实时草稿预览</h4>
         <span>{{ previewModeLabel }}</span>
@@ -94,7 +133,7 @@
       </div>
     </details>
 
-    <footer class="chapter-console__actions">
+    <footer v-if="props.status !== 'failed'" class="chapter-console__actions">
       <button type="button" class="md-btn md-btn-outlined md-ripple" @click="moveToBackground">
         转入后台生成
       </button>
@@ -122,6 +161,7 @@ import Tooltip from '@/components/Tooltip.vue'
 import type { Chapter } from '@/api/novel'
 import { globalAlert } from '@/composables/useAlert'
 import { countNonWhitespaceChars } from '@/utils/text'
+import { formatChapterGenerationError } from '@/utils/chapter'
 
 interface Props {
   chapterNumber: number | null
@@ -135,13 +175,17 @@ interface Props {
   generationStepTotal?: number | null
   generationStartedAt?: string | null
   statusUpdatedAt?: string | null
+  generatingChapter?: number | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
   chapterTitle: '',
   chapterSummary: '',
   chapterContentPreview: '',
+  generatingChapter: null,
 })
+
+const emit = defineEmits(['generateChapter'])
 
 const clockNow = ref(Date.now())
 const localStartAt = ref(Date.now())
@@ -270,9 +314,87 @@ const parseBackendTimestampToMs = (raw?: string | null): number | null => {
 
 const parsedStepPayload = computed(() => parseStepPayload(props.generationStep))
 
+const failureReason = computed(() => {
+  const step = (props.generationStep || '').trim()
+  if (!step || /^[a-z_]+(?:\|.*)?$/i.test(step)) {
+    return ''
+  }
+  return formatChapterGenerationError(step)
+})
+
+const failureScenario = computed(() => {
+  const step = (props.generationStep || '').toLowerCase()
+
+  if (failureReason.value) {
+    return {
+      title: '已定位错误原因',
+      description: failureReason.value,
+    }
+  }
+
+  if (props.status === 'evaluation_failed') {
+    return {
+      title: '质量评审未通过',
+      description: '当前草稿在一致性或质量评分上未通过，可以重新生成本章后再评审。',
+    }
+  }
+
+  if (step.includes('timeout') || step.includes('time_out')) {
+    return {
+      title: '模型超时',
+      description: '模型响应超时，可能是瞬时拥塞或模型负载过高。',
+    }
+  }
+
+  if (step.includes('context') || step.includes('length') || step.includes('token')) {
+    return {
+      title: '上下文过长',
+      description: '本章输入上下文超出稳定范围，请精简前文摘要后再点击重试。',
+    }
+  }
+
+  if (step.includes('persist') || step.includes('save')) {
+    return {
+      title: '保存失败',
+      description: '草稿生成后写入版本库失败，请确认当前章节状态后再点击重试生成。',
+    }
+  }
+
+  return {
+    title: '生成流程中断',
+    description: '本轮草稿生成未完成，可直接重试本章生成。',
+  }
+})
+
 const currentStepKey = computed(() => {
   const stepKey = parsedStepPayload.value.baseKey
-  if (stepKey) return stepKey
+  if (stepKey && pipelineSteps.some((item) => item.key === stepKey)) {
+    return stepKey
+  }
+
+  if (props.status === 'failed') {
+    const errorMsg = (props.generationStep || '').toLowerCase()
+    if (errorMsg.includes('版本') || errorMsg.includes('字数') || errorMsg.includes('生成章节') || errorMsg.includes('draft')) {
+      return 'draft_generation'
+    }
+    if (errorMsg.includes('评审') || errorMsg.includes('评分') || errorMsg.includes('连贯') || errorMsg.includes('evaluation') || errorMsg.includes('review')) {
+      return 'quality_review'
+    }
+    if (errorMsg.includes('保存') || errorMsg.includes('存储') || errorMsg.includes('save') || errorMsg.includes('persist')) {
+      return 'persist_versions'
+    }
+    if (errorMsg.includes('设定') || errorMsg.includes('retrieval') || errorMsg.includes('rag')) {
+      return 'rag_retrieval'
+    }
+    if (errorMsg.includes('剧情') || errorMsg.includes('规划') || errorMsg.includes('director')) {
+      return 'director_mission'
+    }
+    if (errorMsg.includes('前文') || errorMsg.includes('上下文') || errorMsg.includes('context')) {
+      return 'context_prep'
+    }
+    return 'draft_generation'
+  }
+
   if (props.status === 'evaluating') return 'quality_review'
   if (props.status === 'selecting') return 'waiting_for_confirm'
   return 'context_prep'
@@ -1064,5 +1186,85 @@ onUnmounted(() => {
   100% {
     background-position: 0 0;
   }
+}
+
+/* 失败卡片样式 */
+.chapter-console__failed-card {
+  border: 1px solid color-mix(in srgb, var(--md-error) 24%, var(--md-outline-variant));
+  border-radius: var(--md-radius-sm);
+  background: color-mix(in srgb, var(--md-surface) 96%, transparent);
+  box-shadow: var(--md-elevation-1);
+  padding: var(--md-spacing-4);
+}
+
+.chapter-console__failed-head {
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-3);
+}
+
+.chapter-console__failed-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--md-error-container);
+  display: grid;
+  place-items: center;
+}
+
+.chapter-console__failed-icon {
+  width: 22px;
+  height: 22px;
+  color: var(--md-error);
+}
+
+.chapter-console__failed-head h4 {
+  margin: 0;
+  color: var(--md-on-surface);
+  font-size: var(--md-title-medium);
+}
+
+.chapter-console__failed-subtitle {
+  margin: 4px 0 0;
+  color: var(--md-error);
+  font-size: var(--md-body-small);
+  font-weight: 600;
+}
+
+.chapter-console__failed-desc {
+  margin: var(--md-spacing-3) 0 0;
+  color: var(--md-on-surface-variant);
+  line-height: 1.7;
+  font-size: var(--md-body-medium);
+}
+
+.chapter-console__failed-actions {
+  margin-top: var(--md-spacing-4);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--md-spacing-2);
+}
+
+.chapter-console__failed-actions .md-btn {
+  min-height: 40px;
+}
+
+.chapter-console__failed-detail {
+  margin-top: var(--md-spacing-4);
+  border-top: 1px solid var(--md-outline-variant);
+  padding-top: var(--md-spacing-3);
+}
+
+.chapter-console__failed-detail summary {
+  cursor: pointer;
+  color: var(--md-primary-dark);
+  font-weight: 600;
+  font-size: var(--md-body-medium);
+}
+
+.chapter-console__failed-detail p {
+  margin: 6px 0 0;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-small);
 }
 </style>
