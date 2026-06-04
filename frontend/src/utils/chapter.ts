@@ -211,7 +211,7 @@ export function formatChapterGenerationError(error: unknown): string {
 
   message = message.replace(/^生成章节失败[：:]\s*生成章节失败[，,]?\s*/u, '生成章节失败，')
 
-  const specificReason = message.match(/^生成章节失败[：:]\s*(.+)$/u)?.[1]?.trim()
+  const specificReason = message.match(/^(?:生成章节(?:第\s*\d+\s*个版本)?失败)[：:]\s*(.+)$/u)?.[1]?.trim()
   if (specificReason) {
     return specificReason
   }

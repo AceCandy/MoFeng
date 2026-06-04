@@ -115,6 +115,14 @@ describe('chapter generation error formatting', () => {
     )
   })
 
+  it('handles versioned generation failure messages', () => {
+    const error = '生成章节第 1 个版本失败：字数仅 1780，低于最低要求 2200（容错阈值 1870）。请重试。'
+
+    expect(formatChapterGenerationError(error)).toBe(
+      '字数仅 1780，低于最低要求 2200（容错阈值 1870）。请重试。',
+    )
+  })
+
   it('uses an actionable fallback when the error has no readable message', () => {
     expect(formatChapterGenerationError(null)).toBe('未收到具体错误信息，请查看后端日志或稍后重试。')
   })

@@ -161,11 +161,11 @@ class PipelineOrchestrator:
         graph = self._build_generation_graph()
         try:
             final_state = await graph.ainvoke(initial_state)
-        except HTTPException:
-            await self._mark_generation_failed(project_id=project_id, chapter_number=chapter_number)
+        except HTTPException as e:
+            await self._mark_generation_failed(project_id=project_id, chapter_number=chapter_number, error=e)
             raise
-        except Exception:
-            await self._mark_generation_failed(project_id=project_id, chapter_number=chapter_number)
+        except Exception as e:
+            await self._mark_generation_failed(project_id=project_id, chapter_number=chapter_number, error=e)
             raise
         return final_state["response"]
 
@@ -182,7 +182,9 @@ class PipelineOrchestrator:
         workflow.add_edge(previous, END)
         return workflow.compile()
 
-    async def _mark_generation_failed(self, *, project_id: str, chapter_number: int) -> None:
+    async def _mark_generation_failed(
+        self, *, project_id: str, chapter_number: int, error: Optional[Exception] = None
+    ) -> None:
         """生成图中任一节点失败后，把已初始化章节收敛到 failed。"""
         try:
             await self.session.rollback()
@@ -202,7 +204,16 @@ class PipelineOrchestrator:
 
             chapter.status = "failed"
             chapter.generation_progress = 0
-            chapter.generation_step = "failed"
+            if error:
+                error_msg = ""
+                if hasattr(error, "detail") and error.detail:
+                    error_msg = str(error.detail)
+                else:
+                    error_msg = str(error)
+                truncated_msg = error_msg[:50]
+                chapter.generation_step = f"failed|error={truncated_msg}"
+            else:
+                chapter.generation_step = "failed"
             chapter.generation_step_index = 0
             chapter.generation_step_total = 7
             await self.session.commit()
