@@ -25,22 +25,27 @@
             `is-${stepState(item.key, index).tone}`,
             { 'is-current': stepState(item.key, index).tone === 'in-progress' },
           ]"
-          :data-tooltip="STEP_DETAILS[item.key]?.summary || ''"
         >
-          <div class="chapter-console__pipeline-marker">
-            <span class="chapter-console__dot"></span>
-          </div>
-          <div class="chapter-console__pipeline-content">
-            <div class="chapter-console__pipeline-header">
-              <span class="chapter-console__pipeline-title">{{ item.label }}</span>
-              <span
-                v-if="stepState(item.key, index).tone === 'in-progress'"
-                class="chapter-console__pipeline-badge"
-              >
-                进行中
-              </span>
+          <Tooltip
+            :text="STEP_DETAILS[item.key]?.summary || ''"
+            :show-delay="150"
+            class="chapter-console__pipeline-tooltip-wrapper"
+          >
+            <div class="chapter-console__pipeline-marker">
+              <span class="chapter-console__dot"></span>
             </div>
-          </div>
+            <div class="chapter-console__pipeline-content">
+              <div class="chapter-console__pipeline-header">
+                <span class="chapter-console__pipeline-title">{{ item.label }}</span>
+                <span
+                  v-if="stepState(item.key, index).tone === 'in-progress'"
+                  class="chapter-console__pipeline-badge"
+                >
+                  进行中
+                </span>
+              </div>
+            </div>
+          </Tooltip>
         </li>
       </ol>
     </article>
@@ -113,6 +118,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import Tooltip from '@/components/Tooltip.vue'
 import type { Chapter } from '@/api/novel'
 import { globalAlert } from '@/composables/useAlert'
 import { countNonWhitespaceChars } from '@/utils/text'
@@ -805,48 +811,16 @@ onUnmounted(() => {
   font-weight: 700;
 }
 
-/* Tooltip 样式，仅在 PC 端支持 hover 的设备上生效 */
+.chapter-console__pipeline-tooltip-wrapper {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
 @media (hover: hover) and (min-width: 834px) {
-  .chapter-console__pipeline-item {
+  .chapter-console__pipeline-tooltip-wrapper {
     cursor: pointer;
-  }
-
-  .chapter-console__pipeline-item[data-tooltip]:hover::before {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: calc(100% - 4px);
-    left: 50%;
-    transform: translateX(-50%) translateY(-10px);
-    background-color: var(--md-on-surface);
-    color: var(--md-surface);
-    padding: 8px 12px;
-    border-radius: var(--md-radius-md, 6px);
-    font-size: var(--md-body-small);
-    z-index: 20;
-    box-shadow: var(--md-elevation-3, 0 4px 12px rgba(0, 0, 0, 0.15));
-    pointer-events: none;
-    width: max-content;
-    max-width: 220px;
-    white-space: normal;
-    word-wrap: break-word;
-    line-height: 1.4;
-    text-align: center;
-    opacity: 0;
-    animation: fadeInTooltip 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  }
-
-  .chapter-console__pipeline-item[data-tooltip]:hover::after {
-    content: '';
-    position: absolute;
-    bottom: calc(100% - 4px);
-    left: 50%;
-    transform: translateX(-50%) translateY(2px);
-    border: 6px solid transparent;
-    border-top-color: var(--md-on-surface);
-    z-index: 20;
-    pointer-events: none;
-    opacity: 0;
-    animation: fadeInTooltip 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   }
 }
 
@@ -967,11 +941,14 @@ onUnmounted(() => {
   }
 
   .chapter-console__pipeline-item {
+    padding: 10px 0 14px 0;
+    flex: none;
+  }
+
+  .chapter-console__pipeline-tooltip-wrapper {
     flex-direction: row;
     align-items: flex-start;
     text-align: left;
-    padding: 10px 0 14px 0;
-    flex: none;
   }
 
   .chapter-console__pipeline-item::before {
