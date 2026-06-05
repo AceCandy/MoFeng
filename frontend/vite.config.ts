@@ -15,7 +15,6 @@ import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
-import vueDevTools from 'vite-plugin-vue-devtools'
 
 const frontendHost = process.env.FRONTEND_HOST || '0.0.0.0'
 const frontendPort = Number(process.env.FRONTEND_PORT || '5173')
@@ -96,42 +95,56 @@ const resolveVendorChunk = (id: string) => {
   return 'vendor'
 }
 
+const loadVueDevToolsPlugin = async () => {
+  if (!enableVueDevTools) {
+    return false
+  }
+
+  // Node 25 会暴露不完整的 localStorage 对象，DevTools 包必须在上方 shim 完成后再加载。
+  const { default: vueDevTools } = await import('vite-plugin-vue-devtools')
+  return vueDevTools()
+}
+
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [
-    vue(),
-    vueJsx(),
-    enableVueDevTools && vueDevTools(),
-  ],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
-    },
-  },
-  server: {
-    host: frontendHost,
-    port: frontendPort,
-    strictPort: true,
-    allowedHosts: frontendAllowedHosts,
-    hmr: {
-      protocol: 'ws',
-      host: frontendHmrHost,
-      port: frontendPort,
-      clientPort: frontendPort,
-    },
-    proxy: {
-      '/api': {
-        target: `http://${backendProxyHost}:${backendPort}`,
-        changeOrigin: true,
-      }
-    }
-  },
-  build: {
-    manifest: true,
-    rollupOptions: {
-      output: {
-        manualChunks: resolveVendorChunk,
+export default defineConfig(async () => {
+  const vueDevToolsPlugin = await loadVueDevToolsPlugin()
+
+  return {
+    plugins: [
+      vue(),
+      vueJsx(),
+      vueDevToolsPlugin,
+    ],
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url))
       },
     },
-  },
+    server: {
+      host: frontendHost,
+      port: frontendPort,
+      strictPort: true,
+      allowedHosts: frontendAllowedHosts,
+      hmr: {
+        protocol: 'ws',
+        host: frontendHmrHost,
+        port: frontendPort,
+        clientPort: frontendPort,
+      },
+      proxy: {
+        '/api': {
+          target: `http://${backendProxyHost}:${backendPort}`,
+          changeOrigin: true,
+        }
+      }
+    },
+    build: {
+      manifest: true,
+      rollupOptions: {
+        output: {
+          manualChunks: resolveVendorChunk,
+        },
+      }
+    },
+  }
 })

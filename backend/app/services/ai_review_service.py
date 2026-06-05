@@ -79,10 +79,13 @@ class AIReviewService:
         chapter_mission: Optional[dict] = None,
         user_id: int = 0,
         review_context: Optional[Dict[str, Any]] = None,
+        strict: bool = False,
     ) -> Optional[ReviewResult]:
         """对多个版本进行评审，返回评审结果。"""
         if not versions:
             logger.warning("没有版本可供评审")
+            if strict:
+                raise RuntimeError("没有版本可供评审")
             return None
 
         if len(versions) == 1:
@@ -107,6 +110,8 @@ class AIReviewService:
         review_prompt = await self.prompt_service.get_prompt("editor_review")
         if not review_prompt:
             logger.warning("未配置 editor_review 提示词，跳过 AI 评审")
+            if strict:
+                raise RuntimeError("缺少 editor_review 提示词，无法进行多版本评审")
             return None
 
         review_input = self._build_review_input(versions, chapter_mission, review_context)
@@ -130,6 +135,8 @@ class AIReviewService:
             return result
         except Exception:
             logger.exception("AI 评审失败")
+            if strict:
+                raise
             return None
 
     async def review_single_version(
@@ -137,15 +144,20 @@ class AIReviewService:
         version_content: str,
         user_id: int = 0,
         review_context: Optional[Dict[str, Any]] = None,
+        strict: bool = False,
     ) -> Optional[str]:
         """对单个版本进行上下文化评审。"""
         if not version_content or not version_content.strip():
             logger.warning("单版本评审内容为空")
+            if strict:
+                raise RuntimeError("单版本评审内容为空")
             return None
 
         eval_prompt = await self.prompt_service.get_prompt("evaluation")
         if not eval_prompt:
             logger.warning("未配置 evaluation 提示词，跳过单版本 AI 评审")
+            if strict:
+                raise RuntimeError("缺少 evaluation 提示词，无法进行单版本评审")
             return None
 
         review_input = self._build_single_review_input(version_content, review_context)
@@ -162,6 +174,8 @@ class AIReviewService:
             return remove_think_tags(response)
         except Exception:
             logger.exception("单版本 AI 评审失败")
+            if strict:
+                raise
             return None
 
     def _build_review_input(

@@ -54,6 +54,11 @@
                     selectedChapterNumber === chapter.chapter_number
                       ? 'writing-sidebar__chapter-row--compact-selected'
                       : 'writing-sidebar__chapter-row--compact-idle',
+                    isChapterCompleted(chapter.chapter_number)
+                      ? 'writing-sidebar__chapter-row--completed'
+                      : isChapterLocked(chapter.chapter_number)
+                      ? 'writing-sidebar__chapter-row--locked'
+                      : 'writing-sidebar__chapter-row--pending',
                   ]"
                   :style="{ animationDelay: `${Math.min(index * 8, 80)}ms` }"
                 >
@@ -87,8 +92,45 @@
                       >
                         {{ getChapterWordCount(chapter.chapter_number) }} 字
                       </span>
+                      <span
+                        v-else-if="isChapterLocked(chapter.chapter_number)"
+                        class="writing-sidebar__chapter-lock-icon"
+                      >
+                        <svg
+                          class="w-3.5 h-3.5 opacity-70"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2.5"
+                        >
+                          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                      </span>
+                      <span
+                        v-else
+                        class="writing-sidebar__chapter-badge-pending"
+                      >
+                        待写
+                      </span>
                     </div>
                   </div>
+                </button>
+                <button
+                  v-if="canDeleteChapter(chapter.chapter_number)"
+                  type="button"
+                  class="writing-sidebar__chapter-delete md-ripple"
+                  :aria-label="getDeleteChapterA11yLabel(chapter.chapter_number)"
+                  :title="getDeleteChapterA11yLabel(chapter.chapter_number)"
+                  @click.stop="emit('deleteChapter', getDeleteChapterNumbers(chapter.chapter_number))"
+                >
+                  <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path
+                      fill-rule="evenodd"
+                      d="M8 2a1 1 0 00-.894.553L6.382 4H4a1 1 0 000 2h12a1 1 0 100-2h-2.382l-.724-1.447A1 1 0 0012 2H8zM5 8a1 1 0 011 1v7h8V9a1 1 0 112 0v7a2 2 0 01-2 2H6a2 2 0 01-2-2V9a1 1 0 011-1zm3 1a1 1 0 012 0v5a1 1 0 11-2 0V9zm4 0a1 1 0 112 0v5a1 1 0 11-2 0V9z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -161,6 +203,7 @@ const emit = defineEmits([
   'selectChapter',
   'generateChapter',
   'editChapter',
+  'deleteChapter',
   'generateOutline',
 ])
 
@@ -193,6 +236,36 @@ const hasIncompleteChapter = computed(() => {
   return props.project.blueprint.chapter_outline.some(
     (chapter) => !isChapterCompleted(chapter.chapter_number),
   )
+})
+
+const latestCompletedChapterNumber = computed(() => {
+  const completedNumbers = (props.project?.chapters ?? [])
+    .filter((chapter) => chapter.generation_status === 'successful')
+    .map((chapter) => chapter.chapter_number)
+  return completedNumbers.length ? Math.max(...completedNumbers) : null
+})
+
+const sortedOutlineNumbers = computed(() => {
+  return [...(props.project?.blueprint?.chapter_outline ?? [])]
+    .map((chapter) => chapter.chapter_number)
+    .filter((chapterNumber) => Number.isFinite(chapterNumber))
+    .sort((left, right) => left - right)
+})
+
+const isUngeneratedOutlineChapter = (chapterNumber: number) => {
+  const chapter = chapterByNumber.value.get(chapterNumber)
+  return !chapter || chapter.generation_status === 'not_generated'
+}
+
+const tailUngeneratedChapterNumbers = computed(() => {
+  const tail: number[] = []
+  for (const chapterNumber of [...sortedOutlineNumbers.value].reverse()) {
+    if (!isUngeneratedOutlineChapter(chapterNumber)) {
+      break
+    }
+    tail.unshift(chapterNumber)
+  }
+  return tail
 })
 
 function setChapterRef(chapterNumber: number, el: Element | ComponentPublicInstance | null) {
@@ -237,6 +310,57 @@ defineExpose({
 // 章节状态检查
 const isChapterCompleted = (chapterNumber: number) => {
   return isChapterCompletedStatus(chapterByNumberOrNull(chapterNumber))
+}
+
+const canDeleteChapter = (chapterNumber: number) => {
+  if (chapterNumber === latestCompletedChapterNumber.value) {
+    return true
+  }
+
+  return tailUngeneratedChapterNumbers.value.includes(chapterNumber)
+}
+
+const getDeleteChapterA11yLabel = (chapterNumber: number) => {
+  if (chapterNumber === latestCompletedChapterNumber.value) {
+    return `删除第${chapterNumber}章及全部产物`
+  }
+
+  const deleteNumbers = getDeleteChapterNumbers(chapterNumber)
+  return Array.isArray(deleteNumbers) && deleteNumbers.length > 1
+    ? `删除第${chapterNumber}章及后续未生成大纲`
+    : `删除第${chapterNumber}章大纲`
+}
+
+const getDeleteChapterNumbers = (chapterNumber: number): number[] => {
+  if (chapterNumber === latestCompletedChapterNumber.value) {
+    const tailAfterCompleted = tailUngeneratedChapterNumbers.value.filter(
+      (number) => number > chapterNumber,
+    )
+    return [chapterNumber, ...tailAfterCompleted]
+  }
+
+  const tailFromChapter = tailUngeneratedChapterNumbers.value.filter(
+    (number) => number >= chapterNumber,
+  )
+  return tailFromChapter.length ? tailFromChapter : [chapterNumber]
+}
+
+const isChapterLocked = (chapterNumber: number) => {
+  if (!props.project?.blueprint?.chapter_outline) return true
+
+  const sortedOutlines = [...props.project.blueprint.chapter_outline].sort(
+    (left, right) => left.chapter_number - right.chapter_number,
+  )
+
+  for (const outline of sortedOutlines) {
+    if (outline.chapter_number >= chapterNumber) break
+    const chapter = chapterByNumber.value.get(outline.chapter_number)
+    if (chapter?.generation_status !== 'successful') {
+      return true
+    }
+  }
+
+  return false
 }
 
 const hasChapterInProgress = (chapterNumber: number) => {
@@ -535,6 +659,159 @@ watch(
   background-color: rgba(184, 60, 50, 0.05);
   animation: seal-stamp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
   pointer-events: none;
+}
+
+/* 已完成状态的签条样式 (绿色主题) */
+.writing-sidebar__chapter-row--completed {
+  border-color: rgba(63, 108, 93, 0.35) !important;
+  background-color: rgba(63, 108, 93, 0.015) !important;
+}
+.writing-sidebar__chapter-row--completed:hover {
+  border-color: #3f6c5d !important;
+  background-color: rgba(63, 108, 93, 0.05) !important;
+}
+.writing-sidebar__chapter-row--completed.writing-sidebar__chapter-row--compact-selected {
+  border: 1.5px solid #3f6c5d !important;
+  background-color: rgba(63, 108, 93, 0.06) !important;
+  box-shadow: 2px 2px 0px #3f6c5d !important;
+}
+.writing-sidebar__chapter-row--completed.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-title,
+.writing-sidebar__chapter-row--completed.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-no {
+  color: #3f6c5d !important;
+}
+.writing-sidebar__chapter-row--completed.writing-sidebar__chapter-row--compact-selected::after {
+  color: rgba(63, 108, 93, 0.85) !important;
+  border-color: rgba(63, 108, 93, 0.85) !important;
+  background-color: rgba(63, 108, 93, 0.05) !important;
+}
+
+/* 待完成状态的签条样式 (橙色主题) */
+.writing-sidebar__chapter-row--pending {
+  border-color: rgba(200, 123, 46, 0.45) !important;
+  background-color: rgba(200, 123, 46, 0.015) !important;
+}
+.writing-sidebar__chapter-row--pending:hover {
+  border-color: #c87b2e !important;
+  background-color: rgba(200, 123, 46, 0.05) !important;
+}
+.writing-sidebar__chapter-row--pending.writing-sidebar__chapter-row--compact-selected {
+  border: 1.5px solid #c87b2e !important;
+  background-color: rgba(200, 123, 46, 0.06) !important;
+  box-shadow: 2px 2px 0px #c87b2e !important;
+}
+.writing-sidebar__chapter-row--pending.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-title,
+.writing-sidebar__chapter-row--pending.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-no {
+  color: #c87b2e !important;
+}
+.writing-sidebar__chapter-row--pending.writing-sidebar__chapter-row--compact-selected::after {
+  color: rgba(200, 123, 46, 0.85) !important;
+  border-color: rgba(200, 123, 46, 0.85) !important;
+  background-color: rgba(200, 123, 46, 0.05) !important;
+}
+
+/* 未解锁状态的签条样式 (灰色主题) */
+.writing-sidebar__chapter-row--locked {
+  opacity: 0.65;
+  border-color: rgba(140, 140, 140, 0.25) !important;
+  background-color: rgba(140, 140, 140, 0.02) !important;
+}
+.writing-sidebar__chapter-row--locked:hover {
+  border-color: rgba(140, 140, 140, 0.5) !important;
+  background-color: rgba(140, 140, 140, 0.06) !important;
+  opacity: 0.85;
+}
+.writing-sidebar__chapter-row--locked.writing-sidebar__chapter-row--compact-selected {
+  border: 1.5px solid rgba(140, 140, 140, 0.6) !important;
+  background-color: rgba(140, 140, 140, 0.06) !important;
+  box-shadow: 2px 2px 0px rgba(140, 140, 140, 0.5) !important;
+}
+.writing-sidebar__chapter-row--locked.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-title,
+.writing-sidebar__chapter-row--locked.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-no {
+  color: #5c6265 !important;
+}
+.writing-sidebar__chapter-row--locked.writing-sidebar__chapter-row--compact-selected::after {
+  color: rgba(140, 140, 140, 0.85) !important;
+  border-color: rgba(140, 140, 140, 0.85) !important;
+  background-color: rgba(140, 140, 140, 0.05) !important;
+}
+
+/* 锁定章节的锁图标样式 (右侧) */
+.writing-sidebar__chapter-lock-icon {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #5c6265;
+  width: 20px;
+  height: 20px;
+}
+
+/* 待完成章节的亮眼标签样式 */
+.writing-sidebar__chapter-badge-pending {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 10px;
+  line-height: 1.2;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #f59e0b, #d97706); /* 亮眼的渐变橙黄 */
+  color: #ffffff !important; /* 强制覆盖文字色防止因选中变色而不可读 */
+  box-shadow: 0 1px 3px rgba(217, 119, 6, 0.3);
+  text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.15);
+  /* 浮动微动画效果 */
+  animation: float-badge 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes float-badge {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-2px);
+  }
+}
+
+.writing-sidebar__chapter-delete {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: 0 !important;
+  background-color: var(--md-surface-container-low);
+  color: var(--md-error);
+  opacity: 0;
+  transform: translateY(-50%);
+  transition:
+    opacity 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.writing-sidebar__chapter-delete::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
+.writing-sidebar__tree-item:hover .writing-sidebar__chapter-delete,
+.writing-sidebar__chapter-delete:focus-visible {
+  opacity: 1;
+}
+
+.writing-sidebar__chapter-delete:hover,
+.writing-sidebar__chapter-delete:focus-visible {
+  border-color: var(--md-error);
+  background-color: var(--md-error-container);
 }
 
 .writing-sidebar__chapter-main {

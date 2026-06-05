@@ -236,6 +236,49 @@ describe('UI audit regressions', () => {
     expect(source).not.toContain('保存片段')
   })
 
+  it('uses real chapter generation traces before static node inspector fallback', () => {
+    const apiSource = readSource('src/api/novel.ts')
+    const workspaceSource = readSource('src/components/writing-desk/WDWorkspace.vue')
+    const generatingSource = readSource(
+      'src/components/writing-desk/workspace/ChapterGenerating.vue',
+    )
+
+    expect(apiSource).toContain('export interface ChapterGenerationTrace')
+    expect(apiSource).toContain('generation_traces?: ChapterGenerationTrace[]')
+    expect(apiSource).toContain('uses_llm: boolean')
+    expect(workspaceSource).toContain('generationTraces: renderAsLocalGenerating')
+    expect(workspaceSource).toContain('selectedChapter.value?.generation_traces ?? []')
+    expect(generatingSource).toContain('generationTraces?: ChapterGenerationTrace[]')
+    expect(generatingSource).toContain('const activeTrace = computed')
+    expect(generatingSource).toContain('trace.metadata')
+  })
+
+  it('does not show fabricated prompt or response content when a trace is missing', () => {
+    const source = readSource('src/components/writing-desk/workspace/ChapterGenerating.vue')
+
+    expect(source).toContain('该节点暂未收到真实运行记录。')
+    expect(source).not.toContain('姜沉河')
+    expect(source).not.toContain('AI导演剧情蓝图')
+    expect(source).not.toContain('商业擂台直播')
+    expect(source).not.toContain('主角“林拓”')
+  })
+
+  it('labels chapter trace details by action instead of pretending every node is an LLM call', () => {
+    const source = readSource('src/components/writing-desk/workspace/ChapterGenerating.vue')
+
+    expect(source).toContain('输入材料')
+    expect(source).toContain('实际动作')
+    expect(source).toContain('产出结果')
+    expect(source).toContain('调用类型')
+    expect(source).toContain('LLM 调用：{{ activeStepDetails.llmUsage }}')
+    expect(source).toContain('trace.uses_llm')
+    expect(source).toContain('formatTraceActions')
+    expect(source).toContain('formatModelCall')
+    expect(source).not.toContain('发送给 LLM 的输入 (Prompt)')
+    expect(source).not.toContain('LLM 生成的响应 (Response)')
+    expect(source).not.toContain('【系统 Prompt / 节点输入】')
+  })
+
   it('keeps the overview blueprint page aligned with the shared archive vocabulary', () => {
     const overviewSource = readSource('src/components/novel-detail/OverviewSection.vue')
     const shellSource = readSource('src/components/shared/NovelDetailShell.vue')

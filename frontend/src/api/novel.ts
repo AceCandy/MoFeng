@@ -269,6 +269,25 @@ export interface ChapterVersion {
   style?: string
 }
 
+export interface ChapterGenerationTrace {
+  id: number
+  node_key: string
+  node_label: string
+  stage?: string | null
+  status: string
+  uses_llm: boolean
+  system_prompt?: string | null
+  user_prompt?: string | null
+  raw_response?: string | null
+  cleaned_output?: string | null
+  error?: string | null
+  metadata?: Record<string, any> | null
+  duration_ms?: number | null
+  started_at?: string | null
+  ended_at?: string | null
+  created_at?: string | null
+}
+
 export interface Chapter {
   chapter_number: number
   title: string
@@ -277,7 +296,16 @@ export interface Chapter {
   content: string | null
   versions: string[] | null  // versions是字符串数组，不是对象数组
   evaluation: string | null
-  generation_status: 'not_generated' | 'generating' | 'evaluating' | 'selecting' | 'failed' | 'evaluation_failed' | 'waiting_for_confirm' | 'successful'
+  generation_status:
+    | 'not_generated'
+    | 'generating'
+    | 'evaluating'
+    | 'selecting'
+    | 'failed'
+    | 'evaluation_failed'
+    | 'waiting_for_confirm'
+    | 'finalizing'
+    | 'successful'
   generation_progress?: number | null
   generation_step?: string | null
   generation_step_index?: number | null
@@ -285,6 +313,7 @@ export interface Chapter {
   generation_started_at?: string | null
   status_updated_at?: string | null
   word_count?: number  // 字数统计
+  generation_traces?: ChapterGenerationTrace[]
 }
 
 export interface ConversationMessage {
@@ -316,6 +345,34 @@ export interface ChapterGenerationResponse {
   evaluation: string | null
   ai_message: string
   chapter_number: number
+}
+
+export interface ForeshadowingSyncStats {
+  created: number
+  developing: number
+  revealed: number
+}
+
+export interface ConfirmFinalizeChapterRequest {
+  selected_version_index: number
+  edited_content?: string | null
+  skip_vector_update?: boolean
+}
+
+export interface ConfirmFinalizeChapterResponse {
+  chapter: Chapter
+  finalize: {
+    summary_generated: boolean
+    memory_updated: boolean
+    vector_ingested: boolean
+    foreshadowing_sync: ForeshadowingSyncStats
+  }
+}
+
+export interface DeleteChapterRequest {
+  chapter_numbers: number[]
+  delete_artifacts_confirmed?: boolean
+  confirmation_text?: string | null
 }
 
 export interface DeleteNovelsResponse {
@@ -494,17 +551,15 @@ export class NovelAPI {
     })
   }
 
-  static async selectChapterVersion(
+  static async confirmFinalizeChapter(
     projectId: string,
     chapterNumber: number,
-    versionIndex: number
-  ): Promise<NovelProject> {
-    return request(`${WRITER_BASE}/${projectId}/chapters/select`, {
+    payload: ConfirmFinalizeChapterRequest,
+  ): Promise<ConfirmFinalizeChapterResponse> {
+    return request(`${WRITER_BASE}/${projectId}/chapters/${chapterNumber}/confirm-finalize`, {
       method: 'POST',
-      body: JSON.stringify({
-        chapter_number: chapterNumber,
-        version_index: versionIndex
-      })
+      body: JSON.stringify(payload),
+      timeoutMs: CHAPTER_GENERATION_TIMEOUT_MS,
     })
   }
 
@@ -531,11 +586,11 @@ export class NovelAPI {
 
   static async deleteChapter(
     projectId: string,
-    chapterNumbers: number[]
+    payload: DeleteChapterRequest
   ): Promise<NovelProject> {
     return request(`${WRITER_BASE}/${projectId}/chapters/delete`, {
       method: 'POST',
-      body: JSON.stringify({ chapter_numbers: chapterNumbers })
+      body: JSON.stringify(payload)
     })
   }
 

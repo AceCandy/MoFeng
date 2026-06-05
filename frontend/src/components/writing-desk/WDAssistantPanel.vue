@@ -22,7 +22,7 @@
             </article>
           </div>
           <p v-else class="wd-ai__paragraph">
-            本章已完成，等待系统补齐章节梳理。
+            {{ summaryFallbackText }}
           </p>
         </section>
       </template>
@@ -138,6 +138,13 @@ const isCompletedChapter = computed(() => {
 
 const realSummary = computed(() => {
   return props.selectedChapter?.real_summary?.trim() || ''
+})
+
+const summaryFallbackText = computed(() => {
+  if (props.selectedChapter?.generation_status === 'successful') {
+    return '本章已定稿，但章节梳理为空；请查看定稿节点详情或重新确认定稿。'
+  }
+  return '章节草稿尚未定稿，确认定稿后会同步生成章节梳理。'
 })
 
 const cleanSummaryText = (text: string) =>

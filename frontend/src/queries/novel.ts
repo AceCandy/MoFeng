@@ -535,19 +535,26 @@ export function useApplyOptimizationMutation(projectId?: ProjectIdSource) {
   })
 }
 
-export function useSelectChapterVersionMutation(projectId: ProjectIdSource) {
-  const { setProjectCache, refreshProjectQueries } = useNovelMutationRefresh(projectId)
+export function useConfirmFinalizeChapterMutation(projectId: ProjectIdSource) {
+  const { refreshChapter, refreshProjectQueries, upsertChapterInProjectCache } =
+    useNovelMutationRefresh(projectId)
 
   return useMutation({
-    mutationFn: (payload: { chapterNumber: number; versionIndex: number }) =>
-      NovelAPI.selectChapterVersion(
-        requireProjectId(projectId),
-        payload.chapterNumber,
-        payload.versionIndex,
-      ),
-    onSuccess: async (project) => {
-      setProjectCache(project)
-      await refreshProjectQueries(project.id)
+    mutationFn: (payload: {
+      chapterNumber: number
+      selectedVersionIndex: number
+      editedContent?: string | null
+      skipVectorUpdate?: boolean
+    }) =>
+      NovelAPI.confirmFinalizeChapter(requireProjectId(projectId), payload.chapterNumber, {
+        selected_version_index: payload.selectedVersionIndex,
+        edited_content: payload.editedContent ?? null,
+        skip_vector_update: payload.skipVectorUpdate ?? false,
+      }),
+    onSuccess: async (response, payload) => {
+      upsertChapterInProjectCache(undefined, response.chapter)
+      await refreshChapter(undefined, payload.chapterNumber)
+      await refreshProjectQueries(requireProjectId(projectId))
     },
   })
 }
@@ -569,8 +576,16 @@ export function useDeleteChapterMutation(projectId: ProjectIdSource) {
   const { setProjectCache, refreshProjectQueries } = useNovelMutationRefresh(projectId)
 
   return useMutation({
-    mutationFn: (chapterNumbers: number[]) =>
-      NovelAPI.deleteChapter(requireProjectId(projectId), chapterNumbers),
+    mutationFn: (payload: {
+      chapterNumbers: number[]
+      deleteArtifactsConfirmed?: boolean
+      confirmationText?: string | null
+    }) =>
+      NovelAPI.deleteChapter(requireProjectId(projectId), {
+        chapter_numbers: payload.chapterNumbers,
+        delete_artifacts_confirmed: payload.deleteArtifactsConfirmed ?? false,
+        confirmation_text: payload.confirmationText ?? null,
+      }),
     onSuccess: async (project) => {
       setProjectCache(project)
       await refreshProjectQueries(project.id)

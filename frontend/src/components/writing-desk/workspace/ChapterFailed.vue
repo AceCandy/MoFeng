@@ -31,11 +31,6 @@
         </button>
       </div>
 
-      <details class="chapter-failed__detail">
-        <summary>查看错误上下文</summary>
-        <p>状态：{{ generationStatus }}</p>
-        <p>阶段：{{ generationStep || '未知阶段' }}</p>
-      </details>
     </article>
   </section>
 </template>
@@ -178,23 +173,4 @@ const failureScenario = computed(() => {
 .chapter-failed__actions .md-btn {
   min-height: 44px;
 }
-
-.chapter-failed__detail {
-  margin-top: var(--md-spacing-4);
-  border-top: 1px solid var(--md-outline-variant);
-  padding-top: var(--md-spacing-3);
-}
-
-.chapter-failed__detail summary {
-  cursor: pointer;
-  color: var(--md-primary-dark);
-  font-weight: 600;
-}
-
-.chapter-failed__detail p {
-  margin: 6px 0 0;
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
-}
-
 </style>

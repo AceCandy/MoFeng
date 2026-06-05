@@ -54,9 +54,8 @@
           <span class="chapter-locked__rule"></span>
         </div>
 
-        <h3>故事尚未推进到这里</h3>
-        <p>请先完成前置章节内容。</p>
-        <p>当前章节将在所需章节完成后自动解锁。</p>
+        <h3>故事还未抵达这一章</h3>
+        <p>请先完成前面的待写章节，完成后本章将自动解锁。</p>
       </div>
 
       <button
@@ -64,11 +63,24 @@
         class="chapter-locked__action md-ripple"
         @click="$emit('selectChapter', lockedPrerequisiteChapterNumber ?? chapterNumber)"
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-          <path d="M4 19.5A2.5 2.5 0 016.5 17H20"></path>
-          <path d="M4 4.5A2.5 2.5 0 016.5 2H20v20H6.5A2.5 2.5 0 014 19.5z"></path>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"></path>
+          <line x1="16" y1="8" x2="2" y2="22"></line>
+          <line x1="17.5" y1="15" x2="9" y2="15"></line>
         </svg>
-        前往待完成章节
+        <template v-if="lockedPrerequisiteChapterNumber && lockedPrerequisiteChapterTitle">
+          前往第{{ lockedPrerequisiteChapterNumber }}章：<strong>{{ lockedPrerequisiteChapterTitle }}</strong>
+        </template>
+        <template v-else>
+          前往待完成章节
+        </template>
       </button>
     </section>
   </div>
@@ -80,6 +92,7 @@ interface Props {
   generatingChapter: number | null
   canGenerate: boolean
   lockedPrerequisiteChapterNumber?: number | null
+  lockedPrerequisiteChapterTitle?: string | null
 }
 
 defineProps<Props>()

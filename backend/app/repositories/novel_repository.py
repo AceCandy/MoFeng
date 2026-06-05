@@ -26,6 +26,7 @@ class NovelRepository(BaseRepository[NovelProject]):
                 selectinload(NovelProject.chapters).selectinload(Chapter.versions),
                 selectinload(NovelProject.chapters).selectinload(Chapter.evaluations),
                 selectinload(NovelProject.chapters).selectinload(Chapter.selected_version),
+                selectinload(NovelProject.chapters).selectinload(Chapter.generation_traces),
             )
         )
         result = await self.session.execute(stmt)

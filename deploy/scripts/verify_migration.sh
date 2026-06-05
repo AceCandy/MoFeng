@@ -105,9 +105,19 @@ else
     echo "     请执行: ALTER TABLE chapter_outlines ADD COLUMN metadata JSON NULL;"
 fi
 
+# 检查章节生成 Trace 表
+echo ""
+echo "6. 检查 chapter_generation_traces 表..."
+if mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" -e "DESCRIBE chapter_generation_traces;" > /dev/null 2>&1; then
+    echo "   ✓ chapter_generation_traces 表存在"
+else
+    echo "   ✗ chapter_generation_traces 表不存在"
+    echo "     请执行迁移脚本: backend/db/migrations/add_chapter_generation_traces.sql"
+fi
+
 # 检查 foreshadowings 表的扩展字段
 echo ""
-echo "6. 检查 foreshadowings 表的扩展字段..."
+echo "7. 检查 foreshadowings 表的扩展字段..."
 FORESHADOWING_FIELDS=(
     "status"
     "planted_chapter"

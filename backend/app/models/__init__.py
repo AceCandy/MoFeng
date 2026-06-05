@@ -33,6 +33,7 @@ from .chapter_blueprint import (
     ForeshadowingOp,
     ChapterFunction,
 )
+from .chapter_generation_trace import ChapterGenerationTrace
 
 # 新增：记忆层模型
 from .memory_layer import (
@@ -68,6 +69,7 @@ __all__ = [
     "Chapter",
     "ChapterVersion",
     "ChapterEvaluation",
+    "ChapterGenerationTrace",
     "NovelProject",
     "Prompt",
     "UpdateLog",

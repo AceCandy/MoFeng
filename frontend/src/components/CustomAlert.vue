@@ -102,6 +102,16 @@
             <!-- Content -->
             <div class="md-dialog-content">
               <p :id="dialogMessageId" class="md-body-large" style="color: var(--md-on-surface-variant);">{{ message }}</p>
+              <label v-if="showInput" class="custom-alert__input-field">
+                <span>{{ inputLabel }}</span>
+                <input
+                  v-model="inputValue"
+                  class="md-text-field-input"
+                  type="text"
+                  :placeholder="inputPlaceholder"
+                  autocomplete="off"
+                />
+              </label>
             </div>
 
             <!-- Material 3 Dialog Actions -->
@@ -142,6 +152,9 @@ interface Props {
   showCancel?: boolean
   confirmText?: string
   cancelText?: string
+  showInput?: boolean
+  inputLabel?: string
+  inputPlaceholder?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -149,17 +162,21 @@ const props = withDefaults(defineProps<Props>(), {
   title: '',
   showCancel: false,
   confirmText: '确定',
-  cancelText: '取消'
+  cancelText: '取消',
+  showInput: false,
+  inputLabel: '',
+  inputPlaceholder: ''
 })
 
 const emit = defineEmits<{
-  confirm: []
+  confirm: [inputValue?: string]
   cancel: []
   close: []
 }>()
 
 const dialogRef = ref<HTMLElement | null>(null)
 const confirmButtonRef = ref<HTMLElement | null>(null)
+const inputValue = ref('')
 const dialogInstanceId = `custom-alert-${Math.random().toString(36).slice(2, 10)}`
 const dialogTitleId = `${dialogInstanceId}-title`
 const dialogMessageId = `${dialogInstanceId}-message`
@@ -212,7 +229,7 @@ const confirmButtonClass = computed(() => {
 })
 
 const handleConfirm = () => {
-  emit('confirm')
+  emit('confirm', props.showInput ? inputValue.value : undefined)
   emit('close')
 }
 
@@ -232,3 +249,17 @@ useDialogA11y({
   initialFocusRef: confirmButtonRef,
 })
 </script>
+
+<style scoped>
+.custom-alert__input-field {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.custom-alert__input-field span {
+  color: var(--md-on-surface);
+  font-size: var(--md-label-medium);
+  font-weight: 600;
+}
+</style>

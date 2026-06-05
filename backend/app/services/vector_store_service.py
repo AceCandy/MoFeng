@@ -403,6 +403,7 @@ class VectorStoreService:
             )
         except Exception as exc:  # pragma: no cover - 删除失败时记录日志
             logger.error("删除章节向量失败: project=%s chapters=%s error=%s", project_id, chapter_numbers, exc)
+            raise
 
     @staticmethod
     def _to_f32_blob(embedding: Sequence[float]) -> bytes:

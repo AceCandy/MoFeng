@@ -262,7 +262,7 @@
               @hideVersionSelector="$emit('hideVersionSelector')"
               @update:selectedVersionIndex="$emit('update:selectedVersionIndex', $event)"
               @showVersionDetail="$emit('showVersionDetail', $event)"
-              @confirmVersionSelection="$emit('confirmVersionSelection')"
+              @confirmVersionSelection="$emit('confirmVersionSelection', $event)"
               @generateChapter="$emit('generateChapter', $event)"
               @selectChapter="$emit('selectChapter', $event)"
               @showVersionSelector="$emit('showVersionSelector')"
@@ -860,6 +860,18 @@ const lockedPrerequisiteChapterNumber = computed(() => {
   return null
 })
 
+const lockedPrerequisiteChapterTitle = computed(() => {
+  const num = lockedPrerequisiteChapterNumber.value
+  if (num === null || !props.project?.blueprint?.chapter_outline) {
+    return null
+  }
+  const outline = props.project.blueprint.chapter_outline.find(
+    (ch) => ch.chapter_number === num,
+  )
+  return outline?.title || null
+})
+
+
 const isSelectedChapterLocked = computed(() => {
   if (props.selectedChapterNumber === null) return false
   if (lockedPrerequisiteChapterNumber.value === null) return false
@@ -881,6 +893,8 @@ const chapterStatusLabel = computed(() => {
       return '评审中'
     case 'selecting':
       return '选择版本'
+    case 'finalizing':
+      return '定稿中'
     case 'waiting_for_confirm':
       return '待确认'
     case 'failed':
@@ -896,7 +910,7 @@ const chapterStatusTone = computed(() => {
   const status = selectedChapter.value?.generation_status
   if (status === 'successful') return 'success'
   if (status === 'failed' || status === 'evaluation_failed') return 'error'
-  if (status === 'generating' || status === 'evaluating' || status === 'selecting') return 'progress'
+  if (status === 'generating' || status === 'evaluating' || status === 'selecting' || status === 'finalizing') return 'progress'
   if (status === 'waiting_for_confirm') return 'pending'
   return 'idle'
 })
@@ -953,7 +967,7 @@ const isChapterEvaluationFailed = (chapterNumber: number) => {
 }
 
 const isInProgressStatus = (status: Chapter['generation_status'] | null | undefined) => {
-  return status === 'generating' || status === 'evaluating' || status === 'selecting'
+  return status === 'generating' || status === 'evaluating' || status === 'selecting' || status === 'finalizing'
 }
 
 const isGeneratingInFlight = computed(() => {
@@ -1293,6 +1307,7 @@ watch(
       status === 'generating' ||
       status === 'evaluating' ||
       status === 'selecting' ||
+      status === 'finalizing' ||
       (status === 'waiting_for_confirm' && !hasContent) ||
       (status === 'successful' && !hasContent)
 
@@ -1336,29 +1351,49 @@ const currentComponentProps = computed(() => {
     (isBackendInProgress || isGeneratingInFlight.value || isFailed) &&
     !(status === 'successful' && hasSelectedChapterContent.value)
   if (shouldRenderGenerating) {
-    const renderStatus = (isBackendInProgress || isFailed) ? status : 'generating'
+    // 重试请求仍在途时，忽略旧 failed 快照，避免轮询旧响应把进度条拉回失败节点。
+    const renderAsLocalGenerating = isGeneratingInFlight.value && !isBackendInProgress
+    const renderStatus = renderAsLocalGenerating ? 'generating' : status
+    const generationProgress = renderAsLocalGenerating
+      ? 0
+      : isBackendInProgress
+        ? (selectedChapter.value?.generation_progress ?? null)
+        : null
+    const generationStep = renderAsLocalGenerating
+      ? 'context_prep'
+      : isBackendInProgress || isFailed
+        ? (selectedChapter.value?.generation_step ?? null)
+        : null
+    const generationStepIndex = renderAsLocalGenerating
+      ? 1
+      : isBackendInProgress
+        ? (selectedChapter.value?.generation_step_index ?? null)
+        : null
+    const generationStepTotal = renderAsLocalGenerating
+      ? 7
+      : isBackendInProgress
+        ? (selectedChapter.value?.generation_step_total ?? null)
+        : null
+
     return {
       chapterNumber: props.selectedChapterNumber,
       chapterTitle: selectedChapterOutline.value?.title || '',
       chapterSummary: selectedChapterOutline.value?.summary || '',
       chapterContentPreview: cleanVersionContent(selectedChapter.value?.content || ''),
       status: renderStatus,
-      generationProgress: isBackendInProgress
-        ? (selectedChapter.value?.generation_progress ?? null)
-        : null,
-      generationStep: (isBackendInProgress || isFailed) ? (selectedChapter.value?.generation_step ?? null) : null,
-      generationStepIndex: isBackendInProgress
-        ? (selectedChapter.value?.generation_step_index ?? null)
-        : null,
-      generationStepTotal: isBackendInProgress
-        ? (selectedChapter.value?.generation_step_total ?? null)
-        : null,
+      generationProgress,
+      generationStep,
+      generationStepIndex,
+      generationStepTotal,
       generationStartedAt: isBackendInProgress
         ? (selectedChapter.value?.generation_started_at ?? null)
         : null,
       statusUpdatedAt: isBackendInProgress
         ? (selectedChapter.value?.status_updated_at ?? null)
         : null,
+      generationTraces: renderAsLocalGenerating
+        ? []
+        : (selectedChapter.value?.generation_traces ?? []),
       generatingChapter: props.generatingChapter,
     }
   }
@@ -1393,6 +1428,7 @@ const currentComponentProps = computed(() => {
     generatingChapter: props.generatingChapter,
     canGenerate: canGenerateChapter(props.selectedChapterNumber),
     lockedPrerequisiteChapterNumber: lockedPrerequisiteChapterNumber.value,
+    lockedPrerequisiteChapterTitle: lockedPrerequisiteChapterTitle.value,
   }
 })
 

@@ -81,6 +81,10 @@ CREATE TABLE IF NOT EXISTS chapter_outlines (
     chapter_number INT NOT NULL,
     title VARCHAR(255) NOT NULL,
     summary TEXT NULL,
+    goals TEXT NOT NULL,
+    highlights JSON NOT NULL,
+    character_states JSON NOT NULL,
+    metadata JSON NULL,
     CONSTRAINT fk_outlines_project FOREIGN KEY (project_id) REFERENCES novel_projects(id) ON DELETE CASCADE,
     UNIQUE KEY uq_outline_project_chapter (project_id, chapter_number)
 );
@@ -130,6 +134,29 @@ CREATE TABLE IF NOT EXISTS chapter_evaluations (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_evaluations_chapter FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE CASCADE,
     CONSTRAINT fk_evaluations_version FOREIGN KEY (version_id) REFERENCES chapter_versions(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS chapter_generation_traces (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    chapter_id BIGINT NOT NULL,
+    project_id VARCHAR(36) NOT NULL,
+    chapter_number INT NOT NULL,
+    node_key VARCHAR(64) NOT NULL,
+    node_label VARCHAR(128) NOT NULL,
+    stage VARCHAR(64) NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'success',
+    system_prompt LONGTEXT NULL,
+    user_prompt LONGTEXT NULL,
+    raw_response LONGTEXT NULL,
+    cleaned_output LONGTEXT NULL,
+    error TEXT NULL,
+    metadata JSON NULL,
+    started_at TIMESTAMP NULL,
+    ended_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_generation_traces_chapter FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE CASCADE,
+    INDEX idx_chapter_generation_traces_chapter (chapter_id, node_key),
+    INDEX idx_chapter_generation_traces_project_chapter (project_id, chapter_number)
 );
 
 CREATE TABLE IF NOT EXISTS llm_configs (

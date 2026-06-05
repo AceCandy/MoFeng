@@ -12,10 +12,10 @@ Writer API Router - 人类化起点长篇写作系统
 2. 跨章 1234 逻辑：通过 ChapterMission 控制每章只写一个节拍
 3. 后置护栏检查：自动检测并修复违规内容
 """
-import asyncio
 import json
 import logging
 import re
+from datetime import datetime
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -33,15 +33,19 @@ from ...models.novel import Chapter, ChapterOutline, ChapterVersion
 from ...models.project_memory import ProjectMemory
 from ...models.writer_persona import WriterPersona
 from ...schemas.novel import (
-    Chapter as ChapterSchema,
-    ChapterGenerationStatus,
     AdvancedGenerateRequest,
     AdvancedGenerateResponse,
+    Chapter as ChapterSchema,
+    ChapterGenerationStatus,
+    ConfirmFinalizeChapterRequest,
+    ConfirmFinalizeChapterResponse,
+    ConfirmFinalizeStats,
     DeleteChapterRequest,
     EditChapterRequest,
     EvaluateChapterRequest,
     FinalizeChapterRequest,
     FinalizeChapterResponse,
+    ForeshadowingSyncStats,
     GenerateChapterRequest,
     GenerateOutlineRequest,
     NovelProject as NovelProjectSchema,
@@ -51,9 +55,10 @@ from ...schemas.novel import (
 from ...schemas.task import BackgroundTaskResponse
 from ...schemas.user import UserInDB
 from ...services.background_task_service import BackgroundTaskService
-from ...services.chapter_word_count_settings import count_chapter_words
-from ...services.chapter_outline_task_runner import run_generate_chapters_outline_task
+from ...services.chapter_generation_trace_service import CN_TIMEZONE, ChapterGenerationTraceService
 from ...services.chapter_ingest_service import ChapterIngestionService
+from ...services.chapter_outline_task_runner import run_generate_chapters_outline_task
+from ...services.chapter_word_count_settings import count_chapter_words
 from ...services.llm_service import LLMService
 from ...services.novel_service import NovelService
 from ...services.prompt_service import PromptService
@@ -130,6 +135,45 @@ def _build_generation_failure_detail(exc: Exception, max_length: int = 300) -> s
     if redacted.startswith("生成章节失败"):
         return redacted
     return f"生成章节失败：{redacted}"
+
+
+async def _record_finalize_workflow_success(
+    trace_service: ChapterGenerationTraceService,
+    *,
+    project_id: str,
+    chapter_number: int,
+    node_key: str,
+    node_label: str,
+    input_payload: dict,
+    output_payload: dict,
+    actions: list[str],
+    data_reads: Optional[list[str]] = None,
+    data_writes: Optional[list[str]] = None,
+    started_at: Optional[datetime] = None,
+) -> None:
+    """记录确认定稿后处理的非模型节点，保证前端能查看真实输入输出。"""
+    ended_at = datetime.now(CN_TIMEZONE)
+    await trace_service.record_success(
+        project_id=project_id,
+        chapter_number=chapter_number,
+        node_key=node_key,
+        node_label=node_label,
+        stage=node_key,
+        input_payload=input_payload,
+        output_payload=output_payload,
+        metadata={
+            "trace_kind": "workflow",
+            "call_type": node_key,
+            "summary": f"{node_label}执行完成。",
+            "actions": actions,
+            "data_reads": data_reads or [],
+            "data_writes": data_writes or [],
+            "model_calls": [],
+        },
+        uses_llm=False,
+        started_at=started_at or ended_at,
+        ended_at=ended_at,
+    )
 
 
 def _extract_tail_excerpt(text: Optional[str], limit: int = 500) -> str:
@@ -227,6 +271,9 @@ async def _build_review_context(
         "chapter_number": chapter_number,
         "title": outline.title if outline else f"第{chapter_number}章",
         "summary": outline.summary if outline else "",
+        "goals": outline.goals if outline else "",
+        "highlights": outline.highlights if outline else [],
+        "character_states": outline.character_states if outline else {},
         "metadata": outline.metadata if outline and outline.metadata else {},
     }
 
@@ -804,105 +851,6 @@ async def _refresh_edit_summary_and_ingest(
             logger.error("章节 %s 向量化入库失败: %s", chapter_number, exc)
 
 
-async def _finalize_chapter_async(
-    project_id: str,
-    chapter_number: int,
-    selected_version_id: int,
-    user_id: int,
-    skip_vector_update: bool = False,
-) -> None:
-    async with AsyncSessionLocal() as session:
-        llm_service = LLMService(session)
-
-        stmt = (
-            select(Chapter)
-            .options(selectinload(Chapter.versions))
-            .where(
-                Chapter.project_id == project_id,
-                Chapter.chapter_number == chapter_number,
-            )
-        )
-        result = await session.execute(stmt)
-        chapter = result.scalars().first()
-        if not chapter:
-            return
-
-        selected_version = next(
-            (v for v in chapter.versions if v.id == selected_version_id),
-            None,
-        )
-        if not selected_version or not selected_version.content:
-            return
-
-        chapter.selected_version_id = selected_version.id
-        chapter.status = ChapterGenerationStatus.SUCCESSFUL.value
-        chapter.generation_progress = 100
-        chapter.generation_step = "completed"
-        chapter.generation_step_index = 7
-        chapter.generation_step_total = 7
-        chapter.word_count = count_chapter_words(selected_version.content or "")
-        await session.commit()
-
-        vector_store = None
-        if settings.vector_store_enabled:
-            try:
-                vector_store = VectorStoreService()
-            except RuntimeError as exc:
-                logger.warning("向量库初始化失败，跳过定稿写入: %s", exc)
-
-        sync_session = getattr(session, "sync_session", session)
-        finalize_service = FinalizeService(sync_session, llm_service, vector_store)
-        await finalize_service.finalize_chapter(
-            project_id=project_id,
-            chapter_number=chapter_number,
-            chapter_text=selected_version.content,
-            user_id=user_id,
-            skip_vector_update=skip_vector_update,
-        )
-        try:
-            stats = await _sync_foreshadowings_for_chapter(
-                session,
-                project_id=project_id,
-                chapter=chapter,
-                content=selected_version.content,
-                user_id=user_id,
-            )
-            logger.info(
-                "异步定稿伏笔同步完成 project=%s chapter=%s created=%s revealed=%s developing=%s",
-                project_id,
-                chapter_number,
-                stats["created"],
-                stats["revealed"],
-                stats["developing"],
-            )
-        except Exception as exc:
-            await session.rollback()
-            logger.exception(
-                "异步定稿伏笔同步失败 project=%s chapter=%s err=%s",
-                project_id,
-                chapter_number,
-                exc,
-            )
-
-
-def _schedule_finalize_task(
-    project_id: str,
-    chapter_number: int,
-    selected_version_id: int,
-    user_id: int,
-    skip_vector_update: bool = False,
-) -> None:
-    asyncio.create_task(
-        _finalize_chapter_async(
-            project_id=project_id,
-            chapter_number=chapter_number,
-            selected_version_id=selected_version_id,
-            user_id=user_id,
-            skip_vector_update=skip_vector_update,
-        )
-    )
-
-
 @router.post("/advanced/generate", response_model=AdvancedGenerateResponse)
 async def advanced_generate_chapter(
     request: AdvancedGenerateRequest,
@@ -921,23 +869,293 @@ async def advanced_generate_chapter(
         user_id=current_user.id,
         flow_config=request.flow_config.model_dump(),
     )
+    return AdvancedGenerateResponse(**result)
 
-    flow_config = request.flow_config
-    if flow_config.async_finalize and result.get("variants"):
-        best_index = result.get("best_version_index", 0)
-        variants = result["variants"]
-        if 0 <= best_index < len(variants):
-            selected_version_id = variants[best_index]["version_id"]
-            background_tasks.add_task(
-                _schedule_finalize_task,
-                request.project_id,
-                request.chapter_number,
-                selected_version_id,
-                current_user.id,
-                False,
+
+async def _confirm_finalize_chapter_sync(
+    *,
+    session: AsyncSession,
+    novel_service: NovelService,
+    project_id: str,
+    chapter_number: int,
+    request: ConfirmFinalizeChapterRequest,
+    user_id: int,
+) -> ConfirmFinalizeChapterResponse:
+    trace_service = ChapterGenerationTraceService(session)
+    stats = ConfirmFinalizeStats()
+    stmt = (
+        select(Chapter)
+        .options(
+            selectinload(Chapter.versions),
+            selectinload(Chapter.evaluations),
+            selectinload(Chapter.selected_version),
+        )
+        .where(Chapter.project_id == project_id, Chapter.chapter_number == chapter_number)
+    )
+    result = await session.execute(stmt)
+    chapter = result.scalars().first()
+    if not chapter:
+        raise HTTPException(status_code=404, detail="章节不存在")
+
+    versions = sorted(chapter.versions or [], key=lambda item: item.created_at)
+    if request.selected_version_index < 0 or request.selected_version_index >= len(versions):
+        raise HTTPException(status_code=400, detail="候选草稿索引无效")
+
+    selected_version = versions[request.selected_version_index]
+    final_content = (
+        request.edited_content
+        if request.edited_content is not None
+        else selected_version.content
+    )
+    final_content = (final_content or "").strip()
+    if not final_content:
+        raise HTTPException(status_code=400, detail="最终正文为空，无法定稿")
+
+    selected_version.content = final_content
+    chapter.status = ChapterGenerationStatus.FINALIZING.value
+    chapter.generation_progress = 90
+    chapter.generation_step = "confirm_finalize"
+    chapter.generation_step_index = 8
+    chapter.generation_step_total = 12
+    chapter.selected_version_id = selected_version.id
+    chapter.selected_version = selected_version
+    chapter.word_count = count_chapter_words(final_content)
+    selected_version_id = selected_version.id
+    final_word_count = chapter.word_count
+    await session.commit()
+
+    try:
+        await _record_finalize_workflow_success(
+            trace_service,
+            project_id=project_id,
+            chapter_number=chapter_number,
+            node_key="confirm_finalize",
+            node_label="确认定稿",
+            input_payload={
+                "selected_version_index": request.selected_version_index,
+                "edited": request.edited_content is not None,
+                "content_chars": len(final_content),
+            },
+            output_payload={
+                "selected_version_id": selected_version_id,
+                "word_count": final_word_count,
+            },
+            actions=["校验候选草稿", "保存最终正文", "绑定选中版本"],
+            data_reads=["chapters", "chapter_versions"],
+            data_writes=["chapters", "chapter_versions"],
+        )
+
+        llm_service = LLMService(session)
+        prompt_service = PromptService(session)
+        summary_prompt = await prompt_service.get_prompt("extraction")
+        if not summary_prompt:
+            raise HTTPException(status_code=500, detail="未配置摘要提示词，请联系管理员配置 'extraction' 提示词")
+        summary_raw = await llm_service.get_summary(
+            final_content,
+            temperature=0.15,
+            user_id=user_id,
+            timeout=180.0,
+            system_prompt=summary_prompt,
+            stage="summary_memory",
+        )
+        summary_text = remove_think_tags(summary_raw).strip()
+        if not summary_text:
+            raise HTTPException(status_code=500, detail="章节梳理为空，无法定稿")
+        chapter.real_summary = summary_text
+        await session.commit()
+        stats.summary_generated = True
+        await trace_service.record_success(
+            project_id=project_id,
+            chapter_number=chapter_number,
+            node_key="real_summary",
+            node_label="生成章节梳理",
+            stage="summary_memory",
+            system_prompt=summary_prompt,
+            user_prompt=final_content,
+            raw_response=summary_raw,
+            cleaned_output=summary_text,
+            input_payload={"content_chars": len(final_content)},
+            output_payload={"summary_chars": len(summary_text)},
+            metadata={
+                "trace_kind": "llm",
+                "call_type": "chat_llm",
+                "summary": "生成最终正文的真实章节梳理并写回 Chapter.real_summary。",
+                "actions": ["读取摘要提示词", "调用摘要模型", "清理 think 标签", "写回章节梳理"],
+                "data_writes": ["chapters.real_summary"],
+                "model_calls": [
+                    {
+                        "purpose": "生成章节梳理",
+                        "call_type": "chat_llm",
+                        "stage": "summary_memory",
+                        "temperature": 0.15,
+                        "timeout_seconds": 180,
+                    }
+                ],
+            },
+        )
+
+        vector_store = None
+        if settings.vector_store_enabled and not request.skip_vector_update:
+            vector_store = VectorStoreService()
+        finalize_service = FinalizeService(getattr(session, "sync_session", session), llm_service, vector_store)
+        finalize_result = await finalize_service.finalize_chapter(
+            project_id=project_id,
+            chapter_number=chapter_number,
+            chapter_text=final_content,
+            user_id=user_id,
+            skip_vector_update=request.skip_vector_update,
+        )
+        if not finalize_result.get("success"):
+            raise HTTPException(
+                status_code=500,
+                detail=f"定稿记忆更新失败：{finalize_result.get('error') or '未知错误'}",
+            )
+        stats.memory_updated = True
+        await _record_finalize_workflow_success(
+            trace_service,
+            project_id=project_id,
+            chapter_number=chapter_number,
+            node_key="finalize_memory",
+            node_label="更新记忆快照",
+            input_payload={"content_chars": len(final_content), "skip_vector_update": request.skip_vector_update},
+            output_payload=finalize_result,
+            actions=["更新全局摘要", "更新角色状态", "更新剧情线", "创建章节快照"],
+            data_reads=["project_memory", "characters"],
+            data_writes=["project_memory", "chapter_snapshots", "chapter_blueprints"],
+        )
+
+        if request.skip_vector_update:
+            await _record_finalize_workflow_success(
+                trace_service,
+                project_id=project_id,
+                chapter_number=chapter_number,
+                node_key="chapter_ingest",
+                node_label="写入章节索引",
+                input_payload={"content_chars": len(final_content), "summary_chars": len(summary_text)},
+                output_payload={"ingested": False, "skip_vector_update": True},
+                actions=["跳过章节向量索引写入"],
+                data_reads=["chapters"],
+                data_writes=[],
+            )
+        else:
+            ingest_service = ChapterIngestionService(llm_service=llm_service)
+            outline_result = await session.execute(
+                select(ChapterOutline).where(
+                    ChapterOutline.project_id == project_id,
+                    ChapterOutline.chapter_number == chapter_number,
+                )
+            )
+            outline = outline_result.scalars().first()
+            chapter_title = outline.title if outline and outline.title else f"第{chapter_number}章"
+            await ingest_service.ingest_chapter(
+                project_id=project_id,
+                chapter_number=chapter_number,
+                title=chapter_title,
+                content=final_content,
+                summary=summary_text,
+                user_id=user_id,
+            )
+            stats.vector_ingested = True
+            await _record_finalize_workflow_success(
+                trace_service,
+                project_id=project_id,
+                chapter_number=chapter_number,
+                node_key="chapter_ingest",
+                node_label="写入章节索引",
+                input_payload={"title": chapter_title, "content_chars": len(final_content), "summary_chars": len(summary_text)},
+                output_payload={"ingested": True},
+                actions=["切分章节正文", "生成向量", "写入章节检索索引"],
+                data_reads=["chapters", "chapter_outlines"],
+                data_writes=["vector_store"],
             )
 
-    return AdvancedGenerateResponse(**result)
+        sync_stats = await _sync_foreshadowings_for_chapter(
+            session,
+            project_id=project_id,
+            chapter=chapter,
+            content=final_content,
+            user_id=user_id,
+        )
+        stats.foreshadowing_sync = ForeshadowingSyncStats(
+            created=int(sync_stats.get("created", 0)),
+            developing=int(sync_stats.get("developing", 0)),
+            revealed=int(sync_stats.get("revealed", 0)),
+        )
+        await _record_finalize_workflow_success(
+            trace_service,
+            project_id=project_id,
+            chapter_number=chapter_number,
+            node_key="foreshadowing_sync",
+            node_label="同步伏笔",
+            input_payload={"content_chars": len(final_content)},
+            output_payload=stats.foreshadowing_sync.model_dump(),
+            actions=["抽取本章新伏笔", "判断历史伏笔推进", "写入伏笔状态历史"],
+            data_reads=["foreshadowings"],
+            data_writes=["foreshadowings", "foreshadowing_status_history"],
+        )
+
+        chapter.status = ChapterGenerationStatus.SUCCESSFUL.value
+        chapter.generation_progress = 100
+        chapter.generation_step = "finalized"
+        chapter.generation_step_index = 12
+        chapter.generation_step_total = 12
+        await session.commit()
+        await _record_finalize_workflow_success(
+            trace_service,
+            project_id=project_id,
+            chapter_number=chapter_number,
+            node_key="finalized",
+            node_label="定稿完成",
+            input_payload={"selected_version_id": selected_version_id},
+            output_payload={"status": ChapterGenerationStatus.SUCCESSFUL.value, "word_count": final_word_count},
+            actions=["确认所有后处理节点完成", "标记章节为已完成"],
+            data_writes=["chapters"],
+        )
+    except Exception as exc:
+        await session.rollback()
+        refreshed = (
+            await session.execute(
+                select(Chapter).where(
+                    Chapter.project_id == project_id,
+                    Chapter.chapter_number == chapter_number,
+                )
+            )
+        ).scalars().first()
+        if refreshed:
+            refreshed.status = ChapterGenerationStatus.WAITING_FOR_CONFIRM.value
+            refreshed.selected_version_id = None
+            refreshed.selected_version = None
+            refreshed.real_summary = None
+            refreshed.word_count = 0
+            refreshed.generation_progress = 100
+            refreshed.generation_step = "finalization_failed"
+            refreshed.generation_step_index = 7
+            refreshed.generation_step_total = 12
+            await session.commit()
+        await trace_service.record_failure(
+            project_id=project_id,
+            chapter_number=chapter_number,
+            node_key="finalization_error",
+            node_label="定稿失败",
+            stage="finalization_error",
+            error=_build_generation_failure_detail(exc),
+            input_payload={"selected_version_index": request.selected_version_index},
+            metadata={
+                "trace_kind": "workflow",
+                "call_type": "finalization_error",
+                "summary": "定稿后处理失败，章节保留草稿待确认状态。",
+                "actions": ["回滚事务", "恢复草稿待确认状态", "记录失败原因"],
+                "data_writes": ["chapters"],
+                "model_calls": [],
+            },
+            uses_llm=False,
+        )
+        if isinstance(exc, HTTPException):
+            raise
+        raise HTTPException(status_code=500, detail=_build_generation_failure_detail(exc)) from exc
+
+    refreshed = await novel_service.get_chapter_schema(project_id, user_id, chapter_number)
+    return ConfirmFinalizeChapterResponse(chapter=refreshed, finalize=stats)
 
 
 @router.post("/chapters/{chapter_number}/finalize", response_model=FinalizeChapterResponse)
@@ -949,7 +1167,7 @@ async def finalize_chapter(
     current_user: UserInDB = Depends(get_current_user),
 ) -> FinalizeChapterResponse:
     """
-    定稿入口：选中版本后触发 FinalizeService 进行记忆更新与快照写入。
+    兼容旧定稿入口：内部统一走同步确认定稿流程。
     """
     novel_service = NovelService(session)
     await novel_service.ensure_project_owner(request.project_id, current_user.id)
@@ -967,51 +1185,31 @@ async def finalize_chapter(
     if not chapter:
         raise HTTPException(status_code=404, detail="章节不存在")
 
-    selected_version = next(
-        (v for v in chapter.versions if v.id == request.selected_version_id),
+    ordered_versions = sorted(chapter.versions or [], key=lambda item: item.created_at)
+    selected_version_index = next(
+        (index for index, version in enumerate(ordered_versions) if version.id == request.selected_version_id),
         None,
     )
-    if not selected_version or not selected_version.content:
+    if selected_version_index is None:
         raise HTTPException(status_code=400, detail="选中的版本不存在或内容为空")
 
-    chapter.selected_version_id = selected_version.id
-    chapter.status = ChapterGenerationStatus.SUCCESSFUL.value
-    chapter.generation_progress = 100
-    chapter.generation_step = "completed"
-    chapter.generation_step_index = 7
-    chapter.generation_step_total = 7
-    chapter.word_count = count_chapter_words(selected_version.content or "")
-    await session.commit()
-
-    vector_store = None
-    if settings.vector_store_enabled and not request.skip_vector_update:
-        try:
-            vector_store = VectorStoreService()
-        except RuntimeError as exc:
-            logger.warning("向量库初始化失败，跳过定稿写入: %s", exc)
-
-    sync_session = getattr(session, "sync_session", session)
-    finalize_service = FinalizeService(sync_session, LLMService(session), vector_store)
-    finalize_result = await finalize_service.finalize_chapter(
+    result = await _confirm_finalize_chapter_sync(
+        session=session,
+        novel_service=novel_service,
         project_id=request.project_id,
         chapter_number=chapter_number,
-        chapter_text=selected_version.content,
+        request=ConfirmFinalizeChapterRequest(
+            selected_version_index=selected_version_index,
+            skip_vector_update=request.skip_vector_update or False,
+        ),
         user_id=current_user.id,
-        skip_vector_update=request.skip_vector_update or False,
-    )
-    background_tasks.add_task(
-        _sync_foreshadowings_after_finalize,
-        request.project_id,
-        chapter_number,
-        selected_version.content,
-        current_user.id,
     )
 
     return FinalizeChapterResponse(
         project_id=request.project_id,
         chapter_number=chapter_number,
-        selected_version_id=selected_version.id,
-        result=finalize_result,
+        selected_version_id=request.selected_version_id,
+        result=result.finalize.model_dump(),
     )
 
 
@@ -1054,75 +1252,43 @@ async def generate_chapter(
         raise HTTPException(status_code=500, detail=_build_generation_failure_detail(exc)) from exc
 
 
+@router.post("/novels/{project_id}/chapters/{chapter_number}/confirm-finalize", response_model=ConfirmFinalizeChapterResponse)
+async def confirm_finalize_chapter(
+    project_id: str,
+    chapter_number: int,
+    request: ConfirmFinalizeChapterRequest,
+    session: AsyncSession = Depends(get_session),
+    current_user: UserInDB = Depends(get_current_user),
+) -> ConfirmFinalizeChapterResponse:
+    novel_service = NovelService(session)
+    await novel_service.ensure_project_owner(project_id, current_user.id)
+    return await _confirm_finalize_chapter_sync(
+        session=session,
+        novel_service=novel_service,
+        project_id=project_id,
+        chapter_number=chapter_number,
+        request=request,
+        user_id=current_user.id,
+    )
+
+
 @router.post("/novels/{project_id}/chapters/select", response_model=NovelProjectSchema)
 async def select_chapter_version(
     project_id: str,
     request: SelectVersionRequest,
-    background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_session),
     current_user: UserInDB = Depends(get_current_user),
 ) -> NovelProjectSchema:
     novel_service = NovelService(session)
-    project = await novel_service.ensure_project_owner(project_id, current_user.id)
-    chapter = await novel_service.get_or_create_chapter(project_id, request.chapter_number)
-
-    chapter.status = ChapterGenerationStatus.SELECTING.value
-    chapter.generation_progress = 95
-    chapter.generation_step = "selecting_version"
-    chapter.generation_step_index = 6
-    chapter.generation_step_total = 7
-    await session.commit()
-
-    # 使用 novel_service.select_chapter_version 确保排序一致
-    # 该函数会按 created_at 排序并校验索引
-    try:
-        selected_version = await novel_service.select_chapter_version(chapter, request.version_index)
-    except HTTPException:
-        chapter.status = ChapterGenerationStatus.WAITING_FOR_CONFIRM.value
-        chapter.generation_progress = 100
-        chapter.generation_step = "waiting_for_confirm"
-        chapter.generation_step_index = 7
-        chapter.generation_step_total = 7
-        await session.commit()
-        raise
-
-    # 校验内容是否为空
-    if not selected_version.content or len(selected_version.content.strip()) == 0:
-        # 回滚状态，不标记为 successful
-        await session.rollback()
-        raise HTTPException(status_code=400, detail="选中的版本内容为空，无法确认为最终版")
-
-    # 异步触发向量化入库
-    try:
-        llm_service = LLMService(session)
-        ingest_service = ChapterIngestionService(llm_service=llm_service)
-        outline_stmt = select(ChapterOutline).where(
-            ChapterOutline.project_id == project_id,
-            ChapterOutline.chapter_number == request.chapter_number,
-        )
-        outline_result = await session.execute(outline_stmt)
-        outline = outline_result.scalars().first()
-        chapter_title = outline.title if outline and outline.title else f"第{request.chapter_number}章"
-        await ingest_service.ingest_chapter(
-            project_id=project_id,
-            chapter_number=request.chapter_number,
-            title=chapter_title,
-            content=selected_version.content,
-            summary=None,
-            user_id=current_user.id,
-        )
-        logger.info(f"章节 {request.chapter_number} 向量化入库成功")
-    except Exception as e:
-        logger.error(f"章节 {request.chapter_number} 向量化入库失败: {e}")
-        # 向量化失败不应阻止版本选择，仅记录错误
-    background_tasks.add_task(
-        _sync_foreshadowings_after_finalize,
-        project_id,
-        request.chapter_number,
-        selected_version.content,
-        current_user.id,
+    await novel_service.ensure_project_owner(project_id, current_user.id)
+    await _confirm_finalize_chapter_sync(
+        session=session,
+        novel_service=novel_service,
+        project_id=project_id,
+        chapter_number=request.chapter_number,
+        request=ConfirmFinalizeChapterRequest(selected_version_index=request.version_index),
+        user_id=current_user.id,
     )
-
     return await _load_project_schema(novel_service, project_id, current_user.id)
 
 
@@ -1296,6 +1462,9 @@ async def update_chapter_outline(
 
     outline.title = request.title
     outline.summary = request.summary
+    outline.goals = request.goals
+    outline.highlights = request.highlights
+    outline.character_states = request.character_states
     await session.commit()
 
     return await _load_project_schema(novel_service, project_id, current_user.id)
@@ -1311,10 +1480,18 @@ async def delete_chapters(
     novel_service = NovelService(session)
     await novel_service.ensure_project_owner(project_id, current_user.id)
 
-    for ch_num in request.chapter_numbers:
-        await novel_service.delete_chapter(project_id, ch_num)
+    async def delete_vector_data(chapter_numbers: List[int]) -> None:
+        llm_service = LLMService(session)
+        ingest_service = ChapterIngestionService(llm_service=llm_service)
+        await ingest_service.delete_chapters(project_id, chapter_numbers)
 
-    await session.commit()
+    await novel_service.delete_chapters(
+        project_id,
+        request.chapter_numbers,
+        delete_vector_data=delete_vector_data,
+        delete_artifacts_confirmed=request.delete_artifacts_confirmed,
+        confirmation_text=request.confirmation_text,
+    )
     return await _load_project_schema(novel_service, project_id, current_user.id)
 
 
