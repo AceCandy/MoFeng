@@ -24,7 +24,10 @@
             'chapter-console__pipeline-item',
             `is-${stepState(item.key, index).tone}`,
             { 'is-current': stepState(item.key, index).tone === 'in-progress' },
+            { 'is-selected': activeStepKey === item.key },
+            { 'is-clickable': stepState(item.key, index).tone !== 'waiting' },
           ]"
+          @click="selectStep(item.key, index)"
         >
           <Tooltip
             :text="STEP_DETAILS[item.key]?.summary || ''"
@@ -81,11 +84,6 @@
         </button>
       </div>
 
-      <details class="chapter-console__failed-detail">
-        <summary>查看错误上下文</summary>
-        <p>状态：{{ status }}</p>
-        <p>阶段：{{ generationStep || '未知阶段' }}</p>
-      </details>
     </article>
 
     <!-- 正常生成中状态展示草稿预览卡片 -->
@@ -122,16 +120,61 @@
       </div>
     </article>
 
-    <details class="chapter-console__log" :open="showLog" @toggle="syncLogOpen">
-      <summary>{{ showLog ? '收起生成日志' : '查看生成日志' }}</summary>
-      <div class="chapter-console__log-body">
-        <p><strong>阶段编码：</strong>{{ statusDetails.stageKey }}</p>
-        <p><strong>输入：</strong>{{ statusDetails.inputs }}</p>
-        <p><strong>输出：</strong>{{ statusDetails.outputs }}</p>
-        <p><strong>下一步：</strong>{{ statusDetails.next }}</p>
-        <p v-if="runtimeDetailText"><strong>补充信息：</strong>{{ runtimeDetailText }}</p>
+    <!-- 节点详情面板 -->
+    <article v-if="activeStepDetails" class="chapter-console__inspector-card">
+      <header class="chapter-console__inspector-header">
+        <div class="chapter-console__inspector-title-group">
+          <span class="chapter-console__inspector-badge">节点详情</span>
+          <h4 class="chapter-console__inspector-title">{{ activeStepDetails.label }}</h4>
+        </div>
+        <span class="chapter-console__inspector-subtitle">{{ activeStepDetails.summary }}</span>
+      </header>
+      <div class="chapter-console__inspector-meta">
+        <span class="chapter-console__call-type">调用类型：{{ activeStepDetails.callType }}</span>
+        <span class="chapter-console__llm-usage">LLM 调用：{{ activeStepDetails.llmUsage }}</span>
+        <span v-if="activeStepDetails.status" class="chapter-console__trace-status">
+          状态：{{ activeStepDetails.status }}
+        </span>
+        <span class="chapter-console__trace-duration">
+          系统耗时：{{ activeStepDetails.systemDuration }}
+        </span>
       </div>
-    </details>
+      <div class="chapter-console__inspector-grids">
+        <div class="chapter-console__inspector-panel">
+          <div class="chapter-console__panel-title">
+            <svg class="w-4 h-4 text-primary" viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+              <path fill-rule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V3zm2.5 1.5v3h9v-3h-9zm9 5.5h-9v3h9v-3z" clip-rule="evenodd" />
+            </svg>
+            输入材料
+          </div>
+          <div class="chapter-console__panel-code-wrapper">
+            <pre class="chapter-console__panel-code"><code>{{ activeStepDetails.inputs }}</code></pre>
+          </div>
+        </div>
+        <div class="chapter-console__inspector-panel">
+          <div class="chapter-console__panel-title">
+            <svg class="w-4 h-4 text-primary" viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+              <path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd" />
+            </svg>
+            实际动作
+          </div>
+          <div class="chapter-console__panel-code-wrapper">
+            <pre class="chapter-console__panel-code"><code>{{ activeStepDetails.actions }}</code></pre>
+          </div>
+        </div>
+        <div class="chapter-console__inspector-panel">
+          <div class="chapter-console__panel-title">
+            <svg class="w-4 h-4 text-primary" viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
+              <path fill-rule="evenodd" d="M4 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V8.414a1 1 0 00-.293-.707l-4.414-4.414A1 1 0 0011.586 3H4zm7 1.5V8h3.5L11 4.5zM6 11h8v1.5H6V11zm0 3h6v1.5H6V14z" clip-rule="evenodd" />
+            </svg>
+            产出结果
+          </div>
+          <div class="chapter-console__panel-code-wrapper">
+            <pre class="chapter-console__panel-code"><code>{{ activeStepDetails.outputs }}</code></pre>
+          </div>
+        </div>
+      </div>
+    </article>
 
     <footer v-if="props.status !== 'failed'" class="chapter-console__actions">
       <button type="button" class="md-btn md-btn-outlined md-ripple" @click="moveToBackground">
@@ -139,9 +182,6 @@
       </button>
       <button type="button" class="md-btn md-btn-outlined md-ripple" @click="cancelGeneration">
         取消生成
-      </button>
-      <button type="button" class="md-btn md-btn-text md-ripple" @click="toggleLog">
-        {{ showLog ? '收起生成日志' : '查看生成日志' }}
       </button>
       <button
         type="button"
@@ -158,9 +198,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import Tooltip from '@/components/Tooltip.vue'
-import type { Chapter } from '@/api/novel'
+import type { Chapter, ChapterGenerationTrace } from '@/api/novel'
 import { globalAlert } from '@/composables/useAlert'
-import { countNonWhitespaceChars } from '@/utils/text'
 import { formatChapterGenerationError } from '@/utils/chapter'
 
 interface Props {
@@ -175,6 +214,7 @@ interface Props {
   generationStepTotal?: number | null
   generationStartedAt?: string | null
   statusUpdatedAt?: string | null
+  generationTraces?: ChapterGenerationTrace[]
   generatingChapter?: number | null
 }
 
@@ -182,6 +222,7 @@ const props = withDefaults(defineProps<Props>(), {
   chapterTitle: '',
   chapterSummary: '',
   chapterContentPreview: '',
+  generationTraces: () => [],
   generatingChapter: null,
 })
 
@@ -189,17 +230,25 @@ const emit = defineEmits(['generateChapter'])
 
 const clockNow = ref(Date.now())
 const localStartAt = ref(Date.now())
-const showLog = ref(false)
 const notifyWhenDone = ref(false)
 let timer: number | null = null
 
+const activeStepKey = ref<string | null>(null)
+
+const selectStep = (key: string, index: number) => {
+  if (stepState(key, index).tone !== 'waiting') {
+    activeStepKey.value = key
+  }
+}
+
 const STAGE_CONFIG: Record<
-  'generating' | 'evaluating' | 'selecting',
+  'generating' | 'evaluating' | 'selecting' | 'finalizing',
   { start: number; end: number; expectedSeconds: number; label: string }
 > = {
   generating: { start: 8, end: 78, expectedSeconds: 190, label: '生成正文' },
-  evaluating: { start: 78, end: 92, expectedSeconds: 55, label: '检查连贯性' },
-  selecting: { start: 92, end: 98, expectedSeconds: 38, label: '等待确认' },
+  evaluating: { start: 78, end: 92, expectedSeconds: 55, label: 'AI评审' },
+  selecting: { start: 92, end: 98, expectedSeconds: 38, label: '保存草稿' },
+  finalizing: { start: 90, end: 99, expectedSeconds: 180, label: '同步定稿' },
 }
 
 const PIPELINE_LABELS: Record<string, string> = {
@@ -207,10 +256,19 @@ const PIPELINE_LABELS: Record<string, string> = {
   director_mission: '规划剧情',
   rag_retrieval: '调用设定',
   draft_generation: '生成正文',
-  quality_review: '检查连贯性',
+  quality_review: 'AI评审',
+  review_refinement: '修复润色',
   persist_versions: '保存草稿',
+  save_draft: '保存草稿',
   waiting_for_confirm: '等待确认',
   selecting_version: '等待确认',
+  confirm_finalize: '确认定稿',
+  real_summary: '生成章节梳理',
+  finalize_memory: '更新记忆快照',
+  chapter_ingest: '写入章节索引',
+  foreshadowing_sync: '同步伏笔',
+  finalized: '定稿完成',
+  finalization_error: '定稿失败',
 }
 
 const pipelineSteps = [
@@ -218,9 +276,15 @@ const pipelineSteps = [
   { key: 'director_mission', label: '规划剧情' },
   { key: 'rag_retrieval', label: '调用设定' },
   { key: 'draft_generation', label: '生成正文' },
-  { key: 'quality_review', label: '检查连贯性' },
-  { key: 'persist_versions', label: '保存草稿' },
-  { key: 'waiting_for_confirm', label: '等待确认' },
+  { key: 'quality_review', label: 'AI评审' },
+  { key: 'review_refinement', label: '修复润色' },
+  { key: 'save_draft', label: '保存草稿' },
+  { key: 'confirm_finalize', label: '确认定稿' },
+  { key: 'real_summary', label: '生成章节梳理' },
+  { key: 'finalize_memory', label: '更新记忆快照' },
+  { key: 'chapter_ingest', label: '写入章节索引' },
+  { key: 'foreshadowing_sync', label: '同步伏笔' },
+  { key: 'finalized', label: '定稿完成' },
 ]
 
 type StepDetail = {
@@ -234,6 +298,43 @@ type ParsedStepPayload = {
   raw: string
   baseKey: string
   meta: Record<string, string>
+}
+
+type TraceMetadata = Record<string, any>
+
+type ActiveStepDetails = {
+  label: string
+  summary: string
+  callType: string
+  llmUsage: string
+  status: string
+  systemDuration: string
+  inputs: string
+  actions: string
+  outputs: string
+}
+
+const TRACE_CALL_TYPE_LABELS: Record<string, string> = {
+  database_context: '数据库读取',
+  database_write: '数据库写入',
+  rag_retrieval: 'RAG 检索',
+  chat_llm: '聊天模型',
+  embedding: '向量模型',
+  preview_generation: '预览生成',
+  version_review: '版本评审',
+  chapter_optimization: '修复润色',
+  confirm_finalize: '确认定稿',
+  real_summary: '章节梳理',
+  finalize_memory: '记忆快照',
+  chapter_ingest: '章节索引',
+  foreshadowing_sync: '伏笔同步',
+  finalized: '定稿完成',
+  finalization_error: '定稿失败',
+}
+
+const TRACE_STATUS_LABELS: Record<string, string> = {
+  success: '成功',
+  failed: '失败',
 }
 
 const STEP_DETAILS: Record<string, StepDetail> = {
@@ -259,25 +360,79 @@ const STEP_DETAILS: Record<string, StepDetail> = {
     summary: '根据任务、前文、人物状态与伏笔生成第一版正文。',
     inputs: '章节方案 + 相关设定',
     outputs: '章节草稿版本',
-    next: '检查连贯性',
+    next: 'AI评审',
   },
   quality_review: {
-    summary: '检查人物一致性、叙事逻辑与语义连贯性。',
+    summary: '单版本生成修改意见，多版本对比选优并生成修改建议。',
     inputs: '候选正文版本',
-    outputs: '评审结果',
+    outputs: '评审结果与修改建议',
+    next: '修复润色',
+  },
+  review_refinement: {
+    summary: '根据 AI 评审建议自动修复润色推荐版本。',
+    inputs: '推荐版本 + AI 修改建议',
+    outputs: '修复润色后的最终正文',
     next: '保存草稿',
   },
   persist_versions: {
-    summary: '将新草稿写入版本库并保留历史版本。',
-    inputs: '候选版本 + 评审结果',
-    outputs: '新版本 Vx',
-    next: '等待确认',
+    summary: '将候选草稿写入版本库，等待人工确认定稿。',
+    inputs: '候选版本 + 推荐索引',
+    outputs: '待确认草稿',
+    next: '人工确认定稿',
+  },
+  save_draft: {
+    summary: '将候选草稿写入版本库，等待人工确认定稿。',
+    inputs: '候选版本 + 推荐索引',
+    outputs: '待确认草稿',
+    next: '人工确认定稿',
   },
   waiting_for_confirm: {
-    summary: '草稿保存完成，等待你确认采纳。',
+    summary: '草稿保存完成，等待你确认定稿。',
     inputs: '新草稿版本',
     outputs: '待确认状态',
-    next: '完成后进入正文查看',
+    next: '确认后进入同步定稿',
+  },
+  confirm_finalize: {
+    summary: '确认最终草稿并锁定本次定稿正文。',
+    inputs: '候选版本 + 手动修改正文',
+    outputs: '最终正文与选中版本',
+    next: '生成章节梳理',
+  },
+  real_summary: {
+    summary: '基于最终正文生成真实章节梳理。',
+    inputs: '最终正文',
+    outputs: 'Chapter.real_summary',
+    next: '更新记忆',
+  },
+  finalize_memory: {
+    summary: '更新全局摘要、角色状态、剧情线和章节快照。',
+    inputs: '最终正文 + 当前项目记忆',
+    outputs: '项目记忆与章节快照',
+    next: '写入索引',
+  },
+  chapter_ingest: {
+    summary: '写入章节向量索引，供后续检索使用。',
+    inputs: '最终正文 + 章节梳理',
+    outputs: '章节检索索引',
+    next: '同步伏笔',
+  },
+  foreshadowing_sync: {
+    summary: '抽取新伏笔并判断历史伏笔推进或回收。',
+    inputs: '最终正文 + 历史活跃伏笔',
+    outputs: '伏笔表与状态历史',
+    next: '定稿完成',
+  },
+  finalized: {
+    summary: '所有后处理完成，章节进入已完成状态。',
+    inputs: '后处理统计',
+    outputs: 'successful',
+    next: '进入正文查看',
+  },
+  finalization_error: {
+    summary: '定稿后处理失败，章节保留草稿待确认。',
+    inputs: '失败节点上下文',
+    outputs: '错误详情',
+    next: '修改后重试',
   },
 }
 
@@ -315,6 +470,15 @@ const parseBackendTimestampToMs = (raw?: string | null): number | null => {
 const parsedStepPayload = computed(() => parseStepPayload(props.generationStep))
 
 const failureReason = computed(() => {
+  const traceError = [...props.generationTraces]
+    .reverse()
+    .find((trace) => trace.status === 'failed' && trace.error?.trim())
+    ?.error
+    ?.trim()
+  if (props.status === 'failed' && traceError) {
+    return formatChapterGenerationError(traceError)
+  }
+
   const step = (props.generationStep || '').trim()
   if (!step) {
     return ''
@@ -387,6 +551,9 @@ const failureScenario = computed(() => {
 
 const currentStepKey = computed(() => {
   const stepKey = parsedStepPayload.value.baseKey
+  if (stepKey === 'waiting_for_confirm' || stepKey === 'selecting_version') {
+    return 'save_draft'
+  }
   if (stepKey && pipelineSteps.some((item) => item.key === stepKey)) {
     return stepKey
   }
@@ -399,8 +566,11 @@ const currentStepKey = computed(() => {
     if (errorMsg.includes('评审') || errorMsg.includes('评分') || errorMsg.includes('连贯') || errorMsg.includes('evaluation') || errorMsg.includes('review')) {
       return 'quality_review'
     }
+    if (errorMsg.includes('润色') || errorMsg.includes('修复') || errorMsg.includes('optimization') || errorMsg.includes('refinement')) {
+      return 'review_refinement'
+    }
     if (errorMsg.includes('保存') || errorMsg.includes('存储') || errorMsg.includes('save') || errorMsg.includes('persist')) {
-      return 'persist_versions'
+      return 'save_draft'
     }
     if (errorMsg.includes('设定') || errorMsg.includes('retrieval') || errorMsg.includes('rag')) {
       return 'rag_retrieval'
@@ -415,7 +585,8 @@ const currentStepKey = computed(() => {
   }
 
   if (props.status === 'evaluating') return 'quality_review'
-  if (props.status === 'selecting') return 'waiting_for_confirm'
+  if (props.status === 'selecting' || props.status === 'waiting_for_confirm') return 'save_draft'
+  if (props.status === 'finalizing') return parsedStepPayload.value.baseKey || 'confirm_finalize'
   return 'context_prep'
 })
 
@@ -438,8 +609,6 @@ const elapsedSeconds = computed(() => {
   return Math.max(0, delta)
 })
 
-const generatedWordCount = computed(() => countNonWhitespaceChars(props.chapterContentPreview || ''))
-
 const backendProgress = computed(() => {
   if (props.generationProgress === null || props.generationProgress === undefined) return null
   if (!Number.isFinite(props.generationProgress)) return null
@@ -450,7 +619,8 @@ const currentStageConfig = computed(() => {
   if (
     props.status === 'generating' ||
     props.status === 'evaluating' ||
-    props.status === 'selecting'
+    props.status === 'selecting' ||
+    props.status === 'finalizing'
   ) {
     return STAGE_CONFIG[props.status]
   }
@@ -496,40 +666,6 @@ const elapsedText = computed(() => {
   return `${mins} 分 ${String(secs).padStart(2, '0')} 秒`
 })
 
-const statusText = computed(() => {
-  if (props.status === 'generating') {
-    return {
-      status: '生成第一版草稿中',
-      badge: '草稿构建中',
-    }
-  }
-  if (props.status === 'evaluating') {
-    return {
-      status: '质量评审中',
-      badge: '质量检查',
-    }
-  }
-  if (props.status === 'selecting') {
-    return {
-      status: '结果收敛中',
-      badge: '保存与确认',
-    }
-  }
-  return {
-    status: '处理中',
-    badge: '处理中',
-  }
-})
-
-const displaySummary = computed(() => {
-  const summary = (props.chapterSummary || '').trim()
-  if (summary) return summary
-  if (props.chapterNumber === 76) {
-    return '当死亡计数逼近十万，所有忽略过那串灰字的人都隐约生出不安，像整座服务器都在等待某个古老约定兑现。'
-  }
-  return '系统正在根据本章目标、人物关系与伏笔信息生成第一版草稿。'
-})
-
 const previewParagraphs = computed(() => {
   const raw = (props.chapterContentPreview || '').trim()
   if (!raw) return []
@@ -547,32 +683,229 @@ const previewModeLabel = computed(() => {
   return '暂未生成正文，先展示策略摘要'
 })
 
-const stageExplanation = computed(() => {
-  return '正在根据本章任务、前文摘要、人物状态和伏笔信息生成第一版正文。系统会保留原章节，新内容将保存为新的草稿版本。'
+watch(
+  () => currentStepKey.value,
+  (newKey) => {
+    activeStepKey.value = newKey
+  },
+  { immediate: true }
+)
+
+const activeStepTraces = computed(() => {
+  const key = activeStepKey.value || currentStepKey.value
+  return props.generationTraces.filter((trace) => trace.node_key === key)
 })
 
-const statusDetails = computed(() => {
-  const key = currentStepKey.value
-  const detail = STEP_DETAILS[key] ?? {
+const activeTrace = computed(() => {
+  const traces = activeStepTraces.value
+  return traces.length ? traces[traces.length - 1] : null
+})
+
+const isPlainTraceObject = (value: unknown): value is TraceMetadata => {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+const traceMetadata = (trace: ChapterGenerationTrace): TraceMetadata => {
+  return isPlainTraceObject(trace.metadata) ? trace.metadata : {}
+}
+
+const resolveTraceDurationMs = (trace: ChapterGenerationTrace): number | null => {
+  if (typeof trace.duration_ms === 'number' && Number.isFinite(trace.duration_ms)) {
+    return Math.max(0, Math.round(trace.duration_ms))
+  }
+  const metadata = traceMetadata(trace)
+  if (typeof metadata.duration_ms === 'number' && Number.isFinite(metadata.duration_ms)) {
+    return Math.max(0, Math.round(metadata.duration_ms))
+  }
+  const startedAt = parseBackendTimestampToMs(trace.started_at)
+  const endedAt = parseBackendTimestampToMs(trace.ended_at)
+  if (startedAt === null || endedAt === null) {
+    return null
+  }
+  return Math.max(0, endedAt - startedAt)
+}
+
+const formatSystemDuration = (durationMs: number | null): string => {
+  if (durationMs === null) {
+    return '未记录'
+  }
+  if (durationMs < 1000) {
+    return `${durationMs} ms`
+  }
+  if (durationMs < 60_000) {
+    const seconds = durationMs / 1000
+    const display = Number.isInteger(seconds) ? String(seconds) : seconds.toFixed(1)
+    return `${display} 秒`
+  }
+  const totalSeconds = Math.round(durationMs / 1000)
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${minutes} 分 ${String(seconds).padStart(2, '0')} 秒`
+}
+
+const traceUsesLlm = (trace: ChapterGenerationTrace): boolean => {
+  if (trace.uses_llm === true || trace.uses_llm === false) {
+    return trace.uses_llm
+  }
+  const metadata = traceMetadata(trace)
+  if (metadata.uses_llm === true || metadata.uses_llm === false) {
+    return metadata.uses_llm
+  }
+  if (Array.isArray(metadata.model_calls)) {
+    return metadata.model_calls.length > 0
+  }
+  return Boolean(trace.system_prompt?.trim() || trace.user_prompt?.trim() || trace.raw_response?.trim())
+}
+
+const formatTraceValue = (value: unknown): string => {
+  if (value === null || value === undefined || value === '') return '无'
+  if (typeof value === 'string') return value
+  return JSON.stringify(value, null, 2)
+}
+
+const formatTracePayload = (payload: unknown, emptyText: string): string => {
+  if (!isPlainTraceObject(payload)) {
+    return payload ? formatTraceValue(payload) : emptyText
+  }
+  const lines = Object.entries(payload)
+    .map(([key, value]) => `${key}：${formatTraceValue(value)}`)
+    .filter(Boolean)
+  return lines.length ? lines.join('\n\n') : emptyText
+}
+
+const formatModelCall = (call: unknown, index: number): string => {
+  if (!isPlainTraceObject(call)) {
+    return `模型调用 ${index + 1}：${formatTraceValue(call)}`
+  }
+  const callType = TRACE_CALL_TYPE_LABELS[String(call.call_type || '')] || call.call_type || '模型调用'
+  const pieces = [
+    `${call.purpose || call.reason || `模型调用 ${index + 1}`}`,
+    `类型：${callType}`,
+  ]
+  if (call.stage) pieces.push(`stage：${call.stage}`)
+  if (call.status) pieces.push(`状态：${call.status}`)
+  if (call.temperature !== undefined) pieces.push(`temperature：${call.temperature}`)
+  if (call.timeout_seconds !== undefined) pieces.push(`超时：${call.timeout_seconds}s`)
+  if (call.max_tokens !== undefined) pieces.push(`max_tokens：${call.max_tokens}`)
+  return pieces.join('；')
+}
+
+const formatTraceInputs = (trace: ChapterGenerationTrace) => {
+  const metadata = traceMetadata(trace)
+  const sections: string[] = []
+  if (metadata.input_payload !== undefined) {
+    sections.push(formatTracePayload(metadata.input_payload, '该节点未记录输入材料。'))
+  }
+  if (trace.system_prompt?.trim()) {
+    sections.push(`模型系统指令：\n${trace.system_prompt.trim()}`)
+  }
+  if (trace.user_prompt?.trim()) {
+    sections.push(`模型用户输入：\n${trace.user_prompt.trim()}`)
+  }
+  return sections.length ? sections.join('\n\n') : '该节点未记录输入材料。'
+}
+
+const formatTraceActions = (trace: ChapterGenerationTrace) => {
+  const metadata = traceMetadata(trace)
+  const lines: string[] = []
+  const actions = Array.isArray(metadata.actions) ? metadata.actions : []
+  actions.forEach((action: unknown) => {
+    lines.push(`- ${formatTraceValue(action)}`)
+  })
+  const modelCalls = Array.isArray(metadata.model_calls) ? metadata.model_calls : []
+  if (modelCalls.length) {
+    lines.push('', '模型/向量调用：')
+    modelCalls.forEach((call: unknown, index: number) => {
+      lines.push(`- ${formatModelCall(call, index)}`)
+    })
+  } else if (traceUsesLlm(trace)) {
+    lines.push('', '模型/向量调用：已调用，但本条记录未保存模型明细。')
+  } else {
+    lines.push('', '模型/向量调用：无')
+  }
+  const dataReads = Array.isArray(metadata.data_reads) ? metadata.data_reads : []
+  if (dataReads.length) {
+    lines.push('', '读取数据：')
+    dataReads.forEach((item: unknown) => lines.push(`- ${formatTraceValue(item)}`))
+  }
+  const dataWrites = Array.isArray(metadata.data_writes) ? metadata.data_writes : []
+  if (dataWrites.length) {
+    lines.push('', '写入数据：')
+    dataWrites.forEach((item: unknown) => lines.push(`- ${formatTraceValue(item)}`))
+  }
+  if (metadata.skip_reason) {
+    lines.push('', `跳过说明：${formatTraceValue(metadata.skip_reason)}`)
+  }
+  if (metadata.metrics) {
+    lines.push('', `运行指标：\n${formatTraceValue(metadata.metrics)}`)
+  }
+  return lines.length ? lines.join('\n') : '该节点未记录具体动作。'
+}
+
+const formatTraceOutputs = (trace: ChapterGenerationTrace) => {
+  const metadata = traceMetadata(trace)
+  const sections: string[] = []
+  if (trace.error?.trim()) {
+    sections.push(`错误：\n${trace.error.trim()}`)
+  }
+  if (metadata.output_payload !== undefined) {
+    sections.push(formatTracePayload(metadata.output_payload, '该节点未记录产出结果。'))
+  }
+  if (trace.raw_response?.trim()) {
+    sections.push(`模型原始返回：\n${trace.raw_response.trim()}`)
+  }
+  if (trace.cleaned_output?.trim()) {
+    sections.push(`清洗后输出：\n${trace.cleaned_output.trim()}`)
+  }
+  return sections.length ? sections.join('\n\n') : '该节点未记录产出结果。'
+}
+
+const resolveTraceCallType = (trace: ChapterGenerationTrace) => {
+  const metadata = traceMetadata(trace)
+  const callType = String(metadata.call_type || '')
+  if (callType) return TRACE_CALL_TYPE_LABELS[callType] || callType
+  if (traceUsesLlm(trace)) return '聊天模型'
+  return '运行节点'
+}
+
+const activeStepDetails = computed<ActiveStepDetails>(() => {
+  const key = activeStepKey.value || currentStepKey.value
+  const stepConfig = STEP_DETAILS[key] ?? {
     summary: '正在处理当前章节请求。',
     inputs: '系统自动组装',
     outputs: '处理中',
     next: '请稍候',
   }
+  const trace = activeTrace.value
+
+  if (trace) {
+    const metadata = traceMetadata(trace)
+    return {
+      label: PIPELINE_LABELS[key] || trace.node_label || stepConfig.summary,
+      summary: metadata.summary || (trace.status === 'failed'
+        ? `真实运行记录：${trace.node_label || stepConfig.summary} 执行失败`
+        : `真实运行记录：${trace.node_label || stepConfig.summary}`),
+      callType: resolveTraceCallType(trace),
+      llmUsage: traceUsesLlm(trace) ? '是' : '否',
+      status: TRACE_STATUS_LABELS[trace.status] || trace.status || '',
+      systemDuration: formatSystemDuration(resolveTraceDurationMs(trace)),
+      inputs: formatTraceInputs(trace),
+      actions: formatTraceActions(trace),
+      outputs: formatTraceOutputs(trace),
+    }
+  }
 
   return {
-    ...detail,
-    stageKey: parsedStepPayload.value.raw || key,
+    label: PIPELINE_LABELS[key] || stepConfig.summary,
+    summary: `暂未收到 ${PIPELINE_LABELS[key] || stepConfig.summary} 的真实运行记录`,
+    callType: '等待记录',
+    llmUsage: '待记录',
+    status: '',
+    systemDuration: '未记录',
+    inputs: '该节点暂未收到真实运行记录。',
+    actions: '该节点暂未收到真实运行记录。',
+    outputs: '该节点暂未收到真实运行记录。',
   }
-})
-
-const runtimeDetailText = computed(() => {
-  const meta = parsedStepPayload.value.meta
-  const details: string[] = []
-  if (meta.v) details.push(`版本进度 ${meta.v}`)
-  if (meta.g) details.push(`护栏触发 ${meta.g} 条`)
-  if (meta.p === 'gen') details.push('正在生成段落文本')
-  return details.join('，')
 })
 
 const stepState = (key: string, index: number) => {
@@ -593,14 +926,6 @@ const stepState = (key: string, index: number) => {
     return { tone: 'in-progress', label: '进行中' }
   }
   return { tone: 'waiting', label: '等待中' }
-}
-
-const toggleLog = () => {
-  showLog.value = !showLog.value
-}
-
-const syncLogOpen = (event: Event) => {
-  showLog.value = (event.currentTarget as HTMLDetailsElement).open
 }
 
 const moveToBackground = async () => {
@@ -644,7 +969,7 @@ watch(
       ['generating', 'evaluating', 'selecting'].includes(prevStatus) &&
       (nextStatus === 'waiting_for_confirm' || nextStatus === 'successful')
     ) {
-      await globalAlert.showSuccess(`第${props.chapterNumber}章草稿已生成，可回到写作台确认版本。`, '生成完成')
+      await globalAlert.showSuccess(`第${props.chapterNumber}章已完成 AI 评审和修复润色。`, '生成完成')
     }
   },
 )
@@ -1159,54 +1484,6 @@ onUnmounted(() => {
   }
 }
 
-@keyframes fadeInTooltip {
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes dot-ripple {
-  0% {
-    transform: scale(1);
-    opacity: 0.4;
-  }
-
-  100% {
-    transform: scale(2.2);
-    opacity: 0;
-  }
-}
-
-@keyframes blink-cursor {
-  0%,
-  49% {
-    opacity: 1;
-  }
-
-  50%,
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes line-flow {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: 0 0;
-  }
-}
-
-@keyframes line-flow-vertical {
-  0% {
-    background-position: 0 200%;
-  }
-  100% {
-    background-position: 0 0;
-  }
-}
-
 /* 失败卡片样式 */
 .chapter-console__failed-card {
   border: 1px solid color-mix(in srgb, var(--md-error) 24%, var(--md-outline-variant));
@@ -1286,22 +1563,203 @@ onUnmounted(() => {
   min-height: 40px;
 }
 
-.chapter-console__failed-detail {
-  margin-top: var(--md-spacing-4);
-  border-top: 1px solid var(--md-outline-variant);
-  padding-top: var(--md-spacing-3);
-}
-
-.chapter-console__failed-detail summary {
+/* 节点详情面板样式 */
+.chapter-console__pipeline-item.is-clickable {
   cursor: pointer;
-  color: var(--md-primary-dark);
-  font-weight: 600;
-  font-size: var(--md-body-medium);
 }
 
-.chapter-console__failed-detail p {
-  margin: 6px 0 0;
-  color: var(--md-on-surface-variant);
+.chapter-console__pipeline-item.is-clickable:hover .chapter-console__dot {
+  transform: scale(1.3);
+}
+
+/* 选中节点的圆圈特效 */
+.chapter-console__pipeline-item.is-selected .chapter-console__dot {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 3px;
+  transform: scale(1.2);
+}
+
+.chapter-console__pipeline-item.is-selected.is-failed .chapter-console__dot {
+  outline-color: var(--md-error);
+}
+
+.chapter-console__pipeline-item.is-selected.is-done .chapter-console__dot {
+  outline-color: var(--md-success);
+}
+
+.chapter-console__inspector-card {
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-md, 8px);
+  background: color-mix(in srgb, var(--md-surface) 95%, transparent);
+  padding: var(--md-spacing-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-3);
+  animation: fadeInInspector 0.3s ease-out;
+}
+
+.chapter-console__inspector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px dashed var(--md-outline-variant);
+  padding-bottom: var(--md-spacing-2);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chapter-console__inspector-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chapter-console__inspector-badge {
+  font-size: var(--md-label-small);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  padding: 2px 6px;
+  border-radius: var(--md-radius-small, 4px);
+}
+
+.chapter-console__inspector-title {
+  margin: 0;
+  color: var(--md-on-surface);
+  font-size: var(--md-title-medium);
+  font-weight: 600;
+}
+
+.chapter-console__inspector-subtitle {
   font-size: var(--md-body-small);
+  color: var(--md-on-surface-variant);
+}
+
+.chapter-console__inspector-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chapter-console__call-type,
+.chapter-console__llm-usage,
+.chapter-console__trace-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-surface-container-low);
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-small);
+  font-weight: 700;
+}
+
+.chapter-console__inspector-grids {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--md-spacing-3);
+}
+
+@media (max-width: 833px) {
+  .chapter-console__inspector-grids {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chapter-console__inspector-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chapter-console__panel-title {
+  font-size: var(--md-label-medium);
+  font-weight: 600;
+  color: var(--md-primary-dark);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chapter-console__panel-code-wrapper {
+  background-color: color-mix(in srgb, var(--md-surface-container-highest) 35%, var(--md-surface-container-low));
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-md, 6px);
+  padding: var(--md-spacing-3);
+  height: 240px;
+  overflow: auto;
+}
+
+.chapter-console__panel-code {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--md-on-surface);
+}
+
+@keyframes fadeInTooltip {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dot-ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@keyframes blink-cursor {
+  0%,
+  49% {
+    opacity: 1;
+  }
+
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes line-flow {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+@keyframes line-flow-vertical {
+  0% {
+    background-position: 0 200%;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+@keyframes fadeInInspector {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>

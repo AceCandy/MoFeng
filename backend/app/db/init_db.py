@@ -129,6 +129,46 @@ async def _ensure_schema_updates() -> None:
 
             if "chapter_outlines" in table_names:
                 columns = {col["name"] for col in inspector.get_columns("chapter_outlines")}
+                dialect = sync_conn.dialect.name
+                if "goals" not in columns:
+                    if dialect == "sqlite":
+                        sync_conn.execute(
+                            text("ALTER TABLE chapter_outlines ADD COLUMN goals TEXT NOT NULL DEFAULT ''")
+                        )
+                    else:
+                        sync_conn.execute(text("ALTER TABLE chapter_outlines ADD COLUMN goals TEXT NULL"))
+                        sync_conn.execute(text("UPDATE chapter_outlines SET goals = '' WHERE goals IS NULL"))
+                        sync_conn.execute(text("ALTER TABLE chapter_outlines MODIFY COLUMN goals TEXT NOT NULL"))
+                if "highlights" not in columns:
+                    if dialect == "sqlite":
+                        sync_conn.execute(
+                            text("ALTER TABLE chapter_outlines ADD COLUMN highlights JSON NOT NULL DEFAULT '[]'")
+                        )
+                    else:
+                        sync_conn.execute(text("ALTER TABLE chapter_outlines ADD COLUMN highlights JSON NULL"))
+                        sync_conn.execute(text("UPDATE chapter_outlines SET highlights = '[]' WHERE highlights IS NULL"))
+                        sync_conn.execute(
+                            text("ALTER TABLE chapter_outlines MODIFY COLUMN highlights JSON NOT NULL")
+                        )
+                if "character_states" not in columns:
+                    if dialect == "sqlite":
+                        sync_conn.execute(
+                            text(
+                                "ALTER TABLE chapter_outlines "
+                                "ADD COLUMN character_states JSON NOT NULL DEFAULT '{}'"
+                            )
+                        )
+                    else:
+                        sync_conn.execute(text("ALTER TABLE chapter_outlines ADD COLUMN character_states JSON NULL"))
+                        sync_conn.execute(
+                            text(
+                                "UPDATE chapter_outlines "
+                                "SET character_states = '{}' WHERE character_states IS NULL"
+                            )
+                        )
+                        sync_conn.execute(
+                            text("ALTER TABLE chapter_outlines MODIFY COLUMN character_states JSON NOT NULL")
+                        )
                 if "metadata" not in columns:
                     sync_conn.execute(text("ALTER TABLE chapter_outlines ADD COLUMN metadata JSON"))
 

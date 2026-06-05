@@ -135,7 +135,7 @@ class BlueprintRelationship(Base):
 
 
 class ChapterOutline(Base):
-    """章节纲要，支持 metadata 存储导演脚本/节拍状态等信息。"""
+    """章节纲要，记录单章概要、目标、看点与角色瞬时状态。"""
 
     __tablename__ = "chapter_outlines"
 
@@ -144,6 +144,9 @@ class ChapterOutline(Base):
     chapter_number: Mapped[int] = mapped_column(Integer, nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     summary: Mapped[Optional[str]] = mapped_column(Text)
+    goals: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    highlights: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    character_states: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     metadata_: Mapped[Optional[dict]] = mapped_column("metadata", JSON)  # 存储导演脚本/节拍状态
     metadata = _MetadataAccessor()
 
@@ -189,6 +192,14 @@ class Chapter(Base):
     )
     evaluations: Mapped[list["ChapterEvaluation"]] = relationship(
         back_populates="chapter", cascade="all, delete-orphan", order_by="ChapterEvaluation.created_at"
+    )
+    generation_traces: Mapped[list["ChapterGenerationTrace"]] = relationship(
+        "ChapterGenerationTrace",
+        back_populates="chapter",
+        cascade="all, delete-orphan",
+        order_by="ChapterGenerationTrace.created_at",
+        primaryjoin="Chapter.id == ChapterGenerationTrace.chapter_id",
+        foreign_keys="[ChapterGenerationTrace.chapter_id]",
     )
 
 

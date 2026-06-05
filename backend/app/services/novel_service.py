@@ -5,7 +5,7 @@ import json
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional
 
 _PREFERRED_CONTENT_KEYS: tuple[str, ...] = (
     "content",
@@ -88,17 +88,26 @@ from ..models import (
     BlueprintRelationship,
     Chapter,
     ChapterEvaluation,
+    ChapterGenerationTrace,
     ChapterOutline,
+    ChapterSnapshot,
     ChapterVersion,
+    CharacterState,
+    Foreshadowing,
+    ForeshadowingReminder,
+    ForeshadowingResolution,
+    ForeshadowingStatusHistory,
     NovelBlueprint,
     NovelConversation,
     NovelProject,
+    ProjectMemory,
 )
 from ..repositories.novel_repository import NovelRepository
 from ..schemas.admin import AdminNovelSummary
 from ..schemas.novel import (
     Blueprint,
     Chapter as ChapterSchema,
+    ChapterGenerationTrace as ChapterGenerationTraceSchema,
     ChapterGenerationStatus,
     ChapterOutline as ChapterOutlineSchema,
     NovelProject as NovelProjectSchema,
@@ -225,6 +234,7 @@ class NovelService:
                 selectinload(Chapter.versions),
                 selectinload(Chapter.evaluations),
                 selectinload(Chapter.selected_version),
+                selectinload(Chapter.generation_traces),
             )
         )
         chapter_result = await self.session.execute(chapter_stmt)
@@ -402,6 +412,9 @@ class NovelService:
                     chapter_number=outline.chapter_number,
                     title=outline.title,
                     summary=outline.summary,
+                    goals=outline.goals,
+                    highlights=outline.highlights,
+                    character_states=outline.character_states,
                 )
             )
 
@@ -466,6 +479,9 @@ class NovelService:
                         chapter_number=outline.get("chapter_number"),
                         title=outline.get("title", ""),
                         summary=outline.get("summary"),
+                        goals=outline.get("goals", ""),
+                        highlights=outline.get("highlights") or [],
+                        character_states=outline.get("character_states") or {},
                     )
                 )
         await self.session.commit()
@@ -491,18 +507,26 @@ class NovelService:
         chapter_number: int,
         title: str,
         summary: str,
+        goals: str = "",
+        highlights: Optional[List[str]] = None,
+        character_states: Optional[Dict[str, str]] = None,
         metadata: Optional[dict] = None,
     ) -> ChapterOutline:
-        """更新或创建章节大纲，支持 metadata 存储导演脚本等信息。"""
+        """更新或创建章节大纲，写入概要、目标、看点和角色瞬时状态。"""
         stmt = select(ChapterOutline).where(
             ChapterOutline.project_id == project_id,
             ChapterOutline.chapter_number == chapter_number,
         )
         result = await self.session.execute(stmt)
         outline = result.scalars().first()
+        resolved_highlights = highlights or []
+        resolved_character_states = character_states or {}
         if outline:
             outline.title = title
             outline.summary = summary
+            outline.goals = goals
+            outline.highlights = resolved_highlights
+            outline.character_states = resolved_character_states
             if metadata is not None:
                 outline.metadata = metadata
         else:
@@ -511,6 +535,9 @@ class NovelService:
                 chapter_number=chapter_number,
                 title=title,
                 summary=summary,
+                goals=goals,
+                highlights=resolved_highlights,
+                character_states=resolved_character_states,
                 metadata=metadata,
             )
             self.session.add(outline)
@@ -536,11 +563,21 @@ class NovelService:
         await self.session.refresh(chapter)
         return chapter
 
-    async def replace_chapter_versions(self, chapter: Chapter, contents: List[str], metadata: Optional[List[Dict]] = None) -> List[ChapterVersion]:
-        await self.session.execute(delete(ChapterVersion).where(ChapterVersion.chapter_id == chapter.id))
-        # 清空已选版本，避免关系缓存导致序列化时读到旧正文。
+    async def replace_chapter_versions(
+        self,
+        chapter: Chapter,
+        contents: List[str],
+        metadata: Optional[List[Dict]] = None,
+        evaluation_feedback: Optional[str] = None,
+    ) -> List[ChapterVersion]:
+        # 生成完成只保存候选草稿；真实正文、章节梳理和选中版本必须等用户确认定稿后写入。
         chapter.selected_version_id = None
         chapter.selected_version = None
+        chapter.real_summary = None
+        chapter.word_count = 0
+        await self.session.flush()
+        await self.session.execute(delete(ChapterEvaluation).where(ChapterEvaluation.chapter_id == chapter.id))
+        await self.session.execute(delete(ChapterVersion).where(ChapterVersion.chapter_id == chapter.id))
         versions: List[ChapterVersion] = []
         for index, content in enumerate(contents):
             extra = metadata[index] if metadata and index < len(metadata) else None
@@ -553,9 +590,20 @@ class NovelService:
             )
             self.session.add(version)
             versions.append(version)
+        await self.session.flush()
+        if evaluation_feedback and evaluation_feedback.strip() and versions:
+            review_version = versions[0]
+            self.session.add(
+                ChapterEvaluation(
+                    chapter_id=chapter.id,
+                    version_id=review_version.id,
+                    feedback=evaluation_feedback.strip(),
+                    decision="ai_review",
+                )
+            )
         chapter.status = ChapterGenerationStatus.WAITING_FOR_CONFIRM.value
-        chapter.generation_progress = 100
         chapter.generation_step = f"waiting_for_confirm|v={len(versions)}"
+        chapter.generation_progress = 100
         chapter.generation_step_index = 7
         chapter.generation_step_total = 7
         await self.session.commit()
@@ -607,21 +655,238 @@ class NovelService:
         await self.session.refresh(chapter)
         await self._touch_project(chapter.project_id)
 
-    async def delete_chapters(self, project_id: str, chapter_numbers: Iterable[int]) -> None:
-        await self.session.execute(
-            delete(Chapter).where(
-                Chapter.project_id == project_id,
-                Chapter.chapter_number.in_(list(chapter_numbers)),
-            )
+    async def delete_chapters(
+        self,
+        project_id: str,
+        chapter_numbers: Iterable[int],
+        *,
+        delete_vector_data: Optional[Callable[[List[int]], Awaitable[None]]] = None,
+        delete_artifacts_confirmed: bool = False,
+        confirmation_text: Optional[str] = None,
+    ) -> None:
+        numbers = sorted({int(number) for number in chapter_numbers if int(number) > 0})
+        if not numbers:
+            return
+
+        outlines_result = await self.session.execute(
+            select(ChapterOutline)
+            .where(ChapterOutline.project_id == project_id)
+            .order_by(ChapterOutline.chapter_number.asc())
         )
-        await self.session.execute(
-            delete(ChapterOutline).where(
-                ChapterOutline.project_id == project_id,
-                ChapterOutline.chapter_number.in_(list(chapter_numbers)),
+        outlines = list(outlines_result.scalars())
+        outline_numbers = {outline.chapter_number for outline in outlines}
+        missing_numbers = [number for number in numbers if number not in outline_numbers]
+        if missing_numbers:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"章节大纲不存在: {', '.join(map(str, missing_numbers))}",
             )
+
+        chapters_result = await self.session.execute(
+            select(Chapter).where(Chapter.project_id == project_id)
         )
-        await self.session.commit()
+        chapters_by_number = {chapter.chapter_number: chapter for chapter in chapters_result.scalars()}
+        completed_numbers = sorted(
+            number
+            for number, chapter in chapters_by_number.items()
+            if chapter.status == ChapterGenerationStatus.SUCCESSFUL.value
+        )
+        latest_completed_number = completed_numbers[-1] if completed_numbers else None
+        completed_to_delete: List[int] = []
+        draft_numbers: List[int] = []
+
+        for number in numbers:
+            chapter = chapters_by_number.get(number)
+            if chapter and chapter.status == ChapterGenerationStatus.SUCCESSFUL.value:
+                if number != latest_completed_number:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="只能删除最近一个已完成章节",
+                    )
+                completed_to_delete.append(number)
+                continue
+
+            if chapter and chapter.status != ChapterGenerationStatus.NOT_GENERATED.value:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="只能删除未生成大纲章节或最近一个已完成章节",
+                )
+            draft_numbers.append(number)
+
+        if completed_to_delete:
+            completed_number = completed_to_delete[0]
+            expected_confirmation_text = f"删除第{completed_number}章及全部产物"
+            if not delete_artifacts_confirmed or (confirmation_text or "").strip() != expected_confirmation_text:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"删除最近已完成章节必须二次确认删除章节及全部产物：请输入“{expected_confirmation_text}”",
+                )
+
+            later_outline_numbers = sorted(number for number in outline_numbers if number > completed_number)
+            missing_later_numbers = [number for number in later_outline_numbers if number not in draft_numbers]
+            if missing_later_numbers:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="删除最近已完成章节时必须同时删除其后的未生成章节大纲",
+                )
+
+        if draft_numbers:
+            first_draft_number = min(draft_numbers)
+            expected_tail_numbers = sorted(number for number in outline_numbers if number >= first_draft_number)
+            if sorted(draft_numbers) != expected_tail_numbers:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="只能删除尾部连续未生成章节大纲",
+                )
+
+        completed_chapter_ids = [
+            chapters_by_number[number].id for number in completed_to_delete if number in chapters_by_number
+        ]
+
+        try:
+            if completed_chapter_ids:
+                # 已完成章删除必须移除正文、版本、评审、trace、定稿产物和自动伏笔产物。
+                await self._delete_completed_chapter_artifacts(
+                    project_id=project_id,
+                    chapter_numbers=completed_to_delete,
+                    chapter_ids=completed_chapter_ids,
+                )
+                await self.session.execute(
+                    delete(ChapterEvaluation).where(ChapterEvaluation.chapter_id.in_(completed_chapter_ids))
+                )
+                await self.session.execute(
+                    delete(ChapterVersion).where(ChapterVersion.chapter_id.in_(completed_chapter_ids))
+                )
+                await self.session.execute(
+                    delete(ChapterGenerationTrace).where(
+                        ChapterGenerationTrace.chapter_id.in_(completed_chapter_ids)
+                    )
+                )
+                await self.session.execute(
+                    delete(Chapter).where(
+                        Chapter.project_id == project_id,
+                        Chapter.chapter_number.in_(completed_to_delete),
+                    )
+                )
+                if delete_vector_data:
+                    await delete_vector_data(completed_to_delete)
+
+            if draft_numbers:
+                draft_chapter_ids = [
+                    chapters_by_number[number].id for number in draft_numbers if number in chapters_by_number
+                ]
+                if draft_chapter_ids:
+                    await self.session.execute(
+                        delete(ChapterGenerationTrace).where(
+                            ChapterGenerationTrace.chapter_id.in_(draft_chapter_ids)
+                        )
+                    )
+                    await self.session.execute(
+                        delete(Chapter).where(
+                            Chapter.project_id == project_id,
+                            Chapter.chapter_number.in_(draft_numbers),
+                        )
+                    )
+
+            await self.session.execute(
+                delete(ChapterOutline).where(
+                    ChapterOutline.project_id == project_id,
+                    ChapterOutline.chapter_number.in_(numbers),
+                )
+            )
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
         await self._touch_project(project_id)
+
+    async def _delete_completed_chapter_artifacts(
+        self,
+        *,
+        project_id: str,
+        chapter_numbers: List[int],
+        chapter_ids: List[int],
+    ) -> None:
+        foreshadowing_result = await self.session.execute(
+            select(Foreshadowing.id).where(
+                Foreshadowing.project_id == project_id,
+                Foreshadowing.chapter_id.in_(chapter_ids),
+                Foreshadowing.is_manual.is_(False),
+            )
+        )
+        auto_foreshadowing_ids = list(foreshadowing_result.scalars())
+
+        if auto_foreshadowing_ids:
+            await self.session.execute(
+                delete(ForeshadowingStatusHistory).where(
+                    ForeshadowingStatusHistory.foreshadowing_id.in_(auto_foreshadowing_ids)
+                )
+            )
+            await self.session.execute(
+                delete(ForeshadowingReminder).where(
+                    ForeshadowingReminder.foreshadowing_id.in_(auto_foreshadowing_ids)
+                )
+            )
+            await self.session.execute(
+                delete(ForeshadowingResolution).where(
+                    ForeshadowingResolution.foreshadowing_id.in_(auto_foreshadowing_ids)
+                )
+            )
+            await self.session.execute(
+                delete(Foreshadowing).where(Foreshadowing.id.in_(auto_foreshadowing_ids))
+            )
+
+        # 删除本章造成的伏笔推进/回收历史，避免已删除章节继续影响后续判断。
+        await self.session.execute(
+            delete(ForeshadowingStatusHistory).where(
+                ForeshadowingStatusHistory.chapter_number.in_(chapter_numbers)
+            )
+        )
+        await self.session.execute(
+            delete(ChapterSnapshot).where(
+                ChapterSnapshot.project_id == project_id,
+                ChapterSnapshot.chapter_number.in_(chapter_numbers),
+            )
+        )
+        await self.session.execute(
+            delete(CharacterState).where(
+                CharacterState.project_id == project_id,
+                CharacterState.chapter_number.in_(chapter_numbers),
+            )
+        )
+        await self._restore_project_memory_after_completed_delete(project_id, min(chapter_numbers))
+
+    async def _restore_project_memory_after_completed_delete(
+        self,
+        project_id: str,
+        deleted_from_chapter_number: int,
+    ) -> None:
+        memory_result = await self.session.execute(
+            select(ProjectMemory).where(ProjectMemory.project_id == project_id)
+        )
+        memory = memory_result.scalars().first()
+        if not memory:
+            return
+
+        snapshot_result = await self.session.execute(
+            select(ChapterSnapshot)
+            .where(
+                ChapterSnapshot.project_id == project_id,
+                ChapterSnapshot.chapter_number < deleted_from_chapter_number,
+            )
+            .order_by(ChapterSnapshot.chapter_number.desc())
+        )
+        previous_snapshot = snapshot_result.scalars().first()
+        if previous_snapshot:
+            memory.last_updated_chapter = previous_snapshot.chapter_number
+            memory.global_summary = previous_snapshot.global_summary_snapshot
+            if previous_snapshot.plot_arcs_snapshot is not None:
+                memory.plot_arcs = previous_snapshot.plot_arcs_snapshot
+            return
+
+        memory.last_updated_chapter = 0
+        memory.global_summary = ""
+        memory.plot_arcs = {}
 
     # ------------------------------------------------------------------
     # 序列化辅助
@@ -783,6 +1048,9 @@ class NovelService:
                         chapter_number=outline.chapter_number,
                         title=outline.title,
                         summary=outline.summary or "",
+                        goals=outline.goals or "",
+                        highlights=outline.highlights or [],
+                        character_states=outline.character_states or {},
                     )
                     for outline in sorted(project.outlines, key=lambda o: o.chapter_number)
                 ],
@@ -895,49 +1163,84 @@ class NovelService:
 
         title = outline.title if outline else f"第{chapter_number}章"
         summary = outline.summary if outline else ""
+        goals = outline.goals if outline else ""
+        highlights = outline.highlights if outline else []
+        character_states = outline.character_states if outline else {}
         real_summary = chapter.real_summary if chapter else None
         content = None
         versions: Optional[List[str]] = None
         evaluation_text: Optional[str] = None
         status_value = ChapterGenerationStatus.NOT_GENERATED.value
         word_count = 0
+        generation_traces: List[ChapterGenerationTraceSchema] = []
 
         if chapter:
             status_value = chapter.status or ChapterGenerationStatus.NOT_GENERATED.value
             word_count = chapter.word_count or 0
+            loaded_versions = chapter.__dict__.get("versions") or []
+            loaded_evaluations = chapter.__dict__.get("evaluations") or []
+            loaded_selected_version = chapter.__dict__.get("selected_version")
+            if "generation_traces" in chapter.__dict__ and chapter.generation_traces:
+                generation_traces = [
+                    ChapterGenerationTraceSchema(
+                        id=trace.id,
+                        node_key=trace.node_key,
+                        node_label=trace.node_label,
+                        stage=trace.stage,
+                        status=trace.status,
+                        uses_llm=self._trace_uses_llm(trace),
+                        system_prompt=trace.system_prompt,
+                        user_prompt=trace.user_prompt,
+                        raw_response=trace.raw_response,
+                        cleaned_output=trace.cleaned_output,
+                        error=trace.error,
+                        metadata=trace.metadata,
+                        duration_ms=self._trace_duration_ms(trace),
+                        started_at=trace.started_at,
+                        ended_at=trace.ended_at,
+                        created_at=trace.created_at,
+                    )
+                    for trace in sorted(
+                        chapter.generation_traces,
+                        key=lambda item: (item.created_at, item.id),
+                    )
+                ]
 
             # 只有在 include_content=True 时才包含完整内容
             if include_content:
                 selected_version = None
-                if chapter.selected_version_id and chapter.versions:
+                if chapter.selected_version_id and loaded_versions:
                     selected_version = next(
-                        (v for v in chapter.versions if v.id == chapter.selected_version_id),
+                        (v for v in loaded_versions if v.id == chapter.selected_version_id),
                         None,
                     )
                 if (
                     selected_version is None
-                    and chapter.selected_version
+                    and loaded_selected_version
                     and (
                         chapter.selected_version_id is None
-                        or chapter.selected_version.id == chapter.selected_version_id
+                        or loaded_selected_version.id == chapter.selected_version_id
                     )
                 ):
-                    selected_version = chapter.selected_version
+                    selected_version = loaded_selected_version
                 if selected_version:
                     content = selected_version.content
-                if chapter.versions:
+                if loaded_versions:
                     versions = [
                         v.content
-                        for v in sorted(chapter.versions, key=lambda item: item.created_at)
+                        for v in sorted(loaded_versions, key=lambda item: item.created_at)
                     ]
-                if chapter.evaluations:
-                    latest = sorted(chapter.evaluations, key=lambda item: item.created_at)[-1]
+                if loaded_evaluations:
+                    latest = sorted(loaded_evaluations, key=lambda item: item.created_at)[-1]
                     evaluation_text = latest.feedback or latest.decision
 
         return ChapterSchema(
             chapter_number=chapter_number,
             title=title,
             summary=summary,
+            goals=goals or "",
+            highlights=highlights or [],
+            character_states=character_states or {},
             real_summary=real_summary,
             content=content,
             versions=versions,
@@ -952,4 +1255,33 @@ class NovelService:
             # 序列化阶段只读取已加载值，避免触发异步懒加载导致 MissingGreenlet。
             status_updated_at=chapter.__dict__.get("updated_at") if chapter else None,
             word_count=word_count,
+            generation_traces=generation_traces,
         )
+
+    @staticmethod
+    def _trace_uses_llm(trace: Any) -> bool:
+        """兼容旧 trace：优先读显式标记，缺失时再按调用材料推断。"""
+        metadata = trace.metadata if isinstance(trace.metadata, dict) else {}
+        explicit = metadata.get("uses_llm")
+        if isinstance(explicit, bool):
+            return explicit
+        model_calls = metadata.get("model_calls")
+        if isinstance(model_calls, list):
+            return len(model_calls) > 0
+        return any(
+            bool((value or "").strip())
+            for value in (trace.system_prompt, trace.user_prompt, trace.raw_response)
+        )
+
+    @staticmethod
+    def _trace_duration_ms(trace: Any) -> Optional[int]:
+        """返回节点系统耗时，兼容未写 duration_ms 的旧 trace。"""
+        metadata = trace.metadata if isinstance(trace.metadata, dict) else {}
+        duration_ms = metadata.get("duration_ms")
+        if isinstance(duration_ms, (int, float)) and duration_ms >= 0:
+            return int(duration_ms)
+        started_at = getattr(trace, "started_at", None)
+        ended_at = getattr(trace, "ended_at", None)
+        if not started_at or not ended_at:
+            return None
+        return max(0, int((ended_at - started_at).total_seconds() * 1000))

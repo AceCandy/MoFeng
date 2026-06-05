@@ -20,6 +20,7 @@ from ..models.project_memory import ProjectMemory
 from ..repositories.system_config_repository import SystemConfigRepository
 from ..services.ai_review_service import AIReviewService
 from ..services.chapter_context_service import ChapterContextService
+from ..services.chapter_generation_trace_service import ChapterGenerationTraceService
 from ..services.chapter_guardrails import ChapterGuardrails
 from ..services.chapter_word_count_settings import (
     build_word_count_requirement_text,
@@ -40,6 +41,7 @@ from ..services.reader_simulator_service import ReaderSimulatorService, ReaderTy
 from ..services.self_critique_service import CritiqueDimension, SelfCritiqueService
 from ..services.vector_store_service import VectorStoreService
 from ..services.writer_context_builder import WriterContextBuilder
+from ..schemas.novel import ChapterGenerationStatus
 from ..utils.json_utils import remove_think_tags, unwrap_markdown_json
 
 logger = logging.getLogger(__name__)
@@ -52,6 +54,15 @@ MAX_CHAPTER_VERSION_COUNT = 2
 def _clamp_version_count(value: int) -> int:
     return max(MIN_CHAPTER_VERSION_COUNT, min(MAX_CHAPTER_VERSION_COUNT, int(value)))
 WRITER_GENERATION_MAX_TOKENS = 7000
+TRACE_NODE_META: Dict[str, Tuple[str, str]] = {
+    "context_prep": ("整理前文", "context_prep"),
+    "director_mission": ("规划剧情", "chapter_mission"),
+    "rag_retrieval": ("调用设定", "rag_retrieval"),
+    "draft_generation": ("生成正文", "chapter_writing"),
+    "quality_review": ("AI评审", "version_review"),
+    "review_refinement": ("修复润色", "chapter_optimization"),
+    "persist_versions": ("保存草稿", "save_draft"),
+}
 
 
 class PipelineGraphState(TypedDict, total=False):
@@ -102,7 +113,6 @@ class PipelineConfig:
     enable_optimizer: bool = False
     enable_consistency: bool = False
     enable_enrichment: bool = False
-    async_finalize: bool = False
     enable_constitution: bool = False
     enable_persona: bool = False
     enable_six_dimension: bool = False
@@ -141,6 +151,7 @@ class PipelineOrchestrator:
         self.novel_service = NovelService(session)
         self.context_builder = WriterContextBuilder()
         self.guardrails = ChapterGuardrails()
+        self.trace_service = ChapterGenerationTraceService(session)
 
     async def generate_chapter(
         self,
@@ -202,14 +213,21 @@ class PipelineOrchestrator:
             if not chapter:
                 return
 
-            chapter.status = "failed"
-            chapter.generation_progress = 0
+            current_step = chapter.generation_step or ""
+            error_msg = ""
             if error:
-                error_msg = ""
                 if hasattr(error, "detail") and error.detail:
                     error_msg = str(error.detail)
                 else:
                     error_msg = str(error)
+            node_key, node_label, stage = self._resolve_failure_trace_node(
+                current_step=current_step,
+                error_msg=error_msg,
+            )
+
+            chapter.status = "failed"
+            chapter.generation_progress = 0
+            if error:
                 truncated_msg = error_msg[:50]
                 chapter.generation_step = f"failed|error={truncated_msg}"
             else:
@@ -217,9 +235,87 @@ class PipelineOrchestrator:
             chapter.generation_step_index = 0
             chapter.generation_step_total = 7
             await self.session.commit()
+            await self._record_terminal_failure_trace(
+                project_id=project_id,
+                chapter_number=chapter_number,
+                node_key=node_key,
+                node_label=node_label,
+                stage=stage,
+                error_msg=error_msg or "生成流程失败，但未收到具体错误信息",
+            )
         except Exception:
             logger.exception(
                 "Pipeline 项目 %s 第 %s 章标记 failed 失败",
+                project_id,
+                chapter_number,
+            )
+
+    @staticmethod
+    def _resolve_failure_trace_node(*, current_step: str, error_msg: str) -> Tuple[str, str, str]:
+        base_key = (current_step or "").split("|", 1)[0].strip()
+        if base_key in TRACE_NODE_META:
+            label, stage = TRACE_NODE_META[base_key]
+            return base_key, label, stage
+
+        lower_error = (error_msg or "").lower()
+        if any(token in lower_error for token in ("润色", "修复", "optimization", "refinement")):
+            return "review_refinement", *TRACE_NODE_META["review_refinement"]
+        if any(token in lower_error for token in ("评审", "评分", "连贯", "evaluation", "review")):
+            return "quality_review", *TRACE_NODE_META["quality_review"]
+        if any(token in lower_error for token in ("保存", "存储", "save", "persist")):
+            return "persist_versions", *TRACE_NODE_META["persist_versions"]
+        if any(token in lower_error for token in ("设定", "retrieval", "rag")):
+            return "rag_retrieval", *TRACE_NODE_META["rag_retrieval"]
+        if any(token in lower_error for token in ("剧情", "规划", "director", "mission")):
+            return "director_mission", *TRACE_NODE_META["director_mission"]
+        if any(token in lower_error for token in ("前文", "上下文", "context")):
+            return "context_prep", *TRACE_NODE_META["context_prep"]
+        return "draft_generation", *TRACE_NODE_META["draft_generation"]
+
+    async def _record_terminal_failure_trace(
+        self,
+        *,
+        project_id: str,
+        chapter_number: int,
+        node_key: str,
+        node_label: str,
+        stage: str,
+        error_msg: str,
+    ) -> None:
+        """兜底记录未被具体节点捕获的失败，便于刷新后仍能查看真实错误。"""
+        try:
+            traces = await self.trace_service.list_for_chapter(
+                project_id=project_id,
+                chapter_number=chapter_number,
+            )
+            if any(trace.status == "failed" for trace in traces):
+                return
+            now = datetime.now(CN_TIMEZONE)
+            await self.trace_service.record_failure(
+                project_id=project_id,
+                chapter_number=chapter_number,
+                node_key=node_key,
+                node_label=node_label,
+                stage=stage,
+                error=error_msg,
+                metadata={
+                    "trace_kind": "workflow",
+                    "call_type": "generation_failure",
+                    "summary": "生成流程异常终止，系统已将章节标记为生成失败。",
+                    "actions": [
+                        "捕获 LangGraph 生成流程异常",
+                        "写入章节 failed 状态",
+                        "保留完整错误原因供前端失败卡片和节点详情展示",
+                    ],
+                    "model_calls": [],
+                },
+                uses_llm=False,
+                started_at=now,
+                ended_at=now,
+            )
+        except Exception:
+            logger.exception(
+                "Pipeline 项目 %s 第 %s 章记录 failed trace 失败",
                 project_id,
                 chapter_number,
             )
@@ -294,6 +390,10 @@ class PipelineOrchestrator:
             started_at=datetime.now(CN_TIMEZONE),
             reset_selected_version=True,
         )
+        await self.trace_service.clear_for_chapter(
+            project_id=project_id,
+            chapter_number=chapter_number,
+        )
 
         return {
             "config": config,
@@ -303,6 +403,7 @@ class PipelineOrchestrator:
         }
 
     async def _graph_collect_context(self, state: PipelineGraphState) -> PipelineGraphState:
+        started_at = datetime.now(CN_TIMEZONE)
         project_schema = await self._load_generation_project_schema(
             state["project_id"],
             state["user_id"],
@@ -317,6 +418,46 @@ class PipelineOrchestrator:
         )
         blueprint_dict = self._normalize_blueprint(project_schema.blueprint.model_dump())
         all_characters = [c.get("name") for c in blueprint_dict.get("characters", []) if c.get("name")]
+        await self.trace_service.record_success(
+            project_id=state["project_id"],
+            chapter_number=state["chapter_number"],
+            node_key="context_prep",
+            node_label="整理前文",
+            stage="context_prep",
+            input_payload={
+                "outline_title": state["outline_title"],
+                "outline_summary": state["outline_summary"],
+                "writing_notes": state["writing_notes"],
+            },
+            output_payload={
+                "previous_summary": history_context.get("previous_summary"),
+                "previous_tail": history_context.get("previous_tail"),
+                "completed_chapters": history_context.get("completed_chapters"),
+            },
+            metadata={
+                "trace_kind": "workflow",
+                "call_type": "database_context",
+                "summary": "读取前文章节与项目蓝图，整理上一章摘要、上一章结尾和已完成章节列表。",
+                "actions": [
+                    "读取项目蓝图与章节大纲",
+                    "查询当前章节之前已选中正文的章节",
+                    "提取上一章结尾片段",
+                    "是否调用摘要模型由前文章节是否缺少 real_summary 决定",
+                ],
+                "data_reads": [
+                    "NovelProject / NovelBlueprint",
+                    "Chapter.selected_version",
+                    "Chapter.real_summary",
+                ],
+                "model_calls": history_context.get("model_calls", []),
+                "skip_reason": None
+                if history_context.get("model_calls")
+                else "前文章节均已有摘要，或这是第一章，无需补摘要模型调用",
+                "metrics": history_context.get("trace_metrics", {}),
+            },
+            started_at=started_at,
+            ended_at=datetime.now(CN_TIMEZONE),
+        )
 
         return {
             "history_context": history_context,
@@ -326,7 +467,16 @@ class PipelineOrchestrator:
         }
 
     async def _graph_generate_chapter_mission(self, state: PipelineGraphState) -> PipelineGraphState:
+        await self._set_chapter_generation_state(
+            project_id=state["project_id"],
+            chapter_number=state["chapter_number"],
+            progress=12,
+            step="director_mission",
+            step_index=2,
+        )
         chapter_mission = await self._generate_chapter_mission(
+            project_id=state["project_id"],
+            chapter_number=state["chapter_number"],
             blueprint_dict=state["blueprint_dict"],
             previous_summary=state["history_context"]["previous_summary"],
             previous_tail=state["history_context"]["previous_tail"],
@@ -409,6 +559,14 @@ class PipelineOrchestrator:
         }
 
     async def _graph_prepare_retrieval_context(self, state: PipelineGraphState) -> PipelineGraphState:
+        started_at = datetime.now(CN_TIMEZONE)
+        await self._set_chapter_generation_state(
+            project_id=state["project_id"],
+            chapter_number=state["chapter_number"],
+            progress=42,
+            step="rag_retrieval",
+            step_index=3,
+        )
         config = state["config"]
         rag_context = None
         knowledge_context = None
@@ -435,6 +593,46 @@ class PipelineOrchestrator:
                     "chunks": len(rag_context.get("chunks", [])) if rag_context else 0,
                     "summaries": len(rag_context.get("summaries", [])) if rag_context else 0,
                 }
+        await self.trace_service.record_success(
+            project_id=state["project_id"],
+            chapter_number=state["chapter_number"],
+            node_key="rag_retrieval",
+            node_label="调用设定",
+            stage="rag_retrieval",
+            input_payload={
+                "rag_enabled": config.enable_rag,
+                "rag_mode": config.rag_mode,
+                "outline_title": state["outline_title"],
+                "outline_summary": state["outline_summary"],
+                "writing_notes": state["writing_notes"],
+            },
+            output_payload={
+                "rag_stats": rag_stats,
+                "rag_context": rag_context,
+                "knowledge_context": knowledge_context,
+            },
+            metadata={
+                "trace_kind": "workflow",
+                "call_type": "rag_retrieval",
+                "summary": "按 RAG 配置检索本章可引用的历史片段、章节摘要或精筛设定上下文。",
+                "actions": [
+                    "检查 RAG 是否启用",
+                    "根据章节标题、摘要和写作指令构造检索依据",
+                    "simple 模式调用向量模型生成查询 embedding 后检索",
+                    "two_stage 模式先生成检索词，再做向量检索和知识过滤",
+                ],
+                "data_reads": [
+                    "向量库 rag_chunks / rag_summaries",
+                    "ProjectMemory.global_summary（two_stage 模式）",
+                    "ChapterBlueprint（two_stage 模式）",
+                ],
+                "model_calls": self._describe_rag_model_calls(config, rag_stats),
+                "skip_reason": self._resolve_rag_skip_reason(config, rag_stats),
+                "metrics": rag_stats or {},
+            },
+            started_at=started_at,
+            ended_at=datetime.now(CN_TIMEZONE),
+        )
 
         return {
             "rag_context": rag_context,
@@ -535,6 +733,7 @@ class PipelineOrchestrator:
         return {"versions": versions}
 
     async def _graph_review_versions(self, state: PipelineGraphState) -> PipelineGraphState:
+        started_at = datetime.now(CN_TIMEZONE)
         await self._set_chapter_generation_state(
             project_id=state["project_id"],
             chapter_number=state["chapter_number"],
@@ -543,20 +742,56 @@ class PipelineOrchestrator:
             step_index=5,
         )
 
-        best_version_index, ai_review_result = await self._run_ai_review(
-            versions=state["versions"],
+        review_context = self._build_review_context(
+            writer_blueprint=state["writer_blueprint"],
+            blueprint_dict=state["blueprint_dict"],
+            chapter_number=state["chapter_number"],
+            outline_title=state["outline_title"],
+            outline_summary=state["outline_summary"],
             chapter_mission=state.get("chapter_mission"),
-            user_id=state["user_id"],
-            context=self._build_review_context(
-                writer_blueprint=state["writer_blueprint"],
-                blueprint_dict=state["blueprint_dict"],
-                chapter_number=state["chapter_number"],
-                outline_title=state["outline_title"],
-                outline_summary=state["outline_summary"],
-                chapter_mission=state.get("chapter_mission"),
-                history_context=state["history_context"],
-            ),
+            history_context=state["history_context"],
         )
+        try:
+            best_version_index, ai_review_result = await self._run_ai_review(
+                versions=state["versions"],
+                chapter_mission=state.get("chapter_mission"),
+                user_id=state["user_id"],
+                context=review_context,
+            )
+        except Exception as exc:
+            await self.trace_service.record_failure(
+                project_id=state["project_id"],
+                chapter_number=state["chapter_number"],
+                node_key="quality_review",
+                node_label="AI评审",
+                stage="version_review",
+                error=str(exc),
+                input_payload={
+                    "version_count": len(state["versions"]),
+                    "content_lengths": [
+                        len(version.get("content", "") or "") for version in state["versions"]
+                    ],
+                },
+                metadata={
+                    "trace_kind": "llm",
+                    "call_type": "chat_llm",
+                    "summary": "AI评审候选版本失败，生成流程终止。",
+                    "actions": [
+                        "整理候选版本",
+                        "单版本生成修改意见，或多版本对比选优并生成修改意见",
+                    ],
+                    "model_calls": [
+                        {
+                            "stage": "version_review",
+                            "call_type": "chat_llm",
+                            "purpose": "AI评审候选版本并产出修复润色建议",
+                        }
+                    ],
+                },
+                started_at=started_at,
+                ended_at=datetime.now(CN_TIMEZONE),
+            )
+            raise
 
         review_summaries: Dict[str, Any] = {}
         if ai_review_result:
@@ -567,6 +802,49 @@ class PipelineOrchestrator:
             best_version_index = max(0, min(best_version_index, len(versions) - 1))
         else:
             best_version_index = 0
+
+        await self.trace_service.record_success(
+            project_id=state["project_id"],
+            chapter_number=state["chapter_number"],
+            node_key="quality_review",
+            node_label="AI评审",
+            stage="version_review",
+            input_payload={
+                "version_count": len(versions),
+                "content_lengths": [len(version.get("content", "") or "") for version in versions],
+            },
+            output_payload={
+                "best_version_index": best_version_index,
+                "review_summaries": review_summaries,
+                "review_mode": "single" if len(versions) == 1 else "compare",
+            },
+            metadata={
+                "trace_kind": "llm",
+                "call_type": "chat_llm",
+                "summary": "AI评审候选正文版本；单版本产出修改意见，多版本对比选出最佳版本并产出修改建议。",
+                "actions": [
+                    "统计候选版本数量和正文长度",
+                    "单版本调用评审模型产出修改意见",
+                    "多版本调用评审模型比较版本并选出最佳",
+                    "保留评审结果供后续自动修复润色使用",
+                ],
+                "model_calls": [
+                    {
+                        "stage": "version_review",
+                        "call_type": "chat_llm",
+                        "purpose": "AI评审候选版本并产出修复润色建议",
+                    }
+                ],
+                "skip_reason": None,
+                "metrics": {
+                    "version_count": len(versions),
+                    "content_lengths": [len(version.get("content", "") or "") for version in versions],
+                    "best_version_index": best_version_index,
+                },
+            },
+            started_at=started_at,
+            ended_at=datetime.now(CN_TIMEZONE),
+        )
 
         return {"best_version_index": best_version_index, "review_summaries": review_summaries}
 
@@ -579,6 +857,31 @@ class PipelineOrchestrator:
         review_summaries = state["review_summaries"]
         best_version = versions[state["best_version_index"]]
         best_content = best_version["content"]
+        await self._set_chapter_generation_state(
+            project_id=state["project_id"],
+            chapter_number=state["chapter_number"],
+            progress=92,
+            step="review_refinement",
+            step_index=6,
+        )
+        review_summary = self._build_review_refinement_summary(
+            review_summaries.get("ai_review"),
+            state["best_version_index"],
+        )
+        refined_content, refinement_report = await self._run_review_guided_refinement(
+            project_id=state["project_id"],
+            chapter_number=state["chapter_number"],
+            source_content=best_content,
+            review_summary=review_summary,
+            version_number=state["best_version_index"] + 1,
+            version_review=self._extract_best_version_review(
+                review_summaries.get("ai_review"),
+                state["best_version_index"],
+            ),
+            user_id=state["user_id"],
+        )
+        best_content = refined_content
+        review_summaries["review_guided_refinement"] = refinement_report
 
         enhanced_flow = state.get("enhanced_flow")
         if enhanced_flow and config.enable_six_dimension:
@@ -645,17 +948,24 @@ class PipelineOrchestrator:
         return {"versions": versions, "review_summaries": review_summaries}
 
     async def _graph_persist_versions(self, state: PipelineGraphState) -> PipelineGraphState:
+        started_at = datetime.now(CN_TIMEZONE)
         versions = state["versions"]
         contents = [v.get("content", "") for v in versions]
         metadata = [v.get("metadata") for v in versions]
+        evaluation_feedback = self._build_chapter_evaluation_feedback(state.get("review_summaries"))
         chapter = await self._set_chapter_generation_state(
             project_id=state["project_id"],
             chapter_number=state["chapter_number"],
-            progress=96,
+            progress=98,
             step="persist_versions",
-            step_index=6,
+            step_index=7,
         )
-        versions_models = await self.novel_service.replace_chapter_versions(chapter, contents, metadata)
+        versions_models = await self.novel_service.replace_chapter_versions(
+            chapter,
+            contents,
+            metadata,
+            evaluation_feedback=evaluation_feedback,
+        )
 
         variants = []
         for idx, version_model in enumerate(versions_models):
@@ -667,6 +977,49 @@ class PipelineOrchestrator:
                     "metadata": versions[idx].get("metadata"),
                 }
             )
+        await self.trace_service.record_success(
+            project_id=state["project_id"],
+            chapter_number=state["chapter_number"],
+            node_key="save_draft",
+            node_label="保存草稿",
+            stage="save_draft",
+            input_payload={
+                "version_count": len(contents),
+                "content_lengths": [len(content or "") for content in contents],
+                "recommended_version_index": state["best_version_index"],
+            },
+            output_payload={
+                "versions": [
+                    {"index": item["index"], "version_id": item["version_id"]}
+                    for item in variants
+                ],
+                "status": ChapterGenerationStatus.WAITING_FOR_CONFIRM.value,
+            },
+            metadata={
+                "trace_kind": "workflow",
+                "call_type": "database_write",
+                "summary": "将候选草稿写入版本表，等待人工确认定稿。",
+                "actions": [
+                    "更新章节生成状态为保存草稿",
+                    "替换本轮章节候选版本列表",
+                    "保留 AI 推荐版本索引供前端默认选中",
+                    "将章节状态标记为待确认定稿",
+                ],
+                "data_writes": [
+                    "chapters",
+                    "chapter_versions",
+                ],
+                "model_calls": [],
+                "skip_reason": "保存草稿节点不调用模型",
+                "metrics": {
+                    "version_count": len(contents),
+                    "content_lengths": [len(content or "") for content in contents],
+                    "recommended_version_index": state["best_version_index"],
+                },
+            },
+            started_at=started_at,
+            ended_at=datetime.now(CN_TIMEZONE),
+        )
 
         return {"variants": variants}
 
@@ -716,7 +1069,6 @@ class PipelineOrchestrator:
             "enable_optimizer",
             "enable_consistency",
             "enable_enrichment",
-            "async_finalize",
             "enable_rag",
         ):
             if key in flow_config and flow_config[key] is not None:
@@ -780,6 +1132,8 @@ class PipelineOrchestrator:
         latest_prev_number = -1
         previous_summary_text = ""
         previous_tail_excerpt = ""
+        summary_model_calls = []
+        skipped_chapters = 0
         stmt = (
             select(Chapter)
             .options(selectinload(Chapter.selected_version))
@@ -794,6 +1148,7 @@ class PipelineOrchestrator:
 
         for existing in chapters:
             if existing.selected_version is None or not existing.selected_version.content:
+                skipped_chapters += 1
                 continue
             if not existing.real_summary:
                 summary = await self.llm_service.get_summary(
@@ -804,6 +1159,15 @@ class PipelineOrchestrator:
                     stage="summary_memory",
                 )
                 existing.real_summary = remove_think_tags(summary)
+                summary_model_calls.append(
+                    {
+                        "stage": "summary_memory",
+                        "call_type": "chat_llm",
+                        "reason": f"第 {existing.chapter_number} 章缺少 real_summary，补生成前文摘要",
+                        "input": "该章选中版本正文",
+                        "output": "写回 Chapter.real_summary",
+                    }
+                )
                 await self.session.commit()
 
             completed_chapters.append(
@@ -827,6 +1191,13 @@ class PipelineOrchestrator:
             "completed_summaries": completed_summaries,
             "previous_summary": previous_summary_text or "暂无（这是第一章）",
             "previous_tail": previous_tail_excerpt or "暂无（这是第一章）",
+            "model_calls": summary_model_calls,
+            "trace_metrics": {
+                "loaded_previous_chapters": len(chapters),
+                "usable_previous_chapters": len(completed_chapters),
+                "skipped_previous_chapters": skipped_chapters,
+                "summary_model_call_count": len(summary_model_calls),
+            },
         }
 
     @staticmethod
@@ -851,6 +1222,8 @@ class PipelineOrchestrator:
     async def _generate_chapter_mission(
         self,
         *,
+        project_id: str,
+        chapter_number: int,
         blueprint_dict: Dict[str, Any],
         previous_summary: str,
         previous_tail: str,
@@ -863,8 +1236,7 @@ class PipelineOrchestrator:
     ) -> Optional[dict]:
         plan_prompt = await self.prompt_service.get_prompt("chapter_plan")
         if not plan_prompt:
-            logger.warning("未配置 chapter_plan 提示词，跳过导演脚本生成")
-            return None
+            raise RuntimeError("规划剧情失败：缺少 chapter_plan 提示词，请联系管理员配置")
 
         plan_input = f"""
 [上一章摘要]
@@ -883,10 +1255,11 @@ class PipelineOrchestrator:
 [全部角色]
 {json.dumps(all_characters, ensure_ascii=False)}
 
-[写作指令]
-{writing_notes}
-"""
+    [写作指令]
+    {writing_notes}
+    """
 
+        started_at = datetime.now(CN_TIMEZONE)
         try:
             response = await self.llm_service.get_llm_response(
                 system_prompt=plan_prompt,
@@ -899,11 +1272,79 @@ class PipelineOrchestrator:
             cleaned = remove_think_tags(response)
             normalized = unwrap_markdown_json(cleaned)
             mission = json.loads(normalized)
+            await self.trace_service.record_success(
+                project_id=project_id,
+                chapter_number=chapter_number,
+                node_key="director_mission",
+                node_label="规划剧情",
+                stage="chapter_mission",
+                system_prompt=plan_prompt,
+                user_prompt=plan_input,
+                raw_response=response,
+                cleaned_output=normalized,
+                metadata={
+                    "trace_kind": "llm",
+                    "call_type": "chat_llm",
+                    "summary": "调用章节规划模型，把前文、当前大纲和写作指令整理成章节导演脚本。",
+                    "actions": [
+                        "读取 chapter_plan 提示词",
+                        "组装上一章摘要、上一章结尾、当前章节大纲、角色列表和写作指令",
+                        "调用聊天模型生成结构化章节导演脚本",
+                        "解析模型返回 JSON",
+                    ],
+                    "model_calls": [
+                        {
+                            "stage": "chapter_mission",
+                            "call_type": "chat_llm",
+                            "purpose": "生成本章冲突、节奏、POV 和允许新增角色",
+                            "temperature": 0.3,
+                            "timeout_seconds": 120,
+                        }
+                    ],
+                    "metrics": {"macro_beat": mission.get("macro_beat")},
+                },
+                started_at=started_at,
+                ended_at=datetime.now(CN_TIMEZONE),
+            )
             logger.info("章节导演脚本生成完成: macro_beat=%s", mission.get("macro_beat"))
             return mission
         except Exception as exc:
-            logger.warning("生成章节导演脚本失败，将使用默认模式: %s", exc)
-            return None
+            await self.trace_service.record_failure(
+                project_id=project_id,
+                chapter_number=chapter_number,
+                node_key="director_mission",
+                node_label="规划剧情",
+                stage="chapter_mission",
+                system_prompt=plan_prompt,
+                user_prompt=plan_input,
+                error=str(exc),
+                metadata={
+                    "trace_kind": "llm",
+                    "call_type": "chat_llm",
+                    "summary": "调用章节规划模型失败，生成流程终止。",
+                    "actions": [
+                        "读取 chapter_plan 提示词",
+                        "组装章节规划输入",
+                        "调用聊天模型生成章节导演脚本",
+                    ],
+                    "model_calls": [
+                        {
+                            "stage": "chapter_mission",
+                            "call_type": "chat_llm",
+                            "purpose": "生成本章导演脚本",
+                            "temperature": 0.3,
+                            "timeout_seconds": 120,
+                        }
+                    ],
+                },
+                started_at=started_at,
+                ended_at=datetime.now(CN_TIMEZONE),
+            )
+            logger.error("生成章节导演脚本失败，终止生成流程: %s", exc)
+            message = str(exc)
+            if message.startswith("规划剧情失败"):
+                raise
+            raise RuntimeError(f"规划剧情失败：{message}") from exc
 
     async def _get_rag_context(
         self,
@@ -1085,6 +1526,57 @@ class PipelineOrchestrator:
         return chapter_mission.get("pov") or chapter_mission.get("pov_character")
 
     @staticmethod
+    def _describe_rag_model_calls(
+        config: PipelineConfig,
+        rag_stats: Optional[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        if not config.enable_rag:
+            return []
+
+        if config.rag_mode == "two_stage":
+            enabled = bool((rag_stats or {}).get("enabled", True))
+            if not enabled:
+                return []
+            return [
+                {
+                    "stage": "chapter_writing",
+                    "call_type": "chat_llm",
+                    "purpose": "生成知识库检索关键词",
+                },
+                {
+                    "stage": "rag_embedding",
+                    "call_type": "embedding",
+                    "purpose": "为每组检索词生成向量",
+                },
+                {
+                    "stage": "chapter_writing",
+                    "call_type": "chat_llm",
+                    "purpose": "过滤检索结果并按情节、人物、世界碎片重组",
+                },
+            ]
+
+        return [
+            {
+                "stage": "rag_embedding",
+                "call_type": "embedding",
+                "purpose": "为章节标题、摘要和写作指令生成查询向量",
+            }
+        ]
+
+    @staticmethod
+    def _resolve_rag_skip_reason(
+        config: PipelineConfig,
+        rag_stats: Optional[Dict[str, Any]],
+    ) -> Optional[str]:
+        if not config.enable_rag:
+            return "本轮配置关闭 RAG，因此未检索设定"
+        if not settings.vector_store_enabled:
+            return "向量库未启用，因此跳过设定检索"
+        if config.rag_mode == "two_stage" and rag_stats and rag_stats.get("enabled") is False:
+            return str(rag_stats.get("error") or "两层 RAG 未启用或向量库不可用")
+        return None
+
+    @staticmethod
     def _build_review_context(
         *,
         writer_blueprint: Dict[str, Any],
@@ -1151,24 +1643,147 @@ class PipelineOrchestrator:
                 user_id=user_id,
             )
             metadata["preview"] = preview_meta
+            await self.trace_service.record_success(
+                project_id=project_id,
+                chapter_number=chapter_number,
+                node_key="draft_generation",
+                node_label="生成正文",
+                stage="chapter_preview",
+                input_payload={
+                    "outline_title": outline_title,
+                    "outline_summary": outline_summary,
+                    "style_hint": style_hint,
+                    "memory_context": memory_context,
+                    "enhanced_context_keys": sorted((enhanced_context or {}).keys()),
+                },
+                output_payload={
+                    "full_chapter": content,
+                    "preview_status": preview_meta.get("status") if isinstance(preview_meta, dict) else None,
+                },
+                metadata={
+                    "trace_kind": "workflow",
+                    "call_type": "preview_generation",
+                    "summary": "使用预览生成服务分阶段生成章节正文。",
+                    "actions": [
+                        "组装章节预览输入",
+                        "调用预览生成服务",
+                        "返回完整章节和预览状态",
+                    ],
+                    "model_calls": [
+                        {
+                            "stage": "chapter_preview",
+                            "call_type": "chat_llm",
+                            "purpose": "分阶段生成章节预览和正文",
+                        }
+                    ],
+                    "metrics": {
+                        "version_index": index + 1,
+                        "preview": True,
+                        "preview_status": preview_meta.get("status") if isinstance(preview_meta, dict) else None,
+                        "output_chars": len(content or ""),
+                    },
+                },
+            )
 
         if not content:
             final_prompt_input = prompt_input
             if style_hint:
                 final_prompt_input += f"\n\n[版本风格提示]\n{style_hint}"
 
-            response = await self.llm_service.get_llm_response(
-                system_prompt=writer_prompt,
-                conversation_history=[{"role": "user", "content": final_prompt_input}],
-                temperature=0.9,
-                user_id=user_id,
-                timeout=600.0,
-                response_format=None,
-                max_tokens=WRITER_GENERATION_MAX_TOKENS,
-                stage="chapter_writing",
-            )
+            started_at = datetime.now(CN_TIMEZONE)
+            try:
+                response = await self.llm_service.get_llm_response(
+                    system_prompt=writer_prompt,
+                    conversation_history=[{"role": "user", "content": final_prompt_input}],
+                    temperature=0.9,
+                    user_id=user_id,
+                    timeout=600.0,
+                    response_format=None,
+                    max_tokens=WRITER_GENERATION_MAX_TOKENS,
+                    stage="chapter_writing",
+                )
+            except Exception as exc:
+                await self.trace_service.record_failure(
+                    project_id=project_id,
+                    chapter_number=chapter_number,
+                    node_key="draft_generation",
+                    node_label="生成正文",
+                    stage="chapter_writing",
+                    system_prompt=writer_prompt,
+                    user_prompt=final_prompt_input,
+                    error=str(exc),
+                    metadata={
+                        "trace_kind": "llm",
+                        "call_type": "chat_llm",
+                        "summary": "调用正文生成模型失败。",
+                        "actions": [
+                            "组装世界蓝图、前文摘要、导演脚本、RAG 上下文和篇幅要求",
+                            "追加版本风格提示",
+                            "调用聊天模型生成完整章节正文",
+                        ],
+                        "model_calls": [
+                            {
+                                "stage": "chapter_writing",
+                                "call_type": "chat_llm",
+                                "purpose": "生成章节正文",
+                                "temperature": 0.9,
+                                "timeout_seconds": 600,
+                                "max_tokens": WRITER_GENERATION_MAX_TOKENS,
+                            }
+                        ],
+                        "metrics": {
+                            "version_index": index + 1,
+                            "style_hint": style_hint,
+                            "prompt_chars": len(final_prompt_input),
+                        },
+                    },
+                    started_at=started_at,
+                    ended_at=datetime.now(CN_TIMEZONE),
+                )
+                raise
             cleaned = remove_think_tags(response)
             content = unwrap_markdown_json(cleaned)
+            await self.trace_service.record_success(
+                project_id=project_id,
+                chapter_number=chapter_number,
+                node_key="draft_generation",
+                node_label="生成正文",
+                stage="chapter_writing",
+                system_prompt=writer_prompt,
+                user_prompt=final_prompt_input,
+                raw_response=response,
+                cleaned_output=content,
+                metadata={
+                    "trace_kind": "llm",
+                    "call_type": "chat_llm",
+                    "summary": "调用正文生成模型，输出本章候选草稿。",
+                    "actions": [
+                        "组装世界蓝图、前文摘要、导演脚本、RAG 上下文和篇幅要求",
+                        "追加版本风格提示",
+                        "调用聊天模型生成完整章节正文",
+                        "清理模型思考标签并提取正文",
+                    ],
+                    "model_calls": [
+                        {
+                            "stage": "chapter_writing",
+                            "call_type": "chat_llm",
+                            "purpose": "生成章节正文",
+                            "temperature": 0.9,
+                            "timeout_seconds": 600,
+                            "max_tokens": WRITER_GENERATION_MAX_TOKENS,
+                        }
+                    ],
+                    "metrics": {
+                        "version_index": index + 1,
+                        "style_hint": style_hint,
+                        "prompt_chars": len(final_prompt_input),
+                        "raw_response_chars": len(response or ""),
+                        "cleaned_output_chars": len(content or ""),
+                    },
+                },
+                started_at=started_at,
+                ended_at=datetime.now(CN_TIMEZONE),
+            )
 
         guardrail_result = self.guardrails.check(
             generated_text=content,
@@ -1546,6 +2161,280 @@ class PipelineOrchestrator:
                 return "\n\n".join(parts)
         return None
 
+    @staticmethod
+    def _extract_best_version_review(
+        ai_review: Optional[Dict[str, Any]],
+        best_version_index: int,
+    ) -> Dict[str, Any]:
+        if not isinstance(ai_review, dict):
+            return {}
+        target_number = best_version_index + 1
+        for review in ai_review.get("version_reviews") or []:
+            if isinstance(review, dict) and review.get("version_number") == target_number:
+                return review
+        return {}
+
+    @classmethod
+    def _build_review_refinement_summary(
+        cls,
+        ai_review: Optional[Dict[str, Any]],
+        best_version_index: int,
+    ) -> str:
+        if not isinstance(ai_review, dict):
+            return ""
+
+        pieces: List[str] = []
+        mode = ai_review.get("mode")
+        if mode == "single":
+            pieces.append("单版本评审：请根据以下评审意见直接修复润色唯一候选版本。")
+        elif mode == "compare":
+            pieces.append(
+                f"多版本对比评审：推荐采用第 {best_version_index + 1} 个版本，并根据以下意见修复润色。"
+            )
+
+        for label, value in (
+            ("总体评价", ai_review.get("evaluation")),
+            ("修改建议", ai_review.get("suggestions")),
+            ("最终推荐", ai_review.get("final_recommendation")),
+        ):
+            if value:
+                pieces.append(f"{label}：{value}")
+
+        flaws = ai_review.get("flaws")
+        if isinstance(flaws, list) and flaws:
+            pieces.append("需修复问题：\n" + "\n".join(f"- {item}" for item in flaws if item))
+
+        best_review = cls._extract_best_version_review(ai_review, best_version_index)
+        if best_review:
+            if best_review.get("overall_review"):
+                pieces.append(f"推荐版本局部评价：{best_review['overall_review']}")
+            cons = best_review.get("cons")
+            if isinstance(cons, list) and cons:
+                pieces.append("推荐版本缺点：\n" + "\n".join(f"- {item}" for item in cons if item))
+
+        return "\n\n".join(piece for piece in pieces if piece).strip()
+
+    @classmethod
+    def _build_chapter_evaluation_feedback(
+        cls,
+        review_summaries: Optional[Dict[str, Any]],
+    ) -> Optional[str]:
+        """把自动评审结果转换成前端评阅面板已有的 evaluation JSON 结构。"""
+        if not isinstance(review_summaries, dict):
+            return None
+        ai_review = review_summaries.get("ai_review")
+        if not isinstance(ai_review, dict):
+            return None
+
+        version_reviews = ai_review.get("version_reviews") or []
+        evaluation: Dict[str, Dict[str, Any]] = {}
+        for review in version_reviews:
+            if not isinstance(review, dict):
+                continue
+            try:
+                version_number = int(review.get("version_number") or 0)
+            except (TypeError, ValueError):
+                version_number = 0
+            if version_number <= 0:
+                continue
+            evaluation[f"version{version_number}"] = {
+                "pros": review.get("pros") if isinstance(review.get("pros"), list) else [],
+                "cons": review.get("cons") if isinstance(review.get("cons"), list) else [],
+                "overall_review": str(review.get("overall_review") or ""),
+                "scores": review.get("scores") if isinstance(review.get("scores"), dict) else {},
+            }
+
+        try:
+            best_choice = int(ai_review.get("best_version_index") or 0) + 1
+        except (TypeError, ValueError):
+            best_choice = 1
+        if best_choice <= 0:
+            best_choice = 1
+
+        if not evaluation:
+            evaluation["version1"] = {
+                "pros": [],
+                "cons": [],
+                "overall_review": str(
+                    ai_review.get("evaluation")
+                    or ai_review.get("suggestions")
+                    or ai_review.get("final_recommendation")
+                    or "AI评审已完成"
+                ),
+                "scores": ai_review.get("scores") if isinstance(ai_review.get("scores"), dict) else {},
+            }
+            best_choice = 1
+
+        payload = {
+            "best_choice": best_choice,
+            "reason_for_choice": str(
+                ai_review.get("final_recommendation")
+                or ai_review.get("suggestions")
+                or ai_review.get("evaluation")
+                or "AI评审已完成"
+            ),
+            "evaluation": evaluation,
+        }
+        return json.dumps(payload, ensure_ascii=False)
+
+    @staticmethod
+    def _parse_review_guided_refinement_response(raw_response: str) -> Tuple[str, str]:
+        cleaned = remove_think_tags(raw_response)
+        normalized = unwrap_markdown_json(cleaned).strip()
+        candidates = [normalized, cleaned.strip()]
+
+        for candidate in candidates:
+            if not candidate:
+                continue
+            try:
+                parsed = json.loads(candidate)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(parsed, dict):
+                continue
+            optimized_content = parsed.get("optimized_content")
+            if isinstance(optimized_content, str) and optimized_content.strip():
+                notes = parsed.get("optimization_notes")
+                return optimized_content.strip(), str(notes or "修复润色完成")
+
+        fallback = normalized or cleaned.strip()
+        return fallback, "修复润色完成（响应格式非标准JSON）"
+
+    async def _run_review_guided_refinement(
+        self,
+        *,
+        project_id: str,
+        chapter_number: int,
+        source_content: str,
+        review_summary: str,
+        version_number: int,
+        version_review: Dict[str, Any],
+        user_id: int,
+    ) -> Tuple[str, Dict[str, Any]]:
+        started_at = datetime.now(CN_TIMEZONE)
+        system_prompt: Optional[str] = None
+        user_prompt: Optional[str] = None
+        try:
+            source_content = (source_content or "").strip()
+            review_summary = (review_summary or "").strip()
+            if not source_content:
+                raise RuntimeError("修复润色失败：最佳版本正文为空")
+            if not review_summary:
+                raise RuntimeError("修复润色失败：缺少AI评审建议")
+
+            system_prompt = await self.prompt_service.get_prompt("optimize_recommended_version")
+            if not system_prompt:
+                raise RuntimeError("修复润色失败：缺少 optimize_recommended_version 提示词")
+
+            optimize_input = {
+                "source_content": source_content,
+                "review_summary": review_summary,
+                "version_number": version_number,
+                "version_review": version_review or {},
+            }
+            user_prompt = json.dumps(optimize_input, ensure_ascii=False)
+            response = await self.llm_service.get_llm_response(
+                system_prompt=system_prompt,
+                conversation_history=[{"role": "user", "content": user_prompt}],
+                temperature=0.7,
+                user_id=user_id,
+                timeout=600.0,
+                stage="chapter_optimization",
+            )
+            refined_content, optimization_notes = self._parse_review_guided_refinement_response(response)
+            if not refined_content.strip():
+                raise RuntimeError("修复润色失败：模型返回的最终正文为空")
+
+            report = {
+                "version_number": version_number,
+                "optimization_notes": optimization_notes,
+                "source_chars": len(source_content),
+                "refined_chars": len(refined_content),
+            }
+            await self.trace_service.record_success(
+                project_id=project_id,
+                chapter_number=chapter_number,
+                node_key="review_refinement",
+                node_label="修复润色",
+                stage="chapter_optimization",
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                raw_response=response,
+                cleaned_output=refined_content,
+                input_payload={
+                    "version_number": version_number,
+                    "review_summary": review_summary,
+                    "source_chars": len(source_content),
+                },
+                output_payload={
+                    "optimization_notes": optimization_notes,
+                    "refined_chars": len(refined_content),
+                },
+                metadata={
+                    "trace_kind": "llm",
+                    "call_type": "chat_llm",
+                    "summary": "根据 AI 评审选择的版本和修改建议，自动修复润色成最终正文。",
+                    "actions": [
+                        "读取 optimize_recommended_version 提示词",
+                        "组装推荐版本正文和 AI 评审建议",
+                        "调用聊天模型输出修复润色后的完整正文",
+                        "解析 optimized_content 和 optimization_notes",
+                    ],
+                    "model_calls": [
+                        {
+                            "stage": "chapter_optimization",
+                            "call_type": "chat_llm",
+                            "purpose": "按 AI 评审建议修复润色推荐版本",
+                            "temperature": 0.7,
+                            "timeout_seconds": 600,
+                        }
+                    ],
+                    "metrics": report,
+                },
+                started_at=started_at,
+                ended_at=datetime.now(CN_TIMEZONE),
+            )
+            return refined_content, report
+        except Exception as exc:
+            await self.trace_service.record_failure(
+                project_id=project_id,
+                chapter_number=chapter_number,
+                node_key="review_refinement",
+                node_label="修复润色",
+                stage="chapter_optimization",
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                error=str(exc),
+                input_payload={
+                    "version_number": version_number,
+                    "source_chars": len(source_content or ""),
+                    "review_summary": review_summary,
+                },
+                metadata={
+                    "trace_kind": "llm",
+                    "call_type": "chat_llm",
+                    "summary": "按 AI 评审建议修复润色失败，生成流程终止。",
+                    "actions": [
+                        "读取修复润色提示词",
+                        "组装推荐版本正文和 AI 评审建议",
+                        "调用聊天模型输出最终正文",
+                    ],
+                    "model_calls": [
+                        {
+                            "stage": "chapter_optimization",
+                            "call_type": "chat_llm",
+                            "purpose": "按 AI 评审建议修复润色推荐版本",
+                        }
+                    ],
+                },
+                started_at=started_at,
+                ended_at=datetime.now(CN_TIMEZONE),
+            )
+            message = str(exc)
+            if message.startswith("修复润色失败"):
+                raise
+            raise RuntimeError(f"修复润色失败：{message}") from exc
+
     async def _run_ai_review(
         self,
         *,
@@ -1554,24 +2443,57 @@ class PipelineOrchestrator:
         user_id: int,
         context: Optional[Dict[str, Any]] = None,
     ) -> Tuple[int, Optional[Dict[str, Any]]]:
-        if len(versions) <= 1:
-            return 0, None
-
         contents = [v.get("content", "") for v in versions]
+        if not contents:
+            raise RuntimeError("AI评审失败：没有可评审的候选版本")
+
+        ai_review_service = AIReviewService(self.llm_service, self.prompt_service)
+        if len(contents) == 1:
+            evaluation_text = await ai_review_service.review_single_version(
+                version_content=contents[0],
+                user_id=user_id,
+                review_context=context,
+                strict=True,
+            )
+            if not evaluation_text or not evaluation_text.strip():
+                raise RuntimeError("AI评审失败：单版本评审结果为空")
+            versions[0].setdefault("metadata", {})["ai_review"] = {
+                "is_best": True,
+                "evaluation": evaluation_text,
+                "suggestions": evaluation_text,
+                "mode": "single",
+            }
+            return 0, {
+                "mode": "single",
+                "best_version_index": 0,
+                "evaluation": evaluation_text,
+                "flaws": [],
+                "suggestions": evaluation_text,
+                "final_recommendation": "采用唯一版本",
+                "version_reviews": [
+                    {
+                        "version_number": 1,
+                        "overall_review": evaluation_text,
+                        "pros": [],
+                        "cons": [],
+                        "scores": {},
+                    }
+                ],
+            }
+
         try:
-            ai_review_service = AIReviewService(self.llm_service, self.prompt_service)
             ai_review_result = await ai_review_service.review_versions(
                 versions=contents,
                 chapter_mission=chapter_mission,
                 user_id=user_id,
                 review_context=context,
+                strict=True,
             )
         except Exception as exc:
-            logger.warning("AI 评审失败，跳过: %s", exc)
-            return 0, None
+            raise RuntimeError(f"AI评审失败：{exc}") from exc
 
         if not ai_review_result:
-            return 0, None
+            raise RuntimeError("AI评审失败：多版本评审结果为空")
 
         review_map = {
             review.version_number: review for review in ai_review_result.version_reviews
@@ -1589,11 +2511,13 @@ class PipelineOrchestrator:
             }
 
         return ai_review_result.best_version_index, {
+            "mode": "compare",
             "best_version_index": ai_review_result.best_version_index,
             "scores": ai_review_result.scores,
             "evaluation": ai_review_result.overall_evaluation,
             "flaws": ai_review_result.critical_flaws,
             "suggestions": ai_review_result.refinement_suggestions,
+            "final_recommendation": ai_review_result.final_recommendation,
             "version_reviews": [
                 {
                     "version_number": review.version_number,

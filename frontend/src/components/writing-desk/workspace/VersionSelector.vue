@@ -22,11 +22,12 @@
         <button
           type="button"
           class="md-btn md-btn-filled md-ripple"
-          :disabled="!availableVersions?.[selectedVersionIndex]?.content || isSelectingVersion"
-          @click="$emit('confirmVersionSelection')"
+          :disabled="!canConfirmDraft"
+          @click="confirmDraft"
         >
-          采纳为正式版本
+          {{ isSelectingVersion ? '定稿中...' : '确认定稿' }}
         </button>
+        <button type="button" class="md-btn md-btn-outlined md-ripple" @click="openDraftEdit">编辑草稿</button>
         <button type="button" class="md-btn md-btn-tonal md-ripple" @click="$emit('regenerateChapter')">重新生成</button>
         <button type="button" class="md-btn md-btn-text md-ripple" @click="$emit('showEvaluationDetail')">继续润色</button>
       </div>
@@ -104,7 +105,7 @@
     <div class="md-card md-card-outlined p-4 m3-version-container">
       <div class="flex items-center justify-between mb-4">
         <h4 class="md-title-medium font-semibold">
-          {{ availableVersions.length > 1 ? '选择版本' : '生成内容' }}
+          {{ availableVersions.length > 1 ? '草稿确认' : '生成草稿' }}
           <span class="md-body-small md-on-surface-variant ml-2"
             >({{ availableVersions.length }} 个版本)</span
           >
@@ -195,6 +196,19 @@
         </div>
       </div>
 
+      <div v-if="draftEditOpen" class="version-draft-editor">
+        <label class="md-label-large" for="draft-edited-content">编辑草稿正文</label>
+        <textarea
+          id="draft-edited-content"
+          v-model="draftEditedContent"
+          class="version-draft-editor__textarea"
+          rows="14"
+        ></textarea>
+        <p class="md-body-small md-on-surface-variant">
+          当前编辑稿 {{ getVersionWordCount(draftEditedContent) }} 字
+        </p>
+      </div>
+
       <div class="version-actions">
         <button
           type="button"
@@ -219,12 +233,15 @@
         </button>
         <button
           type="button"
-          @click="$emit('confirmVersionSelection')"
-          :disabled="
-            !availableVersions?.[selectedVersionIndex]?.content ||
-            isCurrentVersion(selectedVersionIndex) ||
-            isSelectingVersion
-          "
+          @click="openDraftEdit"
+          class="md-btn md-btn-outlined md-ripple flex items-center justify-center"
+        >
+          编辑草稿
+        </button>
+        <button
+          type="button"
+          @click="confirmDraft"
+          :disabled="!canConfirmDraft"
           class="md-btn md-btn-filled md-ripple disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
         >
           <svg
@@ -239,7 +256,7 @@
               clip-rule="evenodd"></path>
           </svg>
           <span v-else>
-            {{ isCurrentVersion(selectedVersionIndex) ? '当前版本' : '确认选择此版本' }}
+            {{ isCurrentVersion(selectedVersionIndex) ? '当前版本' : '确认定稿' }}
           </span>
         </button>
       </div>
@@ -265,6 +282,8 @@ interface Props {
 
 const props = defineProps<Props>()
 const versionCardRefs = ref<Array<HTMLElement | null>>([])
+const draftEditOpen = ref(false)
+const draftEditedContent = ref('')
 
 type VersionNoticeAction = 'retry-evaluate' | 'show-evaluation'
 
@@ -401,6 +420,31 @@ const compareWithPreviousVersion = () => {
   if (props.availableVersions.length < 2) return
   const previousIndex = Math.max(0, props.selectedVersionIndex - 1)
   emit('showVersionDetail', previousIndex)
+}
+
+const selectedDraftContent = computed(() =>
+  cleanVersionContent(props.availableVersions?.[props.selectedVersionIndex]?.content || ''),
+)
+
+const canConfirmDraft = computed(() => {
+  if (props.isSelectingVersion || !props.availableVersions?.[props.selectedVersionIndex]?.content) {
+    return false
+  }
+  if (draftEditOpen.value && draftEditedContent.value.trim()) {
+    return true
+  }
+  return !isCurrentVersion(props.selectedVersionIndex)
+})
+
+const openDraftEdit = () => {
+  draftEditedContent.value = selectedDraftContent.value
+  draftEditOpen.value = true
+}
+
+const confirmDraft = () => {
+  emit('confirmVersionSelection', {
+    editedContent: draftEditOpen.value ? draftEditedContent.value : null,
+  })
 }
 
 const isCurrentVersion = (versionIndex: number) => {
@@ -622,6 +666,32 @@ const parseMarkdown = (text: string): string => {
   justify-content: flex-end;
   gap: var(--md-spacing-3);
   margin-top: var(--md-spacing-4);
+}
+
+.version-draft-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--md-spacing-2);
+  margin-top: var(--md-spacing-4);
+}
+
+.version-draft-editor__textarea {
+  width: 100%;
+  min-height: 320px;
+  resize: vertical;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-sm);
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+  padding: var(--md-spacing-3);
+  line-height: 1.8;
+  font-family: var(--md-font-family);
+  outline: none;
+}
+
+.version-draft-editor__textarea:focus {
+  border-color: var(--md-primary);
+  box-shadow: inset 0 0 0 1px var(--md-primary);
 }
 
 .m3-version-card {

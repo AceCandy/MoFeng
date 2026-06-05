@@ -76,9 +76,18 @@ fi
 # 3. chapter_outlines 表添加 metadata 字段
 echo "  添加 chapter_outlines.metadata 字段..."
 mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" -e "
-    ALTER TABLE chapter_outlines 
+    ALTER TABLE chapter_outlines
     ADD COLUMN IF NOT EXISTS metadata JSON NULL;
 " 2>/dev/null || echo "  ⚠ 字段可能已存在"
+
+# 4. 章节生成 Trace 表
+if [ -f "$MIGRATION_DIR/add_chapter_generation_traces.sql" ]; then
+    echo "  执行: add_chapter_generation_traces.sql"
+    mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASSWORD" "$DB_NAME" < "$MIGRATION_DIR/add_chapter_generation_traces.sql"
+    echo "  ✓ 完成"
+else
+    echo "  ⚠ 未找到: add_chapter_generation_traces.sql"
+fi
 
 echo ""
 echo "========================================="

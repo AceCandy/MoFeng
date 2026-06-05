@@ -32,7 +32,10 @@ const layoutComponent = computed(() => route.meta.layout === 'auth' ? AuthLayout
     :show-cancel="alert.showCancel"
     :confirm-text="alert.confirmText"
     :cancel-text="alert.cancelText"
-    @confirm="globalAlert.closeAlert(alert.id, true)"
+    :show-input="alert.showInput"
+    :input-label="alert.inputLabel"
+    :input-placeholder="alert.inputPlaceholder"
+    @confirm="(inputValue) => globalAlert.closeAlert(alert.id, inputValue ?? true)"
     @cancel="globalAlert.closeAlert(alert.id, false)"
     @close="globalAlert.closeAlert(alert.id, false)"
   />

@@ -1,19 +1,24 @@
+import json
 from pathlib import Path
 
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.orm import selectinload
 from sqlalchemy.pool import StaticPool
 
 from app.api.routers.writer import _build_generation_failure_detail
 from app.db.base import Base
 from app.models import Chapter, ChapterOutline, ChapterVersion, NovelBlueprint, NovelProject
 from app.models.user import User
+from app.services.novel_service import NovelService
 from app.services.pipeline_orchestrator import PipelineConfig, PipelineOrchestrator
 
 
 ROOT = Path(__file__).resolve().parents[1]
 PIPELINE_SOURCE = ROOT / "app/services/pipeline_orchestrator.py"
 WRITER_ROUTER_SOURCE = ROOT / "app/api/routers/writer.py"
+NOVEL_SERVICE_SOURCE = ROOT / "app/services/novel_service.py"
 REQUIREMENTS = ROOT / "requirements.txt"
 
 
@@ -180,6 +185,191 @@ def test_langgraph_pipeline_preserves_word_count_safeguards() -> None:
     assert "低于最低要求" in source
 
 
+def test_langgraph_pipeline_records_generation_trace_nodes() -> None:
+    source = _source()
+
+    assert "ChapterGenerationTraceService" in source
+    assert "await self.trace_service.clear_for_chapter(" in source
+    assert 'node_key="director_mission"' in source
+    assert 'node_key="rag_retrieval"' in source
+    assert 'node_key="draft_generation"' in source
+    assert 'raw_response=response' in source
+
+
+def test_pipeline_trace_metadata_describes_actions_and_model_calls() -> None:
+    source = _source()
+
+    assert '"trace_kind": "workflow"' in source
+    assert '"trace_kind": "llm"' in source
+    assert '"call_type": "database_context"' in source
+    assert '"call_type": "rag_retrieval"' in source
+    assert '"call_type": "chat_llm"' in source
+    assert '"model_calls"' in source
+    assert '"actions"' in source
+    assert '"data_reads"' in source
+    assert '"metrics"' in source
+    assert '"skip_reason"' in source
+    assert "是否调用摘要模型由前文章节是否缺少 real_summary 决定" in source
+
+
+def test_pipeline_marks_director_mission_before_running_director_llm() -> None:
+    source = _source()
+    block = source.split("async def _graph_generate_chapter_mission", 1)[1].split(
+        "async def _graph_build_visibility_context",
+        1,
+    )[0]
+
+    assert block.index('step="director_mission"') < block.index("chapter_mission = await self._generate_chapter_mission(")
+
+
+def test_pipeline_does_not_record_user_waiting_time_as_trace_node() -> None:
+    source = _source()
+
+    assert 'node_key="waiting_for_confirm"' not in source
+    assert 'node_key="selecting_version"' not in source
+
+
+def test_pipeline_auto_reviews_and_refines_without_manual_choice() -> None:
+    source = _source()
+    review_block = source.split("async def _run_ai_review", 1)[1].split(
+        "async def _run_self_critique",
+        1,
+    )[0]
+    post_review_block = source.split("async def _graph_apply_post_generation_reviews", 1)[1].split(
+        "async def _graph_persist_versions",
+        1,
+    )[0]
+    persist_block = source.split("async def _graph_persist_versions", 1)[1].split(
+        "async def _graph_build_response",
+        1,
+    )[0]
+
+    assert "review_single_version(" in review_block
+    assert "只有一个版本，跳过对比评审" not in review_block
+    assert "_run_review_guided_refinement(" in post_review_block
+    assert 'node_key="review_refinement"' in source
+    assert '"optimize_recommended_version"' in source
+    assert 'node_key="save_draft"' in persist_block
+    assert 'node_label="保存草稿"' in persist_block
+    assert 'finalize_version_index=state["best_version_index"]' not in persist_block
+
+
+def test_pipeline_persists_generated_versions_as_draft_not_successful() -> None:
+    source = _source()
+    block = source.split("async def _graph_persist_versions", 1)[1].split(
+        "async def _graph_build_response",
+        1,
+    )[0]
+
+    assert 'node_key="save_draft"' in block
+    assert 'node_label="保存草稿"' in block
+    assert 'finalize_version_index=state["best_version_index"]' not in block
+    assert '"将章节状态标记为已完成"' not in block
+    assert '"保存草稿节点不调用模型"' in block
+
+
+def test_novel_service_no_longer_keeps_finalize_version_index_branch() -> None:
+    service_source = NOVEL_SERVICE_SOURCE.read_text(encoding="utf-8")
+    block = service_source.split("async def replace_chapter_versions", 1)[1].split(
+        "async def select_chapter_version",
+        1,
+    )[0]
+
+    assert "finalize_version_index" not in block
+    assert "ChapterGenerationStatus.SUCCESSFUL.value" not in block
+    assert 'generation_step = "completed"' not in block
+    assert "chapter.selected_version_id = None" in block
+    assert "chapter.real_summary = None" in block
+
+
+def test_pipeline_review_and_refinement_failures_are_not_silently_ignored() -> None:
+    source = _source()
+
+    assert "raise RuntimeError(\"AI评审失败" in source
+    assert "raise RuntimeError(\"修复润色失败" in source
+    assert "logger.warning(\"AI 评审失败，跳过" not in source
+    assert "沿用默认版本选择" not in source
+
+
+@pytest.mark.asyncio
+async def test_pipeline_director_mission_failure_terminates_generation() -> None:
+    class FakePromptService:
+        async def get_prompt(self, name: str) -> str:
+            assert name == "chapter_plan"
+            return "章节规划提示词"
+
+    class FakeLLMService:
+        async def get_llm_response(self, **kwargs):
+            raise RuntimeError("500: AI 未返回有效内容（结束原因: stop）")
+
+    class FakeTraceService:
+        def __init__(self):
+            self.failures = []
+
+        async def record_failure(self, **kwargs):
+            self.failures.append(kwargs)
+
+    orchestrator = object.__new__(PipelineOrchestrator)
+    orchestrator.prompt_service = FakePromptService()
+    orchestrator.llm_service = FakeLLMService()
+    orchestrator.trace_service = FakeTraceService()
+
+    with pytest.raises(RuntimeError, match="规划剧情失败.*AI 未返回有效内容"):
+        await orchestrator._generate_chapter_mission(
+            project_id="project-director-failure",
+            chapter_number=1,
+            blueprint_dict={},
+            previous_summary="上一章摘要",
+            previous_tail="上一章结尾",
+            outline_title="第一章",
+            outline_summary="开篇",
+            writing_notes="无额外要求",
+            introduced_characters=[],
+            all_characters=[],
+            user_id=1,
+        )
+
+    assert orchestrator.trace_service.failures[-1]["node_key"] == "director_mission"
+    assert "继续" not in orchestrator.trace_service.failures[-1]["metadata"]["summary"]
+
+
+def test_pipeline_builds_frontend_evaluation_payload_from_ai_review() -> None:
+    feedback = PipelineOrchestrator._build_chapter_evaluation_feedback(
+        {
+            "ai_review": {
+                "mode": "compare",
+                "best_version_index": 1,
+                "evaluation": "版本2整体更稳",
+                "suggestions": "保留版本2并压缩对白",
+                "final_recommendation": "选择版本2",
+                "version_reviews": [
+                    {
+                        "version_number": 1,
+                        "pros": ["铺垫清楚"],
+                        "cons": ["节奏偏慢"],
+                        "overall_review": "版本1较稳",
+                        "scores": {"coherence": 78},
+                    },
+                    {
+                        "version_number": 2,
+                        "pros": ["冲突更强"],
+                        "cons": ["个别句子略满"],
+                        "overall_review": "版本2综合最佳",
+                        "scores": {"coherence": 88},
+                    },
+                ],
+            }
+        }
+    )
+
+    payload = json.loads(feedback)
+
+    assert payload["best_choice"] == 2
+    assert payload["reason_for_choice"] == "选择版本2"
+    assert payload["evaluation"]["version1"]["overall_review"] == "版本1较稳"
+    assert payload["evaluation"]["version2"]["pros"] == ["冲突更强"]
+
+
 def test_langgraph_pipeline_marks_chapter_failed_on_runtime_error() -> None:
     source = _source()
 
@@ -267,5 +457,131 @@ async def test_collect_history_context_loads_selected_version_with_async_session
         ]
         assert history["previous_summary"] == "旧章摘要"
         assert history["previous_tail"] == "前序正文开头。\n前序正文结尾。"
+
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_mark_generation_failed_records_full_runtime_error_trace() -> None:
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async with session_factory() as session:
+        project_id = "project-failed-trace"
+        full_error = "修复润色失败：模型返回 JSON 解析错误，真实错误需要完整保留给前端查看"
+        session.add(User(id=1, username="writer", hashed_password="secret"))
+        session.add(
+            NovelProject(
+                id=project_id,
+                user_id=1,
+                title="测试小说",
+                initial_prompt="测试提示",
+            )
+        )
+        session.add(ChapterOutline(project_id=project_id, chapter_number=1, title="第一章", summary="开篇"))
+        chapter = Chapter(
+            project_id=project_id,
+            chapter_number=1,
+            status="generating",
+            generation_step="review_refinement",
+            generation_progress=92,
+        )
+        session.add(chapter)
+        await session.commit()
+
+        orchestrator = PipelineOrchestrator(session)
+        await orchestrator._mark_generation_failed(
+            project_id=project_id,
+            chapter_number=1,
+            error=RuntimeError(full_error),
+        )
+
+        await session.refresh(chapter)
+        traces = await orchestrator.trace_service.list_for_chapter(
+            project_id=project_id,
+            chapter_number=1,
+        )
+
+        assert chapter.status == "failed"
+        assert chapter.generation_step.startswith("failed|error=")
+        assert traces[-1].node_key == "review_refinement"
+        assert traces[-1].status == "failed"
+        assert traces[-1].error == full_error
+
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_replace_chapter_versions_stores_review_feedback_while_waiting_for_confirm() -> None:
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    async with session_factory() as session:
+        project_id = "project-auto-review-feedback"
+        session.add(User(id=1, username="writer", hashed_password="secret"))
+        session.add(
+            NovelProject(
+                id=project_id,
+                user_id=1,
+                title="测试小说",
+                initial_prompt="测试提示",
+            )
+        )
+        session.add(ChapterOutline(project_id=project_id, chapter_number=1, title="第一章", summary="开篇"))
+        chapter = Chapter(project_id=project_id, chapter_number=1, status="generating")
+        session.add(chapter)
+        await session.commit()
+
+        evaluation_feedback = json.dumps(
+            {
+                "best_choice": 1,
+                "reason_for_choice": "单版本评审通过",
+                "evaluation": {
+                    "version1": {
+                        "overall_review": "结构完整",
+                        "pros": ["节奏清楚"],
+                        "cons": [],
+                        "scores": {},
+                    }
+                },
+            },
+            ensure_ascii=False,
+        )
+        await NovelService(session).replace_chapter_versions(
+            chapter,
+            ["这是自动修复润色后的终稿正文。"],
+            evaluation_feedback=evaluation_feedback,
+        )
+
+        refreshed = await session.execute(
+            select(Chapter)
+            .options(
+                selectinload(Chapter.evaluations),
+                selectinload(Chapter.selected_version),
+                selectinload(Chapter.versions),
+            )
+            .where(Chapter.id == chapter.id)
+        )
+        saved_chapter = refreshed.scalars().one()
+
+        assert saved_chapter.status == "waiting_for_confirm"
+        assert saved_chapter.selected_version_id is None
+        assert saved_chapter.real_summary is None
+        assert saved_chapter.evaluations[-1].feedback == evaluation_feedback
+        assert saved_chapter.evaluations[-1].version_id == saved_chapter.versions[0].id
 
     await engine.dispose()

@@ -9,14 +9,18 @@ import type { NovelProject } from '@/api/novel'
 const readSource = (relativePath: string) =>
   readFileSync(resolve(process.cwd(), relativePath), 'utf8')
 
-const mountWorkspace = async (project: NovelProject, selectedChapterNumber: number) => {
+const mountWorkspace = async (
+  project: NovelProject,
+  selectedChapterNumber: number,
+  overrides: { generatingChapter?: number | null } = {},
+) => {
   const host = document.createElement('div')
   document.body.appendChild(host)
   const selectedChapters: number[] = []
   const app = createApp(WDWorkspace, {
     project,
     selectedChapterNumber,
-    generatingChapter: null,
+    generatingChapter: overrides.generatingChapter ?? null,
     evaluatingChapter: null,
     showVersionSelector: false,
     chapterGenerationResult: null,
@@ -77,16 +81,15 @@ describe('WDWorkspace locked chapter state', () => {
     const rendered = await mountWorkspace(project, 2)
 
     try {
-      expect(rendered.host.textContent).toContain('故事尚未推进到这里')
-      expect(rendered.host.textContent).toContain('请先完成前置章节内容。')
-      expect(rendered.host.textContent).toContain('当前章节将在所需章节完成后自动解锁。')
-      expect(rendered.host.textContent).toContain('前往待完成章节')
+      expect(rendered.host.textContent).toContain('故事还未抵达这一章')
+      expect(rendered.host.textContent).toContain('请先完成前面的待写章节，完成后本章将自动解锁。')
+      expect(rendered.host.textContent).toContain('前往第1章：前置契约')
       expect(rendered.host.querySelector('[role="toolbar"][aria-label="章节操作"]')).toBeNull()
       expect(rendered.host.textContent).not.toContain('编辑正文')
       expect(rendered.host.textContent).not.toContain('AI优化')
 
       const gotoButton = Array.from(rendered.host.querySelectorAll('button')).find((button) =>
-        button.textContent?.includes('前往待完成章节'),
+        button.textContent?.includes('前往第1章：前置契约'),
       )
       expect(gotoButton).toBeTruthy()
 
@@ -98,11 +101,63 @@ describe('WDWorkspace locked chapter state', () => {
     }
   })
 
+  it('keeps retrying failed chapters in the generating view while the retry request is in flight', async () => {
+    const project: NovelProject = {
+      id: 'novel-1',
+      title: '全网退役',
+      initial_prompt: '',
+      conversation_history: [],
+      blueprint: {
+        chapter_outline: [
+          {
+            chapter_number: 1,
+            title: '一招',
+            summary: '林拓重新站上擂台。',
+          },
+        ],
+      },
+      chapters: [
+        {
+          chapter_number: 1,
+          title: '一招',
+          summary: '林拓重新站上擂台。',
+          real_summary: null,
+          content: null,
+          versions: null,
+          evaluation: null,
+          generation_status: 'failed',
+          generation_step: '字数仅 1365，低于最低要求 2200（容错阈值 1870）。请重试。',
+        },
+      ],
+    }
+
+    const rendered = await mountWorkspace(project, 1, { generatingChapter: 1 })
+
+    try {
+      expect(rendered.host.textContent).toContain('生成进度')
+      expect(rendered.host.textContent).toContain('实时草稿预览')
+      expect(rendered.host.textContent).not.toContain('第1章生成异常')
+      expect(rendered.host.textContent).not.toContain('重试中')
+    } finally {
+      rendered.unmount()
+    }
+  })
+
   it('wires locked chapter navigation through the writing desk parent', () => {
     const source = readSource('src/views/WritingDesk.vue')
     const workspaceTag = source.match(/<WDWorkspace[\s\S]*?\/>/)?.[0] ?? ''
 
     expect(workspaceTag).toContain('@select-chapter="selectChapter"')
+  })
+
+  it('keeps generation polling lightweight by refreshing only the selected chapter', () => {
+    const source = readSource('src/views/WritingDesk.vue')
+    const refetchHelper = source.match(/const refetchChapterIntoProject[\s\S]*?\n}\n\nconst fetchChapterStatus/)?.[0] ?? ''
+    const pollingBlock = source.match(/const fetchChapterStatus[\s\S]*?\n}\n\n\/\/ 显示版本详情/)?.[0] ?? ''
+
+    expect(refetchHelper).toContain('refreshProject?: boolean')
+    expect(refetchHelper).toContain('if (options.refreshProject)')
+    expect(pollingBlock).toContain('refetchChapterIntoProject(chapterNumber, { refreshProject: false })')
   })
 
   it('keeps the locked chapter light skin on a warm paper palette', () => {

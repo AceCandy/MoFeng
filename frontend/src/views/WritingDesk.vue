@@ -284,13 +284,13 @@ import {
   useEditChapterContentMutation,
   useEvaluateChapterMutation,
   useApplyOptimizationMutation,
+  useConfirmFinalizeChapterMutation,
   useGenerateChapterMutation,
   useGenerateChapterOutlineMutation,
   useNovelChapterQuery,
   useNovelMutationRefresh,
   useNovelProjectQuery,
   useOptimizeRecommendedVersionMutation,
-  useSelectChapterVersionMutation,
   useUpdateChapterOutlineMutation,
 } from '@/queries/novel'
 import { globalAlert } from '@/composables/useAlert'
@@ -376,7 +376,7 @@ const { refreshProjectQueries, upsertChapterInProjectCache } = useNovelMutationR
 )
 const generateChapterMutation = useGenerateChapterMutation(() => props.id)
 const evaluateChapterMutation = useEvaluateChapterMutation(() => props.id)
-const selectChapterVersionMutation = useSelectChapterVersionMutation(() => props.id)
+const confirmFinalizeChapterMutation = useConfirmFinalizeChapterMutation(() => props.id)
 const updateChapterOutlineMutation = useUpdateChapterOutlineMutation(() => props.id)
 const deleteChapterMutation = useDeleteChapterMutation(() => props.id)
 const generateChapterOutlineMutation = useGenerateChapterOutlineMutation(() => props.id)
@@ -563,7 +563,10 @@ const evaluatingChapter = computed(() => {
 })
 
 const isSelectingVersion = computed(() => {
-  return selectedChapter.value?.generation_status === 'selecting'
+  return (
+    selectedChapter.value?.generation_status === 'finalizing' ||
+    confirmFinalizeChapterMutation.isPending.value
+  )
 })
 
 const selectedChapterOutline = computed(() => {
@@ -574,6 +577,14 @@ const selectedChapterOutline = computed(() => {
       (ch) => ch.chapter_number === selectedChapterNumber.value,
     ) || null
   )
+})
+
+const latestCompletedChapterNumber = computed(() => {
+  const completedNumbers =
+    project.value?.chapters
+      ?.filter((chapter) => chapter.generation_status === 'successful')
+      .map((chapter) => chapter.chapter_number) ?? []
+  return completedNumbers.length ? Math.max(...completedNumbers) : null
 })
 
 const progress = computed(() => {
@@ -996,7 +1007,10 @@ const loadProject = async () => {
   }
 }
 
-const refetchChapterIntoProject = async (chapterNumber: number) => {
+const refetchChapterIntoProject = async (
+  chapterNumber: number,
+  options: { refreshProject?: boolean } = { refreshProject: true },
+) => {
   if (selectedChapterNumber.value !== chapterNumber) {
     selectedChapterNumber.value = chapterNumber
     await nextTick()
@@ -1006,7 +1020,9 @@ const refetchChapterIntoProject = async (chapterNumber: number) => {
   if (result.data) {
     upsertChapterInProjectCache(props.id, result.data)
   }
-  await refreshProjectQueries()
+  if (options.refreshProject) {
+    await refreshProjectQueries()
+  }
 }
 
 const fetchChapterStatus = async () => {
@@ -1016,7 +1032,7 @@ const fetchChapterStatus = async () => {
   const chapterNumber = selectedChapterNumber.value
   isFetchingChapterStatus.value = true
   try {
-    await refetchChapterIntoProject(chapterNumber)
+    await refetchChapterIntoProject(chapterNumber, { refreshProject: false })
   } catch (error) {
     console.error('轮询章节状态失败:', error)
     // 在这里可以决定是否要通知用户轮询失败
@@ -1108,33 +1124,10 @@ const generateChapter = async (chapterNumber: number) => {
     // 关键兜底：生成接口在极少数情况下可能返回旧快照，这里强制拉取当前章最新状态。
     await refetchChapterIntoProject(chapterNumber)
 
-    // store 中的 project 已经被更新，所以我们不需要手动修改本地状态。
-    // 单版本场景自动确认，直接进入正文视图。
-    const generatedChapter = project.value?.chapters.find(
-      (ch) => ch.chapter_number === chapterNumber,
-    )
-    const generatedVersions = Array.isArray(generatedChapter?.versions)
-      ? generatedChapter.versions
-      : []
-    const validVersionCount = generatedVersions
-      .map((versionRaw) => extractVersionContent(versionRaw))
-      .filter((content) => Boolean(content.trim())).length
-
-    if (generatedChapter?.generation_status === 'waiting_for_confirm' && validVersionCount === 1) {
-      selectedVersionIndex.value = 0
-      // 单版本自动确认阶段已进入"确认版本"流程，不应再被当作"生成中"渲染。
-      generatingChapter.value = null
-      await selectVersion(0, {
-        chapterNumber,
-        suppressSuccessToast: true,
-        skipAvailabilityCheck: true,
-      })
-      globalAlert.showSuccess('唯一版本已自动确认，已进入正文', '生成成功')
-    } else {
-      // 非单版本场景保留版本选择流程
-      chapterGenerationResult.value = null
-      selectedVersionIndex.value = 0
-    }
+    // 生成完成只进入草稿确认，必须由用户确认定稿后才执行后处理。
+    generatingChapter.value = null
+    chapterGenerationResult.value = null
+    selectedVersionIndex.value = 0
   } catch (error) {
     console.error('生成章节失败:', error)
     const failureMessage = formatChapterGenerationError(error)
@@ -1161,58 +1154,44 @@ const regenerateChapter = async () => {
   }
 }
 
-const selectVersion = async (
-  versionIndex: number,
-  options: {
-    chapterNumber?: number
-    suppressSuccessToast?: boolean
-    skipAvailabilityCheck?: boolean
-  } = {},
-) => {
-  const targetChapterNumber = options.chapterNumber ?? selectedChapterNumber.value
+const confirmVersionSelection = async (payload?: { editedContent?: string | null }) => {
+  const targetChapterNumber = selectedChapterNumber.value
   if (targetChapterNumber === null) {
     return
   }
-  if (!options.skipAvailabilityCheck && !availableVersions.value?.[versionIndex]?.content) {
+  if (!availableVersions.value?.[selectedVersionIndex.value]?.content) {
     return
   }
 
   try {
-    // 在本地立即更新状态以反映UI
     if (project.value?.chapters) {
       const chapter = project.value.chapters.find((ch) => ch.chapter_number === targetChapterNumber)
       if (chapter) {
-        chapter.generation_status = 'selecting'
+        chapter.generation_status = 'finalizing'
+        chapter.generation_step = 'confirm_finalize'
+        chapter.generation_progress = 90
       }
     }
 
-    selectedVersionIndex.value = versionIndex
-    await selectChapterVersionMutation.mutateAsync({
+    await confirmFinalizeChapterMutation.mutateAsync({
       chapterNumber: targetChapterNumber,
-      versionIndex,
+      selectedVersionIndex: selectedVersionIndex.value,
+      editedContent: payload?.editedContent ?? null,
     })
-    // 兜底同步：避免后端响应中正文字段短暂滞后导致界面需手动刷新。
     await refetchChapterIntoProject(targetChapterNumber)
-
-    // 状态更新将由 store 自动触发，本地无需手动更新
-    // 轮询机制会处理状态变更，成功后会自动隐藏选择器
-    // showVersionSelector.value = false
     chapterGenerationResult.value = null
-    if (!options.suppressSuccessToast) {
-      globalAlert.showSuccess('版本已确认', '操作成功')
-    }
+    globalAlert.showSuccess('章节已定稿，后处理已完成', '定稿完成')
   } catch (error) {
-    console.error('选择章节版本失败:', error)
-    // 错误状态下恢复章节状态
+    console.error('确认定稿失败:', error)
     if (project.value?.chapters) {
       const chapter = project.value.chapters.find((ch) => ch.chapter_number === targetChapterNumber)
       if (chapter) {
-        chapter.generation_status = 'waiting_for_confirm' // Or the previous state
+        chapter.generation_status = 'waiting_for_confirm'
       }
     }
     globalAlert.showError(
-      `选择章节版本失败: ${error instanceof Error ? error.message : '未知错误'}`,
-      '选择失败',
+      `确认定稿失败: ${error instanceof Error ? error.message : '未知错误'}`,
+      '定稿失败',
     )
   }
 }
@@ -1220,12 +1199,7 @@ const selectVersion = async (
 // 从详情弹窗中选择版本
 const selectVersionFromDetail = async () => {
   selectedVersionIndex.value = detailVersionIndex.value
-  await selectVersion(detailVersionIndex.value)
   closeVersionDetail()
-}
-
-const confirmVersionSelection = async () => {
-  await selectVersion(selectedVersionIndex.value)
 }
 
 const openEditChapterModal = (chapter: ChapterOutline) => {
@@ -1265,6 +1239,7 @@ const evaluateChapter = async () => {
       | 'failed'
       | 'evaluation_failed'
       | 'waiting_for_confirm'
+      | 'finalizing'
       | 'successful'
       | undefined
 
@@ -1306,19 +1281,63 @@ const evaluateChapter = async () => {
 
 const deleteChapter = async (chapterNumbers: number | number[]) => {
   const numbersToDelete = Array.isArray(chapterNumbers) ? chapterNumbers : [chapterNumbers]
-  const confirmationMessage =
-    numbersToDelete.length > 1
-      ? `您确定要删除选中的 ${numbersToDelete.length} 个章节吗？这个操作无法撤销。`
-      : `您确定要删除第 ${numbersToDelete[0]} 章吗？这个操作无法撤销。`
+  const completedChapterNumber = numbersToDelete.find(
+    (number) => number === latestCompletedChapterNumber.value,
+  )
+  const isDeletingCompletedChapter = completedChapterNumber !== undefined
+  const outlineOnlyNumbers = isDeletingCompletedChapter
+    ? numbersToDelete.filter((number) => number !== completedChapterNumber)
+    : numbersToDelete
+  const confirmationTitle = isDeletingCompletedChapter ? '删除章节及产物' : '删除章节大纲'
+  const confirmationMessage = isDeletingCompletedChapter
+    ? outlineOnlyNumbers.length
+      ? `您确定要删除第 ${completedChapterNumber} 章及后续 ${outlineOnlyNumbers.length} 个未生成大纲吗？此操作会删除该已完成章的正文、版本、评审、生成 trace 和向量数据等全部产物，且无法撤销。`
+      : `您确定要删除第 ${completedChapterNumber} 章吗？此操作会删除正文、版本、评审、生成 trace 和向量数据等全部产物，且无法撤销。`
+    : numbersToDelete.length > 1
+    ? `您确定要删除选中的 ${numbersToDelete.length} 个章节大纲吗？这个操作无法撤销。`
+    : `您确定要删除第 ${numbersToDelete[0]} 章大纲吗？这个操作无法撤销。`
 
-  const confirmed = await globalAlert.showConfirm(confirmationMessage, '删除章节')
+  const confirmed = await globalAlert.showConfirm(confirmationMessage, confirmationTitle)
   if (!confirmed) {
     return
   }
 
+  let artifactConfirmationText: string | null = null
+  if (isDeletingCompletedChapter) {
+    artifactConfirmationText = `删除第${completedChapterNumber}章及全部产物`
+    const typedConfirmation = await globalAlert.showConfirmInput(
+      `请再次确认。输入“${artifactConfirmationText}”后，系统才会删除该已完成章节对应产物。`,
+      '二次确认',
+      {
+        inputLabel: '确认文本',
+        inputPlaceholder: artifactConfirmationText,
+        confirmText: '确认删除',
+      },
+    )
+    if (typedConfirmation !== artifactConfirmationText) {
+      globalAlert.showError('确认文本不匹配，已取消删除。', '删除已取消')
+      return
+    }
+  } else {
+    const secondConfirmed = await globalAlert.showConfirm(
+      '请再次确认删除章节大纲。此操作无法撤销。',
+      '二次确认',
+    )
+    if (!secondConfirmed) {
+      return
+    }
+  }
+
   try {
-    await deleteChapterMutation.mutateAsync(numbersToDelete)
-    globalAlert.showSuccess('章节已删除', '操作成功')
+    await deleteChapterMutation.mutateAsync({
+      chapterNumbers: numbersToDelete,
+      deleteArtifactsConfirmed: isDeletingCompletedChapter,
+      confirmationText: artifactConfirmationText,
+    })
+    globalAlert.showSuccess(
+      isDeletingCompletedChapter ? '章节及产物已删除' : '章节大纲已删除',
+      '操作成功',
+    )
     // If the currently selected chapter was deleted, unselect it
     if (selectedChapterNumber.value && numbersToDelete.includes(selectedChapterNumber.value)) {
       selectedChapterNumber.value = null
