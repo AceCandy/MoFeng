@@ -928,8 +928,8 @@ const stepState = (key: string, index: number) => {
   return { tone: 'waiting', label: '等待中' }
 }
 
-const moveToBackground = async () => {
-  await globalAlert.showSuccess('已切换为后台生成，章节完成后会在列表中显示状态。', '已转入后台')
+const moveToBackground = () => {
+  globalAlert.showToast('已切换为后台生成，章节完成后会在列表中显示状态。', 'success')
 }
 
 const cancelGeneration = async () => {
@@ -938,17 +938,17 @@ const cancelGeneration = async () => {
     '暂不支持取消',
   )
   if (confirmed) {
-    await globalAlert.showAlert('建议使用"转入后台生成"避免阻塞当前写作。', 'info', '提示')
+    globalAlert.showToast('建议使用"转入后台生成"避免阻塞当前写作。', 'info')
   }
 }
 
-const toggleNotify = async () => {
+const toggleNotify = () => {
   notifyWhenDone.value = !notifyWhenDone.value
   localStorage.setItem('writing-desk-notify-when-done', notifyWhenDone.value ? '1' : '0')
   if (notifyWhenDone.value) {
-    await globalAlert.showSuccess('已开启完成通知。', '通知已开启')
+    globalAlert.showToast('已开启完成通知。', 'success')
   } else {
-    await globalAlert.showAlert('已关闭完成通知。', 'info', '通知已关闭')
+    globalAlert.showToast('已关闭完成通知。', 'info')
   }
 }
 

@@ -966,11 +966,12 @@ const applyRecommendedOptimization = async () => {
 
     const syncStats = applyResult.foreshadowing_sync
     if (syncStats) {
-      globalAlert.showSuccess(
+      globalAlert.showToast(
         `优化内容已应用，伏笔同步：新增 ${syncStats.created}，推进 ${syncStats.developing}，回收 ${syncStats.revealed}`,
+        'success',
       )
     } else {
-      globalAlert.showSuccess('优化内容已应用')
+      globalAlert.showToast('优化内容已应用', 'success')
     }
 
     showRecommendedOptimizeResultModal.value = false
@@ -1216,7 +1217,7 @@ const openEvaluationDetailModal = () => {
 const saveChapterChanges = async (updatedChapter: ChapterOutline) => {
   try {
     await updateChapterOutlineMutation.mutateAsync(updatedChapter)
-    globalAlert.showSuccess('章节大纲已更新', '保存成功')
+    globalAlert.showToast('章节大纲已更新', 'success')
   } catch (error) {
     console.error('更新章节大纲失败:', error)
     globalAlert.showError(
@@ -1257,7 +1258,7 @@ const evaluateChapter = async () => {
       await evaluateChapterMutation.mutateAsync(selectedChapterNumber.value)
 
       // 评审完成后，状态会通过store和轮询更新，这里不需要额外操作
-      globalAlert.showSuccess('章节评审结果已生成', '评审成功')
+      globalAlert.showToast('章节评审结果已生成', 'success')
     } catch (error) {
       console.error('评审章节失败:', error)
 
@@ -1318,14 +1319,6 @@ const deleteChapter = async (chapterNumbers: number | number[]) => {
       globalAlert.showError('确认文本不匹配，已取消删除。', '删除已取消')
       return
     }
-  } else {
-    const secondConfirmed = await globalAlert.showConfirm(
-      '请再次确认删除章节大纲。此操作无法撤销。',
-      '二次确认',
-    )
-    if (!secondConfirmed) {
-      return
-    }
   }
 
   try {
@@ -1334,9 +1327,9 @@ const deleteChapter = async (chapterNumbers: number | number[]) => {
       deleteArtifactsConfirmed: isDeletingCompletedChapter,
       confirmationText: artifactConfirmationText,
     })
-    globalAlert.showSuccess(
+    globalAlert.showToast(
       isDeletingCompletedChapter ? '章节及产物已删除' : '章节大纲已删除',
-      '操作成功',
+      'success',
     )
     // If the currently selected chapter was deleted, unselect it
     if (selectedChapterNumber.value && numbersToDelete.includes(selectedChapterNumber.value)) {
@@ -1364,7 +1357,7 @@ const editChapterContent = async (data: { chapterNumber: number; content: string
       chapterNumber: data.chapterNumber,
       content: data.content,
     })
-    globalAlert.showSuccess('章节内容已更新', '保存成功')
+    globalAlert.showToast('章节内容已更新', 'success')
   } catch (error) {
     console.error('编辑章节内容失败:', error)
     globalAlert.showError(
@@ -1380,7 +1373,7 @@ const handleGenerateOutline = async (numChapters: number) => {
   try {
     const startChapter = (project.value.blueprint?.chapter_outline?.length || 0) + 1
     await generateChapterOutlineMutation.mutateAsync({ startChapter, numChapters })
-    globalAlert.showSuccess('大纲生成任务已加入后台，可在右上角任务日志查看进度', '任务已提交')
+    globalAlert.showToast('大纲生成任务已加入后台，可在右上角任务日志查看进度', 'success')
   } catch (error) {
     console.error('生成大纲失败:', error)
     globalAlert.showError(

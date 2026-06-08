@@ -4942,3 +4942,25 @@ html:hover {
   border-color: #173324 !important;
   box-shadow: 1.5px 1.5px 0px rgba(39, 82, 58, 0.4) !important;
 }
+
+/* ============================================
+   墨风全局下拉选择框 (Select) 金石小箭头美化
+   ============================================ */
+select.md-text-field-input {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  /* 增加中式折线小箭头 */
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231c2022' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 16px center !important;
+  background-size: 16px !important;
+  padding-right: 40px !important; /* 预留出小箭头的展示空间 */
+}
+
+/* 暗色模式下更换为浅色小箭头 */
+:global([data-theme='dark']) select.md-text-field-input,
+:global(.dark) select.md-text-field-input,
+[data-theme='dark'] select.md-text-field-input {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e5dec9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
+}

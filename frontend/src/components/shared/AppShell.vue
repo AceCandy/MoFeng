@@ -261,6 +261,12 @@ const openPromptEditor = () => {
   openAdminModal('prompts')
 }
 
+const passwordManagementRef = ref<any>(null)
+const isSavingPassword = computed(() => passwordManagementRef.value?.submitting ?? false)
+const triggerPasswordSave = () => {
+  passwordManagementRef.value?.submit()
+}
+
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
   syncThemeState()
@@ -665,7 +671,19 @@ onUnmounted(() => {
         width="min(90vw, 540px)"
         @close="showPasswordModal = false"
       >
-        <PasswordManagement :is-modal="true" @saved="showPasswordModal = false" />
+        <template #header-actions>
+          <!-- 极具金石质感的「契」字朱红方章保存按钮 -->
+          <button
+            type="button"
+            class="m3-ink-modal-save-badge-btn"
+            title="确认更替密契"
+            :disabled="isSavingPassword"
+            @click="triggerPasswordSave"
+          >
+            契
+          </button>
+        </template>
+        <PasswordManagement ref="passwordManagementRef" :is-modal="true" @saved="showPasswordModal = false" />
       </GlobalModalContainer>
     </Teleport>
 

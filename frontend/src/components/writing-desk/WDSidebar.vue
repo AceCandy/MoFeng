@@ -42,6 +42,7 @@
                 v-for="(chapter, index) in project.blueprint.chapter_outline"
                 :key="chapter.chapter_number"
                 class="writing-sidebar__tree-item"
+                :class="{ 'has-delete-btn': canDeleteChapter(chapter.chapter_number) }"
               >
                 <button
                   type="button"
@@ -659,6 +660,7 @@ watch(
   background-color: rgba(184, 60, 50, 0.05);
   animation: seal-stamp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
   pointer-events: none;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* 已完成状态的签条样式 (绿色主题) */
@@ -745,6 +747,7 @@ watch(
   color: #5c6265;
   width: 20px;
   height: 20px;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* 待完成章节的亮眼标签样式 */
@@ -762,6 +765,7 @@ watch(
   text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.15);
   /* 浮动微动画效果 */
   animation: float-badge 1.8s ease-in-out infinite alternate;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes float-badge {
@@ -776,25 +780,27 @@ watch(
 .writing-sidebar__chapter-delete {
   position: absolute;
   top: 50%;
-  right: 6px;
+  right: 12px;
   z-index: 12;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  min-height: 32px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
   border: 1px solid var(--md-outline-variant);
-  border-radius: 0 !important;
+  border-radius: 4px !important;
   background-color: var(--md-surface-container-low);
-  color: var(--md-error);
+  color: var(--md-on-surface-variant);
   opacity: 0;
-  transform: translateY(-50%);
+  transform: translateY(-50%) translateX(10px);
   transition:
-    opacity 0.2s cubic-bezier(0.22, 1, 0.36, 1),
-    background-color 0.2s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .writing-sidebar__chapter-delete::before {
@@ -806,14 +812,32 @@ watch(
 .writing-sidebar__tree-item:hover .writing-sidebar__chapter-delete,
 .writing-sidebar__chapter-delete:focus-visible {
   opacity: 1;
+  transform: translateY(-50%) translateX(0);
 }
 
 .writing-sidebar__chapter-delete:hover,
 .writing-sidebar__chapter-delete:focus-visible {
-  border-color: var(--md-error);
-  background-color: var(--md-error-container);
+  border-color: #9c2720;
+  background-color: rgba(184, 60, 50, 0.08);
+  color: #c94036;
 }
 
+/* 当有删除按钮的章节被 hover，或删除按钮获得焦点时，隐藏章节行的各种状态和印章，以进行无缝替换 */
+.writing-sidebar__tree-item.has-delete-btn:hover .writing-sidebar__chapter-word-count,
+.writing-sidebar__tree-item.has-delete-btn:hover .writing-sidebar__chapter-lock-icon,
+.writing-sidebar__tree-item.has-delete-btn:hover .writing-sidebar__chapter-badge-pending,
+.writing-sidebar__tree-item.has-delete-btn:hover .writing-sidebar__chapter-row--compact-selected::after {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+.writing-sidebar__tree-item.has-delete-btn:has(.writing-sidebar__chapter-delete:focus-visible) .writing-sidebar__chapter-word-count,
+.writing-sidebar__tree-item.has-delete-btn:has(.writing-sidebar__chapter-delete:focus-visible) .writing-sidebar__chapter-lock-icon,
+.writing-sidebar__tree-item.has-delete-btn:has(.writing-sidebar__chapter-delete:focus-visible) .writing-sidebar__chapter-badge-pending,
+.writing-sidebar__tree-item.has-delete-btn:has(.writing-sidebar__chapter-delete:focus-visible) .writing-sidebar__chapter-row--compact-selected::after {
+  opacity: 0 !important;
+  pointer-events: none;
+}
 .writing-sidebar__chapter-main {
   display: flex;
   align-items: center;
@@ -889,6 +913,7 @@ watch(
   text-align: right;
   color: var(--md-on-surface-variant);
   font-size: var(--md-body-small);
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .m3-stagger {

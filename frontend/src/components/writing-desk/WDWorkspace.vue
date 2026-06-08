@@ -1481,7 +1481,7 @@ const selectVersionFromTab = (index: number) => {
     chapterNumber: props.selectedChapterNumber,
     content: cleanContent,
   })
-  globalAlert.showSuccess('成功应用所选历史版本！')
+  globalAlert.showToast('成功应用所选历史版本！', 'success')
   activeTab.value = 'content' // 自动切回正文
 }
 

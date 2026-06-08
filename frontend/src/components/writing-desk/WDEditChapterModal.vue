@@ -1,68 +1,57 @@
 <!-- AIMETA P=编辑章节弹窗_章节信息编辑|R=章节编辑表单|NR=不含内容生成|E=component:WDEditChapterModal|X=ui|A=编辑弹窗|D=vue|S=dom|RD=./README.ai -->
 <template>
-  <div v-if="show" class="md-dialog-overlay" @click.self="handleClose">
-    <div
-      ref="dialogRef"
-      class="md-dialog w-full max-w-lg m3-edit-dialog p-8"
-      :class="show ? 'scale-100 opacity-100' : 'scale-95 opacity-0'"
-      role="dialog"
-      aria-modal="true"
-      :aria-labelledby="dialogTitleId"
-    >
-      <div class="flex justify-between items-center mb-6">
-        <h2 :id="dialogTitleId" class="md-headline-small font-semibold">编辑章节大纲</h2>
-        <button
-          ref="closeButtonRef"
-          data-dialog-initial-focus
-          @click="handleClose"
-          class="md-icon-btn md-ripple"
-          aria-label="关闭编辑章节大纲弹窗"
-        >
-          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
-          </svg>
-        </button>
-      </div>
+  <GlobalModalContainer
+    v-if="show"
+    title="编辑章节大纲"
+    badge-text="编"
+    width="min(90vw, 560px)"
+    @close="handleClose"
+  >
+    <template #header-actions>
+      <!-- 右上角朱砂方印保存按钮 -->
+      <button
+        ref="closeButtonRef"
+        data-dialog-initial-focus
+        type="button"
+        class="m3-ink-modal-save-badge-btn"
+        :disabled="!isChanged"
+        @click="saveChanges"
+      >
+        存
+      </button>
+    </template>
 
-      <div v-if="editableChapter" class="space-y-6">
-        <div>
-          <label for="chapter-title" class="md-text-field-label mb-2">章节标题</label>
-          <input
-            type="text"
-            id="chapter-title"
-            v-model="editableChapter.title"
-            class="md-text-field-input w-full"
-            placeholder="请输入章节标题"
-          />
-        </div>
-        <div>
-          <label for="chapter-summary" class="md-text-field-label mb-2">章节摘要</label>
-          <textarea
-            id="chapter-summary"
-            v-model="editableChapter.summary"
-            rows="5"
-            class="md-textarea w-full"
-            placeholder="请输入章节摘要"
-          ></textarea>
-        </div>
+    <div v-if="editableChapter" class="space-y-6 pt-4">
+      <div>
+        <label for="chapter-title" class="md-text-field-label mb-2">章节标题</label>
+        <!-- 乌丝栏下划线输入 -->
+        <input
+          type="text"
+          id="chapter-title"
+          v-model="editableChapter.title"
+          class="m3-underline-input w-full"
+          placeholder="请输入章节标题"
+        />
       </div>
-
-      <div class="mt-8 flex justify-end gap-4">
-        <button @click="handleClose" class="md-btn md-btn-outlined md-ripple">
-          取消
-        </button>
-        <button @click="saveChanges" class="md-btn md-btn-filled md-ripple disabled:opacity-50" :disabled="!isChanged">
-          保存更改
-        </button>
+      <div>
+        <label for="chapter-summary" class="md-text-field-label mb-2">章节摘要</label>
+        <!-- 直角墨描边 textarea -->
+        <textarea
+          id="chapter-summary"
+          v-model="editableChapter.summary"
+          rows="5"
+          class="m3-textarea-ink w-full"
+          placeholder="请输入章节摘要"
+        ></textarea>
       </div>
     </div>
-  </div>
+  </GlobalModalContainer>
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, toRef } from 'vue'
+import { ref, watch, computed } from 'vue'
 import type { ChapterOutline } from '@/api/novel'
-import { useDialogA11y } from '@/composables/useDialogA11y'
+import GlobalModalContainer from '@/components/shared/GlobalModalContainer.vue'
 
 interface Props {
   show: boolean
@@ -73,10 +62,7 @@ const props = defineProps<Props>()
 const emit = defineEmits(['close', 'save'])
 
 const editableChapter = ref<ChapterOutline | null>(null)
-const dialogRef = ref<HTMLElement | null>(null)
 const closeButtonRef = ref<HTMLElement | null>(null)
-const dialogInstanceId = `chapter-edit-${Math.random().toString(36).slice(2, 10)}`
-const dialogTitleId = `${dialogInstanceId}-title`
 
 const handleClose = () => {
   emit('close')
@@ -102,20 +88,52 @@ const saveChanges = () => {
     emit('save', editableChapter.value)
   }
 }
-
-useDialogA11y({
-  active: toRef(props, 'show'),
-  dialogRef,
-  onClose: handleClose,
-  initialFocusRef: closeButtonRef,
-})
 </script>
 
 <style scoped>
-.m3-edit-dialog {
-  border-radius: var(--md-radius-md, 6px);
-  border: 3px double var(--md-outline);
-  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15);
-  max-width: min(560px, calc(100vw - 32px));
+/* 乌丝栏下划线输入框 */
+.m3-underline-input {
+  width: 100%;
+  border: none;
+  border-bottom: 1.5px solid var(--md-outline);
+  background: transparent;
+  color: var(--md-on-surface);
+  padding: 8px 4px;
+  font-size: 16px;
+  font-family: var(--md-font-serif);
+  outline: none;
+  transition: border-bottom-color 0.25s ease;
+}
+
+.m3-underline-input:focus {
+  border-bottom-color: var(--md-secondary);
+}
+
+/* 直角墨线 textarea */
+.m3-textarea-ink {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  padding: 12px;
+  border: 1.5px solid var(--md-outline-variant);
+  border-radius: 0 !important;
+  background-color: transparent;
+  color: var(--md-on-surface);
+  font-family: var(--md-font-serif);
+  font-size: var(--md-body-large);
+  line-height: 1.8;
+  outline: none;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.m3-textarea-ink:focus {
+  border-color: var(--md-outline);
+  box-shadow: 2px 2px 0px var(--md-outline);
+}
+
+.md-text-field-label {
+  font-family: var(--md-font-serif);
+  font-weight: 600;
+  color: var(--md-on-surface-variant);
 }
 </style>

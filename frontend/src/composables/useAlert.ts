@@ -22,6 +22,26 @@ interface Alert {
 const alerts = ref<Alert[]>([])
 let alertId = 0
 
+export interface Toast {
+  id: number
+  message: string
+  type: 'success' | 'error' | 'info'
+}
+
+const toasts = ref<Toast[]>([])
+let toastId = 0
+
+const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success', duration = 3000) => {
+  const id = toastId++
+  toasts.value.push({ id, message, type })
+  setTimeout(() => {
+    const index = toasts.value.findIndex((t) => t.id === id)
+    if (index !== -1) {
+      toasts.value.splice(index, 1)
+    }
+  }, duration)
+}
+
 const closeAlert = (id: number, result: AlertResult) => {
   const index = alerts.value.findIndex((a) => a.id === id)
   if (index !== -1) {
@@ -103,6 +123,8 @@ export const globalAlert = {
   showError,
   showConfirm,
   showConfirmInput,
+  toasts,
+  showToast,
 }
 
 export function useAlert() {

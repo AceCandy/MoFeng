@@ -707,11 +707,12 @@ const applyOptimization = async () => {
 
     const syncStats = applyResult.foreshadowing_sync
     if (syncStats) {
-      globalAlert.showSuccess(
+      globalAlert.showToast(
         `优化内容已应用，伏笔同步：新增 ${syncStats.created}，推进 ${syncStats.developing}，回收 ${syncStats.revealed}`,
+        'success',
       )
     } else {
-      globalAlert.showSuccess('优化内容已应用')
+      globalAlert.showToast('优化内容已应用', 'success')
     }
     showOptimizeResult.value = false
 
