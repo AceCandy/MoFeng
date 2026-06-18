@@ -281,18 +281,18 @@
 
                   <!-- 各版本详细评审 -->
                   <div v-if="evaluationData.evaluation" class="chapters-section__panel-stack">
-                    <div v-for="(versionEval, versionKey) in evaluationData.evaluation" :key="versionKey"
+                    <div v-for="item in sortedEvaluationEntries" :key="item.key"
                       class="border border-[var(--md-outline-variant)] rounded-sm overflow-hidden"
-                      :class="isSelectedVersion(versionKey, evaluationData.best_choice) ? 'ring-2 ring-[var(--md-primary-light)]' : ''">
+                      :class="isSelectedVersion(item.key, evaluationData.best_choice) ? 'ring-2 ring-[var(--md-primary-light)]' : ''">
                       <!-- 版本标题 -->
                       <div class="px-5 py-3 bg-[var(--md-surface-container-low)] border-b border-[var(--md-outline-variant)] flex items-center justify-between">
                         <h6 class="font-bold text-[var(--md-on-surface)] flex items-center gap-2">
                           <span class="w-6 h-6 bg-[var(--md-on-surface)] text-[var(--md-surface)] rounded-xs flex items-center justify-center text-xs">
-                            {{ getVersionNumber(versionKey) }}
+                            {{ item.versionNumber }}
                           </span>
-                          {{ getVersionLabel(versionKey) }}
+                          {{ getVersionLabel(item.key) }}
                         </h6>
-                        <span v-if="isSelectedVersion(versionKey, evaluationData.best_choice)"
+                        <span v-if="isSelectedVersion(item.key, evaluationData.best_choice)"
                           class="px-2.5 py-1 bg-[var(--md-primary-container)] text-[var(--md-primary-dark)] text-xs font-semibold rounded-xs">
                           最佳
                         </span>
@@ -300,7 +300,7 @@
 
                       <div class="p-4 space-y-3">
                         <!-- 优点 -->
-                        <div v-if="versionEval.pros && versionEval.pros.length > 0"
+                        <div v-if="item.result.pros && item.result.pros.length > 0"
                           class="bg-[var(--md-success-container)] border border-[color-mix(in_oklch,var(--md-success-text)_20%,transparent)] rounded-sm p-3">
                           <h6 class="text-xs font-bold text-[var(--md-success-text)] mb-2 flex items-center gap-1.5">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -309,16 +309,16 @@
                             优点
                           </h6>
                           <ul class="space-y-1.5">
-                            <li v-for="(item, idx) in versionEval.pros" :key="idx"
+                            <li v-for="(pro, idx) in item.result.pros" :key="idx"
                               class="flex items-start gap-2 text-xs text-[var(--md-success-text)] leading-relaxed">
                               <span class="w-1 h-1 bg-[var(--md-success-text)] rounded-xs mt-1.5 flex-shrink-0"></span>
-                              <span>{{ item }}</span>
+                              <span>{{ pro }}</span>
                             </li>
                           </ul>
                         </div>
 
                         <!-- 缺点 -->
-                        <div v-if="versionEval.cons && versionEval.cons.length > 0"
+                        <div v-if="item.result.cons && item.result.cons.length > 0"
                           class="bg-[var(--md-error-container)] border border-[color-mix(in_oklch,var(--md-error-text)_20%,transparent)] rounded-sm p-3">
                           <h6 class="text-xs font-bold text-[var(--md-error-text)] mb-2 flex items-center gap-1.5">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -327,19 +327,19 @@
                             缺点
                           </h6>
                           <ul class="space-y-1.5">
-                            <li v-for="(item, idx) in versionEval.cons" :key="idx"
+                            <li v-for="(con, idx) in item.result.cons" :key="idx"
                               class="flex items-start gap-2 text-xs text-[var(--md-error-text)] leading-relaxed">
                               <span class="w-1 h-1 bg-[var(--md-error-text)] rounded-xs mt-1.5 flex-shrink-0"></span>
-                              <span>{{ item }}</span>
+                              <span>{{ con }}</span>
                             </li>
                           </ul>
                         </div>
 
                         <!-- 总体评价 -->
-                        <div v-if="versionEval.overall_review"
+                        <div v-if="item.result.overall_review"
                           class="bg-[var(--md-surface-container-low)] border border-[var(--md-outline-variant)] rounded-sm p-3">
                           <h6 class="text-xs font-bold text-[var(--md-on-surface)] mb-2">总体评价</h6>
-                          <p class="text-xs text-[var(--md-on-surface)] leading-relaxed">{{ versionEval.overall_review }}</p>
+                          <p class="text-xs text-[var(--md-on-surface)] leading-relaxed">{{ item.result.overall_review }}</p>
                         </div>
                       </div>
                     </div>
@@ -688,6 +688,22 @@ const evaluationData = computed(() => {
       feedback: selectedChapter.value.evaluation
     }
   }
+})
+
+const sortedEvaluationEntries = computed(() => {
+  const evaluation = evaluationData.value?.evaluation
+  if (!evaluation || typeof evaluation !== 'object' || Array.isArray(evaluation)) {
+    return []
+  }
+
+  // 多版本编号必须和候选版本数组一致：version1 对应章节 versions[0]。
+  return Object.entries(evaluation)
+    .map(([key, result]) => ({
+      key,
+      result: result as Record<string, any>,
+      versionNumber: getVersionNumber(key),
+    }))
+    .sort((a, b) => a.versionNumber - b.versionNumber)
 })
 
 // 获取评分标签

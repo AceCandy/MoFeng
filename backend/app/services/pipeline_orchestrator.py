@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, TypedDict
@@ -47,6 +48,7 @@ from ..utils.json_utils import remove_think_tags, unwrap_markdown_json
 logger = logging.getLogger(__name__)
 # 使用固定 UTC+8，避免在 Windows/Python 环境缺少 tzdata 时 ZoneInfo 初始化失败。
 CN_TIMEZONE = timezone(timedelta(hours=8), name="Asia/Shanghai")
+VERSION_REFERENCE_PATTERN = re.compile(r"版本\s*(\d+)|第\s*(\d+)\s*(?:个\s*)?(?:版本|版)")
 MIN_CHAPTER_VERSION_COUNT = 1
 MAX_CHAPTER_VERSION_COUNT = 2
 
@@ -2187,18 +2189,32 @@ class PipelineOrchestrator:
         mode = ai_review.get("mode")
         if mode == "single":
             pieces.append("单版本评审：请根据以下评审意见直接修复润色唯一候选版本。")
+            for label, value in (
+                ("总体评价", ai_review.get("evaluation")),
+                ("修改建议", ai_review.get("suggestions")),
+                ("最终推荐", ai_review.get("final_recommendation")),
+            ):
+                if value:
+                    pieces.append(f"{label}：{value}")
         elif mode == "compare":
             pieces.append(
                 f"多版本对比评审：推荐采用第 {best_version_index + 1} 个版本，并根据以下意见修复润色。"
             )
-
-        for label, value in (
-            ("总体评价", ai_review.get("evaluation")),
-            ("修改建议", ai_review.get("suggestions")),
-            ("最终推荐", ai_review.get("final_recommendation")),
-        ):
-            if value:
-                pieces.append(f"{label}：{value}")
+            # 多版本模式必须以结构化 best_version_index 为准，避免模型自然语言推荐互相矛盾。
+            suggestions = ai_review.get("suggestions")
+            if suggestions and not cls._has_conflicting_version_reference(
+                str(suggestions),
+                best_version_index + 1,
+            ):
+                pieces.append(f"推荐版本修复建议：{suggestions}")
+        else:
+            for label, value in (
+                ("总体评价", ai_review.get("evaluation")),
+                ("修改建议", ai_review.get("suggestions")),
+                ("最终推荐", ai_review.get("final_recommendation")),
+            ):
+                if value:
+                    pieces.append(f"{label}：{value}")
 
         flaws = ai_review.get("flaws")
         if isinstance(flaws, list) and flaws:
@@ -2213,6 +2229,48 @@ class PipelineOrchestrator:
                 pieces.append("推荐版本缺点：\n" + "\n".join(f"- {item}" for item in cons if item))
 
         return "\n\n".join(piece for piece in pieces if piece).strip()
+
+    @staticmethod
+    def _referenced_version_numbers(text: str) -> set[int]:
+        numbers: set[int] = set()
+        for match in VERSION_REFERENCE_PATTERN.finditer(text or ""):
+            raw_number = match.group(1) or match.group(2)
+            try:
+                numbers.add(int(raw_number))
+            except (TypeError, ValueError):
+                continue
+        return numbers
+
+    @classmethod
+    def _has_conflicting_version_reference(cls, text: str, best_choice: int) -> bool:
+        referenced_numbers = cls._referenced_version_numbers(text)
+        return bool(referenced_numbers and best_choice not in referenced_numbers)
+
+    @classmethod
+    def _build_consistent_reason_for_choice(
+        cls,
+        ai_review: Dict[str, Any],
+        best_choice: int,
+        evaluation: Dict[str, Dict[str, Any]],
+    ) -> str:
+        final_recommendation = str(ai_review.get("final_recommendation") or "").strip()
+        if final_recommendation and not cls._has_conflicting_version_reference(
+            final_recommendation,
+            best_choice,
+        ):
+            return final_recommendation
+
+        best_review = evaluation.get(f"version{best_choice}") or {}
+        best_overall_review = str(best_review.get("overall_review") or "").strip()
+        if best_overall_review:
+            return best_overall_review
+
+        for value in (ai_review.get("suggestions"), ai_review.get("evaluation")):
+            text = str(value or "").strip()
+            if text and not cls._has_conflicting_version_reference(text, best_choice):
+                return text
+
+        return f"推荐采用版本{best_choice}"
 
     @classmethod
     def _build_chapter_evaluation_feedback(
@@ -2267,11 +2325,10 @@ class PipelineOrchestrator:
 
         payload = {
             "best_choice": best_choice,
-            "reason_for_choice": str(
-                ai_review.get("final_recommendation")
-                or ai_review.get("suggestions")
-                or ai_review.get("evaluation")
-                or "AI评审已完成"
+            "reason_for_choice": cls._build_consistent_reason_for_choice(
+                ai_review,
+                best_choice,
+                evaluation,
             ),
             "evaluation": evaluation,
         }

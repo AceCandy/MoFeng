@@ -20,17 +20,21 @@
             {{ getVersionWordCount(version?.content || '') }} 字
           </p>
         </div>
-        <button
-          ref="closeButtonRef"
-          data-dialog-initial-focus
-          @click="handleClose"
-          class="md-icon-btn md-ripple"
-          aria-label="关闭版本详情弹窗"
-        >
-          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
-          </svg>
-        </button>
+        <div class="flex items-center gap-3">
+          <span v-if="isCurrent" class="md-chip m3-version-active-stamp">
+            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+            </svg>
+            当前选中版本
+          </span>
+          <button
+            v-else
+            @click="$emit('selectVersion')"
+            class="md-btn md-btn-filled md-ripple"
+          >
+            选择此版本
+          </button>
+        </div>
       </div>
 
       <!-- 弹窗内容 -->
@@ -39,35 +43,6 @@
           <div class="whitespace-pre-wrap leading-relaxed m3-detail-dialog__content">
             {{ cleanVersionContent(version?.content || '') }}
           </div>
-        </div>
-      </div>
-
-      <!-- 弹窗底部操作按钮 -->
-      <div class="flex items-center justify-between p-6 border-t m3-detail-dialog__footer">
-        <div class="md-body-small md-on-surface-variant">
-          <span v-if="isCurrent" class="md-chip m3-version-active-stamp">
-            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
-            </svg>
-            当前选中版本
-          </span>
-          <span v-else class="md-on-surface-variant">未选中版本</span>
-        </div>
-
-        <div class="flex gap-3">
-          <button
-            @click="handleClose"
-            class="md-btn md-btn-outlined md-ripple"
-          >
-            关闭
-          </button>
-          <button
-            v-if="!isCurrent"
-            @click="$emit('selectVersion')"
-            class="md-btn md-btn-filled md-ripple"
-          >
-            选择此版本
-          </button>
         </div>
       </div>
     </div>
@@ -91,7 +66,6 @@ const props = defineProps<Props>()
 
 const emit = defineEmits(['close', 'selectVersion'])
 const dialogRef = ref<HTMLElement | null>(null)
-const closeButtonRef = ref<HTMLElement | null>(null)
 const dialogInstanceId = `version-detail-${Math.random().toString(36).slice(2, 10)}`
 const dialogTitleId = `${dialogInstanceId}-title`
 
@@ -146,7 +120,6 @@ useDialogA11y({
   active: toRef(props, 'show'),
   dialogRef,
   onClose: handleClose,
-  initialFocusRef: closeButtonRef,
 })
 </script>
 

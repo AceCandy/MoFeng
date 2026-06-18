@@ -289,6 +289,53 @@ async def optimize_chapter(
         )
 
 
+async def do_optimize_recommended_version(
+    llm_service: LLMService,
+    prompt_service: PromptService,
+    source_content: str,
+    review_summary: str,
+    version_number: Optional[int],
+    version_review: Optional[dict],
+    user_id: int,
+) -> tuple[str, str]:
+    """根据评审建议优化推荐版本的核心逻辑（供内部和 API 复用）。"""
+    source_content = (source_content or "").strip()
+    review_summary = (review_summary or "").strip()
+    if not source_content:
+        raise ValueError("缺少推荐版本正文")
+    if not review_summary:
+        raise ValueError("缺少评审建议")
+
+    optimizer_prompt = await prompt_service.get_prompt("optimize_recommended_version")
+    if not optimizer_prompt:
+        raise ValueError("缺少推荐版本优化提示词，请配置 'optimize_recommended_version' 提示词")
+
+    optimize_input = {
+        "source_content": source_content,
+        "review_summary": review_summary,
+        "version_number": version_number,
+        "version_review": version_review or {},
+    }
+
+    response = await llm_service.get_llm_response(
+        system_prompt=optimizer_prompt,
+        conversation_history=[{
+            "role": "user",
+            "content": json.dumps(optimize_input, ensure_ascii=False)
+        }],
+        temperature=0.7,
+        user_id=user_id,
+        timeout=600.0,
+        stage="chapter_optimization",
+    )
+
+    optimized_content, optimization_notes = _parse_optimizer_response(response)
+    if not optimized_content.strip():
+        raise ValueError("优化结果为空，请重试")
+
+    return optimized_content, optimization_notes
+
+
 @router.post("/optimize-recommended-version", response_model=OptimizeResponse)
 async def optimize_recommended_version(
     request: OptimizeRecommendedVersionRequest,
@@ -308,27 +355,6 @@ async def optimize_recommended_version(
     if not chapter:
         raise HTTPException(status_code=404, detail="章节不存在")
 
-    source_content = (request.source_content or "").strip()
-    review_summary = (request.review_summary or "").strip()
-    if not source_content:
-        raise HTTPException(status_code=400, detail="缺少推荐版本正文")
-    if not review_summary:
-        raise HTTPException(status_code=400, detail="缺少评审建议")
-
-    optimizer_prompt = await prompt_service.get_prompt("optimize_recommended_version")
-    if not optimizer_prompt:
-        raise HTTPException(
-            status_code=500,
-            detail="缺少推荐版本优化提示词，请联系管理员配置 'optimize_recommended_version' 提示词",
-        )
-
-    optimize_input = {
-        "source_content": source_content,
-        "review_summary": review_summary,
-        "version_number": request.version_number,
-        "version_review": request.version_review or {},
-    }
-
     logger.info(
         "用户 %s 开始根据评审优化项目 %s 第 %s 章推荐版本 version=%s",
         current_user.id,
@@ -338,29 +364,23 @@ async def optimize_recommended_version(
     )
 
     try:
-        response = await llm_service.get_llm_response(
-            system_prompt=optimizer_prompt,
-            conversation_history=[{
-                "role": "user",
-                "content": json.dumps(optimize_input, ensure_ascii=False)
-            }],
-            temperature=0.7,
+        optimized_content, optimization_notes = await do_optimize_recommended_version(
+            llm_service=llm_service,
+            prompt_service=prompt_service,
+            source_content=request.source_content,
+            review_summary=request.review_summary,
+            version_number=request.version_number,
+            version_review=request.version_review,
             user_id=current_user.id,
-            timeout=600.0,
-            stage="chapter_optimization",
         )
-
-        optimized_content, optimization_notes = _parse_optimizer_response(response)
-        if not optimized_content.strip():
-            raise HTTPException(status_code=500, detail="优化结果为空，请重试")
 
         return OptimizeResponse(
             optimized_content=optimized_content,
             optimization_notes=optimization_notes,
             dimension="recommended_version_review",
         )
-    except HTTPException:
-        raise
+    except ValueError as val_exc:
+        raise HTTPException(status_code=400, detail=str(val_exc))
     except Exception as exc:
         logger.exception(
             "项目 %s 第 %s 章推荐版本优化失败: %s",

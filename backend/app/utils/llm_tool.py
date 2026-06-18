@@ -42,7 +42,8 @@ class LLMClient:
         self._api_key = key
         self._client = None
         if self._provider_type != "anthropic":
-            self._client = AsyncOpenAI(api_key=key, base_url=self._base_url)
+            # 重试统一交给 LLMService 控制，避免 SDK 隐式重试叠加导致等待时间不可控。
+            self._client = AsyncOpenAI(api_key=key, base_url=self._base_url, max_retries=0)
 
     @staticmethod
     def _anthropic_messages_url(base_url: Optional[str]) -> str:

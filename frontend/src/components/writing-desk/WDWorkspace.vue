@@ -40,7 +40,7 @@
             role="toolbar"
             aria-label="章节操作"
           >
-            <div class="writing-workspace__toolbar-row writing-workspace__toolbar-row--utility">
+            <div v-if="isFinalizedSuccessful" class="writing-workspace__toolbar-row writing-workspace__toolbar-row--utility">
               <div class="writing-workspace__toolbar-group writing-workspace__toolbar-group--utility">
                 <button
                   type="button"
@@ -59,63 +59,9 @@
                   导出
                 </button>
               </div>
-
-              <div ref="moreMenuRef" class="writing-workspace__more-menu">
-                <button
-                  ref="moreMenuTriggerRef"
-                  type="button"
-                  @click="toggleMoreMenu"
-                  class="md-btn md-btn-text md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--ghost"
-                  :aria-expanded="showMoreMenu ? 'true' : 'false'"
-                  aria-haspopup="menu"
-                  :aria-controls="moreMenuId"
-                >
-                  更多
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M19 9l-7 7-7-7"
-                    ></path>
-                  </svg>
-                </button>
-
-                <div
-                  v-if="showMoreMenu"
-                  :id="moreMenuId"
-                  ref="moreMenuPanelRef"
-                  class="writing-workspace__more-menu-panel"
-                  role="menu"
-                  tabindex="-1"
-                  @keydown="handleMoreMenuKeydown"
-                >
-                  <button
-                    :ref="(el) => registerMoreMenuItemRef(el, 0)"
-                    type="button"
-                    role="menuitem"
-                    @click="handleCopyFromMore"
-                    :disabled="!hasSelectedChapterContent"
-                    class="writing-workspace__more-menu-item disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    复制
-                  </button>
-                  <button
-                    :ref="(el) => registerMoreMenuItemRef(el, 1)"
-                    type="button"
-                    role="menuitem"
-                    @click="handleExportFromMore"
-                    :disabled="!isChapterContentView"
-                    class="writing-workspace__more-menu-item disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    导出
-                  </button>
-
-                </div>
-              </div>
             </div>
 
-            <div class="writing-workspace__toolbar-row writing-workspace__toolbar-row--primary">
+            <div v-if="isDraftWaitingConfirm" class="writing-workspace__toolbar-row writing-workspace__toolbar-row--primary">
               <div class="writing-workspace__toolbar-group writing-workspace__toolbar-group--emphasis">
               <button
                 type="button"
@@ -123,8 +69,18 @@
                 :disabled="!hasSelectedChapterContent"
                 class="md-btn md-btn-outlined md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--secondary writing-workspace__tool-btn--hero disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <span class="writing-workspace__label-full">编辑正文</span>
+                <span class="writing-workspace__label-full">编辑草稿</span>
                 <span class="writing-workspace__label-short">编辑</span>
+              </button>
+
+              <button
+                v-if="isDraftWaitingConfirm && hasSelectedChapterContent"
+                type="button"
+                @click="$emit('confirmVersionSelection', {})"
+                class="md-btn md-btn-filled md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--primary writing-workspace__tool-btn--hero"
+              >
+                <span class="writing-workspace__label-full">确认定稿</span>
+                <span class="writing-workspace__label-short">定稿</span>
               </button>
 
               <div ref="aiMenuRef" class="writing-workspace__ai-menu">
@@ -164,7 +120,7 @@
                     type="button"
                     role="menuitem"
                     @click="handleLayeredOptimize"
-                    :disabled="!isChapterContentView"
+                    :disabled="!hasSelectedChapterContent"
                     class="writing-workspace__ai-menu-item disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     分层优化
@@ -174,7 +130,7 @@
                     type="button"
                     role="menuitem"
                     @click="handlePolishContent"
-                    :disabled="!isChapterContentView"
+                    :disabled="!hasSelectedChapterContent"
                     class="writing-workspace__ai-menu-item disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     润色正文
@@ -184,7 +140,7 @@
                     type="button"
                     role="menuitem"
                     @click="handleAdjustRhythm"
-                    :disabled="!isChapterContentView"
+                    :disabled="!hasSelectedChapterContent"
                     class="writing-workspace__ai-menu-item disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     调整节奏
@@ -194,20 +150,10 @@
                     type="button"
                     role="menuitem"
                     @click="handleRewriteStyle"
-                    :disabled="!isChapterContentView"
+                    :disabled="!hasSelectedChapterContent"
                     class="writing-workspace__ai-menu-item disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     改写风格
-                  </button>
-                  <button
-                    :ref="(el) => registerAiMenuItemRef(el, 4)"
-                    type="button"
-                    role="menuitem"
-                    @click="handleRegenerateFromMenu"
-                    :disabled="isSelectedChapterGeneratingLike"
-                    class="writing-workspace__ai-menu-item writing-workspace__ai-menu-item--danger disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {{ isSelectedChapterGeneratingLike ? '生成中...' : '重新生成' }}
                   </button>
                 </div>
               </div>
@@ -253,6 +199,12 @@
           </div>
 
           <div class="writing-workspace__body h-full">
+            <ChapterGenerating
+              v-if="shouldShowDraftTraceReplay"
+              class="writing-workspace__trace-replay"
+              v-bind="draftTraceReplayProps"
+            />
+
             <!-- 1. 章节正文 Tab 分支 -->
             <component
               v-if="activeTab === 'content' || selectedChapter?.generation_status !== 'successful' || !hasSelectedChapterContent"
@@ -284,7 +236,7 @@
                     @click="previewVersionIndex = index"
                   >
                     <div class="flex items-center justify-between">
-                      <span class="version-label">版本 {{ availableVersions.length - index }}</span>
+                      <span class="version-label">版本 {{ index + 1 }}</span>
                       <span class="version-badge">{{ version.style || '标准' }}</span>
                     </div>
                     <p class="version-preview-text line-clamp-2">
@@ -335,25 +287,25 @@
                       </p>
                     </div>
                     <div class="space-y-4">
-                      <div v-for="(evalResult, versionName) in parsedEvaluation.evaluation" :key="versionName" class="md-card md-card-outlined p-4 m3-eval-version-card" style="border: 1px solid var(--md-outline); background: var(--md-surface-container-low)">
+                      <div v-for="item in sortedEvaluationEntries" :key="item.key" class="md-card md-card-outlined p-4 m3-eval-version-card" style="border: 1px solid var(--md-outline); background: var(--md-surface-container-low)">
                         <h5 class="md-title-medium font-semibold mb-2" style="font-family: var(--md-font-serif); color: var(--md-secondary)">
-                          版本 {{ String(versionName).replace('version', '') }} 评估
+                          版本 {{ item.versionNumber }} 评估
                         </h5>
                         <div class="prose prose-sm max-w-none md-on-surface space-y-3">
-                          <div v-if="evalResult.overall_review">
+                          <div v-if="item.result.overall_review">
                             <p class="font-semibold" style="color: var(--md-on-surface)">综合评价:</p>
-                            <p style="color: var(--md-on-surface-variant)">{{ evalResult.overall_review }}</p>
+                            <p style="color: var(--md-on-surface-variant)">{{ item.result.overall_review }}</p>
                           </div>
-                          <div v-if="evalResult.pros && evalResult.pros.length">
+                          <div v-if="item.result.pros && item.result.pros.length">
                             <p class="font-semibold" style="color: var(--md-on-surface)">优点:</p>
                             <ul class="list-disc pl-5 space-y-1" style="color: var(--md-on-surface-variant)">
-                              <li v-for="(pro, i) in evalResult.pros" :key="`pro-${i}`">{{ pro }}</li>
+                              <li v-for="(pro, i) in item.result.pros" :key="`pro-${i}`">{{ pro }}</li>
                             </ul>
                           </div>
-                          <div v-if="evalResult.cons && evalResult.cons.length">
+                          <div v-if="item.result.cons && item.result.cons.length">
                             <p class="font-semibold" style="color: var(--md-on-surface)">缺点:</p>
                             <ul class="list-disc pl-5 space-y-1" style="color: var(--md-on-surface-variant)">
-                              <li v-for="(con, i) in evalResult.cons" :key="`con-${i}`">{{ con }}</li>
+                              <li v-for="(con, i) in item.result.cons" :key="`con-${i}`">{{ con }}</li>
                             </ul>
                           </div>
                         </div>
@@ -608,27 +560,11 @@ interface ChapterContentExpose {
 
 const bodyComponentRef = ref<ChapterContentExpose | null>(null)
 const aiMenuRef = ref<HTMLElement | null>(null)
-const moreMenuRef = ref<HTMLElement | null>(null)
 const aiMenuPanelRef = ref<HTMLElement | null>(null)
-const moreMenuPanelRef = ref<HTMLElement | null>(null)
 const aiMenuTriggerRef = ref<HTMLButtonElement | null>(null)
-const moreMenuTriggerRef = ref<HTMLButtonElement | null>(null)
 const aiMenuItemRefs = ref<Array<HTMLElement | null>>([])
-const moreMenuItemRefs = ref<Array<HTMLElement | null>>([])
 const aiMenuId = 'wd-workspace-ai-menu'
-const moreMenuId = 'wd-workspace-more-menu'
 const showAiMenu = ref(false)
-const showMoreMenu = ref(false)
-
-const confirmRegenerateChapter = async () => {
-  const confirmed = await globalAlert.showConfirm(
-    '重新生成会覆盖当前章节的现有内容，确定继续吗？',
-    '重新生成确认',
-  )
-  if (confirmed) {
-    emit('regenerateChapter')
-  }
-}
 
 const copyTextLegacy = (text: string): boolean => {
   const textarea = document.createElement('textarea')
@@ -796,6 +732,81 @@ const selectedChapterOutline = computed(() => {
   )
 })
 
+const toBoundedVersionIndex = (value: unknown): number | null => {
+  const index = Number(value)
+  if (!Number.isInteger(index) || index < 0 || index >= props.availableVersions.length) {
+    return null
+  }
+  return index
+}
+
+const resolveRecommendedVersionIndex = (chapter: Chapter | null): number | null => {
+  if (!chapter || props.availableVersions.length === 0) {
+    return null
+  }
+
+  const metadataIndex = props.availableVersions.findIndex((version) => {
+    const metadata = version.metadata
+    return metadata?.ai_review?.is_best === true
+  })
+  if (metadataIndex >= 0) {
+    return metadataIndex
+  }
+
+  for (const version of props.availableVersions) {
+    const metadata = version.metadata
+    const metadataBestIndex = toBoundedVersionIndex(
+      metadata?.review_summaries?.ai_review?.best_version_index ??
+        metadata?.ai_review?.best_version_index,
+    )
+    if (metadataBestIndex !== null) {
+      return metadataBestIndex
+    }
+  }
+
+  const traces = [...(chapter.generation_traces ?? [])].reverse()
+  for (const trace of traces) {
+    if (trace.node_key !== 'save_draft') {
+      continue
+    }
+    const metadata = trace.metadata && typeof trace.metadata === 'object' ? trace.metadata : {}
+    for (const candidate of [
+      metadata.input_payload?.recommended_version_index,
+      metadata.metrics?.recommended_version_index,
+      metadata.recommended_version_index,
+      metadata.input_payload?.best_version_index,
+      metadata.metrics?.best_version_index,
+    ]) {
+      const traceIndex = toBoundedVersionIndex(candidate)
+      if (traceIndex !== null) {
+        return traceIndex
+      }
+    }
+  }
+
+  return null
+}
+
+const resolveVersionFallbackOrder = (chapter: Chapter | null): number[] => {
+  const indices: number[] = []
+  const pushIndex = (index: number | null) => {
+    if (index !== null && !indices.includes(index)) {
+      indices.push(index)
+    }
+  }
+
+  const selectedIndex = toBoundedVersionIndex(props.selectedVersionIndex)
+  const recommendedIndex = resolveRecommendedVersionIndex(chapter)
+  // 待确认草稿初始索引常为 0；若 AI 明确推荐其他版本，正文兜底先展示推荐版本。
+  if (chapter?.generation_status === 'waiting_for_confirm' && props.selectedVersionIndex === 0) {
+    pushIndex(recommendedIndex)
+  }
+  pushIndex(selectedIndex)
+  pushIndex(recommendedIndex)
+  props.availableVersions.forEach((_, index) => pushIndex(index))
+  return indices
+}
+
 const resolveChapterContent = (chapter: Chapter | null): string => {
   if (!chapter) {
     return ''
@@ -806,7 +817,8 @@ const resolveChapterContent = (chapter: Chapter | null): string => {
     return directContent
   }
 
-  for (const version of props.availableVersions) {
+  for (const index of resolveVersionFallbackOrder(chapter)) {
+    const version = props.availableVersions[index]
     const normalized = cleanVersionContent(version.content || '')
     if (normalized.trim()) {
       return normalized
@@ -832,6 +844,19 @@ const selectedChapterForDisplay = computed<Chapter | null>(() => {
 
 const hasSelectedChapterContent = computed(() => {
   return selectedChapterResolvedContent.value.trim().length > 0
+})
+
+const isFinalizedSuccessful = computed(() => {
+  return selectedChapter.value?.generation_status === 'successful' && hasSelectedChapterContent.value
+})
+
+const isDraftWaitingConfirm = computed(() => {
+  const status = selectedChapter.value?.generation_status
+  return status === 'waiting_for_confirm'
+})
+
+const shouldShowDraftTraceReplay = computed(() => {
+  return isDraftWaitingConfirm.value && hasSelectedChapterContent.value
 })
 
 const selectedChapterWordCount = computed(() => countNonWhitespaceChars(selectedChapterResolvedContent.value))
@@ -880,10 +905,15 @@ const isSelectedChapterLocked = computed(() => {
   return status !== 'failed' && status !== 'evaluation_failed' && status !== 'waiting_for_confirm'
 })
 
-const shouldShowChapterToolbar = computed(() => !isSelectedChapterLocked.value)
+const shouldShowChapterToolbar = computed(() => {
+  if (isSelectedChapterLocked.value) return false
+  return isFinalizedSuccessful.value || isDraftWaitingConfirm.value
+})
 
 const chapterStatusLabel = computed(() => {
-  const status = selectedChapter.value?.generation_status
+  const status = props.evaluatingChapter === props.selectedChapterNumber
+    ? 'evaluating'
+    : selectedChapter.value?.generation_status
   switch (status) {
     case 'successful':
       return '已完成'
@@ -907,7 +937,9 @@ const chapterStatusLabel = computed(() => {
 })
 
 const chapterStatusTone = computed(() => {
-  const status = selectedChapter.value?.generation_status
+  const status = props.evaluatingChapter === props.selectedChapterNumber
+    ? 'evaluating'
+    : selectedChapter.value?.generation_status
   if (status === 'successful') return 'success'
   if (status === 'failed' || status === 'evaluation_failed') return 'error'
   if (status === 'generating' || status === 'evaluating' || status === 'selecting' || status === 'finalizing') return 'progress'
@@ -1012,15 +1044,20 @@ const currentComponent = computed(() => {
     return WorkspaceInitial
   }
 
-  const status = selectedChapter.value?.generation_status
+  const status = props.evaluatingChapter === props.selectedChapterNumber
+    ? 'evaluating'
+    : selectedChapter.value?.generation_status
   const shouldRenderGenerating =
-    (isInProgressStatus(status) || isGeneratingInFlight.value || status === 'failed') &&
+    (isInProgressStatus(status) || isGeneratingInFlight.value || status === 'failed' || status === 'evaluation_failed') &&
     !(status === 'successful' && hasSelectedChapterContent.value)
   if (shouldRenderGenerating) {
     return ChapterGenerating // Use a generic "in-progress" component
   }
 
-  if (status === 'waiting_for_confirm' || status === 'evaluation_failed') {
+  if (status === 'waiting_for_confirm') {
+    if (hasSelectedChapterContent.value) {
+      return ChapterContent
+    }
     return VersionSelector
   }
 
@@ -1058,10 +1095,6 @@ const resolveMenuElement = (element: unknown) => {
 
 const registerAiMenuItemRef = (element: unknown, index: number) => {
   aiMenuItemRefs.value[index] = resolveMenuElement(element)
-}
-
-const registerMoreMenuItemRef = (element: unknown, index: number) => {
-  moreMenuItemRefs.value[index] = resolveMenuElement(element)
 }
 
 const getEnabledMenuItems = (items: Array<HTMLElement | null>) => {
@@ -1129,10 +1162,6 @@ const handleAiMenuKeydown = (event: KeyboardEvent) => {
   handleMenuKeydown(event, aiMenuItemRefs.value, closeAiMenu)
 }
 
-const handleMoreMenuKeydown = (event: KeyboardEvent) => {
-  handleMenuKeydown(event, moreMenuItemRefs.value, closeMoreMenu)
-}
-
 const closeAiMenu = (restoreFocus: boolean = false) => {
   showAiMenu.value = false
   if (restoreFocus) {
@@ -1140,30 +1169,12 @@ const closeAiMenu = (restoreFocus: boolean = false) => {
   }
 }
 
-const closeMoreMenu = (restoreFocus: boolean = false) => {
-  showMoreMenu.value = false
-  if (restoreFocus) {
-    moreMenuTriggerRef.value?.focus()
-  }
-}
-
 const toggleAiMenu = () => {
   if (isAiMenuDisabled.value) return
-  closeMoreMenu()
   showAiMenu.value = !showAiMenu.value
   if (showAiMenu.value) {
     nextTick(() => {
       focusFirstMenuItem(aiMenuItemRefs.value)
-    })
-  }
-}
-
-const toggleMoreMenu = () => {
-  closeAiMenu()
-  showMoreMenu.value = !showMoreMenu.value
-  if (showMoreMenu.value) {
-    nextTick(() => {
-      focusFirstMenuItem(moreMenuItemRefs.value)
     })
   }
 }
@@ -1189,21 +1200,6 @@ const openContentOptimizerWithPreset = (preset?: { dimension?: string; notes?: s
 
 const exportContentAsTxt = () => {
   bodyComponentRef.value?.exportCurrentChapterAsTxt?.()
-}
-
-const handleCopyFromMore = async () => {
-  closeMoreMenu()
-  await copySelectedChapterContent()
-}
-
-const handleExportFromMore = () => {
-  closeMoreMenu()
-  exportContentAsTxt()
-}
-
-const handleViewVersionFromMore = () => {
-  closeMoreMenu()
-  openVersionDetail()
 }
 
 const handleLayeredOptimize = () => {
@@ -1239,50 +1235,16 @@ const handleRewriteStyle = () => {
   })
 }
 
-const handleRegenerateFromMenu = async () => {
-  closeAiMenu()
-  if (isSelectedChapterGeneratingLike.value) return
-  await confirmRegenerateChapter()
-}
-
 const handleAiMenuOutsideClick = (event: MouseEvent) => {
   const targetNode = event.target as Node | null
   if (!targetNode) return
   if (showAiMenu.value && !aiMenuRef.value?.contains(targetNode)) {
     showAiMenu.value = false
   }
-  if (showMoreMenu.value && !moreMenuRef.value?.contains(targetNode)) {
-    showMoreMenu.value = false
-  }
 }
-
-// Polling for chapter status updates
-const pollingTimer = ref<number | null>(null)
-const lastPollingChapterNumber = ref<number | null>(null)
-const POLLING_INTERVAL_MS = 3000
 
 const requestChapterStatus = () => {
   emit('fetchChapterStatus')
-}
-
-const startPolling = (immediate: boolean = false) => {
-  // 已在轮询中时不重复启动，避免重置定时器导致请求风暴
-  if (pollingTimer.value !== null) {
-    return
-  }
-  if (immediate) {
-    requestChapterStatus()
-  }
-  pollingTimer.value = window.setInterval(() => {
-    requestChapterStatus()
-  }, POLLING_INTERVAL_MS)
-}
-
-const stopPolling = () => {
-  if (pollingTimer.value) {
-    clearInterval(pollingTimer.value)
-    pollingTimer.value = null
-  }
 }
 
 watch(
@@ -1294,16 +1256,15 @@ watch(
   ],
   ([chapterNumber, status, versionsCount, hasContent]) => {
     if (chapterNumber === null) {
-      stopPolling()
-      lastPollingChapterNumber.value = null
       return
     }
 
-    // 需要轮询的场景：
+    // 需要服务端推送同步的场景：
     // 1) 生成/评审/选择中（状态推进）
     // 2) 等待确认但正文还没同步（含版本已到但正文未到的短暂窗口）
     // 3) 已成功但正文暂未同步（避免必须手动刷新）
     const needsPolling =
+      isGeneratingInFlight.value ||
       status === 'generating' ||
       status === 'evaluating' ||
       status === 'selecting' ||
@@ -1312,13 +1273,8 @@ watch(
       (status === 'successful' && !hasContent)
 
     if (needsPolling) {
-      const chapterChanged = chapterNumber !== lastPollingChapterNumber.value
-      const shouldRequestImmediately = pollingTimer.value === null || chapterChanged
-      startPolling(shouldRequestImmediately)
-    } else {
-      stopPolling()
+      requestChapterStatus()
     }
-    lastPollingChapterNumber.value = chapterNumber
   },
   { immediate: true },
 )
@@ -1327,7 +1283,6 @@ watch(
   () => props.selectedChapterNumber,
   () => {
     closeAiMenu()
-    closeMoreMenu()
   },
 )
 
@@ -1337,16 +1292,17 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleAiMenuOutsideClick)
-  stopPolling()
 })
 
 const currentComponentProps = computed(() => {
   if (props.selectedChapterNumber === null) {
     return {}
   }
-  const status = selectedChapter.value?.generation_status
+  const status = props.evaluatingChapter === props.selectedChapterNumber
+    ? 'evaluating'
+    : selectedChapter.value?.generation_status
   const isBackendInProgress = isInProgressStatus(status)
-  const isFailed = status === 'failed'
+  const isFailed = status === 'failed' || status === 'evaluation_failed'
   const shouldRenderGenerating =
     (isBackendInProgress || isGeneratingInFlight.value || isFailed) &&
     !(status === 'successful' && hasSelectedChapterContent.value)
@@ -1395,10 +1351,19 @@ const currentComponentProps = computed(() => {
         ? []
         : (selectedChapter.value?.generation_traces ?? []),
       generatingChapter: props.generatingChapter,
+      availableVersions: props.availableVersions,
+      selectedVersionIndex: props.selectedVersionIndex,
     }
   }
 
-  if (status === 'waiting_for_confirm' || status === 'evaluation_failed') {
+  if (status === 'waiting_for_confirm') {
+    if (hasSelectedChapterContent.value) {
+      return {
+        selectedChapter: selectedChapterForDisplay.value,
+        projectId: props.project?.id,
+      }
+    }
+
     return {
       selectedChapter: selectedChapter.value,
       chapterGenerationResult: props.chapterGenerationResult,
@@ -1429,8 +1394,29 @@ const currentComponentProps = computed(() => {
     canGenerate: canGenerateChapter(props.selectedChapterNumber),
     lockedPrerequisiteChapterNumber: lockedPrerequisiteChapterNumber.value,
     lockedPrerequisiteChapterTitle: lockedPrerequisiteChapterTitle.value,
+    chapterOutline: selectedChapterOutline.value,
+    project: props.project,
   }
 })
+
+const draftTraceReplayProps = computed(() => ({
+  chapterNumber: props.selectedChapterNumber,
+  chapterTitle: selectedChapterOutline.value?.title || '',
+  chapterSummary: selectedChapterOutline.value?.summary || '',
+  chapterContentPreview: selectedChapterResolvedContent.value,
+  status: selectedChapter.value?.generation_status ?? null,
+  generationProgress: selectedChapter.value?.generation_progress ?? null,
+  generationStep: selectedChapter.value?.generation_step ?? 'waiting_for_confirm',
+  generationStepIndex: selectedChapter.value?.generation_step_index ?? null,
+  generationStepTotal: selectedChapter.value?.generation_step_total ?? null,
+  generationStartedAt: selectedChapter.value?.generation_started_at ?? null,
+  statusUpdatedAt: selectedChapter.value?.status_updated_at ?? null,
+  generationTraces: selectedChapter.value?.generation_traces ?? [],
+  generatingChapter: props.generatingChapter,
+  availableVersions: props.availableVersions,
+  selectedVersionIndex: props.selectedVersionIndex,
+  readOnly: true,
+}))
 
 // ==========================================================================
 // 写作台正文/历史版本/AI评审三合一 Tab 切换区状态与逻辑
@@ -1504,6 +1490,28 @@ const parsedEvaluation = computed(() => {
     console.error('Failed to parse evaluation JSON in WDWorkspace:', error)
     return null
   }
+})
+
+const getEvaluationVersionNumber = (versionKey: string | number): number => {
+  const normalizedKey = String(versionKey)
+  const match = normalizedKey.match(/\d+/)
+  return match ? Number.parseInt(match[0], 10) : 0
+}
+
+const sortedEvaluationEntries = computed(() => {
+  const evaluation = parsedEvaluation.value?.evaluation
+  if (!evaluation || typeof evaluation !== 'object' || Array.isArray(evaluation)) {
+    return []
+  }
+
+  // 多版本编号必须和候选版本数组一致：version1 对应 availableVersions[0]。
+  return Object.entries(evaluation)
+    .map(([key, result]) => ({
+      key,
+      result: result as Record<string, any>,
+      versionNumber: getEvaluationVersionNumber(key),
+    }))
+    .sort((a, b) => a.versionNumber - b.versionNumber)
 })
 
 const parseMarkdown = (text: string | null | undefined): string => {
@@ -1847,13 +1855,7 @@ const parseMarkdown = (text: string | null | undefined): string => {
   box-shadow: 0px 0px 0px var(--md-secondary) !important;
 }
 
-.writing-workspace__more-menu {
-  position: relative;
-  display: none;
-}
-
 /* 极致国风脑洞：下拉菜单重塑为方直“折页折扇”宣纸面板 */
-.writing-workspace__more-menu-panel,
 .writing-workspace__ai-menu-panel {
   position: absolute;
   top: calc(100% + 6px);
@@ -1873,7 +1875,6 @@ const parseMarkdown = (text: string | null | undefined): string => {
 }
 
 /* 极致国风脑洞：菜单项 Hover 水墨吸水徐徐晕开淡染 */
-.writing-workspace__more-menu-item,
 .writing-workspace__ai-menu-item {
   display: block;
   width: 100%;
@@ -1891,13 +1892,11 @@ const parseMarkdown = (text: string | null | undefined): string => {
   transition: background-color 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.writing-workspace__more-menu-item:hover:not(:disabled),
 .writing-workspace__ai-menu-item:hover:not(:disabled) {
   background-color: rgba(184, 60, 50, 0.08) !important; /* 朱砂慢晕淡染 */
   color: var(--md-secondary);
 }
 
-.writing-workspace__more-menu-item:focus-visible,
 .writing-workspace__ai-menu-item:focus-visible {
   outline: 1.5px solid var(--md-secondary);
   background-color: rgba(184, 60, 50, 0.04);
@@ -1925,6 +1924,10 @@ const parseMarkdown = (text: string | null | undefined): string => {
 
 .writing-workspace__body {
   min-height: 0;
+}
+
+.writing-workspace__trace-replay {
+  padding: var(--md-spacing-3) var(--md-spacing-5) 0;
 }
 
 .m3-editor-dialog {
@@ -1969,13 +1972,8 @@ const parseMarkdown = (text: string | null | undefined): string => {
 }
 
 @media (max-width: 1160px) {
-  .writing-workspace__toolbar-group--utility,
   .writing-workspace__toolbar-divider {
     display: none;
-  }
-
-  .writing-workspace__more-menu {
-    display: block;
   }
 }
 
@@ -2032,8 +2030,7 @@ const parseMarkdown = (text: string | null | undefined): string => {
     display: inline;
   }
 
-  .writing-workspace__ai-menu-panel,
-  .writing-workspace__more-menu-panel {
+  .writing-workspace__ai-menu-panel {
     right: 0;
     left: auto;
   }

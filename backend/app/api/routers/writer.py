@@ -137,6 +137,28 @@ def _build_generation_failure_detail(exc: Exception, max_length: int = 300) -> s
     return f"生成章节失败：{redacted}"
 
 
+def _build_evaluation_failure_detail(exc: Exception, max_length: int = 300) -> str:
+    """保留 AI 评审失败根因，同时避免把敏感配置原样回传给前端。"""
+    raw_detail = str(exc).strip() or exc.__class__.__name__
+    normalized = re.sub(r"\s+", " ", raw_detail).strip()
+    if not normalized:
+        return "AI评审失败：未收到具体错误信息，请查看后端日志。"
+
+    redacted = re.sub(
+        r"(?i)\b(api[_-]?key|authorization|bearer|token|secret|password)\b(\s*[=:]\s*)([^,\s;]+)",
+        r"\1\2[已隐藏]",
+        normalized,
+    )
+    if len(redacted) > max_length:
+        redacted = redacted[:max_length].rstrip() + "..."
+
+    if redacted.startswith("AI评审失败"):
+        return redacted
+    if redacted.startswith("评审失败"):
+        return f"AI{redacted}"
+    return f"AI评审失败：{redacted}"
+
+
 async def _record_finalize_workflow_success(
     trace_service: ChapterGenerationTraceService,
     *,
@@ -913,10 +935,10 @@ async def _confirm_finalize_chapter_sync(
 
     selected_version.content = final_content
     chapter.status = ChapterGenerationStatus.FINALIZING.value
-    chapter.generation_progress = 90
+    chapter.generation_progress = 0
     chapter.generation_step = "confirm_finalize"
-    chapter.generation_step_index = 8
-    chapter.generation_step_total = 12
+    chapter.generation_step_index = 1
+    chapter.generation_step_total = 4
     chapter.selected_version_id = selected_version.id
     chapter.selected_version = selected_version
     chapter.word_count = count_chapter_words(final_content)
@@ -950,6 +972,13 @@ async def _confirm_finalize_chapter_sync(
         summary_prompt = await prompt_service.get_prompt("extraction")
         if not summary_prompt:
             raise HTTPException(status_code=500, detail="未配置摘要提示词，请联系管理员配置 'extraction' 提示词")
+
+        chapter.generation_step = "real_summary"
+        chapter.generation_step_index = 1
+        chapter.generation_step_total = 4
+        chapter.generation_progress = 10
+        await session.commit()
+
         summary_raw = await llm_service.get_summary(
             final_content,
             temperature=0.15,
@@ -994,10 +1023,16 @@ async def _confirm_finalize_chapter_sync(
             },
         )
 
+        chapter.generation_step = "finalize_memory"
+        chapter.generation_step_index = 2
+        chapter.generation_step_total = 4
+        chapter.generation_progress = 40
+        await session.commit()
+
         vector_store = None
         if settings.vector_store_enabled and not request.skip_vector_update:
             vector_store = VectorStoreService()
-        finalize_service = FinalizeService(getattr(session, "sync_session", session), llm_service, vector_store)
+        finalize_service = FinalizeService(session, llm_service, vector_store)
         finalize_result = await finalize_service.finalize_chapter(
             project_id=project_id,
             chapter_number=chapter_number,
@@ -1023,6 +1058,12 @@ async def _confirm_finalize_chapter_sync(
             data_reads=["project_memory", "characters"],
             data_writes=["project_memory", "chapter_snapshots", "chapter_blueprints"],
         )
+
+        chapter.generation_step = "chapter_ingest"
+        chapter.generation_step_index = 3
+        chapter.generation_step_total = 4
+        chapter.generation_progress = 70
+        await session.commit()
 
         if request.skip_vector_update:
             await _record_finalize_workflow_success(
@@ -1069,6 +1110,12 @@ async def _confirm_finalize_chapter_sync(
                 data_writes=["vector_store"],
             )
 
+        chapter.generation_step = "foreshadowing_sync"
+        chapter.generation_step_index = 4
+        chapter.generation_step_total = 4
+        chapter.generation_progress = 90
+        await session.commit()
+
         sync_stats = await _sync_foreshadowings_for_chapter(
             session,
             project_id=project_id,
@@ -1097,8 +1144,8 @@ async def _confirm_finalize_chapter_sync(
         chapter.status = ChapterGenerationStatus.SUCCESSFUL.value
         chapter.generation_progress = 100
         chapter.generation_step = "finalized"
-        chapter.generation_step_index = 12
-        chapter.generation_step_total = 12
+        chapter.generation_step_index = 4
+        chapter.generation_step_total = 4
         await session.commit()
         await _record_finalize_workflow_success(
             trace_service,
@@ -1129,8 +1176,8 @@ async def _confirm_finalize_chapter_sync(
             refreshed.word_count = 0
             refreshed.generation_progress = 100
             refreshed.generation_step = "finalization_failed"
-            refreshed.generation_step_index = 7
-            refreshed.generation_step_total = 12
+            refreshed.generation_step_index = 4
+            refreshed.generation_step_total = 4
             await session.commit()
         await trace_service.record_failure(
             project_id=project_id,
@@ -1393,7 +1440,20 @@ async def evaluate_chapter(
             )
             if not evaluation_text or len(evaluation_text.strip()) == 0:
                 raise ValueError("评审结果为空")
-            evaluation_feedback = evaluation_text
+
+            # 单版本同样包装成与多版本结构一致的 JSON 格式
+            evaluation_feedback = json.dumps({
+                "best_choice": 1,
+                "reason_for_choice": evaluation_text,
+                "evaluation": {
+                    "version1": {
+                        "pros": [],
+                        "cons": [],
+                        "overall_review": evaluation_text,
+                        "scores": {}
+                    }
+                }
+            }, ensure_ascii=False)
             evaluation_version = version_to_evaluate
 
         await novel_service.add_chapter_evaluation(
@@ -1403,8 +1463,80 @@ async def evaluate_chapter(
             decision="reviewed"
         )
         logger.info("项目 %s 第 %s 章评审成功", project_id, request.chapter_number)
+
+        # 自动优化流程
+        try:
+            # 1. 解析评审结果获取最佳版本和修改建议
+            eval_data = json.loads(evaluation_feedback)
+            best_choice = eval_data.get("best_choice", 1)
+
+            # 寻找源版本
+            source_version = None
+            if len(ordered_versions) > 1:
+                if isinstance(best_choice, int) and 1 <= best_choice <= len(ordered_versions):
+                    source_version = ordered_versions[best_choice - 1]
+
+            if not source_version:
+                # 只有单版本或者没找到多版本对应索引，使用 evaluation_version 或者是 ordered_versions[-1]
+                source_version = evaluation_version or (ordered_versions[-1] if ordered_versions else None)
+
+            if source_version and source_version.content:
+                source_content = source_version.content
+                version_num = best_choice if isinstance(best_choice, int) else 1
+                review_summary = eval_data.get("reason_for_choice", "")
+                version_review = eval_data.get("evaluation", {}).get(f"version{version_num}", {})
+
+                # 2. 更新状态为 auto_optimizing (复用 evaluating 状态，前端显示"评审中")
+                chapter.status = "evaluating"
+                chapter.generation_step = "auto_optimizing"
+                await session.commit()
+
+                # 3. 调用优化函数 do_optimize_recommended_version
+                from .optimizer import do_optimize_recommended_version
+                optimized_content, _ = await do_optimize_recommended_version(
+                    llm_service=llm_service,
+                    prompt_service=prompt_service,
+                    source_content=source_content,
+                    review_summary=review_summary,
+                    version_number=version_num,
+                    version_review=version_review,
+                    user_id=current_user.id,
+                )
+
+                if optimized_content and optimized_content.strip():
+                    # 4. 创建优化版本
+                    optimized_version = ChapterVersion(
+                        chapter_id=chapter.id,
+                        content=optimized_content,
+                        version_label="ai_optimized",
+                    )
+                    session.add(optimized_version)
+                    await session.flush()
+
+                    # 5. 设为选中版本，并将状态改为 waiting_for_confirm
+                    chapter.selected_version_id = optimized_version.id
+                    chapter.selected_version = optimized_version
+                    chapter.status = "waiting_for_confirm"
+                    chapter.generation_step = "optimization_done"
+                    await session.commit()
+                else:
+                    raise ValueError("自动优化结果为空")
+            else:
+                logger.warning("未找到可供优化的源版本，跳过自动优化")
+                chapter.status = "waiting_for_confirm"
+                chapter.generation_step = "evaluation_done"
+                await session.commit()
+
+        except Exception as opt_exc:
+            logger.warning("项目 %s 第 %s 章自动优化失败，降级为仅评审: %s", project_id, request.chapter_number, opt_exc)
+            # 确保即使优化失败，章节也处于 waiting_for_confirm 状态
+            chapter.status = "waiting_for_confirm"
+            chapter.generation_step = "evaluation_done"
+            await session.commit()
     except Exception as exc:
         logger.exception("项目 %s 第 %s 章评审失败: %s", project_id, request.chapter_number, exc)
+        failure_detail = _build_evaluation_failure_detail(exc)
+        failure_summary = failure_detail[:120]
         # 回滚事务，恢复状态
         await session.rollback()
 
@@ -1428,19 +1560,54 @@ async def evaluate_chapter(
                 chapter_id=chapter.id,
                 version_id=version_to_evaluate.id if version_to_evaluate else None,
                 decision="failed",
-                feedback="评审失败，请重试",
+                feedback=failure_detail,
                 score=None
             )
             session.add(evaluation_record)
             chapter.status = "evaluation_failed"
             chapter.generation_progress = 0
-            chapter.generation_step = "evaluation_failed"
+            chapter.generation_step = f"evaluation_failed|error={failure_summary}"
             chapter.generation_step_index = 0
             chapter.generation_step_total = 3
             await session.commit()
+            trace_service = ChapterGenerationTraceService(session)
+            try:
+                await trace_service.record_failure(
+                    project_id=project_id,
+                    chapter_number=request.chapter_number,
+                    node_key="quality_review",
+                    node_label="AI评审",
+                    stage="version_review",
+                    error=failure_detail,
+                    input_payload={
+                        "version_count": len(ordered_versions),
+                        "selected_version_id": version_to_evaluate.id if version_to_evaluate else None,
+                    },
+                    metadata={
+                        "trace_kind": "llm",
+                        "call_type": "chat_llm",
+                        "summary": "手动 AI 评审失败，章节保留候选版本等待重试。",
+                        "actions": [
+                            "读取章节候选版本",
+                            "构建评审上下文",
+                            "调用 AI 评审服务",
+                        ],
+                        "model_calls": [
+                            {
+                                "stage": "version_review",
+                                "call_type": "chat_llm",
+                                "purpose": "AI评审候选版本并产出修改建议",
+                            }
+                        ],
+                    },
+                    started_at=datetime.now(CN_TIMEZONE),
+                    ended_at=datetime.now(CN_TIMEZONE),
+                )
+            except Exception:
+                logger.exception("项目 %s 第 %s 章记录评审失败 trace 失败", project_id, request.chapter_number)
 
         # 抛出异常，让前端知道评审失败
-        raise HTTPException(status_code=500, detail="评审失败，请重试")
+        raise HTTPException(status_code=500, detail=failure_detail) from exc
 
     return await _load_project_schema(novel_service, project_id, current_user.id)
 

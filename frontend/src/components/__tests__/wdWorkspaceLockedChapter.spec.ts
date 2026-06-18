@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
 import { createApp, nextTick } from 'vue'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
@@ -12,11 +13,21 @@ const readSource = (relativePath: string) =>
 const mountWorkspace = async (
   project: NovelProject,
   selectedChapterNumber: number,
-  overrides: { generatingChapter?: number | null } = {},
+  overrides: {
+    generatingChapter?: number | null
+    selectedVersionIndex?: number
+    availableVersions?: Array<{ content: string; style?: string; metadata?: Record<string, any> }>
+  } = {},
 ) => {
   const host = document.createElement('div')
   document.body.appendChild(host)
   const selectedChapters: number[] = []
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  })
   const app = createApp(WDWorkspace, {
     project,
     selectedChapterNumber,
@@ -24,12 +35,13 @@ const mountWorkspace = async (
     evaluatingChapter: null,
     showVersionSelector: false,
     chapterGenerationResult: null,
-    selectedVersionIndex: 0,
-    availableVersions: [],
+    selectedVersionIndex: overrides.selectedVersionIndex ?? 0,
+    availableVersions: overrides.availableVersions ?? [],
     isSelectingVersion: false,
     onSelectChapter: (chapterNumber: number) => selectedChapters.push(chapterNumber),
   })
 
+  app.use(VueQueryPlugin, { queryClient })
   app.mount(host)
   await nextTick()
 
@@ -143,6 +155,171 @@ describe('WDWorkspace locked chapter state', () => {
     }
   })
 
+  it('renders waiting confirmation draft content when the chapter body only exists in versions', async () => {
+    const project: NovelProject = {
+      id: 'novel-1',
+      title: '全网退役',
+      initial_prompt: '',
+      conversation_history: [],
+      blueprint: {
+        chapter_outline: [
+          {
+            chapter_number: 1,
+            title: '一招',
+            summary: '林拓在直播擂台上重新出手。',
+          },
+        ],
+      },
+      chapters: [
+        {
+          chapter_number: 1,
+          title: '一招',
+          summary: '林拓在直播擂台上重新出手。',
+          real_summary: null,
+          content: null,
+          versions: null,
+          evaluation: null,
+          generation_status: 'waiting_for_confirm',
+          status_updated_at: '2026-06-09T14:42:00',
+          generation_step: 'waiting_for_confirm',
+          generation_traces: [
+            {
+              id: 101,
+              node_key: 'context_prep',
+              node_label: '整理前文',
+              status: 'success',
+              uses_llm: false,
+              metadata: {
+                duration_ms: 1300,
+                input_payload: { chapter_number: 1 },
+                actions: ['读取前文章节与项目记忆'],
+                output_payload: { summary: '前文上下文整理完成' },
+              },
+            },
+            {
+              id: 102,
+              node_key: 'save_draft',
+              node_label: '保存草稿',
+              status: 'success',
+              uses_llm: false,
+              metadata: {
+                duration_ms: 900,
+                actions: ['写入候选版本并保留待确认状态'],
+                output_payload: { status: 'waiting_for_confirm' },
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    const rendered = await mountWorkspace(project, 1, {
+      availableVersions: [
+        {
+          content: '退役冠军林拓站在商业直播表演赛的灯下。\n\n他看见对手穿着旧布鞋，却仍旧把拳架抬得很稳。',
+          style: '标准',
+        },
+      ],
+    })
+
+    try {
+      expect(rendered.host.textContent).toContain('待确认')
+      expect(rendered.host.textContent).toContain('编辑草稿')
+      expect(rendered.host.textContent).toContain('确认定稿')
+      expect(rendered.host.textContent).toContain('退役冠军林拓站在商业直播表演赛的灯下')
+      expect(rendered.host.querySelector('.chapter-paper')).not.toBeNull()
+      expect(rendered.host.textContent).toContain('生成进度')
+      expect(rendered.host.textContent).toContain('整理前文')
+      expect(rendered.host.textContent).toContain('待人工确认')
+      expect(rendered.host.textContent).not.toContain('转入后台生成')
+      expect(rendered.host.textContent).not.toContain('取消生成')
+      const pipelineTitles = Array.from(
+        rendered.host.querySelectorAll('.chapter-console__pipeline-title'),
+      ).map((item) => item.textContent?.trim())
+      expect(pipelineTitles[pipelineTitles.length - 1]).toBe('修复润色')
+      expect(pipelineTitles).not.toContain('待人工确认')
+
+      const contextStep = Array.from(
+        rendered.host.querySelectorAll('.chapter-console__pipeline-item'),
+      ).find((item) => item.textContent?.includes('整理前文'))
+      expect(contextStep).toBeTruthy()
+
+      contextStep?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      await nextTick()
+
+      expect(rendered.host.textContent).toContain('节点详情')
+      expect(rendered.host.textContent).toContain('读取前文章节与项目记忆')
+      expect(rendered.host.textContent).toContain('前文上下文整理完成')
+    } finally {
+      rendered.unmount()
+    }
+  })
+
+  it('renders the recommended waiting confirmation draft instead of the first non-empty version', async () => {
+    const project: NovelProject = {
+      id: 'novel-1',
+      title: '全网退役',
+      initial_prompt: '',
+      conversation_history: [],
+      blueprint: {
+        chapter_outline: [
+          {
+            chapter_number: 1,
+            title: '一招',
+            summary: '林拓在直播擂台上重新出手。',
+          },
+        ],
+      },
+      chapters: [
+        {
+          chapter_number: 1,
+          title: '一招',
+          summary: '林拓在直播擂台上重新出手。',
+          real_summary: null,
+          content: null,
+          versions: null,
+          evaluation: null,
+          generation_status: 'waiting_for_confirm',
+          generation_step: 'waiting_for_confirm',
+          generation_traces: [
+            {
+              id: 201,
+              node_key: 'save_draft',
+              node_label: '保存草稿',
+              status: 'success',
+              uses_llm: false,
+              metadata: {
+                input_payload: { recommended_version_index: 1 },
+                metrics: { recommended_version_index: 1 },
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    const rendered = await mountWorkspace(project, 1, {
+      availableVersions: [
+        {
+          content: '版本一只是铺垫，冲突还没有真正立起来。',
+          style: '标准',
+        },
+        {
+          content: '版本二让林拓在灯下直接迎上对手，是 AI 评审推荐的底稿。',
+          style: '强化冲突',
+          metadata: { ai_review: { is_best: true } },
+        },
+      ],
+    })
+
+    try {
+      expect(rendered.host.textContent).toContain('版本二让林拓在灯下直接迎上对手')
+      expect(rendered.host.textContent).not.toContain('版本一只是铺垫')
+    } finally {
+      rendered.unmount()
+    }
+  })
+
   it('wires locked chapter navigation through the writing desk parent', () => {
     const source = readSource('src/views/WritingDesk.vue')
     const workspaceTag = source.match(/<WDWorkspace[\s\S]*?\/>/)?.[0] ?? ''
@@ -150,14 +327,25 @@ describe('WDWorkspace locked chapter state', () => {
     expect(workspaceTag).toContain('@select-chapter="selectChapter"')
   })
 
-  it('keeps generation polling lightweight by refreshing only the selected chapter', () => {
+  it('defaults waiting confirmation selection from the structured recommended version index', () => {
     const source = readSource('src/views/WritingDesk.vue')
-    const refetchHelper = source.match(/const refetchChapterIntoProject[\s\S]*?\n}\n\nconst fetchChapterStatus/)?.[0] ?? ''
-    const pollingBlock = source.match(/const fetchChapterStatus[\s\S]*?\n}\n\n\/\/ 显示版本详情/)?.[0] ?? ''
 
-    expect(refetchHelper).toContain('refreshProject?: boolean')
-    expect(refetchHelper).toContain('if (options.refreshProject)')
-    expect(pollingBlock).toContain('refetchChapterIntoProject(chapterNumber, { refreshProject: false })')
+    expect(source).toContain('const resolveRecommendedVersionIndex')
+    expect(source).toContain('recommended_version_index')
+    expect(source).toContain('metadata?.ai_review?.is_best')
+    expect(source).toContain('selectedVersionIndex.value = recommendedIndex')
+    expect(source).not.toContain('selectedVersionIndex.value = availableVersions.value.length - 1')
+  })
+
+  it('streams generation status instead of polling the selected chapter', () => {
+    const source = readSource('src/views/WritingDesk.vue')
+    const pollingBlock = source.match(/const fetchChapterStatus[\s\S]*?\n}\n\n\/\/ 显示版本详情/)?.[0] ?? ''
+    const workspaceSource = readSource('src/components/writing-desk/WDWorkspace.vue')
+
+    expect(pollingBlock).toContain('NovelAPI.subscribeChapterStatus')
+    expect(pollingBlock).toContain('upsertChapterInProjectCache(projectId, chapter)')
+    expect(workspaceSource).not.toContain('setInterval(() =>')
+    expect(workspaceSource).not.toContain('POLLING_INTERVAL_MS')
   })
 
   it('keeps the locked chapter light skin on a warm paper palette', () => {

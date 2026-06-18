@@ -70,7 +70,7 @@
               :project="project"
               :selected-chapter-number="selectedChapterNumber"
               :generating-chapter="generatingChapter"
-              :evaluating-chapter="evaluatingChapter"
+              :evaluating-chapter="activeEvaluatingChapter"
               :is-generating-outline="isGeneratingOutline"
               @open-project-detail="viewProjectDetail"
               @select-chapter="selectChapter"
@@ -86,7 +86,7 @@
               :project="project"
               :selected-chapter-number="selectedChapterNumber"
               :generating-chapter="generatingChapter"
-              :evaluating-chapter="evaluatingChapter"
+              :evaluating-chapter="activeEvaluatingChapter"
               :show-version-selector="showVersionSelector"
               :chapter-generation-result="chapterGenerationResult"
               :selected-version-index="selectedVersionIndex"
@@ -271,8 +271,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineAsyncComponent, nextTick, onMounted, watch } from 'vue'
+import { ref, computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { NovelAPI } from '@/api/novel'
 import type {
   Chapter,
   ChapterOutline,
@@ -333,6 +334,7 @@ const selectedChapterNumber = ref<number | null>(null)
 const resolvedProjectEntryId = ref<string | null>(null)
 const chapterGenerationResult = ref<ChapterGenerationResponse | null>(null)
 const selectedVersionIndex = ref<number>(0)
+const lastAutoRecommendedSelectionKey = ref<string | null>(null)
 const generatingChapter = ref<number | null>(null)
 const showVersionDetailModal = ref(false)
 const detailVersionIndex = ref<number>(0)
@@ -342,6 +344,9 @@ const editingChapter = ref<ChapterOutline | null>(null)
 const isGeneratingOutline = ref(false)
 const showGenerateOutlineModal = ref(false)
 const isFetchingChapterStatus = ref(false)
+const statusStreamController = ref<AbortController | null>(null)
+const statusStreamKey = ref<string | null>(null)
+const statusStreamReconnectTimer = ref<number | null>(null)
 const optimizeRecommendedVersionMutation = useOptimizeRecommendedVersionMutation()
 const showRecommendedOptimizeResultModal = ref(false)
 const recommendedDialogRef = ref<HTMLElement | null>(null)
@@ -479,6 +484,13 @@ watch(
   },
 )
 
+watch(
+  () => props.id,
+  () => {
+    stopChapterStatusStream()
+  },
+)
+
 const closeAllDrawers = () => {
   isSidebarDrawerOpen.value = false
   isAssistantDrawerOpen.value = false
@@ -555,11 +567,15 @@ const showVersionSelector = computed(() => {
   )
 })
 
-const evaluatingChapter = computed(() => {
-  if (selectedChapter.value?.generation_status === 'evaluating') {
-    return selectedChapter.value.chapter_number
-  }
-  return null
+const evaluatingChapter = ref<number | null>(null)
+
+const activeEvaluatingChapter = computed(() => {
+  return (
+    evaluatingChapter.value ??
+    (selectedChapter.value?.generation_status === 'evaluating'
+      ? selectedChapter.value.chapter_number
+      : null)
+  )
 })
 
 const isSelectingVersion = computed(() => {
@@ -702,6 +718,16 @@ const hasChapterInProgress = (chapterNumber: number) => {
 }
 
 const extractVersionContent = (raw: unknown): string => {
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    const record = raw as Record<string, unknown>
+    for (const key of ['content', 'chapter_content', 'chapter_text', 'text', 'body', 'story']) {
+      const candidate = record[key]
+      if (typeof candidate === 'string' && candidate.trim()) {
+        return candidate
+      }
+    }
+  }
+
   if (typeof raw !== 'string') {
     return ''
   }
@@ -734,6 +760,16 @@ const extractVersionContent = (raw: unknown): string => {
   return raw
 }
 
+const extractVersionMetadata = (raw: unknown): Record<string, any> | null => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return null
+  }
+  const metadata = (raw as Record<string, unknown>).metadata
+  return metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+    ? (metadata as Record<string, any>)
+    : null
+}
+
 // 可用版本列表（来源优先级：生成结果 > 章节 versions > 章节 content 兜底）
 const availableVersions = computed<ChapterVersion[]>(() => {
   if (
@@ -758,6 +794,7 @@ const availableVersions = computed<ChapterVersion[]>(() => {
         return {
           content,
           style: '标准',
+          metadata: extractVersionMetadata(versionRaw),
         } as ChapterVersion
       })
       .filter((item): item is ChapterVersion => item !== null)
@@ -772,6 +809,103 @@ const availableVersions = computed<ChapterVersion[]>(() => {
 
   return []
 })
+
+const toBoundedVersionIndex = (value: unknown, versionCount: number): number | null => {
+  const index = Number(value)
+  if (!Number.isInteger(index) || index < 0 || index >= versionCount) {
+    return null
+  }
+  return index
+}
+
+const resolveRecommendedVersionIndex = (
+  chapter: Chapter | null,
+  versions: ChapterVersion[],
+): number | null => {
+  if (!versions.length) {
+    return null
+  }
+
+  const metadataIndex = versions.findIndex((version) => {
+    const metadata = version.metadata
+    return metadata?.ai_review?.is_best === true
+  })
+  if (metadataIndex >= 0) {
+    return metadataIndex
+  }
+
+  for (const version of versions) {
+    const metadata = version.metadata
+    const metadataBestIndex = toBoundedVersionIndex(
+      metadata?.review_summaries?.ai_review?.best_version_index ??
+        metadata?.ai_review?.best_version_index,
+      versions.length,
+    )
+    if (metadataBestIndex !== null) {
+      return metadataBestIndex
+    }
+  }
+
+  const evaluationPayload = parseEvaluationPayload(chapter?.evaluation || null)
+  const bestChoiceIndex = toBoundedVersionIndex(
+    Number(evaluationPayload?.best_choice) - 1,
+    versions.length,
+  )
+  if (bestChoiceIndex !== null) {
+    return bestChoiceIndex
+  }
+
+  const traces = [...(chapter?.generation_traces ?? [])].reverse()
+  for (const trace of traces) {
+    if (trace.node_key !== 'save_draft') {
+      continue
+    }
+    const metadata = trace.metadata && typeof trace.metadata === 'object' ? trace.metadata : {}
+    for (const candidate of [
+      metadata.input_payload?.recommended_version_index,
+      metadata.metrics?.recommended_version_index,
+      metadata.recommended_version_index,
+      metadata.input_payload?.best_version_index,
+      metadata.metrics?.best_version_index,
+    ]) {
+      const traceIndex = toBoundedVersionIndex(candidate, versions.length)
+      if (traceIndex !== null) {
+        return traceIndex
+      }
+    }
+  }
+
+  return null
+}
+
+const syncRecommendedVersionSelection = () => {
+  const chapter = selectedChapter.value
+  const versions = availableVersions.value
+  if (!chapter || chapter.generation_status !== 'waiting_for_confirm' || versions.length === 0) {
+    lastAutoRecommendedSelectionKey.value = null
+    return
+  }
+
+  const recommendedIndex = resolveRecommendedVersionIndex(chapter, versions)
+  if (recommendedIndex === null) {
+    return
+  }
+
+  const selectionKey = [
+    chapter.chapter_number,
+    chapter.status_updated_at ?? '',
+    chapter.generation_traces?.length ?? 0,
+    versions.length,
+    recommendedIndex,
+  ].join(':')
+
+  if (lastAutoRecommendedSelectionKey.value === selectionKey) {
+    return
+  }
+
+  selectedVersionIndex.value = recommendedIndex
+  lastAutoRecommendedSelectionKey.value = selectionKey
+}
 
 const recommendedOptimizedParagraphs = computed(() => {
   if (!recommendedOptimizedContent.value.trim()) return []
@@ -889,6 +1023,18 @@ const parseEvaluationPayload = (evaluation: string | null): Record<string, any> 
   return null
 }
 
+watch(
+  [
+    () => selectedChapter.value?.chapter_number ?? null,
+    () => selectedChapter.value?.generation_status ?? null,
+    () => selectedChapter.value?.status_updated_at ?? null,
+    () => selectedChapter.value?.generation_traces ?? [],
+    () => availableVersions.value,
+  ],
+  syncRecommendedVersionSelection,
+  { deep: true, immediate: true },
+)
+
 const closeRecommendedOptimizeResult = () => {
   if (isApplyingRecommendedOptimization.value) return
   showRecommendedOptimizeResultModal.value = false
@@ -989,6 +1135,10 @@ onMounted(() => {
   restoreAssistantPanelVisibility()
 })
 
+onUnmounted(() => {
+  stopChapterStatusStream()
+})
+
 // 方法
 const goBack = () => {
   router.push('/workspace')
@@ -1026,20 +1176,67 @@ const refetchChapterIntoProject = async (
   }
 }
 
-const fetchChapterStatus = async () => {
-  if (selectedChapterNumber.value === null || isFetchingChapterStatus.value) {
+const stopChapterStatusStream = () => {
+  if (statusStreamReconnectTimer.value !== null) {
+    window.clearTimeout(statusStreamReconnectTimer.value)
+    statusStreamReconnectTimer.value = null
+  }
+  statusStreamController.value?.abort()
+  statusStreamController.value = null
+  statusStreamKey.value = null
+  isFetchingChapterStatus.value = false
+}
+
+const fetchChapterStatus = () => {
+  if (selectedChapterNumber.value === null) {
     return
   }
+  const projectId = props.id
   const chapterNumber = selectedChapterNumber.value
-  isFetchingChapterStatus.value = true
-  try {
-    await refetchChapterIntoProject(chapterNumber, { refreshProject: false })
-  } catch (error) {
-    console.error('轮询章节状态失败:', error)
-    // 在这里可以决定是否要通知用户轮询失败
-  } finally {
-    isFetchingChapterStatus.value = false
+  const streamKey = `${projectId}:${chapterNumber}`
+  if (statusStreamKey.value === streamKey) {
+    return
   }
+
+  stopChapterStatusStream()
+  if (statusStreamReconnectTimer.value !== null) {
+    window.clearTimeout(statusStreamReconnectTimer.value)
+    statusStreamReconnectTimer.value = null
+  }
+  const controller = new AbortController()
+  statusStreamController.value = controller
+  statusStreamKey.value = streamKey
+  isFetchingChapterStatus.value = true
+
+  void NovelAPI.subscribeChapterStatus(projectId, chapterNumber, {
+    signal: controller.signal,
+    onChapter: (chapter) => {
+      if (chapter.chapter_number !== chapterNumber) return
+      upsertChapterInProjectCache(projectId, chapter)
+    },
+    onError: (error) => {
+      if (controller.signal.aborted) return
+      console.error('章节状态 SSE 同步失败:', error)
+    },
+  }).catch((error) => {
+    if (controller.signal.aborted) return
+    console.error('章节状态 SSE 连接失败:', error)
+    if (props.id === projectId && selectedChapterNumber.value === chapterNumber) {
+      void refetchChapterIntoProject(chapterNumber, { refreshProject: false })
+    }
+    statusStreamReconnectTimer.value = window.setTimeout(() => {
+      if (props.id === projectId && selectedChapterNumber.value === chapterNumber) {
+        statusStreamKey.value = null
+        fetchChapterStatus()
+      }
+    }, 3000)
+  }).finally(() => {
+    if (statusStreamKey.value === streamKey) {
+      statusStreamController.value = null
+      statusStreamKey.value = null
+      isFetchingChapterStatus.value = false
+    }
+  })
 }
 
 // 显示版本详情
@@ -1087,39 +1284,28 @@ const generateChapter = async (chapterNumber: number) => {
     selectedChapterNumber.value = chapterNumber
     const nowIso = new Date().toISOString()
 
-    // 在本地更新章节状态为generating
-    if (project.value?.chapters) {
-      const chapter = project.value.chapters.find((ch) => ch.chapter_number === chapterNumber)
-      if (chapter) {
-        chapter.generation_status = 'generating'
-        chapter.generation_progress = 0
-        chapter.generation_step = 'context_prep'
-        chapter.generation_step_index = 1
-        chapter.generation_step_total = null
-        chapter.generation_started_at = nowIso
-        chapter.status_updated_at = nowIso
-      } else {
-        // If chapter does not exist, create a temporary one to show generating state
-        const outline = project.value.blueprint?.chapter_outline?.find(
-          (o) => o.chapter_number === chapterNumber,
-        )
-        project.value.chapters.push({
-          chapter_number: chapterNumber,
-          title: outline?.title || '加载中...',
-          summary: outline?.summary || '',
-          content: '',
-          versions: [],
-          evaluation: null,
-          generation_status: 'generating',
-          generation_progress: 0,
-          generation_step: 'context_prep',
-          generation_step_index: 1,
-          generation_step_total: null,
-          generation_started_at: nowIso,
-          status_updated_at: nowIso,
-        } as Chapter)
-      }
-    }
+    const existingChapter = project.value?.chapters.find((ch) => ch.chapter_number === chapterNumber)
+    const outline = project.value?.blueprint?.chapter_outline?.find(
+      (o) => o.chapter_number === chapterNumber,
+    )
+    upsertChapterInProjectCache(props.id, {
+      ...(existingChapter ?? {}),
+      chapter_number: chapterNumber,
+      title: existingChapter?.title || outline?.title || '加载中...',
+      summary: existingChapter?.summary || outline?.summary || '',
+      content: existingChapter?.content || '',
+      versions: existingChapter?.versions || [],
+      evaluation: existingChapter?.evaluation ?? null,
+      generation_status: 'generating',
+      generation_progress: 0,
+      generation_step: 'context_prep',
+      generation_step_index: 1,
+      generation_step_total: null,
+      generation_started_at: nowIso,
+      status_updated_at: nowIso,
+      generation_traces: existingChapter?.generation_traces || [],
+    } as Chapter)
+    fetchChapterStatus()
 
     await generateChapterMutation.mutateAsync(chapterNumber)
     // 关键兜底：生成接口在极少数情况下可能返回旧快照，这里强制拉取当前章最新状态。
@@ -1133,14 +1319,14 @@ const generateChapter = async (chapterNumber: number) => {
     console.error('生成章节失败:', error)
     const failureMessage = formatChapterGenerationError(error)
 
-    // 错误状态的本地更新仍然是必要的，以立即反映UI
-    if (project.value?.chapters) {
-      const chapter = project.value.chapters.find((ch) => ch.chapter_number === chapterNumber)
-      if (chapter) {
-        chapter.generation_status = 'failed'
-        chapter.generation_step = failureMessage
-        chapter.status_updated_at = new Date().toISOString()
-      }
+    const failedChapter = project.value?.chapters.find((ch) => ch.chapter_number === chapterNumber)
+    if (failedChapter) {
+      upsertChapterInProjectCache(props.id, {
+        ...failedChapter,
+        generation_status: 'failed',
+        generation_step: failureMessage,
+        status_updated_at: new Date().toISOString(),
+      })
     }
 
     globalAlert.showError(failureMessage, '生成失败')
@@ -1160,6 +1346,17 @@ const confirmVersionSelection = async (payload?: { editedContent?: string | null
   if (targetChapterNumber === null) {
     return
   }
+
+  if (!availableVersions.value?.[selectedVersionIndex.value]?.content) {
+    const recommendedIndex = resolveRecommendedVersionIndex(
+      selectedChapter.value,
+      availableVersions.value,
+    )
+    if (recommendedIndex !== null) {
+      selectedVersionIndex.value = recommendedIndex
+    }
+  }
+
   if (!availableVersions.value?.[selectedVersionIndex.value]?.content) {
     return
   }
@@ -1231,6 +1428,9 @@ const saveChapterChanges = async (updatedChapter: ChapterOutline) => {
 
 const evaluateChapter = async () => {
   if (selectedChapterNumber.value !== null) {
+    const targetChapter = selectedChapterNumber.value
+    evaluatingChapter.value = targetChapter
+
     // 保存原始状态，用于失败时恢复
     let previousStatus:
       | 'not_generated'
@@ -1248,14 +1448,14 @@ const evaluateChapter = async () => {
       // 在本地更新章节状态为evaluating以立即反映在UI上
       if (project.value?.chapters) {
         const chapter = project.value.chapters.find(
-          (ch) => ch.chapter_number === selectedChapterNumber.value,
+          (ch) => ch.chapter_number === targetChapter,
         )
         if (chapter) {
           previousStatus = chapter.generation_status // 保存原状态
           chapter.generation_status = 'evaluating'
         }
       }
-      await evaluateChapterMutation.mutateAsync(selectedChapterNumber.value)
+      await evaluateChapterMutation.mutateAsync(targetChapter)
 
       // 评审完成后，状态会通过store和轮询更新，这里不需要额外操作
       globalAlert.showToast('章节评审结果已生成', 'success')
@@ -1265,7 +1465,7 @@ const evaluateChapter = async () => {
       // 错误状态下恢复章节状态为原始状态
       if (project.value?.chapters) {
         const chapter = project.value.chapters.find(
-          (ch) => ch.chapter_number === selectedChapterNumber.value,
+          (ch) => ch.chapter_number === targetChapter,
         )
         if (chapter && previousStatus) {
           chapter.generation_status = previousStatus // 恢复为原状态
@@ -1276,6 +1476,10 @@ const evaluateChapter = async () => {
         `评审章节失败: ${error instanceof Error ? error.message : '未知错误'}`,
         '评审失败',
       )
+    } finally {
+      if (evaluatingChapter.value === targetChapter) {
+        evaluatingChapter.value = null
+      }
     }
   }
 }

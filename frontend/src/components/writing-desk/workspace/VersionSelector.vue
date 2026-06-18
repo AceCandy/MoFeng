@@ -117,13 +117,14 @@
           <div
             :ref="(el) => registerVersionCardRef(el, index)"
             @click="$emit('update:selectedVersionIndex', index)"
+            @dblclick="$emit('showVersionDetail', index)"
             @keydown.enter.prevent="$emit('update:selectedVersionIndex', index)"
             @keydown.space.prevent="$emit('update:selectedVersionIndex', index)"
             @keydown="handleVersionRadioKeydown($event, index)"
             role="radio"
             :tabindex="selectedVersionIndex === index ? 0 : -1"
             :aria-checked="selectedVersionIndex === index"
-            :aria-label="`候选版本 ${index + 1}`"
+            :aria-label="`候选版本 ${index + 1}，双击查看详情`"
             :aria-posinset="index + 1"
             :aria-setsize="availableVersions.length"
             :class="[
@@ -176,23 +177,6 @@
               </div>
             </div>
           </div>
-          <div class="version-card__actions">
-            <button
-              type="button"
-              @click="$emit('showVersionDetail', index)"
-              class="md-btn md-btn-text md-ripple version-card__details-action flex items-center gap-1"
-            >
-              <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
-                <path
-                  fill-rule="evenodd"
-                  d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-                  clip-rule="evenodd"
-                ></path>
-              </svg>
-              查看详情
-            </button>
-          </div>
         </div>
       </div>
 
@@ -210,34 +194,6 @@
       </div>
 
       <div class="version-actions">
-        <button
-          type="button"
-          @click="$emit('evaluateChapter')"
-          :disabled="
-            evaluatingChapter === selectedChapter?.chapter_number || availableVersions.length < 2
-          "
-          class="md-btn md-btn-tonal md-ripple disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          <svg
-            v-if="evaluatingChapter === selectedChapter?.chapter_number"
-            class="w-4 h-4 animate-spin"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path
-              fill-rule="evenodd"
-              d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-              clip-rule="evenodd"></path>
-          </svg>
-          {{ evaluatingChapter === selectedChapter?.chapter_number ? '评审中...' : 'AI 评审' }}
-        </button>
-        <button
-          type="button"
-          @click="openDraftEdit"
-          class="md-btn md-btn-outlined md-ripple flex items-center justify-center"
-        >
-          编辑草稿
-        </button>
         <button
           type="button"
           @click="confirmDraft"
@@ -649,21 +605,10 @@ const parseMarkdown = (text: string): string => {
   min-width: 0;
 }
 
-.version-card__actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-}
-
-.version-card__details-action {
-  min-height: 44px;
-  padding-inline: 0;
-}
-
 .version-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   gap: var(--md-spacing-3);
   margin-top: var(--md-spacing-4);
 }

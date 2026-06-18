@@ -162,10 +162,10 @@ SUMMARIZE_RECENT_CHAPTERS_PROMPT = """\
 class KnowledgeRetrievalService:
     """
     知识检索服务
-    
+
     实现两层RAG：检索→过滤→注入
     """
-    
+
     def __init__(
         self,
         db: Session,
@@ -175,7 +175,7 @@ class KnowledgeRetrievalService:
         self.db = db
         self.llm_service = llm_service
         self.vector_store_service = vector_store_service
-    
+
     async def retrieve_and_filter(
         self,
         project_id: str,
@@ -187,7 +187,7 @@ class KnowledgeRetrievalService:
     ) -> FilteredContext:
         """
         检索并过滤知识
-        
+
         Args:
             project_id: 项目ID
             chapter_number: 章节号
@@ -195,20 +195,20 @@ class KnowledgeRetrievalService:
             pov_character: POV角色（用于可见性过滤）
             user_guidance: 用户指导
             top_k: 检索数量
-            
+
         Returns:
             FilteredContext
         """
         # 1. 获取章节蓝图信息
         blueprint = self._get_chapter_blueprint(project_id, chapter_number)
-        
+
         # 2. 生成检索关键词
         queries = await self._generate_search_queries(
             blueprint=blueprint,
             user_guidance=user_guidance,
             user_id=user_id
         )
-        
+
         # 3. 执行向量检索
         retrieved = await self._retrieve_from_vector_store(
             project_id=project_id,
@@ -216,13 +216,13 @@ class KnowledgeRetrievalService:
             top_k=top_k,
             user_id=user_id,
         )
-        
+
         # 4. 获取前文摘要
         memory = self.db.query(ProjectMemory).filter(
             ProjectMemory.project_id == project_id
         ).first()
         global_summary = memory.global_summary if memory else ""
-        
+
         # 5. 过滤和结构化
         filtered = await self._filter_knowledge(
             retrieved=retrieved,
@@ -251,7 +251,7 @@ class KnowledgeRetrievalService:
         }
 
         return filtered
-    
+
     async def get_chapter_context(
         self,
         project_id: str,
@@ -262,20 +262,20 @@ class KnowledgeRetrievalService:
     ) -> Dict[str, Any]:
         """
         获取章节写作上下文
-        
+
         整合多个来源的信息，为章节生成提供完整上下文。
         """
         context = {}
-        
+
         # 1. 获取项目记忆
         memory = self.db.query(ProjectMemory).filter(
             ProjectMemory.project_id == project_id
         ).first()
-        
+
         if memory:
             context["global_summary"] = memory.global_summary
             context["plot_arcs"] = memory.plot_arcs
-        
+
         # 2. 获取章节蓝图
         blueprint = self._get_chapter_blueprint(project_id, chapter_number)
         if blueprint:
@@ -288,7 +288,7 @@ class KnowledgeRetrievalService:
                 "brief_summary": blueprint.brief_summary,
                 "mission_constraints": blueprint.mission_constraints
             }
-        
+
         # 3. 获取前几章内容摘要
         if include_recent_chapters > 0:
             recent_summaries = await self._get_recent_chapter_summaries(
@@ -297,7 +297,7 @@ class KnowledgeRetrievalService:
                 count=include_recent_chapters
             )
             context["recent_chapters"] = recent_summaries
-        
+
         # 4. 检索相关知识
         if self.vector_store_service:
             filtered = await self.retrieve_and_filter(
@@ -313,14 +313,14 @@ class KnowledgeRetrievalService:
                 "narrative_techniques": filtered.narrative_techniques,
                 "warnings": filtered.warnings
             }
-        
+
         # 5. 获取角色状态
         character_state = await self._get_character_state(project_id)
         if character_state:
             context["character_state"] = character_state
-        
+
         return context
-    
+
     async def generate_chapter_summary(
         self,
         project_id: str,
@@ -329,26 +329,26 @@ class KnowledgeRetrievalService:
     ) -> Optional[str]:
         """
         生成当前章节的写作摘要
-        
+
         基于前文内容和章节蓝图，生成针对性的写作摘要。
         """
         # 获取章节蓝图
         blueprint = self._get_chapter_blueprint(project_id, chapter_number)
         if not blueprint:
             return None
-        
+
         # 获取前几章内容
         recent_chapters = await self._get_recent_chapter_content(
             project_id=project_id,
             current_chapter=chapter_number,
             count=3
         )
-        
+
         combined_text = "\n\n---\n\n".join([
             f"第{ch['number']}章：\n{ch['content'][:2000]}..."
             for ch in recent_chapters
         ])
-        
+
         prompt = SUMMARIZE_RECENT_CHAPTERS_PROMPT.format(
             combined_text=combined_text,
             chapter_number=chapter_number,
@@ -360,7 +360,7 @@ class KnowledgeRetrievalService:
             twist_level=blueprint.cognitive_twist_level or 1,
             brief_summary=blueprint.brief_summary or ""
         )
-        
+
         try:
             response = await self.llm_service.generate(
                 prompt=prompt,
@@ -372,7 +372,7 @@ class KnowledgeRetrievalService:
         except Exception as e:
             logger.error(f"生成章节摘要失败: {e}")
             return None
-    
+
     def _get_chapter_blueprint(
         self,
         project_id: str,
@@ -383,7 +383,7 @@ class KnowledgeRetrievalService:
             ChapterBlueprint.project_id == project_id,
             ChapterBlueprint.chapter_number == chapter_number
         ).first()
-    
+
     async def _generate_search_queries(
         self,
         blueprint: Optional[ChapterBlueprint],
@@ -393,7 +393,7 @@ class KnowledgeRetrievalService:
         """生成检索关键词"""
         if not blueprint:
             return []
-        
+
         prompt = KNOWLEDGE_QUERY_PROMPT.format(
             chapter_number=blueprint.chapter_number,
             chapter_title=blueprint.brief_summary or "",
@@ -405,7 +405,7 @@ class KnowledgeRetrievalService:
             brief_summary=blueprint.brief_summary or "",
             user_guidance=user_guidance or ""
         )
-        
+
         try:
             response = await self.llm_service.generate(
                 prompt=prompt,
@@ -413,7 +413,7 @@ class KnowledgeRetrievalService:
                 max_tokens=500,
                 temperature=0.5
             )
-            
+
             if response:
                 # 解析关键词
                 queries = [
@@ -424,9 +424,9 @@ class KnowledgeRetrievalService:
                 return queries[:5]
         except Exception as e:
             logger.error(f"生成检索关键词失败: {e}")
-        
+
         return []
-    
+
     async def _retrieve_from_vector_store(
         self,
         project_id: str,
@@ -437,7 +437,7 @@ class KnowledgeRetrievalService:
         """从向量库检索"""
         if not self.vector_store_service or not queries:
             return []
-        
+
         retrieved = []
         for query in queries:
             try:
@@ -474,7 +474,7 @@ class KnowledgeRetrievalService:
                     ))
             except Exception as e:
                 logger.error(f"向量检索失败: {e}")
-        
+
         # 去重
         seen = set()
         unique = []
@@ -482,9 +482,9 @@ class KnowledgeRetrievalService:
             if r.content not in seen:
                 seen.add(r.content)
                 unique.append(r)
-        
+
         return unique
-    
+
     async def _filter_knowledge(
         self,
         retrieved: List[RetrievedKnowledge],
@@ -502,13 +502,13 @@ class KnowledgeRetrievalService:
                 narrative_techniques=[],
                 warnings=[]
             )
-        
+
         # 格式化检索内容
         retrieved_texts = "\n\n".join([
             f"[来源: {r.source}, 相关度: {r.relevance_score:.2f}]\n{r.content}"
             for r in retrieved[:10]
         ])
-        
+
         prompt = KNOWLEDGE_FILTER_PROMPT.format(
             retrieved_texts=retrieved_texts,
             chapter_number=blueprint.chapter_number if blueprint else 0,
@@ -517,7 +517,7 @@ class KnowledgeRetrievalService:
             pov_character=pov_character or "主角",
             global_summary=global_summary[:2000] if global_summary else ""
         )
-        
+
         try:
             response = await self.llm_service.generate(
                 prompt=prompt,
@@ -525,7 +525,7 @@ class KnowledgeRetrievalService:
                 max_tokens=2000,
                 temperature=0.3
             )
-            
+
             if response:
                 import json
                 response = response.strip()
@@ -533,7 +533,7 @@ class KnowledgeRetrievalService:
                     response = response.split("```")[1]
                     if response.startswith("json"):
                         response = response[4:]
-                
+
                 data = json.loads(response)
                 return FilteredContext(
                     plot_fuel=data.get("plot_fuel", []),
@@ -544,7 +544,7 @@ class KnowledgeRetrievalService:
                 )
         except Exception as e:
             logger.error(f"过滤知识失败: {e}")
-        
+
         return FilteredContext(
             plot_fuel=[],
             character_info=[],
@@ -552,7 +552,7 @@ class KnowledgeRetrievalService:
             narrative_techniques=[],
             warnings=[]
         )
-    
+
     async def _get_recent_chapter_summaries(
         self,
         project_id: str,
@@ -561,12 +561,12 @@ class KnowledgeRetrievalService:
     ) -> List[Dict[str, Any]]:
         """获取前几章摘要"""
         from ..models.project_memory import ChapterSnapshot
-        
+
         snapshots = self.db.query(ChapterSnapshot).filter(
             ChapterSnapshot.project_id == project_id,
             ChapterSnapshot.chapter_number < current_chapter
         ).order_by(ChapterSnapshot.chapter_number.desc()).limit(count).all()
-        
+
         return [
             {
                 "chapter_number": s.chapter_number,
@@ -574,7 +574,7 @@ class KnowledgeRetrievalService:
             }
             for s in reversed(snapshots)
         ]
-    
+
     async def _get_recent_chapter_content(
         self,
         project_id: str,
@@ -583,12 +583,12 @@ class KnowledgeRetrievalService:
     ) -> List[Dict[str, Any]]:
         """获取前几章内容"""
         from ..models.novel import Chapter, ChapterVersion
-        
+
         chapters = self.db.query(Chapter).filter(
             Chapter.project_id == project_id,
             Chapter.chapter_number < current_chapter
         ).order_by(Chapter.chapter_number.desc()).limit(count).all()
-        
+
         result = []
         for ch in reversed(chapters):
             content = ""
@@ -596,24 +596,38 @@ class KnowledgeRetrievalService:
                 content = ch.selected_version.content
             elif ch.versions:
                 content = ch.versions[-1].content
-            
+
             result.append({
                 "number": ch.chapter_number,
                 "content": content
             })
-        
+
         return result
-    
+
     async def _get_character_state(self, project_id: str) -> Optional[str]:
         """获取角色状态"""
         from ..models.memory_layer import CharacterState
-        
+
         states = self.db.query(CharacterState).filter(
             CharacterState.project_id == project_id,
-            CharacterState.character_name == "__all__"
-        ).order_by(CharacterState.chapter_number.desc()).first()
-        
-        if states and states.extra:
-            return states.extra.get("raw_state_text")
-        
-        return None
+        ).order_by(
+            CharacterState.chapter_number.desc(),
+            CharacterState.id.desc(),
+        ).limit(50).all()
+
+        if not states:
+            return None
+
+        latest_chapter = states[0].chapter_number
+        state_texts: list[str] = []
+        seen_texts: set[str] = set()
+        for state in states:
+            if state.chapter_number != latest_chapter:
+                break
+            raw_text = (state.extra or {}).get("raw_state_text")
+            if raw_text and raw_text not in seen_texts:
+                # 兼容旧的 __all__ 占位记录和新的逐角色记录，避免生成上下文丢失角色状态。
+                state_texts.append(raw_text)
+                seen_texts.add(raw_text)
+
+        return "\n\n".join(state_texts) if state_texts else None

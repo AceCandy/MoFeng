@@ -125,7 +125,7 @@ MAX_RETRIES=30
 RETRY_COUNT=0
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if curl -f http://127.0.0.1:${APP_PORT:-80}/api/health > /dev/null 2>&1; then
+    if curl -f http://127.0.0.1:${APP_PORT:-6100}/api/health > /dev/null 2>&1; then
         echo -e "${GREEN}✓ 服务健康检查通过${NC}"
         break
     else

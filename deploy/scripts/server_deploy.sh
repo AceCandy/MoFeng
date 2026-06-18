@@ -101,7 +101,7 @@ SECRET_KEY=${SECRET_KEY}
 ENVIRONMENT=production
 DEBUG=false
 LOGGING_LEVEL=INFO
-APP_PORT=80
+APP_PORT=6100
 
 # 数据库配置（使用 SQLite，无需额外配置）
 DB_PROVIDER=sqlite
@@ -194,7 +194,7 @@ RETRY_COUNT=0
 HEALTH_OK=false
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if curl -f http://127.0.0.1:80/api/health > /dev/null 2>&1; then
+    if curl -f http://127.0.0.1:6100/api/health > /dev/null 2>&1; then
         echo -e "${GREEN}✓ 服务健康检查通过${NC}"
         HEALTH_OK=true
         break
@@ -212,7 +212,7 @@ if [ "$HEALTH_OK" = false ]; then
     docker compose logs --tail=50 app
     echo ""
     echo "可能的原因："
-    echo "1. 端口 80 被占用"
+    echo "1. 端口 6100 被占用"
     echo "2. 数据库配置错误"
     echo "3. 依赖安装失败"
     echo ""
@@ -228,8 +228,8 @@ echo "========================================="
 echo ""
 echo "访问信息："
 echo "  前端地址: http://$(curl -s ifconfig.me)"
-echo "  本地访问: http://localhost"
-echo "  API 文档: http://localhost/api/docs"
+echo "  本地访问: http://localhost:6100"
+echo "  API 文档: http://localhost:6100/api/docs"
 echo ""
 echo "管理员账号："
 echo "  用户名: admin"

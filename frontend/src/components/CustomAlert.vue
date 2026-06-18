@@ -190,7 +190,7 @@ useDialogA11y({
   font-weight: bold;
   line-height: 1;
   transform: rotate(-4deg); /* 盖印的随机倾斜感 */
-  transition: all 0.3s ease;
+  transition: border-color 0.3s ease, color 0.3s ease, background-color 0.3s ease, transform 0.3s ease;
 }
 
 /* 印章配色体系 */
@@ -270,7 +270,7 @@ useDialogA11y({
   font-family: var(--md-font-serif);
   font-weight: 600;
   color: var(--md-on-surface-variant) !important;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .custom-alert-btn-cancel:hover {
@@ -286,7 +286,7 @@ useDialogA11y({
   background-color: transparent !important;
   color: var(--md-on-surface) !important;
   box-shadow: 1.5px 1.5px 0px var(--md-outline);
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .custom-alert-btn-confirm:hover {

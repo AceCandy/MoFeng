@@ -17,14 +17,14 @@ import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 
 const frontendHost = process.env.FRONTEND_HOST || '0.0.0.0'
-const frontendPort = Number(process.env.FRONTEND_PORT || '5173')
+const frontendPort = Number(process.env.FRONTEND_PORT || '6100')
 const frontendHmrHost = process.env.FRONTEND_HMR_HOST || 'localhost'
 const frontendAllowedHosts = (process.env.FRONTEND_ALLOWED_HOSTS || 'test.acecandy.cn')
   .split(',')
   .map(host => host.trim())
   .filter(Boolean)
 const backendProxyHost = process.env.BACKEND_PROXY_HOST || '127.0.0.1'
-const backendPort = Number(process.env.BACKEND_PORT || '8000')
+const backendPort = Number(process.env.BACKEND_PORT || '6101')
 const isProduction = process.env.NODE_ENV === 'production'
 const enableVueDevTools = !isProduction && process.env.VITE_ENABLE_VUE_DEVTOOLS === 'true'
 

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import selectinload
 from sqlalchemy.pool import StaticPool
 
-from app.api.routers.writer import _build_generation_failure_detail
+from app.api.routers.writer import _build_evaluation_failure_detail, _build_generation_failure_detail
 from app.db.base import Base
 from app.models import Chapter, ChapterOutline, ChapterVersion, NovelBlueprint, NovelProject
 from app.models.user import User
@@ -30,6 +30,14 @@ def _writer_generate_block() -> str:
     source = WRITER_ROUTER_SOURCE.read_text(encoding="utf-8")
     return source.split('@router.post("/novels/{project_id}/chapters/generate"', 1)[1].split(
         "\n\n@router.post(\"/novels/{project_id}/chapters/select\"",
+        1,
+    )[0]
+
+
+def _writer_evaluate_block() -> str:
+    source = WRITER_ROUTER_SOURCE.read_text(encoding="utf-8")
+    return source.split('@router.post("/novels/{project_id}/chapters/evaluate"', 1)[1].split(
+        "\n\n@router.post(\"/novels/{project_id}/chapters/finalize\"",
         1,
     )[0]
 
@@ -159,6 +167,25 @@ def test_generation_failure_detail_keeps_reason_and_redacts_secrets() -> None:
     assert detail == "生成章节失败：阶段 chapter_writing 使用的供应商缺少 API Key"
     assert "sk-live-secret" not in secret_detail
     assert "api_key=[已隐藏]" in secret_detail
+
+
+def test_evaluate_endpoint_records_failure_trace_and_detail() -> None:
+    block = _writer_evaluate_block()
+
+    assert "_build_evaluation_failure_detail(exc)" in block
+    assert 'node_key="quality_review"' in block
+    assert "trace_service.record_failure" in block
+    assert 'chapter.generation_step = f"evaluation_failed|error={failure_summary}"' in block
+    assert 'detail="评审失败，请重试"' not in block
+
+
+def test_evaluation_failure_detail_keeps_reason_and_redacts_secrets() -> None:
+    detail = _build_evaluation_failure_detail(RuntimeError("模型返回空结果"))
+    secret_detail = _build_evaluation_failure_detail(RuntimeError("token=sk-live-secret 调用失败"))
+
+    assert detail == "AI评审失败：模型返回空结果"
+    assert "sk-live-secret" not in secret_detail
+    assert "token=[已隐藏]" in secret_detail
 
 
 def test_langgraph_pipeline_preserves_stage_routing_keys() -> None:
@@ -368,6 +395,70 @@ def test_pipeline_builds_frontend_evaluation_payload_from_ai_review() -> None:
     assert payload["reason_for_choice"] == "选择版本2"
     assert payload["evaluation"]["version1"]["overall_review"] == "版本1较稳"
     assert payload["evaluation"]["version2"]["pros"] == ["冲突更强"]
+
+
+def test_review_refinement_summary_ignores_conflicting_global_recommendation() -> None:
+    summary = PipelineOrchestrator._build_review_refinement_summary(
+        {
+            "mode": "compare",
+            "best_version_index": 1,
+            "evaluation": "版本1更适合作为第一章正式稿。",
+            "suggestions": "沿用版本2的冲突强度，压缩铺垫。",
+            "final_recommendation": "最终建议采用版本1。",
+            "flaws": ["版本2个别句子略显堆叠"],
+            "version_reviews": [
+                {
+                    "version_number": 1,
+                    "overall_review": "版本1铺垫完整但冲突不足",
+                    "cons": ["节奏偏慢"],
+                },
+                {
+                    "version_number": 2,
+                    "overall_review": "版本2综合最佳，适合作为修复润色底稿",
+                    "cons": ["个别句子略显堆叠"],
+                },
+            ],
+        },
+        1,
+    )
+
+    assert "推荐采用第 2 个版本" in summary
+    assert "版本2综合最佳" in summary
+    assert "沿用版本2的冲突强度" in summary
+    assert "版本2个别句子略显堆叠" in summary
+    assert "版本1更适合" not in summary
+    assert "最终建议采用版本1" not in summary
+
+
+def test_frontend_evaluation_feedback_uses_structured_best_choice_when_text_conflicts() -> None:
+    feedback = PipelineOrchestrator._build_chapter_evaluation_feedback(
+        {
+            "ai_review": {
+                "mode": "compare",
+                "best_version_index": 1,
+                "evaluation": "版本1更适合作为第一章正式稿。",
+                "suggestions": "沿用版本2的冲突强度，压缩铺垫。",
+                "final_recommendation": "最终建议采用版本1。",
+                "version_reviews": [
+                    {
+                        "version_number": 1,
+                        "overall_review": "版本1铺垫完整但冲突不足",
+                    },
+                    {
+                        "version_number": 2,
+                        "overall_review": "版本2综合最佳，适合作为修复润色底稿",
+                    },
+                ],
+            }
+        }
+    )
+
+    payload = json.loads(feedback)
+
+    assert payload["best_choice"] == 2
+    assert payload["reason_for_choice"] == "版本2综合最佳，适合作为修复润色底稿"
+    assert "版本1更适合" not in payload["reason_for_choice"]
+    assert "最终建议采用版本1" not in payload["reason_for_choice"]
 
 
 def test_langgraph_pipeline_marks_chapter_failed_on_runtime_error() -> None:

@@ -12,14 +12,15 @@
 这是"生成后闭环"的核心服务，确保长程一致性。
 """
 import logging
-from typing import Optional, Dict, Any, List
-from datetime import datetime
+import re
+from typing import Optional, Dict, Any
 
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.project_memory import ProjectMemory, ChapterSnapshot
 from ..models.memory_layer import CharacterState
-from ..models.novel import Chapter, ChapterVersion, NovelProject
+from ..models.novel import BlueprintCharacter
 from ..models.chapter_blueprint import ChapterBlueprint
 from .chapter_word_count_settings import count_chapter_words
 from .llm_service import LLMService
@@ -140,20 +141,20 @@ GENERATE_CHAPTER_SUMMARY_PROMPT = """\
 class FinalizeService:
     """
     定稿服务
-    
+
     负责章节定稿后的一系列处理，包括更新记忆、状态和向量库。
     """
-    
+
     def __init__(
         self,
-        db: Session,
+        db: AsyncSession,
         llm_service: LLMService,
         vector_store_service: Optional[VectorStoreService] = None
     ):
         self.db = db
         self.llm_service = llm_service
         self.vector_store_service = vector_store_service
-    
+
     async def finalize_chapter(
         self,
         project_id: str,
@@ -164,29 +165,29 @@ class FinalizeService:
     ) -> Dict[str, Any]:
         """
         对指定章节执行定稿处理
-        
+
         Args:
             project_id: 项目ID
             chapter_number: 章节号
             chapter_text: 章节正文
             user_id: 用户ID
             skip_vector_update: 是否跳过向量库更新
-            
+
         Returns:
             包含更新结果的字典
         """
         logger.info(f"开始定稿处理: project={project_id}, chapter={chapter_number}")
-        
+
         result = {
             "success": True,
             "chapter_number": chapter_number,
             "updates": {}
         }
-        
+
         try:
             # 1. 获取或创建项目记忆
             project_memory = await self._get_or_create_project_memory(project_id)
-            
+
             # 2. 更新全局摘要
             new_summary = await self._update_global_summary(
                 chapter_text=chapter_text,
@@ -196,7 +197,7 @@ class FinalizeService:
             if new_summary:
                 project_memory.global_summary = new_summary
                 result["updates"]["global_summary"] = "updated"
-            
+
             # 3. 更新角色状态
             old_state = await self._get_character_state_text(project_id)
             new_state = await self._update_character_state(
@@ -207,7 +208,7 @@ class FinalizeService:
             if new_state:
                 await self._save_character_state(project_id, chapter_number, new_state)
                 result["updates"]["character_state"] = "updated"
-            
+
             # 4. 更新剧情线追踪
             new_plot_arcs = await self._update_plot_arcs(
                 chapter_text=chapter_text,
@@ -218,7 +219,7 @@ class FinalizeService:
             if new_plot_arcs:
                 project_memory.plot_arcs = new_plot_arcs
                 result["updates"]["plot_arcs"] = "updated"
-            
+
             # 5. 更新向量库
             if not skip_vector_update and self.vector_store_service:
                 await self._update_vector_store(
@@ -227,7 +228,7 @@ class FinalizeService:
                     chapter_text=chapter_text
                 )
                 result["updates"]["vector_store"] = "updated"
-            
+
             # 6. 创建章节快照
             chapter_summary = await self._generate_chapter_summary(
                 chapter_text=chapter_text,
@@ -244,31 +245,33 @@ class FinalizeService:
                 word_count=count_chapter_words(chapter_text)
             )
             result["updates"]["snapshot"] = "created"
-            
+
             # 7. 更新项目记忆的最后更新章节
             project_memory.last_updated_chapter = chapter_number
             project_memory.version += 1
-            
+
             # 8. 更新章节蓝图状态
             await self._update_blueprint_status(project_id, chapter_number)
-            
-            self.db.commit()
+
+            await self.db.commit()
             logger.info(f"定稿处理完成: project={project_id}, chapter={chapter_number}")
-            
+
         except Exception as e:
             logger.error(f"定稿处理失败: {e}")
-            self.db.rollback()
+            await self.db.rollback()
             result["success"] = False
             result["error"] = str(e)
-        
+
         return result
-    
+
     async def _get_or_create_project_memory(self, project_id: str) -> ProjectMemory:
         """获取或创建项目记忆"""
-        memory = self.db.query(ProjectMemory).filter(
-            ProjectMemory.project_id == project_id
-        ).first()
-        
+        memory = (
+            await self.db.execute(
+                select(ProjectMemory).where(ProjectMemory.project_id == project_id)
+            )
+        ).scalars().first()
+
         if not memory:
             memory = ProjectMemory(
                 project_id=project_id,
@@ -280,10 +283,10 @@ class FinalizeService:
                 }
             )
             self.db.add(memory)
-            self.db.flush()
-        
+            await self.db.flush()
+
         return memory
-    
+
     async def _update_global_summary(
         self,
         chapter_text: str,
@@ -295,7 +298,7 @@ class FinalizeService:
             chapter_text=chapter_text,
             global_summary=old_summary
         )
-        
+
         try:
             response = await self.llm_service.generate(
                 prompt=prompt,
@@ -307,23 +310,27 @@ class FinalizeService:
         except Exception as e:
             logger.error(f"更新全局摘要失败: {e}")
             return None
-    
+
     async def _get_character_state_text(self, project_id: str) -> str:
         """获取角色状态文本"""
         # 获取最新的角色状态记录
-        states = self.db.query(CharacterState).filter(
-            CharacterState.project_id == project_id
-        ).order_by(CharacterState.chapter_number.desc()).all()
-        
+        states = (
+            await self.db.execute(
+                select(CharacterState)
+                .where(CharacterState.project_id == project_id)
+                .order_by(CharacterState.chapter_number.desc())
+            )
+        ).scalars().all()
+
         if not states:
             return ""
-        
+
         # 按角色分组，取每个角色的最新状态
         latest_states = {}
         for state in states:
             if state.character_name not in latest_states:
                 latest_states[state.character_name] = state
-        
+
         # 格式化为文本
         text_parts = []
         for name, state in latest_states.items():
@@ -340,9 +347,9 @@ class FinalizeService:
             if state.new_knowledge:
                 parts.append(f"├──触发事件: {state.new_knowledge}")
             text_parts.append("\n".join(parts))
-        
+
         return "\n\n".join(text_parts)
-    
+
     async def _update_character_state(
         self,
         chapter_text: str,
@@ -354,7 +361,7 @@ class FinalizeService:
             chapter_text=chapter_text,
             old_state=old_state or "（暂无角色状态记录）"
         )
-        
+
         try:
             response = await self.llm_service.generate(
                 prompt=prompt,
@@ -366,7 +373,7 @@ class FinalizeService:
         except Exception as e:
             logger.error(f"更新角色状态失败: {e}")
             return None
-    
+
     async def _save_character_state(
         self,
         project_id: str,
@@ -374,18 +381,98 @@ class FinalizeService:
         state_text: str
     ):
         """保存角色状态到数据库"""
-        # 解析状态文本并保存
-        # 这里简化处理，实际可以做更精细的解析
-        # 创建一个通用的状态记录
-        state = CharacterState(
-            project_id=project_id,
-            character_id=0,  # 通用记录
-            character_name="__all__",
-            chapter_number=chapter_number,
-            extra={"raw_state_text": state_text}
+        characters = await self._get_blueprint_characters(project_id)
+        if not characters:
+            logger.warning("项目 %s 未配置蓝图角色，跳过角色状态外键表写入", project_id)
+            return
+
+        state_blocks = self._split_character_state_text(state_text)
+        matched_states: list[tuple[BlueprintCharacter, str]] = []
+        for character in characters:
+            block = self._match_character_state_block(character.name, state_blocks, state_text)
+            if block:
+                matched_states.append((character, block))
+
+        if not matched_states:
+            logger.warning("项目 %s 角色状态未匹配到蓝图角色，跳过角色状态外键表写入", project_id)
+            return
+
+        next_state_id = None
+        if self.db.get_bind().dialect.name == "sqlite":
+            # 兼容已创建过的 SQLite 旧表：BigInteger 主键不会自动递增，显式分配 id 避免定稿写入失败。
+            max_id = (
+                await self.db.execute(select(func.max(CharacterState.id)))
+            ).scalar()
+            next_state_id = (max_id or 0) + 1
+
+        for character, block in matched_states:
+            state_kwargs = {}
+            if next_state_id is not None:
+                state_kwargs["id"] = next_state_id
+                next_state_id += 1
+
+            # character_states.character_id 有外键约束，只能写入真实蓝图角色，原始文本仍保留在 extra 中。
+            state = CharacterState(
+                project_id=project_id,
+                character_id=character.id,
+                character_name=character.name,
+                chapter_number=chapter_number,
+                extra={"raw_state_text": block},
+                **state_kwargs,
+            )
+            self.db.add(state)
+
+    async def _get_blueprint_characters(self, project_id: str) -> list[BlueprintCharacter]:
+        """读取项目蓝图角色，用于给角色状态表提供合法外键。"""
+        result = await self.db.execute(
+            select(BlueprintCharacter)
+            .where(BlueprintCharacter.project_id == project_id)
+            .order_by(BlueprintCharacter.position, BlueprintCharacter.id)
         )
-        self.db.add(state)
-    
+        return list(result.scalars().all())
+
+    @staticmethod
+    def _split_character_state_text(state_text: str) -> dict[str, str]:
+        """按“角色名：”标题粗略切分 AI 返回的角色状态文档。"""
+        blocks: dict[str, list[str]] = {}
+        current_name: Optional[str] = None
+
+        heading_pattern = re.compile(r"^\s*(?![├│└#\-*])([^：:\n]{1,80})\s*[：:]\s*(.*)$")
+        for raw_line in state_text.splitlines():
+            line = raw_line.strip()
+            match = heading_pattern.match(line)
+            if match:
+                current_name = match.group(1).strip()
+                first_value = match.group(2).strip()
+                blocks.setdefault(current_name, [])
+                heading = f"{current_name}：{first_value}" if first_value else f"{current_name}："
+                blocks[current_name].append(heading)
+                continue
+
+            if current_name:
+                blocks[current_name].append(raw_line)
+
+        return {
+            name: "\n".join(part for part in parts if part.strip()).strip()
+            for name, parts in blocks.items()
+        }
+
+    @staticmethod
+    def _match_character_state_block(
+        character_name: str,
+        state_blocks: dict[str, str],
+        fallback_text: str,
+    ) -> Optional[str]:
+        """优先按标题精确匹配；标题解析失败时退回到全文包含匹配。"""
+        for state_name, block in state_blocks.items():
+            if state_name == character_name or character_name in state_name:
+                return block or fallback_text
+
+        if not state_blocks and character_name in fallback_text:
+            return fallback_text
+
+        return None
+
     async def _update_plot_arcs(
         self,
         chapter_text: str,
@@ -395,13 +482,13 @@ class FinalizeService:
     ) -> Optional[Dict]:
         """更新剧情线追踪"""
         import json
-        
+
         prompt = UPDATE_PLOT_ARCS_PROMPT.format(
             chapter_text=chapter_text,
             chapter_number=chapter_number,
             plot_arcs=json.dumps(old_plot_arcs, ensure_ascii=False, indent=2)
         )
-        
+
         try:
             response = await self.llm_service.generate(
                 prompt=prompt,
@@ -421,9 +508,9 @@ class FinalizeService:
             logger.error(f"解析剧情线JSON失败: {e}")
         except Exception as e:
             logger.error(f"更新剧情线失败: {e}")
-        
+
         return None
-    
+
     async def _update_vector_store(
         self,
         project_id: str,
@@ -433,7 +520,7 @@ class FinalizeService:
         """更新向量库"""
         if not self.vector_store_service:
             return
-        
+
         try:
             # 将章节文本分块并存入向量库
             await self.vector_store_service.add_chapter_to_store(
@@ -443,7 +530,7 @@ class FinalizeService:
             )
         except Exception as e:
             logger.error(f"更新向量库失败: {e}")
-    
+
     async def _generate_chapter_summary(
         self,
         chapter_text: str,
@@ -455,7 +542,7 @@ class FinalizeService:
             chapter_text=chapter_text[:5000],  # 限制长度
             chapter_number=chapter_number
         )
-        
+
         try:
             response = await self.llm_service.generate(
                 prompt=prompt,
@@ -467,7 +554,7 @@ class FinalizeService:
         except Exception as e:
             logger.error(f"生成章节摘要失败: {e}")
             return None
-    
+
     async def _create_chapter_snapshot(
         self,
         project_id: str,
@@ -489,17 +576,21 @@ class FinalizeService:
             word_count=word_count
         )
         self.db.add(snapshot)
-    
+
     async def _update_blueprint_status(self, project_id: str, chapter_number: int):
         """更新章节蓝图状态"""
-        blueprint = self.db.query(ChapterBlueprint).filter(
-            ChapterBlueprint.project_id == project_id,
-            ChapterBlueprint.chapter_number == chapter_number
-        ).first()
-        
+        blueprint = (
+            await self.db.execute(
+                select(ChapterBlueprint).where(
+                    ChapterBlueprint.project_id == project_id,
+                    ChapterBlueprint.chapter_number == chapter_number,
+                )
+            )
+        ).scalars().first()
+
         if blueprint:
             blueprint.is_finalized = True
-    
+
     async def get_finalize_context(
         self,
         project_id: str,
@@ -507,19 +598,28 @@ class FinalizeService:
     ) -> Dict[str, Any]:
         """
         获取定稿上下文信息
-        
+
         用于在生成章节时提供上下文参考。
         """
-        memory = self.db.query(ProjectMemory).filter(
-            ProjectMemory.project_id == project_id
-        ).first()
-        
+        memory = (
+            await self.db.execute(
+                select(ProjectMemory).where(ProjectMemory.project_id == project_id)
+            )
+        ).scalars().first()
+
         # 获取最近的章节快照
-        recent_snapshots = self.db.query(ChapterSnapshot).filter(
-            ChapterSnapshot.project_id == project_id,
-            ChapterSnapshot.chapter_number < chapter_number
-        ).order_by(ChapterSnapshot.chapter_number.desc()).limit(3).all()
-        
+        recent_snapshots = (
+            await self.db.execute(
+                select(ChapterSnapshot)
+                .where(
+                    ChapterSnapshot.project_id == project_id,
+                    ChapterSnapshot.chapter_number < chapter_number,
+                )
+                .order_by(ChapterSnapshot.chapter_number.desc())
+                .limit(3)
+            )
+        ).scalars().all()
+
         return {
             "global_summary": memory.global_summary if memory else None,
             "plot_arcs": memory.plot_arcs if memory else None,

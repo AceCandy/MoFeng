@@ -51,9 +51,9 @@ uvicorn app.main:app --reload
 
 Default URLs:
 
-- API: `http://127.0.0.1:8000`
-- Swagger: `http://127.0.0.1:8000/docs`
-- Health: `http://127.0.0.1:8000/api/health`
+- API: `http://127.0.0.1:6101`
+- Swagger: `http://127.0.0.1:6101/docs`
+- Health: `http://127.0.0.1:6101/api/health`
 
 ### 2.3 Frontend
 
@@ -65,7 +65,7 @@ npm run dev
 
 Default URL:
 
-- Frontend: `http://127.0.0.1:5173`
+- Frontend: `http://127.0.0.1:6100`
 
 ### 2.4 Root-level helper scripts
 
@@ -94,7 +94,7 @@ Helper script behavior:
 - If `frontend/node_modules` is missing, frontend dependencies are installed automatically.
 - If `backend/.venv` is missing, the backend virtual environment is created automatically.
 - If the selected Python environment is missing `uvicorn`, backend dependencies from `backend/requirements.txt` are installed automatically.
-- If default ports `8000` or `5173` are occupied, the scripts switch to the next available port.
+- If default ports `6101` or `6100` are occupied, the scripts switch to the next available port.
 - Frontend and backend listen on `0.0.0.0`, so the dev environment can be opened from other devices on the local network.
 - After startup, the scripts print the local frontend URL and the effective local API proxy target.
 
@@ -139,7 +139,7 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build
 
 Default access URL:
 
-- `http://127.0.0.1:8088`
+- `http://127.0.0.1:6100`
 
 The actual external port comes from `APP_PORT` in `deploy/.env`.
 
@@ -278,8 +278,8 @@ If the frontend opens but keeps loading, check these first:
 
 Check:
 
-- `http://127.0.0.1:8000/docs`
-- `http://127.0.0.1:8000/api/health`
+- `http://127.0.0.1:6101/docs`
+- `http://127.0.0.1:6101/api/health`
 
 The frontend depends on backend APIs during startup and route restoration.
 

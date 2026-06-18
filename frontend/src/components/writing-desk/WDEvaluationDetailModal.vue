@@ -39,23 +39,23 @@
               <p class="md-body-small mt-2 m3-eval-best-choice-reason">{{ parsedEvaluation.reason_for_choice }}</p>
             </div>
             <div class="space-y-4">
-              <div v-for="(evalResult, versionName) in parsedEvaluation.evaluation" :key="versionName" class="md-card md-card-outlined p-4 m3-eval-version-card">
-                <h5 class="md-title-medium font-semibold mb-2">版本 {{ String(versionName).replace('version', '') }} 评估</h5>
+              <div v-for="item in sortedEvaluationEntries" :key="item.key" class="md-card md-card-outlined p-4 m3-eval-version-card">
+                <h5 class="md-title-medium font-semibold mb-2">版本 {{ item.versionNumber }} 评估</h5>
                 <div class="prose prose-sm max-w-none md-on-surface space-y-3">
                   <div>
                     <p class="font-semibold">综合评价:</p>
-                    <p>{{ evalResult.overall_review }}</p>
+                    <p>{{ item.result.overall_review }}</p>
                   </div>
                   <div>
                     <p class="font-semibold">优点:</p>
                     <ul class="list-disc pl-5 space-y-1">
-                      <li v-for="(pro, i) in evalResult.pros" :key="`pro-${i}`">{{ pro }}</li>
+                      <li v-for="(pro, i) in item.result.pros" :key="`pro-${i}`">{{ pro }}</li>
                     </ul>
                   </div>
                   <div>
                     <p class="font-semibold">缺点:</p>
                     <ul class="list-disc pl-5 space-y-1">
-                      <li v-for="(con, i) in evalResult.cons" :key="`con-${i}`">{{ con }}</li>
+                      <li v-for="(con, i) in item.result.cons" :key="`con-${i}`">{{ con }}</li>
                     </ul>
                   </div>
                 </div>
@@ -132,6 +132,28 @@ const parsedEvaluation = computed(() => {
 const canOptimizeRecommendedVersion = computed(() => {
   const bestChoice = Number(parsedEvaluation.value?.best_choice)
   return Number.isInteger(bestChoice) && bestChoice > 0
+})
+
+const getEvaluationVersionNumber = (versionKey: string | number): number => {
+  const normalizedKey = String(versionKey)
+  const match = normalizedKey.match(/\d+/)
+  return match ? Number.parseInt(match[0], 10) : 0
+}
+
+const sortedEvaluationEntries = computed(() => {
+  const evaluation = parsedEvaluation.value?.evaluation
+  if (!evaluation || typeof evaluation !== 'object' || Array.isArray(evaluation)) {
+    return []
+  }
+
+  // 多版本编号必须和候选版本数组一致：version1 对应 availableVersions[0]。
+  return Object.entries(evaluation)
+    .map(([key, result]) => ({
+      key,
+      result: result as Record<string, any>,
+      versionNumber: getEvaluationVersionNumber(key),
+    }))
+    .sort((a, b) => a.versionNumber - b.versionNumber)
 })
 
 const parseMarkdown = (text: string | null): string => {

@@ -211,6 +211,92 @@ async def test_stream_and_collect_passes_provider_type_to_llm_client(monkeypatch
 
 
 @pytest.mark.asyncio
+async def test_stream_and_collect_retries_transient_concurrency_limit(monkeypatch):
+    class FakeLLMClient:
+        attempts = 0
+
+        def __init__(self, *, api_key, base_url, provider_type):
+            pass
+
+        async def stream_chat(self, **kwargs):
+            FakeLLMClient.attempts += 1
+            if FakeLLMClient.attempts == 1:
+                raise RuntimeError("Concurrency limit exceeded for account, please retry later")
+            yield {"content": "ok", "finish_reason": "stop"}
+
+    sleep_calls = []
+
+    async def fake_sleep(delay):
+        sleep_calls.append(delay)
+
+    service = LLMService(AsyncMock())
+    service._resolve_llm_config = AsyncMock(
+        return_value={
+            "api_key": "test-key",
+            "base_url": "https://api.example.test/v1",
+            "model": "chat-model",
+            "provider_type": "openai_compatible",
+        }
+    )
+    service.usage_service = SimpleNamespace(increment=AsyncMock())
+    monkeypatch.setattr("app.services.llm_service.LLMClient", FakeLLMClient)
+    monkeypatch.setattr("asyncio.sleep", fake_sleep)
+
+    response = await service._stream_and_collect(
+        [{"role": "user", "content": "hello"}],
+        temperature=0.2,
+        user_id=7,
+        timeout=30.0,
+    )
+
+    assert response == "ok"
+    assert FakeLLMClient.attempts == 2
+    assert len(sleep_calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_stream_and_collect_does_not_retry_non_retryable_errors(monkeypatch):
+    class FakeLLMClient:
+        attempts = 0
+
+        def __init__(self, *, api_key, base_url, provider_type):
+            pass
+
+        async def stream_chat(self, **kwargs):
+            FakeLLMClient.attempts += 1
+            raise RuntimeError("invalid API Key")
+            yield {"content": "", "finish_reason": None}
+
+    sleep_calls = []
+
+    async def fake_sleep(delay):
+        sleep_calls.append(delay)
+
+    service = LLMService(AsyncMock())
+    service._resolve_llm_config = AsyncMock(
+        return_value={
+            "api_key": "bad-key",
+            "base_url": "https://api.example.test/v1",
+            "model": "chat-model",
+            "provider_type": "openai_compatible",
+        }
+    )
+    monkeypatch.setattr("app.services.llm_service.LLMClient", FakeLLMClient)
+    monkeypatch.setattr("asyncio.sleep", fake_sleep)
+
+    with pytest.raises(RuntimeError, match="invalid API Key"):
+        await service._stream_and_collect(
+            [{"role": "user", "content": "hello"}],
+            temperature=0.2,
+            user_id=7,
+            timeout=30.0,
+        )
+
+    assert FakeLLMClient.attempts == 1
+    assert sleep_calls == []
+
+
+@pytest.mark.asyncio
 async def test_get_embedding_does_not_fallback_to_legacy_user_level_values():
     service = LLMService(AsyncMock())
     _disable_model_routes(service)

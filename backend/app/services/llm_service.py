@@ -1,6 +1,8 @@
 # AIMETA P=LLM服务_大模型调用封装|R=API调用_流式生成|NR=不含业务逻辑|E=LLMService|X=internal|A=服务类|D=openai,httpx|S=net|RD=./README.ai
+import asyncio
 import logging
 import os
+import random
 from typing import Any, AsyncGenerator, Dict, List, Optional
 from urllib.parse import urlparse
 
@@ -21,6 +23,29 @@ from ..services.usage_service import UsageService
 from ..utils.llm_tool import ChatMessage, LLMClient
 
 logger = logging.getLogger(__name__)
+LLM_RETRY_MAX_ATTEMPTS = 3
+LLM_RETRY_BASE_DELAY_SECONDS = 1.0
+LLM_RETRY_MAX_DELAY_SECONDS = 8.0
+LLM_RETRYABLE_STATUS_CODES = {408, 409, 429, 500, 502, 503, 504}
+LLM_RETRYABLE_ERROR_KEYWORDS = (
+    "concurrency limit exceeded",
+    "please retry later",
+    "rate limit",
+    "too many requests",
+    "temporarily unavailable",
+    "temporary unavailable",
+    "overloaded",
+)
+LLM_NON_RETRYABLE_ERROR_KEYWORDS = (
+    "api key",
+    "invalid key",
+    "insufficient_quota",
+    "quota exceeded",
+    "billing",
+    "permission denied",
+    "model_not_found",
+    "model not found",
+)
 
 try:  # pragma: no cover - 运行环境未安装时兼容
     from ollama import AsyncClient as OllamaAsyncClient
@@ -39,6 +64,150 @@ class LLMService:
         self.stage_route_repo = UserAIStageRouteRepository(session)
         self.usage_service = UsageService(session)
         self._embedding_dimensions: Dict[str, int] = {}
+
+    @staticmethod
+    def _get_llm_error_status_code(exc: Exception) -> Optional[int]:
+        status_code = getattr(exc, "status_code", None)
+        if isinstance(status_code, int):
+            return status_code
+
+        response = getattr(exc, "response", None)
+        response_status = getattr(response, "status_code", None)
+        if isinstance(response_status, int):
+            return response_status
+        return None
+
+    @staticmethod
+    def _extract_llm_error_detail(exc: Exception, default: str) -> str:
+        response = getattr(exc, "response", None)
+        if response is not None:
+            try:
+                payload = response.json()
+            except Exception:
+                payload = None
+
+            if isinstance(payload, dict):
+                error_data = payload.get("error", {})
+                if isinstance(error_data, dict):
+                    detail = error_data.get("message_zh") or error_data.get("message")
+                    if detail:
+                        return str(detail)
+                elif isinstance(error_data, str) and error_data.strip():
+                    return error_data.strip()
+
+                for key in ("message_zh", "message", "detail"):
+                    detail = payload.get(key)
+                    if detail:
+                        return str(detail)
+
+        detail = str(exc).strip()
+        return detail or default
+
+    @staticmethod
+    def _retry_after_seconds(exc: Exception) -> Optional[float]:
+        response = getattr(exc, "response", None)
+        headers = getattr(response, "headers", None)
+        if not headers:
+            return None
+
+        retry_after = headers.get("retry-after") or headers.get("Retry-After")
+        if not retry_after:
+            return None
+        try:
+            value = float(retry_after)
+        except ValueError:
+            return None
+        return max(0.0, min(value, LLM_RETRY_MAX_DELAY_SECONDS))
+
+    @classmethod
+    def _is_retryable_llm_error(cls, exc: Exception) -> bool:
+        if isinstance(exc, PermissionDeniedError):
+            return False
+
+        detail = cls._extract_llm_error_detail(exc, "").lower()
+        if any(keyword in detail for keyword in LLM_NON_RETRYABLE_ERROR_KEYWORDS):
+            return False
+
+        status_code = cls._get_llm_error_status_code(exc)
+        if status_code in LLM_RETRYABLE_STATUS_CODES:
+            return True
+
+        if isinstance(
+            exc,
+            (
+                httpx.RemoteProtocolError,
+                httpx.ReadTimeout,
+                APIConnectionError,
+                APITimeoutError,
+                InternalServerError,
+            ),
+        ):
+            return True
+
+        return any(keyword in detail for keyword in LLM_RETRYABLE_ERROR_KEYWORDS)
+
+    @classmethod
+    def _llm_retry_delay_seconds(cls, exc: Exception, attempt: int) -> float:
+        retry_after = cls._retry_after_seconds(exc)
+        if retry_after is not None:
+            return retry_after
+
+        delay = LLM_RETRY_BASE_DELAY_SECONDS * (2 ** max(attempt - 1, 0))
+        jitter = random.uniform(0, 0.4)
+        return min(delay + jitter, LLM_RETRY_MAX_DELAY_SECONDS)
+
+    @classmethod
+    def _raise_llm_stream_error(cls, exc: Exception, config: Dict[str, Any], user_id: Optional[int]) -> None:
+        if isinstance(exc, InternalServerError):
+            detail = cls._extract_llm_error_detail(exc, "AI 服务内部错误，请稍后重试")
+            logger.error(
+                "LLM stream internal error: model=%s user_id=%s detail=%s",
+                config.get("model"),
+                user_id,
+                detail,
+                exc_info=True,
+            )
+            raise HTTPException(status_code=503, detail=detail) from exc
+
+        if isinstance(exc, (httpx.RemoteProtocolError, httpx.ReadTimeout, APIConnectionError, APITimeoutError)):
+            if isinstance(exc, httpx.RemoteProtocolError):
+                detail = "AI 服务连接被意外中断，请稍后重试"
+            elif isinstance(exc, (httpx.ReadTimeout, APITimeoutError)):
+                detail = "AI 服务响应超时，请稍后重试"
+            else:
+                detail = "无法连接到 AI 服务，请稍后重试"
+            logger.error(
+                "LLM stream failed: model=%s user_id=%s detail=%s",
+                config.get("model"),
+                user_id,
+                detail,
+                exc_info=True,
+            )
+            raise HTTPException(status_code=503, detail=detail) from exc
+
+        if isinstance(exc, PermissionDeniedError):
+            detail = "AI 服务拒绝访问（可能被上游安全策略拦截），请稍后重试或更换可用 API 地址"
+            logger.error(
+                "LLM stream permission denied: model=%s user_id=%s detail=%s",
+                config.get("model"),
+                user_id,
+                detail,
+                exc_info=True,
+            )
+            raise HTTPException(status_code=503, detail=detail) from exc
+
+        if cls._is_retryable_llm_error(exc):
+            detail = cls._extract_llm_error_detail(exc, "AI 服务繁忙，请稍后重试")
+            logger.error(
+                "LLM stream upstream error: model=%s user_id=%s detail=%s",
+                config.get("model"),
+                user_id,
+                detail,
+                exc_info=True,
+            )
+            raise HTTPException(status_code=503, detail=detail) from exc
+
+        raise exc
 
     async def get_llm_response(
         self,
@@ -303,65 +472,42 @@ class LLMService:
             len(messages),
         )
 
-        try:
-            async for part in client.stream_chat(
-                messages=chat_messages,
-                model=config.get("model"),
-                temperature=temperature,
-                timeout=int(timeout),
-                response_format=response_format,
-                max_tokens=max_tokens,
-                top_p=top_p,
-            ):
-                if part.get("content"):
-                    full_response += part["content"]
-                if part.get("finish_reason"):
-                    finish_reason = part["finish_reason"]
-        except InternalServerError as exc:
-            detail = "AI 服务内部错误，请稍后重试"
-            response = getattr(exc, "response", None)
-            if response is not None:
-                try:
-                    payload = response.json()
-                    error_data = payload.get("error", {}) if isinstance(payload, dict) else {}
-                    detail = error_data.get("message_zh") or error_data.get("message") or detail
-                except Exception:
-                    detail = str(exc) or detail
-            else:
-                detail = str(exc) or detail
-            logger.error(
-                "LLM stream internal error: model=%s user_id=%s detail=%s",
-                config.get("model"),
-                user_id,
-                detail,
-                exc_info=exc,
-            )
-            raise HTTPException(status_code=503, detail=detail)
-        except (httpx.RemoteProtocolError, httpx.ReadTimeout, APIConnectionError, APITimeoutError) as exc:
-            if isinstance(exc, httpx.RemoteProtocolError):
-                detail = "AI 服务连接被意外中断，请稍后重试"
-            elif isinstance(exc, (httpx.ReadTimeout, APITimeoutError)):
-                detail = "AI 服务响应超时，请稍后重试"
-            else:
-                detail = "无法连接到 AI 服务，请稍后重试"
-            logger.error(
-                "LLM stream failed: model=%s user_id=%s detail=%s",
-                config.get("model"),
-                user_id,
-                detail,
-                exc_info=exc,
-            )
-            raise HTTPException(status_code=503, detail=detail) from exc
-        except PermissionDeniedError as exc:
-            detail = "AI 服务拒绝访问（可能被上游安全策略拦截），请稍后重试或更换可用 API 地址"
-            logger.error(
-                "LLM stream permission denied: model=%s user_id=%s detail=%s",
-                config.get("model"),
-                user_id,
-                detail,
-                exc_info=exc,
-            )
-            raise HTTPException(status_code=503, detail=detail) from exc
+        # 单次模型调用层轻量重试：只处理上游临时故障，不重跑外层业务流程。
+        for attempt in range(1, LLM_RETRY_MAX_ATTEMPTS + 1):
+            full_response = ""
+            finish_reason = None
+            try:
+                async for part in client.stream_chat(
+                    messages=chat_messages,
+                    model=config.get("model"),
+                    temperature=temperature,
+                    timeout=int(timeout),
+                    response_format=response_format,
+                    max_tokens=max_tokens,
+                    top_p=top_p,
+                ):
+                    if part.get("content"):
+                        full_response += part["content"]
+                    if part.get("finish_reason"):
+                        finish_reason = part["finish_reason"]
+                break
+            except Exception as exc:
+                if attempt < LLM_RETRY_MAX_ATTEMPTS and self._is_retryable_llm_error(exc):
+                    delay = self._llm_retry_delay_seconds(exc, attempt)
+                    detail = self._extract_llm_error_detail(exc, exc.__class__.__name__)
+                    logger.warning(
+                        "LLM stream retry: model=%s user_id=%s stage=%s attempt=%s/%s delay=%.2fs detail=%s",
+                        config.get("model"),
+                        user_id,
+                        stage,
+                        attempt,
+                        LLM_RETRY_MAX_ATTEMPTS,
+                        delay,
+                        detail,
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                self._raise_llm_stream_error(exc, config, user_id)
 
         logger.debug(
             "LLM response collected: model=%s user_id=%s finish_reason=%s preview=%s",

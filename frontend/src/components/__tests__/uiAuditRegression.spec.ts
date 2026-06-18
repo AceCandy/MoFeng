@@ -219,8 +219,8 @@ describe('UI audit regressions', () => {
   it('keeps app shell decorative data urls out of the main css budget path', () => {
     const css = readSource('src/assets/main.css')
 
-    expect(css).not.toMatch(/\.app-shell__dropdown-item:hover[\s\S]*?data:image/)
-    expect(css).not.toMatch(/\.app-shell__project-welcome-message[\s\S]*?data:image/)
+    expect(css).not.toMatch(/\.app-shell__dropdown-item:hover\s*\{[^}]*?data:image/)
+    expect(css).not.toMatch(/\.app-shell__project-welcome-message\s*\{[^}]*?data:image/)
   })
 
   it('keeps failed chapter recovery focused on the real retry action', () => {
@@ -421,18 +421,11 @@ describe('UI audit regressions', () => {
 
   it('keeps version cards free of nested detail buttons inside radios', () => {
     const source = readSource('src/components/writing-desk/workspace/VersionSelector.vue')
-    const radioStart = source.indexOf('role="radio"')
-    const actionsStart = source.indexOf('version-card__actions')
-    const radioBlock = radioStart >= 0 && actionsStart > radioStart ? source.slice(radioStart, actionsStart) : ''
 
     expect(source).toContain('role="radiogroup"')
     expect(source).toContain('role="radio"')
-    expect(source).toContain('version-card__details-action')
-    expect(source).toContain('version-card__actions')
-    expect(radioStart).toBeGreaterThanOrEqual(0)
-    expect(actionsStart).toBeGreaterThan(radioStart)
-    expect(radioBlock).not.toContain('version-card__details-action')
-    expect(radioBlock).not.toContain('查看详情')
+    expect(source).not.toContain('version-card__details-action')
+    expect(source).not.toContain('version-card__actions')
   })
 
   it('announces version banners with live region semantics', () => {

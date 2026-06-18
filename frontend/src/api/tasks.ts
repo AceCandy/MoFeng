@@ -2,6 +2,7 @@
 import { useAuthStore } from '@/stores/auth'
 import { API_BASE_URL, API_PREFIX } from './base'
 import { HttpRequestError, requestJson, type HttpRequestOptions } from './http'
+import { readSSESubscription, streamRequest } from './novel'
 
 export type BackgroundTaskStatus = 'queued' | 'running' | 'succeeded' | 'failed'
 
@@ -61,6 +62,32 @@ const request = async <T = unknown>(url: string, options: HttpRequestOptions = {
 export class TaskAPI {
   static async getTasks(limit = 20): Promise<BackgroundTask[]> {
     return request(`${TASKS_BASE}?limit=${limit}`)
+  }
+
+  static async subscribeTasks(
+    handlers: {
+      onTasks: (tasks: BackgroundTask[]) => void
+      onError?: (error: Error) => void
+      signal?: AbortSignal
+      limit?: number
+    }
+  ): Promise<void> {
+    const response = await streamRequest(`${TASKS_BASE}/events?limit=${handlers.limit ?? 20}`, {
+      method: 'GET',
+      signal: handlers.signal,
+      timeoutMs: 600_000,
+    })
+    await readSSESubscription(response, {
+      onMessage: (message) => {
+        if (message.event === 'tasks') {
+          handlers.onTasks(Array.isArray(message.data) ? (message.data as BackgroundTask[]) : [])
+        }
+      },
+      onError: handlers.onError,
+      // 任务日志是全局长连接；由组件卸载或登出主动 abort。
+      stopEvents: [],
+    })
+    throw new Error('任务日志推送中断')
   }
 
   static async getTask(taskId: string): Promise<BackgroundTask> {

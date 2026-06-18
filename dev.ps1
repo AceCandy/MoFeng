@@ -5,10 +5,10 @@ $BackendDir = Join-Path $RootDir 'backend'
 $FrontendDir = Join-Path $RootDir 'frontend'
 $BackendHost = '0.0.0.0'
 $BackendProxyHost = '127.0.0.1'
-$BackendDefaultPort = 8000
+$BackendDefaultPort = 6101
 $FrontendHost = '0.0.0.0'
 $FrontendHmrHost = 'localhost'
-$FrontendDefaultPort = 5173
+$FrontendDefaultPort = 6100
 
 if (-not (Test-Path $BackendDir) -or -not (Test-Path $FrontendDir)) {
     throw 'backend or frontend directory not found.'

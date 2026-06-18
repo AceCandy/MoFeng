@@ -1,13 +1,15 @@
 # AIMETA P=小说API_项目和章节管理|R=小说CRUD_章节管理|NR=不含内容生成|E=route:GET_POST_/api/novels/*|X=http|A=小说CRUD_章节|D=fastapi,sqlalchemy|S=db|RD=./README.ai
+import asyncio
 import json
 import logging
 from typing import Any, AsyncGenerator, Dict, List
 
-from fastapi import APIRouter, Body, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.dependencies import get_current_user
+from ...db.session import AsyncSessionLocal
 from ...db.session import get_session
 from ...schemas.novel import (
     Blueprint,
@@ -201,6 +203,18 @@ def _sse_event(event: str, payload: Dict) -> str:
     return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
 
+def _sse_response(stream: AsyncGenerator[str, None]) -> StreamingResponse:
+    return StreamingResponse(
+        stream,
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 @router.post("", response_model=NovelProjectSchema, status_code=status.HTTP_201_CREATED)
 async def create_novel(
     title: str = Body(...),
@@ -287,6 +301,64 @@ async def get_chapter(
     novel_service = NovelService(session)
     logger.info("用户 %s 获取项目 %s 第 %s 章", current_user.id, project_id, chapter_number)
     return await novel_service.get_chapter_schema(project_id, current_user.id, chapter_number)
+
+
+@router.get("/{project_id}/chapters/{chapter_number}/events")
+async def stream_chapter_status(
+    project_id: str,
+    chapter_number: int,
+    request: Request,
+    wait_for_active: bool = Query(default=False),
+    current_user: UserInDB = Depends(get_current_user),
+) -> StreamingResponse:
+    """推送单章生成状态，替代写作台前端定时轮询章节接口。"""
+
+    async def event_stream() -> AsyncGenerator[str, None]:
+        last_payload: str | None = None
+        has_seen_active_status = False
+        active_statuses = {"generating", "evaluating", "selecting", "finalizing"}
+        terminal_statuses = {"waiting_for_confirm", "successful", "failed", "evaluation_failed"}
+
+        while True:
+            if await request.is_disconnected():
+                break
+
+            try:
+                async with AsyncSessionLocal() as session:
+                    service = NovelService(session)
+                    chapter = await service.get_chapter_schema(project_id, current_user.id, chapter_number)
+            except HTTPException as exc:
+                yield _sse_event("error", {"detail": str(exc.detail)})
+                break
+            except Exception as exc:
+                logger.exception(
+                    "章节状态 SSE 读取失败: project_id=%s chapter=%s user_id=%s",
+                    project_id,
+                    chapter_number,
+                    current_user.id,
+                )
+                yield _sse_event("error", {"detail": f"章节状态同步失败: {str(exc)}"})
+                break
+
+            # 用 JSON 快照去重，避免每秒把完全相同的章节对象重复推给前端。
+            payload = chapter.model_dump(mode="json")
+            payload_text = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+            status_value = payload.get("generation_status")
+            if status_value in active_statuses:
+                has_seen_active_status = True
+            if payload_text != last_payload:
+                can_close_as_final = status_value in terminal_statuses and (
+                    not wait_for_active or has_seen_active_status
+                )
+                event_name = "final" if can_close_as_final else "chapter"
+                yield _sse_event(event_name, payload)
+                last_payload = payload_text
+                if event_name == "final":
+                    break
+
+            await asyncio.sleep(1.0)
+
+    return _sse_response(event_stream())
 
 
 @router.delete("", status_code=status.HTTP_200_OK)

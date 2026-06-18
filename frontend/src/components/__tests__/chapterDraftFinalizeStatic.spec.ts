@@ -49,6 +49,43 @@ describe('chapter draft finalization contracts', () => {
     expect(workspace).toContain('ChapterGenerating')
   })
 
+  it('keeps finalized version labels aligned with candidate indexes', () => {
+    const workspace = readSource('src/components/writing-desk/WDWorkspace.vue')
+
+    expect(workspace).toContain('版本 {{ index + 1 }}')
+    expect(workspace).not.toContain('版本 {{ availableVersions.length - index }}')
+  })
+
+  it('only keeps copy and export actions after finalization', () => {
+    const workspace = readSource('src/components/writing-desk/WDWorkspace.vue')
+
+    expect(workspace).toContain('v-if="isFinalizedSuccessful"')
+    expect(workspace).toContain('@click="copySelectedChapterContent"')
+    expect(workspace).toContain('@click="exportContentAsTxt"')
+    expect(workspace).toContain('v-if="isDraftWaitingConfirm" class="writing-workspace__toolbar-row writing-workspace__toolbar-row--primary"')
+    expect(workspace).not.toContain('v-if="isFinalizedSuccessful || isDraftWaitingConfirm"')
+  })
+
+  it('renders multi-version evaluations in numeric version order', () => {
+    const workspace = readSource('src/components/writing-desk/WDWorkspace.vue')
+    const detailModal = readSource('src/components/writing-desk/WDEvaluationDetailModal.vue')
+    const chaptersSection = readSource('src/components/novel-detail/ChaptersSection.vue')
+
+    for (const source of [workspace, detailModal, chaptersSection]) {
+      expect(source).toContain('sortedEvaluationEntries')
+      expect(source).toContain('versionNumber')
+      expect(source).toContain('.sort((a, b) => a.versionNumber - b.versionNumber)')
+    }
+
+    expect(workspace).not.toContain('v-for="(evalResult, versionName) in parsedEvaluation.evaluation"')
+    expect(detailModal).not.toContain(
+      'v-for="(evalResult, versionName) in parsedEvaluation.evaluation"',
+    )
+    expect(chaptersSection).not.toContain(
+      'v-for="(versionEval, versionKey) in evaluationData.evaluation"',
+    )
+  })
+
   it('labels finalization trace nodes in the console', () => {
     const generating = readSource('src/components/writing-desk/workspace/ChapterGenerating.vue')
 

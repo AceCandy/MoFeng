@@ -44,7 +44,7 @@ const request = async <T = any>(url: string, options: HttpRequestOptions = {}) =
   }
 }
 
-const streamRequest = async (url: string, options: HttpRequestOptions = {}) => {
+export const streamRequest = async (url: string, options: HttpRequestOptions = {}) => {
   const authStore = useAuthStore()
   const headers = new Headers({
     'Content-Type': 'application/json',
@@ -86,7 +86,12 @@ const parseSSEData = (rawData: string): unknown => {
   }
 }
 
-const parseSSEMessage = (message: string) => {
+type SSEMessage = {
+  event: string
+  data: unknown
+}
+
+const parseSSEMessage = (message: string): SSEMessage | null => {
   let event = 'message'
   const dataLines: string[] = []
 
@@ -215,6 +220,63 @@ const readSSEStream = async <T>(
   }
 }
 
+export const readSSESubscription = async (
+  response: Response,
+  handlers: {
+    onMessage: (message: SSEMessage) => void
+    onError?: (error: Error) => void
+    stopEvents?: string[]
+  }
+): Promise<void> => {
+  const reader = response.body!.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  const stopEvents = new Set(handlers.stopEvents ?? ['final'])
+
+  const handleRawMessage = (rawMessage: string): boolean => {
+    if (!rawMessage) return false
+    const message = parseSSEMessage(rawMessage)
+    if (!message) return false
+    if (message.event === 'error') {
+      const error = new Error(getSSEErrorDetail(message.data))
+      handlers.onError?.(error)
+      throw error
+    }
+    handlers.onMessage(message)
+    return stopEvents.has(message.event)
+  }
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) {
+        buffer += decoder.decode()
+        break
+      }
+
+      buffer += decoder.decode(value, { stream: true })
+      let boundaryIndex = findSSEBoundary(buffer)
+      while (boundaryIndex >= 0) {
+        const rawMessage = buffer.slice(0, boundaryIndex).trim()
+        const boundaryLength = getBoundaryLength(buffer, boundaryIndex)
+        buffer = buffer.slice(boundaryIndex + boundaryLength)
+        if (handleRawMessage(rawMessage)) {
+          void reader.cancel().catch(() => undefined)
+          return
+        }
+        boundaryIndex = findSSEBoundary(buffer)
+      }
+    }
+
+    const trailingMessage = buffer.trim()
+    if (trailingMessage) {
+      handleRawMessage(trailingMessage)
+    }
+  } finally {
+    reader.releaseLock()
+  }
+}
+
 // 类型定义
 export interface NovelProject {
   id: string
@@ -262,11 +324,15 @@ export interface ChapterOutline {
   chapter_number: number
   title: string
   summary: string
+  goals?: string
+  highlights?: string[]
+  character_states?: Record<string, string>
 }
 
 export interface ChapterVersion {
   content: string
   style?: string
+  metadata?: Record<string, any> | null
 }
 
 export interface ChapterGenerationTrace {
@@ -480,6 +546,39 @@ export class NovelAPI {
 
   static async getChapter(projectId: string, chapterNumber: number): Promise<Chapter> {
     return request(`${NOVELS_BASE}/${projectId}/chapters/${chapterNumber}`)
+  }
+
+  static async subscribeChapterStatus(
+    projectId: string,
+    chapterNumber: number,
+    handlers: {
+      onChapter: (chapter: Chapter) => void
+      onError?: (error: Error) => void
+      signal?: AbortSignal
+    }
+  ): Promise<void> {
+    const response = await streamRequest(
+      `${NOVELS_BASE}/${projectId}/chapters/${chapterNumber}/events?wait_for_active=1`,
+      {
+        method: 'GET',
+        signal: handlers.signal,
+        timeoutMs: CHAPTER_GENERATION_TIMEOUT_MS,
+      },
+    )
+    let endedByFinal = false
+    await readSSESubscription(response, {
+      onMessage: (message) => {
+        if (message.event === 'chapter' || message.event === 'final') {
+          endedByFinal = message.event === 'final'
+          handlers.onChapter(message.data as Chapter)
+        }
+      },
+      onError: handlers.onError,
+      stopEvents: ['final'],
+    })
+    if (!endedByFinal) {
+      throw new Error('章节状态推送中断')
+    }
   }
 
   static async getSection(projectId: string, section: NovelSectionType): Promise<NovelSectionResponse> {

@@ -217,9 +217,9 @@ npm run dev
 
 Default URLs:
 
-- Frontend: `http://127.0.0.1:5173`
-- API: `http://127.0.0.1:8000`
-- Swagger: `http://127.0.0.1:8000/docs`
+- Frontend: `http://127.0.0.1:6100`
+- API: `http://127.0.0.1:6101`
+- Swagger: `http://127.0.0.1:6101/docs`
 
 ---
 
@@ -234,7 +234,7 @@ copy deploy\.env.example deploy\.env
 docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build
 ```
 
-Default URL: `http://127.0.0.1:8088`
+Default URL: `http://127.0.0.1:6100`
 
 To enable bundled MySQL profile:
 

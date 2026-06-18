@@ -140,7 +140,7 @@ MAX_RETRIES=30
 RETRY_COUNT=0
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if docker-compose $COMPOSE_PROFILES exec -T app curl -f http://127.0.0.1:8000/api/health > /dev/null 2>&1; then
+    if docker-compose $COMPOSE_PROFILES exec -T app curl -f http://127.0.0.1:6101/api/health > /dev/null 2>&1; then
         echo -e "${GREEN}✓ 服务健康检查通过${NC}"
         break
     else
@@ -166,9 +166,9 @@ echo -e "${GREEN}部署成功！${NC}"
 echo "========================================="
 echo ""
 echo "访问地址："
-echo "  前端: http://localhost:${APP_PORT:-80}"
-echo "  后端 API: http://localhost:${APP_PORT:-80}/api"
-echo "  健康检查: http://localhost:${APP_PORT:-80}/api/health"
+echo "  前端: http://localhost:${APP_PORT:-6100}"
+echo "  后端 API: http://localhost:${APP_PORT:-6100}/api"
+echo "  健康检查: http://localhost:${APP_PORT:-6100}/api/health"
 echo ""
 echo "管理员账号："
 echo "  用户名: ${ADMIN_DEFAULT_USERNAME:-admin}"

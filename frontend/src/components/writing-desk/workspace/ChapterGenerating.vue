@@ -1,10 +1,20 @@
 <!-- AIMETA P=生成中_章节生成进度|R=进度展示_流式输出|NR=不含生成逻辑|E=component:ChapterGenerating|X=internal|A=生成状态|D=vue|S=dom|RD=./README.ai -->
 <template>
-  <section class="chapter-console" aria-label="AI章节生成控制台">
+  <section
+    class="chapter-console"
+    :class="{ 'chapter-console--read-only': props.readOnly }"
+    aria-label="AI章节生成控制台"
+  >
     <article class="chapter-console__pipeline-card" aria-label="生成进度">
       <header class="chapter-console__pipeline-header-main">
-        <h4>生成进度</h4>
-        <div v-if="props.status && ['generating', 'evaluating', 'selecting'].includes(props.status)" class="chapter-console__pipeline-meta-top">
+        <div class="chapter-console__pipeline-title-group">
+          <h4>生成进度</h4>
+          <span v-if="props.readOnly" class="chapter-console__read-only-badge">只读回溯</span>
+        </div>
+        <div
+          v-if="!props.readOnly && props.status && ['generating', 'evaluating', 'selecting'].includes(props.status)"
+          class="chapter-console__pipeline-meta-top"
+        >
           <span class="chapter-console__meta-item">
             <span class="meta-label">已耗时：</span>
             <span class="meta-value">{{ elapsedText }}</span>
@@ -20,6 +30,7 @@
         <li
           v-for="(item, index) in pipelineSteps"
           :key="item.key"
+          :aria-label="stepTooltipText(item.key, index)"
           :class="[
             'chapter-console__pipeline-item',
             `is-${stepState(item.key, index).tone}`,
@@ -30,7 +41,7 @@
           @click="selectStep(item.key, index)"
         >
           <Tooltip
-            :text="STEP_DETAILS[item.key]?.summary || ''"
+            :text="stepTooltipText(item.key, index)"
             :show-delay="150"
             class="chapter-console__pipeline-tooltip-wrapper"
           >
@@ -41,10 +52,22 @@
               <div class="chapter-console__pipeline-header">
                 <span class="chapter-console__pipeline-title">{{ item.label }}</span>
                 <span
+                  v-if="shouldShowManualConfirmBadge(item.key)"
+                  class="chapter-console__pipeline-badge chapter-console__pipeline-badge--manual-confirm"
+                >
+                  待人工确认
+                </span>
+                <span
                   v-if="stepState(item.key, index).tone === 'in-progress'"
                   class="chapter-console__pipeline-badge"
                 >
                   进行中
+                </span>
+                <span
+                  v-else-if="stepState(item.key, index).tone === 'failed'"
+                  class="chapter-console__pipeline-badge chapter-console__pipeline-badge--failed"
+                >
+                  失败
                 </span>
               </div>
             </div>
@@ -53,41 +76,62 @@
       </ol>
     </article>
 
-    <!-- 失败状态展示错误卡片 -->
-    <article v-if="props.status === 'failed'" class="chapter-console__failed-card">
-      <div class="chapter-console__failed-head">
-        <div class="chapter-console__failed-icon-wrap">
-          <svg class="chapter-console__failed-icon" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fill-rule="evenodd"
-              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-              clip-rule="evenodd"
-            ></path>
-          </svg>
+    <!-- 失败状态展示区域 -->
+    <div v-if="!props.readOnly && (props.status === 'failed' || props.status === 'evaluation_failed')" class="chapter-console__failed-container">
+
+      <div v-if="failedVersionCards.length" class="chapter-console__failed-versions" aria-label="已保留候选版本">
+        <div class="chapter-console__failed-versions-head">
+          <div>
+            <span class="chapter-console__failed-versions-kicker">保留草稿</span>
+            <h5>本轮候选版本仍可查看</h5>
+          </div>
+          <p>AI 评审失败不会清空已生成的正文，可先打开候选版本核对内容，再决定重试评审或重新生成。</p>
         </div>
-        <div class="chapter-console__failed-title-row">
-          <h4>第{{ chapterNumber }}章生成异常</h4>
-          <span class="chapter-console__failed-reason-inline">
-            <strong>{{ failureScenario.title }}：</strong>{{ failureScenario.description }}
-          </span>
+        <div class="chapter-console__failed-version-grid">
+          <button
+            v-for="item in failedVersionCards"
+            :key="`failed-version-${item.index}`"
+            type="button"
+            class="chapter-console__failed-version-card"
+            :aria-label="`候选版本 ${item.displayIndex}，双击查看详情`"
+            @dblclick="emit('showVersionDetail', item.index)"
+          >
+            <span class="chapter-console__failed-version-title">版本 {{ item.displayIndex }}</span>
+            <span class="chapter-console__failed-version-meta">{{ item.wordCount }} 字 · {{ item.style }}</span>
+            <span class="chapter-console__failed-version-preview">{{ item.preview }}</span>
+            <span class="chapter-console__failed-version-action">双击查看正文</span>
+          </button>
         </div>
       </div>
 
       <div class="chapter-console__failed-actions">
         <button
+          v-if="props.status === 'evaluation_failed'"
           type="button"
-          @click="emit('generateChapter', chapterNumber)"
-          :disabled="generatingChapter === chapterNumber"
-          class="md-btn md-btn-filled md-ripple disabled:opacity-50"
+          @click="emit('evaluateChapter')"
+          class="md-btn md-btn-filled md-ripple"
         >
-          {{ generatingChapter === chapterNumber ? '重试中...' : '重试生成本章' }}
+          重新 AI评审
+        </button>
+        <button
+          type="button"
+          @click="handleFailedGenerateAction"
+          :disabled="generatingChapter === chapterNumber"
+          :class="[
+            'md-btn md-ripple disabled:opacity-50',
+            props.status === 'evaluation_failed'
+              ? 'md-btn-outlined chapter-console__danger-action'
+              : 'md-btn-filled',
+          ]"
+        >
+          {{ generatingChapter === chapterNumber ? '重试中...' : retryGenerateLabel }}
         </button>
       </div>
 
-    </article>
+    </div>
 
     <!-- 正常生成中状态展示草稿预览卡片 -->
-    <article v-else class="chapter-console__preview-card">
+    <article v-else-if="!props.readOnly" class="chapter-console__preview-card">
       <header>
         <h4>实时草稿预览</h4>
         <span>{{ previewModeLabel }}</span>
@@ -121,7 +165,10 @@
     </article>
 
     <!-- 节点详情面板 -->
-    <article v-if="activeStepDetails" class="chapter-console__inspector-card">
+    <article
+      v-if="activeStepDetails && (!props.readOnly || activeStepKey)"
+      class="chapter-console__inspector-card"
+    >
       <header class="chapter-console__inspector-header">
         <div class="chapter-console__inspector-title-group">
           <span class="chapter-console__inspector-badge">节点详情</span>
@@ -132,7 +179,11 @@
       <div class="chapter-console__inspector-meta">
         <span class="chapter-console__call-type">调用类型：{{ activeStepDetails.callType }}</span>
         <span class="chapter-console__llm-usage">LLM 调用：{{ activeStepDetails.llmUsage }}</span>
-        <span v-if="activeStepDetails.status" class="chapter-console__trace-status">
+        <span
+          v-if="activeStepDetails.status"
+          class="chapter-console__trace-status"
+          :class="{ 'is-failed': activeStepDetails.status === '失败' }"
+        >
           状态：{{ activeStepDetails.status }}
         </span>
         <span class="chapter-console__trace-duration">
@@ -176,7 +227,10 @@
       </div>
     </article>
 
-    <footer v-if="props.status !== 'failed'" class="chapter-console__actions">
+    <footer
+      v-if="!props.readOnly && props.status !== 'failed' && props.status !== 'evaluation_failed'"
+      class="chapter-console__actions"
+    >
       <button type="button" class="md-btn md-btn-outlined md-ripple" @click="moveToBackground">
         转入后台生成
       </button>
@@ -198,9 +252,10 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import Tooltip from '@/components/Tooltip.vue'
-import type { Chapter, ChapterGenerationTrace } from '@/api/novel'
+import type { Chapter, ChapterGenerationTrace, ChapterVersion } from '@/api/novel'
 import { globalAlert } from '@/composables/useAlert'
-import { formatChapterGenerationError } from '@/utils/chapter'
+import { cleanVersionContent, formatChapterGenerationError } from '@/utils/chapter'
+import { countNonWhitespaceChars } from '@/utils/text'
 
 interface Props {
   chapterNumber: number | null
@@ -216,6 +271,9 @@ interface Props {
   statusUpdatedAt?: string | null
   generationTraces?: ChapterGenerationTrace[]
   generatingChapter?: number | null
+  availableVersions?: ChapterVersion[]
+  selectedVersionIndex?: number
+  readOnly?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -224,9 +282,12 @@ const props = withDefaults(defineProps<Props>(), {
   chapterContentPreview: '',
   generationTraces: () => [],
   generatingChapter: null,
+  availableVersions: () => [],
+  selectedVersionIndex: 0,
+  readOnly: false,
 })
 
-const emit = defineEmits(['generateChapter'])
+const emit = defineEmits(['generateChapter', 'showVersionDetail', 'evaluateChapter'])
 
 const clockNow = ref(Date.now())
 const localStartAt = ref(Date.now())
@@ -247,7 +308,7 @@ const STAGE_CONFIG: Record<
 > = {
   generating: { start: 8, end: 78, expectedSeconds: 190, label: '生成正文' },
   evaluating: { start: 78, end: 92, expectedSeconds: 55, label: 'AI评审' },
-  selecting: { start: 92, end: 98, expectedSeconds: 38, label: '保存草稿' },
+  selecting: { start: 92, end: 98, expectedSeconds: 38, label: '待人工确认' },
   finalizing: { start: 90, end: 99, expectedSeconds: 180, label: '同步定稿' },
 }
 
@@ -258,6 +319,7 @@ const PIPELINE_LABELS: Record<string, string> = {
   draft_generation: '生成正文',
   quality_review: 'AI评审',
   review_refinement: '修复润色',
+  auto_optimizing: '修复润色',
   persist_versions: '保存草稿',
   save_draft: '保存草稿',
   waiting_for_confirm: '等待确认',
@@ -271,21 +333,24 @@ const PIPELINE_LABELS: Record<string, string> = {
   finalization_error: '定稿失败',
 }
 
-const pipelineSteps = [
-  { key: 'context_prep', label: '整理前文' },
-  { key: 'director_mission', label: '规划剧情' },
-  { key: 'rag_retrieval', label: '调用设定' },
-  { key: 'draft_generation', label: '生成正文' },
-  { key: 'quality_review', label: 'AI评审' },
-  { key: 'review_refinement', label: '修复润色' },
-  { key: 'save_draft', label: '保存草稿' },
-  { key: 'confirm_finalize', label: '确认定稿' },
-  { key: 'real_summary', label: '生成章节梳理' },
-  { key: 'finalize_memory', label: '更新记忆快照' },
-  { key: 'chapter_ingest', label: '写入章节索引' },
-  { key: 'foreshadowing_sync', label: '同步伏笔' },
-  { key: 'finalized', label: '定稿完成' },
-]
+const pipelineSteps = computed(() => {
+  if (props.status === 'finalizing') {
+    return [
+      { key: 'real_summary', label: '生成章节梳理' },
+      { key: 'finalize_memory', label: '更新记忆快照' },
+      { key: 'chapter_ingest', label: '写入章节索引' },
+      { key: 'foreshadowing_sync', label: '同步伏笔' },
+    ]
+  }
+  return [
+    { key: 'context_prep', label: '整理前文' },
+    { key: 'director_mission', label: '规划剧情' },
+    { key: 'rag_retrieval', label: '调用设定' },
+    { key: 'draft_generation', label: '生成正文' },
+    { key: 'quality_review', label: 'AI评审' },
+    { key: 'review_refinement', label: '修复润色' },
+  ]
+})
 
 type StepDetail = {
   summary: string
@@ -372,19 +437,19 @@ const STEP_DETAILS: Record<string, StepDetail> = {
     summary: '根据 AI 评审建议自动修复润色推荐版本。',
     inputs: '推荐版本 + AI 修改建议',
     outputs: '修复润色后的最终正文',
-    next: '保存草稿',
+    next: '人工编辑或确认定稿',
   },
   persist_versions: {
-    summary: '将候选草稿写入版本库，等待人工确认定稿。',
+    summary: '将修复润色后的草稿写入版本库，进入人工确认节点。',
     inputs: '候选版本 + 推荐索引',
-    outputs: '待确认草稿',
+    outputs: '待人工确认状态',
     next: '人工确认定稿',
   },
   save_draft: {
-    summary: '将候选草稿写入版本库，等待人工确认定稿。',
-    inputs: '候选版本 + 推荐索引',
-    outputs: '待确认草稿',
-    next: '人工确认定稿',
+    summary: 'AI 产出已结束，当前可人工编辑草稿或确认定稿。',
+    inputs: '修复润色后的正文 + 推荐索引',
+    outputs: '待人工确认状态',
+    next: '人工编辑或确认定稿',
   },
   waiting_for_confirm: {
     summary: '草稿保存完成，等待你确认定稿。',
@@ -469,13 +534,31 @@ const parseBackendTimestampToMs = (raw?: string | null): number | null => {
 
 const parsedStepPayload = computed(() => parseStepPayload(props.generationStep))
 
+const isFailureStatus = computed(
+  () => props.status === 'failed' || props.status === 'evaluation_failed',
+)
+
+const normalizePipelineStepKey = (key?: string | null) => {
+  const normalized = (key || '').trim()
+  if (normalized === 'persist_versions') return 'save_draft'
+  if (normalized === 'evaluation_failed' || normalized === 'evaluating') return 'quality_review'
+  if (normalized === 'auto_optimizing') return 'review_refinement'
+  if (normalized === 'optimization_done') return 'review_refinement'
+  if (normalized === 'failed') return ''
+  return normalized
+}
+
+const stepExists = (key: string) => pipelineSteps.value.some((item) => item.key === key)
+
+const terminalFailedTrace = computed(() => {
+  return [...props.generationTraces].reverse().find((trace) => trace.status === 'failed') ?? null
+})
+
 const failureReason = computed(() => {
-  const traceError = [...props.generationTraces]
-    .reverse()
-    .find((trace) => trace.status === 'failed' && trace.error?.trim())
+  const traceError = terminalFailedTrace.value
     ?.error
     ?.trim()
-  if (props.status === 'failed' && traceError) {
+  if (isFailureStatus.value && traceError) {
     return formatChapterGenerationError(traceError)
   }
 
@@ -488,15 +571,23 @@ const failureReason = computed(() => {
   let rawError = step
   if (parsed.meta.error) {
     rawError = parsed.meta.error
-  } else if (parsed.baseKey && pipelineSteps.some((item) => item.key === parsed.baseKey)) {
+  } else if (parsed.baseKey && stepExists(normalizePipelineStepKey(parsed.baseKey))) {
     const pipeIdx = step.indexOf('|')
     if (pipeIdx >= 0) {
       rawError = step.slice(pipeIdx + 1)
     }
   }
 
+  if (
+    isFailureStatus.value &&
+    (parsed.baseKey === 'failed' || parsed.baseKey === 'evaluation_failed') &&
+    !parsed.meta.error
+  ) {
+    return ''
+  }
+
   // 仅在非明确失败状态下，才利用正则过滤标准运行步骤名
-  if (props.status !== 'failed') {
+  if (!isFailureStatus.value) {
     if (/^[a-z_]+(?:\|.*)?$/i.test(step)) {
       return ''
     }
@@ -517,8 +608,8 @@ const failureScenario = computed(() => {
 
   if (props.status === 'evaluation_failed') {
     return {
-      title: '质量评审未通过',
-      description: '当前草稿在一致性或质量评分上未通过，可以重新生成本章后再评审。',
+      title: 'AI评审失败',
+      description: '评审节点未返回更具体的失败原因，请查看节点详情、后端日志，或重新评审。',
     }
   }
 
@@ -549,12 +640,37 @@ const failureScenario = computed(() => {
   }
 })
 
+const retryGenerateLabel = computed(() =>
+  props.status === 'evaluation_failed' ? '放弃本轮草稿并重新生成' : '重试生成本章',
+)
+
+const isWaitingForManualConfirm = computed(() => props.status === 'waiting_for_confirm')
+
+const shouldShowManualConfirmBadge = (key: string) =>
+  key === 'review_refinement' && isWaitingForManualConfirm.value
+
 const currentStepKey = computed(() => {
-  const stepKey = parsedStepPayload.value.baseKey
-  if (stepKey === 'waiting_for_confirm' || stepKey === 'selecting_version') {
-    return 'save_draft'
+  const traceStepKey = normalizePipelineStepKey(terminalFailedTrace.value?.node_key)
+  if (isFailureStatus.value && traceStepKey && stepExists(traceStepKey)) {
+    return traceStepKey
   }
-  if (stepKey && pipelineSteps.some((item) => item.key === stepKey)) {
+  if (props.status === 'evaluation_failed') {
+    return 'quality_review'
+  }
+  const stepKey = normalizePipelineStepKey(parsedStepPayload.value.baseKey)
+  if (stepKey === 'waiting_for_confirm' || stepKey === 'selecting_version') {
+    return 'review_refinement'
+  }
+  if (props.status === 'finalizing') {
+    if (stepKey === 'confirm_finalize') {
+      return 'real_summary'
+    }
+    if (stepKey && pipelineSteps.value.some((item) => item.key === stepKey)) {
+      return stepKey
+    }
+    return 'real_summary'
+  }
+  if (stepKey && pipelineSteps.value.some((item) => item.key === stepKey)) {
     return stepKey
   }
 
@@ -585,13 +701,42 @@ const currentStepKey = computed(() => {
   }
 
   if (props.status === 'evaluating') return 'quality_review'
-  if (props.status === 'selecting' || props.status === 'waiting_for_confirm') return 'save_draft'
-  if (props.status === 'finalizing') return parsedStepPayload.value.baseKey || 'confirm_finalize'
+  if (props.status === 'selecting' || props.status === 'waiting_for_confirm') return 'review_refinement'
   return 'context_prep'
 })
 
+const stepTooltipText = (key: string, index: number) => {
+  const state = stepState(key, index)
+  const label = PIPELINE_LABELS[key] || STEP_DETAILS[key]?.summary || '当前节点'
+  if (state.tone === 'failed') {
+    const reason = failureReason.value || failureScenario.value.description
+    return `${label}失败：${reason}`
+  }
+  if (shouldShowManualConfirmBadge(key)) {
+    return `${label}已完成：当前待人工确认，可人工编辑草稿或确认定稿。`
+  }
+  return STEP_DETAILS[key]?.summary || ''
+}
+
+const failedVersionCards = computed(() =>
+  props.availableVersions
+    .map((version, index) => {
+      const content = cleanVersionContent(version.content || '').trim()
+      if (!content) return null
+      const preview = content.replace(/\s+/g, ' ').slice(0, 96)
+      return {
+        index,
+        displayIndex: index + 1,
+        style: version.style || '标准',
+        wordCount: countNonWhitespaceChars(content),
+        preview: preview ? `${preview}${content.length > 96 ? '...' : ''}` : '暂无正文预览',
+      }
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null),
+)
+
 const currentStepIndex = computed(() => {
-  const index = pipelineSteps.findIndex((item) => item.key === currentStepKey.value)
+  const index = pipelineSteps.value.findIndex((item) => item.key === currentStepKey.value)
   return index >= 0 ? index : 0
 })
 
@@ -686,18 +831,35 @@ const previewModeLabel = computed(() => {
 watch(
   () => currentStepKey.value,
   (newKey) => {
-    activeStepKey.value = newKey
+    if (!props.readOnly) {
+      activeStepKey.value = newKey
+    }
   },
   { immediate: true }
 )
 
+watch(
+  () => props.readOnly,
+  (readOnly) => {
+    if (!readOnly && !activeStepKey.value) {
+      activeStepKey.value = currentStepKey.value
+    }
+  },
+)
+
 const activeStepTraces = computed(() => {
   const key = activeStepKey.value || currentStepKey.value
-  return props.generationTraces.filter((trace) => trace.node_key === key)
+  return props.generationTraces.filter((trace) => normalizePipelineStepKey(trace.node_key) === key)
 })
 
 const activeTrace = computed(() => {
+  const key = activeStepKey.value || currentStepKey.value
   const traces = activeStepTraces.value
+  if (isFailureStatus.value && key === currentStepKey.value) {
+    const failedTrace = [...traces].reverse().find((trace) => trace.status === 'failed')
+    if (failedTrace) return failedTrace
+    return terminalFailedTrace.value
+  }
   return traces.length ? traces[traces.length - 1] : null
 })
 
@@ -771,6 +933,129 @@ const formatTracePayload = (payload: unknown, emptyText: string): string => {
     .map(([key, value]) => `${key}：${formatTraceValue(value)}`)
     .filter(Boolean)
   return lines.length ? lines.join('\n\n') : emptyText
+}
+
+const firstTextValue = (...values: unknown[]): string => {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim()
+    }
+  }
+  return ''
+}
+
+const toDisplayVersionNumber = (value: unknown): number | null => {
+  const index = Number(value)
+  if (!Number.isInteger(index) || index < 0) {
+    return null
+  }
+  return index + 1
+}
+
+const getTraceOutputPayload = (trace: ChapterGenerationTrace): TraceMetadata | null => {
+  const payload = traceMetadata(trace).output_payload
+  return isPlainTraceObject(payload) ? payload : null
+}
+
+const getTraceOutputText = (trace: ChapterGenerationTrace, ...payloadKeys: string[]): string => {
+  const payload = getTraceOutputPayload(trace)
+  const payloadValues = payloadKeys.map((key) => payload?.[key])
+  const rawText = firstTextValue(trace.cleaned_output, ...payloadValues, trace.raw_response)
+  return cleanVersionContent(rawText).trim()
+}
+
+const formatDraftGenerationOutputs = (trace: ChapterGenerationTrace) => {
+  const text = getTraceOutputText(trace, 'full_chapter', 'content', 'chapter_content')
+  return text ? `AI生成正文：\n${text}` : '该节点未记录 AI 生成正文。'
+}
+
+const formatAiReviewOutputs = (trace: ChapterGenerationTrace) => {
+  const payload = getTraceOutputPayload(trace)
+  const summaries = payload?.review_summaries
+  const aiReview = isPlainTraceObject(summaries) && isPlainTraceObject(summaries.ai_review)
+    ? summaries.ai_review
+    : null
+  const lines: string[] = []
+  const bestVersionNumber = toDisplayVersionNumber(
+    payload?.best_version_index ?? aiReview?.best_version_index,
+  )
+
+  if (bestVersionNumber !== null) {
+    lines.push(`推荐版本：版本 ${bestVersionNumber}`)
+  }
+
+  if (aiReview) {
+    const evaluation = firstTextValue(
+      aiReview.evaluation,
+      aiReview.overall_evaluation,
+      aiReview.reason_for_choice,
+    )
+    const suggestions = firstTextValue(
+      aiReview.suggestions,
+      aiReview.refinement_suggestions,
+    )
+    const recommendation = firstTextValue(aiReview.final_recommendation)
+    if (evaluation) lines.push(`评审结论：${evaluation}`)
+    if (suggestions) lines.push(`修改建议：${suggestions}`)
+    if (recommendation) lines.push(`最终建议：${recommendation}`)
+
+    const flaws = Array.isArray(aiReview.flaws) ? aiReview.flaws : []
+    if (flaws.length) {
+      lines.push(`需修复问题：\n${flaws.map((item) => `- ${formatTraceValue(item)}`).join('\n')}`)
+    }
+
+    const versionReviews = Array.isArray(aiReview.version_reviews) ? aiReview.version_reviews : []
+    if (versionReviews.length) {
+      const reviews = versionReviews
+        .map((item) => {
+          if (!isPlainTraceObject(item)) return ''
+          const versionNumber = Number(item.version_number)
+          const title = Number.isInteger(versionNumber) && versionNumber > 0
+            ? `版本 ${versionNumber}`
+            : '候选版本'
+          const review = firstTextValue(item.overall_review)
+          return review ? `${title}：${review}` : ''
+        })
+        .filter(Boolean)
+      if (reviews.length) {
+        lines.push(`分版本评审：\n${reviews.join('\n')}`)
+      }
+    }
+  }
+
+  if (lines.length) {
+    return lines.join('\n\n')
+  }
+
+  if (payload) {
+    return `评审结论：\n${formatTracePayload(payload, '该节点未记录评审结论。')}`
+  }
+  return '该节点未记录评审结论。'
+}
+
+const formatReviewRefinementOutputs = (trace: ChapterGenerationTrace) => {
+  const text = getTraceOutputText(trace, 'optimized_content', 'refined_content', 'final_content')
+  const payload = getTraceOutputPayload(trace)
+  const lines = text ? [`AI修复后正文：\n${text}`] : ['该节点未记录 AI 修复后正文。']
+  const notes = firstTextValue(payload?.optimization_notes, payload?.notes)
+  if (notes) {
+    lines.push(`修复说明：${notes}`)
+  }
+  return lines.join('\n\n')
+}
+
+const formatManualConfirmationOutputs = (trace: ChapterGenerationTrace) => {
+  const payload = getTraceOutputPayload(trace)
+  const status = firstTextValue(payload?.status) || 'waiting_for_confirm'
+  const lines = [
+    `人工确认状态：${status}`,
+    '此节点不再产生 AI 正文；你可以人工编辑草稿，或确认定稿。',
+  ]
+  const versions = Array.isArray(payload?.versions) ? payload.versions : []
+  if (versions.length) {
+    lines.push(`已保存候选版本：${versions.length} 个`)
+  }
+  return lines.join('\n\n')
 }
 
 const formatModelCall = (call: unknown, index: number): string => {
@@ -848,6 +1133,21 @@ const formatTraceOutputs = (trace: ChapterGenerationTrace) => {
   if (trace.error?.trim()) {
     sections.push(`错误：\n${trace.error.trim()}`)
   }
+  const normalizedNodeKey = normalizePipelineStepKey(trace.node_key)
+  if (!sections.length) {
+    if (normalizedNodeKey === 'draft_generation') {
+      return formatDraftGenerationOutputs(trace)
+    }
+    if (normalizedNodeKey === 'quality_review') {
+      return formatAiReviewOutputs(trace)
+    }
+    if (normalizedNodeKey === 'review_refinement') {
+      return formatReviewRefinementOutputs(trace)
+    }
+    if (normalizedNodeKey === 'save_draft') {
+      return formatManualConfirmationOutputs(trace)
+    }
+  }
   if (metadata.output_payload !== undefined) {
     sections.push(formatTracePayload(metadata.output_payload, '该节点未记录产出结果。'))
   }
@@ -895,6 +1195,22 @@ const activeStepDetails = computed<ActiveStepDetails>(() => {
     }
   }
 
+  if (isFailureStatus.value && key === currentStepKey.value) {
+    const label = PIPELINE_LABELS[key] || stepConfig.summary
+    const reason = failureReason.value || failureScenario.value.description
+    return {
+      label,
+      summary: `${label}执行失败，当前章节流程已停止。`,
+      callType: '失败节点',
+      llmUsage: key === 'quality_review' || key === 'review_refinement' ? '是' : '待确认',
+      status: '失败',
+      systemDuration: '未记录',
+      inputs: stepConfig.inputs,
+      actions: '该失败节点未返回完整 trace，前端已按章节失败状态显示兜底详情。',
+      outputs: `错误：\n${reason}`,
+    }
+  }
+
   return {
     label: PIPELINE_LABELS[key] || stepConfig.summary,
     summary: `暂未收到 ${PIPELINE_LABELS[key] || stepConfig.summary} 的真实运行记录`,
@@ -909,11 +1225,18 @@ const activeStepDetails = computed<ActiveStepDetails>(() => {
 })
 
 const stepState = (key: string, index: number) => {
-  if (props.status === 'failed') {
+  if (props.status === 'failed' || props.status === 'evaluation_failed') {
     if (key === currentStepKey.value) {
       return { tone: 'failed', label: '失败' }
     }
     if (index < currentStepIndex.value) {
+      return { tone: 'done', label: '已完成' }
+    }
+    return { tone: 'waiting', label: '等待中' }
+  }
+
+  if (props.readOnly && props.status === 'waiting_for_confirm') {
+    if (index <= currentStepIndex.value) {
       return { tone: 'done', label: '已完成' }
     }
     return { tone: 'waiting', label: '等待中' }
@@ -930,6 +1253,18 @@ const stepState = (key: string, index: number) => {
 
 const moveToBackground = () => {
   globalAlert.showToast('已切换为后台生成，章节完成后会在列表中显示状态。', 'success')
+}
+
+const handleFailedGenerateAction = async () => {
+  if (props.chapterNumber === null) return
+  if (props.status === 'evaluation_failed') {
+    const confirmed = await globalAlert.showConfirm(
+      '重新生成会放弃本轮已生成的候选正文，并用新生成结果替换它们。确认要重新生成本章吗？',
+      '放弃本轮草稿',
+    )
+    if (!confirmed) return
+  }
+  emit('generateChapter', props.chapterNumber)
 }
 
 const cancelGeneration = async () => {
@@ -1076,6 +1411,25 @@ onUnmounted(() => {
   margin: 0;
   color: var(--md-on-surface);
   font-size: var(--md-title-medium);
+}
+
+.chapter-console__pipeline-title-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--md-spacing-2);
+}
+
+.chapter-console__read-only-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--md-outline);
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-surface-container-low);
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-small);
+  font-weight: 700;
 }
 
 .chapter-console__pipeline-header-main {
@@ -1234,6 +1588,21 @@ onUnmounted(() => {
   border-radius: var(--md-radius-small, 4px);
 }
 
+.chapter-console__pipeline-badge--failed {
+  color: var(--md-error);
+  background-color: color-mix(in srgb, var(--md-error) 14%, var(--md-surface));
+  border: 1px solid color-mix(in srgb, var(--md-error) 28%, transparent);
+}
+
+.chapter-console__pipeline-badge--manual-confirm {
+  color: var(--md-on-secondary);
+  background-color: var(--md-secondary);
+  border: 1px solid var(--md-secondary-dark);
+  box-shadow: 1px 1px 0 rgba(28, 32, 34, 0.18);
+  font-family: var(--md-font-serif);
+  letter-spacing: 0.04em;
+}
+
 .chapter-console__pipeline-item.is-done .chapter-console__dot {
   background-color: var(--md-success);
 }
@@ -1269,7 +1638,22 @@ onUnmounted(() => {
 }
 
 .chapter-console__pipeline-item.is-failed .chapter-console__dot {
-  background-color: var(--md-error);
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border: 3px solid var(--md-error);
+  background-color: var(--md-error-container);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--md-error) 18%, transparent);
+  transform: scale(1.1);
+}
+
+.chapter-console__pipeline-item.is-failed .chapter-console__dot::before {
+  content: '!';
+  color: var(--md-error);
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .chapter-console__pipeline-item.is-failed .chapter-console__pipeline-title {
@@ -1282,6 +1666,34 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   width: 100%;
+}
+
+.chapter-console--read-only {
+  gap: var(--md-spacing-3);
+}
+
+.chapter-console--read-only .chapter-console__pipeline-card,
+.chapter-console--read-only .chapter-console__inspector-card {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.chapter-console--read-only .chapter-console__pipeline-card {
+  padding: var(--md-spacing-3) var(--md-spacing-4);
+  background-color: color-mix(in srgb, var(--md-surface-container-low) 66%, var(--md-surface));
+}
+
+.chapter-console--read-only .chapter-console__pipeline {
+  margin-top: var(--md-spacing-3);
+}
+
+.chapter-console--read-only .chapter-console__pipeline-item {
+  padding-bottom: 8px;
+}
+
+.chapter-console--read-only .chapter-console__pipeline-title {
+  font-size: var(--md-label-medium);
+  font-weight: 600;
 }
 
 @media (hover: hover) and (min-width: 834px) {
@@ -1484,76 +1896,20 @@ onUnmounted(() => {
   }
 }
 
-/* 失败卡片样式 */
-.chapter-console__failed-card {
-  border: 1px solid color-mix(in srgb, var(--md-error) 24%, var(--md-outline-variant));
-  border-radius: var(--md-radius-sm);
-  background: color-mix(in srgb, var(--md-surface) 96%, transparent);
-  box-shadow: var(--md-elevation-1);
-  padding: var(--md-spacing-4);
-}
-
-.chapter-console__failed-head {
+/* 失败状态容器样式 */
+.chapter-console__failed-container {
   display: flex;
-  align-items: center;
-  gap: var(--md-spacing-3);
-}
-
-.chapter-console__failed-icon-wrap {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: var(--md-error-container);
-  display: grid;
-  place-items: center;
-}
-
-.chapter-console__failed-icon {
-  width: 22px;
-  height: 22px;
-  color: var(--md-error);
-}
-
-.chapter-console__failed-head h4 {
-  margin: 0;
-  color: var(--md-on-surface);
-  font-size: var(--md-title-medium);
-  white-space: nowrap;
-}
-
-.chapter-console__failed-title-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--md-spacing-2);
-  flex: 1;
-}
-
-.chapter-console__failed-reason-inline {
-  color: var(--md-error);
-  font-size: var(--md-body-medium);
-  font-weight: 500;
-  margin-left: 12px;
-  background-color: color-mix(in srgb, var(--md-error) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--md-error) 18%, transparent);
-  padding: 6px 12px;
-  border-radius: var(--md-radius-md, 4px);
-  line-height: 1.5;
+  flex-direction: column;
+  gap: var(--md-spacing-4);
 }
 
 @media (max-width: 833px) {
-  .chapter-console__failed-title-row {
+  .chapter-console__failed-versions-head {
     flex-direction: column;
-    align-items: flex-start;
-  }
-  .chapter-console__failed-reason-inline {
-    margin-left: 0;
-    margin-top: 6px;
   }
 }
 
 .chapter-console__failed-actions {
-  margin-top: var(--md-spacing-4);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--md-spacing-2);
@@ -1561,6 +1917,101 @@ onUnmounted(() => {
 
 .chapter-console__failed-actions .md-btn {
   min-height: 40px;
+}
+
+.chapter-console__failed-actions .chapter-console__danger-action {
+  border-color: color-mix(in srgb, var(--md-error) 42%, var(--md-outline));
+  color: var(--md-error);
+}
+
+.chapter-console__failed-versions {
+  border: 1px solid color-mix(in srgb, var(--md-outline) 72%, var(--md-surface));
+  border-radius: var(--md-radius-sm);
+  background: color-mix(in srgb, var(--md-surface-container-low) 72%, var(--md-surface));
+  padding: var(--md-spacing-3);
+}
+
+.chapter-console__failed-versions-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--md-spacing-3);
+  align-items: flex-start;
+}
+
+.chapter-console__failed-versions-head h5 {
+  margin: 2px 0 0;
+  color: var(--md-on-surface);
+  font-size: var(--md-title-small);
+}
+
+.chapter-console__failed-versions-head p {
+  max-width: 680px;
+  margin: 0;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-small);
+  line-height: 1.7;
+}
+
+.chapter-console__failed-versions-kicker {
+  color: var(--md-error);
+  font-size: var(--md-label-small);
+  font-weight: 800;
+}
+
+.chapter-console__failed-version-grid {
+  margin-top: var(--md-spacing-3);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--md-spacing-3);
+}
+
+.chapter-console__failed-version-card {
+  min-height: 148px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-xs);
+  background: var(--md-surface);
+  color: var(--md-on-surface);
+  padding: var(--md-spacing-3);
+  text-align: left;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.chapter-console__failed-version-card:hover,
+.chapter-console__failed-version-card:focus-visible {
+  border-color: color-mix(in srgb, var(--md-primary) 48%, var(--md-outline));
+  background: color-mix(in srgb, var(--md-primary-container) 18%, var(--md-surface));
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.chapter-console__failed-version-title {
+  color: var(--md-on-surface);
+  font-size: var(--md-title-small);
+  font-weight: 800;
+}
+
+.chapter-console__failed-version-meta,
+.chapter-console__failed-version-action {
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-small);
+  font-weight: 700;
+}
+
+.chapter-console__failed-version-preview {
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-small);
+  line-height: 1.65;
+}
+
+.chapter-console__failed-version-action {
+  color: var(--md-primary);
 }
 
 /* 节点详情面板样式 */
@@ -1656,6 +2107,12 @@ onUnmounted(() => {
   color: var(--md-on-surface-variant);
   font-size: var(--md-label-small);
   font-weight: 700;
+}
+
+.chapter-console__trace-status.is-failed {
+  border-color: color-mix(in srgb, var(--md-error) 36%, var(--md-outline-variant));
+  background-color: color-mix(in srgb, var(--md-error) 10%, var(--md-surface));
+  color: var(--md-error);
 }
 
 .chapter-console__inspector-grids {
