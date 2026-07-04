@@ -466,8 +466,14 @@ export function useGenerateChapterMutation(projectId: ProjectIdSource) {
   const { setProjectCache, refreshProjectQueries } = useNovelMutationRefresh(projectId)
 
   return useMutation({
-    mutationFn: (chapterNumber: number) =>
-      NovelAPI.generateChapter(requireProjectId(projectId), chapterNumber),
+    mutationFn: (payload: number | { chapterNumber: number; fromNode?: string }) => {
+      const args = typeof payload === 'number' ? { chapterNumber: payload } : payload
+      return NovelAPI.generateChapter(
+        requireProjectId(projectId),
+        args.chapterNumber,
+        args.fromNode,
+      )
+    },
     onSuccess: async (project) => {
       setProjectCache(project)
       await refreshProjectQueries(project.id)

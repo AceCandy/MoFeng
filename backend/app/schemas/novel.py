@@ -190,6 +190,7 @@ class NovelSectionResponse(BaseModel):
 class GenerateChapterRequest(BaseModel):
     chapter_number: int
     writing_notes: Optional[str] = Field(default=None, description="章节额外写作指令")
+    from_node_key: Optional[str] = Field(default=None, description="节点级恢复起点(trace node_key)，为空表示整章生成")
 
 
 class FlowConfig(BaseModel):
@@ -208,6 +209,7 @@ class AdvancedGenerateRequest(BaseModel):
     chapter_number: int
     writing_notes: Optional[str] = Field(default=None, description="章节额外写作指令")
     flow_config: FlowConfig = Field(default_factory=FlowConfig)
+    from_node_key: Optional[str] = Field(default=None, description="节点级恢复起点(trace node_key)，为空表示整章生成")
 
 
 class AdvancedGenerateVariant(BaseModel):

@@ -100,6 +100,48 @@ class ChapterGenerationTraceService:
         )
         await self.session.commit()
 
+    async def clear_from_node(
+        self,
+        *,
+        project_id: str,
+        chapter_number: int,
+        from_node_key: str,
+        node_order: Dict[str, int],
+    ) -> int:
+        """节点级恢复专用：删除 from_node_key 及其之后的所有 trace，保留前置 trace。
+
+        node_order 由调用方提供（trace node_key → 图序号），避免与本模块形成循环依赖；
+        未知 node_key 的 trace 保守保留。返回实际删除条数。
+        """
+        from_seq = node_order.get(from_node_key)
+        if from_seq is None:
+            return 0
+        traces = await self.list_for_chapter(project_id=project_id, chapter_number=chapter_number)
+        to_delete_ids = [
+            t.id
+            for t in traces
+            if node_order.get(t.node_key) is not None and node_order[t.node_key] >= from_seq
+        ]
+        if not to_delete_ids:
+            return 0
+        await self.session.execute(
+            delete(ChapterGenerationTrace).where(ChapterGenerationTrace.id.in_(to_delete_ids))
+        )
+        await self.session.commit()
+        return len(to_delete_ids)
+
+    async def delete_failed_traces(self, *, project_id: str, chapter_number: int) -> int:
+        """删除章节的所有 failed trace，用于恢复失败时覆盖旧失败记录。"""
+        chapter = await self._get_chapter(project_id=project_id, chapter_number=chapter_number)
+        result = await self.session.execute(
+            delete(ChapterGenerationTrace).where(
+                ChapterGenerationTrace.chapter_id == chapter.id,
+                ChapterGenerationTrace.status == "failed",
+            )
+        )
+        await self.session.commit()
+        return getattr(result, "rowcount", None) or 0
+
     async def record_success(
         self,
         *,

@@ -69,6 +69,15 @@
                 >
                   失败
                 </span>
+                <button
+                  v-if="canRetryFromNode(item.key, index)"
+                  type="button"
+                  class="chapter-console__pipeline-retry"
+                  :disabled="generatingChapter === chapterNumber"
+                  @click.stop="emit('retryFromNode', { chapterNumber: props.chapterNumber, nodeKey: item.key })"
+                >
+                  从此节点重试
+                </button>
               </div>
             </div>
           </Tooltip>
@@ -287,7 +296,7 @@ const props = withDefaults(defineProps<Props>(), {
   readOnly: false,
 })
 
-const emit = defineEmits(['generateChapter', 'showVersionDetail', 'evaluateChapter'])
+const emit = defineEmits(['generateChapter', 'showVersionDetail', 'evaluateChapter', 'retryFromNode'])
 
 const clockNow = ref(Date.now())
 const localStartAt = ref(Date.now())
@@ -641,8 +650,16 @@ const failureScenario = computed(() => {
 })
 
 const retryGenerateLabel = computed(() =>
-  props.status === 'evaluation_failed' ? '放弃本轮草稿并重新生成' : '重试生成本章',
+  props.status === 'evaluation_failed' ? '放弃本轮草稿并重新生成' : '整章重新生成',
 )
+
+// 失败态下，已完成或失败的节点允许作为节点级重试起点
+const canRetryFromNode = (key: string, index: number) => {
+  if (props.readOnly) return false
+  if (props.status !== 'failed' && props.status !== 'evaluation_failed') return false
+  const tone = stepState(key, index).tone
+  return tone === 'failed' || tone === 'done'
+}
 
 const isWaitingForManualConfirm = computed(() => props.status === 'waiting_for_confirm')
 
@@ -1329,6 +1346,28 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--md-spacing-4);
+}
+
+.chapter-console__pipeline-retry {
+  margin-left: auto;
+  padding: 2px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--md-sys-color-primary, #2563eb);
+  background: transparent;
+  border: 1px solid var(--md-sys-color-primary, #2563eb);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.chapter-console__pipeline-retry:hover:not(:disabled) {
+  opacity: 0.8;
+}
+
+.chapter-console__pipeline-retry:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .chapter-console__header,

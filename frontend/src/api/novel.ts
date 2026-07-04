@@ -635,10 +635,14 @@ export class NovelAPI {
     })
   }
 
-  static async generateChapter(projectId: string, chapterNumber: number): Promise<NovelProject> {
+  static async generateChapter(
+    projectId: string,
+    chapterNumber: number,
+    fromNode?: string,
+  ): Promise<NovelProject> {
     return request(`${WRITER_BASE}/${projectId}/chapters/generate`, {
       method: 'POST',
-      body: JSON.stringify({ chapter_number: chapterNumber }),
+      body: JSON.stringify({ chapter_number: chapterNumber, from_node_key: fromNode }),
       timeoutMs: CHAPTER_GENERATION_TIMEOUT_MS,
     })
   }

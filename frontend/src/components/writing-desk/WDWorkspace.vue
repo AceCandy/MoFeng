@@ -216,6 +216,7 @@
               @showVersionDetail="$emit('showVersionDetail', $event)"
               @confirmVersionSelection="$emit('confirmVersionSelection', $event)"
               @generateChapter="$emit('generateChapter', $event)"
+              @retryFromNode="$emit('retryFromNode', $event)"
               @selectChapter="$emit('selectChapter', $event)"
               @showVersionSelector="$emit('showVersionSelector')"
               @regenerateChapter="$emit('regenerateChapter')"
@@ -545,6 +546,7 @@ const emit = defineEmits([
   'showVersionDetail',
   'confirmVersionSelection',
   'generateChapter',
+  'retryFromNode',
   'selectChapter',
   'showVersionSelector',
   'showEvaluationDetail',

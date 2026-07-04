@@ -890,6 +890,7 @@ async def advanced_generate_chapter(
         writing_notes=request.writing_notes,
         user_id=current_user.id,
         flow_config=request.flow_config.model_dump(),
+        from_node_key=request.from_node_key,
     )
     return AdvancedGenerateResponse(**result)
 
@@ -1285,6 +1286,7 @@ async def generate_chapter(
                 "preset": "basic",
                 "enable_rag": True,
             },
+            from_node_key=request.from_node_key,
         )
         return await _load_project_schema(novel_service, project_id, current_user.id)
     except HTTPException:

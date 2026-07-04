@@ -6,7 +6,7 @@ import logging
 import os
 import re
 from datetime import datetime, timedelta, timezone
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional, Tuple, TypedDict
 
 from fastapi import HTTPException
@@ -64,6 +64,43 @@ TRACE_NODE_META: Dict[str, Tuple[str, str]] = {
     "quality_review": ("AI评审", "version_review"),
     "review_refinement": ("修复润色", "chapter_optimization"),
     "persist_versions": ("保存草稿", "save_draft"),
+}
+
+# trace node_key → GRAPH_SEQUENCE 节点名；save_draft 兼容旧 trace
+TRACE_KEY_TO_GRAPH_NODE: Dict[str, str] = {
+    "context_prep": "collect_context",
+    "director_mission": "generate_chapter_mission",
+    "rag_retrieval": "prepare_retrieval_context",
+    "draft_generation": "generate_versions",
+    "quality_review": "review_versions",
+    "review_refinement": "apply_post_generation_reviews",
+    "persist_versions": "persist_versions",
+    "save_draft": "persist_versions",
+}
+# 恢复子图强制前置的纯计算节点，用于重建 enhanced_flow / memory_context / visibility_context
+RECOVERY_PREREQ_NODES: Tuple[str, ...] = (
+    "build_visibility_context",
+    "prepare_enhanced_context",
+    "prepare_memory_context",
+)
+# 节点级恢复起点对应的 UI 进度与 step_index（仅展示用）
+_RESUME_PROGRESS: Dict[str, int] = {
+    "context_prep": 10,
+    "director_mission": 25,
+    "rag_retrieval": 35,
+    "draft_generation": 55,
+    "quality_review": 70,
+    "review_refinement": 85,
+    "persist_versions": 95,
+}
+_RESUME_STEP_INDEX: Dict[str, int] = {
+    "context_prep": 1,
+    "director_mission": 2,
+    "rag_retrieval": 3,
+    "draft_generation": 4,
+    "quality_review": 5,
+    "review_refinement": 6,
+    "persist_versions": 7,
 }
 
 
@@ -127,6 +164,10 @@ class PipelineConfig:
     enable_faction: bool = False
 
 
+class _RebuildError(Exception):
+    """节点级恢复从 trace 还原 State 失败时抛出，调用方应回退到更早节点或全量生成。"""
+
+
 class PipelineOrchestrator:
     """统一写作流水线编排器。"""
 
@@ -163,7 +204,17 @@ class PipelineOrchestrator:
         user_id: int,
         writing_notes: Optional[str] = None,
         flow_config: Optional[Dict[str, Any]] = None,
+        from_node_key: Optional[str] = None,
     ) -> Dict[str, Any]:
+        if from_node_key:
+            return await self._resume_generation(
+                project_id=project_id,
+                chapter_number=chapter_number,
+                user_id=user_id,
+                from_node_key=from_node_key,
+                writing_notes=writing_notes,
+                flow_config=flow_config,
+            )
         initial_state: PipelineGraphState = {
             "project_id": project_id,
             "chapter_number": chapter_number,
@@ -182,6 +233,154 @@ class PipelineOrchestrator:
             raise
         return final_state["response"]
 
+    async def _resume_generation(
+        self,
+        *,
+        project_id: str,
+        chapter_number: int,
+        user_id: int,
+        from_node_key: str,
+        writing_notes: Optional[str] = None,
+        flow_config: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """从指定 trace 节点恢复生成：还原前置 State → 清目标及之后 trace → 跑恢复子图。"""
+        normalized_key = self._normalize_trace_key(from_node_key)
+        if normalized_key is None:
+            raise HTTPException(status_code=400, detail=f"不支持的恢复节点: {from_node_key}")
+        start_graph_node = TRACE_KEY_TO_GRAPH_NODE[normalized_key]
+
+        traces = await self.trace_service.list_for_chapter(
+            project_id=project_id, chapter_number=chapter_number,
+        )
+        if not traces:
+            raise HTTPException(status_code=409, detail="无可恢复的 trace 记录，请使用整章生成")
+
+        try:
+            rebuilt_state = await self._rebuild_state_from_traces(
+                traces=traces,
+                from_node_key=normalized_key,
+                project_id=project_id,
+                chapter_number=chapter_number,
+                user_id=user_id,
+                writing_notes=writing_notes,
+                flow_config=flow_config,
+            )
+        except _RebuildError as exc:
+            raise HTTPException(
+                status_code=409,
+                detail=f"无法从 {from_node_key} 恢复，请尝试更早的节点或整章生成：{exc}",
+            ) from exc
+
+        node_order = {
+            key: self.GRAPH_SEQUENCE.index(graph_node)
+            for key, graph_node in TRACE_KEY_TO_GRAPH_NODE.items()
+        }
+        await self.trace_service.clear_from_node(
+            project_id=project_id,
+            chapter_number=chapter_number,
+            from_node_key=normalized_key,
+            node_order=node_order,
+        )
+
+        await self._set_chapter_generation_state(
+            project_id=project_id,
+            chapter_number=chapter_number,
+            status="generating",
+            progress=_RESUME_PROGRESS.get(normalized_key, 0),
+            step=normalized_key,
+            step_index=_RESUME_STEP_INDEX.get(normalized_key, 1),
+            step_total=7,
+            reset_selected_version=True,
+        )
+
+        graph = self._build_recovery_graph(start_graph_node=start_graph_node)
+        try:
+            final_state = await graph.ainvoke(rebuilt_state)
+        except HTTPException as exc:
+            await self._mark_generation_failed_resume(
+                project_id=project_id,
+                chapter_number=chapter_number,
+                error=exc,
+                from_node_key=normalized_key,
+            )
+            raise
+        except Exception as exc:
+            await self._mark_generation_failed_resume(
+                project_id=project_id,
+                chapter_number=chapter_number,
+                error=exc,
+                from_node_key=normalized_key,
+            )
+            raise
+        return final_state["response"]
+
+    @staticmethod
+    def _normalize_trace_key(raw: str) -> Optional[str]:
+        """归一化外部传入的 node_key 到 TRACE_KEY_TO_GRAPH_NODE 的键空间。"""
+        key = (raw or "").strip()
+        return key if key in TRACE_KEY_TO_GRAPH_NODE else None
+
+    async def _mark_generation_failed_resume(
+        self,
+        *,
+        project_id: str,
+        chapter_number: int,
+        error: Optional[Exception],
+        from_node_key: str,
+    ) -> None:
+        """恢复生成失败：不清空全部 trace，failed 记录挂在 from_node_key 上并覆盖旧 failed。"""
+        try:
+            await self.session.rollback()
+        except Exception:
+            pass
+        try:
+            result = await self.session.execute(
+                select(Chapter).where(
+                    Chapter.project_id == project_id,
+                    Chapter.chapter_number == chapter_number,
+                )
+            )
+            chapter = result.scalars().first()
+            if not chapter:
+                return
+
+            error_msg = ""
+            if error:
+                error_msg = str(getattr(error, "detail", None) or error)
+            chapter.status = "failed"
+            chapter.generation_progress = 0
+            truncated = error_msg[:50] if error_msg else ""
+            chapter.generation_step = f"failed|error={truncated}" if error_msg else "failed"
+            chapter.generation_step_index = 0
+            chapter.generation_step_total = 7
+            await self.session.commit()
+
+            await self.trace_service.delete_failed_traces(
+                project_id=project_id, chapter_number=chapter_number,
+            )
+            label, stage = TRACE_NODE_META.get(from_node_key, (from_node_key, from_node_key))
+            await self.trace_service.record_failure(
+                project_id=project_id,
+                chapter_number=chapter_number,
+                node_key=from_node_key,
+                node_label=label,
+                stage=stage,
+                error=error_msg or "恢复生成流程失败",
+                metadata={
+                    "trace_kind": "workflow",
+                    "call_type": "generation_failure",
+                    "summary": f"从 {from_node_key} 恢复生成失败",
+                    "model_calls": [],
+                },
+                uses_llm=False,
+            )
+        except Exception:
+            logger.exception(
+                "Pipeline 项目 %s 第 %s 章恢复失败后标记 failed 失败",
+                project_id,
+                chapter_number,
+            )
+
     def _build_generation_graph(self):
         """构建高级写作 LangGraph，节点顺序完整覆盖原流水线阶段。"""
         workflow = StateGraph(PipelineGraphState)
@@ -194,6 +393,276 @@ class PipelineOrchestrator:
             previous = node_name
         workflow.add_edge(previous, END)
         return workflow.compile()
+
+    def _build_recovery_graph(self, *, start_graph_node: str):
+        """构建节点级恢复子图：从 start_graph_node 起、含其后所有节点、到 END。
+
+        不含 initialize_chapter（避免触发 clear_for_chapter 清空前置 trace）；
+        强制前置排在 start 之前的 RECOVERY_PREREQ_NODES 纯计算节点，以重建
+        enhanced_flow / memory_context / visibility_context 等不可序列化产物。
+        """
+        if start_graph_node not in self.GRAPH_SEQUENCE:
+            raise ValueError(f"未知的恢复起点节点: {start_graph_node}")
+        start_idx = self.GRAPH_SEQUENCE.index(start_graph_node)
+        prereq_to_add = [
+            node for node in RECOVERY_PREREQ_NODES
+            if self.GRAPH_SEQUENCE.index(node) < start_idx
+        ]
+        ordered = prereq_to_add + list(self.GRAPH_SEQUENCE[start_idx:])
+
+        workflow = StateGraph(PipelineGraphState)
+        for node_name in ordered:
+            workflow.add_node(node_name, getattr(self, f"_graph_{node_name}"))
+        previous = START
+        for node_name in ordered:
+            workflow.add_edge(previous, node_name)
+            previous = node_name
+        workflow.add_edge(previous, END)
+        return workflow.compile()
+
+    @staticmethod
+    def _replay_ai_review_side_effect(
+        *,
+        versions: List[Dict[str, Any]],
+        review_summaries: Dict[str, Any],
+        best_version_index: int,
+    ) -> None:
+        """从 quality_review 落盘的 review_summaries.ai_review 重放 versions[idx].metadata.ai_review 副作用。
+
+        quality_review 节点在图返回外给 versions 写入了 ai_review 副作用（未进 State、未进 trace 的
+        output_payload），节点级恢复还原到 quality_review 之后的状态时需据此重建该副作用。
+        """
+        ai_review = (review_summaries or {}).get("ai_review")
+        if not isinstance(ai_review, dict) or not versions:
+            return
+        if ai_review.get("mode") == "single":
+            versions[0].setdefault("metadata", {})["ai_review"] = {
+                "is_best": True,
+                "evaluation": ai_review.get("evaluation"),
+                "suggestions": ai_review.get("suggestions"),
+                "mode": "single",
+            }
+            return
+        version_reviews = ai_review.get("version_reviews") or []
+        review_map = {
+            vr.get("version_number"): vr
+            for vr in version_reviews
+            if isinstance(vr, dict) and vr.get("version_number") is not None
+        }
+        for idx, variant in enumerate(versions):
+            vr = review_map.get(idx + 1)
+            variant.setdefault("metadata", {})["ai_review"] = {
+                "is_best": idx == best_version_index,
+                "scores": vr.get("scores") if vr else ai_review.get("scores"),
+                "evaluation": vr.get("overall_review") if vr else None,
+                "pros": (vr.get("pros") or []) if vr else [],
+                "cons": (vr.get("cons") or []) if vr else [],
+                "flaws": ai_review.get("flaws") if idx == best_version_index else None,
+                "suggestions": ai_review.get("suggestions") if idx == best_version_index else None,
+            }
+
+    def _trace_node_seq(self, node_key: str) -> int:
+        """trace node_key 在 GRAPH_SEQUENCE 中的序号；未知 key 返回 -1。"""
+        graph_node = TRACE_KEY_TO_GRAPH_NODE.get(node_key)
+        if graph_node is None or graph_node not in self.GRAPH_SEQUENCE:
+            return -1
+        return self.GRAPH_SEQUENCE.index(graph_node)
+
+    async def _rebuild_state_from_traces(
+        self,
+        *,
+        traces: List[ChapterGenerationTrace],
+        from_node_key: str,
+        project_id: str,
+        chapter_number: int,
+        user_id: int,
+        writing_notes: Optional[str] = None,
+        flow_config: Optional[Dict[str, Any]] = None,
+    ) -> PipelineGraphState:
+        """从 from_node_key 之前的 success trace 还原 LangGraph State。
+
+        只还原 trace 节点产物；纯计算节点产物由恢复子图重算。
+        versions 按 from_node_key 取对应时序快照（draft 定稿 → ai_review 副作用 → 润色改写）。
+        """
+        from_seq = self._trace_node_seq(from_node_key)
+        if from_seq < 0:
+            raise _RebuildError(f"未知的恢复节点: {from_node_key}")
+
+        def latest_success(key: str) -> Optional[ChapterGenerationTrace]:
+            candidates = [t for t in traces if t.node_key == key and t.status == "success"]
+            if not candidates:
+                return None
+            return max(candidates, key=lambda t: (t.created_at, t.id))
+
+        def output_of(t: Optional[ChapterGenerationTrace]) -> Dict[str, Any]:
+            return (t.metadata_ or {}).get("output_payload") or {} if t is not None else {}
+
+        def input_of(t: Optional[ChapterGenerationTrace]) -> Dict[str, Any]:
+            return (t.metadata_ or {}).get("input_payload") or {} if t is not None else {}
+
+        state: PipelineGraphState = {
+            "project_id": project_id,
+            "chapter_number": chapter_number,
+            "user_id": user_id,
+        }
+        if writing_notes is not None:
+            state["writing_notes"] = writing_notes
+        if flow_config is not None:
+            state["flow_config"] = flow_config
+
+        if from_seq > self._trace_node_seq("context_prep"):
+            ctx = latest_success("context_prep")
+            if ctx is None:
+                raise _RebuildError("缺少 context_prep 的成功记录，无法还原前文与蓝图")
+            op = output_of(ctx)
+            ip = input_of(ctx)
+            completed = op.get("completed_chapters") or []
+            completed_summaries = op.get("completed_summaries") or [
+                c.get("summary", "")
+                for c in completed
+                if isinstance(c, dict) and c.get("summary")
+            ]
+            state["history_context"] = {
+                "previous_summary": op.get("previous_summary", ""),
+                "previous_tail": op.get("previous_tail", ""),
+                "completed_chapters": completed,
+                "completed_summaries": completed_summaries,
+                "model_calls": [],
+                "trace_metrics": {},
+            }
+            blueprint_dict = op.get("blueprint_dict") or {}
+            state["blueprint_dict"] = blueprint_dict
+            state["all_characters"] = op.get("all_characters") or [
+                c.get("name")
+                for c in blueprint_dict.get("characters", [])
+                if isinstance(c, dict) and c.get("name")
+            ]
+            state["outline_title"] = ip.get("outline_title") or f"第{chapter_number}章"
+            state["outline_summary"] = ip.get("outline_summary") or ""
+            state["writing_notes"] = state.get("writing_notes") or ip.get("writing_notes") or "无额外写作指令"
+            state["config"] = await self._resolve_config_from_trace_or_flow(op, flow_config)
+
+        if from_seq > self._trace_node_seq("director_mission"):
+            dm = latest_success("director_mission")
+            if dm is None or not dm.cleaned_output:
+                raise _RebuildError("缺少 director_mission 的成功记录，无法还原章节导演脚本")
+            try:
+                mission = json.loads(dm.cleaned_output)
+            except (json.JSONDecodeError, TypeError) as exc:
+                raise _RebuildError(f"director_mission 记录无法解析为 JSON: {exc}")
+            state["chapter_mission"] = mission
+            if isinstance(mission, dict):
+                state["allowed_new_characters"] = mission.get("allowed_new_characters") or []
+
+        if from_seq > self._trace_node_seq("rag_retrieval"):
+            rag = latest_success("rag_retrieval")
+            if rag is not None:
+                op = output_of(rag)
+                state["rag_context"] = op.get("rag_context")
+                state["knowledge_context"] = op.get("knowledge_context")
+                state["rag_stats"] = op.get("rag_stats")
+
+        if from_seq > self._trace_node_seq("draft_generation"):
+            versions = self._rebuild_versions(traces)
+            if not versions:
+                raise _RebuildError("缺少 draft_generation 的成功记录，无法还原候选版本")
+            state["versions"] = versions
+
+        if from_seq > self._trace_node_seq("quality_review"):
+            qr = latest_success("quality_review")
+            if qr is None:
+                raise _RebuildError("缺少 quality_review 的成功记录，无法还原评审结果")
+            op = output_of(qr)
+            versions = state.get("versions") or []
+            best_idx = op.get("best_version_index", 0)
+            if versions:
+                best_idx = max(0, min(int(best_idx), len(versions) - 1))
+            state["best_version_index"] = best_idx
+            review_summaries = op.get("review_summaries") or {}
+            state["review_summaries"] = review_summaries
+            if versions:
+                self._replay_ai_review_side_effect(
+                    versions=versions,
+                    review_summaries=review_summaries,
+                    best_version_index=best_idx,
+                )
+
+        if from_seq > self._trace_node_seq("review_refinement"):
+            rr = latest_success("review_refinement")
+            if rr is None or not rr.cleaned_output:
+                raise _RebuildError("缺少 review_refinement 的成功记录，无法还原润色结果")
+            versions = state.get("versions") or []
+            best_idx = state.get("best_version_index", 0)
+            if versions and 0 <= best_idx < len(versions):
+                versions[best_idx]["content"] = rr.cleaned_output
+
+        return state
+
+    async def _resolve_config_from_trace_or_flow(
+        self,
+        trace_output: Dict[str, Any],
+        flow_config: Optional[Dict[str, Any]],
+    ) -> PipelineConfig:
+        """优先从 context_prep trace 的 config 字段还原，否则用 flow_config 重算。"""
+        cfg_dict = trace_output.get("config")
+        if isinstance(cfg_dict, dict):
+            valid = PipelineConfig.__dataclass_fields__
+            kwargs = {k: v for k, v in cfg_dict.items() if k in valid}
+            if kwargs:
+                return PipelineConfig(**kwargs)
+        if flow_config is not None:
+            return await self._resolve_config(flow_config)
+        raise _RebuildError("trace 未记录 config 且未重传 flow_config，无法还原流水线配置")
+
+    def _rebuild_versions(
+        self,
+        traces: List[ChapterGenerationTrace],
+    ) -> List[Dict[str, Any]]:
+        """从 trace 组装 versions，优先取 quality_review input_payload 的完整正文，其次 draft 定稿 trace。"""
+        qr_candidates = [
+            t for t in traces
+            if t.node_key == "quality_review" and t.status == "success"
+        ]
+        if qr_candidates:
+            qr_latest = max(qr_candidates, key=lambda t: (t.created_at, t.id))
+            qr_versions = (qr_latest.metadata_ or {}).get("input_payload", {}).get("versions")
+            if isinstance(qr_versions, list) and qr_versions:
+                return [
+                    {
+                        "index": idx,
+                        "content": (v.get("content") if isinstance(v, dict) else "") or "",
+                        "metadata": (v.get("metadata") if isinstance(v, dict) else {}) or {},
+                    }
+                    for idx, v in enumerate(qr_versions)
+                ]
+
+        by_version: Dict[int, ChapterGenerationTrace] = {}
+        for t in traces:
+            if t.node_key != "draft_generation" or t.status != "success":
+                continue
+            meta = t.metadata_ or {}
+            op = meta.get("output_payload") or {}
+            metrics = meta.get("metrics") or {}
+            idx = op.get("version_index") or metrics.get("version_index")
+            if idx is None:
+                continue
+            existing = by_version.get(idx)
+            if existing is None or (t.created_at, t.id) > (existing.created_at, existing.id):
+                by_version[idx] = t
+        versions: List[Dict[str, Any]] = []
+        for idx in sorted(by_version.keys()):
+            t = by_version[idx]
+            op = (t.metadata_ or {}).get("output_payload") or {}
+            full = op.get("full_content")
+            if not full:
+                full = t.cleaned_output or ""
+                logger.warning("draft_generation trace 缺 full_content，退化使用 cleaned_output（可能含定稿前内容）")
+            versions.append({
+                "index": len(versions),
+                "content": full,
+                "metadata": op.get("version_metadata") or {},
+            })
+        return versions
 
     async def _mark_generation_failed(
         self, *, project_id: str, chapter_number: int, error: Optional[Exception] = None
@@ -435,6 +904,10 @@ class PipelineOrchestrator:
                 "previous_summary": history_context.get("previous_summary"),
                 "previous_tail": history_context.get("previous_tail"),
                 "completed_chapters": history_context.get("completed_chapters"),
+                "completed_summaries": history_context.get("completed_summaries", []),
+                "blueprint_dict": blueprint_dict,
+                "all_characters": all_characters,
+                "config": asdict(state["config"]),
             },
             metadata={
                 "trace_kind": "workflow",
@@ -814,6 +1287,14 @@ class PipelineOrchestrator:
             input_payload={
                 "version_count": len(versions),
                 "content_lengths": [len(version.get("content", "") or "") for version in versions],
+                "versions": [
+                    {
+                        "index": idx,
+                        "content": version.get("content", ""),
+                        "metadata": version.get("metadata", {}),
+                    }
+                    for idx, version in enumerate(versions)
+                ],
             },
             output_payload={
                 "best_version_index": best_version_index,
@@ -982,7 +1463,7 @@ class PipelineOrchestrator:
         await self.trace_service.record_success(
             project_id=state["project_id"],
             chapter_number=state["chapter_number"],
-            node_key="save_draft",
+            node_key="persist_versions",
             node_label="保存草稿",
             stage="save_draft",
             input_payload={
@@ -1887,6 +2368,42 @@ class PipelineOrchestrator:
             "minimum": minimum_word_count,
             "actual": actual_word_count,
         }
+
+        # 记录定稿后的候选正文，作为节点级恢复还原 versions 的权威来源
+        await self.trace_service.record_success(
+            project_id=project_id,
+            chapter_number=chapter_number,
+            node_key="draft_generation",
+            node_label="生成正文",
+            stage="chapter_writing",
+            cleaned_output=resolved_content,
+            input_payload={
+                "version_index": index + 1,
+                "outline_title": outline_title,
+                "outline_summary": outline_summary,
+            },
+            output_payload={
+                "full_content": resolved_content,
+                "version_metadata": metadata,
+                "version_index": index + 1,
+            },
+            metadata={
+                "trace_kind": "workflow",
+                "call_type": "postprocess",
+                "summary": "正文定稿：guardrail 校验与字数补写/压缩后的最终候选正文。",
+                "actions": [
+                    "执行角色可见性 guardrail 校验",
+                    "提取并解析正文",
+                    "按字数要求补写或压缩",
+                ],
+                "model_calls": [],
+                "metrics": {
+                    "version_index": index + 1,
+                    "final_chars": len(resolved_content or ""),
+                    "actual_word_count": actual_word_count,
+                },
+            },
+        )
 
         return {
             "index": index,

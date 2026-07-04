@@ -99,6 +99,7 @@
               @show-version-detail="showVersionDetail"
               @confirm-version-selection="confirmVersionSelection"
               @generate-chapter="generateChapter"
+              @retry-from-node="retryFromNode"
               @select-chapter="selectChapter"
               @show-evaluation-detail="openEvaluationDetailModal"
               @fetch-chapter-status="fetchChapterStatus"
@@ -1330,6 +1331,57 @@ const generateChapter = async (chapterNumber: number) => {
     }
 
     globalAlert.showError(failureMessage, '生成失败')
+  } finally {
+    generatingChapter.value = null
+  }
+}
+
+const retryFromNode = async (payload: { chapterNumber: number; nodeKey: string }) => {
+  if (!payload || payload.chapterNumber == null || !payload.nodeKey) return
+  const { chapterNumber, nodeKey } = payload
+  const confirmed = await globalAlert.showConfirm(
+    '从此节点重试会丢弃该节点及之后的所有产物并重新生成，确认继续？',
+    '节点级重试',
+  )
+  if (!confirmed) return
+
+  try {
+    generatingChapter.value = chapterNumber
+    selectedChapterNumber.value = chapterNumber
+    const nowIso = new Date().toISOString()
+    const existingChapter = project.value?.chapters.find((ch) => ch.chapter_number === chapterNumber)
+    upsertChapterInProjectCache(props.id, {
+      ...(existingChapter ?? {}),
+      chapter_number: chapterNumber,
+      generation_status: 'generating',
+      generation_progress: 0,
+      generation_step: nodeKey,
+      generation_step_index: 1,
+      generation_started_at: nowIso,
+      status_updated_at: nowIso,
+      generation_traces: existingChapter?.generation_traces || [],
+    } as Chapter)
+    fetchChapterStatus()
+
+    await generateChapterMutation.mutateAsync({ chapterNumber, fromNode: nodeKey })
+    await refetchChapterIntoProject(chapterNumber)
+
+    generatingChapter.value = null
+    chapterGenerationResult.value = null
+    selectedVersionIndex.value = 0
+  } catch (error) {
+    console.error('节点级重试失败:', error)
+    const failureMessage = formatChapterGenerationError(error)
+    const failedChapter = project.value?.chapters.find((ch) => ch.chapter_number === chapterNumber)
+    if (failedChapter) {
+      upsertChapterInProjectCache(props.id, {
+        ...failedChapter,
+        generation_status: 'failed',
+        generation_step: failureMessage,
+        status_updated_at: new Date().toISOString(),
+      })
+    }
+    globalAlert.showError(failureMessage, '重试失败')
   } finally {
     generatingChapter.value = null
   }
