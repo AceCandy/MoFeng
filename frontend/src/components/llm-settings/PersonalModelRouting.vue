@@ -342,7 +342,7 @@
             <div
               v-if="isModelPickerOpen(provider.id)"
               :id="`model-picker-${provider.id}`"
-              ref="modelPickerDialogRef"
+              :ref="setModelPickerDialogRef"
               class="model-routing__model-picker"
               role="dialog"
               aria-modal="false"
@@ -357,19 +357,35 @@
                   }}</strong>
                   <p class="model-routing__hint">
                     {{
-                      activeSection === 'llm' ? '勾选后加入可用模型池。' : '单选后作为当前检索模型。'
+                      activeSection === 'llm'
+                        ? '勾选后点右上角"保存"生效。'
+                        : '单选后作为当前检索模型。'
                     }}
                   </p>
                 </div>
-                <button type="button" class="model-routing__link" @click="closeModelPicker">
+                <button
+                  v-if="!isChatPickerDirty"
+                  type="button"
+                  class="model-routing__link"
+                  @click="closeModelPicker"
+                >
                   关闭
+                </button>
+                <button
+                  v-else
+                  type="button"
+                  class="md-btn md-btn-filled md-ripple model-routing__picker-save"
+                  :disabled="isSavingPicker"
+                  @click="saveChatSelections(provider)"
+                >
+                  {{ isSavingPicker ? '保存中...' : '保存' }}
                 </button>
               </div>
 
               <label class="md-text-field model-routing__picker-search">
                 <span class="md-text-field-label">搜索模型</span>
                 <input
-                  ref="modelPickerSearchInputRef"
+                  :ref="setModelPickerSearchInputRef"
                   data-dialog-initial-focus
                   v-model="modelPickerQuery"
                   class="md-text-field-input"
@@ -407,10 +423,10 @@
                   <input
                     v-if="activeSection === 'llm'"
                     type="checkbox"
-                    :checked="Boolean(chatModelForName(provider.id, modelName)?.is_enabled)"
+                    :checked="pendingChatModelNames.has(modelName)"
                     :disabled="!provider.is_enabled"
                     :aria-label="`启用文本生成模型 ${modelName}`"
-                    @change="toggleChatModel(provider, modelName, $event)"
+                    @change="togglePendingChatModel(provider, modelName, $event)"
                   />
                   <input
                     v-else
@@ -488,7 +504,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+  type ComponentPublicInstance,
+} from 'vue'
 import type {
   ProviderCreate,
   ProviderType,
@@ -736,6 +760,17 @@ const isModelPickerActive = computed(() => activeModelPickerProviderId.value !==
 const modelPickerDialogRef = ref<HTMLElement | null>(null)
 const modelPickerSearchInputRef = ref<HTMLElement | null>(null)
 const modelPickerQuery = ref('')
+// 弹窗位于 v-for 子树内，字符串 ref 会被收集成数组；
+// 改用函数 ref，只保留当前打开弹窗的单个 DOM
+const setModelPickerDialogRef = (el: Element | ComponentPublicInstance | null) => {
+  modelPickerDialogRef.value = el instanceof HTMLElement ? el : null
+}
+const setModelPickerSearchInputRef = (el: Element | ComponentPublicInstance | null) => {
+  modelPickerSearchInputRef.value = el instanceof HTMLElement ? el : null
+}
+// 拉取模型弹窗的本地勾选集合（仅文本生成 section），保存前不写后端
+const pendingChatModelNames = ref<Set<string>>(new Set())
+const isSavingPicker = ref(false)
 const feedback = ref<{ type: 'success' | 'error'; message: string }>({
   type: 'success',
   message: '',
@@ -918,8 +953,13 @@ const savedModelForActiveSection = (
     ? embeddingModelForName(providerId, modelName)
     : chatModelForName(providerId, modelName)
 
-const isModelSelectedForActiveSection = (providerId: number, modelName: string): boolean =>
-  Boolean(savedModelForActiveSection(providerId, modelName)?.is_enabled)
+const isModelSelectedForActiveSection = (providerId: number, modelName: string): boolean => {
+  // 文本生成弹窗打开时，行高亮跟随本地待保存勾选，避免勾选与高亮不一致
+  if (activeSection.value === 'llm' && activeModelPickerProviderId.value === providerId) {
+    return pendingChatModelNames.value.has(modelName)
+  }
+  return Boolean(savedModelForActiveSection(providerId, modelName)?.is_enabled)
+}
 
 const activeModelStateLabel = (providerId: number, modelName: string): string => {
   const model = savedModelForActiveSection(providerId, modelName)
@@ -968,7 +1008,38 @@ const isModelPickerOpen = (providerId: number): boolean =>
 const closeModelPicker = () => {
   activeModelPickerProviderId.value = null
   modelPickerQuery.value = ''
+  pendingChatModelNames.value = new Set()
+  isSavingPicker.value = false
 }
+
+const enabledChatModelNamesFor = (providerId: number): Set<string> =>
+  new Set(
+    models.value
+      .filter(
+        (model) =>
+          model.provider_id === providerId &&
+          Boolean(model.capabilities.chat) &&
+          model.is_enabled,
+      )
+      .map((model) => model.model_name),
+  )
+
+const isChatPickerDirty = computed(() => {
+  if (activeSection.value !== 'llm' || activeModelPickerProviderId.value === null) {
+    return false
+  }
+  const current = enabledChatModelNamesFor(activeModelPickerProviderId.value)
+  const pending = pendingChatModelNames.value
+  if (current.size !== pending.size) {
+    return true
+  }
+  for (const name of pending) {
+    if (!current.has(name)) {
+      return true
+    }
+  }
+  return false
+})
 
 useDialogA11y({
   active: isModelPickerActive,
@@ -1132,6 +1203,9 @@ const openProviderModelPicker = async (provider: UserModelProvider) => {
   }
   activeModelPickerProviderId.value = provider.id
   modelPickerQuery.value = ''
+  if (activeSection.value === 'llm') {
+    pendingChatModelNames.value = enabledChatModelNamesFor(provider.id)
+  }
   await loadProviderModels(provider)
 }
 
@@ -1189,30 +1263,104 @@ const upsertModelForCapability = async (
   return existing
 }
 
-const toggleChatModel = async (provider: UserModelProvider, modelName: string, event: Event) => {
+// 仅更新本地待保存勾选集合，提交前不写后端
+const togglePendingChatModel = (
+  provider: UserModelProvider,
+  modelName: string,
+  event: Event,
+) => {
   const checked = (event.target as HTMLInputElement).checked
-  const existing = chatModelForName(provider.id, modelName)
+  if (!checked) {
+    const existing = chatModelForName(provider.id, modelName)
+    if (existing?.is_default_chat) {
+      setFeedback('error', '主模型不能直接停用，请先选择另一个主模型。')
+      ;(event.target as HTMLInputElement).checked = true
+      return
+    }
+  }
+  const next = new Set(pendingChatModelNames.value)
+  if (checked) {
+    next.add(modelName)
+  } else {
+    next.delete(modelName)
+  }
+  pendingChatModelNames.value = next
+}
+
+const saveChatSelections = async (provider: UserModelProvider) => {
+  if (isSavingPicker.value) {
+    return
+  }
+  const pending = new Set(pendingChatModelNames.value)
+  const currentEnabled = models.value.filter(
+    (model) =>
+      model.provider_id === provider.id &&
+      Boolean(model.capabilities.chat) &&
+      model.is_enabled,
+  )
+  const toAdd = [...pending].filter(
+    (name) => !currentEnabled.some((model) => model.model_name === name),
+  )
+  const toDisable = currentEnabled.filter((model) => !pending.has(model.model_name))
+
+  isSavingPicker.value = true
   try {
-    if (checked) {
-      await upsertModelForCapability(provider, modelName, 'chat')
-    } else if (existing) {
-      if (existing.is_default_chat) {
-        setFeedback('error', '主模型不能直接停用，请先选择另一个主模型。')
-        ;(event.target as HTMLInputElement).checked = true
-        return
+    for (const name of toAdd) {
+      await upsertModelForCapability(provider, name, 'chat')
+    }
+    for (const model of toDisable) {
+      if (model.is_default_chat) {
+        continue
       }
       await updateUserModelMutation.mutateAsync({
-        id: existing.id,
+        id: model.id,
         data: { is_enabled: false },
       })
     }
     await loadBundle()
+    setFeedback('success', '文本生成模型选择已保存。')
     emit('saved')
+    closeModelPicker()
   } catch (error) {
     const message = error instanceof Error ? error.message : '未知错误'
-    setFeedback('error', `更新文本生成模型失败：${message}`)
+    setFeedback('error', `保存模型失败：${message}`)
+  } finally {
+    isSavingPicker.value = false
   }
 }
+
+// 点击弹窗外部：无改动直接关，有改动弹确认，避免误丢勾选
+const onPickerClickOutside = async (event: MouseEvent) => {
+  if (!isModelPickerActive.value || activeSection.value !== 'llm') {
+    return
+  }
+  const target = event.target
+  if (target instanceof Element) {
+    // 弹窗位于 v-for 子树内，模板 ref 会被收集为数组，
+    // 这里用 id 选择器判定点击是否落在弹窗内
+    if (target.closest(`#model-picker-${activeModelPickerProviderId.value}`)) {
+      return
+    }
+    if (target.closest('[aria-haspopup="dialog"]')) {
+      return
+    }
+  }
+  if (!isChatPickerDirty.value) {
+    closeModelPicker()
+    return
+  }
+  const confirmed = await globalAlert.showConfirm(
+    '有未保存的模型改动，确认放弃吗？',
+    '未保存的改动',
+  )
+  if (confirmed) {
+    closeModelPicker()
+  }
+}
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', onPickerClickOutside)
+})
 
 const setPrimaryChatModel = async (model?: UserAIModel) => {
   if (!model) {
@@ -1368,6 +1516,7 @@ watch(
 )
 
 onMounted(() => {
+  document.addEventListener('click', onPickerClickOutside)
   void loadBundle()
 })
 
