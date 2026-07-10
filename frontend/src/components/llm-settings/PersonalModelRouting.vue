@@ -347,39 +347,80 @@
               role="dialog"
               aria-modal="false"
               :aria-labelledby="`model-picker-title-${provider.id}`"
-              @keydown.esc.stop.prevent="closeModelPicker"
+              @keydown.esc.stop.prevent="!isSavingPicker && closeModelPicker()"
               @click.stop
             >
               <div class="model-routing__picker-head">
                 <div>
                   <strong :id="`model-picker-title-${provider.id}`">{{
-                    activeSection === 'llm' ? '选择文本生成模型' : '选择记忆检索模型'
+                    activeSection === 'llm'
+                      ? '选择文本生成模型'
+                      : activeSection === 'embedding'
+                        ? '选择记忆检索模型'
+                        : '选择语音朗读模型'
                   }}</strong>
                   <p class="model-routing__hint">
                     {{
                       activeSection === 'llm'
                         ? '勾选后点右上角"保存"生效。'
-                        : '单选后作为当前检索模型。'
+                        : activeSection === 'embedding'
+                          ? '单选后作为当前检索模型。'
+                          : '先设置协议、音色和语速，再选择默认朗读模型。'
                     }}
                   </p>
                 </div>
                 <button
-                  v-if="!isChatPickerDirty"
+                  v-if="activeSection === 'tts' || !isChatPickerDirty"
                   type="button"
                   class="model-routing__link"
+                  :disabled="isSavingPicker"
                   @click="closeModelPicker"
                 >
                   关闭
                 </button>
                 <button
-                  v-else
+                  v-if="activeSection === 'tts' || isChatPickerDirty"
                   type="button"
                   class="md-btn md-btn-filled md-ripple model-routing__picker-save"
                   :disabled="isSavingPicker"
-                  @click="saveChatSelections(provider)"
+                  @click="savePickerSelections(provider)"
                 >
                   {{ isSavingPicker ? '保存中...' : '保存' }}
                 </button>
+              </div>
+
+              <div v-if="activeSection === 'tts'" class="model-routing__tts-form">
+                <label class="md-text-field">
+                  <span class="md-text-field-label">语音协议</span>
+                  <select v-model="ttsForm.protocol" class="md-text-field-input">
+                    <option value="mimo_chat_audio">MiMo Chat Audio</option>
+                    <option value="openai_speech">OpenAI Speech</option>
+                  </select>
+                </label>
+                <label class="md-text-field">
+                  <span class="md-text-field-label">默认音色</span>
+                  <input
+                    v-model="ttsForm.voice"
+                    class="md-text-field-input"
+                    type="text"
+                    list="mimo-tts-voices"
+                    placeholder="如 白桦 / alloy"
+                  />
+                  <datalist id="mimo-tts-voices">
+                    <option v-for="voice in mimoPresetVoices" :key="voice" :value="voice" />
+                  </datalist>
+                </label>
+                <label class="md-text-field model-routing__tts-speed">
+                  <span class="md-text-field-label">语速 {{ ttsForm.speed.toFixed(1) }}x</span>
+                  <input
+                    v-model.number="ttsForm.speed"
+                    type="range"
+                    min="0.5"
+                    max="2"
+                    step="0.1"
+                    aria-label="语音朗读语速"
+                  />
+                </label>
               </div>
 
               <label class="md-text-field model-routing__picker-search">
@@ -429,7 +470,7 @@
                     @change="togglePendingChatModel(provider, modelName, $event)"
                   />
                   <input
-                    v-else
+                    v-else-if="activeSection === 'embedding'"
                     name="embedding-model"
                     type="radio"
                     :checked="
@@ -441,6 +482,15 @@
                     :disabled="!provider.is_enabled"
                     :aria-label="`选择向量模型 ${modelName}`"
                     @change="selectEmbeddingModel(provider, modelName)"
+                  />
+                  <input
+                    v-else
+                    name="tts-model"
+                    type="radio"
+                    :checked="pendingTTSModelName === modelName"
+                    :disabled="!provider.is_enabled || isSavingPicker"
+                    :aria-label="`选择语音朗读模型 ${modelName}`"
+                    @change="selectPendingTTSModel(modelName)"
                   />
                 </label>
               </div>
@@ -455,7 +505,13 @@
 
             <div class="model-routing__selected-models">
               <p class="md-label-medium model-routing__model-list-title">
-                {{ activeSection === 'llm' ? '已选文本生成模型' : '已选检索模型' }}
+                {{
+                  activeSection === 'llm'
+                    ? '已选文本生成模型'
+                    : activeSection === 'embedding'
+                      ? '已选检索模型'
+                      : '已选语音朗读模型'
+                }}
               </p>
               <p
                 v-if="selectedModelChipsForProvider(provider.id).length === 0"
@@ -472,6 +528,7 @@
                   <span class="model-routing__chip-name">{{ chip.display_name || chip.model_name }}</span>
                   <small v-if="activeSection === 'llm' && chip.is_default_chat" class="model-routing__stamp-label">主</small>
                   <small v-else-if="activeSection === 'embedding' && chip.is_default_embedding" class="model-routing__stamp-label">用</small>
+                  <small v-else-if="activeSection === 'tts' && chip.is_default_tts" class="model-routing__stamp-label">读</small>
                   <button
                     type="button"
                     class="model-routing__delete-btn"
@@ -492,7 +549,11 @@
         <p class="md-title-small">尚未配置供应商</p>
         <p class="model-routing__empty">
           先新增一个{{
-            activeSection === 'llm' ? '文本生成' : '记忆检索'
+            activeSection === 'llm'
+              ? '文本生成'
+              : activeSection === 'embedding'
+                ? '记忆检索'
+                : '语音朗读'
           }}供应商，再拉取并启用模型。
         </p>
         <button type="button" class="md-btn md-btn-filled md-ripple" @click="beginCreateProvider">
@@ -516,6 +577,7 @@ import {
 import type {
   ProviderCreate,
   ProviderType,
+  TTSProtocol,
   UserAIModel,
   UserAIModelCreate,
   UserModelProvider,
@@ -534,8 +596,8 @@ import {
   useUpdateUserModelMutation,
 } from '@/queries/llm'
 
-type Capability = 'chat' | 'embedding'
-type RoutingSection = 'llm' | 'embedding' | 'routes'
+type Capability = 'chat' | 'embedding' | 'tts'
+type RoutingSection = 'llm' | 'embedding' | 'tts' | 'routes'
 type ProviderFormMode = 'create' | 'edit' | null
 type ReadinessTone = 'success' | 'warning' | 'neutral'
 
@@ -570,6 +632,12 @@ interface ReadinessSummary {
   value: string
   description: string
   tone: ReadinessTone
+}
+
+interface TTSForm {
+  protocol: TTSProtocol
+  voice: string
+  speed: number
 }
 
 const emit = defineEmits<{
@@ -770,10 +838,17 @@ const setModelPickerSearchInputRef = (el: Element | ComponentPublicInstance | nu
 }
 // 拉取模型弹窗的本地勾选集合（仅文本生成 section），保存前不写后端
 const pendingChatModelNames = ref<Set<string>>(new Set())
+const pendingTTSModelName = ref('')
 const isSavingPicker = ref(false)
 const feedback = ref<{ type: 'success' | 'error'; message: string }>({
   type: 'success',
   message: '',
+})
+const mimoPresetVoices = ['冰糖', '茉莉', '苏打', '白桦', 'Mia', 'Chloe', 'Milo', 'Dean']
+const ttsForm = reactive<TTSForm>({
+  protocol: 'mimo_chat_audio',
+  voice: '白桦',
+  speed: 1.0,
 })
 
 const emptyProviderForm = (): ProviderForm => ({
@@ -808,11 +883,18 @@ const enabledEmbeddingModels = computed(() =>
 const defaultEmbeddingModel = computed(() =>
   enabledEmbeddingModels.value.find((model) => model.is_default_embedding),
 )
+const enabledTTSModels = computed(() =>
+  models.value.filter((model) => model.is_enabled && Boolean(model.capabilities.tts)),
+)
+const defaultTTSModel = computed(() =>
+  enabledTTSModels.value.find((model) => model.is_default_tts),
+)
 const configuredRouteCount = computed(
   () => Object.values(routeSelections).filter((modelId) => Boolean(modelId)).length,
 )
 const chatModelsByProvider = computed(() => groupModelsByProvider('chat'))
 const embeddingModelsByProvider = computed(() => groupModelsByProvider('embedding'))
+const ttsModelsByProvider = computed(() => groupModelsByProvider('tts'))
 const activeProviders = computed(() =>
   providers.value.filter((provider) => providerCapabilities(provider)[activeModelCapability()]),
 )
@@ -821,13 +903,18 @@ const sectionEyebrow = computed(() =>
     ? '阶段覆盖'
     : activeSection.value === 'embedding'
       ? '记忆检索'
-      : '文本生成',
+      : activeSection.value === 'tts'
+        ? '语音朗读'
+        : '文本生成',
 )
 const sectionHeading = computed(() => {
   if (activeSection.value === 'routes') {
     return '按创作阶段选择默认模型'
   }
-  return activeSection.value === 'embedding' ? '配置向量供应商和检索模型' : '配置供应商和主模型'
+  if (activeSection.value === 'embedding') {
+    return '配置向量供应商和检索模型'
+  }
+  return activeSection.value === 'tts' ? '配置朗读供应商和语音模型' : '配置供应商和主模型'
 })
 const sectionDescription = computed(() => {
   if (activeSection.value === 'routes') {
@@ -835,6 +922,9 @@ const sectionDescription = computed(() => {
   }
   if (activeSection.value === 'embedding') {
     return '记忆检索只使用一个当前向量模型，避免索引和查询维度不一致。'
+  }
+  if (activeSection.value === 'tts') {
+    return '设置默认朗读模型、协议、音色与语速；未配置时自动使用浏览器朗读。'
   }
   return '先保存供应商，再拉取模型并指定主模型，写作流程才能稳定生成正文。'
 })
@@ -859,6 +949,15 @@ const sectionReadinessSummary = computed<ReadinessSummary>(() => {
     }
   }
 
+  if (activeSection.value === 'tts') {
+    return {
+      label: '当前朗读模型',
+      value: modelDisplayName(defaultTTSModel.value),
+      description: `${enabledTTSModels.value.length} 个可用语音模型 · ${activeProviders.value.length} 个供应商`,
+      tone: defaultTTSModel.value ? 'success' : 'warning',
+    }
+  }
+
   return {
     label: '主模型',
     value: modelDisplayName(primaryChatModel.value),
@@ -871,7 +970,7 @@ const providerFetchState = (providerId: number): ProviderFetchState => {
   if (!providerFetchStates[providerId]) {
     providerFetchStates[providerId] = {
       isLoading: false,
-      modelsByCapability: { chat: [], embedding: [] },
+      modelsByCapability: { chat: [], embedding: [], tts: [] },
       error: '',
     }
   }
@@ -903,10 +1002,13 @@ const groupModelsByProvider = (capability: Capability): Record<number, UserAIMod
 
 const modelNamesForProvider = (providerId: number): string[] => {
   const capability = activeModelCapability()
-  const existing =
+  const grouped =
     capability === 'chat'
-      ? (chatModelsByProvider.value[providerId] || []).map((model) => model.model_name)
-      : (embeddingModelsByProvider.value[providerId] || []).map((model) => model.model_name)
+      ? chatModelsByProvider.value
+      : capability === 'embedding'
+        ? embeddingModelsByProvider.value
+        : ttsModelsByProvider.value
+  const existing = (grouped[providerId] || []).map((model) => model.model_name)
   const fetched = providerFetchState(providerId).modelsByCapability[capability]
   return Array.from(new Set([...existing, ...fetched])).sort((a, b) => a.localeCompare(b))
 }
@@ -925,7 +1027,9 @@ const selectedModelChipsForProvider = (providerId: number): UserAIModel[] => {
   const source =
     capability === 'chat'
       ? chatModelsByProvider.value[providerId] || []
-      : embeddingModelsByProvider.value[providerId] || []
+      : capability === 'embedding'
+        ? embeddingModelsByProvider.value[providerId] || []
+        : ttsModelsByProvider.value[providerId] || []
   return source.filter((model) => model.is_enabled)
 }
 
@@ -945,13 +1049,23 @@ const embeddingModelForName = (providerId: number, modelName: string): UserAIMod
       Boolean(model.capabilities.embedding),
   )
 
+const ttsModelForName = (providerId: number, modelName: string): UserAIModel | undefined =>
+  models.value.find(
+    (model) =>
+      providerId === model.provider_id &&
+      model.model_name === modelName &&
+      Boolean(model.capabilities.tts),
+  )
+
 const savedModelForActiveSection = (
   providerId: number,
   modelName: string,
 ): UserAIModel | undefined =>
   activeSection.value === 'embedding'
     ? embeddingModelForName(providerId, modelName)
-    : chatModelForName(providerId, modelName)
+    : activeSection.value === 'tts'
+      ? ttsModelForName(providerId, modelName)
+      : chatModelForName(providerId, modelName)
 
 const isModelSelectedForActiveSection = (providerId: number, modelName: string): boolean => {
   // 文本生成弹窗打开时，行高亮跟随本地待保存勾选，避免勾选与高亮不一致
@@ -969,6 +1083,9 @@ const activeModelStateLabel = (providerId: number, modelName: string): string =>
   if (activeSection.value === 'embedding') {
     return model.is_default_embedding ? '当前使用' : '已登记'
   }
+  if (activeSection.value === 'tts') {
+    return model.is_default_tts ? '当前朗读' : '已登记'
+  }
   return model.is_default_chat ? '主模型' : '已启用'
 }
 
@@ -981,7 +1098,11 @@ const assignProviderForm = (next: ProviderForm) => {
 }
 
 const activeModelCapability = (): Capability =>
-  activeSection.value === 'embedding' ? 'embedding' : 'chat'
+  activeSection.value === 'embedding'
+    ? 'embedding'
+    : activeSection.value === 'tts'
+      ? 'tts'
+      : 'chat'
 
 const providerModelsQuery = useProviderModelsQuery(
   () => activeModelPickerProviderId.value,
@@ -994,12 +1115,14 @@ const createProviderCapabilities = (): Record<Capability, boolean> => {
   return {
     chat: capability === 'chat',
     embedding: capability === 'embedding',
+    tts: capability === 'tts',
   }
 }
 
 const providerCapabilities = (provider: UserModelProvider): Record<Capability, boolean> => ({
   chat: Boolean(provider.capabilities?.chat),
   embedding: Boolean(provider.capabilities?.embedding),
+  tts: Boolean(provider.capabilities?.tts),
 })
 
 const isModelPickerOpen = (providerId: number): boolean =>
@@ -1009,6 +1132,7 @@ const closeModelPicker = () => {
   activeModelPickerProviderId.value = null
   modelPickerQuery.value = ''
   pendingChatModelNames.value = new Set()
+  pendingTTSModelName.value = ''
   isSavingPicker.value = false
 }
 
@@ -1045,7 +1169,11 @@ useDialogA11y({
   active: isModelPickerActive,
   dialogRef: modelPickerDialogRef,
   initialFocusRef: modelPickerSearchInputRef,
-  onClose: closeModelPicker,
+  onClose: () => {
+    if (!isSavingPicker.value) {
+      closeModelPicker()
+    }
+  },
   trapFocus: false,
   lockBodyScroll: false,
 })
@@ -1113,6 +1241,7 @@ const saveProviderForm = async () => {
   }
 
   try {
+    const editingProvider = providers.value.find((provider) => provider.id === editingProviderId.value)
     await saveProviderMutation.mutateAsync({
       id: editingProviderId.value,
       data: editingProviderId.value
@@ -1121,6 +1250,10 @@ const saveProviderForm = async () => {
           provider_type: payload.provider_type,
           base_url: payload.base_url,
           ...(providerForm.api_key.trim() ? { api_key: payload.api_key } : {}),
+          capabilities: {
+            ...(editingProvider ? providerCapabilities(editingProvider) : {}),
+            [activeModelCapability()]: true,
+          },
           is_enabled: payload.is_enabled,
         }
         : payload,
@@ -1206,6 +1339,15 @@ const openProviderModelPicker = async (provider: UserModelProvider) => {
   if (activeSection.value === 'llm') {
     pendingChatModelNames.value = enabledChatModelNamesFor(provider.id)
   }
+  if (activeSection.value === 'tts') {
+    const current = defaultTTSModel.value?.provider_id === provider.id
+      ? defaultTTSModel.value
+      : ttsModelsByProvider.value[provider.id]?.[0]
+    ttsForm.protocol = current?.tts_protocol || 'mimo_chat_audio'
+    ttsForm.voice = current?.tts_voice || '白桦'
+    ttsForm.speed = current?.tts_speed || 1.0
+    pendingTTSModelName.value = current?.model_name || ''
+  }
   await loadProviderModels(provider)
 }
 
@@ -1224,6 +1366,28 @@ const createModelPayload = (
       context_window: null,
       is_default_chat: !primaryChatModel.value,
       is_default_embedding: false,
+      is_default_tts: false,
+      tts_protocol: null,
+      tts_voice: null,
+      tts_speed: 1.0,
+      is_enabled: true,
+      sort_order: 0,
+    }
+  }
+
+  if (capability === 'tts') {
+    return {
+      provider_id: provider.id,
+      display_name: modelName,
+      model_name: modelName,
+      capabilities: { chat: false, embedding: false, tts: true },
+      context_window: null,
+      is_default_chat: false,
+      is_default_embedding: false,
+      is_default_tts: true,
+      tts_protocol: ttsForm.protocol,
+      tts_voice: ttsForm.voice.trim(),
+      tts_speed: ttsForm.speed,
       is_enabled: true,
       sort_order: 0,
     }
@@ -1233,10 +1397,14 @@ const createModelPayload = (
     provider_id: provider.id,
     display_name: modelName,
     model_name: modelName,
-    capabilities: { chat: false, embedding: true },
+    capabilities: { chat: false, embedding: true, tts: false },
     context_window: null,
     is_default_chat: false,
     is_default_embedding: true,
+    is_default_tts: false,
+    tts_protocol: null,
+    tts_voice: null,
+    tts_speed: 1.0,
     is_enabled: true,
     sort_order: 0,
   }
@@ -1250,7 +1418,9 @@ const upsertModelForCapability = async (
   const existing =
     capability === 'chat'
       ? chatModelForName(provider.id, modelName)
-      : embeddingModelForName(provider.id, modelName)
+      : capability === 'embedding'
+        ? embeddingModelForName(provider.id, modelName)
+        : ttsModelForName(provider.id, modelName)
   if (!existing) {
     return saveUserModelMutation.mutateAsync(createModelPayload(provider, modelName, capability))
   }
@@ -1327,6 +1497,14 @@ const saveChatSelections = async (provider: UserModelProvider) => {
   } finally {
     isSavingPicker.value = false
   }
+}
+
+const savePickerSelections = async (provider: UserModelProvider) => {
+  if (activeSection.value === 'tts') {
+    await saveTTSSelection(provider)
+    return
+  }
+  await saveChatSelections(provider)
 }
 
 // 点击弹窗外部：无改动直接关，有改动弹确认，避免误丢勾选
@@ -1416,6 +1594,47 @@ const selectEmbeddingModel = async (provider: UserModelProvider, modelName: stri
   }
 }
 
+const selectPendingTTSModel = (modelName: string) => {
+  pendingTTSModelName.value = modelName
+}
+
+const saveTTSSelection = async (provider: UserModelProvider) => {
+  if (isSavingPicker.value) {
+    return
+  }
+  if (!pendingTTSModelName.value) {
+    setFeedback('error', '请选择默认语音朗读模型。')
+    return
+  }
+  if (!ttsForm.voice.trim()) {
+    setFeedback('error', '请先填写默认音色。')
+    return
+  }
+  isSavingPicker.value = true
+  try {
+    const selected = await upsertModelForCapability(provider, pendingTTSModelName.value, 'tts')
+    await updateUserModelMutation.mutateAsync({
+      id: selected.id,
+      data: {
+        is_enabled: true,
+        is_default_tts: true,
+        tts_protocol: ttsForm.protocol,
+        tts_voice: ttsForm.voice.trim(),
+        tts_speed: ttsForm.speed,
+      },
+    })
+    await loadBundle()
+    setFeedback('success', '默认语音朗读模型已保存。')
+    emit('saved')
+    closeModelPicker()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '未知错误'
+    setFeedback('error', `设置语音朗读模型失败：${message}`)
+  } finally {
+    isSavingPicker.value = false
+  }
+}
+
 const deleteModelForActiveSection = async (provider: UserModelProvider, modelName: string) => {
   const model = savedModelForActiveSection(provider.id, modelName)
   if (!model) {
@@ -1427,6 +1646,10 @@ const deleteModelForActiveSection = async (provider: UserModelProvider, modelNam
   }
   if (model.is_default_embedding) {
     setFeedback('error', '当前向量模型不能直接删除，请先选择另一个向量模型。')
+    return
+  }
+  if (model.is_default_tts) {
+    setFeedback('error', '当前语音朗读模型不能直接删除，请先选择另一个语音朗读模型。')
     return
   }
 
@@ -1827,6 +2050,24 @@ defineExpose({
 
 .model-routing__picker-search {
   margin-bottom: var(--md-spacing-3);
+}
+
+.model-routing__tts-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--md-spacing-2);
+  margin-bottom: var(--md-spacing-3);
+  padding-bottom: var(--md-spacing-3);
+  border-bottom: 1px solid var(--md-outline-variant);
+}
+
+.model-routing__tts-speed {
+  grid-column: 1 / -1;
+}
+
+.model-routing__tts-speed input[type='range'] {
+  width: 100%;
+  accent-color: var(--md-primary);
 }
 
 .model-routing__picker-list {
@@ -2296,6 +2537,14 @@ defineExpose({
     position: static;
     width: 100%;
     max-height: 360px;
+  }
+
+  .model-routing__tts-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .model-routing__tts-speed {
+    grid-column: auto;
   }
 }
 

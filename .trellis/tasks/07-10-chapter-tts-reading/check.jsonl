@@ -1,0 +1,7 @@
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"复核字段迁移和事务归属"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"复核服务异常与路由状态码"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"复核异步 HTTP、安全日志和后端测试"}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"复核新增接口和状态机类型"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"复核 API 复用、用户反馈和前端门禁"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"复核配置与朗读跨层链路完整性"}
+{"file":".trellis/tasks/07-10-chapter-tts-reading/research/mimo-v2.5-tts-api.md","reason":"核验 MiMo 实现未偏离官方契约"}

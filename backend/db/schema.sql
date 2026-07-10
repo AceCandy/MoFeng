@@ -171,6 +171,43 @@ CREATE TABLE IF NOT EXISTS llm_configs (
     CONSTRAINT fk_llm_configs_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS user_model_providers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    provider_type VARCHAR(32) NOT NULL DEFAULT 'openai_compatible',
+    base_url TEXT NOT NULL,
+    api_key_encrypted TEXT NULL,
+    api_key_preview VARCHAR(32) NULL,
+    capabilities_json JSON NOT NULL,
+    is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_user_model_providers_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS user_ai_models (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    provider_id INT NOT NULL,
+    display_name VARCHAR(120) NOT NULL,
+    model_name VARCHAR(160) NOT NULL,
+    capabilities_json JSON NOT NULL,
+    context_window INT NULL,
+    is_default_chat BOOLEAN NOT NULL DEFAULT FALSE,
+    is_default_embedding BOOLEAN NOT NULL DEFAULT FALSE,
+    is_default_tts BOOLEAN NOT NULL DEFAULT FALSE,
+    tts_protocol VARCHAR(32) NULL,
+    tts_voice VARCHAR(120) NULL,
+    tts_speed FLOAT NOT NULL DEFAULT 1.0,
+    is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_user_ai_models_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_user_ai_models_provider FOREIGN KEY (provider_id) REFERENCES user_model_providers(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS prompts (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) UNIQUE NOT NULL,

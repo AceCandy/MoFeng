@@ -1,0 +1,12 @@
+{"file":".trellis/spec/backend/index.md","reason":"后端分层、依赖注入和质量规范索引"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"新增模型字段、启动迁移和事务边界"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"TTS 服务异常与 HTTP 状态映射"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"异步 httpx、Pydantic、测试和 AIMETA 约束"}
+{"file":".trellis/spec/frontend/index.md","reason":"Vue、API、composable 和状态边界索引"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"设置 Tab 与章节工具栏组件约定"}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"播放 composable 与 Vue Query 使用边界"}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"TTS API 和播放状态的严格类型要求"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"requestRaw、useAlert、Vitest 和构建门禁"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"核对数据库到前端配置及音频响应的数据流"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"复用现有 HTTP、Query 和模型配置契约"}
+{"file":".trellis/tasks/07-10-chapter-tts-reading/research/mimo-v2.5-tts-api.md","reason":"MiMo 官方端点、请求、音色、响应与长度契约"}

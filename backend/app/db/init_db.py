@@ -214,6 +214,21 @@ async def _ensure_schema_updates() -> None:
                         "WHERE capabilities_json IS NULL"
                     )
                 )
+
+            if "user_ai_models" in table_names:
+                model_columns = {col["name"] for col in inspector.get_columns("user_ai_models")}
+                if "is_default_tts" not in model_columns:
+                    sync_conn.execute(
+                        text("ALTER TABLE user_ai_models ADD COLUMN is_default_tts BOOLEAN NOT NULL DEFAULT 0")
+                    )
+                if "tts_protocol" not in model_columns:
+                    sync_conn.execute(text("ALTER TABLE user_ai_models ADD COLUMN tts_protocol VARCHAR(32)"))
+                if "tts_voice" not in model_columns:
+                    sync_conn.execute(text("ALTER TABLE user_ai_models ADD COLUMN tts_voice VARCHAR(120)"))
+                if "tts_speed" not in model_columns:
+                    sync_conn.execute(
+                        text("ALTER TABLE user_ai_models ADD COLUMN tts_speed FLOAT NOT NULL DEFAULT 1.0")
+                    )
         await conn.run_sync(_upgrade)
 
 

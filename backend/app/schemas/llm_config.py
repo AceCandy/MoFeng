@@ -1,10 +1,11 @@
 # AIMETA P=LLM配置模式_模型配置请求响应|R=LLM配置结构|NR=不含业务逻辑|E=LLMConfigSchema|X=internal|A=Pydantic模式|D=pydantic|S=none|RD=./README.ai
 from typing import Dict, List, Literal, Optional
 
-from pydantic import BaseModel, HttpUrl, Field
+from pydantic import BaseModel, Field, HttpUrl, model_validator
 
 
 ProviderType = Literal["openai_compatible", "anthropic", "ollama", "custom"]
+TTSProtocol = Literal["mimo_chat_audio", "openai_speech"]
 
 
 class LLMConfigBase(BaseModel):
@@ -47,7 +48,9 @@ class ProviderBase(BaseModel):
     provider_type: ProviderType = "openai_compatible"
     base_url: str = Field(min_length=1)
     api_key: Optional[str] = None
-    capabilities: Dict[str, bool] = Field(default_factory=lambda: {"chat": True, "embedding": False})
+    capabilities: Dict[str, bool] = Field(
+        default_factory=lambda: {"chat": True, "embedding": False, "tts": False}
+    )
     is_enabled: bool = True
 
 
@@ -81,12 +84,29 @@ class UserAIModelBase(BaseModel):
     provider_id: int
     display_name: str = Field(min_length=1, max_length=120)
     model_name: str = Field(min_length=1, max_length=160)
-    capabilities: Dict[str, bool] = Field(default_factory=lambda: {"chat": True, "embedding": False})
+    capabilities: Dict[str, bool] = Field(
+        default_factory=lambda: {"chat": True, "embedding": False, "tts": False}
+    )
     context_window: Optional[int] = None
     is_default_chat: bool = False
     is_default_embedding: bool = False
+    is_default_tts: bool = False
+    tts_protocol: Optional[TTSProtocol] = None
+    tts_voice: Optional[str] = Field(default=None, max_length=120)
+    tts_speed: float = Field(default=1.0, ge=0.5, le=2.0)
     is_enabled: bool = True
     sort_order: int = 0
+
+    @model_validator(mode="after")
+    def validate_tts_configuration(self):
+        if self.is_default_tts and not self.capabilities.get("tts"):
+            raise ValueError("默认语音朗读模型必须启用 TTS 能力")
+        if self.capabilities.get("tts"):
+            if not self.tts_protocol:
+                raise ValueError("TTS 模型必须选择语音协议")
+            if not (self.tts_voice or "").strip():
+                raise ValueError("TTS 模型必须配置音色")
+        return self
 
 
 class UserAIModelCreate(UserAIModelBase):
@@ -101,6 +121,10 @@ class UserAIModelUpdate(BaseModel):
     context_window: Optional[int] = None
     is_default_chat: Optional[bool] = None
     is_default_embedding: Optional[bool] = None
+    is_default_tts: Optional[bool] = None
+    tts_protocol: Optional[TTSProtocol] = None
+    tts_voice: Optional[str] = Field(default=None, max_length=120)
+    tts_speed: Optional[float] = Field(default=None, ge=0.5, le=2.0)
     is_enabled: Optional[bool] = None
     sort_order: Optional[int] = None
 
@@ -115,6 +139,10 @@ class UserAIModelRead(BaseModel):
     context_window: Optional[int] = None
     is_default_chat: bool
     is_default_embedding: bool
+    is_default_tts: bool
+    tts_protocol: Optional[TTSProtocol] = None
+    tts_voice: Optional[str] = None
+    tts_speed: float
     is_enabled: bool
     sort_order: int
 

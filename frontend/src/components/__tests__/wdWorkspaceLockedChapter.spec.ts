@@ -357,4 +357,50 @@ describe('WDWorkspace locked chapter state', () => {
     expect(source).toContain('--chapter-locked-muted: #667172;')
     expect(source).toContain('--chapter-locked-action-bg: rgba(250, 246, 237, 0.64);')
   })
+
+  it('shows the reading control only for finalized chapter content', async () => {
+    const project: NovelProject = {
+      id: 'novel-1',
+      title: '全网退役',
+      initial_prompt: '',
+      conversation_history: [],
+      blueprint: {
+        chapter_outline: [
+          { chapter_number: 1, title: '一招', summary: '林拓重新站上擂台。' },
+        ],
+      },
+      chapters: [
+        {
+          chapter_number: 1,
+          title: '一招',
+          summary: '林拓重新站上擂台。',
+          real_summary: null,
+          content: '林拓抬起拳架。',
+          versions: null,
+          evaluation: null,
+          generation_status: 'successful',
+        },
+      ],
+    }
+
+    const rendered = await mountWorkspace(project, 1)
+    try {
+      const toolbar = rendered.host.querySelector('[role="toolbar"][aria-label="章节操作"]')
+      expect(toolbar?.textContent).toContain('朗读')
+    } finally {
+      rendered.unmount()
+    }
+  })
+
+  it('wires the reading toolbar to playback state and chapter cleanup', () => {
+    const source = readSource('src/components/writing-desk/WDWorkspace.vue')
+
+    expect(source).toContain('useChapterReader()')
+    expect(source).toContain("readerStatus.value === 'playing'")
+    expect(source).toContain("readerStatus.value === 'paused'")
+    expect(source).toContain('chapterReader.pause()')
+    expect(source).toContain('chapterReader.resume()')
+    expect(source).toContain('chapterReader.stop()')
+    expect(source).toContain('selectedChapterOutline.value?.title')
+  })
 })

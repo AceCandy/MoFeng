@@ -1,7 +1,7 @@
 # AIMETA P=个人AI模型配置模型_供应商模型和阶段路由|R=模型配置表|NR=不含调用逻辑|E=UserModelProvider_UserAIModel_UserAIStageRoute|X=internal|A=ORM模型|D=sqlalchemy|S=db|RD=./README.ai
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.types import JSON
 
@@ -22,7 +22,7 @@ class UserModelProvider(Base):
     api_key_preview: Mapped[str | None] = mapped_column(String(32))
     capabilities_json: Mapped[dict] = mapped_column(
         JSON,
-        default=lambda: {"chat": True, "embedding": False},
+        default=lambda: {"chat": True, "embedding": False, "tts": False},
         nullable=False,
     )
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
@@ -54,6 +54,10 @@ class UserAIModel(Base):
     context_window: Mapped[int | None] = mapped_column(Integer)
     is_default_chat: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_default_embedding: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_default_tts: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    tts_protocol: Mapped[str | None] = mapped_column(String(32))
+    tts_voice: Mapped[str | None] = mapped_column(String(120))
+    tts_speed: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -67,6 +67,7 @@
             'is-active': activeSettingsSection === section.id,
             'nav-item-llm': section.id === 'llm',
             'nav-item-embedding': section.id === 'embedding',
+            'nav-item-tts': section.id === 'tts',
             'nav-item-routes': section.id === 'routes'
           }"
           :id="`settings-tab-${section.id}`"
@@ -108,6 +109,14 @@
           @navigate="selectSettingsSection"
         />
         <PersonalModelRouting
+          v-else-if="activeSettingsSection === 'tts'"
+          ref="personalRoutingXRef"
+          active-section="tts"
+          :is-modal="props.isModal"
+          @saved="handleLLMConfigSaved"
+          @navigate="selectSettingsSection"
+        />
+        <PersonalModelRouting
           v-else
           ref="personalRoutingXRef"
           active-section="routes"
@@ -139,7 +148,7 @@ const emit = defineEmits<{
   (e: 'saved'): void
 }>()
 
-type SettingsSectionId = 'llm' | 'embedding' | 'routes'
+type SettingsSectionId = 'llm' | 'embedding' | 'tts' | 'routes'
 
 interface SettingsSection {
   id: SettingsSectionId
@@ -154,6 +163,7 @@ const bundleQuery = useLLMConfigBundleQuery()
 const settingsSections: SettingsSection[] = [
   { id: 'llm', label: '文本生成', description: '供应商、模型拉取与主模型' },
   { id: 'embedding', label: '记忆检索', description: '向量供应商与唯一检索模型' },
+  { id: 'tts', label: '语音朗读', description: '朗读模型、音色与语速' },
   { id: 'routes', label: '阶段路由', description: '按创作阶段覆盖主模型' },
 ]
 
@@ -161,6 +171,7 @@ const activeSettingsSection = ref<SettingsSectionId>('llm')
 const settingsTabRefs = ref<Record<SettingsSectionId, HTMLButtonElement | null>>({
   llm: null,
   embedding: null,
+  tts: null,
   routes: null,
 })
 

@@ -27,6 +27,7 @@ export interface LLMConfigCreate {
 }
 
 export type ProviderType = 'openai_compatible' | 'anthropic' | 'ollama' | 'custom';
+export type TTSProtocol = 'mimo_chat_audio' | 'openai_speech';
 
 export interface UserModelProvider {
   id: number;
@@ -60,6 +61,10 @@ export interface UserAIModel {
   context_window: number | null;
   is_default_chat: boolean;
   is_default_embedding: boolean;
+  is_default_tts: boolean;
+  tts_protocol: TTSProtocol | null;
+  tts_voice: string | null;
+  tts_speed: number;
   is_enabled: boolean;
   sort_order: number;
 }
@@ -72,6 +77,10 @@ export interface UserAIModelCreate {
   context_window?: number | null;
   is_default_chat: boolean;
   is_default_embedding: boolean;
+  is_default_tts: boolean;
+  tts_protocol: TTSProtocol | null;
+  tts_voice: string | null;
+  tts_speed: number;
   is_enabled: boolean;
   sort_order: number;
 }

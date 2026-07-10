@@ -54,7 +54,7 @@ CHAT_STAGE_KEYS = {
 }
 EMBEDDING_STAGE_KEYS = {"rag_embedding"}
 ALL_STAGE_KEYS = CHAT_STAGE_KEYS | EMBEDDING_STAGE_KEYS
-DEFAULT_PROVIDER_CAPABILITIES = {"chat": True, "embedding": False}
+DEFAULT_PROVIDER_CAPABILITIES = {"chat": True, "embedding": False, "tts": False}
 
 
 class LLMConfigService:
@@ -103,6 +103,10 @@ class LLMConfigService:
             context_window=model.context_window,
             is_default_chat=model.is_default_chat,
             is_default_embedding=model.is_default_embedding,
+            is_default_tts=getattr(model, "is_default_tts", False),
+            tts_protocol=getattr(model, "tts_protocol", None),
+            tts_voice=getattr(model, "tts_voice", None),
+            tts_speed=getattr(model, "tts_speed", 1.0),
             is_enabled=model.is_enabled,
             sort_order=model.sort_order,
         )
@@ -113,7 +117,20 @@ class LLMConfigService:
         return {
             "chat": bool(source.get("chat")),
             "embedding": bool(source.get("embedding")),
+            "tts": bool(source.get("tts")),
         }
+
+    @staticmethod
+    def _validate_tts_model(model) -> None:
+        supports_tts = bool((model.capabilities_json or {}).get("tts"))
+        if getattr(model, "is_default_tts", False) and not supports_tts:
+            raise ValueError("默认语音朗读模型必须启用 TTS 能力")
+        if not supports_tts:
+            return
+        if not getattr(model, "tts_protocol", None):
+            raise ValueError("TTS 模型必须选择语音协议")
+        if not (getattr(model, "tts_voice", None) or "").strip():
+            raise ValueError("TTS 模型必须配置音色")
 
     @classmethod
     def _provider_to_read(cls, provider, fallback_capabilities: Optional[dict] = None) -> ProviderRead:
@@ -286,9 +303,13 @@ class LLMConfigService:
         inferred: dict[int, dict[str, bool]] = {}
         for model in models:
             capabilities = model.capabilities_json or {}
-            provider_caps = inferred.setdefault(model.provider_id, {"chat": False, "embedding": False})
+            provider_caps = inferred.setdefault(
+                model.provider_id,
+                {"chat": False, "embedding": False, "tts": False},
+            )
             provider_caps["chat"] = provider_caps["chat"] or bool(capabilities.get("chat"))
             provider_caps["embedding"] = provider_caps["embedding"] or bool(capabilities.get("embedding"))
+            provider_caps["tts"] = provider_caps["tts"] or bool(capabilities.get("tts"))
         return inferred
 
     async def create_provider(self, user_id: int, payload: ProviderCreate) -> ProviderRead:
@@ -367,6 +388,8 @@ class LLMConfigService:
         return True
 
     async def create_model(self, user_id: int, payload: UserAIModelCreate) -> UserAIModelRead:
+        if payload.is_default_tts:
+            await self.model_repo.lock_user_configuration(user_id)
         provider = await self.provider_repo.get_owned(payload.provider_id, user_id)
         if not provider:
             raise ValueError("provider not found")
@@ -379,6 +402,10 @@ class LLMConfigService:
             context_window=payload.context_window,
             is_default_chat=payload.is_default_chat,
             is_default_embedding=payload.is_default_embedding,
+            is_default_tts=payload.is_default_tts,
+            tts_protocol=payload.tts_protocol,
+            tts_voice=(payload.tts_voice or "").strip() or None,
+            tts_speed=payload.tts_speed,
             is_enabled=payload.is_enabled,
             sort_order=payload.sort_order,
         )
@@ -391,6 +418,7 @@ class LLMConfigService:
         return [self._model_to_read(item) for item in await self.model_repo.list_by_user(user_id)]
 
     async def update_model(self, user_id: int, model_id: int, payload: UserAIModelUpdate) -> UserAIModelRead:
+        await self.model_repo.lock_user_configuration(user_id)
         model = await self.model_repo.get_owned(model_id, user_id)
         if not model:
             raise ValueError("model not found")
@@ -412,10 +440,19 @@ class LLMConfigService:
             model.is_default_chat = data["is_default_chat"]
         if "is_default_embedding" in data and data["is_default_embedding"] is not None:
             model.is_default_embedding = data["is_default_embedding"]
+        if "is_default_tts" in data and data["is_default_tts"] is not None:
+            model.is_default_tts = data["is_default_tts"]
+        if "tts_protocol" in data:
+            model.tts_protocol = data["tts_protocol"]
+        if "tts_voice" in data:
+            model.tts_voice = (data["tts_voice"] or "").strip() or None
+        if "tts_speed" in data and data["tts_speed"] is not None:
+            model.tts_speed = data["tts_speed"]
         if "is_enabled" in data and data["is_enabled"] is not None:
             model.is_enabled = data["is_enabled"]
         if "sort_order" in data and data["sort_order"] is not None:
             model.sort_order = data["sort_order"]
+        self._validate_tts_model(model)
         await self._normalize_default_flags(user_id, model)
         await self.session.commit()
         return self._model_to_read(model)
@@ -428,6 +465,8 @@ class LLMConfigService:
             raise ValueError("主模型不能直接删除，请先选择另一个主模型。")
         if model.is_default_embedding:
             raise ValueError("当前向量模型不能直接删除，请先选择另一个向量模型。")
+        if getattr(model, "is_default_tts", False):
+            raise ValueError("当前语音朗读模型不能直接删除，请先选择另一个语音朗读模型。")
 
         # 删除模型前主动清理阶段路由，避免留下指向已删除模型的配置。
         routes = list(await self.stage_route_repo.list_by_user(user_id))
@@ -440,7 +479,10 @@ class LLMConfigService:
         return True
 
     async def _normalize_default_flags(self, user_id: int, changed_model) -> None:
-        models = list(await self.model_repo.list_by_user(user_id))
+        if getattr(changed_model, "is_default_tts", False):
+            models = list(await self.model_repo.list_by_user_for_update(user_id))
+        else:
+            models = list(await self.model_repo.list_by_user(user_id))
         if changed_model.is_default_chat:
             for model in models:
                 if model.id != changed_model.id:
@@ -453,6 +495,11 @@ class LLMConfigService:
                     # 向量模型是记忆检索的唯一入口，避免多个 embedding 同时启用。
                     if (model.capabilities_json or {}).get("embedding"):
                         model.is_enabled = False
+        if getattr(changed_model, "is_default_tts", False):
+            changed_model.is_enabled = True
+            for model in models:
+                if model.id != changed_model.id:
+                    model.is_default_tts = False
 
     async def upsert_stage_routes(self, user_id: int, payload: StageRoutesPayload) -> list[StageRouteRead]:
         incoming_stages = {item.stage for item in payload.routes}

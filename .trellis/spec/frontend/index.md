@@ -28,6 +28,7 @@
 | [State Management](./state-management.md) | Pinia vs Vue Query boundary, store styles, auth token plumbing |
 | [Type Safety](./type-safety.md) | strict tsconfig, colocated interfaces, `any` policy |
 | [Quality Guidelines](./quality-guidelines.md) | HTTP, routing, Tailwind tokens, forms, testing, review checklist |
+| [LLM Settings](./llm-settings.md) | PersonalModelRouting supplier/model capability isolation, TTS provider separation |
 
 ---
 

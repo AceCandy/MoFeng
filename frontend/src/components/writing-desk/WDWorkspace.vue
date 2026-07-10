@@ -44,6 +44,23 @@
               <div class="writing-workspace__toolbar-group writing-workspace__toolbar-group--utility">
                 <button
                   type="button"
+                  @click="handleReaderToggle"
+                  :aria-label="readerPrimaryLabel"
+                  class="md-btn md-btn-text md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--ghost"
+                >
+                  {{ readerPrimaryLabel }}
+                </button>
+                <button
+                  v-if="readerStatus === 'playing' || readerStatus === 'paused'"
+                  type="button"
+                  aria-label="停止朗读"
+                  @click="chapterReader.stop()"
+                  class="md-btn md-btn-text md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--ghost"
+                >
+                  停止
+                </button>
+                <button
+                  type="button"
                   @click="copySelectedChapterContent"
                   :disabled="!hasSelectedChapterContent"
                   class="md-btn md-btn-text md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--ghost disabled:opacity-50 disabled:cursor-not-allowed"
@@ -507,6 +524,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { globalAlert } from '@/composables/useAlert'
 import { useDialogA11y } from '@/composables/useDialogA11y'
+import { useChapterReader } from '@/composables/useChapterReader'
 import type {
   Chapter,
   ChapterOutline,
@@ -567,6 +585,8 @@ const aiMenuTriggerRef = ref<HTMLButtonElement | null>(null)
 const aiMenuItemRefs = ref<Array<HTMLElement | null>>([])
 const aiMenuId = 'wd-workspace-ai-menu'
 const showAiMenu = ref(false)
+const chapterReader = useChapterReader()
+const readerStatus = chapterReader.status
 
 const copyTextLegacy = (text: string): boolean => {
   const textarea = document.createElement('textarea')
@@ -851,6 +871,30 @@ const hasSelectedChapterContent = computed(() => {
 const isFinalizedSuccessful = computed(() => {
   return selectedChapter.value?.generation_status === 'successful' && hasSelectedChapterContent.value
 })
+
+const readerPrimaryLabel = computed(() => {
+  if (readerStatus.value === 'generating') return '停止'
+  if (readerStatus.value === 'playing') return '暂停'
+  if (readerStatus.value === 'paused') return '继续'
+  return '朗读'
+})
+
+const handleReaderToggle = () => {
+  if (readerStatus.value === 'generating') {
+    chapterReader.stop()
+    return
+  }
+  if (readerStatus.value === 'playing') {
+    chapterReader.pause()
+    return
+  }
+  if (readerStatus.value === 'paused') {
+    chapterReader.resume()
+    return
+  }
+  const chapterTitle = `第${props.selectedChapterNumber}章 ${selectedChapterOutline.value?.title || '未知标题'}`
+  void chapterReader.start(chapterTitle, selectedChapterResolvedContent.value)
+}
 
 const isDraftWaitingConfirm = computed(() => {
   const status = selectedChapter.value?.generation_status
@@ -1285,6 +1329,7 @@ watch(
   () => props.selectedChapterNumber,
   () => {
     closeAiMenu()
+    chapterReader.stop()
   },
 )
 
@@ -1294,6 +1339,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleAiMenuOutsideClick)
+  chapterReader.stop()
 })
 
 const currentComponentProps = computed(() => {

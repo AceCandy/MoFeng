@@ -32,6 +32,15 @@ class UserModelProviderRepository(BaseRepository[UserModelProvider]):
 class UserAIModelRepository(BaseRepository[UserAIModel]):
     model = UserAIModel
 
+    async def lock_user_configuration(self, user_id: int) -> None:
+        """串行化同一用户的默认模型切换，避免并发事务留下多个默认项。"""
+        await self.session.execute(
+            select(UserModelProvider.id)
+            .where(UserModelProvider.user_id == user_id)
+            .order_by(UserModelProvider.id)
+            .with_for_update()
+        )
+
     async def list_by_user(self, user_id: int) -> Iterable[UserAIModel]:
         result = await self.session.execute(
             select(UserAIModel)
@@ -41,11 +50,34 @@ class UserAIModelRepository(BaseRepository[UserAIModel]):
         )
         return result.scalars().all()
 
+    async def list_by_user_for_update(self, user_id: int) -> Iterable[UserAIModel]:
+        """以当前读锁定用户模型，供默认标记切换事务清理同级记录。"""
+        result = await self.session.execute(
+            select(UserAIModel)
+            .where(UserAIModel.user_id == user_id)
+            .order_by(UserAIModel.sort_order, UserAIModel.id)
+            .with_for_update()
+        )
+        return result.scalars().all()
+
     async def get_owned(self, model_id: int, user_id: int) -> Optional[UserAIModel]:
         result = await self.session.execute(
             select(UserAIModel)
             .options(selectinload(UserAIModel.provider))
             .where(UserAIModel.id == model_id, UserAIModel.user_id == user_id)
+        )
+        return result.scalars().first()
+
+    async def get_default_tts(self, user_id: int) -> Optional[UserAIModel]:
+        result = await self.session.execute(
+            select(UserAIModel)
+            .options(selectinload(UserAIModel.provider))
+            .where(
+                UserAIModel.user_id == user_id,
+                UserAIModel.is_default_tts.is_(True),
+                UserAIModel.is_enabled.is_(True),
+            )
+            .order_by(UserAIModel.sort_order, UserAIModel.id)
         )
         return result.scalars().first()
 

@@ -49,7 +49,7 @@ def test_provider_create_defaults_to_chat_scope():
         base_url="https://api.example.com/v1",
     )
 
-    assert payload.capabilities == {"chat": True, "embedding": False}
+    assert payload.capabilities == {"chat": True, "embedding": False, "tts": False}
 
 
 def test_provider_create_accepts_anthropic_with_custom_url():
@@ -142,7 +142,7 @@ def test_provider_to_read_exposes_provider_scope():
 
     read = LLMConfigService._provider_to_read(provider)
 
-    assert read.capabilities == {"chat": False, "embedding": True}
+    assert read.capabilities == {"chat": False, "embedding": True, "tts": False}
 
 
 @pytest.mark.asyncio
