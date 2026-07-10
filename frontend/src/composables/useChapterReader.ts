@@ -164,9 +164,11 @@ export const useChapterReader = (
           requestSegment(index + 1)
         }
         await playAudio(blob, currentRun)
-      } catch {
+      } catch (error) {
         if (currentRun !== runId) return
-        notify('模型朗读失败，已切换浏览器朗读。', 'info')
+        abortController?.abort()
+        const reason = error instanceof Error && error.message ? error.message : '未知错误'
+        notify(`模型朗读失败（${reason}），已切换浏览器朗读。`, 'info')
         await playBrowserSegments(segments, index, currentRun)
         return
       }

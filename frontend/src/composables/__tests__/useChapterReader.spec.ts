@@ -168,7 +168,7 @@ describe('useChapterReader', () => {
     await playback
 
     expect(browserSpeech.spoken).toEqual(['失败段。'])
-    expect(notify).toHaveBeenCalledWith('模型朗读失败，已切换浏览器朗读。', 'info')
+    expect(notify).toHaveBeenCalledWith('模型朗读失败（upstream failed），已切换浏览器朗读。', 'info')
   })
 
   it('reports unavailable browser speech without leaving an active state', async () => {
