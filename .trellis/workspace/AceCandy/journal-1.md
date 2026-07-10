@@ -39,3 +39,36 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 2: 修复 pipeline 静态测试 node_key 断言
+
+**Date**: 2026-07-10
+**Task**: 修复 pipeline 静态测试 node_key 断言
+**Branch**: `main`
+
+### Summary
+
+修复 test_pipeline_langgraph_refactor_static 两个预存失败：_graph_persist_versions 的 trace node_key 已从 save_draft 重构为 persist_versions（旧 key 经 TRACE_KEY_TO_GRAPH_NODE 映射保留兼容），更新静态断言对齐现状；动态行为不变，仍持久化为草稿（WAITING_FOR_CONFIRM）。后端全套 184 passed。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b3924ce` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
