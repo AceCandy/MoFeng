@@ -276,7 +276,7 @@ def test_pipeline_auto_reviews_and_refines_without_manual_choice() -> None:
     assert "_run_review_guided_refinement(" in post_review_block
     assert 'node_key="review_refinement"' in source
     assert '"optimize_recommended_version"' in source
-    assert 'node_key="save_draft"' in persist_block
+    assert 'node_key="persist_versions"' in persist_block
     assert 'node_label="保存草稿"' in persist_block
     assert 'finalize_version_index=state["best_version_index"]' not in persist_block
 
@@ -288,7 +288,7 @@ def test_pipeline_persists_generated_versions_as_draft_not_successful() -> None:
         1,
     )[0]
 
-    assert 'node_key="save_draft"' in block
+    assert 'node_key="persist_versions"' in block
     assert 'node_label="保存草稿"' in block
     assert 'finalize_version_index=state["best_version_index"]' not in block
     assert '"将章节状态标记为已完成"' not in block
