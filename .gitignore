@@ -3,6 +3,7 @@
 backend/.venv/
 /frontend/.vscode
 /frontend/node_modules
+/node_modules
 /backend/app/__pycache__/*.pyc
 *.pyc
 /backend/dist
