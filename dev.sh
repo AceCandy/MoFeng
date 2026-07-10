@@ -146,6 +146,23 @@ PY
   return 1
 }
 
+# 端口判定不可用时打印占用诊断：优先列出 LISTEN 进程，否则提示残留 socket（如 TIME_WAIT）
+show_port_occupant() {
+  local port=$1
+  echo "  >> 端口 ${port} 判定为不可用，排查占用源：" >&2
+  if ! command -v ss >/dev/null 2>&1; then
+    echo "    未找到 ss，可手动排查：lsof -i:${port} 或 sudo netstat -tlnp | grep :${port}" >&2
+    return
+  fi
+  if ss -tlnH 2>/dev/null | awk -v p="${port}" '$4 ~ ":"p"([^0-9]|$)"' | grep -q .; then
+    echo "    [LISTEN] 占用 ${port} 的监听（进程名需 root 权限）：" >&2
+    ss -tlnp 2>/dev/null | awk -v p="${port}" 'NR==1 || $4 ~ ":"p"([^0-9]|$)"' | sed 's/^/      /' >&2 || true
+  else
+    echo "    无 LISTEN 占用，可能是 TIME_WAIT 等残留 socket：" >&2
+    ss -tan 2>/dev/null | awk -v p="${port}" '$4 ~ ":"p"([^0-9]|$)" {print $1}' | sort | uniq -c | sed 's/^/      /' >&2 || true
+  fi
+}
+
 find_available_port() {
   local host=$1
   local start_port=$2
@@ -155,6 +172,10 @@ find_available_port() {
     if is_port_available "$host" "$port"; then
       printf '%s\n' "$port"
       return
+    fi
+    # 默认端口不可用时打印一次占用诊断，便于定位"查不到占用却切换"的情况
+    if [ "$port" = "$start_port" ]; then
+      show_port_occupant "$port"
     fi
     port=$((port + 1))
   done
