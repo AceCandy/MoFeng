@@ -333,12 +333,13 @@
                 aria-haspopup="dialog"
                 :aria-expanded="isModelPickerOpen(provider.id)"
                 :aria-controls="`model-picker-${provider.id}`"
-                @click="openProviderModelPicker(provider)"
+                @click="openProviderModelPicker(provider, $event)"
               >
                 {{ providerFetchState(provider.id).isLoading ? '拉取中...' : '拉取模型' }}
               </button>
             </div>
 
+          <Teleport to="body">
             <div
               v-if="isModelPickerOpen(provider.id)"
               :id="`model-picker-${provider.id}`"
@@ -346,6 +347,7 @@
               class="model-routing__model-picker"
               role="dialog"
               aria-modal="false"
+              :style="modelPickerStyle"
               :aria-labelledby="`model-picker-title-${provider.id}`"
               @keydown.esc.stop.prevent="!isSavingPicker && closeModelPicker()"
               @click.stop
@@ -495,6 +497,7 @@
                 </label>
               </div>
             </div>
+          </Teleport>
 
             <p v-if="!provider.is_enabled" class="model-routing__hint">
               启用供应商后才能使用里面的模型。
@@ -828,6 +831,8 @@ const isModelPickerActive = computed(() => activeModelPickerProviderId.value !==
 const modelPickerDialogRef = ref<HTMLElement | null>(null)
 const modelPickerSearchInputRef = ref<HTMLElement | null>(null)
 const modelPickerQuery = ref('')
+// 弹窗 Teleport 到 body 后的 fixed 定位坐标
+const modelPickerPosition = ref({ top: 0, left: 0 })
 // 弹窗位于 v-for 子树内，字符串 ref 会被收集成数组；
 // 改用函数 ref，只保留当前打开弹窗的单个 DOM
 const setModelPickerDialogRef = (el: Element | ComponentPublicInstance | null) => {
@@ -1330,9 +1335,38 @@ const loadProviderModels = async (provider: UserModelProvider) => {
   }
 }
 
-const openProviderModelPicker = async (provider: UserModelProvider) => {
+const modelPickerStyle = computed(() => ({
+  top: `${modelPickerPosition.value.top}px`,
+  left: `${modelPickerPosition.value.left}px`,
+}))
+
+// 按触发按钮位置计算 fixed 坐标，超出视口时翻转/收边
+const updateModelPickerPosition = (trigger: HTMLElement) => {
+  const rect = trigger.getBoundingClientRect()
+  const gap = 4
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const pickerW = Math.min(420, vw - 16)
+  const pickerMaxH = 420
+  let top = rect.bottom + gap
+  let left = rect.left
+  if (left + pickerW > vw - 8) left = vw - pickerW - 8
+  if (left < 8) left = 8
+  if (top + pickerMaxH > vh - 8) {
+    const above = rect.top - gap - pickerMaxH
+    top = above > 8 ? above : Math.max(8, vh - pickerMaxH - 8)
+  }
+  modelPickerPosition.value = { top, left }
+}
+
+const openProviderModelPicker = async (provider: UserModelProvider, event?: MouseEvent) => {
   if (!provider.is_enabled) {
     return
+  }
+  // currentTarget 在 await 后会被清空，需先读取
+  const trigger = event?.currentTarget
+  if (trigger instanceof HTMLElement) {
+    updateModelPickerPosition(trigger)
   }
   activeModelPickerProviderId.value = provider.id
   modelPickerQuery.value = ''
@@ -1536,8 +1570,20 @@ const onPickerClickOutside = async (event: MouseEvent) => {
   }
 }
 
+// 视口滚动/缩放会使 fixed 定位漂移，直接关闭弹窗（picker 内部滚动除外）
+const onPickerViewportChange = (event: Event) => {
+  if (!isModelPickerActive.value) return
+  const target = event.target
+  if (target instanceof Element && target.closest(`#model-picker-${activeModelPickerProviderId.value}`)) {
+    return
+  }
+  closeModelPicker()
+}
+
 onBeforeUnmount(() => {
   document.removeEventListener('click', onPickerClickOutside)
+  window.removeEventListener('scroll', onPickerViewportChange, true)
+  window.removeEventListener('resize', onPickerViewportChange)
 })
 
 const setPrimaryChatModel = async (model?: UserAIModel) => {
@@ -1740,6 +1786,8 @@ watch(
 
 onMounted(() => {
   document.addEventListener('click', onPickerClickOutside)
+  window.addEventListener('scroll', onPickerViewportChange, true)
+  window.addEventListener('resize', onPickerViewportChange)
   void loadBundle()
 })
 
@@ -2020,11 +2068,9 @@ defineExpose({
 }
 
 .model-routing__model-picker {
-  position: absolute;
-  top: 132px;
-  right: var(--md-spacing-4);
-  z-index: 20;
-  width: min(420px, calc(100% - var(--md-spacing-8)));
+  position: fixed;
+  z-index: 900;
+  width: min(420px, calc(100vw - 16px));
   max-height: 420px;
   overflow: auto;
   border: 1px solid var(--md-outline-variant);
@@ -2534,8 +2580,6 @@ defineExpose({
   }
 
   .model-routing__model-picker {
-    position: static;
-    width: 100%;
     max-height: 360px;
   }
 
