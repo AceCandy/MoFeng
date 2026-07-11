@@ -44,7 +44,7 @@ describe('TTS settings integration', () => {
     const routing = source('src/components/llm-settings/PersonalModelRouting.vue')
 
     expect(routing).toContain('@click="savePickerSelections(provider)"')
-    expect(routing).toContain('@change="selectPendingTTSModel(modelName)"')
+    expect(routing).toContain('@change="selectPendingTTSModel(provider, modelName)"')
     expect(routing).toContain(':disabled="!provider.is_enabled || isSavingPicker"')
     expect(routing).toContain('const saveTTSSelection = async (provider: UserModelProvider)')
     expect(routing).toContain("v-if=\"activeSection === 'tts' || !isChatPickerDirty\"")

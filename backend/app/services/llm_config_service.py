@@ -684,43 +684,32 @@ class LLMConfigService:
             return []
 
     async def _get_anthropic_models(self, api_key: Optional[str], base_url: Optional[str]) -> List[str]:
-        """获取 Anthropic 模型列表，失败时回退到常用 Claude 模型。"""
+        """获取 Anthropic 模型列表，失败或为空时返回空列表（不回退硬编码模型）。"""
         import httpx
 
-        fallback_models = [
-            "claude-3-5-sonnet-20241022",
-            "claude-3-5-haiku-20241022",
-            "claude-3-opus-20240229",
-            "claude-3-sonnet-20240229",
-            "claude-3-haiku-20240307",
-        ]
-        if api_key:
-            models_url = self._anthropic_endpoint_url(base_url, "models")
-            headers = {
-                "x-api-key": api_key,
-                "anthropic-version": "2023-06-01",
-            }
-            try:
-                logger.info("请求 Anthropic 模型列表: url=%s", models_url)
-                async with httpx.AsyncClient(timeout=20.0) as client:
-                    response = await client.get(models_url, headers=headers)
-                    response.raise_for_status()
-                    payload = response.json()
-                model_ids = [
-                    item.get("id")
-                    for item in payload.get("data", [])
-                    if isinstance(item, dict) and isinstance(item.get("id"), str) and item.get("id")
-                ]
-                if model_ids:
-                    logger.info("成功获取 %d 个 Anthropic 模型", len(model_ids))
-                    return sorted(model_ids)
-            except Exception as e:
-                logger.error("获取 Anthropic 模型列表失败: base=%s error=%s", base_url, str(e), exc_info=True)
-
-        logger.info("返回 Anthropic 预定义模型列表")
-        return [
-            *fallback_models,
-        ]
+        if not api_key:
+            return []
+        models_url = self._anthropic_endpoint_url(base_url, "models")
+        headers = {
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+        }
+        try:
+            logger.info("请求 Anthropic 模型列表: url=%s", models_url)
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                response = await client.get(models_url, headers=headers)
+                response.raise_for_status()
+                payload = response.json()
+            model_ids = [
+                item.get("id")
+                for item in payload.get("data", [])
+                if isinstance(item, dict) and isinstance(item.get("id"), str) and item.get("id")
+            ]
+            logger.info("成功获取 %d 个 Anthropic 模型", len(model_ids))
+            return sorted(model_ids)
+        except Exception as e:
+            logger.error("获取 Anthropic 模型列表失败: base=%s error=%s", base_url, str(e), exc_info=True)
+            return []
 
     async def _get_google_models(self, api_key: str, base_url: Optional[str]) -> List[str]:
         """获取 Google Gemini 的模型列表"""

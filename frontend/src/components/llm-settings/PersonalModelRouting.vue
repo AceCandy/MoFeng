@@ -367,7 +367,7 @@
                         ? '勾选后点右上角"保存"生效。'
                         : activeSection === 'embedding'
                           ? '单选后作为当前检索模型。'
-                          : '先设置协议、音色和语速，再选择默认朗读模型。'
+                          : '先选择默认朗读模型，再设置它的协议、音色与语速。'
                     }}
                   </p>
                 </div>
@@ -389,40 +389,6 @@
                 >
                   {{ isSavingPicker ? '保存中...' : '保存' }}
                 </button>
-              </div>
-
-              <div v-if="activeSection === 'tts'" class="model-routing__tts-form">
-                <label class="md-text-field">
-                  <span class="md-text-field-label">语音协议</span>
-                  <select v-model="ttsForm.protocol" class="md-text-field-input">
-                    <option value="mimo_chat_audio">MiMo Chat Audio</option>
-                    <option value="openai_speech">OpenAI Speech</option>
-                  </select>
-                </label>
-                <label class="md-text-field">
-                  <span class="md-text-field-label">默认音色</span>
-                  <input
-                    v-model="ttsForm.voice"
-                    class="md-text-field-input"
-                    type="text"
-                    list="mimo-tts-voices"
-                    placeholder="如 白桦 / alloy"
-                  />
-                  <datalist id="mimo-tts-voices">
-                    <option v-for="voice in mimoPresetVoices" :key="voice" :value="voice" />
-                  </datalist>
-                </label>
-                <label class="md-text-field model-routing__tts-speed">
-                  <span class="md-text-field-label">语速 {{ ttsForm.speed.toFixed(1) }}x</span>
-                  <input
-                    v-model.number="ttsForm.speed"
-                    type="range"
-                    min="0.5"
-                    max="2"
-                    step="0.1"
-                    aria-label="语音朗读语速"
-                  />
-                </label>
               </div>
 
               <label class="md-text-field model-routing__picker-search">
@@ -492,7 +458,41 @@
                     :checked="pendingTTSModelName === modelName"
                     :disabled="!provider.is_enabled || isSavingPicker"
                     :aria-label="`选择语音朗读模型 ${modelName}`"
-                    @change="selectPendingTTSModel(modelName)"
+                    @change="selectPendingTTSModel(provider, modelName)"
+                  />
+                </label>
+              </div>
+
+              <div v-if="activeSection === 'tts' && pendingTTSModelName" class="model-routing__tts-form">
+                <label class="md-text-field">
+                  <span class="md-text-field-label">语音协议</span>
+                  <select v-model="ttsForm.protocol" class="md-text-field-input">
+                    <option value="mimo_chat_audio">MiMo Chat Audio</option>
+                    <option value="openai_speech">OpenAI Speech</option>
+                  </select>
+                </label>
+                <label class="md-text-field">
+                  <span class="md-text-field-label">默认音色</span>
+                  <input
+                    v-model="ttsForm.voice"
+                    class="md-text-field-input"
+                    type="text"
+                    list="mimo-tts-voices"
+                    placeholder="如 白桦 / alloy"
+                  />
+                  <datalist id="mimo-tts-voices">
+                    <option v-for="voice in ttsPresetVoices" :key="voice" :value="voice" />
+                  </datalist>
+                </label>
+                <label class="md-text-field model-routing__tts-speed">
+                  <span class="md-text-field-label">语速 {{ ttsForm.speed.toFixed(1) }}x</span>
+                  <input
+                    v-model.number="ttsForm.speed"
+                    type="range"
+                    min="0.5"
+                    max="2"
+                    step="0.1"
+                    aria-label="语音朗读语速"
                   />
                 </label>
               </div>
@@ -850,11 +850,15 @@ const feedback = ref<{ type: 'success' | 'error'; message: string }>({
   message: '',
 })
 const mimoPresetVoices = ['冰糖', '茉莉', '苏打', '白桦', 'Mia', 'Chloe', 'Milo', 'Dean']
+const openAIPresetVoices = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer']
 const ttsForm = reactive<TTSForm>({
   protocol: 'mimo_chat_audio',
   voice: '白桦',
   speed: 1.0,
 })
+const ttsPresetVoices = computed(() =>
+  ttsForm.protocol === 'openai_speech' ? openAIPresetVoices : mimoPresetVoices,
+)
 
 const emptyProviderForm = (): ProviderForm => ({
   name: '',
@@ -1640,8 +1644,21 @@ const selectEmbeddingModel = async (provider: UserModelProvider, modelName: stri
   }
 }
 
-const selectPendingTTSModel = (modelName: string) => {
+const selectPendingTTSModel = (provider: UserModelProvider, modelName: string) => {
   pendingTTSModelName.value = modelName
+  const existing = ttsModelForName(provider.id, modelName)
+  if (!existing) {
+    return
+  }
+  if (existing.tts_protocol) {
+    ttsForm.protocol = existing.tts_protocol as TTSProtocol
+  }
+  if (existing.tts_voice) {
+    ttsForm.voice = existing.tts_voice
+  }
+  if (typeof existing.tts_speed === 'number') {
+    ttsForm.speed = existing.tts_speed
+  }
 }
 
 const saveTTSSelection = async (provider: UserModelProvider) => {

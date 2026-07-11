@@ -60,3 +60,29 @@ const createProviderCapabilities = (): Record<Capability, boolean> => {
 ```
 
 So: to configure TTS, add/edit a provider from inside the TTS tab; that is what marks it `tts`-capable and makes it visible there.
+
+---
+
+## TTS model form is per-model: pick the model first, then set protocol/voice/speed
+
+`tts_protocol` / `tts_voice` / `tts_speed` are fields on `UserAIModel`, not on the provider. The TTS picker therefore shows the model radio list first; the protocol/voice/speed form renders only after a model is selected (`v-if="activeSection === 'tts' && pendingTTSModelName"`) and rehydrates from that model's saved config when the selection switches.
+
+```ts
+// switching the selected TTS model rehydrates the form from that model's saved config
+const selectPendingTTSModel = (provider: UserModelProvider, modelName: string) => {
+  pendingTTSModelName.value = modelName
+  const existing = ttsModelForName(provider.id, modelName)
+  if (!existing) return
+  if (existing.tts_protocol) ttsForm.protocol = existing.tts_protocol as TTSProtocol
+  if (existing.tts_voice) ttsForm.voice = existing.tts_voice
+  if (typeof existing.tts_speed === 'number') ttsForm.speed = existing.tts_speed
+}
+```
+
+The voice suggestion list follows the protocol: `mimo_chat_audio` → MiMo preset voices, `openai_speech` → OpenAI standard voices (`alloy`/`echo`/`fable`/`onyx`/`nova`/`shimmer`). Never put the protocol/voice form above the model list or make it provider-scoped — that inverts the data model and forces users to configure a voice before knowing which model they picked.
+
+---
+
+## Model-list fetch returns empty on failure — never a hardcoded fallback
+
+`get_available_models` and every per-provider helper (`_get_anthropic_models`, `_get_google_models`, …) return `[]` on any fetch failure or empty result. Do not add a hardcoded "preset models" fallback that masks the failure — an earlier `_get_anthropic_models` returned a baked-in claude list on failure, which made a misconfigured provider (e.g. an OpenAI-compatible service whose type was set to `anthropic`) look like it had "fetched claude models." Empty + the picker's "没有可选模型" state is honest; if fetch health needs to surface, propagate the error explicitly rather than substituting fake data.
