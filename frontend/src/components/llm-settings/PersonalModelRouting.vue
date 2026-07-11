@@ -2069,7 +2069,7 @@ defineExpose({
 
 .model-routing__model-picker {
   position: fixed;
-  z-index: 900;
+  z-index: 1050;
   width: min(420px, calc(100vw - 16px));
   max-height: 420px;
   overflow: auto;
