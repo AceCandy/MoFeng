@@ -72,3 +72,36 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 3: 章节朗读悬浮控件与浏览器首字修复
+
+**Date**: 2026-07-11
+**Task**: 章节朗读悬浮控件与浏览器首字修复
+**Branch**: `main`
+
+### Summary
+
+把章节朗读从工具栏行内按钮改造为正文区右上的独立悬浮控件（国风样式）：主按钮（入口/暂停/继续/停止）+ 状态文字 + 音色选择（仅列在线 Natural 中文语音并显示中文名，支持试听）+ 倍速选择 + 重置；音色与倍速偏好持久化到 localStorage。正文当前段加粗+石青变色+蓝色波浪线高亮并自动滚动居中；抽共享分段 util 让朗读与正文展示段落对齐；tabs 切换栏移出正文滚动区，滚动正文时纹丝不动。修复浏览器朗读首字被吞：speechSynthesis.cancel + 段间延时 + 前置静音填充 + 优先选 zh-CN Online (Natural) 神经语音（规避 Windows 本地微软桌面语音的裁首字 bug）。vue-tsc 0 错误，全量 111 测试通过。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1a8a4c0` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
