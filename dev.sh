@@ -124,14 +124,22 @@ python_for_port_check() {
 is_port_available() {
   local host=$1
   local port=$2
-  local port_check_python
 
+  # 优先用 ss 查 LISTEN：有进程监听才算占用，TIME_WAIT 等残留不算（与 vite/uvicorn 实际 listen 行为一致）
+  if command -v ss >/dev/null 2>&1; then
+    if ss -tlnH 2>/dev/null | awk -v p="${port}" '$4 ~ ":"p"([^0-9]|$)"' | grep -q .; then
+      return 1   # 存在 LISTEN → 端口被占
+    fi
+    return 0
+  fi
+
+  # 无 ss（如 macOS）降级为 bind 探测；不开 SO_REUSEADDR，避免 macOS 把 127.0.0.1 监听误判为 0.0.0.0 可用
+  local port_check_python
   port_check_python="$(python_for_port_check)"
 
   if "$port_check_python" - <<PY >/dev/null 2>&1
 import socket
 sock = socket.socket()
-# 不启用 SO_REUSEADDR，避免 macOS 上把已有 127.0.0.1 监听误判为 0.0.0.0 可用。
 try:
     sock.bind(("$host", $port))
 except OSError:
