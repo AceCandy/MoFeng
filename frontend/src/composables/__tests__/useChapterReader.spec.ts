@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { splitSpeechText, useChapterReader } from '@/composables/useChapterReader'
+import { pickChineseVoice, useChapterReader } from '@/composables/useChapterReader'
 
 
 class FakeUtterance {
@@ -74,6 +74,7 @@ const bundle = (configured: boolean) => ({
 
 
 beforeEach(() => {
+  localStorage.clear()
   FakeAudio.instances = []
   browserSpeech.spoken = []
   vi.clearAllMocks()
@@ -93,24 +94,77 @@ afterEach(() => {
 })
 
 
-describe('splitSpeechText', () => {
-  it('keeps title first and respects paragraph and sentence boundaries', () => {
-    const segments = splitSpeechText('第一章 风起', '第一段。第二句！\n\n第三段。', 8)
-
-    expect(segments[0]).toBe('第一章 风起')
-    expect(segments.slice(1).join('')).toBe('第一段。第二句！第三段。')
-    expect(segments.every((segment) => segment.length <= 8)).toBe(true)
-  })
-
-  it('hard splits a sentence longer than the limit', () => {
-    const segments = splitSpeechText('', '一'.repeat(21), 10)
-
-    expect(segments.map((segment) => segment.length)).toEqual([10, 10, 1])
-  })
-})
-
-
 describe('useChapterReader', () => {
+  it('picks the zh-CN online (Natural) voice over the buggy local Microsoft voice', () => {
+    const voices = [
+      { name: 'Microsoft Huihui - Chinese (Simplified, PRC)', lang: 'zh-CN' },
+      { name: 'Microsoft Kangkang - Chinese (Simplified, PRC)', lang: 'zh-CN' },
+      { name: 'Microsoft HiuGaai Online (Natural) - Chinese (Cantonese Traditional)', lang: 'zh-HK' },
+      { name: 'Microsoft Xiaoxiao Online (Natural) - Chinese (Mainland)', lang: 'zh-CN' },
+      { name: 'Microsoft Yunxi Online (Natural) - Chinese (Mainland)', lang: 'zh-CN' },
+    ] as unknown as SpeechSynthesisVoice[]
+    Object.defineProperty(window.speechSynthesis, 'getVoices', {
+      value: () => voices,
+      configurable: true,
+    })
+
+    const picked = pickChineseVoice()
+    expect(picked?.name).toContain('Xiaoxiao')
+    expect(picked?.lang).toBe('zh-CN')
+  })
+
+  it('persists voice and rate choices to localStorage', () => {
+    const reader = useChapterReader({
+      loadConfig: async () => bundle(false),
+      synthesize: vi.fn(),
+      notify: vi.fn(),
+    })
+    reader.setVoiceURI('voice-uri-1')
+    reader.setRate(1.5)
+    expect(reader.voiceURI.value).toBe('voice-uri-1')
+    expect(reader.rate.value).toBe(1.5)
+    expect(localStorage.getItem('mofeng:reader-voice')).toBe('voice-uri-1')
+    expect(localStorage.getItem('mofeng:reader-rate')).toBe('1.5')
+  })
+
+  it('previewVoice speaks a sample with the current voice only when idle', () => {
+    const voices = [
+      { name: 'Microsoft Xiaoxiao Online (Natural)', voiceURI: 'xiaoxiao', lang: 'zh-CN' },
+    ] as unknown as SpeechSynthesisVoice[]
+    Object.defineProperty(window.speechSynthesis, 'getVoices', {
+      value: () => voices,
+      configurable: true,
+    })
+    const reader = useChapterReader({
+      loadConfig: async () => bundle(false),
+      synthesize: vi.fn(),
+      notify: vi.fn(),
+    })
+    reader.setVoiceURI('xiaoxiao')
+
+    reader.previewVoice()
+
+    expect(browserSpeech.spoken.length).toBe(1)
+    expect(browserSpeech.spoken[0].startsWith(' ')).toBe(true)
+    expect(browserSpeech.cancel).toHaveBeenCalled()
+    expect(reader.status.value).toBe('idle')
+  })
+
+  it('previewVoice is a no-op while reading', async () => {
+    const reader = useChapterReader({
+      loadConfig: async () => bundle(true),
+      synthesize: vi.fn(async () => new Blob(['x'])),
+      notify: vi.fn(),
+    })
+    const playback = reader.start('标题', '正文。')
+    await vi.waitFor(() => expect(reader.status.value).not.toBe('idle'))
+    const spokenBefore = browserSpeech.spoken.length
+    reader.previewVoice()
+    expect(browserSpeech.spoken.length).toBe(spokenBefore)
+    reader.stop()
+    await playback
+  })
+
   it('uses browser speech immediately when no default TTS is configured', async () => {
     const reader = useChapterReader({
       loadConfig: async () => bundle(false),
@@ -120,8 +174,39 @@ describe('useChapterReader', () => {
 
     await reader.start('第一章', '正文。')
 
-    expect(browserSpeech.spoken).toEqual(['第一章', '正文。'])
+    expect(browserSpeech.spoken.map((text) => text.trim())).toEqual(['第一章', '正文。'])
+    // 每段前置静音填充，规避系统 TTS 裁掉首字
+    expect(browserSpeech.spoken.every((text) => text.startsWith(' '))).toBe(true)
     expect(reader.status.value).toBe('idle')
+  })
+
+  it('clears the speech queue before each segment to avoid clipped first chars', async () => {
+    const reader = useChapterReader({
+      loadConfig: async () => bundle(false),
+      synthesize: vi.fn(),
+      notify: vi.fn(),
+    })
+
+    await reader.start('第一章', '第一段。第二段。')
+
+    // 每段 speak 前都应清队列（含 start 初始 stop 的一次），次数不少于 spoken 段数
+    expect(browserSpeech.spoken.length).toBeGreaterThanOrEqual(2)
+    expect(browserSpeech.cancel).toHaveBeenCalledTimes(
+      browserSpeech.spoken.length + 1,
+    )
+  })
+
+  it('exposes paragraph progress aligned with displayed paragraphs', async () => {
+    const reader = useChapterReader({
+      loadConfig: async () => bundle(false),
+      synthesize: vi.fn(),
+      notify: vi.fn(),
+    })
+
+    await reader.start('第一章', '段落一。\n\n段落二。')
+
+    // 正文两个段落，与 ChapterContent 展示段落一致，用于高亮与进度
+    expect(reader.paragraphCount.value).toBe(2)
   })
 
   it('prefetches one model segment and supports pause resume and stop', async () => {
@@ -167,7 +252,7 @@ describe('useChapterReader', () => {
     FakeAudio.instances[0].onended?.()
     await playback
 
-    expect(browserSpeech.spoken).toEqual(['失败段。'])
+    expect(browserSpeech.spoken.map((text) => text.trim())).toEqual(['失败段。'])
     expect(notify).toHaveBeenCalledWith('模型朗读失败（upstream failed），已切换浏览器朗读。', 'info')
   })
 

@@ -385,8 +385,7 @@ describe('WDWorkspace locked chapter state', () => {
 
     const rendered = await mountWorkspace(project, 1)
     try {
-      const toolbar = rendered.host.querySelector('[role="toolbar"][aria-label="章节操作"]')
-      expect(toolbar?.textContent).toContain('朗读')
+      expect(rendered.host.querySelector('[aria-label="朗读"]')).not.toBeNull()
     } finally {
       rendered.unmount()
     }

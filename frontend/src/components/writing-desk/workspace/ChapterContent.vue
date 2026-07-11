@@ -5,7 +5,12 @@
 
       <div class="prose max-w-none">
         <div class="chapter-prose">
-          <p v-for="(paragraph, idx) in chapterDisplayParagraphs" :key="`chapter-${idx}`">
+          <p
+            v-for="(paragraph, idx) in chapterDisplayParagraphs"
+            :key="`chapter-${idx}`"
+            :ref="(el) => setParagraphRef(el, idx)"
+            :class="{ 'chapter-prose__p--active': idx === activeParagraphIndex }"
+          >
             <template v-if="idx === 0 && paragraph && paragraph.trim().length > 0">
               <span class="first-stamp-char">{{ paragraph.trim()[0] }}</span>{{ paragraph.trim().slice(1) }}
             </template>
@@ -244,7 +249,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { globalAlert } from '@/composables/useAlert'
 import { useDialogA11y } from '@/composables/useDialogA11y'
@@ -259,6 +264,8 @@ import { countNonWhitespaceChars } from '@/utils/text'
 interface Props {
   selectedChapter: Chapter
   projectId?: string
+  /** 朗读高亮的正文段落下标，-1 或缺省表示不高亮 */
+  activeParagraphIndex?: number
 }
 
 const props = defineProps<Props>()
@@ -423,6 +430,24 @@ const splitChapterParagraphs = (content: string): string[] => {
 
 const chapterDisplayParagraphs = computed(() =>
   splitChapterParagraphs(cleanVersionContent(props.selectedChapter.content || '')),
+)
+
+// 朗读高亮：收集每段 DOM，当前段变化时滚动居中
+const paragraphEls: HTMLElement[] = []
+const setParagraphRef = (el: Element | unknown, idx: number) => {
+  if (el instanceof HTMLElement) {
+    paragraphEls[idx] = el
+  }
+}
+
+watch(
+  () => props.activeParagraphIndex,
+  (idx) => {
+    if (idx == null || idx < 0) return
+    void nextTick(() => {
+      paragraphEls[idx]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  },
 )
 
 const optimizedPreviewText = computed(() => cleanVersionContent(optimizedContent.value || ''))
@@ -929,6 +954,15 @@ defineExpose({
 
 .chapter-prose p:last-child {
   margin-bottom: 0;
+}
+
+/* 朗读当前段：石青变色 + 蓝色波浪线高亮（国风石青 #2e5c8a，宣纸底上醒目） */
+.chapter-prose p.chapter-prose__p--active {
+  font-weight: 700;
+  color: #2e5c8a;
+  text-decoration: underline wavy #2e5c8a;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.16em;
 }
 
 @keyframes optimizer-pop-in {

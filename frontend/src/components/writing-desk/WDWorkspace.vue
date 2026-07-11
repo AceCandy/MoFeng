@@ -44,23 +44,6 @@
               <div class="writing-workspace__toolbar-group writing-workspace__toolbar-group--utility">
                 <button
                   type="button"
-                  @click="handleReaderToggle"
-                  :aria-label="readerPrimaryLabel"
-                  class="md-btn md-btn-text md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--ghost"
-                >
-                  {{ readerPrimaryLabel }}
-                </button>
-                <button
-                  v-if="readerStatus === 'playing' || readerStatus === 'paused'"
-                  type="button"
-                  aria-label="停止朗读"
-                  @click="chapterReader.stop()"
-                  class="md-btn md-btn-text md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--ghost"
-                >
-                  停止
-                </button>
-                <button
-                  type="button"
                   @click="copySelectedChapterContent"
                   :disabled="!hasSelectedChapterContent"
                   class="md-btn md-btn-text md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--ghost disabled:opacity-50 disabled:cursor-not-allowed"
@@ -180,41 +163,60 @@
         </div>
       </div>
 
+      <div
+        v-if="selectedChapter?.generation_status === 'successful' && hasSelectedChapterContent"
+        class="writing-workspace__tabs-row"
+      >
+        <nav class="writing-workspace__tabs" aria-label="章节工作台分区">
+          <button
+            type="button"
+            class="writing-workspace__tab-btn md-ripple"
+            :class="{ 'is-active': activeTab === 'content' }"
+            @click="activeTab = 'content'"
+          >
+            <span class="tab-badge">🎴</span>
+            <span>章节正文</span>
+          </button>
+          <button
+            type="button"
+            class="writing-workspace__tab-btn md-ripple"
+            :class="{ 'is-active': activeTab === 'versions' }"
+            @click="activeTab = 'versions'"
+          >
+            <span class="tab-badge">📜</span>
+            <span>查看版本 ({{ availableVersions.length }})</span>
+          </button>
+          <button
+            type="button"
+            class="writing-workspace__tab-btn md-ripple"
+            :class="{ 'is-active': activeTab === 'evaluation' }"
+            @click="activeTab = 'evaluation'"
+          >
+            <span class="tab-badge">⚖️</span>
+            <span>AI 评审反馈</span>
+          </button>
+        </nav>
+      </div>
+
       <!-- 章节内容展示区 -->
       <div class="writing-workspace__content">
-          <!-- 章节状态是已完成 (successful) 且有正文内容时，展示正文、版本、评审切换 Tab 页签 -->
-          <div v-if="selectedChapter?.generation_status === 'successful' && hasSelectedChapterContent" class="writing-workspace__tabs-row">
-            <nav class="writing-workspace__tabs" aria-label="章节工作台分区">
-              <button
-                type="button"
-                class="writing-workspace__tab-btn md-ripple"
-                :class="{ 'is-active': activeTab === 'content' }"
-                @click="activeTab = 'content'"
-              >
-                <span class="tab-badge">🎴</span>
-                <span>章节正文</span>
-              </button>
-              <button
-                type="button"
-                class="writing-workspace__tab-btn md-ripple"
-                :class="{ 'is-active': activeTab === 'versions' }"
-                @click="activeTab = 'versions'"
-              >
-                <span class="tab-badge">📜</span>
-                <span>查看版本 ({{ availableVersions.length }})</span>
-              </button>
-              <button
-                type="button"
-                class="writing-workspace__tab-btn md-ripple"
-                :class="{ 'is-active': activeTab === 'evaluation' }"
-                @click="activeTab = 'evaluation'"
-              >
-                <span class="tab-badge">⚖️</span>
-                <span>AI 评审反馈</span>
-              </button>
-            </nav>
-          </div>
-
+          <ChapterReaderBar
+            v-if="isFinalizedSuccessful"
+            :status="readerStatus"
+            :isBrowserFallback="readerIsBrowserFallback"
+            :currentParagraphIndex="readerCurrentParagraphIndex"
+            :paragraphCount="readerParagraphCount"
+            :voiceURI="readerVoiceURI"
+            :rate="readerRate"
+            :voiceOptions="readerVoiceOptions"
+            :rateOptions="READER_RATE_OPTIONS"
+            @start="handleReaderStart"
+            @play-pause="handleReaderPlayPause"
+            @reset="handleReaderReset"
+            @voice-change="chapterReader.setVoiceURI"
+            @rate-change="chapterReader.setRate"
+            @preview-voice="chapterReader.previewVoice"
+          />
           <div class="writing-workspace__body h-full">
             <ChapterGenerating
               v-if="shouldShowDraftTraceReplay"
@@ -539,6 +541,7 @@ import WorkspaceInitial from './workspace/WorkspaceInitial.vue'
 import ChapterGenerating from './workspace/ChapterGenerating.vue'
 import VersionSelector from './workspace/VersionSelector.vue'
 import ChapterContent from './workspace/ChapterContent.vue'
+import ChapterReaderBar from './ChapterReaderBar.vue'
 import ChapterFailed from './workspace/ChapterFailed.vue'
 import ChapterEmpty from './workspace/ChapterEmpty.vue'
 
@@ -872,18 +875,56 @@ const isFinalizedSuccessful = computed(() => {
   return selectedChapter.value?.generation_status === 'successful' && hasSelectedChapterContent.value
 })
 
-const readerPrimaryLabel = computed(() => {
-  if (readerStatus.value === 'generating') return '停止'
-  if (readerStatus.value === 'playing') return '暂停'
-  if (readerStatus.value === 'paused') return '继续'
-  return '朗读'
-})
+// 朗读控件：入口仅在 idle 显示，点击后原地展开为播放条；重置即停止回到入口
+const readerCurrentParagraphIndex = chapterReader.currentParagraphIndex
+const readerParagraphCount = chapterReader.paragraphCount
+const readerIsBrowserFallback = chapterReader.isBrowserFallback
+const readerVoiceURI = chapterReader.voiceURI
+const readerRate = chapterReader.rate
 
-const handleReaderToggle = () => {
-  if (readerStatus.value === 'generating') {
-    chapterReader.stop()
-    return
-  }
+// 浏览器朗读音色：仅在浏览器 fallback 时可选，选项来自本机 getVoices，存 localStorage
+const browserVoiceOptions = ref<SpeechSynthesisVoice[]>([])
+const refreshBrowserVoices = () => {
+  browserVoiceOptions.value = (window.speechSynthesis?.getVoices?.() ?? []).filter(
+    (voice) => /^zh/i.test(voice.lang) && /natural|neural/i.test(voice.name),
+  )
+}
+// 微软在线神经语音英文名 → 中文友好名（带性别/地区），未命中的回退原英文名
+const VOICE_CN_LABEL: Record<string, string> = {
+  Xiaoxiao: '晓晓（女）',
+  Xiaoyi: '晓伊（女）',
+  Yunjian: '云健（男）',
+  Yunxi: '云希（男）',
+  Yunxia: '云夏（女）',
+  Yunyang: '云扬（男）',
+  Xiaobei: '晓北（女·东北话）',
+  Xiaoni: '晓妮（女·陕西话）',
+  HsiaoChen: '晓臻（女·台湾）',
+  HsiaoYu: '晓雨（女·台湾）',
+  YunJhe: '云哲（男·台湾）',
+  HiuGaai: '曉佳（女·粤语）',
+  HiuMaan: '曉敏（女·粤语）',
+  WanLung: '雲龍（男·粤语）',
+}
+const readerVoiceLabel = (voice: SpeechSynthesisVoice) => {
+  const match = voice.name.match(/Microsoft\s+([A-Za-z]+)/i)
+  return (match && VOICE_CN_LABEL[match[1]]) || voice.name
+}
+
+// 悬浮控件音色选项（URI + 清洗后的标签）
+const readerVoiceOptions = computed(() =>
+  browserVoiceOptions.value.map((voice) => ({ uri: voice.voiceURI, label: readerVoiceLabel(voice) })),
+)
+
+// 朗读倍速：浏览器与模型 TTS 通用
+const READER_RATE_OPTIONS = [0.75, 1, 1.25, 1.5, 2]
+
+const handleReaderStart = () => {
+  const chapterTitle = `第${props.selectedChapterNumber}章 ${selectedChapterOutline.value?.title || '未知标题'}`
+  void chapterReader.start(chapterTitle, selectedChapterResolvedContent.value)
+}
+
+const handleReaderPlayPause = () => {
   if (readerStatus.value === 'playing') {
     chapterReader.pause()
     return
@@ -892,8 +933,14 @@ const handleReaderToggle = () => {
     chapterReader.resume()
     return
   }
-  const chapterTitle = `第${props.selectedChapterNumber}章 ${selectedChapterOutline.value?.title || '未知标题'}`
-  void chapterReader.start(chapterTitle, selectedChapterResolvedContent.value)
+  if (readerStatus.value === 'generating') {
+    chapterReader.stop()
+  }
+}
+
+// 重置：停止朗读，收缩回「准备播放」入口
+const handleReaderReset = () => {
+  chapterReader.stop()
 }
 
 const isDraftWaitingConfirm = computed(() => {
@@ -1335,10 +1382,13 @@ watch(
 
 onMounted(() => {
   document.addEventListener('click', handleAiMenuOutsideClick)
+  refreshBrowserVoices()
+  window.speechSynthesis?.addEventListener('voiceschanged', refreshBrowserVoices)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleAiMenuOutsideClick)
+  window.speechSynthesis?.removeEventListener('voiceschanged', refreshBrowserVoices)
   chapterReader.stop()
 })
 
@@ -1409,6 +1459,7 @@ const currentComponentProps = computed(() => {
       return {
         selectedChapter: selectedChapterForDisplay.value,
         projectId: props.project?.id,
+        activeParagraphIndex: readerCurrentParagraphIndex.value,
       }
     }
 
@@ -1426,6 +1477,7 @@ const currentComponentProps = computed(() => {
     return {
       selectedChapter: selectedChapterForDisplay.value,
       projectId: props.project?.id,
+      activeParagraphIndex: readerCurrentParagraphIndex.value,
     }
   }
   if (isChapterFailed(props.selectedChapterNumber)) {
@@ -1960,9 +2012,10 @@ const parseMarkdown = (text: string | null | undefined): string => {
 
 /* 极致国风脑洞：正文区融入古典竹青淡墨横线信笺格背景 */
 .writing-workspace__content {
+  position: relative;
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
   padding: 0 !important; /* 彻底去除灰色间距，使内部稿纸能够完美顶边铺满 */
   display: flex;
   flex-direction: column;
@@ -1971,7 +2024,9 @@ const parseMarkdown = (text: string | null | undefined): string => {
 }
 
 .writing-workspace__body {
+  flex: 1;
   min-height: 0;
+  overflow-y: auto;
 }
 
 .writing-workspace__trace-replay {
@@ -2106,10 +2161,12 @@ const parseMarkdown = (text: string | null | undefined): string => {
    三合一 Tab 切换栏样式与中国风金石重塑
    ========================================================================== */
 .writing-workspace__tabs-row {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: flex-start;
   margin-top: var(--md-spacing-3);
+  padding: 0 var(--md-spacing-4);
   border-bottom: 1.5px solid var(--md-outline-variant);
   padding-bottom: 1px;
 }
