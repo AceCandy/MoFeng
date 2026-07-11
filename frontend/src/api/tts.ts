@@ -7,7 +7,11 @@ import { requestRaw } from './http'
 const TTS_BASE = `${API_BASE_URL}${API_PREFIX}/tts`
 
 
-export const synthesizeSpeech = async (text: string, signal?: AbortSignal): Promise<Blob> => {
+export const synthesizeSpeech = async (
+  text: string,
+  options?: { voice?: string; speed?: number },
+  signal?: AbortSignal,
+): Promise<Blob> => {
   const authStore = useAuthStore()
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (authStore.token) {
@@ -16,7 +20,7 @@ export const synthesizeSpeech = async (text: string, signal?: AbortSignal): Prom
   const response = await requestRaw(`${TTS_BASE}/speech`, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, voice: options?.voice, speed: options?.speed }),
     signal,
     timeoutMs: 65_000,
     fallbackErrorMessage: '语音合成失败',

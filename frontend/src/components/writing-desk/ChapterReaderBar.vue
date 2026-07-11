@@ -61,7 +61,19 @@
       <span class="reader-float__status">{{ statusLabel }}</span>
 
       <select
-        v-if="showVoiceControl"
+        v-if="useModelVoice"
+        class="reader-float__select"
+        aria-label="模型朗读音色"
+        title="模型朗读音色"
+        :value="modelVoice"
+        @change="emit('model-voice-change', ($event.target as HTMLSelectElement).value)"
+      >
+        <option v-for="option in modelVoiceOptions" :key="option.voice" :value="option.voice">
+          {{ option.label }}
+        </option>
+      </select>
+      <select
+        v-else-if="showVoiceControl"
         class="reader-float__select"
         aria-label="朗读音色"
         title="朗读音色"
@@ -74,7 +86,7 @@
         </option>
       </select>
       <button
-        v-if="showVoiceControl"
+        v-if="useModelVoice || showVoiceControl"
         type="button"
         class="md-btn md-btn-text md-ripple reader-float__btn reader-float__btn--preview"
         :disabled="status !== 'idle'"
@@ -143,6 +155,9 @@ import type { ReaderStatus } from '@/composables/useChapterReader'
 interface Props {
   status: ReaderStatus
   isBrowserFallback: boolean
+  hasModelTTS: boolean
+  modelVoice: string
+  modelVoiceOptions: { voice: string; label: string }[]
   currentParagraphIndex: number
   paragraphCount: number
   voiceURI: string
@@ -158,12 +173,15 @@ const emit = defineEmits<{
   'play-pause': []
   reset: []
   'voice-change': [uri: string]
+  'model-voice-change': [voice: string]
   'rate-change': [rate: number]
   'preview-voice': []
 }>()
 
 // idle 也露出音色+试听，供朗读前预选预听；模型 TTS 播放中隐藏
 const showVoiceControl = computed(() => props.isBrowserFallback || props.status === 'idle')
+// 配了默认 TTS 模型且未回退浏览器时，音色由后端模型决定，控件只读展示模型音色
+const useModelVoice = computed(() => props.hasModelTTS && !props.isBrowserFallback)
 
 const statusLabel = computed(() => {
   const idx = props.currentParagraphIndex

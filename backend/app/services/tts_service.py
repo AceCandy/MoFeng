@@ -3,6 +3,7 @@ import base64
 import binascii
 import json
 from dataclasses import dataclass
+from typing import Optional
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,7 +34,13 @@ class TTSService:
     def __init__(self, session: AsyncSession):
         self.model_repo = UserAIModelRepository(session)
 
-    async def synthesize(self, user_id: int, text: str) -> SpeechAudio:
+    async def synthesize(
+        self,
+        user_id: int,
+        text: str,
+        voice: Optional[str] = None,
+        speed: Optional[float] = None,
+    ) -> SpeechAudio:
         model = await self.model_repo.get_default_tts(user_id)
         if not model:
             raise TTSConfigurationError("未配置默认语音朗读模型")
@@ -45,13 +52,18 @@ class TTSService:
             or not provider.is_enabled
         ):
             raise TTSConfigurationError("默认语音朗读模型不可用")
-        if not provider.api_key_encrypted or not model.tts_voice or not model.tts_protocol:
+        if not provider.api_key_encrypted or not model.tts_protocol:
             raise TTSConfigurationError("默认语音朗读模型配置不完整")
+        # 音色/倍速优先用运行时传入（朗读控件的全局偏好），缺省回退模型配置
+        effective_voice = (voice or model.tts_voice or "").strip()
+        if not effective_voice:
+            raise TTSConfigurationError("未选择语音朗读音色")
+        effective_speed = speed if speed is not None else float(model.tts_speed or 1.0)
 
         if model.tts_protocol == "mimo_chat_audio":
-            return await self._synthesize_mimo(model, text)
+            return await self._synthesize_mimo(model, text, effective_voice, effective_speed)
         if model.tts_protocol == "openai_speech":
-            return await self._synthesize_openai(model, text)
+            return await self._synthesize_openai(model, text, effective_voice, effective_speed)
         raise TTSConfigurationError("默认语音朗读模型协议不受支持")
 
     @staticmethod
@@ -86,9 +98,8 @@ class TTSService:
             len(content) >= 2 and content[0] == 0xFF and content[1] & 0xE0 == 0xE0
         )
 
-    async def _synthesize_mimo(self, model, text: str) -> SpeechAudio:
+    async def _synthesize_mimo(self, model, text: str, voice: str, speed: float) -> SpeechAudio:
         messages = []
-        speed = float(model.tts_speed or 1.0)
         if speed != 1.0:
             messages.append(
                 {"role": "user", "content": f"请以正常语速的 {speed:g} 倍朗读。"}
@@ -97,7 +108,7 @@ class TTSService:
         payload = {
             "model": model.model_name,
             "messages": messages,
-            "audio": {"format": "wav", "voice": model.tts_voice},
+            "audio": {"format": "wav", "voice": voice},
         }
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
@@ -125,12 +136,12 @@ class TTSService:
         except (KeyError, IndexError, TypeError, ValueError, binascii.Error) as exc:
             raise TTSUpstreamError("语音模型未返回有效音频") from exc
 
-    async def _synthesize_openai(self, model, text: str) -> SpeechAudio:
+    async def _synthesize_openai(self, model, text: str, voice: str, speed: float) -> SpeechAudio:
         payload = {
             "model": model.model_name,
             "input": text,
-            "voice": model.tts_voice,
-            "speed": float(model.tts_speed or 1.0),
+            "voice": voice,
+            "speed": speed,
             "response_format": "mp3",
         }
         try:

@@ -204,6 +204,9 @@
             v-if="isFinalizedSuccessful"
             :status="readerStatus"
             :isBrowserFallback="readerIsBrowserFallback"
+            :hasModelTTS="readerHasModelTTS"
+            :modelVoice="readerModelVoice"
+            :modelVoiceOptions="readerModelVoiceOptions"
             :currentParagraphIndex="readerCurrentParagraphIndex"
             :paragraphCount="readerParagraphCount"
             :voiceURI="readerVoiceURI"
@@ -214,6 +217,7 @@
             @play-pause="handleReaderPlayPause"
             @reset="handleReaderReset"
             @voice-change="chapterReader.setVoiceURI"
+            @model-voice-change="chapterReader.setModelVoice"
             @rate-change="chapterReader.setRate"
             @preview-voice="chapterReader.previewVoice"
           />
@@ -879,6 +883,9 @@ const isFinalizedSuccessful = computed(() => {
 const readerCurrentParagraphIndex = chapterReader.currentParagraphIndex
 const readerParagraphCount = chapterReader.paragraphCount
 const readerIsBrowserFallback = chapterReader.isBrowserFallback
+const readerHasModelTTS = chapterReader.hasModelTTS
+const readerModelVoice = chapterReader.modelVoice
+const readerModelVoiceOptions = chapterReader.modelVoiceOptions
 const readerVoiceURI = chapterReader.voiceURI
 const readerRate = chapterReader.rate
 

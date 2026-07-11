@@ -270,4 +270,47 @@ describe('useChapterReader', () => {
     expect(reader.status.value).toBe('idle')
     expect(notify).toHaveBeenCalledWith('当前浏览器不支持语音朗读。', 'error')
   })
+
+  it('refreshTTSConfig exposes the default TTS model availability and its voice', async () => {
+    const reader = useChapterReader({
+      loadConfig: async () => bundle(true),
+      synthesize: vi.fn(),
+      notify: vi.fn(),
+    })
+    await reader.refreshTTSConfig()
+    expect(reader.hasModelTTS.value).toBe(true)
+    expect(reader.modelVoiceLabel.value).toBe('alloy')
+
+    const unconfigured = useChapterReader({
+      loadConfig: async () => bundle(false),
+      synthesize: vi.fn(),
+      notify: vi.fn(),
+    })
+    await unconfigured.refreshTTSConfig()
+    expect(unconfigured.hasModelTTS.value).toBe(false)
+    expect(unconfigured.modelVoiceLabel.value).toBe('默认')
+  })
+
+  it('previewVoice synthesizes a sample with the model voice when configured', async () => {
+    const synthesize = vi.fn(async () => new Blob(['x'], { type: 'audio/mpeg' }))
+    const reader = useChapterReader({
+      loadConfig: async () => bundle(true),
+      synthesize,
+      notify: vi.fn(),
+    })
+    await reader.refreshTTSConfig()
+
+    reader.previewVoice()
+
+    await vi.waitFor(() =>
+      expect(synthesize).toHaveBeenCalledWith(
+        '墨痕轻染，字字如玉。',
+        expect.objectContaining({ voice: 'alloy' }),
+        undefined,
+      ),
+    )
+    // 配了模型时不走浏览器 speech
+    expect(browserSpeech.spoken.length).toBe(0)
+    reader.stop()
+  })
 })

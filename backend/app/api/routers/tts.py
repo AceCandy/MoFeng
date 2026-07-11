@@ -23,7 +23,7 @@ async def synthesize_speech(
     current_user: UserInDB = Depends(get_current_user),
 ) -> Response:
     try:
-        audio = await service.synthesize(current_user.id, payload.text)
+        audio = await service.synthesize(current_user.id, payload.text, payload.voice, payload.speed)
     except TTSConfigurationError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except TimeoutError as exc:

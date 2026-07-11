@@ -129,8 +129,7 @@ class LLMConfigService:
             return
         if not getattr(model, "tts_protocol", None):
             raise ValueError("TTS 模型必须选择语音协议")
-        if not (getattr(model, "tts_voice", None) or "").strip():
-            raise ValueError("TTS 模型必须配置音色")
+        # 音色与倍速改为朗读时在控件选择（全局偏好），不再要求模型预置
 
     @classmethod
     def _provider_to_read(cls, provider, fallback_capabilities: Optional[dict] = None) -> ProviderRead:

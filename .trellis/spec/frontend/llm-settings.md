@@ -63,23 +63,23 @@ So: to configure TTS, add/edit a provider from inside the TTS tab; that is what 
 
 ---
 
-## TTS model form is per-model: pick the model first, then set protocol/voice/speed
+## TTS settings page only selects the default model — voice/speed live on the reader
 
-`tts_protocol` / `tts_voice` / `tts_speed` are fields on `UserAIModel`, not on the provider. The TTS picker therefore shows the model radio list first; the protocol/voice/speed form renders only after a model is selected (`v-if="activeSection === 'tts' && pendingTTSModelName"`) and rehydrates from that model's saved config when the selection switches.
+The 语音朗读 tab in `PersonalModelRouting.vue` lets the user pick **only** the default TTS model. Protocol/voice/speed are **not** configured here:
+
+- `tts_protocol` is bound to the model, defaulted to `mimo_chat_audio` when a model is marked default (`createModelPayload` / `saveTTSSelection` use `'mimo_chat_audio'` as fallback, preserving any already-set protocol). It tells the backend which upstream API to call (`/chat/completions` vs `/audio/speech`).
+- `tts_voice` / `tts_speed` are **not** stored on the model — they are runtime preferences chosen on the chapter reader bar (`useChapterReader`) and sent to the backend per request (see [Chapter Reader](./chapter-reader.md)).
+
+Consequently backend `synthesize(user_id, text, voice=None, speed=None)` accepts optional runtime `voice`/`speed` overriding the model's stored values, and `_validate_tts_model` no longer requires `tts_voice`. Do **not** re-introduce a protocol/voice/speed form in the model picker — that splits the mental model (model = which engine; reader bar = how it sounds) and was the earlier R2/R3 approach, since reverted.
 
 ```ts
-// switching the selected TTS model rehydrates the form from that model's saved config
-const selectPendingTTSModel = (provider: UserModelProvider, modelName: string) => {
-  pendingTTSModelName.value = modelName
-  const existing = ttsModelForName(provider.id, modelName)
-  if (!existing) return
-  if (existing.tts_protocol) ttsForm.protocol = existing.tts_protocol as TTSProtocol
-  if (existing.tts_voice) ttsForm.voice = existing.tts_voice
-  if (typeof existing.tts_speed === 'number') ttsForm.speed = existing.tts_speed
+// saveTTSSelection — only sets default + protocol fallback, never voice/speed
+data: {
+  is_enabled: true,
+  is_default_tts: true,
+  tts_protocol: selected.tts_protocol || 'mimo_chat_audio',
 }
 ```
-
-The voice suggestion list follows the protocol: `mimo_chat_audio` → MiMo preset voices, `openai_speech` → OpenAI standard voices (`alloy`/`echo`/`fable`/`onyx`/`nova`/`shimmer`). Never put the protocol/voice form above the model list or make it provider-scoped — that inverts the data model and forces users to configure a voice before knowing which model they picked.
 
 ---
 

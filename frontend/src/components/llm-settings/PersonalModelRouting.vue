@@ -367,7 +367,7 @@
                         ? '勾选后点右上角"保存"生效。'
                         : activeSection === 'embedding'
                           ? '单选后作为当前检索模型。'
-                          : '先选择默认朗读模型，再设置它的协议、音色与语速。'
+                          : '选择默认语音朗读模型；音色与倍速在朗读控件里调整。'
                     }}
                   </p>
                 </div>
@@ -463,39 +463,6 @@
                 </label>
               </div>
 
-              <div v-if="activeSection === 'tts' && pendingTTSModelName" class="model-routing__tts-form">
-                <label class="md-text-field">
-                  <span class="md-text-field-label">语音协议</span>
-                  <select v-model="ttsForm.protocol" class="md-text-field-input">
-                    <option value="mimo_chat_audio">MiMo Chat Audio</option>
-                    <option value="openai_speech">OpenAI Speech</option>
-                  </select>
-                </label>
-                <label class="md-text-field">
-                  <span class="md-text-field-label">默认音色</span>
-                  <input
-                    v-model="ttsForm.voice"
-                    class="md-text-field-input"
-                    type="text"
-                    list="mimo-tts-voices"
-                    placeholder="如 白桦 / alloy"
-                  />
-                  <datalist id="mimo-tts-voices">
-                    <option v-for="voice in ttsPresetVoices" :key="voice" :value="voice" />
-                  </datalist>
-                </label>
-                <label class="md-text-field model-routing__tts-speed">
-                  <span class="md-text-field-label">语速 {{ ttsForm.speed.toFixed(1) }}x</span>
-                  <input
-                    v-model.number="ttsForm.speed"
-                    type="range"
-                    min="0.5"
-                    max="2"
-                    step="0.1"
-                    aria-label="语音朗读语速"
-                  />
-                </label>
-              </div>
             </div>
           </Teleport>
 
@@ -580,7 +547,6 @@ import {
 import type {
   ProviderCreate,
   ProviderType,
-  TTSProtocol,
   UserAIModel,
   UserAIModelCreate,
   UserModelProvider,
@@ -635,12 +601,6 @@ interface ReadinessSummary {
   value: string
   description: string
   tone: ReadinessTone
-}
-
-interface TTSForm {
-  protocol: TTSProtocol
-  voice: string
-  speed: number
 }
 
 const emit = defineEmits<{
@@ -849,17 +809,6 @@ const feedback = ref<{ type: 'success' | 'error'; message: string }>({
   type: 'success',
   message: '',
 })
-const mimoPresetVoices = ['冰糖', '茉莉', '苏打', '白桦', 'Mia', 'Chloe', 'Milo', 'Dean']
-const openAIPresetVoices = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer']
-const ttsForm = reactive<TTSForm>({
-  protocol: 'mimo_chat_audio',
-  voice: '白桦',
-  speed: 1.0,
-})
-const ttsPresetVoices = computed(() =>
-  ttsForm.protocol === 'openai_speech' ? openAIPresetVoices : mimoPresetVoices,
-)
-
 const emptyProviderForm = (): ProviderForm => ({
   name: '',
   provider_type: 'openai_compatible',
@@ -1381,9 +1330,6 @@ const openProviderModelPicker = async (provider: UserModelProvider, event?: Mous
     const current = defaultTTSModel.value?.provider_id === provider.id
       ? defaultTTSModel.value
       : ttsModelsByProvider.value[provider.id]?.[0]
-    ttsForm.protocol = current?.tts_protocol || 'mimo_chat_audio'
-    ttsForm.voice = current?.tts_voice || '白桦'
-    ttsForm.speed = current?.tts_speed || 1.0
     pendingTTSModelName.value = current?.model_name || ''
   }
   await loadProviderModels(provider)
@@ -1423,9 +1369,10 @@ const createModelPayload = (
       is_default_chat: false,
       is_default_embedding: false,
       is_default_tts: true,
-      tts_protocol: ttsForm.protocol,
-      tts_voice: ttsForm.voice.trim(),
-      tts_speed: ttsForm.speed,
+      // 协议跟模型（默认 MiMo）；音色/倍速改在朗读控件配置，模型不预置
+      tts_protocol: 'mimo_chat_audio',
+      tts_voice: null,
+      tts_speed: 1.0,
       is_enabled: true,
       sort_order: 0,
     }
@@ -1645,20 +1592,9 @@ const selectEmbeddingModel = async (provider: UserModelProvider, modelName: stri
 }
 
 const selectPendingTTSModel = (provider: UserModelProvider, modelName: string) => {
+  // 音色/倍速已移至朗读控件（全局偏好），这里只记录待保存的默认朗读模型
+  void provider
   pendingTTSModelName.value = modelName
-  const existing = ttsModelForName(provider.id, modelName)
-  if (!existing) {
-    return
-  }
-  if (existing.tts_protocol) {
-    ttsForm.protocol = existing.tts_protocol as TTSProtocol
-  }
-  if (existing.tts_voice) {
-    ttsForm.voice = existing.tts_voice
-  }
-  if (typeof existing.tts_speed === 'number') {
-    ttsForm.speed = existing.tts_speed
-  }
 }
 
 const saveTTSSelection = async (provider: UserModelProvider) => {
@@ -1669,10 +1605,6 @@ const saveTTSSelection = async (provider: UserModelProvider) => {
     setFeedback('error', '请选择默认语音朗读模型。')
     return
   }
-  if (!ttsForm.voice.trim()) {
-    setFeedback('error', '请先填写默认音色。')
-    return
-  }
   isSavingPicker.value = true
   try {
     const selected = await upsertModelForCapability(provider, pendingTTSModelName.value, 'tts')
@@ -1681,9 +1613,8 @@ const saveTTSSelection = async (provider: UserModelProvider) => {
       data: {
         is_enabled: true,
         is_default_tts: true,
-        tts_protocol: ttsForm.protocol,
-        tts_voice: ttsForm.voice.trim(),
-        tts_speed: ttsForm.speed,
+        // 协议跟模型（默认 MiMo，保留已配置协议）；音色/倍速在朗读控件配置
+        tts_protocol: selected.tts_protocol || 'mimo_chat_audio',
       },
     })
     await loadBundle()
@@ -2113,24 +2044,6 @@ defineExpose({
 
 .model-routing__picker-search {
   margin-bottom: var(--md-spacing-3);
-}
-
-.model-routing__tts-form {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--md-spacing-2);
-  margin-bottom: var(--md-spacing-3);
-  padding-bottom: var(--md-spacing-3);
-  border-bottom: 1px solid var(--md-outline-variant);
-}
-
-.model-routing__tts-speed {
-  grid-column: 1 / -1;
-}
-
-.model-routing__tts-speed input[type='range'] {
-  width: 100%;
-  accent-color: var(--md-primary);
 }
 
 .model-routing__picker-list {
@@ -2598,14 +2511,6 @@ defineExpose({
 
   .model-routing__model-picker {
     max-height: 360px;
-  }
-
-  .model-routing__tts-form {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .model-routing__tts-speed {
-    grid-column: auto;
   }
 }
 
