@@ -1,8 +1,7 @@
 // AIMETA P=小说API客户端_小说和章节接口|R=小说CRUD_章节管理_生成|NR=不含UI逻辑|E=api:novel|X=internal|A=novelApi对象|D=axios|S=net|RD=./README.ai
-import { useAuthStore } from '@/stores/auth'
-import router from '@/router'
 import { API_BASE_URL, API_PREFIX } from './base'
-import { HttpRequestError, requestJson, requestRaw, type HttpRequestOptions } from './http'
+import { authJson, authRaw } from './client'
+import { type HttpRequestOptions } from './http'
 import type { BackgroundTask } from './tasks'
 
 const DEFAULT_NOVEL_REQUEST_TIMEOUT_MS = 60_000
@@ -10,72 +9,25 @@ const BLUEPRINT_GENERATION_TIMEOUT_MS = 480_000
 const CHAPTER_GENERATION_TIMEOUT_MS = 660_000
 
 // 统一的请求处理函数
-const request = async <T = any>(url: string, options: HttpRequestOptions = {}) => {
-  const authStore = useAuthStore()
-  const headers = new Headers({
-    'Content-Type': 'application/json',
-    ...options.headers
+const request = async <T = any>(url: string, options: HttpRequestOptions = {}) =>
+  authJson<T>(url, {
+    ...options,
+    timeoutMs: options.timeoutMs ?? DEFAULT_NOVEL_REQUEST_TIMEOUT_MS,
+    fallbackErrorMessage: '小说接口请求失败',
   })
-
-  // 如果 body 是 FormData，删除 Content-Type header，让浏览器自动设置（包含 boundary）
-  if (options.body instanceof FormData) {
-    headers.delete('Content-Type')
-  }
-
-  if (authStore.isAuthenticated && authStore.token) {
-    headers.set('Authorization', `Bearer ${authStore.token}`)
-  }
-
-  try {
-    return await requestJson<T>(url, {
-      ...options,
-      headers,
-      timeoutMs: options.timeoutMs ?? DEFAULT_NOVEL_REQUEST_TIMEOUT_MS,
-      fallbackErrorMessage: '小说接口请求失败',
-    })
-  } catch (error) {
-    if (error instanceof HttpRequestError && error.status === 401) {
-      // Token 失效或未授权
-      authStore.logout()
-      router.push('/login')
-      throw new Error('会话已过期，请重新登录')
-    }
-    throw error
-  }
-}
 
 export const streamRequest = async (url: string, options: HttpRequestOptions = {}) => {
-  const authStore = useAuthStore()
-  const headers = new Headers({
-    'Content-Type': 'application/json',
-    ...options.headers
+  const response = await authRaw(url, {
+    ...options,
+    timeoutMs: options.timeoutMs ?? DEFAULT_NOVEL_REQUEST_TIMEOUT_MS,
+    fallbackErrorMessage: '流式请求失败',
   })
 
-  if (authStore.isAuthenticated && authStore.token) {
-    headers.set('Authorization', `Bearer ${authStore.token}`)
+  if (!response.body) {
+    throw new Error('浏览器不支持流式响应')
   }
 
-  try {
-    const response = await requestRaw(url, {
-      ...options,
-      headers,
-      timeoutMs: options.timeoutMs ?? DEFAULT_NOVEL_REQUEST_TIMEOUT_MS,
-      fallbackErrorMessage: '流式请求失败',
-    })
-
-    if (!response.body) {
-      throw new Error('浏览器不支持流式响应')
-    }
-
-    return response
-  } catch (error) {
-    if (error instanceof HttpRequestError && error.status === 401) {
-      authStore.logout()
-      router.push('/login')
-      throw new Error('会话已过期，请重新登录')
-    }
-    throw error
-  }
+  return response
 }
 
 const parseSSEData = (rawData: string): unknown => {

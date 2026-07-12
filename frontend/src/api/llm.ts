@@ -1,7 +1,6 @@
 // AIMETA P=LLM_API客户端_模型配置接口|R=LLM配置CRUD|NR=不含UI逻辑|E=api:llm|X=internal|A=llmApi对象|D=axios|S=net|RD=./README.ai
-import { useAuthStore } from '@/stores/auth';
 import { API_BASE_URL, API_PREFIX } from './base';
-import { requestJson } from './http';
+import { authJson } from './client';
 
 const LLM_BASE = `${API_BASE_URL}${API_PREFIX}/llm-config`;
 
@@ -103,25 +102,13 @@ export interface LLMConfigBundle {
   stage_routes: StageRoute[];
 }
 
-const getHeaders = () => {
-  const authStore = useAuthStore();
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-  if (authStore.token) {
-    headers.Authorization = `Bearer ${authStore.token}`;
-  }
-  return headers;
-};
-
 const llmRequest = <T>(
   path: string,
   options: RequestInit = {},
   fallbackErrorMessage = 'LLM 配置请求失败',
 ) =>
-  requestJson<T>(`${LLM_BASE}${path}`, {
+  authJson<T>(`${LLM_BASE}${path}`, {
     ...options,
-    headers: getHeaders(),
     timeoutMs: 20_000,
     fallbackErrorMessage,
   });

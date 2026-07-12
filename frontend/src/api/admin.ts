@@ -1,42 +1,19 @@
 // AIMETA P=管理员API客户端_管理接口调用|R=用户管理_系统配置_统计|NR=不含UI逻辑|E=api:admin|X=internal|A=adminApi对象|D=axios|S=net|RD=./README.ai
-import { useAuthStore } from '@/stores/auth'
-import router from '@/router'
 import type { NovelSectionResponse, NovelSectionType } from '@/api/novel'
+import { authJson } from './client'
 import { API_BASE_URL } from './base'
-import { HttpRequestError, requestJson } from './http'
 export { API_BASE_URL } from './base'
 
 // API 配置
 export const ADMIN_API_PREFIX = '/api/admin'
 
 // 统一请求封装
-const request = async <T = any>(url: string, options: RequestInit = {}) => {
-  const authStore = useAuthStore()
-  const headers = new Headers({
-    'Content-Type': 'application/json',
-    ...options.headers
+const request = async <T = any>(url: string, options: RequestInit = {}) =>
+  authJson<T>(url, {
+    ...options,
+    timeoutMs: 20_000,
+    fallbackErrorMessage: '管理接口请求失败',
   })
-
-  if (authStore.isAuthenticated && authStore.token) {
-    headers.set('Authorization', `Bearer ${authStore.token}`)
-  }
-
-  try {
-    return await requestJson<T>(url, {
-      ...options,
-      headers,
-      timeoutMs: 20_000,
-      fallbackErrorMessage: '管理接口请求失败',
-    })
-  } catch (error) {
-    if (error instanceof HttpRequestError && error.status === 401) {
-      authStore.logout()
-      router.push('/login')
-      throw new Error('会话已过期，请重新登录')
-    }
-    throw error
-  }
-}
 
 const adminRequest = <T = any>(path: string, options: RequestInit = {}) =>
   request<T>(`${API_BASE_URL}${ADMIN_API_PREFIX}${path}`, options)

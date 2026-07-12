@@ -1,7 +1,6 @@
 // AIMETA P=TTS_API客户端_单段语音合成|R=认证_二进制音频请求|NR=不含播放逻辑|E=api:tts|X=internal|A=ttsApi|D=fetch,pinia|S=net|RD=./README.ai
-import { useAuthStore } from '@/stores/auth'
 import { API_BASE_URL, API_PREFIX } from './base'
-import { requestRaw } from './http'
+import { authRaw } from './client'
 
 
 const TTS_BASE = `${API_BASE_URL}${API_PREFIX}/tts`
@@ -12,14 +11,8 @@ export const synthesizeSpeech = async (
   options?: { voice?: string; speed?: number },
   signal?: AbortSignal,
 ): Promise<Blob> => {
-  const authStore = useAuthStore()
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (authStore.token) {
-    headers.Authorization = `Bearer ${authStore.token}`
-  }
-  const response = await requestRaw(`${TTS_BASE}/speech`, {
+  const response = await authRaw(`${TTS_BASE}/speech`, {
     method: 'POST',
-    headers,
     body: JSON.stringify({ text, voice: options?.voice, speed: options?.speed }),
     signal,
     timeoutMs: 65_000,
