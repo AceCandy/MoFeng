@@ -32,3 +32,12 @@
 - 建议排在路线图**阶段一止血 + 阶段二工程化（2-4 周）**。
 - 本任务为审查后的**整理产出，未进入实现**。属复杂任务，实现需 `task.py start` 后补 `design.md` / `implement.md`。
 - 关联报表：第叁/肆章（前端）、第伍/陆章（后端）、第贰章 P0 看板·工程基线。
+
+## Progress
+
+已完成并落盘：#15 Alembic（`dd7c65e`）/ #16 章节并发唯一约束 / #17 验证码下沉 Redis / #18 Celery engine 复用 / #19 .gitignore / #20 ESLint 分层门禁+CI（`500741d`）/ #21 鉴权收敛 http.ts / #23 OpenAPI codegen / #24 client.spec。验证依据：后端 pytest 191 + 前端 vitest 120。
+
+**未完成（需新会话 + 在场逐块验证）**：
+- #22 拆 `WDWorkspace.vue`（2427 行）+ 乐观更新规范化 + `cleanVersionContent` 5x 重复去重。超大重构，Acceptance 第 4 项依赖此项。
+
+任务保持 planning，待 #22 新会话补 `design.md` / `implement.md` 后 `task.py start`。

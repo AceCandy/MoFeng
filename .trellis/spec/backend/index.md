@@ -14,6 +14,7 @@
 | Errors | Service raises `ValueError`; router translates to `HTTPException` | [error-handling](./error-handling.md) |
 | Logging | stdlib `logging`, `getLogger(__name__)`, lazy `%s` args | [logging-guidelines](./logging-guidelines.md) |
 | Quality | `httpx.AsyncClient`, `response_model=` on routes, AIMETA header on every file | [quality-guidelines](./quality-guidelines.md) |
+| Security | CORS whitelist, Fernet secret encryption, SSRF guard, auth hardening | [security-guidelines](./security-guidelines.md) |
 
 ---
 
@@ -22,10 +23,11 @@
 | Guide | Description |
 |-------|-------------|
 | [Directory Structure](./directory-structure.md) | Request flow, directory map, DI wiring, AIMETA header |
-| [Database Guidelines](./database-guidelines.md) | Engine/session, repository pattern, transaction ownership, schema init (no Alembic) |
+| [Database Guidelines](./database-guidelines.md) | Engine/session, repository pattern, transaction ownership, schema init (Alembic + startup fallback) |
 | [Error Handling](./error-handling.md) | Domain errors vs `HTTPException`, status-code map, anti-patterns |
 | [Logging Guidelines](./logging-guidelines.md) | `dictConfig` setup, level conventions, lazy formatting |
 | [Quality Guidelines](./quality-guidelines.md) | Async discipline, Pydantic schemas, config, Celery, review checklist |
+| [Security Guidelines](./security-guidelines.md) | CORS, Fernet secret encryption, SSRF, auth hardening |
 
 ---
 
@@ -35,7 +37,7 @@ These are documented so new code does not repeat them. They are intentionally **
 
 1. Error signaling is split between `ValueError` (good) and `HTTPException` raised from services (legacy). New code uses `ValueError`.
 2. No shared timestamp mixin / uniform PK type across models. New models match sibling models in their aggregate.
-3. No Alembic in use despite being declared in `requirements.txt`. Schema is patched by `init_db._ensure_schema_updates`.
+3. Alembic is in use (baseline `a53385d06521`), but `init_db._ensure_schema_updates` still runs at boot as a fallback. Retire it once all deployments run `alembic upgrade head`.
 4. Some routers open `AsyncSessionLocal()` directly. New routers use `Depends(get_session)`.
 
 ---

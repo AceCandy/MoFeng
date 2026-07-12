@@ -140,4 +140,4 @@ Rule for new tasks: reuse `app.db.session.AsyncSessionLocal` and `settings.sqlal
 - [ ] Outbound HTTP is `httpx.AsyncClient`; sync libs wrapped with `asyncio.to_thread`.
 - [ ] Logger declared at module top with `getLogger(__name__)`; uses `%s` args.
 - [ ] No secrets in log lines.
-- [ ] Schema change accompanied by an `_ensure_schema_updates` block + `db/migrations/*.sql` note.
+- [ ] Schema change shipped as an Alembic migration under `backend/alembic/versions/` (see [database-guidelines](./database-guidelines.md)).
