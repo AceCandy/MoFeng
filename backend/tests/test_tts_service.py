@@ -125,8 +125,9 @@ async def test_mimo_synthesis_uses_chat_audio_contract(monkeypatch):
     assert FakeAsyncClient.request["url"] == "http://127.0.0.1:8000/v1/chat/completions"
     payload = FakeAsyncClient.request["json"]
     assert payload["audio"] == {"format": "wav", "voice": "白桦"}
+    assert payload["messages"][0]["role"] == "system"
+    assert "有声书演播" in payload["messages"][0]["content"]
     assert payload["messages"][-1] == {"role": "assistant", "content": "第一段正文"}
-    assert "1.2" in payload["messages"][0]["content"]
     assert FakeAsyncClient.request["headers"]["Authorization"] == "Bearer secret-key"
 
 

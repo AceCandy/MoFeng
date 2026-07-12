@@ -75,7 +75,7 @@ class TTSService:
         effective_speed = speed if speed is not None else float(model.tts_speed or 1.0)
 
         if model.tts_protocol == "mimo_chat_audio":
-            return await self._synthesize_mimo(model, text, effective_voice, effective_speed)
+            return await self._synthesize_mimo(model, text, effective_voice)
         if model.tts_protocol == "openai_speech":
             return await self._synthesize_openai(model, text, effective_voice, effective_speed)
         raise TTSConfigurationError("默认语音朗读模型协议不受支持")
@@ -221,13 +221,20 @@ class TTSService:
             return bytes(out)
         return pcm[: len(pcm) // 2 * 2]
 
-    async def _synthesize_mimo(self, model, text: str, voice: str, speed: float) -> SpeechAudio:
-        messages = []
-        if speed != 1.0:
-            messages.append(
-                {"role": "user", "content": f"请以正常语速的 {speed:g} 倍朗读。"}
-            )
-        messages.append({"role": "assistant", "content": text})
+    async def _synthesize_mimo(self, model, text: str, voice: str) -> SpeechAudio:
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "你是一位顶级有声书演播艺术家。请朗读提供的文本：\n"
+                    "1. 感情饱满，语调随情节起伏——紧张处提速上扬，舒缓处放慢沉静；\n"
+                    "2. 区分旁白与对白：旁白叙述有温度，对白贴合角色情绪与性格；\n"
+                    "3. 善用停顿、气息与重音制造戏剧张力；\n"
+                    "4. 全程忠实原文，只演绎不创作，不得改写、增删或加入开场/收尾/解说。"
+                ),
+            },
+            {"role": "assistant", "content": text},
+        ]
         payload = {
             "model": model.model_name,
             "messages": messages,
