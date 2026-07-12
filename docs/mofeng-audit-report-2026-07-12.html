@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>墨风（MoFeng）多专家审查与竞品调研报告 · 2026-07-12</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@500;700;900&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c2024; --ink-soft:#3a3f44;
+    --vermilion:#b83c32; --vermilion-soft:#d35a4e;
+    --jade:#4f7a6b; --ochre:#b5822b;
+    --xuan:#f6efdf; --xuan-soft:#fbf7ec; --paper:#fffdf7;
+    --line:#e4d9bf; --line-soft:#efe6d2;
+    --muted:#756c5d; --muted-soft:#9a9080;
+    --p0:#b83c32; --p1:#b5822b; --p2:#7d7464;
+    --shadow:2px 2px 0 rgba(28,32,36,.07);
+    --shadow-strong:3px 3px 0 rgba(28,32,36,.12);
+    --serif:'Noto Serif SC',Songti SC,SimSun,serif;
+    --sans:'Noto Sans SC',system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+    --mono:ui-monospace,'JetBrains Mono',Consolas,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--xuan);color:var(--ink);font-family:var(--sans);line-height:1.75;font-size:15.5px;-webkit-font-smoothing:antialiased;position:relative}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(900px 500px at 10% -5%,rgba(184,60,50,.035),transparent 60%),radial-gradient(900px 500px at 95% 6%,rgba(79,122,107,.04),transparent 60%)}
+  .wrap{max-width:1280px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
+  /* 顶栏 */
+  header.topbar{position:sticky;top:0;z-index:50;background:rgba(246,239,223,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+  .topbar-inner{display:flex;align-items:center;gap:18px;padding:14px 0}
+  .seal{flex:0 0 auto;width:46px;height:46px;border-radius:8px;background:var(--vermilion);color:#fbf3ea;font-family:var(--serif);font-weight:900;font-size:22px;display:grid;place-items:center;box-shadow:var(--shadow-strong);letter-spacing:-1px}
+  .topbar h1{font-family:var(--serif);font-size:19px;margin:0;font-weight:700;line-height:1.25}
+  .topbar .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .topbar .spacer{flex:1}
+  .topbar .score-mini{text-align:right}
+  .topbar .score-mini .num{font-family:var(--serif);font-size:28px;font-weight:900;color:var(--vermilion);line-height:1}
+  .topbar .score-mini .lbl{font-size:11px;color:var(--muted)}
+  .btn{cursor:pointer;border:1px solid var(--line);background:var(--paper);color:var(--ink);padding:7px 13px;border-radius:7px;font-size:12.5px;font-family:var(--sans);box-shadow:var(--shadow);transition:transform .12s}
+  .btn:hover{transform:translate(-1px,-1px);box-shadow:var(--shadow-strong)}
+  /* 封面 */
+  .hero{padding:54px 0 30px;border-bottom:1px dashed var(--line)}
+  .hero .kicker{color:var(--vermilion);font-size:13px;letter-spacing:3px;font-weight:700;margin-bottom:10px}
+  .hero h2{font-family:var(--serif);font-size:42px;font-weight:900;margin:0 0 14px;line-height:1.15;letter-spacing:-.5px}
+  .hero h2 em{font-style:normal;color:var(--vermilion)}
+  .hero p.lead{font-size:16px;color:var(--ink-soft);max-width:820px;margin:0 0 22px}
+  .meta-row{display:flex;flex-wrap:wrap;gap:10px}
+  .chip{font-size:12.5px;padding:5px 12px;border:1px solid var(--line);border-radius:999px;background:var(--paper);color:var(--ink-soft);box-shadow:var(--shadow)}
+  .chip b{color:var(--vermilion)}
+  /* 仪表盘 */
+  .dashboard{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin:30px 0}
+  .score-card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px 12px;box-shadow:var(--shadow);text-align:center}
+  .score-card .role{font-size:12px;color:var(--muted);margin-bottom:8px;line-height:1.3;min-height:32px;display:flex;align-items:center;justify-content:center}
+  .ring{position:relative;width:74px;height:74px;margin:0 auto 8px}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .bg{fill:none;stroke:var(--line-soft);stroke-width:7}
+  .ring .fg{fill:none;stroke-width:7;stroke-linecap:round}
+  .ring .val{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--serif);font-weight:900;font-size:20px}
+  .score-card .tag{font-size:11px;color:var(--muted-soft)}
+  /* 统计条 */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:24px 0}
+  .stat{background:var(--paper);border:1px solid var(--line);border-left:5px solid var(--ink);border-radius:10px;padding:16px 18px;box-shadow:var(--shadow)}
+  .stat.p0{border-left-color:var(--p0)} .stat.p1{border-left-color:var(--p1)} .stat.p2{border-left-color:var(--p2)} .stat.avg{border-left-color:var(--jade)}
+  .stat .n{font-family:var(--serif);font-size:32px;font-weight:900;line-height:1}
+  .stat .l{font-size:12.5px;color:var(--muted);margin-top:6px}
+  .stat.p0 .n{color:var(--p0)} .stat.p1 .n{color:var(--p1)} .stat.p2 .n{color:var(--p2)} .stat.avg .n{color:var(--jade)}
+  /* 主体布局 */
+  .layout{display:grid;grid-template-columns:230px 1fr;gap:34px;padding:34px 0 60px;align-items:start}
+  nav.toc{position:sticky;top:84px;align-self:start;font-size:13px;max-height:calc(100vh - 100px);overflow:auto}
+  nav.toc .toc-h{font-family:var(--serif);font-weight:700;color:var(--ink);margin:0 0 10px;font-size:14px;letter-spacing:1px}
+  nav.toc ol{list-style:none;margin:0;padding:0}
+  nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:5px 10px;border-radius:6px;border-left:2px solid transparent;line-height:1.4}
+  nav.toc a:hover{color:var(--ink);background:var(--xuan-soft)}
+  nav.toc a.active{color:var(--vermilion);border-left-color:var(--vermilion);background:var(--xuan-soft);font-weight:500}
+  nav.toc a.sub{font-size:12px;padding-left:22px;color:var(--muted-soft)}
+  main{min-width:0}
+  section.chapter{margin-bottom:46px;scroll-margin-top:78px}
+  h3.ch{font-family:var(--serif);font-size:27px;font-weight:900;margin:0 0 6px;letter-spacing:-.3px;display:flex;align-items:baseline;gap:12px}
+  h3.ch .idx{font-size:14px;color:var(--vermilion);font-family:var(--sans);font-weight:700;letter-spacing:2px}
+  .ch-desc{color:var(--muted);font-size:13.5px;margin:0 0 22px}
+  h4{font-family:var(--serif);font-size:18px;font-weight:700;margin:30px 0 14px;color:var(--ink);display:flex;align-items:center;gap:9px}
+  h4::before{content:"";width:4px;height:18px;background:var(--vermilion);border-radius:2px;display:inline-block}
+  /* 总评卡 */
+  .verdict{display:grid;grid-template-columns:130px 1fr;gap:22px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:22px 24px;box-shadow:var(--shadow);margin-bottom:24px;align-items:center}
+  .verdict .grade{font-family:var(--serif);text-align:center;border-right:1px dashed var(--line);padding-right:22px}
+  .verdict .grade .g{font-size:52px;font-weight:900;color:var(--vermilion);line-height:1}
+  .verdict .grade .g small{font-size:22px;color:var(--muted)}
+  .verdict .grade .gl{font-size:11.5px;color:var(--muted);margin-top:4px;letter-spacing:1px}
+  .verdict .grade .bar{height:6px;background:var(--line-soft);border-radius:3px;margin-top:10px;overflow:hidden}
+  .verdict .grade .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--vermilion),var(--vermilion-soft))}
+  .verdict p{margin:0;color:var(--ink-soft);font-size:14.5px}
+  .verdict .role-tag{display:inline-block;font-size:11.5px;color:var(--jade);background:rgba(79,122,107,.1);padding:2px 9px;border-radius:5px;margin-bottom:8px;font-weight:500}
+  /* 亮点 / 借鉴 */
+  ul.gems,ul.advice{list-style:none;margin:0 0 10px;padding:0}
+  ul.gems li,ul.advice li{position:relative;padding:10px 12px 10px 30px;margin-bottom:8px;background:var(--paper);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow);font-size:14px;line-height:1.7}
+  ul.gems li::before{content:"◆";position:absolute;left:11px;top:10px;color:var(--jade);font-size:11px}
+  ul.advice li::before{content:"→";position:absolute;left:11px;top:9px;color:var(--vermilion);font-weight:700}
+  code,.fref{font-family:var(--mono);font-size:12.5px;background:rgba(184,60,50,.07);color:#8a2a22;padding:1px 6px;border-radius:4px;white-space:nowrap}
+  /* 问题卡 */
+  .issue{display:grid;grid-template-columns:64px 1fr;gap:0;background:var(--paper);border:1px solid var(--line);border-radius:10px;margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow)}
+  .issue .lv{writing-mode:vertical-rl;text-orientation:upright;color:#fff;font-family:var(--serif);font-weight:900;font-size:13px;display:grid;place-items:center;letter-spacing:2px;padding:8px 0}
+  .issue.p0 .lv{background:var(--p0)} .issue.p1 .lv{background:var(--p1)} .issue.p2 .lv{background:var(--p2)}
+  .issue .body{padding:13px 16px}
+  .issue .ihead{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:7px}
+  .issue .cat{font-size:11.5px;font-weight:700;color:var(--ink);background:var(--xuan);border:1px solid var(--line);padding:2px 9px;border-radius:5px}
+  .issue .meta-line{font-size:13px;color:var(--ink-soft);line-height:1.7}
+  .issue .meta-line b{color:var(--ink)}
+  .issue .impact,.issue .fix{font-size:13px;margin-top:6px;line-height:1.7}
+  .issue .impact{color:#8a5a12}
+  .issue .fix{color:#2f5145}
+  .issue .impact::before{content:"影响　";font-weight:700;color:var(--ochre);font-size:11.5px}
+  .issue .fix::before{content:"建议　";font-weight:700;color:var(--jade);font-size:11.5px}
+  details.p2group{margin-top:10px;border:1px dashed var(--line);border-radius:9px;background:var(--xuan-soft);padding:6px 14px}
+  details.p2group summary{cursor:pointer;font-size:13px;color:var(--muted);font-weight:500;padding:6px 0;outline:none}
+  details.p2group summary b{color:var(--p2)}
+  details[open].p2group{padding-bottom:14px}
+  /* 表格 */
+  .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);background:var(--paper)}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{padding:9px 11px;text-align:left;border-bottom:1px solid var(--line-soft);vertical-align:top}
+  th{background:var(--xuan);font-family:var(--serif);font-weight:700;font-size:12.5px;color:var(--ink);position:sticky;top:0}
+  tr:last-child td{border-bottom:none}
+  td .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700}
+  .s-strong{background:rgba(79,122,107,.16);color:#2f5145}
+  .s-has{background:rgba(181,130,43,.16);color:#7a540f}
+  .s-weak{background:rgba(125,116,100,.16);color:#5d5648}
+  .s-none{background:rgba(184,60,50,.12);color:#8a2a22}
+  .s-unk{background:#eee;color:#888}
+  /* P0 看板 */
+  .p0board{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:8px}
+  .p0col{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--vermilion);border-radius:11px;padding:16px 16px 8px;box-shadow:var(--shadow)}
+  .p0col h5{font-family:var(--serif);font-size:15.5px;margin:0 0 12px;color:var(--vermilion);display:flex;justify-content:space-between;align-items:center}
+  .p0col h5 span{font-size:11px;color:var(--muted);font-family:var(--sans);font-weight:400}
+  .p0col .mini{font-size:13px;padding:9px 11px;margin-bottom:9px;background:var(--xuan-soft);border-radius:7px;border-left:3px solid var(--vermilion)}
+  .p0col .mini b{display:block;font-size:13px;margin-bottom:3px}
+  /* 路线图 */
+  .road{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:8px}
+  .phase{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:18px;box-shadow:var(--shadow);position:relative}
+  .phase.p1{border-top:4px solid var(--vermilion)} .phase.p2{border-top:4px solid var(--ochre)} .phase.p3{border-top:4px solid var(--jade)}
+  .phase .ph-num{font-family:var(--serif);font-size:12px;color:#fff;background:var(--ink);width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:900;margin-bottom:10px}
+  .phase.p1 .ph-num{background:var(--vermilion)} .phase.p2 .ph-num{background:var(--ochre)} .phase.p3 .ph-num{background:var(--jade)}
+  .phase h5{font-family:var(--serif);font-size:16px;margin:0 0 4px}
+  .phase .when{font-size:11.5px;color:var(--muted);margin-bottom:12px}
+  .phase ol{margin:0;padding-left:18px;font-size:13px;line-height:1.75}
+  .phase ol li{margin-bottom:5px}
+  /* 技术栈卡 */
+  .stack{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:8px 0 10px}
+  .stack .col{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:18px;box-shadow:var(--shadow)}
+  .stack .col h5{font-family:var(--serif);margin:0 0 12px;font-size:15px;display:flex;align-items:center;gap:8px}
+  .stack .col h5 .dot{width:9px;height:9px;border-radius:50%}
+  .stack dl{margin:0;display:grid;grid-template-columns:78px 1fr;gap:7px 12px;font-size:13px}
+  .stack dt{color:var(--muted)} .stack dd{margin:0}
+  .stack ul{margin:6px 0 0;padding-left:18px;font-size:13px;line-height:1.8}
+  /* 页脚 */
+  footer{border-top:1px dashed var(--line);padding:26px 0 50px;color:var(--muted);font-size:13px}
+  footer .note{background:var(--xuan-soft);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:16px;line-height:1.85}
+  footer .note b{color:var(--ink)}
+  .footer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  footer h6{font-family:var(--serif);font-size:13.5px;color:var(--ink);margin:0 0 8px}
+  .law{position:fixed;right:22px;bottom:22px;z-index:60;display:none}
+  .law a{display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:var(--vermilion);color:#fbf3ea;text-decoration:none;font-family:var(--serif);font-weight:900;box-shadow:var(--shadow-strong)}
+  @media(max-width:1000px){
+    .dashboard{grid-template-columns:repeat(3,1fr)}
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .layout{grid-template-columns:1fr}
+    nav.toc{display:none}
+    .p0board,.road{grid-template-columns:1fr}
+    .stack{grid-template-columns:1fr}
+    .footer-grid{grid-template-columns:1fr}
+    .verdict{grid-template-columns:1fr}.verdict .grade{border-right:none;border-bottom:1px dashed var(--line);padding-bottom:14px;padding-right:0}
+    .hero h2{font-size:30px}
+  }
+  @media print{
+    header.topbar,nav.toc,.law,.btn{display:none!important}
+    body{background:#fff;font-size:12px}
+    .issue,.score-card,.stat,.phase,.p0col{break-inside:avoid}
+    section.chapter{break-inside:avoid}
+    a{color:var(--ink);text-decoration:none}
+  }
+</style>
+</head>
+<body>
+<header class="topbar"><div class="wrap topbar-inner">
+  <div class="seal">墨</div>
+  <div>
+    <h1>墨风 MoFeng · 多专家审查与竞品调研报告</h1>
+    <div class="sub">字节前端 · 快手前端总监 · 阿里后端 · 滴滴架构 · 腾讯设计 · 美团 UI · 六视角 + 竞品调研</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="score-mini"><div class="num">6.4</div><div class="lbl">综合健康度 / 10</div></div>
+  <button class="btn" onclick="window.print()">打印 / 导出 PDF</button>
+</div></header>
+
+<div class="wrap">
+<section class="hero">
+  <div class="kicker">CODE &amp; PRODUCT AUDIT · 2026.07.12</div>
+  <h2>一份"可靠的写作台"，<em>底子扎实，但在三处系统性地跑偏</em></h2>
+  <p class="lead">MoFeng（墨风）是一个完成度相当高的 AI 长篇小说创作平台，覆盖灵感→蓝图→章节工业化生产→评审选版→质量护栏→记忆 RAG→后台治理→TTS 的全链路。本次邀请六位不同背景的专家做只读深审，并调研国内外同类产品，结论是：<b>数据层与基础设施已达工业级</b>，但<b>安全基线、工程基线、品牌一致性</b>三个维度存在系统性短板，需优先治理。</p>
+  <div class="meta-row">
+    <span class="chip">审查范围 · <b>前端 frontend/ + 后端 backend/ + deploy/</b></span>
+    <span class="chip">方法论 · <b>只读深审 + codegraph + 竞品联网调研</b></span>
+    <span class="chip">问题总计 · <b>13 P0 / 42 P1 / 47 P2</b></span>
+    <span class="chip">未改动任何代码 / 未做 git 操作</span>
+  </div>
+</section>
+
+<div class="dashboard">
+  <div class="score-card"><div class="role">字节·前端工程</div>
+    <div class="ring"><svg width="74" height="74"><circle class="bg" cx="37" cy="37" r="32"/><circle class="fg" cx="37" cy="37" r="32" style="stroke:#4f7a6b;stroke-dasharray:201.06;stroke-dashoffset:50.27"/></svg><div class="val" style="color:#4f7a6b">7.5</div></div>
+    <div class="tag">数据层工业级 · 组件层偏胖</div></div>
+  <div class="score-card"><div class="role">快手·前端架构</div>
+    <div class="ring"><svg width="74" height="74"><circle class="bg" cx="37" cy="37" r="32"/><circle class="fg" cx="37" cy="37" r="32" style="stroke:#b5822b;stroke-dasharray:201.06;stroke-dashoffset:80.42"/></svg><div class="val" style="color:#b5822b">6.0</div></div>
+    <div class="tag">骨架清晰 · 执行漂移</div></div>
+  <div class="score-card"><div class="role">阿里·后端工程</div>
+    <div class="ring"><svg width="74" height="74"><circle class="bg" cx="37" cy="37" r="32"/><circle class="fg" cx="37" cy="37" r="32" style="stroke:#4f7a6b;stroke-dasharray:201.06;stroke-dashoffset:60.32"/></svg><div class="val" style="color:#4f7a6b">7.0</div></div>
+    <div class="tag">IDOR 一致 · 并发有坑</div></div>
+  <div class="score-card"><div class="role">滴滴·后端架构</div>
+    <div class="ring"><svg width="74" height="74"><circle class="bg" cx="37" cy="37" r="32"/><circle class="fg" cx="37" cy="37" r="32" style="stroke:#b83c32;stroke-dasharray:201.06;stroke-dashoffset:90.48"/></svg><div class="val" style="color:#b83c32">5.5</div></div>
+    <div class="tag">安全/迁移/扩展三短板</div></div>
+  <div class="score-card"><div class="role">腾讯·产品设计</div>
+    <div class="ring"><svg width="74" height="74"><circle class="bg" cx="37" cy="37" r="32"/><circle class="fg" cx="37" cy="37" r="32" style="stroke:#b5822b;stroke-dasharray:201.06;stroke-dashoffset:80.42"/></svg><div class="val" style="color:#b5822b">6.0</div></div>
+    <div class="tag">动线闭环 · 品牌跑偏</div></div>
+  <div class="score-card"><div class="role">美团·UI 视觉</div>
+    <div class="ring"><svg width="74" height="74"><circle class="bg" cx="37" cy="37" r="32"/><circle class="fg" cx="37" cy="37" r="32" style="stroke:#b5822b;stroke-dasharray:201.06;stroke-dashoffset:70.37"/></svg><div class="val" style="color:#b5822b">6.5</div></div>
+    <div class="tag">国风自洽 · 工程卫生欠</div></div>
+</div>
+
+<div class="stats">
+  <div class="stat avg"><div class="n">6.4</div><div class="l">综合健康度（六视角均值 / 10）</div></div>
+  <div class="stat p0"><div class="n">13</div><div class="l">P0 严重问题（安全 / 工程 / 品牌）</div></div>
+  <div class="stat p1"><div class="n">42</div><div class="l">P1 重要问题（可靠 / 扩展 / 体验）</div></div>
+  <div class="stat p2"><div class="n">47</div><div class="l">P2 改进项（卫生 / 可观测 / 细节）</div></div>
+</div>
+
+<div class="layout">
+<nav class="toc">
+  <div class="toc-h">目 录</div>
+  <ol>
+    <li><a href="#ch1">壹 · 项目画像与技术栈</a></li>
+    <li><a href="#ch2">贰 · 健康度概览与 P0 看板</a></li>
+    <li><a href="#ch3">叁 · 字节前端专家</a></li>
+    <li><a href="#ch4">肆 · 快手前端总监</a></li>
+    <li><a href="#ch5">伍 · 阿里后端专家</a></li>
+    <li><a href="#ch6">陆 · 滴滴后端架构师</a></li>
+    <li><a href="#ch7">柒 · 腾讯设计专家</a></li>
+    <li><a href="#ch8">捌 · 美团 UI 专家</a></li>
+    <li><a href="#ch9">玖 · 竞品调研</a></li>
+    <li><a href="#ch10">拾 · 改进路线图</a></li>
+    <li><a href="#ch11">拾壹 · 差异化与战略</a></li>
+  </ol>
+</nav>
+<main>
+<section class="chapter" id="ch1">
+  <h3 class="ch"><span class="idx">壹</span>项目画像与技术栈</h3>
+  <p class="ch-desc">先对齐"我们在审什么"——一个面向长篇小说创作者与小团队、定位"从灵感到成稿一体化"的 AI 创作平台。</p>
+  <div class="stack">
+    <div class="col">
+      <h5><span class="dot" style="background:#4f7a6b"></span>前端 frontend/</h5>
+      <dl>
+        <dt>框架</dt><dd>Vue 3.5 + Vite 7 + TypeScript 5.8</dd>
+        <dt>样式</dt><dd>Tailwind 4 + 自研"墨风"MD token + Naive UI</dd>
+        <dt>状态</dt><dd>TanStack Query（服务端态）+ Pinia（客户端态）</dd>
+        <dt>路由</dt><dd>Vue Router 4 + 守卫鉴权</dd>
+        <dt>其他</dt><dd>marked + DOMPurify、chart.js、SSE 手写解析</dd>
+      </dl>
+    </div>
+    <div class="col">
+      <h5><span class="dot" style="background:#b83c32"></span>后端 backend/app/</h5>
+      <dl>
+        <dt>框架</dt><dd>FastAPI 0.110 + SQLAlchemy 2（async）+ Pydantic</dd>
+        <dt>编排</dt><dd>LangGraph（写作台 7 步状态机）</dd>
+        <dt>AI</dt><dd>OpenAI 兼容 LLM + libsql 向量 RAG + Ollama/OpenAI Embedding</dd>
+        <dt>基建</dt><dd>Redis · Celery · Alembic（未启用）· JWT</dd>
+        <dt>部署</dt><dd>Docker / Compose / Nginx / Supervisord</dd>
+      </dl>
+    </div>
+  </div>
+  <h4>核心能力链路</h4>
+  <p style="font-size:14px;color:var(--ink-soft);margin:0 0 6px">灵感孵化 → 结构化蓝图（世界观/角色/势力/关系/地点/章节）→ 章节工业化生产（生成 N 版 / 评审 / 选版 / 编辑）→ 质量护栏（六维审查 / 一致性 / 伏笔追踪 / 情绪曲线）→ 记忆与 RAG → 管理后台 → TTS 朗读。</p>
+  <p style="font-size:13px;color:var(--muted);margin-top:10px">规模信号：前端 &gt;500 行组件约 <b>20 个</b>（最大 <code>PersonalModelRouting.vue 2684 行</code>）；<code>main.css 4966 行</code>；全仓 <code>!important</code> 约 <b>2236 处</b>（main.css 占 1141）；<b>87 个文件</b>头部带 <code>AIMETA</code> 注释。</p>
+</section>
+
+<section class="chapter" id="ch2">
+  <h3 class="ch"><span class="idx">贰</span>健康度概览与 P0 看板</h3>
+  <p class="ch-desc">六视角均值 <b>6.4 / 10</b>——"底子好、执行漂移"。下面把 13 个 P0 按主题归并成三块看板，它们是本轮最该先动手的地方。</p>
+
+  <div class="p0board">
+    <div class="p0col">
+      <h5>安全基线 <span>4 项 · 多来自后端架构师</span></h5>
+      <div class="mini"><b>CORS 全域开放</b><code>main.py:86-92</code>　<code>allow_origins=["*"]</code>+<code>allow_credentials=True</code>，任意站点可携凭证跨域。</div>
+      <div class="mini"><b>API Key 明文存储</b><code>llm_config_service.py:320,356</code>　字段名 <code>api_key_encrypted</code> 实为明文写入，库泄露即全量泄露。</div>
+      <div class="mini"><b>SSRF 未防护</b><code>llm_config_service.py:319,354</code>　用户可配任意 <code>base_url</code>，后端直发请求，可探内网/云元数据。</div>
+      <div class="mini"><b>默认口令 / SECRET_KEY</b><code>config.py:40,72</code>　默认管理员 <code>ChangeMe123!</code> 硬编码，强制改密可被用户名绕过。</div>
+    </div>
+    <div class="p0col">
+      <h5>工程基线 <span>4 项 · 前端架构 + 后端</span></h5>
+      <div class="mini"><b>无 Alembic 迁移</b><code>init_db.py</code>　全靠 <code>create_all</code>+手写 ALTER（sqlite/mysql 双分支 60+ 行），无版本无回滚。</div>
+      <div class="mini"><b>分层越界</b><code>frontend/src</code>　33 个组件/views 直接 <code>import '@/api'</code>，绕过 queries 层，缓存策略无法收口。</div>
+      <div class="mini"><b>鉴权 401 逻辑四份重复</b><code>api/novel.ts / admin.ts / tasks.ts</code>　各抄一遍 401→登出，<code>tasks.ts</code> 还漏了 <code>router.push</code>。</div>
+      <div class="mini"><b>Authorization 注入散落</b>6 个 api 模块手写 Bearer 头，任一漏写即静默 401。</div>
+    </div>
+    <div class="p0col">
+      <h5>品牌一致性 <span>5 项 · 设计 + UI</span></h5>
+      <div class="mini"><b>功能入口古风印章化</b><code>AppShell.vue:566-628</code>　管理/配置/改密/退出用"司天运营/乾坤万象"+单字印章作唯一标识，与 PRODUCT.md"direct &amp; helpful"冲突。</div>
+      <div class="mini"><b>持续性装饰动效</b><code>WDSidebar.vue</code>　竹简颤抖、印章扣下、待写徽章 1.8s 无限浮动、进度点无限脉冲，干扰长会话专注。</div>
+      <div class="mini"><b>待写徽章高饱和渐变</b><code>WDSidebar.vue:754-769</code>　亮橙渐变+白字+浮动，与古典体系冲突且制造焦虑。</div>
+      <div class="mini"><b>字体字重失效</b><code>main.ts:1-2</code> 仅导入 400/600，但 <code>main.css:284</code> 全局 <code>500 !important</code>，Medium 实际回退 400。</div>
+      <div class="mini"><b>Naive UI 未桥接主题</b>无 <code>n-config-provider</code>，改用 52 个 <code>.n-*</code> 选择器+1141 处 <code>!important</code> 全局覆盖。</div>
+    </div>
+  </div>
+  <p style="margin-top:18px;font-size:13px;color:var(--muted)">值得注意的是：<b>字节前端与阿里后端两位均未给出 P0</b>——前端数据层（http/queryClient/composable）与后端业务层（IDOR 防护、N+1 规避、失败兜底）质量在线；问题集中在新引入的"治理/工程纪律"与"品牌执行"层面，而非核心业务逻辑。</p>
+</section>
+<section class="chapter" id="ch3">
+  <h3 class="ch"><span class="idx">叁</span>字节前端专家视角</h3>
+  <p class="ch-desc">关注 Vue3 大型应用的工程质量、性能与可维护性。聚焦 frontend/src 数据层、composables、queries 与组件抽象。</p>
+  <div class="verdict">
+    <div class="grade"><div class="g">7.5<small>/10</small></div><div class="gl">前端工程</div><div class="bar"><i style="width:75%"></i></div></div>
+    <div><span class="role-tag">字节跳动 · 资深前端工程</span><p>数据层与基础设施已达工业级——<code>http.ts</code> 错误归一化、<code>queryClient.ts</code> 智能重试、<code>useChapterReader</code>/<code>useDialogA11y</code> 高质量 composable、bundle 预算守护完善，TanStack Query 的 queryKey 与失效策略规范。短板集中在<b>组件层</b>：大量超胖组件（&gt;500 行约 20 个，最大 2684 行）、<code>cleanVersionContent</code> 在 5 处逐字重复、少数地方直接突变 vue-query 缓存对象而非不可变更新。无阻断/安全/数据损坏级 P0。</p></div>
+  </div>
+
+  <h4>亮点</h4>
+  <ul class="gems">
+    <li><b>useChapterReader 工业级状态机</b>（<code>composables/useChapterReader.ts:185-626</code>）：依赖注入可测、<code>runId</code> 防竞态、AbortController 取消、Web Audio+speechSynthesis 双通道自动回退、预取窗口、pause/resume 用 offset 重建 source。</li>
+    <li><b>HTTP 错误归一化 + 外部 abort</b>（<code>api/http.ts:127-216</code> + <code>lib/queryClient.ts:8-24</code>）：四类错误 code 归一、智能规避 401/403/abort/4xx 重试，策略克制。</li>
+    <li><b>Query 失效与乐观更新范本</b>（<code>queries/novel.ts:285-462</code>）：setQueryData 乐观删除+removeQueries+invalidate 三连。</li>
+    <li><b>无障碍 + 分包</b>（<code>useDialogA11y.ts</code> / <code>vite.config.ts:41-96</code>）：focus trap+引用计数锁滚；manualChunks 对 naive-ui 按目录细分。</li>
+    <li><b>SSE 流式健壮</b>（<code>api/novel.ts:81-278</code>）：双边界解析、三事件、reader.cancel+releaseLock 清理，三处统一复用。</li>
+  </ul>
+
+  <h4>问题清单（P0 × 0 · P1 × 12 · P2 × 14）</h4>
+  <p style="font-size:13px;color:var(--muted);margin:-6px 0 14px">未发现 P0：<code>v-html</code> 均经 DOMPurify、API key 仅返回 <code>api_key_preview</code>、无敏感泄漏。下列"直接突变缓存对象"是最接近 P0 的项。</p>
+
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">缓存一致性</span><span class="fref">WritingDesk.vue:1417-1423 / 1501-1507</span></div>
+    <div class="meta-line"><b>问题：</b>evaluateChapter 与 confirmVersionSelection 直接突变 vue-query 缓存对象（<code>chapter.generation_status</code> 直接赋值），而非用同文件 generateChapter 的 <code>upsertChapterInProjectCache</code> 不可变更新。</div>
+    <div class="impact">refetch 整体替换 data 引用时乐观改动写到旧对象会被丢弃；失败回滚只还原 status 未还原 step/progress，定稿失败后 UI 残留伪 finalizing。</div>
+    <div class="fix">统一走 <code>upsertChapterInProjectCache</code>；回滚还原全部字段或失败即 invalidateQueries 重拉。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">组件抽象</span><span class="fref">全局 · &gt;500 行组件约 20 个</span></div>
+    <div class="meta-line"><b>问题：</b>大量超胖组件——PersonalModelRouting <b>2684</b>、WDWorkspace <b>2427</b>、ChapterGenerating <b>2261</b>、WritingDesk <b>2055</b>、NovelDetailShell <b>1662</b>、InspirationMode <b>1396</b>、NovelWorkspace <b>1367</b>、SettingsManagement <b>1355</b>。</div>
+    <div class="impact">单文件承载多套状态机，维护/测试/复用成本高；WDWorkspace 还挂 15 个 emit 纯透传+100+ 行巨型 computed。</div>
+    <div class="fix">按 useModelPicker/useProviderForm/useStageRoutes 等 composable 拆分，stageGroups 等静态配置抽常量。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">重复逻辑</span><span class="fref">utils/chapter.ts:47 + 5 处</span></div>
+    <div class="meta-line"><b>问题：</b><code>cleanVersionContent</code> 逐字重复——WritingDesk.vue:633、WDWorkspace.vue:668、VersionSelector.vue:414、ChapterContent.vue:358、WDVersionDetailModal.vue:76 各自局部重定义，仅 ChapterGenerating.vue:266 正确 import。</div>
+    <div class="impact">改一处 bug 要同步改 5 处，极易遗漏。</div>
+    <div class="fix">删除 5 处局部定义，统一 <code>import { cleanVersionContent } from '@/utils/chapter'</code>。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">性能</span><span class="fref">EmotionCurveSection.vue:370-380, 276-310</span></div>
+    <div class="meta-line"><b>问题：</b>getEmotionColorByKey 每次 2 次 <code>window.getComputedStyle</code>，v-for 内每项调用 4 次 → N 章约 8N 次。</div>
+    <div class="impact">大章节量渲染开销显著；CSS 变量读取非响应式，切换深浅主题颜色不更新。</div>
+    <div class="fix">模块级/onMounted 缓存变量值并监听主题刷新，或改 CSS 类+currentColor。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">性能</span><span class="fref">WritingDesk.vue:1027-1037</span></div>
+    <div class="meta-line"><b>问题：</b><code>watch([...generation_traces, availableVersions], ...,{deep:true})</code>，traces 含 system_prompt/raw_response 长文本。</div>
+    <div class="impact">生成时每次 SSE 更新触发 deep 全树比对，长篇生成高频卡顿。</div>
+    <div class="fix">改用 <code>generation_traces.length</code> + <code>status_updated_at</code> 标量作监听源。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">错误处理</span><span class="fref">NovelDetailShell.vue:714-716 / 769-771</span></div>
+    <div class="meta-line"><b>问题：</b>handleSave 与 saveNewChapter 的 catch 仅 <code>console.error</code> 无用户提示，同文件 :747 校验失败却用了 globalAlert。</div>
+    <div class="impact">蓝图/章节保存失败时弹窗不关闭、用户无提示，误以为已保存，可能丢失编辑。</div>
+    <div class="fix">catch 中补 <code>globalAlert.showError(...)</code>。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">数据一致性</span><span class="fref">PersonalModelRouting.vue:1565-1592</span></div>
+    <div class="meta-line"><b>问题：</b>selectEmbeddingModel 先 upsert 新模型，再 <code>Promise.all</code> 批量翻转所有 embedding 模型 enabled/default，中途失败已写入不可回滚。</div>
+    <div class="impact">破坏"记忆检索只有一个当前向量模型"不变量，可能导致索引与查询维度不一致。</div>
+    <div class="fix">由后端保证原子性，或顺序更新+失败 invalidate refetch 让服务端收敛。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">超时/竞态</span><span class="fref">api/novel.ts:603-622</span></div>
+    <div class="meta-line"><b>问题：</b>converseConceptStream 未传 <code>timeoutMs</code>，走 streamRequest 默认 60s（章节接口都传了 660s）。</div>
+    <div class="impact">概念对话一轮 LLM 若思考+输出超 60s 会被固定倒计时 abort 打断。</div>
+    <div class="fix">为流式对话设独立较长超时（如 300s）。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">SSE 重连</span><span class="fref">WritingDesk.vue:1218-1240</span></div>
+    <div class="meta-line"><b>问题：</b>subscribeChapterStatus 的 onError 仅 console.error 不重连，resolve 后 .finally 也不重建。</div>
+    <div class="impact">SSE 静默断开后若章节未到终态、无新事件，UI 进度长期停滞。</div>
+    <div class="fix">SSE 结束后若未到终态自动重连，onError 走重连退避。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">重复逻辑</span><span class="fref">admin 四页</span></div>
+    <div class="meta-line"><b>问题：</b>loading/error/dismiss/refetch 模式抄 4 遍——Statistics.vue:116-139、PromptManagement.vue:261-275、UserManagement.vue:272-283、SettingsManagement.vue:478-492。</div>
+    <div class="impact">同一面板状态模式分散，维护成本高。</div>
+    <div class="fix">抽 <code>useQueryPanelState(query)</code> composable。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">一致性 / XSS</span><span class="fref">VersionSelector.vue:457-478</span></div>
+    <div class="meta-line"><b>问题：</b>自写正则 markdown 转 HTML 后 <code>v-html</code>，项目其他位置（WDWorkspace.vue:1627、WDAssistantPanel.vue:158）都用 marked+DOMPurify。</div>
+    <div class="impact">DOMPurify 兜底无 XSS，但自写解析对嵌套/转义/代码块处理不全，渲染质量差且不统一。</div>
+    <div class="fix">改用 marked+DOMPurify，与项目对齐。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">错误处理</span><span class="fref">UserManagement.vue:301-316</span></div>
+    <div class="meta-line"><b>问题：</b>handleToggleStatus 失败靠 <code>fetchUsers()</code> refetch 回滚，refetch 本身也可能失败。</div>
+    <div class="impact">用户看到"禁用"实际仍启用，状态不一致。</div>
+    <div class="fix">失败时直接还原 row.is_active 旧值，不依赖二次请求。</div>
+  </div></div>
+
+  <details class="p2group"><summary><b>P2 × 14</b>　类型严谨 / Query 卫生 / 资源清理 / 测试覆盖（点击展开）</summary>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">TS 严谨</span><span class="fref">queries/novel.ts:395 等</span></div><div class="meta-line"><code>any</code> 滥用：概念对话 <code>userInput/conversationState:any</code>、updateBlueprint:Record&lt;string,any&gt;、request&lt;T=any&gt;。</div><div class="fix">用具体 payload 或 unknown+守卫。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">Query 卫生</span><span class="fref">queries/tasks.ts:20</span></div><div class="meta-line">useTasksQuery 无条件 refetchInterval:15_000 与 SSE 双跑，未设 refetchIntervalInBackground:false。</div><div class="fix">基于 SSE 状态动态开关+后台不轮询。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">坏味道</span><span class="fref">WDAssistantPanel.vue:233-278</span></div><div class="meta-line">硬编码第 76 章 mock 数据（林烬/白芷/沈无渊/旧系统）。</div><div class="fix">移除特例，统一来自 outline/blueprint 数据源。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">Query 卫生</span><span class="fref">PromptManagement.vue:475</span></div><div class="meta-line">prompts.value.unshift(created) 直接改 query 缓存数组。</div><div class="fix">创建成功 invalidateQueries 触发 refetch。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">Vue 实践</span><span class="fref">VersionSelector.vue:116 / InspirationMode.vue:57-62</span></div><div class="meta-line">v-for :key="index" 用于动态版本/消息列表。</div><div class="fix">用稳定 id 作 key。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">资源清理</span><span class="fref">InspirationMode.vue:697-715</span></div><div class="meta-line">scrollFrameId(rAF) 在 onUnmounted 未 cancelAnimationFrame。</div><div class="fix">补 cancelAnimationFrame。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">性能</span><span class="fref">WDWorkspace.vue:1545-1553</span></div><div class="meta-line">watch(availableVersions, resetIndex,{deep:true}) 仅为重置预览索引。</div><div class="fix">改监听 availableVersions.length。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">错误处理</span><span class="fref">ChapterEmpty.vue:235-241</span></div><div class="meta-line">全局 keydown 监听 Ctrl+Enter 未限定焦点范围。</div><div class="fix">检查 activeElement 是否在可编辑区。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">全局错误</span><span class="fref">main.ts</span></div><div class="meta-line">未设 app.config.errorHandler 与 query 全局错误订阅。</div><div class="fix">接入 errorHandler + queryCache.subscribe。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">测试覆盖</span><span class="fref">useDialogA11y / queries / http / router</span></div><div class="meta-line">关键基础设施无单测；现 19 个 spec 偏 bug 回归驱动。</div><div class="fix">补 useDialogA11y/http.ts/router 单测。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">代码质量</span><span class="fref">SettingsManagement.vue:514,627,763</span></div><div class="meta-line">normalizedVersionInfoUrl 顶层 computed 与局部同名变量 shadow。</div><div class="fix">局部改名或直接复用 computed。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">API 设计</span><span class="fref">NovelDetailShell.vue:565-583</span></div><div class="meta-line">loadSection 的 _force 从未使用但 reloadSection 对外传 true。</div><div class="fix">移除参数或接入 query force 选项。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">文档一致</span><span class="fref">api/llm.ts:1 / api/version.ts:1</span></div><div class="meta-line">llm.ts 注释 D=axios 与实际 fetch 不符；version.ts 从 ./admin 导入 API_BASE_URL。</div><div class="fix">改 D=fetch；统一从 ./base 导入。</div></div></div>
+  </details>
+
+  <h4>向业界 / 竞品借鉴</h4>
+  <ul class="advice">
+    <li><b>乐观更新规范化（TanStack 三段式）</b>：用 onMutate（写乐观值+取消 in-flight）+ onError（回滚 context）+ onSettled（invalidate）替代"直接突变缓存对象"与手动 setQueryData 混用。</li>
+    <li><b>超胖组件按 composable 切分</b>：参考 Vue Enterprise Boilerplate 的 use*Form/use*Table/use*Picker 分层，把 WDWorkspace 的 props 分发下沉到子组件。</li>
+    <li><b>大列表虚拟化</b>：章节/版本/任务日志用 n-virtual-list 或 vue-virtual-scroller，避免百章+ DOM 堆积。</li>
+    <li><b>Markdown 渲染统一缓存层</b>：推广 WorkspaceEntry.vue 的 computed 缓存为全局 useMarkdown composable，集中管控 DOMPurify 配置。</li>
+    <li><b>错误监控接入</b>：app.config.errorHandler + queryCache.subscribe + window.onerror，把散落的 console.error 收敛为可观测上报。</li>
+  </ul>
+</section>
+<section class="chapter" id="ch4">
+  <h3 class="ch"><span class="idx">肆</span>快手前端总监视角</h3>
+  <p class="ch-desc">关注架构合理性、规模化、团队协作与长期演进。通读 frontend/src 各层 + 构建链路 + 工程纪律。</p>
+  <div class="verdict">
+    <div class="grade"><div class="g">6.0<small>/10</small></div><div class="gl">前端架构</div><div class="bar"><i style="width:60%;background:linear-gradient(90deg,#b5822b,#d6a249)"></i></div></div>
+    <div><span class="role-tag">快手 · 前端总监（架构）</span><p>架构骨架清晰——分层命名正确、http 层与 TanStack Query 基础设施到位、构建链路（manualChunks+bundle budget）优于多数同体量团队。但<b>执行已明显漂移</b>：巨型组件（5 个超 2000 行）、分层越界（33 个组件直连 <code>@/api</code>）、鉴权/401 逻辑在 4 个 api 模块各写一遍，叠加 i18n/前端监控/ESLint/前端 CI 的<b>集体缺位</b>。处在"单人能跑、多人会痛"的临界点，6/10——底子好，但需要一次结构性的"还债+立规矩"。</p></div>
+  </div>
+
+  <h4>亮点</h4>
+  <ul class="gems">
+    <li><b>HTTP 层错误归一化专业</b>（<code>api/http.ts:170-222</code>+<code>:77-110</code>）：超时/取消/网络/HTTP 四类统一成 HttpRequestError，并对后端 detail/message/error/msg/errors 多路探测——可惜没被复用。</li>
+    <li><b>TanStack Query 全局策略克制正确</b>（<code>lib/queryClient.ts:8-24</code>）：显式排除 abort+4xx，staleTime 30s/gcTime 5min。</li>
+    <li><b>构建产物有预算守护</b>（<code>scripts/check-bundle-budget.mjs</code>）：基于 manifest 精确统计，warn/max 双阈值，进 build 主链路。</li>
+    <li><b>manualChunks 拆分有章法</b>（<code>vite.config.ts:43-77</code>）：naive-ui 按组件目录细分，缓存友好。</li>
+    <li><b>Pinia 与 Query 职责边界正确</b>：auth 只管 token+user，novel 只管灵感流程临时态+面板可见性，无"Pinia 塞服务端数据"反模式。</li>
+  </ul>
+
+  <h4>问题清单（P0 × 3 · P1 × 7 · P2 × 5）</h4>
+
+  <div class="issue p0"><div class="lv">P0</div><div class="body">
+    <div class="ihead"><span class="cat">分层越界</span><span class="fref">frontend/src · 33 个文件</span></div>
+    <div class="meta-line"><b>问题：</b>components 与 views 中 33 个文件直接 <code>import '@/api'</code>（如 WDWorkspace.vue:540），绕过 queries 层。</div>
+    <div class="impact">分层失去意义，缓存/失效/重试策略无法统一收口，多端调用同一接口出现不一致的 loading/error 处理。</div>
+    <div class="fix">queries 层补齐缺失封装；用 ESLint <code>no-restricted-imports</code> 禁止 components/views 直接 import <code>@/api</code>，数据获取下沉到 useXxxQuery。</div>
+  </div></div>
+  <div class="issue p0"><div class="lv">P0</div><div class="body">
+    <div class="ihead"><span class="cat">鉴权重复</span><span class="fref">api/novel.ts:37-44 / admin.ts:32-35 / tasks.ts:54-56</span></div>
+    <div class="meta-line"><b>问题：</b>401→logout+router.push('/login')+throw '会话已过期' 在 4 个模块各抄一遍，且 tasks.ts 还漏了 router.push（行为不一致）。</div>
+    <div class="impact">鉴权行为不统一，任一模块维护漂移即产生差异化 bug。</div>
+    <div class="fix">在 <code>api/http.ts</code> 加统一 request 拦截器（注入 Authorization+捕获 401 触发登出），各 api 模块只描述 URL/method/body。</div>
+  </div></div>
+  <div class="issue p0"><div class="lv">P0</div><div class="body">
+    <div class="ihead"><span class="cat">Auth 注入散落</span><span class="fref">novel.ts:26,55 / admin.ts:21 / llm.ts:112 / tasks.ts:43 / tts.ts:18 / auth.ts:71</span></div>
+    <div class="meta-line"><b>问题：</b>Bearer 头在每个模块手写，6 处分散。</div>
+    <div class="impact">任一处漏写即静默 401，难以排查。</div>
+    <div class="fix">收敛进 http 层一个 authenticatedRequest 工厂。</div>
+  </div></div>
+
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">巨型组件</span><span class="fref">PersonalModelRouting 2684 / WDWorkspace 2427 / ChapterGenerating 2261 / WritingDesk 2055 / NovelDetailShell 1662</span></div>
+    <div class="meta-line"><b>问题：</b>5 个超 2000 行的单文件承载过多状态与分支。</div>
+    <div class="impact">难以并行开发、难测试、review 成本高、merge 冲突高发。</div>
+    <div class="fix">按"区域"拆 sub-component+状态机抽 composable，WritingDesk/WDWorkspace 至少按侧栏/工作区/助手/模态四区拆，每区 &lt;500 行。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">无 i18n</span><span class="fref">全仓零 vue-i18n · WritingDesk.vue 单文件 145 行中文</span></div>
+    <div class="meta-line"><b>问题：</b>文案与代码耦合，无国际化/灰度文案/A-B 实验能力。</div>
+    <div class="impact">海外或繁体场景需返工。</div>
+    <div class="fix">引入 vue-i18n，先抽 views 层文案为 locale key，新增功能强制走 i18n。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">无前端监控</span><span class="fref">全仓</span></div>
+    <div class="meta-line"><b>问题：</b>搜不到 app.config.errorHandler / window.onerror / Sentry / unhandledrejection。</div>
+    <div class="impact">线上白屏、渲染异常、未捕获 promise rejection 全部静默丢失。</div>
+    <div class="fix">main.ts 注入 errorHandler+unhandledrejection，接 Sentry/自建上报。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">Naive UI 主题未桥接</span><span class="fref">App.vue 无 n-config-provider</span></div>
+    <div class="meta-line"><b>问题：</b>仅 3 个 admin 文件用 naive-ui 且默认主题，与自研"墨风"token 完全割裂。</div>
+    <div class="impact">admin 页面视觉与应用主体不一致。</div>
+    <div class="fix">用 n-config-provider 注入 themeOverrides 对齐墨风 token；或 admin 表格迁到自研 MofengTable 彻底移除 naive-ui。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">类型契约手写</span><span class="fref">api 全层 ~83 个类型</span></div>
+    <div class="meta-line"><b>问题：</b>前后端 Pydantic 契约靠人肉同步，字段漂移只能运行时报错发现。</div>
+    <div class="impact">接口改动前端类型不跟随，重构高风险。</div>
+    <div class="fix">接 OpenAPI→自动生成（hey-api/openapi-typescript/orval），单一数据源在后端。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">缺 ESLint + 前端 CI</span><span class="fref">无 eslint；.github/workflows 仅 docker-publish</span></div>
+    <div class="meta-line"><b>问题：</b>代码风格/最佳实践无门禁，type-check 与单测未在 PR 强制。</div>
+    <div class="impact">分层越界、any 滥用等问题无机制拦截。</div>
+    <div class="fix">引入 eslint+eslint-plugin-vue+自定义 no-restricted-imports；加 GitHub Actions 跑 type-check+vitest+budget，PR 必过。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">样式三套并存</span><span class="fref">Tailwind4 + 自研 MD token（main.css 4966 行）+ Naive UI</span></div>
+    <div class="meta-line"><b>问题：</b>三套心智模型，main.css 单文件 154KB 不可维护。</div>
+    <div class="impact">新人上手成本高，主题改动风险大。</div>
+    <div class="fix">main.css 按域拆分（tokens/reset/components/…），明确 token/原子类/组件类三层边界文档。</div>
+  </div></div>
+
+  <details class="p2group"><summary><b>P2 × 5</b>　源码元数据污染 / 测试策略 / 副作用位置（点击展开）</summary>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">源码污染</span><span class="fref">87 个文件 · api/novel.ts:1</span></div><div class="meta-line">87 个文件头部带 <code>AIMETA</code> 注释且已陈旧（标注 D=axios 实际 fetch）；与项目规则"注释不出现 AI 工具/模型名"相悖。</div><div class="fix">统一清理；元数据移到 .codegraph 索引或 sidecar 文件。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">测试偏静态</span><span class="fref">19 spec / 65+ 组件</span></div><div class="meta-line">多为静态 DOM/时序断言，无 E2E，超大组件几乎无测试。</div><div class="fix">配合组件拆分补组件测试；Playwright 覆盖"登录→建项目→生成章节"1-2 条 E2E。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">composable 直连 api</span><span class="fref">useChapterReader.ts:4-5</span></div><div class="meta-line">直接 import @/api/llm、@/api/tts，组合层穿透到 api。</div><div class="fix">config 获取改走 useLLMConfigQuery。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">副作用位置</span><span class="fref">main.ts</span></div><div class="meta-line">setupTheme/setupScrollbarBehavior 直接操作 DOM，应用入口承担过多全局副作用。</div><div class="fix">抽成 useTheme/useAutoHideScrollbar composable。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">文档一致</span><span class="fref">api/llm.ts:1</span></div><div class="meta-line">注释 D=axios 与实际 fetch 实现不符。</div><div class="fix">改为 D=fetch。</div></div></div>
+  </details>
+
+  <h4>向业界 / 竞品借鉴</h4>
+  <ul class="advice">
+    <li><b>分层强制 + import 边界</b>：借鉴 Nx/dependency-cruiser，把"组件不得 import api"从口头约定变成构建期硬失败——这是从"单人项目"到"团队项目"的关键一道门。</li>
+    <li><b>契约优先</b>：参考 Vercel/Linear 的 OpenAPI→TanStack Query codegen 链路（hey-api/orval），后端 Pydantic→openapi.json→前端 query 函数+类型一键生成。</li>
+    <li><b>设计系统单源</b>：借鉴 shadcn/ui token-first，把 --md-* 作为唯一源，Naive UI/Tailwind 都从 token 派生。</li>
+    <li><b>前端可观测</b>：对标 Sentry/GROW，前端必须有 errorHandler+资源加载失败+接口错误+LCP/INP 上报。</li>
+    <li><b>bundle 预算进阶</b>：已有的 check-bundle-budget.mjs 走在前列，可进一步做 route-level budget，把 god component 拆分与产物体积挂钩。</li>
+  </ul>
+</section>
+<section class="chapter" id="ch5">
+  <h3 class="ch"><span class="idx">伍</span>阿里后端专家视角</h3>
+  <p class="ch-desc">关注代码质量、业务正确性与 API/数据模型设计。聚焦 backend/app 的 routers/services/models/repositories/schemas。</p>
+  <div class="verdict">
+    <div class="grade"><div class="g">7.0<small>/10</small></div><div class="gl">后端工程</div><div class="bar"><i style="width:70%"></i></div></div>
+    <div><span class="role-tag">阿里巴巴 · 资深后端工程</span><p>整体架构成熟度尚可：LangGraph 七步状态机封装清晰、异常→failed 兜底与 trace 记录到位、IDOR 通过 <code>ensure_project_owner</code> 一致落地、仓储层用 selectinload 避开主读路径 N+1。但在<b>并发正确性、多进程部署兼容性、Schema 演进机制、跨域安全</b>四个维度存在中高风险。</p></div>
+  </div>
+
+  <h4>亮点</h4>
+  <ul class="gems">
+    <li><b>IDOR 防护一致</b>（<code>novel_service.py:198-204</code>）：ensure_project_owner 在 projects/writer/novels 几乎所有 project_id 入口被调用，LLM/TTS 配置也按 user_id 强分租户。</li>
+    <li><b>主读路径无 N+1</b>（<code>novel_repository.py:20-28</code>）：一次性 selectinload chapters→versions/evaluations/selected_version/generation_traces。</li>
+    <li><b>生成失败兜底闭环</b>（<code>pipeline_orchestrator.py:226-233</code>+<code>:323-376</code>）：任意节点抛错 rollback→标 failed→记 trace；<code>_auto_fail_stale_in_progress_chapters</code> 超时回收。</li>
+    <li><b>敏感信息脱敏</b>（<code>writer.py:120-137</code>）：正则把回传前端的错误串里 api_key/token/authorization 替换为 [已隐藏]。</li>
+    <li><b>恢复子图设计</b>（<code>pipeline_orchestrator.py:236-315</code>）：节点级断点续跑，trace 还原 State+clear_from_node 保证恢复幂等。</li>
+  </ul>
+
+  <h4>问题清单（P0 × 0 · P1 × 4 · P2 × 8）</h4>
+  <p style="font-size:13px;color:var(--muted);margin:-6px 0 14px">未发现直接导致数据损坏或越权拿数据的硬伤。下列"并发竞态"是最接近 P0 的项。</p>
+
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">并发正确性</span><span class="fref">novel_service.py:547-563 + models/novel.py:156-203</span></div>
+    <div class="meta-line"><b>问题：</b>章节表无 <code>(project_id, chapter_number)</code> 唯一约束，get_or_create_chapter 是典型 SELECT-then-INSERT 竞态。</div>
+    <div class="impact">同一项目并发触发生成/评审同一章时，两请求各自 INSERT→重复章节行，replace_chapter_versions 分别作用不同行，版本与 selected_version 错乱；_auto_fail_stale 只是超时清扫非并发锁。</div>
+    <div class="fix">加 <code>UniqueConstraint(project_id, chapter_number)</code>+索引；get_or_create_chapter 捕获 IntegrityError 重查；生成入口 with_for_update 或状态机前置校验（已 generating 直接 409）。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">多进程兼容</span><span class="fref">auth_service.py:26-27, 93-94, 103-116</span></div>
+    <div class="meta-line"><b>问题：</b>注册验证码与 60s 发送限频用模块级进程内字典 _VERIFICATION_CACHE / _LAST_SEND_TIME。</div>
+    <div class="impact">多 worker 部署时发码与校验可能不同进程→验证码永远校验失败、限频被绕过；字典无容量上限，长期运行内存泄漏。</div>
+    <div class="fix">下沉到 Redis（已有 CacheService）或 SystemConfig 表，带 TTL 自动过期；若坚持单进程需在部署约束固化 --workers 1。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">Schema 演进</span><span class="fref">init_db.py:30-31, 123-232</span></div>
+    <div class="meta-line"><b>问题：</b>项目声称 Alembic，实际既无 alembic.ini 也无 versions/ 目录，建表走 create_all+_ensure_schema_updates 手写 ALTER（含 sqlite/mysql 双分支，is_default_tts 等新字段硬补）。</div>
+    <div class="impact">模型与线上库无法对齐校验、无法回滚、改字段须同步改两处易漏。</div>
+    <div class="fix">引入 Alembic 并 autogenerate 首版基线迁移，把 _ensure_schema_updates 收口为一次性 upgrade 脚本。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">跨域安全</span><span class="fref">main.py:86-92</span></div>
+    <div class="meta-line"><b>问题：</b><code>allow_origins=["*"]</code> 与 <code>allow_credentials=True</code> 同时开启。</div>
+    <div class="impact">Starlette 会回显任意 Origin，等于任意网站可携凭证跨域请求 API。</div>
+    <div class="fix">生产显式枚举前端域名；若不需 cookie 传 token，保持 credentials=False 更安全。</div>
+  </div></div>
+
+  <details class="p2group"><summary><b>P2 × 8</b>　死代码 / OAuth 漏洞 / 事务粒度 / 时序安全（点击展开）</summary>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">死代码</span><span class="fref">blueprint_service.py:143-148,358,363</span></div><div class="meta-line">BlueprintService 全程同步 Session 且全仓无实例化点，若误用会把同步 DB I/O 带进 async 路由。</div><div class="fix">确认无引用后删除，或改写为 AsyncSession。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">逻辑一致性</span><span class="fref">auth_service.py:282-330</span></div><div class="meta-line">OAuth（Linux.do callback）注册未调 is_registration_enabled，username 未做唯一校验；管理员关闭注册后仍可 OAuth 建号，撞名触发 500。</div><div class="fix">OAuth 入口读 allow_registration；username 冲突预检或加随机后缀；data["username"] 用 .get() 防 KeyError。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">API 行为</span><span class="fref">novel_service.py:198-204</span></div><div class="meta-line">ensure_project_owner 对"存在但不属于自己"返回 403，与"不存在返回 404"形成差异，可枚举 project_id 存在性。</div><div class="fix">越权统一返回 404。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">事务粒度</span><span class="fref">novel_service.py（12 处 commit）/ writer.py:1392,1494,1574</span></div><div class="meta-line">单 HTTP 请求内多处各自 commit，评审流程 status→evaluating→commit→优化→commit→失败 rollback 再 commit；中间失败前面已 commit 状态残留。</div><div class="fix">请求级单一事务边界，中间态用 flush 而非 commit，失败统一 rollback 到入口态。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">健壮性</span><span class="fref">core/security.py:35</span></div><div class="meta-line">datetime.utcnow() 在 Py3.12+ 已废弃，naive datetime 跨时区比较埋坑。</div><div class="fix">统一 datetime.now(timezone.utc)，JWT claims 用 aware datetime。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">模型可维护</span><span class="fref">models/novel.py:18-27, 74-75, 150-151, 216-217</span></div><div class="meta-line">_MetadataAccessor 描述符把 metadata 重定向到 metadata_ 列以绕开 Base.metadata 命名冲突，脆弱 hack，Alembic autogenerate 会踩坑。</div><div class="fix">列改名 extra/meta_data/payload，移除访问重定向。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">幂等/校验</span><span class="fref">writer.py:1357</span></div><div class="meta-line">evaluate_chapter 函数体内重复 import selectinload（顶部 line 24 已导入）。</div><div class="fix">删除函数内重复 import。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">时序安全</span><span class="fref">auth_service.py:113</span></div><div class="meta-line">verify_code 用 code != expected 直接字符串比较，理论上可被时序攻击逐位探测。</div><div class="fix">secrets.compare_digest(code, expected)。</div></div></div>
+  </details>
+
+  <h4>向业界 / 竞品借鉴</h4>
+  <ul class="advice">
+    <li><b>并发章节生成加显式锁</b>：借鉴 GitLab/Notion 文档协同，对"同一资源正被长耗时任务处理"引入状态机锁（行锁或 Redis 分布式锁+TTL），前端二次点击直接 409+当前进度。</li>
+    <li><b>验证码/限频下沉 Redis</b>：code:email 带 TTL、ratelimit:email 滑动窗口，多 worker 一致且防内存泄漏。</li>
+    <li><b>迁移工具化</b>：尽早 alembic init+autogenerate，把命令式 DDL 转版本化迁移。</li>
+    <li><b>API 响应包装与错误码标准化</b>：统一 {code,message,data} 信封+业务错误码表，前端按 code 而非文案分支。</li>
+    <li><b>LLM 调用可观测性</b>：给 get_llm_response 统一加 OpenTelemetry/结构化日志（provider/model/stage/tokens/latency/cost），按 stage 写入已存在的 UsageMetric 做成本归因。</li>
+  </ul>
+</section>
+<section class="chapter" id="ch6">
+  <h3 class="ch"><span class="idx">陆</span>滴滴后端架构师视角</h3>
+  <p class="ch-desc">关注系统架构、可靠性、可扩展性、安全与运维。聚焦 main.py/core/db/tasks/向量/LLM·TTS services/deploy/。</p>
+  <div class="verdict">
+    <div class="grade"><div class="g">5.5<small>/10</small></div><div class="gl">后端架构</div><div class="bar"><i style="width:55%;background:linear-gradient(90deg,#b83c32,#d35a4e)"></i></div></div>
+    <div><span class="role-tag">滴滴 · 后端架构师</span><p>采用主流分层（Repository→Service→Router）+ LangGraph 编排，LLM 调用重试/错误分类细致，用户级模型路由有前瞻性。但作为面向多用户的 AI 创作平台，当前在<b>安全基线（CORS 全域+密钥明文+SSRF 未防护）、数据库迁移工程化（create_all+手工 ALTER）、多并发承载（单 worker+SQLite 默认+无限流）</b>三个维度存在系统性短板，离生产级可靠交付还有明显差距。</p></div>
+  </div>
+
+  <h4>亮点</h4>
+  <ul class="gems">
+    <li><b>LLM 调用重试策略精细</b>（<code>llm_service.py:122-157</code>）：可重试状态码白名单+指数退避+随机抖动+Retry-After 解析+不可重试关键词黑名单（quota/key/permission），工业级。</li>
+    <li><b>用户级 AI 模型分阶段路由</b>（<code>llm_service.py:567-622</code>+ai_model_config.py）：UserModelProvider→UserAIModel→UserAIStageRoute 三层，writing/summary/embedding/tts 不同阶段绑不同模型，多租户隔离清晰。</li>
+    <li><b>IDOR 越权防护统一</b>（<code>novel_service.py:198-204</code>）：所有项目操作经 ensure_project_owner 校验。</li>
+    <li><b>TTS 音频完整性校验</b>（<code>tts_service.py:108-140</code>）：校验 wav 头+data chunk 完整性+静音音频检测，标准化 16-bit PCM 解决 MiMo 偶发不可播放。</li>
+    <li><b>向量检索降级方案</b>（<code>vector_store_service.py:437-501</code>）：libsql 不支持 vector_distance_cosine 时自动回退 Python 层余弦。</li>
+  </ul>
+
+  <h4>问题清单（P0 × 5 · P1 × 8 · P2 × 8）</h4>
+
+  <div class="issue p0"><div class="lv">P0</div><div class="body">
+    <div class="ihead"><span class="cat">安全 · CORS</span><span class="fref">main.py:86-92</span></div>
+    <div class="meta-line"><b>问题：</b><code>allow_origins=["*"]</code>+<code>allow_credentials=True</code>，注释自承"生产建议改具体域名"。</div>
+    <div class="impact">任意网站可携凭证跨域请求 API；安全意识缺失的信号。</div>
+    <div class="fix">改为具体域名白名单，移除通配符。</div>
+  </div></div>
+  <div class="issue p0"><div class="lv">P0</div><div class="body">
+    <div class="ihead"><span class="cat">安全 · 密钥明文</span><span class="fref">llm_config_service.py:320, 356</span></div>
+    <div class="meta-line"><b>问题：</b>字段名 <code>api_key_encrypted</code> 实际存储明文 API Key（直接 strip 写入）。</div>
+    <div class="impact">数据库泄露即导致所有用户上游 LLM 密钥泄露；字段名造成虚假安全感。</div>
+    <div class="fix">Fernet/AES-GCM 对称加密，密钥从 SECRET_KEY 派生；或 Secret Manager（Vault/KMS）托管。</div>
+  </div></div>
+  <div class="issue p0"><div class="lv">P0</div><div class="body">
+    <div class="ihead"><span class="cat">安全 · SSRF</span><span class="fref">llm_config_service.py:319,354 + llm_service.py:848,874</span></div>
+    <div class="meta-line"><b>问题：</b>用户可配置任意 base_url，后端直接对其发起 HTTP 请求，无 SSRF 防护。</div>
+    <div class="impact">攻击者可探测内网（169.254.169.254 云元数据、localhost Redis/MySQL）。</div>
+    <div class="fix">协议白名单（https）+IP 黑名单（私有/环回/链路本地段）；DNS 解析后二次校验。</div>
+  </div></div>
+  <div class="issue p0"><div class="lv">P0</div><div class="body">
+    <div class="ihead"><span class="cat">安全 · 默认口令</span><span class="fref">config.py:40, 72</span></div>
+    <div class="meta-line"><b>问题：</b>SECRET_KEY 无默认值但 env.example 给占位符；默认管理员口令 <code>ChangeMe123!</code> 硬编码；requires_password_reset 仅按用户名匹配可绕过。</div>
+    <div class="impact">部署者用占位符/默认口令则 JWT 可伪造、管理员可被爆破。</div>
+    <div class="fix">启动校验 SECRET_KEY 熵值/长度；强制改密逻辑覆盖所有 is_admin 用户。</div>
+  </div></div>
+  <div class="issue p0"><div class="lv">P0</div><div class="body">
+    <div class="ihead"><span class="cat">工程 · 无迁移</span><span class="fref">init_db.py:24-248</span></div>
+    <div class="meta-line"><b>问题：</b>完全无 Alembic（alembic/versions/ 为空），依赖 create_all+_ensure_schema_updates 手工 ALTER（已积累 60+ 行双方言分支）。</div>
+    <div class="impact">无版本号、无回滚路径；多实例并发启动 ALTER 可能冲突。</div>
+    <div class="fix">引入 Alembic，把 _ensure_schema_updates 转为增量迁移脚本。</div>
+  </div></div>
+
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">可扩展性</span><span class="fref">supervisord.conf:9</span></div>
+    <div class="meta-line"><b>问题：</b>uvicorn <code>--workers 1</code> 单进程，章节生成同步阻塞 300s（llm_service.py timeout=300）。</div>
+    <div class="impact">单 worker 被长耗时 LLM 占满后全站排队；3-5 个并发生成即打满。</div>
+    <div class="fix">生产 workers≥2-4，或生成流程改异步任务（Celery）+SSE/轮询。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">可扩展性</span><span class="fref">session.py:11-17 + docker-compose.yml:16</span></div>
+    <div class="meta-line"><b>问题：</b>默认 DB_PROVIDER=sqlite+NullPool，部署默认也是 SQLite。</div>
+    <div class="impact">SQLite 单写入者锁，多用户并发写即 database is locked；无法横向扩展。</div>
+    <div class="fix">生产强制 MySQL，SQLite 标记 dev-only。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">可扩展性</span><span class="fref">novels.py:316-361</span></div>
+    <div class="meta-line"><b>问题：</b>章节状态 SSE 是 while True+asyncio.sleep(1) 轮询 DB，每秒查一次。</div>
+    <div class="impact">N 连接=N 次 DB 查询/秒；5 分钟生成=300 次/连接；单 worker 下放大严重。</div>
+    <div class="fix">改 Redis Pub/Sub 推送，或拉长轮询间隔（5-10s）+状态变更主动通知。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">可靠性</span><span class="fref">emotion_tasks.py:73, 253</span></div>
+    <div class="meta-line"><b>问题：</b>Celery 任务用 settings.database_url（可能 None）创建引擎，且 sessionmaker（同步）配 AsyncSession。</div>
+    <div class="impact">database_url=None 时崩溃；sessionmaker 不支持 async。</div>
+    <div class="fix">改用 sqlalchemy_database_uri+async_sessionmaker；复用 db/session.py 的 engine。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">可靠性</span><span class="fref">emotion_tasks.py:42-43</span></div>
+    <div class="meta-line"><b>问题：</b>每个 Celery 任务 asyncio.new_event_loop()+新建 engine+结束 dispose。</div>
+    <div class="impact">引擎无法复用、连接开销大；事件循环管理粗糙。</div>
+    <div class="fix">用 worker_process_init 信号初始化共享引擎。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">可靠性</span><span class="fref">auth_service.py:26-27</span></div>
+    <div class="meta-line"><b>问题：</b>邮箱验证码 _VERIFICATION_CACHE/_LAST_SEND_TIME 为进程内 dict（与阿里视角同一问题，架构维度复述）。</div>
+    <div class="impact">多 worker 下验证码不共享、无过期清理致内存泄漏。</div>
+    <div class="fix">迁移到 Redis（已有 CacheService）带 TTL。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">可扩展性</span><span class="fref">writer.py:1265-1301</span></div>
+    <div class="meta-line"><b>问题：</b>章节生成无并发限流/排队。</div>
+    <div class="impact">单用户可并发触发多个生成（每请求含 RAG+写作+评审+版本多次 LLM 调用），易打爆上游配额。</div>
+    <div class="fix">每用户/每项目信号量或 Redis 分布式锁，限制并发生成数。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">安全</span><span class="fref">security.py:35</span></div>
+    <div class="meta-line"><b>问题：</b>datetime.utcnow() 在 Py3.12+ 已弃用（与阿里视角同一问题）。</div>
+    <div class="impact">未来版本行为变化；跨时区 token 过期计算偏差。</div>
+    <div class="fix">datetime.now(timezone.utc)。</div>
+  </div></div>
+
+  <details class="p2group"><summary><b>P2 × 8</b>　可观测性 / 运维 / 容器安全（点击展开）</summary>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">可观测性</span><span class="fref">main.py:18-65</span></div><div class="meta-line">日志纯文本，无结构化字段、无 request_id/trace_id，难接入 ELK/Loki。</div><div class="fix">structlog/json formatter，注入 correlation ID。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">可观测性</span><span class="fref">main.py:98-106</span></div><div class="meta-line">健康检查返回静态 JSON，不检查 DB/Redis；DB 宕机仍 healthy。</div><div class="fix">增加 DB ping+Redis ping，区分 liveness/readiness。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">运维</span><span class="fref">nginx.conf:51-53</span></div><div class="meta-line">JS/CSS expires -1+no-store 标注"开发阶段"却是生产镜像，每次全量拉取。</div><div class="fix">hash 文件名+长缓存（expires 1y），仅 index.html 不缓存。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">容器安全</span><span class="fref">supervisord.conf:6,23 + Dockerfile:113</span></div><div class="meta-line">supervisor 和 nginx 以 root 运行，ENTRYPOINT 也 root 启动。</div><div class="fix">nginx 绑定 &gt;1024 端口后全程 appuser 运行。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">安全</span><span class="fref">supervisord.conf:9</span></div><div class="meta-line">--forwarded-allow-ips="*" 信任所有 X-Forwarded-* 头，可伪造客户端 IP。</div><div class="fix">限制为 127.0.0.1 或内网网段。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">可靠性</span><span class="fref">cache_service.py:135</span></div><div class="meta-line">redis.keys("emotion*:*") 是 O(N) 阻塞命令。</div><div class="fix">改用 SCAN 迭代。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">安全</span><span class="fref">config.py:42-46</span></div><div class="meta-line">无 JWT refresh，access token 7 天，泄露后无法吊销。</div><div class="fix">短期 access（15-30min）+长期 refresh+Redis 黑名单。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">工程</span><span class="fref">init_db.py:123-232</span></div><div class="meta-line">_ensure_schema_updates 字符串匹配列名跨方言分支，维护成本随版本递增。</div><div class="fix">迁移 Alembic 后逐步废弃。</div></div></div>
+  </details>
+
+  <h4>向业界 / 竞品借鉴</h4>
+  <ul class="advice">
+    <li><b>LangSmith / Langfuse 可观测性</b>：章节生成是多步 LangGraph 编排，接入 LLM 调用链追踪，可视化每步 token/延迟/成本。</li>
+    <li><b>NovelAI / Sudowrite 生成队列模式</b>：章节生成从同步 HTTP 改"提交任务→排队→SSE/WebSocket 推进度"，参考 Sudowrite Story Engine 异步架构。</li>
+    <li><b>Secret Manager 托管密钥</b>：用户 API Key 不应存数据库，借鉴 GitHub Actions/HashiCorp Vault，加密存储+运行时解密+轮换 API。</li>
+    <li><b>pgvector / Qdrant 替代 libsql 向量</b>：libsql 向量生态尚浅（已有 Python fallback 说明兼容性问题），生产建议 pgvector（同库事务一致）或专用 Qdrant/Milvus。</li>
+    <li><b>多租户配额与限流</b>：借鉴 OpenAI Platform RPM/TPM 限流，在网关层做 per-user 速率限制+配额计量。</li>
+  </ul>
+</section>
+<section class="chapter" id="ch7">
+  <h3 class="ch"><span class="idx">柒</span>腾讯设计专家视角</h3>
+  <p class="ch-desc">关注信息架构、交互流程、用户体验与创作动线。以 README/PRODUCT.md/DESIGN.md 为基准对照前端真实交互。</p>
+  <div class="verdict">
+    <div class="grade"><div class="g">6.0<small>/10</small></div><div class="gl">产品设计</div><div class="bar"><i style="width:60%;background:linear-gradient(90deg,#b5822b,#d6a249)"></i></div></div>
+    <div><span class="role-tag">腾讯 · 产品设计</span><p>创作动线（灵感→蓝图→写作台→评审选版→定稿→后台）在<b>功能闭环上完整</b>，章节流水线状态机、版本评审、RAG/记忆步骤透明化扎实。但整套界面在<b>品牌克制性上出现系统性跑偏</b>：一面在 PRODUCT.md/DESIGN.md 反对"过度品牌化、戏剧化、吵闹动画"，一面在每个角落堆砌伪古风命名（司天运营/乾坤万象/阁主/卷轴）和持续性装饰动效（印章扣下/竹简颤抖/徽章无限浮动），形成"产品定义说要安静、实现却在表演"的根本矛盾。</p></div>
+  </div>
+
+  <h4>核心创作动线评估</h4>
+  <ul class="gems" style="margin-bottom:18px">
+    <li><b>登录 → 配置 LLM　【卡点】</b>：模型配置藏在用户下拉"乾坤万象"印章下（<code>AppShell.vue:589-600</code>），新手无法从首屏发现"需先配模型"；SettingsView.vue:51-56 的提示出现在已迷路之后。</li>
+    <li><b>灵感 → 蓝图　【顺畅·有噪声】</b>：多轮对话+右侧"文思灵感词笺"实时沉淀（<code>InspirationMode.vue:99-130</code>）合理，但按钮"[ 始 ] 重开""[ 歸 ] 退出"印章前缀加戏。</li>
+    <li><b>蓝图 → 写作台　【最顺一段】</b>：详情壳七分区导航+顶部"进入写作台"，双向跳转清晰。</li>
+    <li><b>生成 → 评审 → 选版 → 定稿　【基本顺畅·有割裂】</b>：版本选择存在两套不一致界面（待确认卡片网格 vs 完成后 Tab 列表详情 <code>WDWorkspace.vue:251-298</code>）。</li>
+    <li><b>定稿 → 后台治理　【顺畅】</b>：任务日志 SSE 实时同步+全局进度条，状态可见性在线。</li>
+  </ul>
+
+  <h4>亮点</h4>
+  <ul class="gems">
+    <li><b>章节生成流水线步骤透明化</b>（<code>ChapterGenerating.vue:325-428</code>）：context_prep→整理前文、rag_retrieval→调用设定、finalize_memory→更新记忆逐一展示，把 RAG/记忆过程外化，同类产品少见。</li>
+    <li><b>章节锁机制+引导前置</b>（<code>ChapterEmpty.vue:104-149</code>+<code>WDSidebar.vue:349-365</code>）：未解锁章给"故事还未抵达这一章"并主动跳转，而非简单禁用。</li>
+    <li><b>配置页状态摘要与未保存防丢</b>（<code>SettingsView.vue:19-49</code>+<code>AppShell.vue:268-280</code>）：模型摘要卡+供应商启用计数，关闭脏弹窗二次确认。</li>
+    <li><b>失败状态分类可读</b>（<code>ChapterFailed.vue:64-106</code>）：evaluation_failed/timeout/上下文过长/保存失败差异化文案+重试入口。</li>
+    <li><b>TTS 双轨+试听</b>（<code>ChapterReaderBar.vue</code>+<code>WDWorkspace.vue:901-916</code>）：模型 TTS 与浏览器回退自动切换、音色试听、倍速、中文友好音色名映射。</li>
+  </ul>
+
+  <h4>问题清单（P0 × 3 · P1 × 5 · P2 × 5）</h4>
+
+  <div class="issue p0"><div class="lv">P0</div><div class="body">
+    <div class="ihead"><span class="cat">品牌一致性 / IA</span><span class="fref">AppShell.vue:566-628</span></div>
+    <div class="meta-line"><b>问题：</b>全站导航采用伪古风命名——司天运营=管理、妙笔词林=Prompt 关系、乾坤万象=LLM 配置、更替密契=改密码、离席登出=退出，并以单字印章（司/妙/乾/密/离）作唯一标识。</div>
+    <div class="impact">与 PRODUCT.md"direct and helpful, no exaggerated personality"及 anti-references"over-branded"直接冲突；用户必须解码"乾=配置"才能找到核心功能，长期认知负担高，呈现"新奇 demo"观感而非"可靠写作台"。</div>
+    <div class="fix">管理/配置类入口恢复直白文案（系统管理/模型配置/修改密码/退出登录），古风印章仅作装饰性副标题或图标，不承担识别。</div>
+  </div></div>
+  <div class="issue p0"><div class="lv">P0</div><div class="body">
+    <div class="ihead"><span class="cat">动效 / 品牌</span><span class="fref">WDSidebar.vue:614-622, 646-664, 762-778, 872-876</span></div>
+    <div class="meta-line"><b>问题：</b>章节列表大量持续性/触发性装饰动效——hover 触发 stone-tremble（竹简颤抖）、选中触发 seal-stamp（朱砂[閱]印章扣下）、待写徽章 float-badge 1.8s 无限浮动、进度点 dot-ink-pulse 无限脉冲。</div>
+    <div class="impact">写作台是停留时间最长的页面，持续动画消耗注意力、干扰长会话专注；PRODUCT.md 明确"Motion should be restrained and nonessential"。</div>
+    <div class="fix">移除无限循环类动画（float-badge/dot-ink-pulse），保留一次性入场；hover/选中降级为颜色与边线变化，去除旋转/位移颤抖。</div>
+  </div></div>
+  <div class="issue p0"><div class="lv">P0</div><div class="body">
+    <div class="ihead"><span class="cat">视觉 / 品牌</span><span class="fref">WDSidebar.vue:754-769</span></div>
+    <div class="meta-line"><b>问题：</b>"待写"徽章用 <code>linear-gradient(135deg,#f59e0b,#d97706)</code> 亮橙渐变+白字+1.8s 持续浮动，典型现代 SaaS 高饱和渐变。</div>
+    <div class="impact">与徽墨熟宣古典体系冲突；长列表里每个未完成章都挂一个跳动亮橙块，制造焦虑感而非安静感。</div>
+    <div class="fix">改为与"已完成/锁定"同族的低饱和方印/边框样式，用文字"待写"而非颜色+动画承担识别。</div>
+  </div></div>
+
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">IA / 配置焦虑</span><span class="fref">AppShell.vue:534-633</span></div>
+    <div class="meta-line"><b>问题：</b>LLM/Embedding/阶段路由等高频校验配置全折叠在右上用户下拉内，首屏无常驻"模型状态"提示。</div>
+    <div class="impact">违背原则 2"settings should be explicit, easy to verify"；生成失败时无法快速判断是模型没配/配错还是网络问题。</div>
+    <div class="fix">工作台/写作台首屏增加一行常驻"当前模型·供应商·是否可用"微型状态条，一键跳配置。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">一致性 / 割裂</span><span class="fref">WDWorkspace.vue:251-298 vs VersionSelector.vue:104-219</span></div>
+    <div class="meta-line"><b>问题：</b>同一"选版本"两套界面：待确认态卡片网格+底部确认；完成后"查看版本"Tab 左列表右预览，动作词"确认定稿/应用此版本为当前正文"。且 Tab"应用版本"直接 editChapter 覆盖正文（<code>WDWorkspace.vue:1572-1582</code>）无二次确认。</div>
+    <div class="impact">两种心智模型增加学习成本；误覆盖正文风险。</div>
+    <div class="fix">统一为同一组件/交互模式；覆盖已有正文前加二次确认。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">状态可见性</span><span class="fref">WDWorkspace.vue:225-229, 959-961</span></div>
+    <div class="meta-line"><b>问题：</b>waiting_for_confirm 且已有正文时，trace-replay 与正文 ChapterContent 同容器渲染，生成回放与成品正文抢占垂直空间。</div>
+    <div class="impact">章节完成后目的是"读+定稿"，trace 回放此时是次要信息，常驻挤占阅读区，违背"calm density"。</div>
+    <div class="fix">正文存在时把 trace 回放折叠为可展开的"查看本次生成过程"，默认收起。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">移动端 / 响应式</span><span class="fref">AppShell.vue:347-501</span></div>
+    <div class="meta-line"><b>问题：</b>顶栏同时承载 Logo+项目胶囊+状态胶囊（题材·百分比·x/章）+上下文动作+欢迎语+任务按钮+主题切换+用户标签，窄屏必溢出。</div>
+    <div class="impact">移动端阅读与导航受损。</div>
+    <div class="fix">窄屏下将状态胶囊、欢迎语折叠进项目下拉或抽屉，顶栏只留 Logo+项目切换+用户。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">文案一致性</span><span class="fref">WDWorkspace.vue:421 vs VersionSelector.vue:271-280</span></div>
+    <div class="meta-line"><b>问题：</b>同一评审能力，空态文案"阁主可呼叫 AI 评阅官"偏戏剧，失败文案"AI 评审失败…可以直接重试"偏直白，两种语调混用。</div>
+    <div class="impact">降低品牌语感统一性。</div>
+    <div class="fix">统一为直白专业语调，删除"阁主/呼叫…官"类角色扮演措辞。</div>
+  </div></div>
+
+  <details class="p2group"><summary><b>P2 × 5</b>　朗读控件 / 状态色 / 字数反馈 / 路由导航（点击展开）</summary>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">可用性</span><span class="fref">ChapterReaderBar.vue:210-211</span></div><div class="meta-line">朗读控件 position:absolute;top:8px;right:12px，长章节滚动时不跟随。</div><div class="fix">改为 sticky 或随正文容器吸顶。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">状态可见性</span><span class="fref">全局</span></div><div class="meta-line">项目状态在不同位置用不同色彩体系（NovelDetailShell done/active/draft、WDSidebar 竹青/橙/灰、WDWorkspace success/error/progress）。</div><div class="fix">抽象统一的状态 token（色+词）全站复用。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">信任 / 可观测</span><span class="fref">字数压缩无反馈</span></div><div class="meta-line">README 注明"字数约束为超上限压缩"，但写作台无"本章已从 X 字压缩至 Y 字"提示。</div><div class="fix">生成完成时展示原始/最终字数与压缩标记。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">信息架构</span><span class="fref">router/index.ts:26-60</span></div><div class="meta-line">一级路由无对应主导航 Tab，全靠项目胶囊下拉切换。</div><div class="fix">增加常驻轻量主导航（工作台/灵感）。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">可访问性</span><span class="fref">WDSidebar.vue:754-769</span></div><div class="meta-line">"待写"状态主要靠橙色渐变徽章区分（有 sr-only 兜底），色弱用户在动画移除后区分费力。</div><div class="fix">状态点保持形状/边框差异而非仅靠色相。</div></div></div>
+  </details>
+
+  <h4>向业界 / 竞品借鉴</h4>
+  <ul class="advice">
+    <li><b>Notion / Linear 双层命名法</b>：保留少量古风作页面级 eyebrow，所有可点击功能入口用通用词；装饰服务于氛围，不承担识别。</li>
+    <li><b>Scrivener / Ulysses 长会话专注模式</b>：写作台一键收起两侧栏与装饰、仅留正文+章节名的纯净模式。</li>
+    <li><b>Cursor / Copilot 上下文引用可视化</b>：生成时可点击展开"本次用到哪几章摘要、哪几条伏笔、哪个角色状态"的清单，把"信任前文"做到可核验。</li>
+    <li><b>Figma / Linear 版本对比</b>：统一为"左右并排 diff+选择"单一模式，废弃卡片网格与列表详情两套界面。</li>
+    <li><b>Apple / iA Writer 状态色克制</b>：收敛到 2 个状态色+中性灰，朱砂红仅留给主行动与错误。</li>
+  </ul>
+</section>
+<section class="chapter" id="ch8">
+  <h3 class="ch"><span class="idx">捌</span>美团 UI 专家视角</h3>
+  <p class="ch-desc">关注视觉品质、设计一致性、中文排版与无障碍。核查 assets/、Tailwind、Naive UI 主题、字体与组件视觉实现。</p>
+  <div class="verdict">
+    <div class="grade"><div class="g">6.5<small>/10</small></div><div class="gl">UI 视觉</div><div class="bar"><i style="width:65%;background:linear-gradient(90deg,#b5822b,#d6a249)"></i></div></div>
+    <div><span class="role-tag">美团 · UI 设计工程</span><p>艺术方向与品牌定位高度自洽：焦墨/朱砂/石绿水墨配色+拓片偏置硬投影的国风语言贯穿全局，明确反 SaaS 紫蓝渐变与玻璃拟态，长文阅读用 Noto Serif SC+1.65~1.85 行高，方向正确。但<b>工程卫生欠账严重</b>：全局 2236 处 <code>!important</code>（main.css 占 1141）、字体字重与资源不匹配、Naive UI 未经 n-config-provider 而靠 <code>.n-*</code> 全局覆盖、登录页 6MB 背景图——把好设计拉到"能看但难维护、有性能与无障碍风险"。</p></div>
+  </div>
+
+  <h4>视觉体系现状速写</h4>
+  <div class="stack" style="grid-template-columns:repeat(2,1fr);margin-bottom:20px">
+    <div class="col"><h5><span class="dot" style="background:#4f7a6b"></span>Token 体系（强）</h5><ul><li><code>main.css:14-178</code> 完整 M3 风格语义 token：颜色（焦墨/朱砂/熟宣/竹青）、间距、圆角、字号、动效 cubic-bezier，light/dark 双主题，命名带中文语义注释。</li></ul></div>
+    <div class="col"><h5><span class="dot" style="background:#b83c32"></span>字体 / Naive UI（隐患+弱）</h5><ul><li>7 个字体 token 全指向 Noto Serif SC（<code>main.css:107-113</code>），但 main.ts 仅导入 400/600。</li><li>无 n-config-provider，改用 52 个 <code>.n-*</code> 选择器+<code>!important</code> 全局覆盖。</li></ul></div>
+  </div>
+
+  <h4>亮点</h4>
+  <ul class="gems">
+    <li><b>品牌反例自律到位</b>（<code>main.css:30-34, 287-299</code>）：primary 焦墨黑、secondary 朱砂红，全局无紫蓝 AI 渐变；body 背景仅极弱 radial tint（alpha 0.02-0.035）。</li>
+    <li><b>拓片硬投影体系</b>（<code>main.css:132-140</code>+blueprint.css）：elevation 统一为 2px2px0/3px3px0 无模糊偏置投影，呼应碑拓质感，主动规避高斯模糊与玻璃拟态。</li>
+    <li><b>长文阅读行高达标</b>（<code>main.css:285</code>+<code>ChapterContent.vue:798</code>）：正文 1.65、章节正文 1.85em。</li>
+    <li><b>a11y 基建有意识</b>（<code>main.css:2464-2473</code> 等）：全局 prefers-reduced-motion 降级、登录表单 aria-busy/aria-invalid/role=alert 齐全、focus-visible 覆盖。</li>
+    <li><b>blueprint 共享样式层</b>（<code>blueprint.css:5-462</code>）：section-header/panel/metric/empty-state 统一类，详情页一致性的良好抽象。</li>
+  </ul>
+
+  <h4>问题清单（P0 × 2 · P1 × 6 · P2 × 7）</h4>
+
+  <div class="issue p0"><div class="lv">P0</div><div class="body">
+    <div class="ihead"><span class="cat">字体字重失效</span><span class="fref">main.ts:1-2 vs main.css:284</span></div>
+    <div class="meta-line"><b>问题：</b>全局 body 设 <code>font-weight:500 !important</code>，但 @fontsource 只导入 400/600 字重；按 CSS 字重匹配算法 500→回退到 400。</div>
+    <div class="impact">每一屏正文字重实际仍为 Regular 400，"提升至 Medium"目标完全失效，且 !important 污染全站特异性，faux 渲染在低 DPI 发虚。</div>
+    <div class="fix">要么删掉 <code>!important 500</code>，要么补导 <code>chinese-simplified-500.css</code>（@fontsource 已提供该字面）。</div>
+  </div></div>
+  <div class="issue p0"><div class="lv">P0</div><div class="body">
+    <div class="ihead"><span class="cat">主题架构</span><span class="fref">main.css 全局 · 52 个 .n-*</span></div>
+    <div class="meta-line"><b>问题：</b>Naive UI 未用 n-config-provider/themeOverrides 注入主题，而在 main.css 用 52 个 <code>.n-*</code> 选择器配 1141 处 <code>!important</code> 全局覆盖。</div>
+    <div class="impact">任何 Naive UI 升级都可能击穿覆盖；特异性军备竞赛已扩散到全仓 2236 处 !important。</div>
+    <div class="fix">迁移到 n-config-provider 的 themeOverrides 集中注入 primary/common/font，逐步删 .n-* 全局覆盖。</div>
+  </div></div>
+
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">性能</span><span class="fref">Login.vue:264,276,846 + assets/</span></div>
+    <div class="meta-line"><b>问题：</b>登录页 3 张 PNG 背景图合计约 <b>6.2MB</b>（bg_v2 2.18MB+composite_v4 1.69MB+scene_v3 2.31MB）。</div>
+    <div class="impact">登录首屏极慢，弱网/移动端尤甚，与"安静专业"定位相悖。</div>
+    <div class="fix">压缩+转 WebP/AVIF+按断点响应式加载，目标单图 &lt;300KB。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">品牌一致性</span><span class="fref">Login.vue:262-280 vs PRODUCT.md:19-21</span></div>
+    <div class="meta-line"><b>问题：</b>PRODUCT.md 明确反对 oversized hero/illustration-first，登录页却是整屏插画海报、表单用百分比绝对定位叠在插画上。</div>
+    <div class="impact">自家品牌反例被登录页打破；背景图加载失败时表单悬空于裸底色。</div>
+    <div class="fix">收敛插画权重，表单脱离绝对定位改为独立卡片列；或承认例外并显式注明。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">无障碍</span><span class="fref">Login.vue:600-603</span></div>
+    <div class="meta-line"><b>问题：</b>"记住我"复选框 focus-visible 用 <code>--auth-line</code>=#c4b99f（浅竹青），对纸面背景对比度约 1.8:1。</div>
+    <div class="impact">键盘用户几乎看不见焦点，违反 WCAG 2.1 AA 1.4.11（焦点指示需 3:1）。</div>
+    <div class="fix">改用 --md-primary 或 --auth-vermilion 作焦点环色，加 outline-offset。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">阅读体验</span><span class="fref">ChapterContent.vue:783-799</span></div>
+    <div class="meta-line"><b>问题：</b>.chapter-paper 用 <code>line-height:1.85em !important</code>+信笺横线背景 calc(1.85em-1px) 对齐，6 个属性强写 !important；子元素改 font-size/line-height 横线立即错位。</div>
+    <div class="impact">后人无法局部覆盖，横线与正文绑定脆弱。</div>
+    <div class="fix">去掉关键属性 !important；横线改用 background-size 与正文行高同源变量绑定。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">token 失效</span><span class="fref">BlueprintDisplay / PersonalModelRouting / WorkspaceEntry</span></div>
+    <div class="meta-line"><b>问题：</b>定义了 --md-elevation-0..5 与 --md-shadow-primary-1/2，但组件大量散写 <code>box-shadow:2px 2px 0px rgba(...)</code>。</div>
+    <div class="impact">token 形同虚设，投影值发散、暗色模式不自适应。</div>
+    <div class="fix">统一替换为 var(--md-elevation-*) 引用。</div>
+  </div></div>
+  <div class="issue p1"><div class="lv">P1</div><div class="body">
+    <div class="ihead"><span class="cat">排版 / 可读性</span><span class="fref">main.css:107-113</span></div>
+    <div class="meta-line"><b>问题：</b>7 个字体 token 全指向 Noto Serif SC，--md-font-mono 亦为衬线。</div>
+    <div class="impact">admin/llm-settings 里模型名、API key、JSON、token 计数等等宽场景用衬线，对齐与可读性差。</div>
+    <div class="fix">至少为 --md-font-mono 引入等宽（如 Noto Sans Mono），在 code/kbd/数据单元格切换。</div>
+  </div></div>
+
+  <details class="p2group"><summary><b>P2 × 7</b>　品牌字形 / 阅读宽度 / 断点 / 图标 / 对比度（点击展开）</summary>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">品牌字形</span><span class="fref">AppShell.vue:341 vs index.html:8 / Login.vue:9</span></div><div class="meta-line">顶导航品牌名"墨風"（繁），title 与登录页"墨风"（简），字形不统一。</div><div class="fix">全站统一一种写法。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">阅读宽度</span><span class="fref">main.css:2360-2363</span></div><div class="meta-line">.prose{max-width:none} 全局取消阅读宽度限制，而 blueprint.css 用 68ch/75ch，长文行宽不一致。</div><div class="fix">为章节正文统一 measure（建议 38-42em）。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">响应式断点</span><span class="fref">Login.vue / WDWorkspace.vue / blueprint.css</span></div><div class="meta-line">断点散写（1024/833/390/1160/940/640/640）无统一 token，与 Tailwind 默认不对齐。</div><div class="fix">抽 --bp-sm/md/lg/xl 或对齐 Tailwind 默认。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">Tailwind 任意值</span><span class="fref">全仓 145 处 p-[12px]</span></div><div class="meta-line">绕过 --md-spacing-* token，间距双轨，主题切换不生效。</div><div class="fix">优先用 token 工具类或自定义 @utility 映射到 --md-spacing-*。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">图标体系</span><span class="fref">全仓 146 处 inline svg</span></div><div class="meta-line">无图标库，Login.vue 内 stroke-width 即有 1.4/1.5/1.7 混用，视觉粗细不一。</div><div class="fix">引入轻量图标集（自托管子集）或抽 &lt;AppIcon name size&gt; 统一 stroke-width。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">token 重复</span><span class="fref">Login.vue:252</span></div><div class="meta-line">局部重定义 --md-secondary-readable:#8c241c 覆盖全局，且与 --md-secondary-dark 同值，主题切换局部不跟随。</div><div class="fix">删除局部覆盖，复用全局 token。</div></div></div>
+  <div class="issue p2"><div class="lv">P2</div><div class="body"><div class="ihead"><span class="cat">对比度临界</span><span class="fref">main.css:57, 55</span></div><div class="meta-line">--md-on-surface-variant #556265 在 --md-surface-container-highest #dcd2be 上约 4.3:1，略低于 AA 4.5。</div><div class="fix">将 variant 提深一档，或避免在 highest 容器上放辅助正文。</div></div></div>
+  </details>
+
+  <h4>向业界 / 竞品借鉴</h4>
+  <ul class="advice">
+    <li><b>Naive UI 主题集中化</b>：借鉴 Vuetify/Element Plus 主题注入惯例，用一个 themeOverrides 对象在根 n-config-provider 注入 primary/secondary/font，消除 52 个全局选择器。</li>
+    <li><b>设计 token 落地为代码</b>：借鉴 Material Web/Radix，把 --md-spacing-*/--md-radius-* 暴露为 Tailwind @theme/@utility，工具类与 token 强绑定。</li>
+    <li><b>登录页降权</b>：借鉴 Notion/Linear 登录，左侧极简品牌、右侧居中表单卡片，背景用 CSS 渐变+微噪点替代 6MB 位图。</li>
+    <li><b>等宽子体系</b>：借鉴 GitHub/Vercel 控制台，在数据/代码/key 场景切等宽字体，低成本提升"专业可信赖"感。</li>
+    <li><b>统一焦点态规范</b>：借鉴 GOV.UK Design System，定义全站可复用的 --md-focus-ring（3:1 以上、2px outline、offset 2px）。</li>
+  </ul>
+</section>
+<section class="chapter" id="ch9">
+  <h3 class="ch"><span class="idx">玖</span>竞品调研</h3>
+  <p class="ch-desc">基于公开资料（截至 2026-07）调研国内外同类"AI 小说/长文创作"产品，找出可学习借鉴之处。标注"待核实"为未找到一手确认的结论。</p>
+
+  <h4>调研对象清单</h4>
+  <div class="table-wrap"><table>
+    <thead><tr><th style="width:14%">产品</th><th>一句话定位</th><th style="width:26%">属性</th></tr></thead>
+    <tbody>
+      <tr><td><b>妙笔生花 WordFlower</b></td><td>长篇网文+剧本，内置 RAG 记忆，主打千章连贯</td><td><span class="pill s-none">国内·直接竞品</span> 高度重叠</td></tr>
+      <tr><td>彩云小梦</td><td>AI 续写/互动小说，主打"平行世界回溯"与多模型对话</td><td><span class="pill s-has">国内</span></td></tr>
+      <tr><td>阅文"妙笔"+作家助手</td><td>国内首个网文行业大模型，AIGC 辅助（世界观/角色/情景/打斗）</td><td><span class="pill s-has">国内·平台内置</span></td></tr>
+      <tr><td>番茄作家助手</td><td>字节番茄小说的作者码字 App，含 AI 扩写/改写/续写</td><td><span class="pill s-has">国内·平台</span></td></tr>
+      <tr><td>橙瓜码字 / 星火作家 / 秘塔写作猫 / 橙篇</td><td>老牌码字软件 / 讯飞 AI 写作 / 通用长文+校对 / 文心一言长文</td><td><span class="pill s-weak">国内·通用</span></td></tr>
+      <tr><td><b>Sudowrite</b></td><td>海外最知名 AI 小说写作器，Story Bible+Story Engine 全流程</td><td><span class="pill s-none">海外·标杆</span></td></tr>
+      <tr><td><b>Novelcrafter</b></td><td>BYOK 的"AI 写作 Photoshop"，Codex 记忆+Scene Beats，一致性口碑最好</td><td><span class="pill s-none">海外·BYOK</span></td></tr>
+      <tr><td>NovelAI</td><td>自有模型+Lorebook 世界观库+图像/语音，隐私无审查</td><td><span class="pill s-has">海外</span></td></tr>
+      <tr><td>Squibler / Jasper / Scrivener(+AI) / StoryCraftr(开源)</td><td>简介生成整本草稿 / 营销通用 / 传统写作组织+插件 / 开源</td><td><span class="pill s-weak">海外·通用/开源</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h4>关键能力对比矩阵</h4>
+  <div class="table-wrap"><table>
+    <thead><tr><th>能力维度</th><th>彩云小梦</th><th>阅文妙笔</th><th>WordFlower</th><th>Sudowrite</th><th>NovelAI</th><th>Novelcrafter</th><th>Squibler</th></tr></thead>
+    <tbody>
+      <tr><td>创作流程完整度</td><td><span class="pill s-weak">弱</span></td><td><span class="pill s-has">有</span></td><td><span class="pill s-strong">强</span></td><td><span class="pill s-strong">强</span></td><td><span class="pill s-weak">弱</span></td><td><span class="pill s-strong">强</span></td><td><span class="pill s-has">有</span></td></tr>
+      <tr><td>蓝图/世界观/角色</td><td><span class="pill s-has">有</span></td><td><span class="pill s-strong">强</span></td><td><span class="pill s-has">有</span></td><td><span class="pill s-strong">强</span></td><td><span class="pill s-strong">强</span></td><td><span class="pill s-strong">强</span></td><td><span class="pill s-weak">弱</span></td></tr>
+      <tr><td>多版本生成与评审选版</td><td><span class="pill s-weak">弱</span></td><td><span class="pill s-none">无</span></td><td><span class="pill s-weak">弱</span></td><td><span class="pill s-has">有</span></td><td><span class="pill s-none">无</span></td><td><span class="pill s-weak">弱</span></td><td><span class="pill s-none">无</span></td></tr>
+      <tr><td>质量护栏（一致性/伏笔/节奏/情绪）</td><td><span class="pill s-weak">弱</span></td><td><span class="pill s-none">无</span></td><td><span class="pill s-has">有</span></td><td><span class="pill s-has">有</span></td><td><span class="pill s-weak">弱</span></td><td><span class="pill s-strong">强</span></td><td><span class="pill s-none">无</span></td></tr>
+      <tr><td>记忆与 RAG</td><td><span class="pill s-unk">待核实</span></td><td><span class="pill s-none">无</span></td><td><span class="pill s-strong">强</span></td><td><span class="pill s-has">有</span></td><td><span class="pill s-has">有</span></td><td><span class="pill s-strong">强</span></td><td><span class="pill s-none">无</span></td></tr>
+      <tr><td>TTS 朗读</td><td><span class="pill s-none">无</span></td><td><span class="pill s-has">有</span></td><td><span class="pill s-none">无</span></td><td><span class="pill s-none">无</span></td><td><span class="pill s-strong">强</span></td><td><span class="pill s-none">无</span></td><td><span class="pill s-none">无</span></td></tr>
+      <tr><td>协作与后台治理</td><td><span class="pill s-none">无</span></td><td><span class="pill s-weak">弱</span></td><td><span class="pill s-none">无</span></td><td><span class="pill s-none">无</span></td><td><span class="pill s-none">无</span></td><td><span class="pill s-none">无</span></td><td><span class="pill s-none">无</span></td></tr>
+    </tbody>
+  </table></div>
+  <p style="font-size:12.5px;color:var(--muted);margin-top:8px">来源：Sudowrite 官方与 Kindlepreneur 评测、NovelAI TTS/Lorebook 文档、Novelcrafter Codex 文档、Inkfluence AI 横评。</p>
+
+  <h4>可借鉴亮点（按优先级）</h4>
+  <ul class="gems">
+    <li><b>【P0】Sudowrite — Story Bible 集中化+注入式生成</b>：角色/设定/风格集中一处，每章生成时按需注入 Style/Characters/Scenes，并做 continuity sweep。<b>启发：</b>MoFeng 已有蓝图，可借鉴"生成时自动选片注入+生成后一致性扫描"闭环。</li>
+    <li><b>【P0】妙笔生花 WordFlower — 显式 RAG 记忆+"半自动原则"</b>：内置 RAG 追踪人物/剧情/场景，主打千章连贯；明确"AI 不编造设定，只做格式化/质检/推荐"。<b>启发：</b>这是最贴身的直接竞品，建议作为头号对标，逐功能对照其大纲/章纲/续写/润色/拆书链路。</li>
+    <li><b>【P1】Novelcrafter — Codex 记忆+Scene Beats+BYOK</b>：人物/地点/物件做成可被上下文自动引用的条目；节拍盒让作者只写"接下来发生什么"。<b>启发：</b>伏笔/角色/世界观做成"可自动引用条目"；开放 BYOK 给重度用户降本。</li>
+    <li><b>【P1】NovelAI — Lorebook 关键词触发+TTS/图像一体化</b>：条目按关键词触发注入（省 token、防冗余）。<b>启发：</b>借鉴触发策略优化 RAG 成本与命中率，只在出现相关名词时带入设定。</li>
+    <li><b>【P1】AutoCrit / Inkfluence AI — 独立的一致性与 plot hole 检查</b>：把找剧情漏洞/时间线/动机矛盾做成独立检查。<b>启发：</b>六维审查可显式拆出一致性/伏笔/时间线专项并给可定位修订建议，形成差异化卖点。</li>
+    <li><b>【P1】Sudowrite — Canvas+Describe+Rewrite</b>：Canvas 集中收藏灵感并生成备选情节点；Describe 按五感输出；Rewrite 一次给多候选。<b>启发：</b>灵感孵化做成分版本可沉淀空间；五感模板融入情绪/描写维度审查。</li>
+    <li><b>【P2】阅文作家助手 — 平台化</b>：消息触达/书评/月票/全端同步。<b>启发：</b>若面向"平台作者"可轻量接入读者反馈/数据看板；纯工具路线可忽略。</li>
+  </ul>
+
+  <h4>MoFeng 的差异化优势</h4>
+  <ul class="gems">
+    <li><b>多版本生成+评审选版做成结构化闭环</b>：竞品里只有 Sudowrite Rewrite 给多候选、彩云小梦做版本回退，但都缺"生成多版→评审→选版"闭环。MoFeng 把评审选版作为一等公民。</li>
+    <li><b>六维质量审查与一致性体系化</b>：多数竞品只有零散 consistency check 或被动注入，MoFeng 的"六维"更体系化。</li>
+    <li><b>伏笔（foreshadowing）作为独立实体管理</b>：调研对象中未发现将"伏笔"单独建库并追踪埋设/回收的产品（待核实），潜在强差异点。</li>
+    <li><b>管理后台/治理层</b>：所有 C 端竞品均无后台治理概念，MoFeng 面向"平台"具备 B 端/团队治理空间。</li>
+    <li><b>LangGraph 多智能体架构</b>：天然适合把"蓝图→生成→评审"拆成多 agent 协作，比单 prompt 类工具更有扩展空间。</li>
+  </ul>
+
+  <h4>Top 5 可借鉴建议（按优先级）</h4>
+  <ul class="advice">
+    <li><b>【P0】对标 WordFlower，逐功能对照并强化"评审选版"差异</b>——把大纲→章纲→续写→润色→拆书链路逐一对照，确保在"多版本评审选版+六维质量审查"上保持明显领先，这是最直接的护城河。</li>
+    <li><b>【P0】把蓝图/世界观/角色/伏笔做成"生成时自动注入+生成后一致性扫描"闭环</b>——借鉴 Story Bible 与 Codex，结构化设定不只是给人看，而是自动选片喂入每次生成。</li>
+    <li><b>【P1】RAG 上下文采用"关键词触发注入"以控成本</b>——借鉴 Lorebook 触发策略，避免全量注入爆 token，对长篇连载成本与命中率有直接收益。</li>
+    <li><b>【P1】六维质量审查显式拆出"一致性/伏笔/时间线/情绪"专项，并给可定位修订建议</b>——借鉴 AutoCrit 把 plot hole/时间线做成独立可执行检查，让"质量护栏"成为对外卖点。</li>
+    <li><b>【P2】开放 BYOK 与灵感板 Canvas</b>——重度用户用 BYOK 降本（Novelcrafter 模式）；灵感孵化阶段做成"可分版本、可沉淀参考"的空间，补齐创作流程最前端。</li>
+  </ul>
+  <p style="font-size:12.5px;color:var(--muted);margin-top:10px"><b>待核实：</b>彩云小梦是否真正用 RAG；WordFlower 是否有 TTS/管理后台；各国内产品 2026 最新迭代。<b>建议：</b>落地前对 WordFlower、Sudowrite、Novelcrafter 做一次产品级亲自试用，以确认矩阵判断。</p>
+</section>
+<section class="chapter" id="ch10">
+  <h3 class="ch"><span class="idx">拾</span>改进路线图</h3>
+  <p class="ch-desc">综合六视角与架构师演进建议，按"止血 → 工程化 → 规模化"三阶段排布。每条都映射到前文的 P0/P1。</p>
+  <div class="road">
+    <div class="phase p1">
+      <div class="ph-num">一</div>
+      <h5>止血 · 安全与品牌快修</h5>
+      <div class="when">1-2 周　映射 13 个 P0 中的 8 个</div>
+      <ol>
+        <li><b>安全 P0</b>：CORS 白名单 + SSRF 防护（协议/IP 白名单+DNS 二次校验）+ API Key 真加密（Fernet）+ 默认口令强制改密覆盖所有 is_admin。</li>
+        <li><b>品牌快修</b>：补导 500 字重；移除无限循环装饰动效（float-badge/dot-ink-pulse）；待写徽章去高饱和渐变。</li>
+        <li><b>工程止血</b>：鉴权 401/Authorization 收敛到 http 层统一拦截器，删 4 份副本。</li>
+        <li><b>Naive UI 起步</b>：n-config-provider 注入 themeOverrides，逐步替换 .n-* 覆盖。</li>
+        <li><b>章节并发</b>：加 (project_id, chapter_number) 唯一约束 + IntegrityError 重查。</li>
+      </ol>
+    </div>
+    <div class="phase p2">
+      <div class="ph-num">二</div>
+      <h5>工程化 · 立规矩、补迁移</h5>
+      <div class="when">2-4 周　映射主要 P1</div>
+      <ol>
+        <li><b>迁移</b>：引入 Alembic，冻结当前 schema 为 baseline，废弃 _ensure_schema_updates。</li>
+        <li><b>分层门禁</b>：ESLint + no-restricted-imports 锁"组件不得 import @/api"；前端 CI 跑 type-check+vitest+budget。</li>
+        <li><b>品牌命名</b>：功能入口恢复直白文案，古风降为装饰副标题；版本选择统一组件；trace 回放折叠。</li>
+        <li><b>可靠性</b>：验证码/限频下沉 Redis；SSE 章节状态改 Redis Pub/Sub；章节生成并发限流。</li>
+        <li><b>部署</b>：生产强制 MySQL；登录页 6MB 背景图降权（WebP/AVIF+响应式）。</li>
+        <li><b>契约</b>：OpenAPI codegen 试点（novel 模块），替手写类型。</li>
+      </ol>
+    </div>
+    <div class="phase p3">
+      <div class="ph-num">三</div>
+      <h5>规模化 · 拆巨石、可观测</h5>
+      <div class="when">1-2 月　映射 P1/P2 与战略</div>
+      <ol>
+        <li><b>前端</b>：拆巨型组件（&lt;500 行）+ i18n + 前端监控（errorHandler/Sentry）+ main.css 按域拆分。</li>
+        <li><b>后端</b>：章节生成改 Celery 异步任务+SSE/WebSocket；Celery engine 复用修复。</li>
+        <li><b>可观测</b>：结构化日志+OpenTelemetry+Langfuse LLM 链路追踪；健康检查含 DB/Redis。</li>
+        <li><b>设计系统</b>：token 落地 Tailwind @theme；图标体系统一；统一焦点态规范。</li>
+        <li><b>安全收尾</b>：JWT refresh+黑名单；容器全程非 root；nginx 长缓存。</li>
+        <li><b>产品</b>：对标 WordFlower + 蓝图自动注入闭环 + RAG 关键词触发 + 六维拆专项 + BYOK/Canvas。</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<section class="chapter" id="ch11">
+  <h3 class="ch"><span class="idx">拾壹</span>差异化与战略</h3>
+  <p class="ch-desc">把审查结论收拢到三条战略主线——这是决定 MoFeng 下一程走向的判断。</p>
+  <ul class="advice">
+    <li><b>主线一 · 护城河强化</b>：多版本评审选版 + 六维质量审查 + 伏笔独立追踪，是对抗 WordFlower/Sudowrite 的核心，必须保持明显领先。下一步把"生成时自动注入设定 + 生成后一致性扫描"做成闭环，让结构化蓝图真正喂进每一次生成。</li>
+    <li><b>主线二 · 工程基线补齐</b>：13 个 P0 里 8 个是"安全 + 工程纪律"欠债（CORS/SSRF/密钥明文/无 Alembic/分层越界/鉴权重复）。不补则"单人能跑、多人会痛、上线即危"。这是从作品到产品的必经一关。</li>
+    <li><b>主线三 · 品牌回归</b>：PRODUCT.md 的定位准确（安静、专业、克制），但实现系统性跑偏（古风印章作功能标识 + 持续装饰动效 + 高饱和渐变）。回归"功能词为主、古风为辅"，让界面重新像一张"可靠的写作台"。</li>
+  </ul>
+  <h4>关键判断</h4>
+  <p style="font-size:14.5px;color:var(--ink-soft);background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--vermilion);border-radius:9px;padding:14px 18px;box-shadow:var(--shadow);margin:0"><b>妙笔生花 WordFlower 是最贴身的直接竞品</b>（长篇 + RAG + 大纲/章纲/续写），应作为头号对标对象，而非海外产品。MoFeng 的胜算在于"评审选版 + 六维质量 + 伏笔追踪 + 后台治理"的组合差异化，以及 LangGraph 多智能体架构在"蓝图→生成→评审"多 agent 协作上的扩展空间。</p>
+</section>
+</main>
+</div><!--/.layout-->
+
+<footer>
+  <div class="note">
+    <b>方法论。</b> 六位不同背景的专家（字节前端 / 快手前端总监 / 阿里后端 / 滴滴架构 / 腾讯设计 / 美团 UI）对同一代码库做<b>并行只读深审</b>，优先以 codegraph 理解结构与调用链，再以 Read/rg 核对真实磁盘内容；另有一路竞品调研基于公开网络资料。每条发现尽量标注 <code>文件:行</code> 或来源 URL，结论以项目代码与公开资料为准。
+  </div>
+  <div class="footer-grid">
+    <div>
+      <h6>已覆盖范围</h6>
+      <p style="margin:0">前端 <code>frontend/src</code> 各层（views/components/composables/queries/stores/api/lib/router）+ 构建链路；后端 <code>backend/app</code>（routers/services/models/repositories/schemas/core/db/tasks）+ <code>deploy/</code> + 配置/密钥/样式资产。</p>
+    </div>
+    <div>
+      <h6>未验证项</h6>
+      <p style="margin:0">未执行 build / type-check / test；未起 dev server 做像素级走查；未做 axe/WAVE 自动化无障碍扫描；未量测登录页真实加载时间；竞品能力矩阵基于公开资料判断、未亲自试用。</p>
+    </div>
+    <div>
+      <h6>评分与免责</h6>
+      <p style="margin:0">各视角评分由该角色审查者独立给出，综合 <b>6.4</b> 为六视角均值，仅供横向参考。结论基于 <b>2026-07-12</b> 时点工作树代码与公开资料；代码处于持续迭代中，落地前请复核对应 <code>文件:行</code>。</p>
+    </div>
+  </div>
+  <p style="text-align:center;margin:24px 0 0;color:var(--muted-soft);font-size:12px">墨风 MoFeng · 多专家审查与竞品调研报告 · 2026.07.12 · 本报告为只读审查产出，未改动任何代码</p>
+</footer>
+</div><!--/.wrap-->
+
+<div class="law"><a href="#" title="返回顶部">↑</a></div>
+<script>
+  var links=Array.prototype.slice.call(document.querySelectorAll('nav.toc a'));
+  var secs=Array.prototype.slice.call(document.querySelectorAll('section.chapter'));
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if(e.isIntersecting){
+          var id=e.target.id;
+          links.forEach(function(l){l.classList.toggle('active',l.getAttribute('href')==='#'+id);});
+        }
+      });
+    },{rootMargin:'-80px 0px -70% 0px'});
+    secs.forEach(function(s){io.observe(s);});
+  }
+  var law=document.querySelector('.law');
+  window.addEventListener('scroll',function(){
+    if(law) law.style.display = window.scrollY>600 ? 'block':'none';
+  },{passive:true});
+</script>
+</body>
+</html>
