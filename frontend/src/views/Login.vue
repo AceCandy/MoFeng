@@ -261,7 +261,7 @@ const handleLogin = async () => {
     max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   background:
     linear-gradient(180deg, rgba(45, 39, 29, 0.08), rgba(45, 39, 29, 0.16)),
-    url('../assets/mofeng_login_bg_v2.png') center / cover,
+    url('../assets/mofeng_login_bg_v2.webp') center / cover,
     #d8cbb7;
   color: var(--auth-ink);
 }
@@ -273,7 +273,7 @@ const handleLogin = async () => {
   position: relative;
   flex: 0 1 auto;
   overflow: hidden;
-  background-image: url('../assets/mofeng_login_composite_v4.png');
+  background-image: url('../assets/mofeng_login_composite_v4.webp');
   background-position: center;
   background-size: cover;
   color: var(--auth-ink);
@@ -526,6 +526,12 @@ const handleLogin = async () => {
   box-shadow:
     inset 0 0 0 1px rgba(255, 251, 241, 0.75),
     2px 2px 0 rgba(140, 36, 28, 0.12);
+}
+
+/* 键盘焦点可见环（≥3:1），鼠标 focus 不重复显示 */
+.md-text-field-input:focus-visible {
+  outline: 2px solid var(--auth-vermilion);
+  outline-offset: 2px;
 }
 
 .md-text-field-input::placeholder {
@@ -843,7 +849,7 @@ const handleLogin = async () => {
     max-height: none;
     min-height: max(980px, calc(100vh + 120px));
     aspect-ratio: auto;
-    background-image: url('../assets/mofeng_login_scene_v3.png');
+    background-image: url('../assets/mofeng_login_scene_v3.webp');
     background-position: center -96px;
     background-repeat: no-repeat;
     background-size: 100% auto;

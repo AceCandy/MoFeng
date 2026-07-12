@@ -441,7 +441,7 @@ onUnmounted(() => {
     max(30px, env(safe-area-inset-bottom))
     max(44px, env(safe-area-inset-left));
   background-color: #d9cebc;
-  background-image: url('../assets/mofeng_login_bg_v2.png');
+  background-image: url('../assets/mofeng_login_bg_v2.webp');
   background-position: center;
   background-size: cover;
   color: var(--auth-ink);
@@ -497,7 +497,7 @@ onUnmounted(() => {
   background-color: #eadfca;
   background-image:
     linear-gradient(rgba(236, 225, 205, 0.12), rgba(236, 225, 205, 0.12)),
-    url('../assets/mofeng_scroll_left_v2.png');
+    url('../assets/mofeng_scroll_left_v2.webp');
   background-position: center;
   background-size: cover;
 }

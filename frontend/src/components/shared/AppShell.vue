@@ -553,7 +553,7 @@ onUnmounted(() => {
             <!-- 水墨信笺下拉菜单 -->
             <transition name="fade">
               <div v-if="isUserDropdownOpen" class="app-shell__user-dropdown" @click.stop>
-                <div class="app-shell__user-dropdown-header">阁主案头起居</div>
+                <div class="app-shell__user-dropdown-header">账户</div>
                 <div class="app-shell__user-dropdown-list">
                   <!-- 系统管理配置 -->
                   <a
@@ -565,7 +565,7 @@ onUnmounted(() => {
                   >
                     <span class="app-shell__action-badge is-admin">司</span>
                     <div class="item-text">
-                      <span class="item-title">司天运营</span>
+                      <span class="item-title">系统管理</span>
                       <span class="item-desc">配置全局与用户权限</span>
                     </div>
                   </a>
@@ -580,7 +580,7 @@ onUnmounted(() => {
                   >
                     <span class="app-shell__action-badge is-prompt">妙</span>
                     <div class="item-text">
-                      <span class="item-title">妙笔词林</span>
+                      <span class="item-title">提示词用量</span>
                       <span class="item-desc">查看阶段与 Prompt 关系</span>
                     </div>
                   </a>
@@ -594,8 +594,8 @@ onUnmounted(() => {
                   >
                     <span class="app-shell__action-badge is-settings">乾</span>
                     <div class="item-text">
-                      <span class="item-title">乾坤万象</span>
-                      <span class="item-desc">配置个人大语言模型</span>
+                      <span class="item-title">个人设置</span>
+                      <span class="item-desc">配置个人 AI 模型</span>
                     </div>
                   </a>
 
@@ -608,8 +608,8 @@ onUnmounted(() => {
                   >
                     <span class="app-shell__action-badge is-password">密</span>
                     <div class="item-text">
-                      <span class="item-title">更替密契</span>
-                      <span class="item-desc">更新阁主登入凭证</span>
+                      <span class="item-title">修改密码</span>
+                      <span class="item-desc">更新登录密码</span>
                     </div>
                   </a>
 
@@ -623,8 +623,8 @@ onUnmounted(() => {
                   >
                     <span class="app-shell__action-badge is-logout">离</span>
                     <div class="item-text">
-                      <span class="item-title">离席登出</span>
-                      <span class="item-desc">保存草稿并安全离线</span>
+                      <span class="item-title">退出登录</span>
+                      <span class="item-desc">保存草稿并安全退出</span>
                     </div>
                   </button>
                 </div>
@@ -666,7 +666,7 @@ onUnmounted(() => {
 
       <GlobalModalContainer
         v-if="showSettingsModal"
-        title="乾坤万象中枢"
+        title="个人设置"
         badge-text="乾"
         @close="handleCloseSettingsModal"
       >
@@ -687,7 +687,7 @@ onUnmounted(() => {
 
       <GlobalModalContainer
         v-if="showAdminModal"
-        title="司天监运营台阁"
+        title="系统管理"
         badge-text="司"
         @close="showAdminModal = false"
       >
@@ -696,7 +696,7 @@ onUnmounted(() => {
 
       <GlobalModalContainer
         v-if="showPromptUsageModal"
-        title="妙笔词林图谱"
+        title="提示词用量"
         badge-text="妙"
         width="min(94vw, 1180px)"
         @close="showPromptUsageModal = false"
@@ -706,7 +706,7 @@ onUnmounted(() => {
 
       <GlobalModalContainer
         v-if="showPasswordModal"
-        title="更替阁主密契"
+        title="修改密码"
         badge-text="密"
         width="min(90vw, 540px)"
         @close="showPasswordModal = false"

@@ -2,9 +2,22 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
+import { NConfigProvider, type GlobalThemeOverrides } from 'naive-ui'
 import { globalAlert } from '@/composables/useAlert'
 
 const route = useRoute()
+
+// Naive UI 主题桥接：把国风色板与字体注入组件库，后续逐步替代 main.css 中对 .n-* 的硬覆写
+const themeOverrides: GlobalThemeOverrides = {
+  common: {
+    primaryColor: '#b83c32',
+    primaryColorHover: '#c94036',
+    primaryColorPressed: '#92221b',
+    primaryColorSuppl: '#b83c32',
+    fontFamily: '"Noto Serif SC", serif',
+    borderRadius: '6px',
+  },
+}
 
 // 布局壳与弹窗只在实际渲染时加载，避免登录首屏带上认证后导航和焦点陷阱代码。
 const AppShell = defineAsyncComponent(() => import('@/components/shared/AppShell.vue'))
@@ -15,6 +28,7 @@ const layoutComponent = computed(() => route.meta.layout === 'auth' ? AuthLayout
 </script>
 
 <template>
+  <n-config-provider :theme-overrides="themeOverrides">
   <RouterView v-slot="{ Component }">
     <component :is="layoutComponent">
       <component :is="Component" />
@@ -86,6 +100,7 @@ const layoutComponent = computed(() => route.meta.layout === 'auth' ? AuthLayout
       </div>
     </transition-group>
   </div>
+  </n-config-provider>
 </template>
 
 <style scoped>

@@ -750,7 +750,7 @@ watch(
   transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* 待完成章节的亮眼标签样式 */
+/* 待完成章节的中性标签样式 */
 .writing-sidebar__chapter-badge-pending {
   margin-left: auto;
   flex-shrink: 0;
@@ -759,22 +759,9 @@ watch(
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 4px;
-  background: linear-gradient(135deg, #f59e0b, #d97706); /* 亮眼的渐变橙黄 */
-  color: #ffffff !important; /* 强制覆盖文字色防止因选中变色而不可读 */
-  box-shadow: 0 1px 3px rgba(217, 119, 6, 0.3);
-  text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.15);
-  /* 浮动微动画效果 */
-  animation: float-badge 1.8s ease-in-out infinite alternate;
+  background: var(--md-surface-variant, #e7e2d6);
+  color: var(--md-on-surface-variant, #6b6357) !important;
   transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes float-badge {
-  0% {
-    transform: translateY(0);
-  }
-  100% {
-    transform: translateY(-2px);
-  }
 }
 
 .writing-sidebar__chapter-delete {
@@ -868,11 +855,10 @@ watch(
   border-color: #2b5043;
 }
 
-/* 进行中使用“朱砂”中式红，并加入水墨呼吸闪烁 */
+/* 进行中使用“朱砂”中式红 */
 .writing-sidebar__status-dot.is-progress {
   background-color: var(--md-secondary) !important; /* 古典朱砂 */
   border-color: #92221b;
-  animation: dot-ink-pulse 1.4s ease-out infinite;
 }
 
 /* 失败使用“赤赭” */
@@ -959,14 +945,7 @@ watch(
   }
 }
 
-@keyframes dot-ink-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(184, 60, 50, 0.45);
-  }
-  100% {
-    box-shadow: 0 0 0 7px rgba(184, 60, 50, 0);
-  }
-}
+/* dot-ink-pulse 已移除：进行中状态以朱砂静态色点指示，避免常驻动画 */
 
 @media (prefers-reduced-motion: reduce) {
   .m3-stagger,
