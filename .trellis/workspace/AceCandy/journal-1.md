@@ -105,3 +105,38 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 4: TTS 朗读：Web Audio 播放 + 短段合并区间高亮 + 后端 wav 标准化
+
+**Date**: 2026-07-12
+**Task**: TTS 朗读：Web Audio 播放 + 短段合并区间高亮 + 后端 wav 标准化
+**Branch**: `main`
+
+### Summary
+
+朗读播放层由 HTMLAudioElement 改为 Web Audio（decodeAudioData + AudioBufferSourceNode），修复部分标准 wav 静音无法播放；buildPlayback 相邻短段落按完整段落合并到约 400 字减少请求往返、播放时区间内全部高亮；段间停顿 120→400ms；后端 wav 标准化为 16-bit PCM + data chunk 完整性/静音校验与一次重试。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8f6e79c` | (see git log) |
+| `6f23c48` | (see git log) |
+| `6d03d62` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
