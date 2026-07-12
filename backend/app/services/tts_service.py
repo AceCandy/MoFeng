@@ -2,6 +2,8 @@
 import base64
 import binascii
 import json
+import logging
+import struct
 from dataclasses import dataclass
 from typing import Optional
 
@@ -9,6 +11,9 @@ import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..repositories.ai_model_config_repository import UserAIModelRepository
+
+
+logger = logging.getLogger(__name__)
 
 
 class TTSConfigurationError(ValueError):
@@ -30,6 +35,8 @@ class TTSService:
 
     MAX_AUDIO_BYTES = 24 * 1024 * 1024
     MAX_UPSTREAM_RESPONSE_BYTES = 32 * 1024 * 1024
+    # 有效 wav 最小字节数：仅 wav 头（约 44 字节）而无 PCM 数据视为空音频
+    MIN_AUDIO_BYTES = 1000
 
     def __init__(self, session: AsyncSession):
         self.model_repo = UserAIModelRepository(session)
@@ -98,6 +105,115 @@ class TTSService:
             len(content) >= 2 and content[0] == 0xFF and content[1] & 0xE0 == 0xE0
         )
 
+    @classmethod
+    def _is_valid_wav(cls, audio: bytes) -> bool:
+        # 既校验 wav 头与最小字节数，又校验 data chunk 完整性，并拒绝"完整但静音"的音频
+        if not cls._is_wav(audio) or len(audio) < cls.MIN_AUDIO_BYTES:
+            return False
+        if not cls._wav_data_complete(audio):
+            return False
+        return cls._wav_has_signal(audio)
+
+    @staticmethod
+    def _wav_data_complete(audio: bytes) -> bool:
+        offset = 12  # 跳过 "RIFF" + size + "WAVE" 头
+        while offset + 8 <= len(audio):
+            chunk_id = audio[offset:offset + 4]
+            chunk_size = int.from_bytes(audio[offset + 4:offset + 8], "little")
+            if chunk_id == b"data":
+                return len(audio) >= offset + 8 + chunk_size
+            offset += 8 + chunk_size + (chunk_size & 1)  # 奇数大小需补 1 字节 padding
+            if chunk_size == 0:
+                break
+        return False
+
+    @staticmethod
+    def _wav_has_signal(audio: bytes) -> bool:
+        # 拦截"完整但静音"的音频：定位 data chunk，存在非零样本才算有效
+        offset = 12
+        while offset + 8 <= len(audio):
+            chunk_id = audio[offset:offset + 4]
+            chunk_size = int.from_bytes(audio[offset + 4:offset + 8], "little")
+            if chunk_id == b"data":
+                return any(audio[offset + 8:offset + 8 + chunk_size])
+            offset += 8 + chunk_size + (chunk_size & 1)
+        return False
+
+    @classmethod
+    def _normalize_to_pcm16_wav(cls, audio: bytes) -> bytes:
+        """标准化为 16-bit PCM wav：解析 fmt/data，PCM 转 16-bit，重写标准 wav。
+        MiMo 偶发返回浏览器 <audio> 无法播放的 wav（24/32-bit 或非标准 chunk），
+        统一重写为标准 16-bit PCM 后 <audio> 才能正常播放。"""
+        audio_format = 1
+        num_channels = 1
+        sample_rate = 24000
+        bits_per_sample = 16
+        pcm = b""
+        offset = 12
+        while offset + 8 <= len(audio):
+            chunk_id = audio[offset:offset + 4]
+            chunk_size = int.from_bytes(audio[offset + 4:offset + 8], "little")
+            body = offset + 8
+            if chunk_id == b"fmt " and chunk_size >= 16:
+                audio_format = int.from_bytes(audio[body:body + 2], "little") or 1
+                num_channels = int.from_bytes(audio[body + 2:body + 4], "little") or 1
+                sample_rate = int.from_bytes(audio[body + 4:body + 8], "little") or 24000
+                bits_per_sample = int.from_bytes(audio[body + 14:body + 16], "little") or 16
+            elif chunk_id == b"data":
+                pcm = audio[body:body + chunk_size]
+            offset += 8 + chunk_size + (chunk_size & 1)
+        if not pcm:
+            return audio
+        pcm16 = cls._pcm_to_16bit(pcm, audio_format, bits_per_sample)
+        if audio_format != 1 or bits_per_sample != 16:
+            logger.info(
+                "MiMo wav 标准化为 pcm16: format=%d channels=%d rate=%d bits=%d",
+                audio_format, num_channels, sample_rate, bits_per_sample,
+            )
+        byte_rate = sample_rate * num_channels * 2
+        block_align = num_channels * 2
+        fmt_body = struct.pack("<HHIIHH", 1, num_channels, sample_rate, byte_rate, block_align, 16)
+        return (
+            b"RIFF" + struct.pack("<I", 4 + 8 + len(fmt_body) + 8 + len(pcm16)) + b"WAVE"
+            + b"fmt " + struct.pack("<I", len(fmt_body)) + fmt_body
+            + b"data" + struct.pack("<I", len(pcm16)) + pcm16
+        )
+
+    @staticmethod
+    def _pcm_to_16bit(pcm: bytes, audio_format: int, bits_per_sample: int) -> bytes:
+        """把 PCM 数据转成 16-bit 有符号小端。"""
+        if audio_format == 3 and bits_per_sample == 32:
+            # IEEE float32 → 16-bit PCM
+            out = bytearray()
+            for i in range(0, len(pcm) - 3, 4):
+                val = struct.unpack("<f", pcm[i:i + 4])[0]
+                clamped = -1.0 if val < -1.0 else (1.0 if val > 1.0 else val)
+                out += int(clamped * 32767).to_bytes(2, "little", signed=True)
+            return bytes(out)
+        if bits_per_sample == 16:
+            return pcm[: len(pcm) // 2 * 2]
+        if bits_per_sample == 8:
+            # 8-bit unsigned (0-255) → 16-bit signed
+            out = bytearray()
+            for sample in pcm:
+                out += ((sample - 128) << 8).to_bytes(2, "little", signed=True)
+            return bytes(out)
+        if bits_per_sample == 24:
+            # 24-bit signed → 16-bit signed（右移 8 位）
+            out = bytearray()
+            for i in range(0, len(pcm) - 2, 3):
+                val = int.from_bytes(pcm[i:i + 3], "little", signed=True)
+                out += (val >> 8).to_bytes(2, "little", signed=True)
+            return bytes(out)
+        if bits_per_sample == 32:
+            # 32-bit signed → 16-bit signed（右移 16 位）
+            out = bytearray()
+            for i in range(0, len(pcm) - 3, 4):
+                val = int.from_bytes(pcm[i:i + 4], "little", signed=True)
+                out += (val >> 16).to_bytes(2, "little", signed=True)
+            return bytes(out)
+        return pcm[: len(pcm) // 2 * 2]
+
     async def _synthesize_mimo(self, model, text: str, voice: str, speed: float) -> SpeechAudio:
         messages = []
         if speed != 1.0:
@@ -110,23 +226,26 @@ class TTSService:
             "messages": messages,
             "audio": {"format": "wav", "voice": voice},
         }
+        url = f"{model.provider.base_url.rstrip('/')}/chat/completions"
+        headers = self._headers(model.provider.api_key_encrypted)
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                body, _ = await self._post_limited(
-                    client,
-                    f"{model.provider.base_url.rstrip('/')}/chat/completions",
-                    headers=self._headers(model.provider.api_key_encrypted),
-                    json=payload,
+            # 上游偶发返回截断/空 wav（HTTP 流不完整），完整性校验不过则重试一次
+            for attempt in range(2):
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    body, _ = await self._post_limited(client, url, headers=headers, json=payload)
+                encoded = json.loads(body)["choices"][0]["message"]["audio"]["data"]
+                audio = base64.b64decode(encoded, validate=True) if encoded else b""
+                if len(audio) > self.MAX_AUDIO_BYTES:
+                    raise TTSUpstreamError("语音模型响应过大")
+                if self._is_valid_wav(audio):
+                    return SpeechAudio(
+                        content=self._normalize_to_pcm16_wav(audio),
+                        media_type="audio/wav",
+                    )
+                logger.warning(
+                    "MiMo 返回无效/截断音频，字节数=%d attempt=%d", len(audio), attempt + 1
                 )
-            encoded = json.loads(body)["choices"][0]["message"]["audio"]["data"]
-            if not encoded:
-                raise TTSUpstreamError("语音模型未返回有效音频")
-            audio = base64.b64decode(encoded, validate=True)
-            if len(audio) > self.MAX_AUDIO_BYTES:
-                raise TTSUpstreamError("语音模型响应过大")
-            if not self._is_wav(audio):
-                raise TTSUpstreamError("语音模型未返回有效音频")
-            return SpeechAudio(content=audio, media_type="audio/wav")
+            raise TTSUpstreamError("语音模型未返回有效音频")
         except httpx.TimeoutException as exc:
             raise TimeoutError("语音模型响应超时") from exc
         except httpx.HTTPError as exc:

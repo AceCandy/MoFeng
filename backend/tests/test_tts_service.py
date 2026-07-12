@@ -1,4 +1,5 @@
 import base64
+import struct
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -27,6 +28,38 @@ def _model(protocol="mimo_chat_audio", speed=1.0):
             is_enabled=True,
         ),
     )
+
+
+def _make_wav(pcm: bytes = b"\x01\x00" * 500) -> bytes:
+    """构造最小有效 wav（16-bit mono 24kHz PCM）；pcm 默认非零（有声），传全零可模拟静音。"""
+    fmt_body = struct.pack("<HHIIHH", 1, 1, 24000, 48000, 2, 16)
+    fmt_chunk = b"fmt " + struct.pack("<I", len(fmt_body)) + fmt_body
+    data_chunk = b"data" + struct.pack("<I", len(pcm)) + pcm
+    riff_size = 4 + len(fmt_chunk) + len(data_chunk)
+    return b"RIFF" + struct.pack("<I", riff_size) + b"WAVE" + fmt_chunk + data_chunk
+
+
+def _make_wav_raw(pcm: bytes, bits: int = 16, *, audio_format: int = 1, channels: int = 1, rate: int = 24000) -> bytes:
+    """构造指定位深/格式的 wav（用于测试标准化）。"""
+    block_align = channels * (bits // 8)
+    byte_rate = rate * block_align
+    fmt_body = struct.pack("<HHIIHH", audio_format, channels, rate, byte_rate, block_align, bits)
+    return (
+        b"RIFF" + struct.pack("<I", 4 + 8 + len(fmt_body) + 8 + len(pcm)) + b"WAVE"
+        + b"fmt " + struct.pack("<I", len(fmt_body)) + fmt_body
+        + b"data" + struct.pack("<I", len(pcm)) + pcm
+    )
+
+
+def _read_bits_per_sample(wav: bytes) -> int:
+    offset = 12
+    while offset + 8 <= len(wav):
+        chunk_id = wav[offset:offset + 4]
+        chunk_size = int.from_bytes(wav[offset + 4:offset + 8], "little")
+        if chunk_id == b"fmt " and chunk_size >= 16:
+            return int.from_bytes(wav[offset + 8 + 14:offset + 8 + 16], "little")
+        offset += 8 + chunk_size + (chunk_size & 1)
+    return 0
 
 
 class FakeAsyncClient:
@@ -74,7 +107,8 @@ class FakeResponseStream:
 
 @pytest.mark.asyncio
 async def test_mimo_synthesis_uses_chat_audio_contract(monkeypatch):
-    encoded = base64.b64encode(b"RIFF\x00\x00\x00\x00WAVEdata").decode("ascii")
+    wav = _make_wav()
+    encoded = base64.b64encode(wav).decode("ascii")
     FakeAsyncClient.response = httpx.Response(
         200,
         json={"choices": [{"message": {"audio": {"data": encoded}}}]},
@@ -86,7 +120,7 @@ async def test_mimo_synthesis_uses_chat_audio_contract(monkeypatch):
 
     result = await service.synthesize(7, "第一段正文")
 
-    assert result.content == b"RIFF\x00\x00\x00\x00WAVEdata"
+    assert result.content == wav
     assert result.media_type == "audio/wav"
     assert FakeAsyncClient.request["url"] == "https://api.example.com/v1/chat/completions"
     payload = FakeAsyncClient.request["json"]
@@ -214,3 +248,48 @@ async def test_synthesis_rejects_oversized_upstream_response(monkeypatch):
 
     with pytest.raises(TTSUpstreamError, match="响应过大"):
         await service.synthesize(7, "正文")
+
+
+def test_wav_validation_rejects_silent_and_truncated():
+    # 有效 wav（有声、完整）通过
+    assert TTSService._is_valid_wav(_make_wav()) is True
+    # 完整但静音（PCM 全零）→ 拒绝
+    assert TTSService._is_valid_wav(_make_wav(pcm=b"\x00" * 1000)) is False
+    # data chunk 被截断（实际数据少于声明，总长仍达标）→ 拒绝
+    big = _make_wav(pcm=b"\x01\x00" * 600)
+    assert TTSService._is_valid_wav(big[:-200]) is False
+
+
+@pytest.mark.asyncio
+async def test_synthesis_rejects_silent_wav_after_retry(monkeypatch):
+    # 上游偶发返回"完整但静音"的 wav：校验失败 → 重试一次 → 仍静音 → 报错（前端走浏览器兜底）
+    silent = _make_wav(pcm=b"\x00" * 1000)
+    encoded = base64.b64encode(silent).decode("ascii")
+    FakeAsyncClient.response = httpx.Response(
+        200,
+        json={"choices": [{"message": {"audio": {"data": encoded}}}]},
+        request=httpx.Request("POST", "https://api.example.com/v1/chat/completions"),
+    )
+    monkeypatch.setattr(httpx, "AsyncClient", FakeAsyncClient)
+    service = TTSService(AsyncMock())
+    service.model_repo = SimpleNamespace(get_default_tts=AsyncMock(return_value=_model()))
+
+    with pytest.raises(TTSUpstreamError, match="未返回有效音频"):
+        await service.synthesize(7, "正文")
+
+
+def test_normalize_wav_converts_high_bit_depth_to_pcm16():
+    # 24-bit wav → 16-bit PCM（非零样本，过静音检测；pcm 足够大以过最小字节校验）
+    wav24 = _make_wav_raw(b"\x00\x01\x02" * 500, bits=24)
+    normalized = TTSService._normalize_to_pcm16_wav(wav24)
+    assert TTSService._is_valid_wav(normalized)
+    assert _read_bits_per_sample(normalized) == 16
+
+    # 32-bit wav → 16-bit PCM
+    wav32 = _make_wav_raw(b"\x00\x01\x02\x03" * 750, bits=32)
+    normalized32 = TTSService._normalize_to_pcm16_wav(wav32)
+    assert TTSService._is_valid_wav(normalized32)
+    assert _read_bits_per_sample(normalized32) == 16
+
+    # 16-bit 标准输入透传后仍是有效 16-bit wav
+    assert _read_bits_per_sample(TTSService._normalize_to_pcm16_wav(_make_wav())) == 16
