@@ -19,3 +19,6 @@ If you're using Codex or another agent-capable tool, additional project-scoped h
 Managed by Trellis. Edits outside this block are preserved; edits inside may be overwritten by a future `trellis update`.
 
 <!-- TRELLIS:END -->
+
+## 补充逻辑
+- 扫描代码的codeGraph使用参考 @CODEGRAPH.md
