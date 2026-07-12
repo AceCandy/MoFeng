@@ -7,6 +7,8 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional
 
+from sqlalchemy.exc import IntegrityError
+
 _PREFERRED_CONTENT_KEYS: tuple[str, ...] = (
     "content",
     "chapter_content",
@@ -559,7 +561,16 @@ class NovelService:
             return chapter
         chapter = Chapter(project_id=project_id, chapter_number=chapter_number)
         self.session.add(chapter)
-        await self.session.commit()
+        try:
+            await self.session.commit()
+        except IntegrityError:
+            # 并发场景：另一请求已创建同 (project_id, chapter_number)，回退后重读
+            await self.session.rollback()
+            result = await self.session.execute(stmt)
+            chapter = result.scalars().first()
+            if chapter:
+                return chapter
+            raise
         await self.session.refresh(chapter)
         return chapter
 

@@ -37,3 +37,13 @@ rag_vectors.db
 # 本地验收截图、运行日志与临时令牌
 artifacts/
 .codex-token.tmp
+
+# 前端构建产物与测试覆盖率
+/frontend/dist/
+/frontend/coverage/
+/coverage/
+
+# 日志与系统文件
+*.log
+.DS_Store
+Thumbs.db

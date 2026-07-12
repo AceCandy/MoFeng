@@ -245,14 +245,9 @@ async def _check_reminders_impl(
     total_chapters: int,
 ):
     """提醒检查实现"""
-    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-    from sqlalchemy.orm import sessionmaker
-    from app.core.config import settings
-    
-    # 延迟创建数据库引擎
-    engine = create_async_engine(settings.database_url, echo=False)
-    AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    
+    from app.config.celery_config import get_task_session_factory
+
+    AsyncSessionLocal, own_engine = get_task_session_factory()
     async with AsyncSessionLocal() as session:
         try:
             service = ForeshadowingService(session)
@@ -273,4 +268,5 @@ async def _check_reminders_impl(
             logger.exception(f"提醒检查实现失败: {exc}")
             raise
         finally:
-            await engine.dispose()
+            if own_engine is not None:
+                await own_engine.dispose()

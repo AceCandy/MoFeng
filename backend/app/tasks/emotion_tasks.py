@@ -65,14 +65,10 @@ async def _analyze_emotion_impl(
     task
 ):
     """异步分析实现"""
-    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-    from sqlalchemy.orm import sessionmaker
-    from app.core.config import settings
-    
-    # 延迟创建数据库引擎
-    engine = create_async_engine(settings.database_url, echo=False)
-    AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    
+    from app.config.celery_config import get_task_session_factory
+
+    # 复用 worker 共享 engine（无则建临时），避免每任务 create/dispose
+    AsyncSessionLocal, own_engine = get_task_session_factory()
     async with AsyncSessionLocal() as session:
         try:
             emotion_service = EmotionService(session)
@@ -133,4 +129,5 @@ async def _analyze_emotion_impl(
             logger.exception(f"异步分析实现失败: {exc}")
             raise
         finally:
-            await engine.dispose()
+            if own_engine is not None:
+                await own_engine.dispose()

@@ -39,6 +39,54 @@ app.conf.task_routes = {
     'app.tasks.emotion_tasks.analyze_emotion_async': {'queue': 'emotion_analysis'},
 }
 
+# Celery worker 进程级共享 async engine（避免每个任务重复 create/dispose）
+from celery.signals import worker_process_init, worker_process_shutdown  # noqa: E402
+
+_async_engine = None
+AsyncSessionLocal = None
+
+
+@worker_process_init.connect
+def _init_worker_engine(**kwargs):
+    """worker 子进程启动时建一次共享 engine 与 session factory。"""
+    global _async_engine, AsyncSessionLocal
+    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+    from sqlalchemy.orm import sessionmaker
+    from app.core.config import settings
+    _async_engine = create_async_engine(settings.sqlalchemy_database_uri, echo=False)
+    AsyncSessionLocal = sessionmaker(_async_engine, class_=AsyncSession, expire_on_commit=False)
+
+
+@worker_process_shutdown.connect
+def _shutdown_worker_engine(**kwargs):
+    """worker 子进程退出时释放共享 engine。"""
+    global _async_engine, AsyncSessionLocal
+    if _async_engine is not None:
+        import asyncio
+        try:
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(_async_engine.dispose())
+            loop.close()
+        except Exception:  # noqa: BLE001
+            pass
+    _async_engine = None
+    AsyncSessionLocal = None
+
+
+def get_task_session_factory():
+    """返回 (session_factory, own_engine)。
+
+    worker 进程内复用共享 factory（own_engine=None）；非 worker 环境（如直接调用/测试）
+    建临时 engine，由调用方在用完后 dispose。
+    """
+    if AsyncSessionLocal is not None:
+        return AsyncSessionLocal, None
+    from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+    from sqlalchemy.orm import sessionmaker
+    from app.core.config import settings
+    engine = create_async_engine(settings.sqlalchemy_database_uri, echo=False)
+    return sessionmaker(engine, class_=AsyncSession, expire_on_commit=False), engine
+
 # 定义定时任务（可选）
 app.conf.beat_schedule = {
     # 可以在这里添加定时任务
