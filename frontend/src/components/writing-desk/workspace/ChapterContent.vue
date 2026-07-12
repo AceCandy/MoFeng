@@ -9,7 +9,7 @@
             v-for="(paragraph, idx) in chapterDisplayParagraphs"
             :key="`chapter-${idx}`"
             :ref="(el) => setParagraphRef(el, idx)"
-            :class="{ 'chapter-prose__p--active': idx === activeParagraphIndex }"
+            :class="{ 'chapter-prose__p--active': isParagraphActive(idx) }"
           >
             <template v-if="idx === 0 && paragraph && paragraph.trim().length > 0">
               <span class="first-stamp-char">{{ paragraph.trim()[0] }}</span>{{ paragraph.trim().slice(1) }}
@@ -264,8 +264,10 @@ import { countNonWhitespaceChars } from '@/utils/text'
 interface Props {
   selectedChapter: Chapter
   projectId?: string
-  /** 朗读高亮的正文段落下标，-1 或缺省表示不高亮 */
+  /** 朗读高亮的正文段落区间起点，-1 或缺省表示不高亮 */
   activeParagraphIndex?: number
+  /** 朗读高亮的正文段落区间终点（短段合并时与起点共同覆盖多段），缺省时取起点 */
+  activeParagraphEnd?: number
 }
 
 const props = defineProps<Props>()
@@ -438,6 +440,14 @@ const setParagraphRef = (el: Element | unknown, idx: number) => {
   if (el instanceof HTMLElement) {
     paragraphEls[idx] = el
   }
+}
+
+// 合并段区间高亮：activeParagraphIndex/End 构成闭区间，缺省或负值表示不高亮
+const isParagraphActive = (idx: number): boolean => {
+  const start = props.activeParagraphIndex
+  if (start == null || start < 0) return false
+  const end = props.activeParagraphEnd ?? start
+  return idx >= start && idx <= end
 }
 
 watch(

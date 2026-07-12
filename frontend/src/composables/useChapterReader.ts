@@ -21,19 +21,22 @@ interface ChapterReaderDependencies {
 
 interface ChapterReader {
   status: Readonly<Ref<ReaderStatus>>
+  /** 是否走浏览器 speechSynthesis（未配模型或模型失败兜底） */
   isBrowserFallback: Readonly<Ref<boolean>>
   /** 是否配了可用的默认 TTS 模型；挂载与每次朗读前刷新，决定走模型还是浏览器回退 */
   hasModelTTS: Readonly<Ref<boolean>>
   /** 默认 TTS 模型的音色名（tts_voice），供朗读控件只读展示 */
   modelVoiceLabel: Readonly<Ref<string>>
-  /** 默认 TTS 模型的协议，决定控件音色候选与后端接口 */
+  /** 默认 TTS 模型协议，决定控件音色候选与后端接口 */
   modelProtocol: Readonly<Ref<TTSProtocol>>
   /** 当前选择的模型音色（全局偏好，localStorage），供控件双向绑定 */
   modelVoice: Readonly<Ref<string>>
   /** 当前协议下的可选模型音色候选 */
   modelVoiceOptions: Readonly<Ref<ModelVoiceOption[]>>
-  /** 当前朗读到的正文段落下标，-1 表示标题阶段或空闲，与正文 <p> 一一对应 */
+  /** 当前朗读到的正文段落区间起点，-1 表示标题阶段或空闲 */
   currentParagraphIndex: Readonly<Ref<number>>
+  /** 当前朗读到的正文段落区间终点（短段合并时覆盖多段，单段时等于 currentParagraphIndex） */
+  currentParagraphEnd: Readonly<Ref<number>>
   /** 正文段落数，用于展示进度 */
   paragraphCount: Readonly<Ref<number>>
   /** 浏览器朗读音色 URI（空表示自动选），每台机器独立、存 localStorage */
@@ -54,15 +57,25 @@ interface ChapterReader {
 
 interface PlaybackSegment {
   text: string
-  /** 所属正文段落下标，-1 表示标题段（正文里无对应 <p>） */
+  /** 所属正文段落区间起点，-1 表示标题段（正文里无对应 <p>） */
   paragraphIndex: number
+  /** 所属正文段落区间终点：短段合并时覆盖多段，单段时等于 paragraphIndex */
+  paragraphEnd: number
 }
 
 const TTS_LIMIT = 2500
-/** 段间留白：Chrome 连续 speak 会裁每段首字，cancel 后留足时间让队列收敛 */
-const SEGMENT_GAP_MS = 120
-/** 段首静音填充：系统 TTS 会裁掉 utterance 开头若干毫秒，前置空格让被裁的是填充而非正文首字 */
+/** 段间停顿：连续段落衔接需要自然换气，同时留白让播放引擎收敛、避免裁首尾音 */
+const SEGMENT_GAP_MS = 400
+/** 段首静音填充：合成音频会裁掉开头若干毫秒，前置空格让被裁的是填充而非正文首字 */
 const LEADING_FILLER = ' '
+/** 段尾填充：合成会截断每段末尾若干毫秒，末尾追加句号生成停顿，让被截的是停顿而非正文末字 */
+const TRAILING_FILLER = '。'
+/** 模型合成预取窗口：当前段播放时向后预取的段数，减少段间卡顿 */
+const PREFETCH_AHEAD = 2
+/** 有效音频最短时长（秒）：低于此值视为空/损坏音频，避免静默跳过整段 */
+const MIN_VALID_AUDIO_SECONDS = 0.2
+/** 短段合并目标字数：相邻短段落拼到约此字数再送 TTS，减少请求往返；始终按完整段落闭合、不切断段落 */
+const MERGE_TARGET = 400
 const VOICE_STORAGE_KEY = 'mofeng:reader-voice'
 const RATE_STORAGE_KEY = 'mofeng:reader-rate'
 /** 模型 TTS 全局音色偏好（朗读控件选择，按协议匹配候选），每台机器独立、存 localStorage */
@@ -104,7 +117,8 @@ const splitLongUnit = (unit: string, limit: number): string[] => {
   return chunks
 }
 
-/** 按正文展示段落构建朗读计划：标题段 + 正文段（超长段内部按字数切给 TTS），记录每段所属正文下标 */
+/** 按正文展示段落构建朗读计划：标题段 + 正文段（相邻短段落合并到约 MERGE_TARGET 字以减少请求往返，
+ *  始终按完整段落闭合、绝不切断；仅单段超 TTS 上限时才内部切分），记录每段所属正文段落区间 */
 const buildPlayback = (
   title: string,
   content: string,
@@ -112,14 +126,43 @@ const buildPlayback = (
 ): { segments: PlaybackSegment[]; paragraphCount: number } => {
   const segments: PlaybackSegment[] = []
   for (const chunk of splitLongUnit(title.trim(), limit).filter(Boolean)) {
-    segments.push({ text: chunk, paragraphIndex: -1 })
+    segments.push({ text: chunk, paragraphIndex: -1, paragraphEnd: -1 })
   }
   const paragraphs = splitChapterParagraphs(content)
+  // 相邻短段落按完整段落合并：累计到约 MERGE_TARGET 字即在段落边界闭合，绝不切断段落
+  let buffer: string[] = []
+  let bufferStart = 0
+  let bufferLen = 0
+  const flush = (): void => {
+    if (buffer.length === 0) return
+    segments.push({
+      text: buffer.join('\n'),
+      paragraphIndex: bufferStart,
+      paragraphEnd: bufferStart + buffer.length - 1,
+    })
+    buffer = []
+    bufferLen = 0
+  }
   paragraphs.forEach((paragraph, index) => {
-    for (const chunk of splitLongUnit(paragraph, limit)) {
-      segments.push({ text: chunk, paragraphIndex: index })
+    const chunks = splitLongUnit(paragraph, limit)
+    if (chunks.length > 1) {
+      // 单段超 TTS 上限必须切分：先闭合当前合并段，每个切片独占并归属本段
+      flush()
+      chunks.forEach((chunk) => {
+        segments.push({ text: chunk, paragraphIndex: index, paragraphEnd: index })
+      })
+      return
     }
+    const text = chunks[0]
+    // 加入本段会超目标且当前合并段非空：先在段落边界闭合，保证不切断本段
+    if (buffer.length > 0 && bufferLen + text.length > MERGE_TARGET) {
+      flush()
+    }
+    if (buffer.length === 0) bufferStart = index
+    buffer.push(text)
+    bufferLen += text.length
   })
+  flush()
   return { segments, paragraphCount: paragraphs.length }
 }
 
@@ -146,6 +189,7 @@ export const useChapterReader = (
   const synthesize = dependencies.synthesize ?? synthesizeSpeech
   const notify = dependencies.notify ?? ((message, type) => globalAlert.showToast(message, type))
   const status = ref<ReaderStatus>('idle')
+  /** 是否走浏览器 speechSynthesis（未配模型或模型失败兜底） */
   const isBrowserFallback = ref(false)
   /** 是否配了可用的默认 TTS 模型；挂载与每次朗读前刷新 */
   const hasModelTTS = ref(false)
@@ -158,6 +202,7 @@ export const useChapterReader = (
     typeof localStorage !== 'undefined' ? localStorage.getItem(MODEL_VOICE_STORAGE_KEY) ?? '' : '',
   )
   const currentParagraphIndex = ref(-1)
+  const currentParagraphEnd = ref(-1)
   const paragraphCount = ref(0)
   const storedRate = typeof localStorage !== 'undefined' ? Number(localStorage.getItem(RATE_STORAGE_KEY)) : NaN
   const voiceURI = ref(
@@ -166,23 +211,48 @@ export const useChapterReader = (
   const rate = ref(Number.isFinite(storedRate) && storedRate > 0 ? storedRate : 1)
   let runId = 0
   let abortController: AbortController | null = null
-  let audio: HTMLAudioElement | null = null
-  let objectUrl: string | null = null
+  // 用 Web Audio（AudioBufferSourceNode）播放模型音频：HTMLAudioElement 对部分 wav 有静音 bug，
+  // decodeAudioData 解码更稳健，能播放 <audio> 播不出的音频。
+  let audioCtx: AudioContext | null = null
+  let bufferSource: AudioBufferSourceNode | null = null
+  let decodedBuffer: AudioBuffer | null = null
+  let startedAt = 0
+  let startOffset = 0
+  let bufferEndedHandler: (() => void) | null = null
   let resolveCurrentPlayback: (() => void) | null = null
-  let previewAudio: HTMLAudioElement | null = null
-  let previewUrl: string | null = null
+  let previewSource: AudioBufferSourceNode | null = null
 
-  const releaseAudio = () => {
-    if (audio) {
-      audio.onended = null
-      audio.onerror = null
-      audio.pause()
-      audio = null
+  const getAudioContext = (): AudioContext | null => {
+    const Ctor = window.AudioContext
+    if (!Ctor) return null
+    if (!audioCtx) audioCtx = new Ctor()
+    return audioCtx
+  }
+
+  const stopBufferSource = () => {
+    if (bufferSource) {
+      bufferSource.onended = null
+      try {
+        bufferSource.stop()
+      } catch {
+        // 已停止
+      }
+      bufferSource.disconnect()
+      bufferSource = null
     }
-    if (objectUrl) {
-      URL.revokeObjectURL(objectUrl)
-      objectUrl = null
-    }
+  }
+
+  /** 当前已播放秒数：用于暂停续播与空音频判定 */
+  const getElapsed = (): number => {
+    if (!audioCtx || !decodedBuffer) return 0
+    const elapsed = bufferSource ? audioCtx.currentTime - startedAt : 0
+    return Math.min(startOffset + Math.max(0, elapsed), decodedBuffer.duration)
+  }
+
+  const releasePlayback = () => {
+    bufferEndedHandler = null
+    stopBufferSource()
+    decodedBuffer = null
   }
 
   // 优先用户在播放条选的音色，否则按 pickChineseVoice 自动选
@@ -244,42 +314,44 @@ export const useChapterReader = (
   }
 
   const stopPreview = () => {
-    if (previewAudio) {
-      previewAudio.onended = null
-      previewAudio.onerror = null
-      previewAudio.pause()
-      previewAudio = null
-    }
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl)
-      previewUrl = null
+    if (previewSource) {
+      previewSource.onended = null
+      try {
+        previewSource.stop()
+      } catch {
+        // 已停止
+      }
+      previewSource.disconnect()
+      previewSource = null
     }
   }
 
-  /** 试听模型音色：合成固定样例句并播放；借用 status=generating 防重入（按钮随之禁用） */
+  /** 试听模型音色：合成固定样例句并用 Web Audio 播放；借用 status=generating 防重入（按钮随之禁用） */
   const previewModelVoice = async () => {
     stopPreview()
     status.value = 'generating'
     try {
-      const blob = await synthesize(
-        PREVIEW_SAMPLE,
-        { voice: modelVoice.value, speed: rate.value },
-        abortController?.signal,
-      )
+      const blob = await synthesize(PREVIEW_SAMPLE, { voice: modelVoice.value }, abortController?.signal)
       if (status.value !== 'generating') return
-      previewUrl = URL.createObjectURL(blob)
-      previewAudio = new Audio(previewUrl)
-      previewAudio.playbackRate = rate.value
+      const ctx = getAudioContext()
+      if (!ctx) {
+        notify('模型试听失败。', 'error')
+        if (status.value === 'generating') status.value = 'idle'
+        return
+      }
+      if (ctx.state === 'suspended') void ctx.resume()
+      const buffer = await ctx.decodeAudioData(await blob.arrayBuffer())
+      const source = ctx.createBufferSource()
+      source.buffer = buffer
+      source.playbackRate.value = rate.value
+      source.connect(ctx.destination)
       const finish = () => {
-        stopPreview()
+        if (previewSource === source) previewSource = null
         if (status.value === 'generating') status.value = 'idle'
       }
-      previewAudio.onended = finish
-      previewAudio.onerror = finish
-      void previewAudio.play().catch(() => {
-        notify('模型试听失败。', 'error')
-        finish()
-      })
+      source.onended = finish
+      previewSource = source
+      source.start()
     } catch {
       notify('模型试听失败。', 'error')
       stopPreview()
@@ -309,7 +381,7 @@ export const useChapterReader = (
     runId += 1
     abortController?.abort()
     abortController = null
-    releaseAudio()
+    releasePlayback()
     stopPreview()
     window.speechSynthesis?.cancel()
     resolveCurrentPlayback?.()
@@ -317,24 +389,57 @@ export const useChapterReader = (
     status.value = 'idle'
     isBrowserFallback.value = false
     currentParagraphIndex.value = -1
+    currentParagraphEnd.value = -1
   }
 
+  /** 用 Web Audio 播放一段音频 blob；支持暂停续播（start/stop + offset 记忆） */
   const playAudio = async (blob: Blob, currentRun: number): Promise<void> => {
     if (currentRun !== runId) return
-    releaseAudio()
-    objectUrl = URL.createObjectURL(blob)
-    audio = new Audio(objectUrl)
-    audio.playbackRate = rate.value
+    stopBufferSource()
+    const ctx = getAudioContext()
+    if (!ctx) {
+      throw new Error('当前浏览器不支持音频播放')
+    }
+    if (ctx.state === 'suspended') void ctx.resume()
+    let buffer: AudioBuffer
+    try {
+      buffer = await ctx.decodeAudioData(await blob.arrayBuffer())
+    } catch {
+      throw new Error('音频解码失败')
+    }
+    if (currentRun !== runId) return
+    decodedBuffer = buffer
+    startOffset = 0
     status.value = 'playing'
     await new Promise<void>((resolve, reject) => {
       resolveCurrentPlayback = resolve
-      if (!audio) return resolve()
-      audio.onended = () => resolve()
-      audio.onerror = () => reject(new Error('音频播放失败'))
-      void audio.play().catch(reject)
+      let finished = false
+      bufferEndedHandler = () => {
+        if (finished) return
+        finished = true
+        const elapsed = getElapsed()
+        // 空音频未真正播放就 ended：用实际播放进度兜底，避免静默跳过整段
+        if (elapsed < MIN_VALID_AUDIO_SECONDS) {
+          reject(new Error('返回的音频为空或损坏'))
+          return
+        }
+        resolve()
+      }
+      const source = ctx.createBufferSource()
+      source.buffer = buffer
+      source.playbackRate.value = rate.value
+      source.connect(ctx.destination)
+      source.onended = () => bufferEndedHandler?.()
+      bufferSource = source
+      startedAt = ctx.currentTime
+      try {
+        source.start()
+      } catch {
+        reject(new Error('音频播放失败'))
+      }
     })
     resolveCurrentPlayback = null
-    releaseAudio()
+    stopBufferSource()
   }
 
   const playBrowserSegments = async (
@@ -351,6 +456,7 @@ export const useChapterReader = (
     for (let index = startIndex; index < playback.length && currentRun === runId; index += 1) {
       status.value = 'playing'
       currentParagraphIndex.value = playback[index].paragraphIndex
+      currentParagraphEnd.value = playback[index].paragraphEnd
       // 清掉上一段在队列里的残留并留白再入队，
       // 规避 Chrome 连续 speak 裁掉每段首字的问题（延时不足会复发）
       speech.cancel()
@@ -377,8 +483,8 @@ export const useChapterReader = (
       const existing = pending.get(index)
       if (existing) return existing
       const request = synthesize(
-        playback[index].text,
-        { voice: modelVoice.value, speed: rate.value },
+        `${LEADING_FILLER}${playback[index].text}${TRAILING_FILLER}`,
+        { voice: modelVoice.value },
         abortController?.signal,
       )
       // 预取可能早于消费失败，提前附加处理器避免未处理拒绝告警。
@@ -387,16 +493,29 @@ export const useChapterReader = (
       return request
     }
 
+    // 启动即预热窗口内段落，避免"读完一段才开始合成下一段"的等待
+    for (let preload = 0; preload <= PREFETCH_AHEAD && preload < playback.length; preload += 1) {
+      requestSegment(preload)
+    }
+
     for (let index = 0; index < playback.length && currentRun === runId; index += 1) {
       status.value = 'generating'
       currentParagraphIndex.value = playback[index].paragraphIndex
+      currentParagraphEnd.value = playback[index].paragraphEnd
       try {
         const blob = await requestSegment(index)
         if (currentRun !== runId) return
-        if (index + 1 < playback.length) {
-          requestSegment(index + 1)
+        // 维持预取窗口：当前段已就绪，补一段到窗口尾部
+        const lookahead = index + PREFETCH_AHEAD + 1
+        if (lookahead < playback.length) {
+          requestSegment(lookahead)
         }
         await playAudio(blob, currentRun)
+        if (currentRun !== runId) return
+        // 段间留白：连续 source 切换会裁掉上段尾音与下段首音
+        if (index + 1 < playback.length) {
+          await new Promise<void>((resolve) => setTimeout(resolve, SEGMENT_GAP_MS))
+        }
       } catch (error) {
         if (currentRun !== runId) return
         abortController?.abort()
@@ -415,6 +534,7 @@ export const useChapterReader = (
     if (playback.length === 0) return
     paragraphCount.value = count
     currentParagraphIndex.value = -1
+    currentParagraphEnd.value = -1
     abortController = new AbortController()
     status.value = 'generating'
     await refreshTTSConfig()
@@ -431,26 +551,44 @@ export const useChapterReader = (
       }
     } finally {
       if (currentRun === runId) {
-        releaseAudio()
+        releasePlayback()
         abortController = null
         status.value = 'idle'
         isBrowserFallback.value = false
         currentParagraphIndex.value = -1
+        currentParagraphEnd.value = -1
       }
     }
   }
 
   const pause = () => {
     if (status.value !== 'playing') return
-    audio?.pause()
+    // Web Audio 暂停：记录已播放 offset 后停止 source，resume 时从 offset 重建
+    if (bufferSource && audioCtx) {
+      startOffset = getElapsed()
+      stopBufferSource()
+    }
     window.speechSynthesis?.pause()
     status.value = 'paused'
   }
 
   const resume = () => {
     if (status.value !== 'paused') return
-    if (audio) {
-      void audio.play()
+    if (decodedBuffer && audioCtx) {
+      if (audioCtx.state === 'suspended') void audioCtx.resume()
+      const source = audioCtx.createBufferSource()
+      source.buffer = decodedBuffer
+      source.playbackRate.value = rate.value
+      source.connect(audioCtx.destination)
+      source.onended = () => bufferEndedHandler?.()
+      bufferSource = source
+      startedAt = audioCtx.currentTime
+      try {
+        source.start(0, startOffset)
+      } catch {
+        // 恢复失败视为播放结束
+        bufferEndedHandler?.()
+      }
     } else {
       window.speechSynthesis?.resume()
     }
@@ -471,6 +609,7 @@ export const useChapterReader = (
     modelVoice: readonly(modelVoice),
     modelVoiceOptions,
     currentParagraphIndex: readonly(currentParagraphIndex),
+    currentParagraphEnd: readonly(currentParagraphEnd),
     paragraphCount: readonly(paragraphCount),
     voiceURI: readonly(voiceURI),
     rate: readonly(rate),

@@ -881,6 +881,7 @@ const isFinalizedSuccessful = computed(() => {
 
 // 朗读控件：入口仅在 idle 显示，点击后原地展开为播放条；重置即停止回到入口
 const readerCurrentParagraphIndex = chapterReader.currentParagraphIndex
+const readerCurrentParagraphEnd = chapterReader.currentParagraphEnd
 const readerParagraphCount = chapterReader.paragraphCount
 const readerIsBrowserFallback = chapterReader.isBrowserFallback
 const readerHasModelTTS = chapterReader.hasModelTTS
@@ -1467,6 +1468,7 @@ const currentComponentProps = computed(() => {
         selectedChapter: selectedChapterForDisplay.value,
         projectId: props.project?.id,
         activeParagraphIndex: readerCurrentParagraphIndex.value,
+        activeParagraphEnd: readerCurrentParagraphEnd.value,
       }
     }
 
@@ -1485,6 +1487,7 @@ const currentComponentProps = computed(() => {
       selectedChapter: selectedChapterForDisplay.value,
       projectId: props.project?.id,
       activeParagraphIndex: readerCurrentParagraphIndex.value,
+      activeParagraphEnd: readerCurrentParagraphEnd.value,
     }
   }
   if (isChapterFailed(props.selectedChapterNumber)) {

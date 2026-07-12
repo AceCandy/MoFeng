@@ -14,22 +14,43 @@ class FakeUtterance {
 }
 
 
-class FakeAudio {
-  static instances: FakeAudio[] = []
-  src: string
+class FakeBufferSource {
+  static instances: FakeBufferSource[] = []
+  buffer: AudioBuffer | null = null
+  playbackRate = { value: 1 }
   onended: (() => void) | null = null
-  onerror: (() => void) | null = null
-  paused = false
 
-  constructor(src: string) {
-    this.src = src
-    FakeAudio.instances.push(this)
+  constructor() {
+    FakeBufferSource.instances.push(this)
   }
+  connect = vi.fn()
+  disconnect = vi.fn()
+  start = vi.fn()
+  stop = vi.fn()
+}
 
-  play = vi.fn(async () => undefined)
-  pause = vi.fn(() => {
-    this.paused = true
-  })
+
+class FakeAudioBuffer {
+  duration = 5
+  getChannelData() {
+    return new Float32Array(1000)
+  }
+}
+
+
+class FakeAudioContext {
+  static instances: FakeAudioContext[] = []
+  currentTime = 0
+  state = 'running'
+  destination = {}
+
+  constructor() {
+    FakeAudioContext.instances.push(this)
+  }
+  decodeAudioData = vi.fn(async () => new FakeAudioBuffer() as unknown as AudioBuffer)
+  createBufferSource = vi.fn(() => new FakeBufferSource() as unknown as AudioBufferSourceNode)
+  resume = vi.fn(async () => undefined)
+  close = vi.fn(async () => undefined)
 }
 
 
@@ -75,17 +96,19 @@ const bundle = (configured: boolean) => ({
 
 beforeEach(() => {
   localStorage.clear()
-  FakeAudio.instances = []
+  FakeBufferSource.instances = []
+  FakeAudioContext.instances = []
   browserSpeech.spoken = []
   vi.clearAllMocks()
-  vi.stubGlobal('Audio', FakeAudio)
+  // 测试环境 Blob 可能缺 arrayBuffer（Web Audio decodeAudioData 需要），补齐
+  if (typeof Blob.prototype.arrayBuffer !== 'function') {
+    Blob.prototype.arrayBuffer = function (this: Blob) {
+      return Promise.resolve(new ArrayBuffer(this.size || 8))
+    }
+  }
+  Object.defineProperty(window, 'AudioContext', { value: FakeAudioContext, configurable: true, writable: true })
   vi.stubGlobal('SpeechSynthesisUtterance', FakeUtterance)
   Object.defineProperty(window, 'speechSynthesis', { value: browserSpeech, configurable: true })
-  Object.defineProperty(URL, 'createObjectURL', {
-    value: vi.fn(() => `blob:${FakeAudio.instances.length + 1}`),
-    configurable: true,
-  })
-  Object.defineProperty(URL, 'revokeObjectURL', { value: vi.fn(), configurable: true })
 })
 
 
@@ -209,7 +232,7 @@ describe('useChapterReader', () => {
     expect(reader.paragraphCount.value).toBe(2)
   })
 
-  it('prefetches one model segment and supports pause resume and stop', async () => {
+  it('prefetches segments ahead of playback and supports pause resume and stop', async () => {
     const synthesize = vi.fn(async (text: string) => new Blob([text], { type: 'audio/mpeg' }))
     const reader = useChapterReader({
       loadConfig: async () => bundle(true),
@@ -218,20 +241,62 @@ describe('useChapterReader', () => {
     })
 
     const playback = reader.start('标题', '第一段。\n\n第二段。')
-    await vi.waitFor(() => expect(FakeAudio.instances).toHaveLength(1))
+    await vi.waitFor(() => expect(FakeBufferSource.instances).toHaveLength(1))
+    // 两段短正文合并成一次合成请求：标题 + 合并正文段 = 2 段，启动即预热这 2 段
     expect(synthesize).toHaveBeenCalledTimes(2)
 
     reader.pause()
     expect(reader.status.value).toBe('paused')
-    expect(FakeAudio.instances[0].pause).toHaveBeenCalled()
 
     reader.resume()
     expect(reader.status.value).toBe('playing')
-    expect(FakeAudio.instances[0].play).toHaveBeenCalledTimes(2)
 
     reader.stop()
     expect(reader.status.value).toBe('idle')
-    expect(URL.revokeObjectURL).toHaveBeenCalled()
+    await playback
+  })
+
+  it('merges adjacent short paragraphs to cut synthesis requests', async () => {
+    const synthesize = vi.fn(async (text: string) => new Blob([text], { type: 'audio/mpeg' }))
+    const reader = useChapterReader({
+      loadConfig: async () => bundle(true),
+      synthesize,
+      notify: vi.fn(),
+    })
+
+    // 三段短正文合计远低于合并阈值，应合并成一次合成请求（而非每段各请求一次）
+    const playback = reader.start('标题', '短句一。\n\n短句二。\n\n短句三。')
+    await vi.waitFor(() => expect(FakeBufferSource.instances).toHaveLength(1))
+    // 标题段 + 合并正文段 = 2 次请求，三段正文并入同一条合成文本
+    expect(synthesize).toHaveBeenCalledTimes(2)
+    const merged = synthesize.mock.calls
+      .map((call) => call[0] as string)
+      .find((text) => text.includes('短句一'))
+    expect(merged).toContain('短句二')
+    expect(merged).toContain('短句三')
+    reader.stop()
+    await playback
+  })
+
+  it('keeps each mid-size paragraph whole without splitting at the merge target', async () => {
+    const synthesize = vi.fn(async (text: string) => new Blob([text], { type: 'audio/mpeg' }))
+    const reader = useChapterReader({
+      loadConfig: async () => bundle(true),
+      synthesize,
+      notify: vi.fn(),
+    })
+
+    // 两段正文均介于合并阈值(400)与 TTS 上限(2500)之间：应各自独占一条合成请求，
+    // 且整段送合成、绝不在段落内部切片（硬约束：不切断段落）
+    const longA = '首段标记' + '正文内容'.repeat(130)
+    const longB = '末段标记' + '正文内容'.repeat(130)
+    const playback = reader.start('标题', `${longA}\n\n${longB}`)
+    await vi.waitFor(() => expect(FakeBufferSource.instances).toHaveLength(1))
+    // 标题 + 两段独占正文 = 3 次请求；每段以完整原文送合成（前后仅填充空格与句号）
+    expect(synthesize).toHaveBeenCalledTimes(3)
+    expect(synthesize.mock.calls.some((call) => call[0] === ` ${longA}。`)).toBe(true)
+    expect(synthesize.mock.calls.some((call) => call[0] === ` ${longB}。`)).toBe(true)
+    reader.stop()
     await playback
   })
 
@@ -248,12 +313,36 @@ describe('useChapterReader', () => {
     })
 
     const playback = reader.start('标题', '失败段。')
-    await vi.waitFor(() => expect(FakeAudio.instances).toHaveLength(1))
-    FakeAudio.instances[0].onended?.()
+    await vi.waitFor(() => expect(FakeBufferSource.instances).toHaveLength(1))
+    // 推进播放时长，让标题段正常结束（非空音频）
+    FakeAudioContext.instances[0].currentTime = 5
+    FakeBufferSource.instances[0].onended?.()
     await playback
 
     expect(browserSpeech.spoken.map((text) => text.trim())).toEqual(['失败段。'])
     expect(notify).toHaveBeenCalledWith('模型朗读失败（upstream failed），已切换浏览器朗读。', 'info')
+  })
+
+  it('falls back to browser speech when the model returns an empty audio', async () => {
+    const synthesize = vi.fn(async () => new Blob(['x'], { type: 'audio/wav' }))
+    const notify = vi.fn()
+    const reader = useChapterReader({
+      loadConfig: async () => bundle(true),
+      synthesize,
+      notify,
+    })
+
+    const playback = reader.start('标题', '正文。')
+    await vi.waitFor(() => expect(FakeBufferSource.instances).toHaveLength(1))
+    // 模拟空/损坏音频：实际未播放（currentTime 仍为 0），onended 时 elapsed < 阈值
+    FakeBufferSource.instances[0].onended?.()
+    await playback
+
+    expect(browserSpeech.spoken.map((text) => text.trim())).toEqual(['标题', '正文。'])
+    expect(notify).toHaveBeenCalledWith(
+      '模型朗读失败（返回的音频为空或损坏），已切换浏览器朗读。',
+      'info',
+    )
   })
 
   it('reports unavailable browser speech without leaving an active state', async () => {
