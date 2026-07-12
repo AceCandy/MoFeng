@@ -23,7 +23,7 @@ def _model(protocol="mimo_chat_audio", speed=1.0):
         tts_voice="白桦" if protocol == "mimo_chat_audio" else "alloy",
         tts_speed=speed,
         provider=SimpleNamespace(
-            base_url="https://api.example.com/v1",
+            base_url="http://127.0.0.1:8000/v1",
             api_key_encrypted="secret-key",
             is_enabled=True,
         ),
@@ -112,7 +112,7 @@ async def test_mimo_synthesis_uses_chat_audio_contract(monkeypatch):
     FakeAsyncClient.response = httpx.Response(
         200,
         json={"choices": [{"message": {"audio": {"data": encoded}}}]},
-        request=httpx.Request("POST", "https://api.example.com/v1/chat/completions"),
+        request=httpx.Request("POST", "http://127.0.0.1:8000/v1/chat/completions"),
     )
     monkeypatch.setattr(httpx, "AsyncClient", FakeAsyncClient)
     service = TTSService(AsyncMock())
@@ -122,7 +122,7 @@ async def test_mimo_synthesis_uses_chat_audio_contract(monkeypatch):
 
     assert result.content == wav
     assert result.media_type == "audio/wav"
-    assert FakeAsyncClient.request["url"] == "https://api.example.com/v1/chat/completions"
+    assert FakeAsyncClient.request["url"] == "http://127.0.0.1:8000/v1/chat/completions"
     payload = FakeAsyncClient.request["json"]
     assert payload["audio"] == {"format": "wav", "voice": "白桦"}
     assert payload["messages"][-1] == {"role": "assistant", "content": "第一段正文"}
@@ -136,7 +136,7 @@ async def test_openai_speech_synthesis_returns_binary_audio(monkeypatch):
         200,
         content=b"ID3mp3-data",
         headers={"content-type": "audio/mpeg"},
-        request=httpx.Request("POST", "https://api.example.com/v1/audio/speech"),
+        request=httpx.Request("POST", "http://127.0.0.1:8000/v1/audio/speech"),
     )
     monkeypatch.setattr(httpx, "AsyncClient", FakeAsyncClient)
     service = TTSService(AsyncMock())
@@ -148,7 +148,7 @@ async def test_openai_speech_synthesis_returns_binary_audio(monkeypatch):
 
     assert result.content == b"ID3mp3-data"
     assert result.media_type == "audio/mpeg"
-    assert FakeAsyncClient.request["url"] == "https://api.example.com/v1/audio/speech"
+    assert FakeAsyncClient.request["url"] == "http://127.0.0.1:8000/v1/audio/speech"
     assert FakeAsyncClient.request["json"] == {
         "model": "mimo-v2.5-tts",
         "input": "第二段正文",
@@ -194,7 +194,7 @@ async def test_synthesis_rejects_empty_or_invalid_audio(monkeypatch):
     FakeAsyncClient.response = httpx.Response(
         200,
         json={"choices": [{"message": {"audio": {"data": ""}}}]},
-        request=httpx.Request("POST", "https://api.example.com/v1/chat/completions"),
+        request=httpx.Request("POST", "http://127.0.0.1:8000/v1/chat/completions"),
     )
     monkeypatch.setattr(httpx, "AsyncClient", FakeAsyncClient)
     service = TTSService(AsyncMock())
@@ -217,7 +217,7 @@ async def test_synthesis_rejects_empty_or_invalid_audio(monkeypatch):
     ],
 )
 async def test_synthesis_rejects_invalid_audio_format(monkeypatch, protocol, content, headers):
-    request = httpx.Request("POST", "https://api.example.com/v1/audio")
+    request = httpx.Request("POST", "http://127.0.0.1:8000/v1/audio")
     FakeAsyncClient.response = (
         httpx.Response(200, json=content, headers=headers, request=request)
         if isinstance(content, dict)
@@ -240,7 +240,7 @@ async def test_synthesis_rejects_oversized_upstream_response(monkeypatch):
         200,
         json={"choices": [{"message": {"audio": {"data": encoded}}}]},
         headers={"content-length": str(TTSService.MAX_UPSTREAM_RESPONSE_BYTES + 1)},
-        request=httpx.Request("POST", "https://api.example.com/v1/chat/completions"),
+        request=httpx.Request("POST", "http://127.0.0.1:8000/v1/chat/completions"),
     )
     monkeypatch.setattr(httpx, "AsyncClient", FakeAsyncClient)
     service = TTSService(AsyncMock())
@@ -268,7 +268,7 @@ async def test_synthesis_rejects_silent_wav_after_retry(monkeypatch):
     FakeAsyncClient.response = httpx.Response(
         200,
         json={"choices": [{"message": {"audio": {"data": encoded}}}]},
-        request=httpx.Request("POST", "https://api.example.com/v1/chat/completions"),
+        request=httpx.Request("POST", "http://127.0.0.1:8000/v1/chat/completions"),
     )
     monkeypatch.setattr(httpx, "AsyncClient", FakeAsyncClient)
     service = TTSService(AsyncMock())

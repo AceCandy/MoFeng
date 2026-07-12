@@ -11,6 +11,8 @@ from fastapi import HTTPException
 from openai import APIConnectionError, APITimeoutError, AsyncOpenAI, InternalServerError, PermissionDeniedError
 
 from ..core.config import settings
+from ..core.crypto import decrypt
+from ..core.ssrf import assert_safe_base_url
 from ..repositories.ai_model_config_repository import (
     UserAIModelRepository,
     UserAIStageRouteRepository,
@@ -609,9 +611,13 @@ class LLMService:
             raise HTTPException(status_code=400, detail=f"模型 {model.model_name} 的供应商不可用")
 
         base_url = (provider.base_url or "").strip() or None
-        api_key = (provider.api_key_encrypted or "").strip() or None
+        api_key = decrypt(provider.api_key_encrypted)
         if not base_url:
             raise HTTPException(status_code=400, detail=f"供应商 {provider.name} 缺少 API URL")
+        try:
+            assert_safe_base_url(base_url, allow_private=settings.allow_private_llm_endpoints)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
         return {
             "api_key": api_key,
             "base_url": base_url,
@@ -844,6 +850,10 @@ class LLMService:
                     status_code=400,
                     detail="请先在模型设置中补全用户级向量模型配置：向量 API URL，或启用复用主模型 API URL。系统默认向量配置已禁用。",
                 )
+            try:
+                assert_safe_base_url(base_url, allow_private=settings.allow_private_llm_endpoints)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
             if api_key:
                 client = AsyncOpenAI(api_key=api_key, base_url=base_url)
                 try:

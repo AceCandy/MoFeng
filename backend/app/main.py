@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .core.config import settings
+from .core.config import assert_production_security, settings
 from .db.init_db import init_db
 from .services.prompt_service import PromptService
 from .db.session import AsyncSessionLocal
@@ -68,6 +68,7 @@ dictConfig(
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 应用启动时初始化数据库，并预热提示词缓存
+    assert_production_security()
     await init_db()
     async with AsyncSessionLocal() as session:
         prompt_service = PromptService(session)
@@ -82,10 +83,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS 配置，生产环境建议改为具体域名
+# CORS 配置：仅允许白名单来源，生产环境通过 CORS_ORIGINS 配置具体域名
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

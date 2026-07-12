@@ -8,6 +8,7 @@ import time
 from typing import Dict, Optional
 
 import httpx
+import redis
 from email.header import Header
 from email.mime.text import MIMEText
 from email.utils import formataddr, parseaddr
@@ -25,6 +26,26 @@ from ..schemas.user import AuthOptions, Token, UserCreate, UserInDB, UserRegistr
 
 _VERIFICATION_CACHE: Dict[str, tuple[str, float]] = {}
 _LAST_SEND_TIME: Dict[str, float] = {}
+
+# 验证码 Redis 客户端（可选）：配置 REDIS_URL 时启用以支持多 worker 一致；未配置或连接失败则降级进程内字典
+_redis_client = None
+_redis_client_ready = False
+
+
+def _get_redis_client():
+    """惰性初始化 Redis 客户端；不可用返回 None（调用方降级为进程内存储）。"""
+    global _redis_client, _redis_client_ready
+    if not _redis_client_ready:
+        _redis_client_ready = True
+        if settings.redis_url:
+            try:
+                _redis_client = redis.from_url(settings.redis_url, decode_responses=True)
+                _redis_client.ping()
+                logging.getLogger(__name__).info("验证码 Redis 已连接")
+            except Exception as exc:  # noqa: BLE001
+                logging.getLogger(__name__).warning("验证码 Redis 连接失败，降级进程内存储：%s", exc)
+                _redis_client = None
+    return _redis_client
 
 
 class AuthService:
@@ -87,12 +108,11 @@ class AuthService:
         if not await self.is_registration_enabled():
             raise HTTPException(status_code=403, detail="当前暂未开放注册")
         now = time.time()
-        if email in self._last_send_time and now - self._last_send_time[email] < 60:
+        if self._rate_limited(email, now):
             raise HTTPException(status_code=429, detail="请稍后再试，1分钟内不可重复发送")
 
         code = "".join(random.choices(string.digits, k=6))
-        self._verification_cache[email] = (code, now + 300)
-        self._last_send_time[email] = now
+        self._save_verification_code(email, code, now + 300)
 
         smtp_config = await self._load_smtp_config()
         if not smtp_config:
@@ -103,17 +123,52 @@ class AuthService:
     def verify_code(self, email: str | None, code: str) -> bool:
         if not email:
             return False
+        expected = self._peek_verification_code(email)
+        if expected is None:
+            return False
+        if not secrets.compare_digest(code, expected):
+            return False
+        self._clear_verification_code(email)
+        return True
+
+    # ----- 验证码存储抽象：Redis 优先，未配置/不可用降级进程内字典 -----
+
+    def _rate_limited(self, email: str, now: float) -> bool:
+        client = _get_redis_client()
+        if client:
+            last = client.get(f"vcode:last:{email}")
+            return last is not None and now - float(last) < 60
+        return email in self._last_send_time and now - self._last_send_time[email] < 60
+
+    def _save_verification_code(self, email: str, code: str, expire_at: float) -> None:
+        client = _get_redis_client()
+        if client:
+            client.setex(f"vcode:{email}", max(1, int(expire_at - time.time())), code)
+            client.setex(f"vcode:last:{email}", 60, str(time.time()))
+        else:
+            self._verification_cache[email] = (code, expire_at)
+            self._last_send_time[email] = time.time()
+
+    def _peek_verification_code(self, email: str) -> Optional[str]:
+        """读取验证码（不删除，保留失败重试）。"""
+        client = _get_redis_client()
+        if client:
+            return client.get(f"vcode:{email}")
         cached = self._verification_cache.get(email)
         if not cached:
-            return False
-        expected, expire_at = cached
+            return None
+        code, expire_at = cached
         if time.time() > expire_at:
             self._verification_cache.pop(email, None)
-            return False
-        if code != expected:
-            return False
-        self._verification_cache.pop(email, None)
-        return True
+            return None
+        return code
+
+    def _clear_verification_code(self, email: str) -> None:
+        client = _get_redis_client()
+        if client:
+            client.delete(f"vcode:{email}")
+        else:
+            self._verification_cache.pop(email, None)
 
     async def _load_smtp_config(self) -> Optional[Dict[str, str]]:
         keys = [
@@ -317,9 +372,14 @@ class AuthService:
         external_id = f"linuxdo:{data['id']}"
         user = await self.user_repo.get_by_external_id(external_id)
         if user is None:
+            if not await self.is_registration_enabled():
+                raise HTTPException(status_code=403, detail="当前暂未开放注册，无法通过 OAuth 创建账号")
+            username = data["username"]
+            if await self.user_repo.get_by_username(username):
+                username = f"{username}_{secrets.token_hex(3)}"
             placeholder_password = secrets.token_urlsafe(16)
             user = User(
-                username=data["username"],
+                username=username,
                 email=data.get("email"),
                 external_id=external_id,
                 hashed_password=hash_password(placeholder_password),
@@ -365,8 +425,6 @@ class AuthService:
     def requires_password_reset(self, user: User | UserInDB) -> bool:
         if not user.is_admin:
             return False
-        if user.username != settings.admin_default_username:
-            return False
         hashed_password = getattr(user, "hashed_password", None)
         if not hashed_password:
             return False
@@ -383,7 +441,7 @@ class AuthService:
         if verify_password(new_password, user.hashed_password):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="新密码不能与当前密码相同")
 
-        if username == settings.admin_default_username and new_password == settings.admin_default_password:
+        if user.is_admin and new_password == settings.admin_default_password:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="新密码不能为默认密码")
 
         user.hashed_password = hash_password(new_password)

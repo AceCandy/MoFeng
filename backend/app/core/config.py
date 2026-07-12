@@ -25,6 +25,16 @@ class Settings(BaseSettings):
         env="LOGGING_LEVEL",
         description="应用日志级别",
     )
+    cors_origins: str = Field(
+        default="http://localhost:6100,http://127.0.0.1:6100",
+        env="CORS_ORIGINS",
+        description="允许的跨域来源，逗号分隔；生产环境必须配置为具体域名，禁止使用通配符 *",
+    )
+    allow_private_llm_endpoints: bool = Field(
+        default=False,
+        env="ALLOW_PRIVATE_LLM_ENDPOINTS",
+        description="是否允许 LLM/Embedding/TTS 指向私有/内网地址；仅内网部署时开启",
+    )
     version_info_url: Optional[AnyUrl] = Field(
         default="https://raw.githubusercontent.com/2754026865/mofeng/refs/heads/main/release-metadata/version-info.json",
         env="VERSION_INFO_URL",
@@ -164,6 +174,11 @@ class Settings(BaseSettings):
         env="VECTOR_CHUNK_OVERLAP",
         description="章节分块重叠字数",
     )
+    redis_url: Optional[str] = Field(
+        default=None,
+        env="REDIS_URL",
+        description="Redis 连接串（如 redis://localhost:6379/0），留空则禁用缓存与分布式会话",
+    )
 
     # -------------------- Linux.do OAuth 配置 --------------------
     linuxdo_client_id: Optional[str] = Field(default=None, env="LINUXDO_CLIENT_ID", description="Linux.do OAuth Client ID")
@@ -274,6 +289,16 @@ class Settings(BaseSettings):
         """是否已经配置向量库，用于在业务逻辑中快速判断。"""
         return bool(self.vector_db_url)
 
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """解析 CORS_ORIGINS 为来源白名单，过滤空白与重复项。"""
+        seen: dict[str, None] = {}
+        for origin in self.cors_origins.split(","):
+            normalized = origin.strip()
+            if normalized and normalized not in seen:
+                seen[normalized] = None
+        return list(seen.keys())
+
 
 @lru_cache
 def get_settings() -> Settings:
@@ -282,3 +307,27 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
+
+
+# 已知不安全的 SECRET_KEY 默认/弱值，生产环境不得使用
+_WEAK_SECRET_KEYS = {
+    "",
+    "请替换为随机且复杂的字符串",
+    "your-secret-key-change-me-to-random-string",
+    "ChangeMe123!",
+    "secret",
+    "change-me",
+    "changeme",
+}
+
+
+def assert_production_security() -> None:
+    """生产环境启动前校验关键安全配置，弱配置直接拒绝启动。"""
+    if settings.environment != "production":
+        return
+    key = settings.secret_key or ""
+    if len(key) < 32 or key.strip() in _WEAK_SECRET_KEYS:
+        raise RuntimeError(
+            "生产环境 SECRET_KEY 不安全：长度需 >=32 且不得使用默认/弱值；"
+            "请用 `openssl rand -hex 32` 生成后写入 SECRET_KEY。"
+        )

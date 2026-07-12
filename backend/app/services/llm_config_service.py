@@ -3,9 +3,13 @@ from typing import Optional, List
 import logging
 from urllib.parse import urlparse
 
+from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from openai import AsyncOpenAI
 
+from ..core.config import settings
+from ..core.crypto import decrypt, encrypt
+from ..core.ssrf import assert_safe_base_url
 from ..models import LLMConfig, UserAIModel, UserAIStageRoute, UserModelProvider
 from ..repositories.ai_model_config_repository import (
     UserAIModelRepository,
@@ -74,6 +78,13 @@ class LLMConfigService:
         if not cleaned:
             return None
         return f"******{cleaned[-4:]}"
+
+    @staticmethod
+    def _check_base_url(base_url: Optional[str]) -> None:
+        try:
+            assert_safe_base_url(base_url, allow_private=settings.allow_private_llm_endpoints)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
     @staticmethod
     def _pick_default_model(models: list, *, capability: str):
@@ -312,12 +323,13 @@ class LLMConfigService:
         return inferred
 
     async def create_provider(self, user_id: int, payload: ProviderCreate) -> ProviderRead:
+        self._check_base_url(payload.base_url)
         provider = UserModelProvider(
             user_id=user_id,
             name=payload.name.strip(),
             provider_type=payload.provider_type,
             base_url=payload.base_url.strip().rstrip("/"),
-            api_key_encrypted=(payload.api_key or "").strip() or None,
+            api_key_encrypted=encrypt((payload.api_key or "").strip() or None),
             api_key_preview=self._mask_api_key(payload.api_key),
             capabilities_json=self._normalize_capabilities(payload.capabilities),
             is_enabled=payload.is_enabled,
@@ -336,7 +348,7 @@ class LLMConfigService:
         if not provider.is_enabled:
             raise ValueError("provider disabled")
         return await self.get_available_models(
-            api_key=provider.api_key_encrypted,
+            api_key=decrypt(provider.api_key_encrypted),
             base_url=provider.base_url,
             provider_type=provider.provider_type,
         )
@@ -351,9 +363,10 @@ class LLMConfigService:
         if "provider_type" in data and data["provider_type"] is not None:
             provider.provider_type = data["provider_type"]
         if "base_url" in data and data["base_url"] is not None:
+            self._check_base_url(data["base_url"])
             provider.base_url = data["base_url"].strip().rstrip("/")
         if "api_key" in data:
-            provider.api_key_encrypted = (data["api_key"] or "").strip() or None
+            provider.api_key_encrypted = encrypt((data["api_key"] or "").strip() or None)
             provider.api_key_preview = self._mask_api_key(data["api_key"])
         if "capabilities" in data and data["capabilities"] is not None:
             provider.capabilities_json = self._normalize_capabilities(data["capabilities"])
@@ -535,6 +548,7 @@ class LLMConfigService:
         provider_type: Optional[str] = None,
     ) -> List[str]:
         """使用指定的凭证获取可用的模型列表"""
+        self._check_base_url(base_url)
         provider = self._resolve_provider_for_model_list(provider_type, base_url)
         logger.info(
             "识别到 LLM 提供商: %s (provider_type: %s, base_url: %s, has_api_key=%s)",

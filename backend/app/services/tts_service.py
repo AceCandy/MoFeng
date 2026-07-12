@@ -10,6 +10,9 @@ from typing import Optional
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..core.config import settings
+from ..core.crypto import decrypt
+from ..core.ssrf import assert_safe_base_url
 from ..repositories.ai_model_config_repository import UserAIModelRepository
 
 
@@ -59,6 +62,10 @@ class TTSService:
             or not provider.is_enabled
         ):
             raise TTSConfigurationError("默认语音朗读模型不可用")
+        try:
+            assert_safe_base_url(provider.base_url, allow_private=settings.allow_private_llm_endpoints)
+        except ValueError as exc:
+            raise TTSConfigurationError(str(exc)) from exc
         if not provider.api_key_encrypted or not model.tts_protocol:
             raise TTSConfigurationError("默认语音朗读模型配置不完整")
         # 音色/倍速优先用运行时传入（朗读控件的全局偏好），缺省回退模型配置
@@ -227,7 +234,7 @@ class TTSService:
             "audio": {"format": "wav", "voice": voice},
         }
         url = f"{model.provider.base_url.rstrip('/')}/chat/completions"
-        headers = self._headers(model.provider.api_key_encrypted)
+        headers = self._headers(decrypt(model.provider.api_key_encrypted))
         try:
             # 上游偶发返回截断/空 wav（HTTP 流不完整），完整性校验不过则重试一次
             for attempt in range(2):
@@ -268,7 +275,7 @@ class TTSService:
                 content, media_type = await self._post_limited(
                     client,
                     f"{model.provider.base_url.rstrip('/')}/audio/speech",
-                    headers=self._headers(model.provider.api_key_encrypted),
+                    headers=self._headers(decrypt(model.provider.api_key_encrypted)),
                     json=payload,
                 )
             if (

@@ -61,6 +61,9 @@ services:
       LINUXDO_AUTH_URL: ${LINUXDO_AUTH_URL:-https://connect.linux.do/oauth2/authorize}
       LINUXDO_TOKEN_URL: ${LINUXDO_TOKEN_URL:-https://connect.linux.do/oauth2/token}
       LINUXDO_USER_INFO_URL: ${LINUXDO_USER_INFO_URL:-https://connect.linux.do/api/user}
+
+      # Redis 缓存（启用 --profile redis 时设为 redis://redis:6379/0）
+      REDIS_URL: ${REDIS_URL:-}
     restart: unless-stopped
     volumes:
       - ${SQLITE_STORAGE_SOURCE:-sqlite-data}:/app/storage
@@ -100,6 +103,21 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --max_connections=1000
+
+  # Redis 缓存服务（可选，通过 profile redis 启用：docker compose --profile redis up -d）
+  redis:
+    image: redis:7-alpine
+    container_name: mofeng-redis
+    profiles:
+      - redis
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   mysql-data:

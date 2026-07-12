@@ -80,6 +80,7 @@ async def init_db() -> None:
             )
 
         await _ensure_default_prompts(session)
+        await _migrate_encrypt_provider_api_keys(session)
 
         await session.commit()
 
@@ -246,3 +247,21 @@ async def _ensure_default_prompts(session: AsyncSession) -> None:
             continue
         content = prompt_file.read_text(encoding="utf-8")
         session.add(Prompt(name=name, content=content))
+
+
+async def _migrate_encrypt_provider_api_keys(session: AsyncSession) -> None:
+    """将历史明文 API Key 加密回写，已加密的跳过（幂等）。"""
+    from ..core.crypto import encrypt, is_encrypted
+    from ..models import UserModelProvider
+
+    result = await session.execute(
+        select(UserModelProvider).where(UserModelProvider.api_key_encrypted.isnot(None))
+    )
+    migrated = 0
+    for provider in result.scalars():
+        stored = provider.api_key_encrypted
+        if stored and not is_encrypted(stored):
+            provider.api_key_encrypted = encrypt(stored)
+            migrated += 1
+    if migrated:
+        logger.info("已加密迁移 %d 条历史明文 API Key", migrated)

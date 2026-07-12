@@ -22,7 +22,7 @@ async def test_tts_router_returns_raw_audio_response():
 
     assert response.body == b"wave"
     assert response.media_type == "audio/wav"
-    service.synthesize.assert_awaited_once_with(7, "正文")
+    service.synthesize.assert_awaited_once_with(7, "正文", None, None)
 
 
 @pytest.mark.asyncio

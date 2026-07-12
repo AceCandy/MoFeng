@@ -5,20 +5,28 @@ import logging
 from typing import Optional, Dict, List, Any
 from datetime import datetime, timedelta
 
+from ..core.config import settings
+
 logger = logging.getLogger(__name__)
 
 class CacheService:
     """Redis 缓存服务"""
     
-    def __init__(self, redis_url: str = "redis://localhost:6379/0"):
-        try:
-            self.redis_client = redis.from_url(redis_url, decode_responses=True)
-            # 测试连接
-            self.redis_client.ping()
-            logger.info("Redis 连接成功")
-        except Exception as e:
-            logger.warning(f"Redis 连接失败: {e}，缓存功能将被禁用")
-            self.redis_client = None
+    def __init__(self, redis_url: Optional[str] = None):
+        # 优先用传入地址，否则回退到配置；均为空则禁用缓存
+        url = redis_url or settings.redis_url
+        self.redis_client = None
+        if url:
+            try:
+                self.redis_client = redis.from_url(url, decode_responses=True)
+                # 测试连接
+                self.redis_client.ping()
+                logger.info("Redis 连接成功")
+            except Exception as e:
+                logger.warning(f"Redis 连接失败: {e}，缓存功能将被禁用")
+                self.redis_client = None
+        else:
+            logger.info("未配置 REDIS_URL，缓存功能禁用")
         
         self.EMOTION_CURVE_TTL = 7 * 24 * 3600  # 7 天
         self.EMOTION_META_TTL = 24 * 3600  # 1 天
