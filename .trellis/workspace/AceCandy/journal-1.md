@@ -140,3 +140,36 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 5: TTS 朗读：回退短段合并为逐段 + 流式评估后弃
+
+**Date**: 2026-07-12
+**Task**: TTS 朗读：回退短段合并为逐段 + 流式评估后弃
+**Branch**: `main`
+
+### Summary
+
+短段合并虽减请求数，但合并段只能区间高亮、无法精确到单段，按需回退为逐段合成（每段独立请求+独立高亮，移除 MERGE_TARGET，保留 Web Audio+段间停顿+预热并发）。流式合成（端到端首段秒播）实现完成但浏览器实测卡顿 + 逐段下边际收益不值前后端协议与播放层重写的复杂度，评估后放弃，代码已 stash drop，design 保留参考。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e831569` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
