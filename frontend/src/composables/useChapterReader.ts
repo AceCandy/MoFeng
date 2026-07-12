@@ -74,8 +74,6 @@ const TRAILING_FILLER = '。'
 const PREFETCH_AHEAD = 2
 /** 有效音频最短时长（秒）：低于此值视为空/损坏音频，避免静默跳过整段 */
 const MIN_VALID_AUDIO_SECONDS = 0.2
-/** 短段合并目标字数：相邻短段落拼到约此字数再送 TTS，减少请求往返；始终按完整段落闭合、不切断段落 */
-const MERGE_TARGET = 400
 const VOICE_STORAGE_KEY = 'mofeng:reader-voice'
 const RATE_STORAGE_KEY = 'mofeng:reader-rate'
 /** 模型 TTS 全局音色偏好（朗读控件选择，按协议匹配候选），每台机器独立、存 localStorage */
@@ -117,8 +115,8 @@ const splitLongUnit = (unit: string, limit: number): string[] => {
   return chunks
 }
 
-/** 按正文展示段落构建朗读计划：标题段 + 正文段（相邻短段落合并到约 MERGE_TARGET 字以减少请求往返，
- *  始终按完整段落闭合、绝不切断；仅单段超 TTS 上限时才内部切分），记录每段所属正文段落区间 */
+/** 按正文展示段落构建朗读计划：标题段 + 正文段逐段独立（每段一条合成请求、独立高亮），
+ *  仅单段超 TTS 上限时才内部切分；记录每段所属正文段落（区间起点=终点=段落下标） */
 const buildPlayback = (
   title: string,
   content: string,
@@ -129,40 +127,11 @@ const buildPlayback = (
     segments.push({ text: chunk, paragraphIndex: -1, paragraphEnd: -1 })
   }
   const paragraphs = splitChapterParagraphs(content)
-  // 相邻短段落按完整段落合并：累计到约 MERGE_TARGET 字即在段落边界闭合，绝不切断段落
-  let buffer: string[] = []
-  let bufferStart = 0
-  let bufferLen = 0
-  const flush = (): void => {
-    if (buffer.length === 0) return
-    segments.push({
-      text: buffer.join('\n'),
-      paragraphIndex: bufferStart,
-      paragraphEnd: bufferStart + buffer.length - 1,
-    })
-    buffer = []
-    bufferLen = 0
-  }
   paragraphs.forEach((paragraph, index) => {
-    const chunks = splitLongUnit(paragraph, limit)
-    if (chunks.length > 1) {
-      // 单段超 TTS 上限必须切分：先闭合当前合并段，每个切片独占并归属本段
-      flush()
-      chunks.forEach((chunk) => {
-        segments.push({ text: chunk, paragraphIndex: index, paragraphEnd: index })
-      })
-      return
+    for (const chunk of splitLongUnit(paragraph, limit)) {
+      segments.push({ text: chunk, paragraphIndex: index, paragraphEnd: index })
     }
-    const text = chunks[0]
-    // 加入本段会超目标且当前合并段非空：先在段落边界闭合，保证不切断本段
-    if (buffer.length > 0 && bufferLen + text.length > MERGE_TARGET) {
-      flush()
-    }
-    if (buffer.length === 0) bufferStart = index
-    buffer.push(text)
-    bufferLen += text.length
   })
-  flush()
   return { segments, paragraphCount: paragraphs.length }
 }
 

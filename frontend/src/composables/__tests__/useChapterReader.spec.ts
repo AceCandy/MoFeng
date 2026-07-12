@@ -242,8 +242,8 @@ describe('useChapterReader', () => {
 
     const playback = reader.start('标题', '第一段。\n\n第二段。')
     await vi.waitFor(() => expect(FakeBufferSource.instances).toHaveLength(1))
-    // 两段短正文合并成一次合成请求：标题 + 合并正文段 = 2 段，启动即预热这 2 段
-    expect(synthesize).toHaveBeenCalledTimes(2)
+    // 逐段合成：标题 + 两段正文 = 3 段，启动即预热这 3 段（PREFETCH_AHEAD=2）
+    expect(synthesize).toHaveBeenCalledTimes(3)
 
     reader.pause()
     expect(reader.status.value).toBe('paused')
@@ -253,28 +253,6 @@ describe('useChapterReader', () => {
 
     reader.stop()
     expect(reader.status.value).toBe('idle')
-    await playback
-  })
-
-  it('merges adjacent short paragraphs to cut synthesis requests', async () => {
-    const synthesize = vi.fn(async (text: string) => new Blob([text], { type: 'audio/mpeg' }))
-    const reader = useChapterReader({
-      loadConfig: async () => bundle(true),
-      synthesize,
-      notify: vi.fn(),
-    })
-
-    // 三段短正文合计远低于合并阈值，应合并成一次合成请求（而非每段各请求一次）
-    const playback = reader.start('标题', '短句一。\n\n短句二。\n\n短句三。')
-    await vi.waitFor(() => expect(FakeBufferSource.instances).toHaveLength(1))
-    // 标题段 + 合并正文段 = 2 次请求，三段正文并入同一条合成文本
-    expect(synthesize).toHaveBeenCalledTimes(2)
-    const merged = synthesize.mock.calls
-      .map((call) => call[0] as string)
-      .find((text) => text.includes('短句一'))
-    expect(merged).toContain('短句二')
-    expect(merged).toContain('短句三')
-    reader.stop()
     await playback
   })
 
