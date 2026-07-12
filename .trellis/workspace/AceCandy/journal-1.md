@@ -173,3 +173,36 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 6: TTS 朗读语气优化：有声书主播提示词 + 去模型侧变速
+
+**Date**: 2026-07-13
+**Task**: TTS 朗读语气优化：有声书主播提示词 + 去模型侧变速
+**Branch**: `main`
+
+### Summary
+
+MiMo 朗读链路改造：(1) _synthesize_mimo 删除 speed 形参与「正常语速 X 倍朗读」prompt 变速分支，倍速统一交给前端 AudioBufferSourceNode.playbackRate，消除前后端双重变速隐患；(2) messages 改为 [system 有声书主播提示词(方案B), assistant 原文]，引导声情并茂、忠实原文的演播风格。openai_speech 协议、前端、schema 均未触碰。验证：backend/tests/test_tts_service.py 12 passed。未验证：真实 MiMo 端到端合成（需上游凭证）。顺带调研并记录了 AudioBufferSourceNode 变调问题（独立后续）。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6e98eef` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
