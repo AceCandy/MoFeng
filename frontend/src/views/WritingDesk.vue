@@ -301,6 +301,7 @@ import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
 import { desktopMin, mobileMax } from '@/constants/responsive'
 import { countNonWhitespaceChars } from '@/utils/text'
 import {
+  cleanVersionContent,
   formatChapterGenerationError,
   resolveChapterNumberForEntry,
   resolveChapterNumberForProjectEntry,
@@ -628,53 +629,6 @@ const isCurrentVersion = (versionIndex: number) => {
   const cleanVersionContentStr = cleanVersionContent(availableVersions.value[versionIndex].content)
 
   return cleanCurrentContent === cleanVersionContentStr
-}
-
-const cleanVersionContent = (content: string): string => {
-  if (!content) return ''
-
-  // 尝试解析JSON，看是否是完整的章节对象
-  try {
-    const parsed = JSON.parse(content)
-    const extractContent = (value: any): string | null => {
-      if (!value) return null
-      if (typeof value === 'string') return value
-      if (Array.isArray(value)) {
-        for (const item of value) {
-          const nested = extractContent(item)
-          if (nested) return nested
-        }
-        return null
-      }
-      if (typeof value === 'object') {
-        for (const key of ['content', 'chapter_content', 'chapter_text', 'text', 'body', 'story']) {
-          if (value[key]) {
-            const nested = extractContent(value[key])
-            if (nested) return nested
-          }
-        }
-      }
-      return null
-    }
-    const extracted = extractContent(parsed)
-    if (extracted) {
-      // 如果是章节对象/数组，提取正文
-      content = extracted
-    }
-  } catch (error) {
-    // 如果不是JSON，继续处理字符串
-  }
-
-  // 去掉开头和结尾的引号
-  let cleaned = content.replace(/^"|"$/g, '')
-
-  // 处理转义字符
-  cleaned = cleaned.replace(/\\n/g, '\n') // 换行符
-  cleaned = cleaned.replace(/\\"/g, '"') // 引号
-  cleaned = cleaned.replace(/\\t/g, '\t') // 制表符
-  cleaned = cleaned.replace(/\\\\/g, '\\') // 反斜杠
-
-  return cleaned
 }
 
 const canGenerateChapter = (chapterNumber: number) => {

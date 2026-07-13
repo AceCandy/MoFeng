@@ -225,6 +225,7 @@ import { computed, nextTick, ref } from 'vue'
 import DOMPurify from 'dompurify'
 import type { Chapter, ChapterGenerationResponse, ChapterVersion } from '@/api/novel'
 import { countNonWhitespaceChars } from '@/utils/text'
+import { cleanVersionContent } from '@/utils/chapter'
 
 interface Props {
   selectedChapter: Chapter | null
@@ -409,45 +410,6 @@ const isCurrentVersion = (versionIndex: number) => {
   const cleanCurrentContent = cleanVersionContent(props.selectedChapter.content)
   const cleanVersionContentStr = cleanVersionContent(props.availableVersions[versionIndex].content)
   return cleanCurrentContent === cleanVersionContentStr
-}
-
-const cleanVersionContent = (content: string): string => {
-  if (!content) return ''
-  try {
-    const parsed = JSON.parse(content)
-    const extractContent = (value: any): string | null => {
-      if (!value) return null
-      if (typeof value === 'string') return value
-      if (Array.isArray(value)) {
-        for (const item of value) {
-          const nested = extractContent(item)
-          if (nested) return nested
-        }
-        return null
-      }
-      if (typeof value === 'object') {
-        for (const key of ['content', 'chapter_content', 'chapter_text', 'text', 'body', 'story']) {
-          if (value[key]) {
-            const nested = extractContent(value[key])
-            if (nested) return nested
-          }
-        }
-      }
-      return null
-    }
-    const extracted = extractContent(parsed)
-    if (extracted) {
-      content = extracted
-    }
-  } catch (error) {
-    // not a json
-  }
-  let cleaned = content.replace(/^"|"$/g, '')
-  cleaned = cleaned.replace(/\\n/g, '\n')
-  cleaned = cleaned.replace(/\\"/g, '"')
-  cleaned = cleaned.replace(/\\t/g, '\t')
-  cleaned = cleaned.replace(/\\\\/g, '\\')
-  return cleaned
 }
 
 const getVersionWordCount = (content: string): number => {
