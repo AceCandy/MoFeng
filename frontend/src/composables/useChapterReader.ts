@@ -151,6 +151,14 @@ export const pickChineseVoice = (): SpeechSynthesisVoice | null => {
   return pool.find((voice) => /natural|neural/i.test(voice.name)) ?? pool[0]
 }
 
+/** <audio> 元素解码/播放失败时抛出，触发兜底切回 Web Audio */
+class AudioDecodeError extends Error {
+  constructor() {
+    super('audio element playback failed')
+    this.name = 'AudioDecodeError'
+  }
+}
+
 export const useChapterReader = (
   dependencies: ChapterReaderDependencies = {},
 ): ChapterReader => {
@@ -180,16 +188,24 @@ export const useChapterReader = (
   const rate = ref(Number.isFinite(storedRate) && storedRate > 0 ? storedRate : 1)
   let runId = 0
   let abortController: AbortController | null = null
-  // 用 Web Audio（AudioBufferSourceNode）播放模型音频：HTMLAudioElement 对部分 wav 有静音 bug，
-  // decodeAudioData 解码更稳健，能播放 <audio> 播不出的音频。
+  // 模型段播放：主路径用 <audio> 元素（preservesPitch 保调，变速不变调）；
+  // <audio> 解码失败的段落兜底回 Web Audio（decodeAudioData 更宽容、能出声但变调）。
+  // 后端已把上游 wav 标准化为 16-bit PCM，<audio> 主路径通常不再静音。
   let audioCtx: AudioContext | null = null
   let bufferSource: AudioBufferSourceNode | null = null
   let decodedBuffer: AudioBuffer | null = null
   let startedAt = 0
   let startOffset = 0
   let bufferEndedHandler: (() => void) | null = null
-  let resolveCurrentPlayback: (() => void) | null = null
-  let previewSource: AudioBufferSourceNode | null = null
+  // 外部强制结束当前播放（stop/换段调用），视为正常完成；audio/webaudio/浏览器三路共用
+  let resolvePlayback: (() => void) | null = null
+  // 当前模型段播放后端：'audio' 主路径，'webaudio' 兜底；浏览器朗读路径不经过此处
+  let activeBackend: 'audio' | 'webaudio' | null = null
+  let audioEl: HTMLAudioElement | null = null
+  let currentObjectUrl: string | null = null
+  let previewEl: HTMLAudioElement | null = null
+  // 试听 <audio> 的 objectURL：finish/fail/stopPreview 三处都会 revoke，防打断时泄漏
+  let previewObjectUrl: string | null = null
 
   const getAudioContext = (): AudioContext | null => {
     const Ctor = window.AudioContext
@@ -211,6 +227,43 @@ export const useChapterReader = (
     }
   }
 
+  // <audio> 主路径保调：preservesPitch 设 true（含历史前缀兼容），变速不变调
+  const setPreservePitch = (el: HTMLAudioElement) => {
+    const prefixed = el as HTMLAudioElement & {
+      preservesPitch?: boolean
+      mozPreservesPitch?: boolean
+      webkitPreservesPitch?: boolean
+    }
+    prefixed.preservesPitch = true
+    prefixed.mozPreservesPitch = true
+    prefixed.webkitPreservesPitch = true
+  }
+
+  const getAudioElement = (): HTMLAudioElement | null => {
+    if (typeof window === 'undefined' || typeof window.Audio !== 'function') return null
+    if (!audioEl) {
+      audioEl = new Audio()
+      setPreservePitch(audioEl)
+    }
+    return audioEl
+  }
+
+  /** 释放 <audio> 元素：清监听、暂停、移除 src 触发卸载、revoke objectURL */
+  const stopAudioElement = () => {
+    if (audioEl) {
+      audioEl.onended = null
+      audioEl.onerror = null
+      audioEl.pause()
+      audioEl.removeAttribute('src')
+      audioEl.load()
+      audioEl = null
+    }
+    if (currentObjectUrl) {
+      URL.revokeObjectURL(currentObjectUrl)
+      currentObjectUrl = null
+    }
+  }
+
   /** 当前已播放秒数：用于暂停续播与空音频判定 */
   const getElapsed = (): number => {
     if (!audioCtx || !decodedBuffer) return 0
@@ -221,7 +274,9 @@ export const useChapterReader = (
   const releasePlayback = () => {
     bufferEndedHandler = null
     stopBufferSource()
+    stopAudioElement()
     decodedBuffer = null
+    activeBackend = null
   }
 
   // 优先用户在播放条选的音色，否则按 pickChineseVoice 自动选
@@ -283,44 +338,55 @@ export const useChapterReader = (
   }
 
   const stopPreview = () => {
-    if (previewSource) {
-      previewSource.onended = null
-      try {
-        previewSource.stop()
-      } catch {
-        // 已停止
-      }
-      previewSource.disconnect()
-      previewSource = null
+    if (previewEl) {
+      previewEl.onended = null
+      previewEl.onerror = null
+      previewEl.pause()
+      previewEl.removeAttribute('src')
+      previewEl.load()
+      previewEl = null
+    }
+    if (previewObjectUrl) {
+      URL.revokeObjectURL(previewObjectUrl)
+      previewObjectUrl = null
     }
   }
 
-  /** 试听模型音色：合成固定样例句并用 Web Audio 播放；借用 status=generating 防重入（按钮随之禁用） */
+  /** 试听模型音色：合成固定样例句并用 <audio> 播放（保调）；借用 status=generating 防重入（按钮随之禁用） */
   const previewModelVoice = async () => {
     stopPreview()
     status.value = 'generating'
     try {
       const blob = await synthesize(PREVIEW_SAMPLE, { voice: modelVoice.value }, abortController?.signal)
       if (status.value !== 'generating') return
-      const ctx = getAudioContext()
-      if (!ctx) {
+      if (typeof window === 'undefined' || typeof window.Audio !== 'function') {
         notify('模型试听失败。', 'error')
         if (status.value === 'generating') status.value = 'idle'
         return
       }
-      if (ctx.state === 'suspended') void ctx.resume()
-      const buffer = await ctx.decodeAudioData(await blob.arrayBuffer())
-      const source = ctx.createBufferSource()
-      source.buffer = buffer
-      source.playbackRate.value = rate.value
-      source.connect(ctx.destination)
+      const el = new Audio()
+      setPreservePitch(el)
+      el.playbackRate = rate.value
+      const url = URL.createObjectURL(blob)
+      previewObjectUrl = url
+      el.src = url
       const finish = () => {
-        if (previewSource === source) previewSource = null
+        URL.revokeObjectURL(url)
+        previewObjectUrl = null
+        if (previewEl === el) previewEl = null
         if (status.value === 'generating') status.value = 'idle'
       }
-      source.onended = finish
-      previewSource = source
-      source.start()
+      const fail = () => {
+        URL.revokeObjectURL(url)
+        previewObjectUrl = null
+        if (previewEl === el) previewEl = null
+        notify('模型试听失败。', 'error')
+        if (status.value === 'generating') status.value = 'idle'
+      }
+      el.onended = finish
+      el.onerror = fail
+      previewEl = el
+      el.play().catch(fail)
     } catch {
       notify('模型试听失败。', 'error')
       stopPreview()
@@ -353,16 +419,62 @@ export const useChapterReader = (
     releasePlayback()
     stopPreview()
     window.speechSynthesis?.cancel()
-    resolveCurrentPlayback?.()
-    resolveCurrentPlayback = null
+    resolvePlayback?.()
+    resolvePlayback = null
     status.value = 'idle'
     isBrowserFallback.value = false
     currentParagraphIndex.value = -1
     currentParagraphEnd.value = -1
   }
 
-  /** 用 Web Audio 播放一段音频 blob；支持暂停续播（start/stop + offset 记忆） */
-  const playAudio = async (blob: Blob, currentRun: number): Promise<void> => {
+  /** 主路径：用 <audio> 元素播放（preservesPitch 保调）；error 时抛 AudioDecodeError 触发兜底 */
+  const playWithAudioElement = (blob: Blob, currentRun: number): Promise<void> => {
+    status.value = 'playing'
+    return new Promise<void>((resolve, reject) => {
+      const el = getAudioElement()
+      if (!el) {
+        reject(new Error('当前浏览器不支持音频播放'))
+        return
+      }
+      if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl)
+      currentObjectUrl = URL.createObjectURL(blob)
+      el.src = currentObjectUrl
+      el.playbackRate = rate.value
+      let settled = false
+      const cleanup = () => {
+        el.onended = null
+        el.onerror = null
+      }
+      // stop/换段时外部强制结束 → 视为正常完成
+      resolvePlayback = () => {
+        if (settled) return
+        settled = true
+        cleanup()
+        resolve()
+      }
+      el.onended = () => {
+        if (settled || currentRun !== runId) return
+        settled = true
+        cleanup()
+        resolve()
+      }
+      el.onerror = () => {
+        if (settled || currentRun !== runId) return
+        settled = true
+        cleanup()
+        reject(new AudioDecodeError())
+      }
+      el.play().catch(() => {
+        if (settled || currentRun !== runId) return
+        settled = true
+        cleanup()
+        reject(new AudioDecodeError())
+      })
+    })
+  }
+
+  /** 兜底路径：用 Web Audio（decodeAudioData）播放，能出声但变速会变调 */
+  const playWithWebAudio = async (blob: Blob, currentRun: number): Promise<void> => {
     if (currentRun !== runId) return
     stopBufferSource()
     const ctx = getAudioContext()
@@ -381,7 +493,7 @@ export const useChapterReader = (
     startOffset = 0
     status.value = 'playing'
     await new Promise<void>((resolve, reject) => {
-      resolveCurrentPlayback = resolve
+      resolvePlayback = resolve
       let finished = false
       bufferEndedHandler = () => {
         if (finished) return
@@ -407,8 +519,24 @@ export const useChapterReader = (
         reject(new Error('音频播放失败'))
       }
     })
-    resolveCurrentPlayback = null
+    resolvePlayback = null
     stopBufferSource()
+  }
+
+  /** 播放一段模型音频：<audio> 主路径（保调）→ error 则兜底 Web Audio（能出声） */
+  const playAudio = async (blob: Blob, currentRun: number): Promise<void> => {
+    activeBackend = 'audio'
+    try {
+      await playWithAudioElement(blob, currentRun)
+    } catch (error) {
+      if (currentRun !== runId) return
+      if (error instanceof AudioDecodeError) {
+        activeBackend = 'webaudio'
+        await playWithWebAudio(blob, currentRun)
+      } else {
+        throw error
+      }
+    }
   }
 
   const playBrowserSegments = async (
@@ -422,6 +550,8 @@ export const useChapterReader = (
       return
     }
     isBrowserFallback.value = true
+    // 浏览器朗读路径不经过 audio/webaudio 后端，置空让 pause/resume 只走 speechSynthesis
+    activeBackend = null
     for (let index = startIndex; index < playback.length && currentRun === runId; index += 1) {
       status.value = 'playing'
       currentParagraphIndex.value = playback[index].paragraphIndex
@@ -432,7 +562,7 @@ export const useChapterReader = (
       await new Promise<void>((resolve) => setTimeout(resolve, SEGMENT_GAP_MS))
       if (currentRun !== runId) return
       await new Promise<void>((resolve, reject) => {
-        resolveCurrentPlayback = resolve
+        resolvePlayback = resolve
         const utterance = new SpeechSynthesisUtterance(`${LEADING_FILLER}${playback[index].text}`)
         const voice = resolveVoice()
         if (voice) utterance.voice = voice
@@ -442,7 +572,7 @@ export const useChapterReader = (
         utterance.onerror = () => reject(new Error('浏览器朗读失败'))
         speech.speak(utterance)
       })
-      resolveCurrentPlayback = null
+      resolvePlayback = null
     }
   }
 
@@ -532,8 +662,10 @@ export const useChapterReader = (
 
   const pause = () => {
     if (status.value !== 'playing') return
-    // Web Audio 暂停：记录已播放 offset 后停止 source，resume 时从 offset 重建
-    if (bufferSource && audioCtx) {
+    // 按当前播放后端分派：audio 直接 pause（currentTime 自动记忆），webaudio 记 offset 后停 source
+    if (activeBackend === 'audio' && audioEl) {
+      audioEl.pause()
+    } else if (activeBackend === 'webaudio' && bufferSource && audioCtx) {
       startOffset = getElapsed()
       stopBufferSource()
     }
@@ -543,7 +675,9 @@ export const useChapterReader = (
 
   const resume = () => {
     if (status.value !== 'paused') return
-    if (decodedBuffer && audioCtx) {
+    if (activeBackend === 'audio' && audioEl) {
+      void audioEl.play()
+    } else if (activeBackend === 'webaudio' && decodedBuffer && audioCtx) {
       if (audioCtx.state === 'suspended') void audioCtx.resume()
       const source = audioCtx.createBufferSource()
       source.buffer = decodedBuffer
