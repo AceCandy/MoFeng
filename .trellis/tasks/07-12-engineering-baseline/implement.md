@@ -33,3 +33,19 @@
 
 - [x] **(a) 删 `upsertChapter`(novel.ts:93-105) 死代码**（2026-07-13）：rg 全 src 无调用点，被 `upsertChapterInProjectCache` 取代。surgical 删除，消除审计点名反例。验证：vue-tsc RC=0 / vitest 120 绿。
 - [ ] **(b) 高交互 mutation 三段式乐观更新**（评估完成，实现按需）：逐 mutation 评估见 `design.md` Slice C (b)。删除类（deleteNovels/deleteChapter）最适合但需补回滚测试；生成/评审类不适合（与 SSE 状态竞争）。属对外行为增强，单独会话推进。
+
+## Slice D — WDWorkspace template 子组件抽取（2026-07-13 起）
+
+Slice B 抽完 composable 后 template/style 仍在原组件。本 slice 把内聚 template 块 + 其 scoped style 抽成子组件，按 `design.md` Slice D 契约表风险递增每次一块。
+
+- [x] **`EditChapterModal`**（2026-07-13）：本次。composable useEditChapterModal 随 template 迁入子组件（useDialogA11y 在子 setup 同步调用），父按钮 ref 调 openEditModal。详见 `design.md` Slice D。
+  - [x] 新建 `components/writing-desk/workspace/EditChapterModal.vue`（174 行）：template 搬 440-524（selectedChapterNumber→chapterNumber props），style 搬 1599-1638，内部调 useEditChapterModal（输入 computed(()=>props.xxx) 包装），defineExpose({ openEditModal })，emit editChapter，补 AIMETA 首行（同 workspace 子组件惯例）
+  - [x] WDWorkspace：template 440-524 替换为 `<EditChapterModal ref="editModalRef" :has-content :resolved-content :chapter-number @edit-chapter>`
+  - [x] WDWorkspace：删 style 1599-1638（.m3-editor-dialog*/.md-textarea*）
+  - [x] WDWorkspace：删 script destructure 678-695 + useEditChapterModal import(534)；加 EditChapterModal import + `editModalRef`
+  - [x] WDWorkspace：编辑草稿按钮(68) `@click="openEditModal"` → `@click="editModalRef?.openEditModal()"`
+  - [x] 验证：vue-tsc RC=0 / vitest 120 绿（chapterDraftFinalizeStatic 8 / wdWorkspaceLockedChapter 10 / uiAuditRegression 34）/ eslint 0 新增（1 warning pre-existing @/api/novel）/ diff 复核 6 处改动精确等价。WDWorkspace 1980→1844（−136）
+
+### 回滚点
+
+子组件新建 + WDWorkspace 改造分离。若 vitest 红，先 `git checkout -- WDWorkspace.vue && rm EditChapterModal.vue` 全量回退，再定位。

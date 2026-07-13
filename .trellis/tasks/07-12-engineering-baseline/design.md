@@ -118,3 +118,55 @@ WDWorkspace.vue 共 2427 行（template 527 / script 1088 / style 812）。scrip
 
 **结论**：乐观属体验增强（非正确性 bug）且是对外行为变化（UI 立即响应 vs 等服务器）。最适合的删除类需补回滚测试（删除失败恢复列表项），是独立工作。本会话不实现，按需评估后单独会话推进。
 
+## Slice D 设计：WDWorkspace template 子组件抽取（2026-07-13 起）
+
+Slice B 已抽 4 个 composable（script −447 行），但 template 525 / style 771 仍在原组件，WDWorkspace 1980 行。acceptance「5 大组件 <500 行」需继续拆 template/style。本 slice 把内聚的 template 块连同其 scoped style 抽成独立子组件，按风险递增每次一块。
+
+> scoped 约束：Vue scoped style 带 data-v-xxx 属性，父组件 scoped CSS **不作用**于子组件内部元素，故每块的 style 必须随 template 迁移到子组件。
+
+### 候选块契约表
+
+| 子组件 | template 行 | style 行 | 耦合符号 | 风险 | 顺序 |
+|---|---|---|---|---|---|
+| **EditChapterModal** | 440-524 (~85) | 1599-1638 (~40) | useEditChapterModal 全部返回值 + `selectedChapterNumber`(props) | **低**（composable 已抽，唯一遗留是 template） | ✅ 1（已完成 2026-07-13） |
+| ChapterEvaluationPanel | 300-434 (~135) | 1865-1980 (~116) | `parsedEvaluation`/`sortedEvaluationEntries`/`getEvaluationVersionNumber`/`parseMarkdown` + `selectedChapter.evaluation` + `evaluatingChapter`(props) | 中（4 个逻辑符号 + marked/DOMPurify 迁移） | 2 |
+| ChapterVersionsPanel | 250-298 (~49) | 1801-1863 (~63) | `previewVersionIndex`/`previewVersionParagraphs`/`previewVersionWordCount`/`selectVersionFromTab`/`isCurrentVersion` + watch(props.selectedChapterNumber) | 中（状态群 + watch 迁移） | 3 |
+| WorkspaceHeader | 6-164 (~159) | 1230-1572 (~340，含 status-tag/toolbar/ai-menu) | `isFinalizedSuccessful`/`isDraftWaitingConfirm`/`hasSelectedChapterContent`/`chapterStatusLabel`/`chapterStatusTone` + useAiMenu 全返回值 + Tooltip + 大量 emit | 高（耦合最紧，可能再拆 toolbar/ai-menu） | 4 |
+
+核心动态分发（232-248 `<component :is="currentComponent">` + currentComponentProps 107 行数据装配）**不抽**，留组件。
+
+### 本次：EditChapterModal 抽取
+
+**边界**：composable `useEditChapterModal` **随 template 迁入子组件**（非留父组件传 ref）。理由：`useDialogA11y` 的 `watch(active, ..., {immediate})` + `onBeforeUnmount` 操作 `editDialogRef`/`editCloseButtonRef`，这些 DOM 在子组件内部，composable 必须在子组件 setup 同步调用才能正确绑定。父组件不再调 useEditChapterModal。
+
+**输入适配**：composable 签名要 `ComputedRef`，子组件 props 是裸值。子组件内用 `computed(() => props.xxx)` 包装传入，**composable 文件零改动**，行为等价。
+
+| 子组件 prop | 类型 | 来源（父） | composable 入参 |
+|---|---|---|---|
+| `hasContent` | boolean | `hasSelectedChapterContent` | hasContent |
+| `resolvedContent` | string | `selectedChapterResolvedContent` | resolvedContent |
+| `chapterNumber` | number \| null | `selectedChapterNumber`(props) | chapterNumber |
+
+**打开机制**：子组件 `defineExpose({ openEditModal })`，父编辑草稿按钮 `@click="editModalRef?.openEditModal()"`。openEditModal 内部 hasContent 守卫 + 预填 editingContent 逻辑保留（按钮本身也有 `:disabled="!hasSelectedChapterContent"` 双重守卫）。
+
+**输出**：子组件 `emit('editChapter', payload)`，父 `<EditChapterModal @edit-chapter="$emit('editChapter', $event)" />` 透传。
+
+**style 迁移**：scoped `.m3-editor-dialog` / `.m3-editor-dialog__header` / `.m3-editor-dialog__footer` / `.md-textarea` / `.md-textarea:focus`（1599-1638）整体搬到子组件。`.md-textarea` 在 WDWorkspace template 仅编辑框一处使用，迁移安全。
+
+**等价性**：逐行复刻 template 440-524；composable 调用从父 setup 迁到子 setup（输入 computed 包装、useDialogA11y 子组件 setup 同步调用，focus trap / body scroll lock / Esc 关闭行为不变）。
+
+### 验证
+
+- `cd frontend && npx vue-tsc --noEmit`（类型 + ref/expose 正确性）
+- `cd frontend && npx vitest run`（wdWorkspaceLockedChapter/chapterDraftFinalizeStatic/uiAuditRegression 全绿 = 挂载正常）
+- 编辑流程靠逐行等价 + 手测「编辑草稿→改文→保存→emit editChapter→Esc/点遮罩关闭→焦点回归」
+
+### 回滚
+
+`git checkout -- WDWorkspace.vue && rm components/writing-desk/workspace/EditChapterModal.vue`，无数据/迁移影响。
+
+### 后续块（本次不做）
+
+- ChapterEvaluationPanel：纯展示子组件，props 收 `evaluation: string` + `evaluatingChapter`，内部重算 parsedEvaluation/sortedEvaluationEntries/parseMarkdown。收益最大（~251 行）但 marked 版本兼容分支需整迁。
+- ChapterVersionsPanel / WorkspaceHeader：见契约表，按风险递增跨会话推进。
+
