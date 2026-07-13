@@ -18,15 +18,16 @@
 
 每个文件改完即可单独 `git checkout -- <file>` 回退。全部改完跑验证，若 vitest 红，先定位是哪文件的 import/调用受影响再决定整体 revert 还是单文件修。
 
-## Slice B — WDWorkspace composable 抽取（后续会话）
+## Slice B — WDWorkspace composable 抽取
 
-顺序（每抽完一个独立验证）：
-1. `useVersionResolver`（版本解析，WDWorkspace 764-878）
-2. `useChapterStatus`（章节状态判定，954-1143）
-3. `useAiMenu`（AI 菜单键盘交互，1184-1345）
-4. `useEditChapterModal`（编辑 modal，659-746，配合已有 `WDEditChapterModal.vue`）
+按 `design.md` 契约，每会话抽一个、独立验证。实际顺序按「边界独立度」而非原编号——editModal 最干净先做；versionResolver 是依赖根其次；chapterStatus 最分散；aiMenu 混工具函数最后。
 
-需补 `design.md` 的 props/emits 契约与每个 composable 的输入输出清单后再 start。
+- [x] **`useEditChapterModal`**（2026-07-13）：抽出原 659-706 编辑模态框块 → `composables/useEditChapterModal.ts`（90 行）。WDWorkspace 净 −31 行。逐行等价（含原 `saveEditedContent` 的 isSaving 阻断时序，未顺手修）。解构调用插在 `hasSelectedChapterContent`（原 835）之后规避 TDZ。验证：vue-tsc exit0 / vitest 120 绿 / eslint 0 新增（2 warning 均 pre-existing）。
+- [ ] `useVersionResolver`（版本解析，依赖根，被其余 3 个消费）
+- [ ] `useChapterStatus`（章节状态判定，最分散，~18 个 computed/fn）
+- [ ] `useAiMenu`（AI 菜单键盘 + outsideClick 生命周期，与 openContentOptimizer 等工具函数混杂需先切分边界）
+
+`design.md` Slice B 契约表已沉淀 4 个 composable 的输入/输出/template 引用/副作用。后续会话直接按契约抽取，无需重新分析。
 
 ## Slice C — 乐观更新规范化（后续会话）
 

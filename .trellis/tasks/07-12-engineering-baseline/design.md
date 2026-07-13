@@ -51,3 +51,32 @@
 ### 回滚
 
 纯前端 5 文件改动，`git checkout -- <files>` 或 `git revert <commit>` 即可全量回滚，无数据/迁移影响。
+
+## Slice B 设计：WDWorkspace composable 抽取
+
+WDWorkspace.vue 共 2427 行（template 527 / script 1088 / style 812）。script 抽 4 个 composable，template/style **不动**。依赖链：`useVersionResolver`（依赖根）→ `useChapterStatus` / `useEditChapterModal` / `useAiMenu` 消费它。4 候选耦合较紧，按 implement.md「每抽完一个独立验证」节奏，**每会话只抽一个**。
+
+### composable 契约（本次仅实现 editModal；余 3 个契约先行沉淀供后续会话）
+
+| composable | 输入（依赖） | 输出（return） | template 引用 | 副作用 | 本次 |
+|---|---|---|---|---|---|
+| `useEditChapterModal` | `hasContent`/`resolvedContent`(versionResolver 的 computed)、`chapterNumber`(computed)、`onEditChapter`(emit 回调) | `showEditModal`/`editDialogRef`/`editCloseButtonRef`/`editDialogTitleId`/`editingContentInputId`/`editingContent`/`isSaving`/`editingWordCount`/`openEditModal`/`closeEditModal`/`saveEditedContent` | 模态框 440-524 + `openEditModal` 按钮(68) | 内部调 `useDialogA11y`（watch+onBeforeUnmount，setup 同步链合法） | ✅ |
+| `useVersionResolver` | `selectedChapter`/`selectedChapterOutline`、props.availableVersions/selectedVersionIndex | `selectedChapterResolvedContent`/`selectedChapterForDisplay`/`hasSelectedChapterContent` + 4 个 resolve 纯函数 | 多处 `hasSelectedChapterContent`/`cleanVersionContent(...)` | 无 | ⏳ |
+| `useChapterStatus` | versionResolver 全输出 + props.* | 18 个状态 computed/fn（label/tone/locked/toolbar/generating/failed...） | 状态标签/工具栏可见性/currentComponent | 无 | ⏳ |
+| `useAiMenu` | chapterStatus.`isSelectedChapterGeneratingLike`、`isChapterContentView`、`bodyComponentRef`、props | `showAiMenu`/`aiMenu*` refs + 菜单键盘/focus/handle 函数 | AI 菜单 86-159 + handle 函数 | `onMounted`/`onUnmounted` 注册 outsideClick | ⏳ |
+
+### 本次：useEditChapterModal 抽取
+
+**等价性**：逐行复刻原 659-706，**含原 `saveEditedContent` 既有行为**——`emit('editChapter')` 后调 `closeEditModal()`，但此时 `isSaving=true` 使 `closeEditModal` 早返回，模态框在 `finally` 置 `isSaving=false` 后仍保持开启。此为原行为（疑 bug），重构**保持不改**，仅记录。
+
+**TDZ 注意**：composable 调用同步求值，传入的 `hasSelectedChapterContent`/`selectedChapterResolvedContent` 必须已声明。二者定义在原 821/835，故解构调用**插在 835 `hasSelectedChapterContent` 定义之后**，不能放原 659 位。
+
+**新增**：`frontend/src/composables/useEditChapterModal.ts`。**改动**：`WDWorkspace.vue`（删 useDialogA11y import → 加 useEditChapterModal import、删 659-706、插解构调用）。template/style 零改动。
+
+### 验证
+- `cd frontend && npx vue-tsc --noEmit`（类型 + 解构正确性）
+- `cd frontend && npx vitest run`（mount 套件 wdWorkspaceLockedChapter/chapterDraftFinalizeStatic/uiAuditRegression 全绿 = 组件可正常渲染挂载）
+- 编辑流程无专门 DOM 测试，靠逐行等价 + 手测「编辑草稿→改文→保存→emit editChapter」
+
+### 回滚
+`git checkout -- WDWorkspace.vue && rm composables/useEditChapterModal.ts`，无数据/迁移影响。
