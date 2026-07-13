@@ -206,3 +206,36 @@ MiMo 朗读链路改造：(1) _synthesize_mimo 删除 speed 形参与「正常�
 ### Next Steps
 
 - None - task complete
+
+
+## Session 7: 朗读变速保调：audio 元素替换 Web Audio 主路径
+
+**Date**: 2026-07-13
+**Task**: 朗读变速保调：audio 元素替换 Web Audio 主路径
+**Branch**: `main`
+
+### Summary
+
+模型段朗读主路径改用 <audio> 元素（preservesPitch 保调，变速不变调），<audio> error 时兜底 Web Audio（能出声但变调），再失败切浏览器 speechSynthesis；三级兜底链 audio→webaudio→浏览器。pause/resume/stop 按 activeBackend 分派。根因：后端已把上游 wav 标准化为 16-bit PCM，<audio> 不再静音，故从 Web Audio 切回 <audio>（AudioBufferSourceNode.playbackRate 无法保调，Web Audio 规范层面不支持）。trellis-check 独立复核修复试听 objectURL 泄漏 + 补 webaudio 兜底路径 pause/resume/stop 测试。vue-tsc 通过、16 测试绿。保调效果待人工实测。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ec98988` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
