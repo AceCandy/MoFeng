@@ -23,9 +23,9 @@
 按 `design.md` 契约，每会话抽一个、独立验证。实际顺序按「边界独立度」而非原编号——editModal 最干净先做；versionResolver 是依赖根其次；chapterStatus 最分散；aiMenu 混工具函数最后。
 
 - [x] **`useEditChapterModal`**（2026-07-13）：抽出原 659-706 编辑模态框块 → `composables/useEditChapterModal.ts`（90 行）。WDWorkspace 净 −31 行。逐行等价（含原 `saveEditedContent` 的 isSaving 阻断时序，未顺手修）。解构调用插在 `hasSelectedChapterContent`（原 835）之后规避 TDZ。验证：vue-tsc exit0 / vitest 120 绿 / eslint 0 新增（2 warning 均 pre-existing）。
-- [ ] `useVersionResolver`（版本解析，依赖根，被其余 3 个消费）
-- [ ] `useChapterStatus`（章节状态判定，最分散，~18 个 computed/fn）
-- [ ] `useAiMenu`（AI 菜单键盘 + outsideClick 生命周期，与 openContentOptimizer 等工具函数混杂需先切分边界）
+- [x] **`useVersionResolver`**（2026-07-13）：抽出原 676-788 版本解析块（4 个 resolve 纯函数 + 3 个 computed）→ `composables/useVersionResolver.ts`（145 行）。`selectedChapter`/`selectedChapterOutline` 作为输入保留组件（职责=选中哪个章节，非解析正文）。4 个 resolve 纯函数仅内部互调，只 return 3 个 computed（比 design.md 契约更干净，去除未用暴露）。解构调用插在 `selectedChapterOutline` 之后规避 TDZ。验证：vue-tsc RC=0 / vitest 120 绿。
+- [x] **`useAiMenu`**（2026-07-13）：抽出 AI 菜单状态(原 591-596) + 键盘/聚焦/开关(原 1012-1109) + 内容优化 handler(原 1122-1173) + onMounted/onUnmounted 的 click 监听 → `composables/useAiMenu.ts`（214 行）。`onMounted`/`onUnmounted` 拆分：click 监听进 composable，voices/chapterReader 留组件（Vue 支持多个生命周期钩子）。`ChapterContentExpose` 用结构同构的 `BodyComponentExpose` 内联类型（不动组件接口位置）。`nextTick` 随 toggleAiMenu 移走、组件不再用已删 import。return 15 值。验证：vue-tsc RC=0 / vitest 120 绿 / eslint 0 新增（2 warning 均 pre-existing）。
+- [ ] `useChapterStatus`（章节状态判定，最分散）—— **暂缓新会话**：706-1010 区含「状态判定 + 组件分发(`currentComponent` 引用 6 个 .vue 组件实例) + 朗读控件 + 通用工具」四类混杂，`currentComponentProps`(1231) 远在 aiMenu 区之后需跨区移位。4 个 composable 里耦合最紧、风险最高，按 design.md「每会话一个 + 在场逐块验证」单独会话。
 
 `design.md` Slice B 契约表已沉淀 4 个 composable 的输入/输出/template 引用/副作用。后续会话直接按契约抽取，无需重新分析。
 

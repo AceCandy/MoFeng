@@ -39,7 +39,7 @@
 
 **#22 按风险切三 slice 推进（见 `design.md` / `implement.md`），任务已 `task.py start`（in_progress）**：
 - ✅ **Slice A `cleanVersionContent` 去重**（已完成 + 验证绿）：删 5 处逐字副本（WritingDesk/WDWorkspace/WDVersionDetailModal/VersionSelector/ChapterContent），统一 `import { cleanVersionContent } from '@/utils/chapter'`。5 副本与权威版逐行等价（已比对）。验证：`vue-tsc --noEmit` exit 0 + `vitest run` 120/120 绿（含 uiAuditRegression 34 / wdWorkspaceLockedChapter 10 / chapterDraftFinalizeStatic 8）+ ESLint 0 error（7 warning 均为 pre-existing 分层越界，非本次引入）。diff +5/−204。**Acceptance 第 4 项后半句「cleanVersionContent 仅 utils 一处定义」已达成。**
-- 🔄 **Slice B** WDWorkspace composable 抽取（4 个，每会话 1 个）：✅ `useEditChapterModal` 已抽出 → `composables/useEditChapterModal.ts`（90 行），WDWorkspace 净 −31 行，vue-tsc/vitest 120 绿；⏳ 剩 `useVersionResolver`/`useChapterStatus`/`useAiMenu`。契约见 `design.md` Slice B 表。
+- 🔄 **Slice B** WDWorkspace composable 抽取（4 个，每会话 1-2 个）：✅ `useEditChapterModal`(90 行) / `useVersionResolver`(145 行) / `useAiMenu`(214 行) 已抽出，WDWorkspace 累计 2427→2118 行（−309），vue-tsc/vitest 120 绿 / eslint 0 新增；⏳ 剩 `useChapterStatus`（最纠缠：含 `currentComponent` 组件分发 + 跨区 `currentComponentProps` + .vue import，单独会话）。契约见 `design.md` Slice B 表。
 - ⏳ **Slice C** 乐观更新规范化（TanStack 三段式）—— 前置 research 定位直接突变缓存的 mutation。
 
 > Slice B/C 未完成，Acceptance 第 4 项前半句「5 大组件 <500 行」仍需跨会话达成。
