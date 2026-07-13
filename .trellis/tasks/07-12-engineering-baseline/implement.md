@@ -25,10 +25,11 @@
 - [x] **`useEditChapterModal`**（2026-07-13）：抽出原 659-706 编辑模态框块 → `composables/useEditChapterModal.ts`（90 行）。WDWorkspace 净 −31 行。逐行等价（含原 `saveEditedContent` 的 isSaving 阻断时序，未顺手修）。解构调用插在 `hasSelectedChapterContent`（原 835）之后规避 TDZ。验证：vue-tsc exit0 / vitest 120 绿 / eslint 0 新增（2 warning 均 pre-existing）。
 - [x] **`useVersionResolver`**（2026-07-13）：抽出原 676-788 版本解析块（4 个 resolve 纯函数 + 3 个 computed）→ `composables/useVersionResolver.ts`（145 行）。`selectedChapter`/`selectedChapterOutline` 作为输入保留组件（职责=选中哪个章节，非解析正文）。4 个 resolve 纯函数仅内部互调，只 return 3 个 computed（比 design.md 契约更干净，去除未用暴露）。解构调用插在 `selectedChapterOutline` 之后规避 TDZ。验证：vue-tsc RC=0 / vitest 120 绿。
 - [x] **`useAiMenu`**（2026-07-13）：抽出 AI 菜单状态(原 591-596) + 键盘/聚焦/开关(原 1012-1109) + 内容优化 handler(原 1122-1173) + onMounted/onUnmounted 的 click 监听 → `composables/useAiMenu.ts`（214 行）。`onMounted`/`onUnmounted` 拆分：click 监听进 composable，voices/chapterReader 留组件（Vue 支持多个生命周期钩子）。`ChapterContentExpose` 用结构同构的 `BodyComponentExpose` 内联类型（不动组件接口位置）。`nextTick` 随 toggleAiMenu 移走、组件不再用已删 import。return 15 值。验证：vue-tsc RC=0 / vitest 120 绿 / eslint 0 新增（2 warning 均 pre-existing）。
-- [ ] `useChapterStatus`（章节状态判定，最分散）—— **暂缓新会话**：706-1010 区含「状态判定 + 组件分发(`currentComponent` 引用 6 个 .vue 组件实例) + 朗读控件 + 通用工具」四类混杂，`currentComponentProps`(1231) 远在 aiMenu 区之后需跨区移位。4 个 composable 里耦合最紧、风险最高，按 design.md「每会话一个 + 在场逐块验证」单独会话。
+- [x] **`useChapterStatus`**（2026-07-13）：抽出状态判定 + 组件分发（原 824-835 / 837-872 / 899-1005 三段不连续子区）→ `composables/useChapterStatus.ts`（215 行）。边界取舍：`currentComponentProps`（107 行数据装配，耦合朗读 ref + 锁定前置 + selectedChapterForDisplay）留组件，composable 只负责「判定 + 分发」。输入 6 项（props 子集 + selectedChapter + hasSelectedChapterContent + lockedPrerequisiteChapterNumber + isFinalizedSuccessful + isDraftWaitingConfirm），return 15 项（含 isInProgressStatus/isChapterFailed/isChapterEvaluationFailed/canGenerateChapter/isGeneratingInFlight，供 currentComponentProps 解构消费）。解构调用插在 lockedPrerequisiteChapterTitle 之后规避 TDZ。清理 5 个 orphan .vue import（WorkspaceInitial/VersionSelector/ChapterContent/ChapterFailed/ChapterEmpty，原仅 currentComponent 引用）。修复 Edit 引入的 `}`→`})`（lockedPrerequisiteChapterTitle computed 闭合，eslint parser 抓到、vue-tsc 容忍）。WDWorkspace 2118→1980（−138）。同步更新 chapterDraftFinalizeStatic.spec.ts 的 finalizing 字符串断言指向 composable。验证：vue-tsc RC=0 / vitest 120 绿 / eslint 0 新增（1 warning pre-existing @/api/novel）。
 
 `design.md` Slice B 契约表已沉淀 4 个 composable 的输入/输出/template 引用/副作用。后续会话直接按契约抽取，无需重新分析。
 
-## Slice C — 乐观更新规范化（后续会话）
+## Slice C — 乐观更新规范化
 
-前置 research：定位「直接突变 vue-query 缓存对象」的具体 mutation（字面量扫描无 `optimistic` 命名，需查 mutation 定义）。范本 `queries/novel.ts:285-462`。需补 mutation 测试后再改。
+- [x] **(a) 删 `upsertChapter`(novel.ts:93-105) 死代码**（2026-07-13）：rg 全 src 无调用点，被 `upsertChapterInProjectCache` 取代。surgical 删除，消除审计点名反例。验证：vue-tsc RC=0 / vitest 120 绿。
+- [ ] **(b) 高交互 mutation 三段式乐观更新**（评估完成，实现按需）：逐 mutation 评估见 `design.md` Slice C (b)。删除类（deleteNovels/deleteChapter）最适合但需补回滚测试；生成/评审类不适合（与 SSE 状态竞争）。属对外行为增强，单独会话推进。

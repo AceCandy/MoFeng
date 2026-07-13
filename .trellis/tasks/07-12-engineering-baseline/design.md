@@ -105,3 +105,16 @@ WDWorkspace.vue 共 2427 行（template 527 / script 1088 / style 812）。scrip
 - **(a) 删 `upsertChapter`(93-105) 死代码** —— 消除审计点名反例，surgical 零风险（无调用点），立即落地。
 - **(b) 高交互 mutation 补三段式乐观更新**（`onMutate` 写快照 + `onError` 回滚 + `onSettled` 同步）—— 需补 mutation 测试，风险中，按需评估。
 
+### Slice C (b) mutation 乐观更新评估（2026-07-13）
+
+逐 mutation 评估三段式乐观价值：
+
+| mutation | 现状 | 乐观价值 | 结论 |
+|---|---|---|---|
+| generate/evaluate/confirmFinalize/converse/generateOutline | 流式长任务，状态由 SSE/轮询推送 | 无 | 不适合（乐观与 SSE 状态竞争） |
+| deleteNovels / deleteChapter | onSuccess setQueryData | 高（删除高交互，乐观移除列表项立即响应） | 最适合，需补回滚测试 |
+| updateBlueprint / updateChapterOutline / editChapterContent | onSuccess setQueryData | 中（编辑类） | 可考虑 |
+| create/import/saveBlueprint/analyzeEmotion/applyOptimization | onSuccess invalidate/setQueryData | 低 | 不适合 |
+
+**结论**：乐观属体验增强（非正确性 bug）且是对外行为变化（UI 立即响应 vs 等服务器）。最适合的删除类需补回滚测试（删除失败恢复列表项），是独立工作。本会话不实现，按需评估后单独会话推进。
+
