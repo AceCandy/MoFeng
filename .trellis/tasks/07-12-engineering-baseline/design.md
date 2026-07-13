@@ -80,3 +80,28 @@ WDWorkspace.vue 共 2427 行（template 527 / script 1088 / style 812）。scrip
 
 ### 回滚
 `git checkout -- WDWorkspace.vue && rm composables/useEditChapterModal.ts`，无数据/迁移影响。
+
+## Slice C research（2026-07-13 前置定位）
+
+读 `queries/novel.ts` + 组件层缓存交互后的发现，**修正 Slice C 原始判断**：
+
+### 1. 缓存交互已规范化（范本段是对的）
+
+`useNovelMutationRefresh`(285-362) 辅助与各 mutation 已用**规范不可变 `setQueryData`**：
+- `upsertChapterInProjectCache`(321-352)：函数式 setQueryData，`[...currentProject.chapters]` 浅拷贝 + 不可变更新，返回新对象。
+- 各 mutation（create/import/converse/blueprint/delete）用 `onSuccess: setQueryData / invalidateQueries`。
+- 组件层（AppShell/WorkspaceEntry/PasswordManagement）仅 `invalidateQueries`/`fetchQuery`/`clearAuthQueryCache`，无直接 setQueryData mutate。
+
+### 2. 审计点名的「直接突变」反例 = 死代码
+
+`upsertChapter(project, chapter)`（novel.ts:93-105）直接 `project.chapters.splice/push/sort` —— **rg 全 src 无调用点**，是被 `upsertChapterInProjectCache` 取代的死代码。按 CLAUDE.md「pre-existing dead code 不擅删」，本轮仅记录。
+
+### 3. 真正缺失 = 乐观更新（增强，非 bug 修复）
+
+**所有 mutation 用 `onSuccess`（等服务器确认才更新 UI），无 `onMutate`/`onError`/`onSettled` 三段式乐观更新。** 属体验增强空间，非正确性 bug。需逐 mutation 评估乐观价值（编辑章节/删除小说适合乐观；生成类流式不适合）。
+
+### 下轮 Slice C 建议范围
+
+- **(a) 删 `upsertChapter`(93-105) 死代码** —— 消除审计点名反例，surgical 零风险（无调用点），立即落地。
+- **(b) 高交互 mutation 补三段式乐观更新**（`onMutate` 写快照 + `onError` 回滚 + `onSettled` 同步）—— 需补 mutation 测试，风险中，按需评估。
+
