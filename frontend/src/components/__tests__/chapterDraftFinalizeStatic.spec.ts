@@ -41,11 +41,13 @@ describe('chapter draft finalization contracts', () => {
   })
 
   it('renders finalizing status in the node console', () => {
+    // 状态标签逻辑随 chapterStatusLabel/chapterStatusTone 抽至 useChapterStatus
+    const statusLogic = readSource('src/composables/useChapterStatus.ts')
     const workspace = readSource('src/components/writing-desk/WDWorkspace.vue')
 
-    expect(workspace).toContain("case 'finalizing':")
-    expect(workspace).toContain("return '定稿中'")
-    expect(workspace).toContain("status === 'finalizing'")
+    expect(statusLogic).toContain("case 'finalizing':")
+    expect(statusLogic).toContain("return '定稿中'")
+    expect(statusLogic).toContain("status === 'finalizing'")
     expect(workspace).toContain('ChapterGenerating')
   })
 

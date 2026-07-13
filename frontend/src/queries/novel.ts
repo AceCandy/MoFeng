@@ -90,20 +90,6 @@ const requireNovelSection = (section: SectionSource) => {
   return resolvedSection
 }
 
-const upsertChapter = (project: NovelProject, chapter: Chapter) => {
-  if (!Array.isArray(project.chapters)) {
-    project.chapters = []
-  }
-
-  const index = project.chapters.findIndex((item) => item.chapter_number === chapter.chapter_number)
-  if (index >= 0) {
-    project.chapters.splice(index, 1, chapter)
-  } else {
-    project.chapters.push(chapter)
-  }
-  project.chapters.sort((left, right) => left.chapter_number - right.chapter_number)
-}
-
 export function useNovelProjectsQuery() {
   return useQuery<NovelProjectSummary[]>({
     queryKey: novelQueryKeys.projects(),
