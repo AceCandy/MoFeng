@@ -222,9 +222,11 @@ class TTSService:
         return pcm[: len(pcm) // 2 * 2]
 
     async def _synthesize_mimo(self, model, text: str, voice: str) -> SpeechAudio:
+        # MiMo TTS 契约：语气指令放 user 消息、待朗读原文放 assistant 消息；
+        # 该端点不接受 system 角色（上游返回 4xx）。
         messages = [
             {
-                "role": "system",
+                "role": "user",
                 "content": (
                     "你是一位顶级有声书演播艺术家。请朗读提供的文本：\n"
                     "1. 感情饱满，语调随情节起伏——紧张处提速上扬，舒缓处放慢沉静；\n"
