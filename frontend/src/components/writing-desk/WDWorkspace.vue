@@ -526,11 +526,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { globalAlert } from '@/composables/useAlert'
+import { useAiMenu } from '@/composables/useAiMenu'
 import { useChapterReader } from '@/composables/useChapterReader'
 import { useEditChapterModal } from '@/composables/useEditChapterModal'
+import { useVersionResolver } from '@/composables/useVersionResolver'
 import type {
   Chapter,
   ChapterOutline,
@@ -587,12 +589,6 @@ interface ChapterContentExpose {
 }
 
 const bodyComponentRef = ref<ChapterContentExpose | null>(null)
-const aiMenuRef = ref<HTMLElement | null>(null)
-const aiMenuPanelRef = ref<HTMLElement | null>(null)
-const aiMenuTriggerRef = ref<HTMLButtonElement | null>(null)
-const aiMenuItemRefs = ref<Array<HTMLElement | null>>([])
-const aiMenuId = 'wd-workspace-ai-menu'
-const showAiMenu = ref(false)
 const chapterReader = useChapterReader()
 const readerStatus = chapterReader.status
 
@@ -673,118 +669,14 @@ const selectedChapterOutline = computed(() => {
   )
 })
 
-const toBoundedVersionIndex = (value: unknown): number | null => {
-  const index = Number(value)
-  if (!Number.isInteger(index) || index < 0 || index >= props.availableVersions.length) {
-    return null
-  }
-  return index
-}
-
-const resolveRecommendedVersionIndex = (chapter: Chapter | null): number | null => {
-  if (!chapter || props.availableVersions.length === 0) {
-    return null
-  }
-
-  const metadataIndex = props.availableVersions.findIndex((version) => {
-    const metadata = version.metadata
-    return metadata?.ai_review?.is_best === true
-  })
-  if (metadataIndex >= 0) {
-    return metadataIndex
-  }
-
-  for (const version of props.availableVersions) {
-    const metadata = version.metadata
-    const metadataBestIndex = toBoundedVersionIndex(
-      metadata?.review_summaries?.ai_review?.best_version_index ??
-        metadata?.ai_review?.best_version_index,
-    )
-    if (metadataBestIndex !== null) {
-      return metadataBestIndex
-    }
-  }
-
-  const traces = [...(chapter.generation_traces ?? [])].reverse()
-  for (const trace of traces) {
-    if (trace.node_key !== 'save_draft') {
-      continue
-    }
-    const metadata = trace.metadata && typeof trace.metadata === 'object' ? trace.metadata : {}
-    for (const candidate of [
-      metadata.input_payload?.recommended_version_index,
-      metadata.metrics?.recommended_version_index,
-      metadata.recommended_version_index,
-      metadata.input_payload?.best_version_index,
-      metadata.metrics?.best_version_index,
-    ]) {
-      const traceIndex = toBoundedVersionIndex(candidate)
-      if (traceIndex !== null) {
-        return traceIndex
-      }
-    }
-  }
-
-  return null
-}
-
-const resolveVersionFallbackOrder = (chapter: Chapter | null): number[] => {
-  const indices: number[] = []
-  const pushIndex = (index: number | null) => {
-    if (index !== null && !indices.includes(index)) {
-      indices.push(index)
-    }
-  }
-
-  const selectedIndex = toBoundedVersionIndex(props.selectedVersionIndex)
-  const recommendedIndex = resolveRecommendedVersionIndex(chapter)
-  // 待确认草稿初始索引常为 0；若 AI 明确推荐其他版本，正文兜底先展示推荐版本。
-  if (chapter?.generation_status === 'waiting_for_confirm' && props.selectedVersionIndex === 0) {
-    pushIndex(recommendedIndex)
-  }
-  pushIndex(selectedIndex)
-  pushIndex(recommendedIndex)
-  props.availableVersions.forEach((_, index) => pushIndex(index))
-  return indices
-}
-
-const resolveChapterContent = (chapter: Chapter | null): string => {
-  if (!chapter) {
-    return ''
-  }
-
-  const directContent = cleanVersionContent(chapter?.content || '')
-  if (directContent.trim()) {
-    return directContent
-  }
-
-  for (const index of resolveVersionFallbackOrder(chapter)) {
-    const version = props.availableVersions[index]
-    const normalized = cleanVersionContent(version.content || '')
-    if (normalized.trim()) {
-      return normalized
-    }
-  }
-
-  return ''
-}
-
-const selectedChapterResolvedContent = computed(() => resolveChapterContent(selectedChapter.value))
-
-const selectedChapterForDisplay = computed<Chapter | null>(() => {
-  const chapter = selectedChapter.value
-  if (!chapter) return null
-  if (chapter.content && cleanVersionContent(chapter.content).trim()) {
-    return chapter
-  }
-  return {
-    ...chapter,
-    content: selectedChapterResolvedContent.value,
-  }
-})
-
-const hasSelectedChapterContent = computed(() => {
-  return selectedChapterResolvedContent.value.trim().length > 0
+const {
+  selectedChapterResolvedContent,
+  selectedChapterForDisplay,
+  hasSelectedChapterContent,
+} = useVersionResolver({
+  selectedChapter,
+  availableVersions: computed(() => props.availableVersions),
+  selectedVersionIndex: computed(() => props.selectedVersionIndex),
 })
 
 const {
@@ -1112,104 +1004,27 @@ const isAiMenuDisabled = computed(
   () => isSelectedChapterGeneratingLike.value && !isChapterContentView.value,
 )
 
-const resolveMenuElement = (element: unknown) => {
-  if (element instanceof HTMLElement) {
-    return element
-  }
-  if (element && typeof element === 'object' && '$el' in element) {
-    const componentElement = (element as { $el?: unknown }).$el
-    if (componentElement instanceof HTMLElement) {
-      return componentElement
-    }
-  }
-  return null
-}
-
-const registerAiMenuItemRef = (element: unknown, index: number) => {
-  aiMenuItemRefs.value[index] = resolveMenuElement(element)
-}
-
-const getEnabledMenuItems = (items: Array<HTMLElement | null>) => {
-  return items.filter((item) => item && !item.hasAttribute('disabled')) as HTMLElement[]
-}
-
-const focusMenuItemAtIndex = (items: Array<HTMLElement | null>, targetIndex: number) => {
-  const enabledItems = getEnabledMenuItems(items)
-  if (enabledItems.length === 0) return
-  const safeIndex = ((targetIndex % enabledItems.length) + enabledItems.length) % enabledItems.length
-  enabledItems[safeIndex]?.focus()
-}
-
-const focusFirstMenuItem = (items: Array<HTMLElement | null>) => {
-  focusMenuItemAtIndex(items, 0)
-}
-
-const handleMenuKeydown = (
-  event: KeyboardEvent,
-  items: Array<HTMLElement | null>,
-  closeMenu: (restoreFocus?: boolean) => void,
-) => {
-  const enabledItems = getEnabledMenuItems(items)
-  if (enabledItems.length === 0) return
-
-  const activeElement = document.activeElement as HTMLElement | null
-  const currentIndex = enabledItems.findIndex((item) => item === activeElement)
-
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    closeMenu(true)
-    return
-  }
-
-  if (event.key === 'Tab') {
-    closeMenu()
-    return
-  }
-
-  if (event.key === 'ArrowDown') {
-    event.preventDefault()
-    focusMenuItemAtIndex(enabledItems, currentIndex + 1)
-    return
-  }
-
-  if (event.key === 'ArrowUp') {
-    event.preventDefault()
-    focusMenuItemAtIndex(enabledItems, currentIndex - 1)
-    return
-  }
-
-  if (event.key === 'Home') {
-    event.preventDefault()
-    focusMenuItemAtIndex(enabledItems, 0)
-    return
-  }
-
-  if (event.key === 'End') {
-    event.preventDefault()
-    focusMenuItemAtIndex(enabledItems, enabledItems.length - 1)
-  }
-}
-
-const handleAiMenuKeydown = (event: KeyboardEvent) => {
-  handleMenuKeydown(event, aiMenuItemRefs.value, closeAiMenu)
-}
-
-const closeAiMenu = (restoreFocus: boolean = false) => {
-  showAiMenu.value = false
-  if (restoreFocus) {
-    aiMenuTriggerRef.value?.focus()
-  }
-}
-
-const toggleAiMenu = () => {
-  if (isAiMenuDisabled.value) return
-  showAiMenu.value = !showAiMenu.value
-  if (showAiMenu.value) {
-    nextTick(() => {
-      focusFirstMenuItem(aiMenuItemRefs.value)
-    })
-  }
-}
+const {
+  aiMenuRef,
+  aiMenuPanelRef,
+  aiMenuTriggerRef,
+  aiMenuItemRefs,
+  aiMenuId,
+  showAiMenu,
+  registerAiMenuItemRef,
+  handleAiMenuKeydown,
+  toggleAiMenu,
+  closeAiMenu,
+  handleLayeredOptimize,
+  handlePolishContent,
+  handleAdjustRhythm,
+  handleRewriteStyle,
+  exportContentAsTxt,
+} = useAiMenu({
+  isAiMenuDisabled,
+  isChapterContentView,
+  bodyComponentRef,
+})
 
 const openVersionDetail = () => {
   if (!canViewVersions.value) {
@@ -1220,59 +1035,6 @@ const openVersionDetail = () => {
   const maxIndex = props.availableVersions.length - 1
   const safeIndex = Math.min(Math.max(props.selectedVersionIndex, 0), maxIndex)
   emit('showVersionDetail', safeIndex)
-}
-
-const openContentOptimizer = () => {
-  bodyComponentRef.value?.openOptimizerPanel?.()
-}
-
-const openContentOptimizerWithPreset = (preset?: { dimension?: string; notes?: string }) => {
-  bodyComponentRef.value?.openOptimizerPanelWithPreset?.(preset)
-}
-
-const exportContentAsTxt = () => {
-  bodyComponentRef.value?.exportCurrentChapterAsTxt?.()
-}
-
-const handleLayeredOptimize = () => {
-  closeAiMenu()
-  if (!isChapterContentView.value) return
-  openContentOptimizer()
-}
-
-const handlePolishContent = () => {
-  closeAiMenu()
-  if (!isChapterContentView.value) return
-  openContentOptimizerWithPreset({
-    dimension: 'dialogue',
-    notes: '请优先润色正文表达，让叙述更顺滑、更有画面感。',
-  })
-}
-
-const handleAdjustRhythm = () => {
-  closeAiMenu()
-  if (!isChapterContentView.value) return
-  openContentOptimizerWithPreset({
-    dimension: 'rhythm',
-    notes: '请重点调整章节节奏，控制信息密度与推进速度。',
-  })
-}
-
-const handleRewriteStyle = () => {
-  closeAiMenu()
-  if (!isChapterContentView.value) return
-  openContentOptimizerWithPreset({
-    dimension: 'dialogue',
-    notes: '请在不改变剧情事实的前提下改写文风，统一语气并提升辨识度。',
-  })
-}
-
-const handleAiMenuOutsideClick = (event: MouseEvent) => {
-  const targetNode = event.target as Node | null
-  if (!targetNode) return
-  if (showAiMenu.value && !aiMenuRef.value?.contains(targetNode)) {
-    showAiMenu.value = false
-  }
 }
 
 const requestChapterStatus = () => {
@@ -1320,13 +1082,11 @@ watch(
 )
 
 onMounted(() => {
-  document.addEventListener('click', handleAiMenuOutsideClick)
   refreshBrowserVoices()
   window.speechSynthesis?.addEventListener('voiceschanged', refreshBrowserVoices)
 })
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleAiMenuOutsideClick)
   window.speechSynthesis?.removeEventListener('voiceschanged', refreshBrowserVoices)
   chapterReader.stop()
 })
