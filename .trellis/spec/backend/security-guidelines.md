@@ -99,17 +99,20 @@ Email codes are compared with `secrets.compare_digest` (`AuthService.verify_code
 
 ### Resource ownership
 
-`NovelService.ensure_project_owner(project_id, user_id)` is the single ownership gate for project-scoped routes:
+`NovelService.ensure_project_owner(project_id, user_id)` is the single ownership gate for project-scoped routes. Unauthorized access returns the **same 404 as a missing project** — same status, same detail — so a caller cannot learn whether a resource exists:
 
 ```python
 project = await self.repo.get_by_id(project_id)
 if not project:
     raise HTTPException(404, "项目不存在")
 if project.user_id != user_id:
-    raise HTTPException(403, "无权访问该项目")
+    # 越权访问统一返回 404，与"项目不存在"同码同文案，避免泄露项目存在性
+    raise HTTPException(404, "项目不存在")
 ```
 
-> **Known divergence from the audit recommendation**: the audit asked unauthorized access to return 404 (to avoid leaking that a resource exists), but the implementation returns 403 for "exists but not yours" and 404 only for "does not exist". 403 does leak existence. Aligning to 404 is a tracked follow-up; until then, new ownership checks should match the current 403/404 split for consistency.
+`_ensure_project_owner_light` (a read-only variant that selects only `user_id`) follows the same rule. Every project-scoped route (`novels`, `projects`, `writer`, `optimizer`, `review`, …) goes through one of these — do not add ad-hoc ownership checks in routers. Covered by `tests/test_project_owner_authorization.py`.
+
+> Do **not** return 403 for ownership failures: 403 ("authenticated but forbidden") leaks that the resource exists. 403 remains correct for unrelated gates — admin-role requirements (`dependencies.py`) and registration/OAuth switches (`auth_service.py`) — which are not resource-existence leaks.
 
 ---
 

@@ -202,7 +202,8 @@ class NovelService:
         if not project:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="项目不存在")
         if project.user_id != user_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权访问该项目")
+            # 越权访问统一返回 404，与"项目不存在"同码同文案，避免泄露项目存在性（审计 #14）
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="项目不存在")
         return project
 
     async def get_project_schema(self, project_id: str, user_id: int) -> NovelProjectSchema:
@@ -323,7 +324,8 @@ class NovelService:
         if owner_id is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="项目不存在")
         if owner_id != user_id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="无权访问该项目")
+            # 越权访问统一返回 404，与"项目不存在"同码同文案，避免泄露项目存在性（审计 #14）
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="项目不存在")
 
     # ------------------------------------------------------------------
     # 对话管理
