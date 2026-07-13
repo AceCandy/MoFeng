@@ -529,8 +529,8 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { globalAlert } from '@/composables/useAlert'
-import { useDialogA11y } from '@/composables/useDialogA11y'
 import { useChapterReader } from '@/composables/useChapterReader'
+import { useEditChapterModal } from '@/composables/useEditChapterModal'
 import type {
   Chapter,
   ChapterOutline,
@@ -653,55 +653,6 @@ const copySelectedChapterContent = async () => {
   const copied = await copyText(content)
   if (!copied) {
     globalAlert.showError('复制失败，请手动选择文本复制。')
-  }
-}
-
-// 编辑模态框状态
-const showEditModal = ref(false)
-const editDialogRef = ref<HTMLElement | null>(null)
-const editCloseButtonRef = ref<HTMLElement | null>(null)
-const editDialogTitleId = 'wd-workspace-edit-dialog-title'
-const editingContentInputId = 'wd-workspace-edit-content-input'
-const editingContent = ref('')
-const isSaving = ref(false)
-
-const editingWordCount = computed(() => countNonWhitespaceChars(editingContent.value))
-
-const openEditModal = () => {
-  if (hasSelectedChapterContent.value) {
-    editingContent.value = selectedChapterResolvedContent.value
-    showEditModal.value = true
-  }
-}
-
-const closeEditModal = () => {
-  if (isSaving.value) return
-  showEditModal.value = false
-  editingContent.value = ''
-  isSaving.value = false
-}
-
-useDialogA11y({
-  active: showEditModal,
-  dialogRef: editDialogRef,
-  onClose: closeEditModal,
-  initialFocusRef: editCloseButtonRef,
-})
-
-const saveEditedContent = async () => {
-  if (props.selectedChapterNumber === null || !editingContent.value.trim()) return
-
-  isSaving.value = true
-  try {
-    emit('editChapter', {
-      chapterNumber: props.selectedChapterNumber,
-      content: editingContent.value,
-    })
-    closeEditModal()
-  } catch (error) {
-    console.error('保存章节内容失败:', error)
-  } finally {
-    isSaving.value = false
   }
 }
 
@@ -834,6 +785,25 @@ const selectedChapterForDisplay = computed<Chapter | null>(() => {
 
 const hasSelectedChapterContent = computed(() => {
   return selectedChapterResolvedContent.value.trim().length > 0
+})
+
+const {
+  showEditModal,
+  editDialogRef,
+  editCloseButtonRef,
+  editDialogTitleId,
+  editingContentInputId,
+  editingContent,
+  isSaving,
+  editingWordCount,
+  openEditModal,
+  closeEditModal,
+  saveEditedContent,
+} = useEditChapterModal({
+  hasContent: hasSelectedChapterContent,
+  resolvedContent: selectedChapterResolvedContent,
+  chapterNumber: computed(() => props.selectedChapterNumber),
+  onEditChapter: (payload) => emit('editChapter', payload),
 })
 
 const isFinalizedSuccessful = computed(() => {
