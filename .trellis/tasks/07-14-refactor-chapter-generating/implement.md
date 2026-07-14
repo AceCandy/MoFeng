@@ -176,3 +176,41 @@ cd frontend && npx eslint src/components/writing-desk/workspace/ChapterGeneratin
 ## 提交边界
 
 单 commit：`refactor(frontend): 抽 ChapterDraftPreview 子组件（#22 ChapterGenerating Slice 5）`。仅含 ChapterGenerating.vue + ChapterDraftPreview.vue + design.md + implement.md；不含 useChapterReader.ts/.spec.ts（reader 会话残留）。
+
+---
+
+# Slice 6 实施清单：抽子组件 `ChapterFailedVersions.vue`
+
+## 步骤
+
+1. 新建 `ChapterFailedVersions.vue`：template 逐字搬失败区 DOM（`v-if` 条件留父标签）；script 收 status/failedVersionCards/generatingChapter/chapterNumber props + 逐字迁 `retryGenerateLabel` + emits(showVersionDetail/evaluateChapter/failedGenerateAction)；scoped style 含 failed-* 全部独占规则逐字（无共享选择器，整段搬迁）。
+2. `useGenerationFailure.ts` 新增导出 `FailedVersionCard` interface + `GenerationStatus` type（producer 持有类型，避免子组件直引 @/api/novel）。纯增量。
+3. 改 ChapterGenerating.vue：
+   - template 失败区 → `<ChapterFailedVersions v-if="..." :status :failed-version-cards :generating-chapter :chapter-number @show-version-detail @evaluate-chapter @failed-generate-action />`（v-if 条件同原；v-else-if 链保持）
+   - 新增 `import ChapterFailedVersions from './ChapterFailedVersions.vue'`
+   - 删 `retryGenerateLabel` computed（orphan）
+   - style：删失败区样式整段（L1019-1135，全部 failed-* 独占）
+4. 复核：diff 只含子组件新建 + composable 2 类型导出 + 父 template/import/删 computed/删 style；失败区 template/script/style 与子组件逐字等价；handler handleFailedGenerateAction 留父（读 props，emit generateChapter），子组件 emit failedGenerateAction 意图。
+
+## 验证（全绿）
+
+- vue-tsc --noEmit → exit 0
+- vitest run chapterGeneratingTiming.spec.ts → 7 绿
+- vitest run（全量）→ 139 绿 0 失败（reader prefetch 用例本次亦通过）
+- eslint 改动三文件 → 0 新增（仅父 1 预存 @/api/novel 警告；子组件用 GenerationStatus 类型规避了 @/api 直引）
+
+## 结果
+
+主组件 1330 → **1167**（−163）；子组件 200 行新增。diff（父+composable）28 insertions / 175 deletions，纯 template/script/style 迁移 + 类型导出 + orphan 清理。
+
+## 非纯展示点处理（emit 拆分）
+
+失败区含 `handleFailedGenerateAction`（showConfirm 副作用），非纯展示。决策：handler 留父（它本就读 props.status/props.chapterNumber、emit generateChapter，属父职责），子组件仅 emit `failedGenerateAction` 意图；showVersionDetail/evaluateChapter 由父转发。子组件维持"展示 + emit 意图"，confirm 业务逻辑不外泄至展示组件。
+
+## 回滚点
+
+`git checkout -- ChapterGenerating.vue frontend/src/composables/useGenerationFailure.ts && rm frontend/src/components/writing-desk/workspace/ChapterFailedVersions.vue`，无副作用。
+
+## 提交边界
+
+单 commit：`refactor(frontend): 抽 ChapterFailedVersions 子组件（#22 ChapterGenerating Slice 6）`。仅含 ChapterGenerating.vue + ChapterFailedVersions.vue + useGenerationFailure.ts + design.md + implement.md；不含 backend/app/services/tts_service.py（reader/TTS 会话残留）。

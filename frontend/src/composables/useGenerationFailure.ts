@@ -9,6 +9,18 @@ interface PipelineStep {
   label: string
 }
 
+// 候选版本卡片：失败区展示的保留版本摘要（index 为 availableVersions 下标）
+export interface FailedVersionCard {
+  index: number
+  displayIndex: number
+  style: string
+  wordCount: number
+  preview: string
+}
+
+// 章节生成状态（供子组件复用类型，避免直接 import @/api/novel）
+export type GenerationStatus = Chapter['generation_status']
+
 // useGenerationFailure 只消费的 props 子集（结构同构于 ChapterGenerating 的 Props）
 interface GenerationFailureProps {
   status: Chapter['generation_status'] | null

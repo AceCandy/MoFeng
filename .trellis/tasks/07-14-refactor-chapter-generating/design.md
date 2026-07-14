@@ -263,7 +263,52 @@ template/script/style 逐字搬迁，子组件骨架补全与父原值一致。c
 
 ---
 
-## <500 缺口（Slice 5 后评估）
+## Slice 6 详述：抽子组件 `ChapterFailedVersions.vue`
+
+### 边界
+
+把"失败状态展示区域"（template `chapter-console__failed-container` 整块 + 专属 `retryGenerateLabel` computed + failed-* scoped style）整体抽成子组件。比 Slice 5 更简单：failed-* 选择器全部独占，无共享选择器需拆分。
+
+### 迁出（→ 子组件）
+
+- template：失败区 DOM 逐字搬迁（`v-if` 失败条件留父的子组件标签，保持「失败区 v-if → 草稿预览 v-else-if → 节点详情 v-if」条件链）
+- script：`retryGenerateLabel` computed（仅本区用，逐字迁移）
+- style（scoped）：failed-container/failed-versions(-head/-kicker)/failed-actions/danger-action/failed-version-grid/-card/-title/-meta/-preview/-action + `@media(max-width:833px) failed-versions-head` 全部独占规则逐字搬迁
+
+### 非纯展示点（emit 拆分）
+
+失败区含 `handleFailedGenerateAction`（`globalAlert.showConfirm` 二次确认副作用 + 向上 emit `generateChapter`），非纯展示。拆分方案：**handler 留父组件**（它读 props.status/props.chapterNumber，本就属于父），子组件只 emit `failedGenerateAction` 意图事件；`showVersionDetail`/`evaluateChapter` 由父转发。子组件保持"展示 + emit 意图"，confirm 业务逻辑不外泄。
+
+### 子组件契约
+
+- props：`status`（GenerationStatus|null）、`failedVersionCards`（FailedVersionCard[]）、`generatingChapter`（number|null）、`chapterNumber`（number|null）
+- emits：`showVersionDetail[index]`、`evaluateChapter`、`failedGenerateAction`
+- 内部 computed：`retryGenerateLabel`（从 status 派生）
+
+### 类型导出（composable producer 持有，沿用 ActiveStepDetails 范式）
+
+`useGenerationFailure.ts` 新增导出 `FailedVersionCard`（候选版本卡片结构）+ `GenerationStatus`（= Chapter['generation_status']，避免子组件直接 import @/api/novel 触发 no-restricted-imports）。纯增量，零行为变化。
+
+### 父组件 import 调整
+
+- 新增 `import ChapterFailedVersions from './ChapterFailedVersions.vue'`
+- 删 `retryGenerateLabel` computed（orphan，随迁子组件）
+
+### scoped 关键点
+
+failed-* 全部独占（不在 border/padding/h4 共享选择器组），整段搬迁无需拆分。`.md-btn` 等全局类来自 main.css，scoped 子组件内仍生效（子组件渲染的元素带 data-v-child，`.chapter-console__failed-actions[data-v-child] .md-btn[data-v-child]` 命中）。
+
+### 等价性 / 验证
+
+template/script/style 逐字搬迁 + emit 拆分（handler 留父）。chapterGeneratingTiming 7 用例（含失败卡片 failedVersionCards、evaluation 失败主操作 retryGenerateLabel、放弃草稿二次确认 handleFailedGenerateAction）全绿验证运行时等价——失败区是 timing 测试网覆盖最密的部分。vue-tsc exit 0 / 全量 vitest **139 绿 0 失败**（reader prefetch 用例本次亦通过）/ eslint 0 新增（仅父 1 预存 @/api/novel 警告）。
+
+### 风险
+
+低。失败区是 timing 测试网重点覆盖对象（4/7 用例直接断言失败区 DOM/行为），回归网最强。
+
+---
+
+## <500 缺口（Slice 6 后评估）
 
 | Slice | 主组件行数 |
 |---|---|
@@ -272,6 +317,7 @@ template/script/style 逐字搬迁，子组件骨架补全与父原值一致。c
 | Slice 2 后 | 1664 |
 | Slice 3 后 | 1559 |
 | Slice 4 后 | 1455 |
-| **Slice 5 后** | **1330** |
+| Slice 5 后 | 1330 |
+| **Slice 6 后** | **1167** |
 
-下一块建议：Slice 6-7 纯展示子组件（ChapterFailedVersions 失败区 / ChapterStepInspector 节点详情面板，低-中风险，沿用本 slice 的 scoped 三段同迁范式）。每会话一块。
+下一块建议：Slice 7 抽 `ChapterStepInspector`（节点详情面板，template inspector-card 整块 + activeStepDetails 透传 prop + inspector/panel-code scoped style，纯展示，沿用 scoped 三段同迁范式）。剩余 1167 → 仍需继续拆分至 <500。每会话一块。
