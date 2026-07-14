@@ -18,7 +18,12 @@
   "commit": null,
   "pr_url": null,
   "subtasks": [],
-  "children": [],
+  "children": [
+    "07-14-refactor-personal-model-routing",
+    "07-14-refactor-chapter-generating",
+    "07-14-refactor-writing-desk",
+    "07-14-refactor-novel-detail-shell"
+  ],
   "parent": null,
   "relatedFiles": [],
   "notes": "",
