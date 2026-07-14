@@ -60,13 +60,14 @@ describe('chapter draft finalization contracts', () => {
   })
 
   it('only keeps copy and export actions after finalization', () => {
-    const workspace = readSource('src/components/writing-desk/WDWorkspace.vue')
+    // toolbar 操作随 template 抽至 ChapterToolbar（Slice D 第 4b 块），契约随之迁移
+    const toolbar = readSource('src/components/writing-desk/workspace/ChapterToolbar.vue')
 
-    expect(workspace).toContain('v-if="isFinalizedSuccessful"')
-    expect(workspace).toContain('@click="copySelectedChapterContent"')
-    expect(workspace).toContain('@click="exportContentAsTxt"')
-    expect(workspace).toContain('v-if="isDraftWaitingConfirm" class="writing-workspace__toolbar-row writing-workspace__toolbar-row--primary"')
-    expect(workspace).not.toContain('v-if="isFinalizedSuccessful || isDraftWaitingConfirm"')
+    expect(toolbar).toContain('v-if="isFinalizedSuccessful"')
+    expect(toolbar).toContain("@click=\"$emit('copyContent')\"")
+    expect(toolbar).toContain('@click="exportContentAsTxt"')
+    expect(toolbar).toContain('v-if="isDraftWaitingConfirm" class="writing-workspace__toolbar-row writing-workspace__toolbar-row--primary"')
+    expect(toolbar).not.toContain('v-if="isFinalizedSuccessful || isDraftWaitingConfirm"')
   })
 
   it('renders multi-version evaluations in numeric version order', () => {
