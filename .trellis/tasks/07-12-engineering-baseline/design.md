@@ -131,13 +131,14 @@ Slice B 已抽 4 个 composable（script −447 行），但 template 525 / styl
 | **EditChapterModal** | 440-524 (~85) | 1599-1638 (~40) | useEditChapterModal 全部返回值 + `selectedChapterNumber`(props) | **低**（composable 已抽，唯一遗留是 template） | ✅ 1（已完成 2026-07-13） |
 | **ChapterEvaluationPanel** | 300-434 (~135) | 1726-1843 (~118) | `parsedEvaluation`/`sortedEvaluationEntries`/`getEvaluationVersionNumber`/`parseMarkdown` + `selectedChapter.evaluation` + `evaluatingChapter`(props) | 中（4 符号纯展示逻辑，干净随迁；marked/DOMPurify import 随迁；`chapterDraftFinalizeStatic` 测试源码指针从 WDWorkspace 跟随至子组件） | ✅ 2（已完成 2026-07-14） |
 | **ChapterVersionsPanel** | 250-298 (~49) | 1470-1529 (~60) | `previewVersionIndex`/`previewVersionParagraphs`/`previewVersionWordCount`/`selectVersionFromTab`/`isCurrentVersion` + watch×2 + activeTab 共享态 | 中（watch 1 拆分：activeTab 重置留父、previewIndex 重置迁子；selectVersionFromTab 末尾 `activeTab='content'` 改 emit `switchToContent`；`chapterDraftFinalizeStatic` 版本标签指针从 WDWorkspace 跟随至子组件） | ✅ 3（已完成 2026-07-14） |
-| WorkspaceHeader | 6-164 (~159) | 1230-1572 (~340，含 status-tag/toolbar/ai-menu) | `isFinalizedSuccessful`/`isDraftWaitingConfirm`/`hasSelectedChapterContent`/`chapterStatusLabel`/`chapterStatusTone` + useAiMenu 全返回值 + Tooltip + 大量 emit | 高（耦合最紧，可能再拆 toolbar/ai-menu） | 4 |
+| **ChapterMeta**（WorkspaceHeader 子块 a） | 8-36 (~29) | 868-992 + @media(940/640) + 末尾第二处 summary（共 ~165） | `chapterStatusLabel`/`chapterStatusTone`/`chapterInlineMeta`/`selectedChapterOutline`/`chapterTitleTooltipText`（均 props 传入）+ Tooltip 随迁；复制逻辑 `copyText`/`copySelectedChapterTitle`/`resetChapterTitleTooltip` 留父（toolbar 复制按钮共用）；父 Tooltip orphan import 清理 | 低（纯展示 + emit copyTitle/resetTitleTooltip，零业务逻辑） | ✅ 4a（已完成 2026-07-14） |
+| WorkspaceHeader 剩余（toolbar+ai-menu，子块 b） | 37-162 (~125) | 994-1145 + @media（~180） | `isFinalizedSuccessful`/`isDraftWaitingConfirm`/`hasSelectedChapterContent` + useAiMenu 全返回值 + `bodyComponentRef`（动态组件 ref，需作 prop 传入）+ `editModalRef`（跨区，需 emit openEditModal）+ `confirmVersionSelection` emit | 高（耦合最紧，bodyComponentRef 跨组件、ai-menu focus trap 随迁） | 🔄 4b |
 
 核心动态分发（232-248 `<component :is="currentComponent">` + currentComponentProps 107 行数据装配）**不抽**，留组件。
 
 ### WDWorkspace 拆至 <500 的缺口（2026-07-14 评估）
 
-WDWorkspace 当前 1380 行（Slice D 第 3 块 ChapterVersionsPanel 抽出后，1530→1380，−150）。Slice D 余 1 块（WorkspaceHeader ~500）做完仍 ~880 行 > 500。故 WorkspaceHeader 之外**还需继续找 ~380 行拆出**，候选：
+WDWorkspace 当前 1209 行（Slice D 第 4a 块 ChapterMeta 抽出后，1380→1209，−171）。WorkspaceHeader 剩余子块 b（toolbar+ai-menu，template ~125 + style ~180）抽完仍 ~900 行 > 500。要到 <500 在抽完子块 b 后**还需继续找 ~400 行拆出**，候选：
 
 - currentComponentProps（107 行数据装配）部分抽 composable（耦合朗读 ref + 锁定前置，需评估能否干净剥离）。
 - 朗读/通知相关逻辑余量（若已外移至 composable 则有限）。
