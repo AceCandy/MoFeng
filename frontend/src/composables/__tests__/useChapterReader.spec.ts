@@ -271,7 +271,7 @@ describe('useChapterReader', () => {
       notify: vi.fn(),
     })
 
-    const playback = reader.start('标题', '第一段。\n\n第二段。')
+    const playback = reader.start('标题', '第一段正文内容必须超过二十个字才不会被合并。\n\n第二段正文内容同样超过二十个字不会被合并。')
     await vi.waitFor(() => expect(FakeAudioElement.instances).toHaveLength(1))
     // 逐段合成：标题 + 两段正文 = 3 段，启动即预热这 3 段（PREFETCH_AHEAD=2）
     expect(synthesize).toHaveBeenCalledTimes(3)
@@ -305,6 +305,48 @@ describe('useChapterReader', () => {
     expect(synthesize).toHaveBeenCalledTimes(3)
     expect(synthesize.mock.calls.some((call) => call[0] === ` ${longA}。`)).toBe(true)
     expect(synthesize.mock.calls.some((call) => call[0] === ` ${longB}。`)).toBe(true)
+    reader.stop()
+    await playback
+  })
+
+  it('merges short paragraphs (under threshold) into the next to avoid audio silence', async () => {
+    const synthesize = vi.fn(async (text: string) => new Blob([text], { type: 'audio/mpeg' }))
+    const reader = useChapterReader({
+      loadConfig: async () => bundle(true),
+      synthesize,
+      notify: vi.fn(),
+    })
+    // 长段 + 短段(<15) + 长段：短段并入后一段，不单独合成（规避 <audio> 对短音频的静音 bug）
+    const longA = '这是第一段足够长不会被合并的正文内容测试。'
+    const short = '他笑了。'
+    const longB = '这是第三段足够长不会被合并的正文内容测试。'
+    const playback = reader.start('标题', `${longA}\n\n${short}\n\n${longB}`)
+    await vi.waitFor(() => expect(FakeAudioElement.instances).toHaveLength(1))
+    // 标题 + longA + (short+longB 合并) = 3 次请求；short 不单独成段
+    expect(synthesize).toHaveBeenCalledTimes(3)
+    expect(synthesize.mock.calls.some((call) => call[0] === ` ${short}。`)).toBe(false)
+    // short 并入 longB：换行连接，前后填充空格与句号
+    expect(synthesize.mock.calls.some((call) => call[0] === ` ${short}\n${longB}。`)).toBe(true)
+    reader.stop()
+    await playback
+  })
+
+  it('merges a trailing short paragraph back into the previous segment', async () => {
+    const synthesize = vi.fn(async (text: string) => new Blob([text], { type: 'audio/mpeg' }))
+    const reader = useChapterReader({
+      loadConfig: async () => bundle(true),
+      synthesize,
+      notify: vi.fn(),
+    })
+    // 长段 + 末尾短段：末尾短段无下一段可合并，回并到上一段一起合成
+    const longA = '这是第一段足够长不会被合并的正文内容测试。'
+    const trailing = '他走了。'
+    const playback = reader.start('标题', `${longA}\n\n${trailing}`)
+    await vi.waitFor(() => expect(FakeAudioElement.instances).toHaveLength(1))
+    // 标题 + (longA+trailing 合并) = 2 次请求；trailing 不单独成段
+    expect(synthesize).toHaveBeenCalledTimes(2)
+    expect(synthesize.mock.calls.some((call) => call[0] === ` ${trailing}。`)).toBe(false)
+    expect(synthesize.mock.calls.some((call) => call[0] === ` ${longA}\n${trailing}。`)).toBe(true)
     reader.stop()
     await playback
   })

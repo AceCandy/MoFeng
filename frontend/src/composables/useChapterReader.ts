@@ -64,6 +64,10 @@ interface PlaybackSegment {
 }
 
 const TTS_LIMIT = 2500
+/** 短段合并阈值（字数）：< 此值的正文段并入下一段一起合成。
+ *  <audio> 对"长段后的短段"会静音（浏览器媒体管道 bug，JS 状态全正常但无声），
+ *  合并后短段不单独播放即可规避；合并段覆盖多段高亮（paragraphEnd） */
+const SHORT_PARAGRAPH_MERGE_THRESHOLD = 20
 /** 段间停顿：连续段落衔接需要自然换气，同时留白让播放引擎收敛、避免裁首尾音 */
 const SEGMENT_GAP_MS = 400
 /** 段首静音填充：合成音频会裁掉开头若干毫秒，前置空格让被裁的是填充而非正文首字 */
@@ -115,8 +119,9 @@ const splitLongUnit = (unit: string, limit: number): string[] => {
   return chunks
 }
 
-/** 按正文展示段落构建朗读计划：标题段 + 正文段逐段独立（每段一条合成请求、独立高亮），
- *  仅单段超 TTS 上限时才内部切分；记录每段所属正文段落（区间起点=终点=段落下标） */
+/** 按正文展示段落构建朗读计划：标题段独立；正文段字数低于 SHORT_PARAGRAPH_MERGE_THRESHOLD 时
+ *  并入下一段一起合成（规避 <audio> 对短音频的静音 bug），合并段覆盖多段高亮（paragraphEnd）。
+ *  单段超 TTS 上限时内部切分；记录每段所属正文段落区间 */
 const buildPlayback = (
   title: string,
   content: string,
@@ -127,11 +132,42 @@ const buildPlayback = (
     segments.push({ text: chunk, paragraphIndex: -1, paragraphEnd: -1 })
   }
   const paragraphs = splitChapterParagraphs(content)
+  // 短段（<阈值）向前合并到下一段：累积短段，遇到长段时一并并入；末尾短段回并到上一段
+  const merged: { text: string; start: number; end: number }[] = []
+  let pendingShort = ''
+  let pendingStart = -1
+  let pendingEnd = -1
   paragraphs.forEach((paragraph, index) => {
-    for (const chunk of splitLongUnit(paragraph, limit)) {
-      segments.push({ text: chunk, paragraphIndex: index, paragraphEnd: index })
+    if (paragraph.length < SHORT_PARAGRAPH_MERGE_THRESHOLD) {
+      if (pendingShort) {
+        pendingShort = `${pendingShort}\n${paragraph}`
+      } else {
+        pendingShort = paragraph
+        pendingStart = index
+      }
+      pendingEnd = index
+    } else if (pendingShort) {
+      merged.push({ text: `${pendingShort}\n${paragraph}`, start: pendingStart, end: index })
+      pendingShort = ''
+      pendingStart = -1
+    } else {
+      merged.push({ text: paragraph, start: index, end: index })
     }
   })
+  if (pendingShort) {
+    if (merged.length > 0) {
+      const last = merged[merged.length - 1]
+      last.text = `${last.text}\n${pendingShort}`
+      last.end = pendingEnd
+    } else {
+      merged.push({ text: pendingShort, start: pendingStart, end: pendingEnd })
+    }
+  }
+  for (const unit of merged) {
+    for (const chunk of splitLongUnit(unit.text, limit)) {
+      segments.push({ text: chunk, paragraphIndex: unit.start, paragraphEnd: unit.end })
+    }
+  }
   return { segments, paragraphCount: paragraphs.length }
 }
 
