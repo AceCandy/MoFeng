@@ -64,10 +64,14 @@ interface PlaybackSegment {
 }
 
 const TTS_LIMIT = 2500
-/** 短段合并阈值（字数）：< 此值的正文段并入下一段一起合成。
+/** 短段合并阈值（字数）：< 此值的正文段开启合并组、吸收下一段一起合成。
  *  <audio> 对"长段后的短段"会静音（浏览器媒体管道 bug，JS 状态全正常但无声），
  *  合并后短段不单独播放即可规避；合并段覆盖多段高亮（paragraphEnd） */
 const SHORT_PARAGRAPH_MERGE_THRESHOLD = 20
+/** 合并组续合阈值（字数）：合并后总长 ≤ 此值才继续吸收下一段（针对"嗯。""啊。"等极短段） */
+const MERGE_CONTINUE_THRESHOLD = 10
+/** 单个合并组最多段数：达到即关闭，防止极短段无限合并 */
+const MERGE_MAX_SEGMENTS = 3
 /** 段间停顿：连续段落衔接需要自然换气，同时留白让播放引擎收敛、避免裁首尾音 */
 const SEGMENT_GAP_MS = 400
 /** 段首静音填充：合成音频会裁掉开头若干毫秒，前置空格让被裁的是填充而非正文首字 */
@@ -119,8 +123,9 @@ const splitLongUnit = (unit: string, limit: number): string[] => {
   return chunks
 }
 
-/** 按正文展示段落构建朗读计划：标题段独立；正文段字数低于 SHORT_PARAGRAPH_MERGE_THRESHOLD 时
- *  并入下一段一起合成（规避 <audio> 对短音频的静音 bug），合并段覆盖多段高亮（paragraphEnd）。
+/** 按正文展示段落构建朗读计划：标题段独立；正文段 < SHORT_PARAGRAPH_MERGE_THRESHOLD 时开启合并组
+ *  吸收下一段，合并后总长 ≤ MERGE_CONTINUE_THRESHOLD 则继续吸收，最多 MERGE_MAX_SEGMENTS 段
+ *  （规避 <audio> 对短音频的静音 bug）；合并段覆盖多段区间高亮（paragraphEnd）。
  *  单段超 TTS 上限时内部切分；记录每段所属正文段落区间 */
 const buildPlayback = (
   title: string,
@@ -132,35 +137,45 @@ const buildPlayback = (
     segments.push({ text: chunk, paragraphIndex: -1, paragraphEnd: -1 })
   }
   const paragraphs = splitChapterParagraphs(content)
-  // 短段（<阈值）向前合并到下一段：累积短段，遇到长段时一并并入；末尾短段回并到上一段
+  // 逐段合并：< 阈值的段开启合并组吸收下一段；首段无条件吸收，后续需合并组总长 ≤ 续合阈值；
+  // 吸收后若已"够长"(> 续合阈值)或达段数上限则关闭组；末尾未关闭的合并组回并到上一段
   const merged: { text: string; start: number; end: number }[] = []
-  let pendingShort = ''
-  let pendingStart = -1
-  let pendingEnd = -1
+  let group: { text: string; start: number; end: number; count: number } | null = null
+  const closeGroup = () => {
+    if (group) {
+      merged.push({ text: group.text, start: group.start, end: group.end })
+      group = null
+    }
+  }
   paragraphs.forEach((paragraph, index) => {
-    if (paragraph.length < SHORT_PARAGRAPH_MERGE_THRESHOLD) {
-      if (pendingShort) {
-        pendingShort = `${pendingShort}\n${paragraph}`
-      } else {
-        pendingShort = paragraph
-        pendingStart = index
+    if (group) {
+      // count===1 时无条件吸收（首段 < 阈值触发）；之后需合并组总长 ≤ 续合阈值才继续
+      const canAbsorb = group.count === 1 || group.text.length <= MERGE_CONTINUE_THRESHOLD
+      if (group.count < MERGE_MAX_SEGMENTS && canAbsorb) {
+        group.text = `${group.text}\n${paragraph}`
+        group.end = index
+        group.count += 1
+        // 吸收后已够长或达上限：立即关闭，避免末尾过度回并到上一段
+        if (group.count >= MERGE_MAX_SEGMENTS || group.text.length > MERGE_CONTINUE_THRESHOLD) {
+          closeGroup()
+        }
+        return
       }
-      pendingEnd = index
-    } else if (pendingShort) {
-      merged.push({ text: `${pendingShort}\n${paragraph}`, start: pendingStart, end: index })
-      pendingShort = ''
-      pendingStart = -1
+      closeGroup()
+    }
+    if (paragraph.length < SHORT_PARAGRAPH_MERGE_THRESHOLD) {
+      group = { text: paragraph, start: index, end: index, count: 1 }
     } else {
       merged.push({ text: paragraph, start: index, end: index })
     }
   })
-  if (pendingShort) {
+  if (group) {
     if (merged.length > 0) {
       const last = merged[merged.length - 1]
-      last.text = `${last.text}\n${pendingShort}`
-      last.end = pendingEnd
+      last.text = `${last.text}\n${group.text}`
+      last.end = group.end
     } else {
-      merged.push({ text: pendingShort, start: pendingStart, end: pendingEnd })
+      merged.push({ text: group.text, start: group.start, end: group.end })
     }
   }
   for (const unit of merged) {

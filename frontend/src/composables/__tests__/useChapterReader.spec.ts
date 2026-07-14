@@ -351,6 +351,33 @@ describe('useChapterReader', () => {
     await playback
   })
 
+  it('caps consecutive tiny paragraphs at the merge limit (3 segments)', async () => {
+    const synthesize = vi.fn(async (text: string) => new Blob([text], { type: 'audio/mpeg' }))
+    const reader = useChapterReader({
+      loadConfig: async () => bundle(true),
+      synthesize,
+      notify: vi.fn(),
+    })
+    // 四个连续极短段 + 长段：前三个极短段(各 2 字)合并到上限(3 段)即停，
+    // 第四个极短段另起合并组并吸收后面的长段（验证续合阈值 ≤10 与 3 段上限）
+    const tiny1 = '嗯。'
+    const tiny2 = '啊。'
+    const tiny3 = '哦。'
+    const tiny4 = '诶。'
+    const long = '这是一段足够长的正文内容不会被合并到短段组里。'
+    const playback = reader.start('标题', `${tiny1}\n\n${tiny2}\n\n${tiny3}\n\n${tiny4}\n\n${long}`)
+    await vi.waitFor(() => expect(FakeAudioElement.instances).toHaveLength(1))
+    // 标题 + (tiny1+tiny2+tiny3 达上限合并) + (tiny4+long) = 3 次请求
+    expect(synthesize).toHaveBeenCalledTimes(3)
+    // 前三个极短段合成一条（3 段上限，不再吸收 tiny4）
+    expect(synthesize.mock.calls.some((call) => call[0] === ` ${tiny1}\n${tiny2}\n${tiny3}。`)).toBe(true)
+    // tiny4 没有单独合成，而是和 long 合并
+    expect(synthesize.mock.calls.some((call) => call[0] === ` ${tiny4}。`)).toBe(false)
+    expect(synthesize.mock.calls.some((call) => call[0] === ` ${tiny4}\n${long}。`)).toBe(true)
+    reader.stop()
+    await playback
+  })
+
   it('continues from the failed model segment with browser speech', async () => {
     const synthesize = vi
       .fn()
