@@ -97,3 +97,47 @@ cd frontend && npx eslint src/components/writing-desk/workspace/ChapterGeneratin
 ## 提交边界
 
 单 commit：`refactor(frontend): 抽 useGenerationFailure composable（#22 ChapterGenerating Slice 3）`。
+
+---
+
+# Slice 4 实施清单：抽 `composables/useGenerationPipeline.ts`
+
+## 步骤
+
+1. 新建 `useGenerationPipeline.ts`：迁入 parsedStepPayload/isWaitingForManualConfirm/shouldShowManualConfirmBadge/currentStepKey/currentStepIndex/stepState/canRetryFromNode/stepTooltipText（逐字迁移）。签名收 props 子集 `{ status, generationStep, readOnly }` + `pipelineSteps: ComputedRef<PipelineStep[]>` + `failure: FailureAnalysis`（useGenerationFailure 返回子集 5 字段）。定义顺序按 design.md 依赖图。返回 5 符号（currentStepKey/stepState/canRetryFromNode/shouldShowManualConfirmBadge/stepTooltipText）。
+2. 改 ChapterGenerating.vue：
+   - 删 8 符号定义（currentStepKey/stepTooltipText/currentStepIndex/stepState/canRetryFromNode/isWaitingForManualConfirm/shouldShowManualConfirmBadge/parsedStepPayload）+ 死代码 completedSteps
+   - import `@/utils/generationTrace` 去 `parseStepPayload`
+   - 新增 `import { useGenerationPipeline } from '@/composables/useGenerationPipeline'`
+   - 在 useGenerationFailure 解构之后插 `const { currentStepKey, stepState, canRetryFromNode, shouldShowManualConfirmBadge, stepTooltipText } = useGenerationPipeline(props, pipelineSteps, { isFailureStatus, terminalFailedTrace, stepExists, failureReason, failureScenario })`
+3. 复核：消费点（selectStep/2 watch/activeStepTraces/activeTrace/activeStepDetails/template stepState 调用）零逻辑改动，解构同名 .value/调用不变；composable 逐函数与原组件字节等价。
+
+## 验证（全绿）
+
+- vue-tsc --noEmit → exit 0
+- vitest run chapterGeneratingTiming.spec.ts → 7 绿
+- vitest run（全量）→ 全绿
+- eslint 改动两文件 → 0 新增（1 预存 @/api/novel 警告）
+
+## 回滚点
+
+`git checkout -- ChapterGenerating.vue && rm frontend/src/composables/useGenerationPipeline.ts`，无副作用。
+
+## 结果
+
+主组件 1559 → **1455**（−104）；composable 166 行新增。diff 15 insertions / 119 deletions，纯符号迁移 + import 调整 + 删 completedSteps 死代码。
+
+## 验证（全绿）
+
+- vue-tsc --noEmit → exit 0（FailureAnalysis 契约匹配）
+- vitest run chapterGeneratingTiming.spec.ts → 7 绿
+- vitest run（全量）→ 138 绿
+- eslint 改动两文件 → 0 新增（1 预存 @/api/novel 警告，composable 不受限）
+
+## 实施偏差（已修正）
+
+首次跑 timing 7 用例全挂：`useGenerationPipeline is not defined`——Edit 时插了解构调用却漏了配套 import 行。vue-tsc 未捕获（script setup 对未声明标识符宽松），运行时集成测试立刻抓到。补 import 后全绿。教训：新增 composable 调用时，import 行与解构块须同批 Edit。
+
+## 提交边界
+
+单 commit：`refactor(frontend): 抽 useGenerationPipeline composable（#22 ChapterGenerating Slice 4）`。

@@ -159,13 +159,79 @@ parent `07-12-engineering-baseline` acceptance 第 4 项「5 大组件 <500 行�
 
 ---
 
-## <500 缺口（Slice 3 后评估）
+## Slice 4 详述：抽 `composables/useGenerationPipeline.ts`
+
+### 边界
+
+抽**步骤状态机**——把 pipeline 步骤集、当前步骤键推导（currentStepKey 55 行分支）、步骤运行态（stepState/canRetryFromNode）、tooltip 文案（stepTooltipText）整体迁入 composable。这是 design.md 原计划的中风险块；现状（1559 行）下大头仍是 currentStepKey，必须抽走才能显著推进 <500。
+
+### 迁出符号（→ composable）
+
+- `parsedStepPayload`（computed，仅 currentStepKey 消费，composable 内部，不返回）
+- `isWaitingForManualConfirm` + `shouldShowManualConfirmBadge`（仅后者返模板）
+- `currentStepKey`（computed，55 行分支逐字迁移；返回，组件 active*computed 与 2 个 watch 复用）
+- `currentStepIndex`（computed，仅 composable 内 stepState 用，不返回）
+- `stepState`（函数，逐字迁移；返回，模板 + 组件 selectStep 复用）
+- `canRetryFromNode`（函数，逐字迁移；返回）
+- `stepTooltipText`（函数，逐字迁移；返回）
+
+### 删除（死代码，全项目零引用，已 rg 确认）
+
+- `completedSteps`（computed，仅 L450 定义无消费点）—— 按 Slice 2 删 progressPercent/activeStageLabel 先例顺带删
+
+### composable 签名
+
+`useGenerationPipeline(props: GenerationPipelineProps, pipelineSteps: ComputedRef<PipelineStep[]>, failure: FailureAnalysis)`。
+
+- `GenerationPipelineProps`：props 子集 `{ status, generationStep, readOnly }`
+- `pipelineSteps`：复用组件现有 computed（同时是 useGenerationFailure 的输入；为唯一叶节点，留组件避免循环依赖）
+- `failure`：useGenerationFailure 返回的子集 `{ isFailureStatus, terminalFailedTrace, stepExists, failureReason, failureScenario }`——currentStepKey 需要 isFailureStatus/terminalFailedTrace/stepExists 定位失败节点，stepTooltipText 需要 failureReason/failureScenario。这是对「只收 props」范式的较大偏离，但语义合理：步骤状态机天然需要"失败发生在哪一步"。注释说明。
+
+返回 `{ currentStepKey, stepState, canRetryFromNode, shouldShowManualConfirmBadge, stepTooltipText }`。
+
+### 留组件（依赖 activeStepKey 组件状态 / trace 展示 / 动作）
+
+`pipelineSteps`、`selectStep`（写 activeStepKey，调 composable 的 stepState）、`activeStepKey` ref、watch×2（currentStepKey→activeStepKey / readOnly→activeStepKey）、`activeStepTraces`/`activeTrace`/`activeStepDetails`（消费 currentStepKey + activeStepKey）、`retryGenerateLabel`、`previewParagraphs`/`previewModeLabel`、actions、status→notify watch、onMounted。这些消费 composable 返回的 currentStepKey/stepState（解构同名，.value/调用零改动）。
+
+### 组件 import 调整
+
+- `@/utils/generationTrace`：去 `parseStepPayload`（随 parsedStepPayload 迁入 composable，组件不再直接用）。STEP_DETAILS/PIPELINE_LABELS/normalizePipelineStepKey/trace* 保留（activeStepDetails/activeStepTraces 仍用）。
+- 新增 `import { useGenerationPipeline } from '@/composables/useGenerationPipeline'`
+
+### 依赖顺序（自顶向下，无循环）
+
+```
+pipelineSteps(props)            ← 留组件
+useGenerationFailure(props, pipelineSteps) → failure
+useGenerationPipeline(props, pipelineSteps, failure)
+  ├ parsedStepPayload
+  ├ currentStepKey ← parsedStepPayload + pipelineSteps + failure.{isFailureStatus,terminalFailedTrace,stepExists}
+  ├ currentStepIndex ← pipelineSteps + currentStepKey
+  ├ stepState ← currentStepKey + currentStepIndex
+  ├ canRetryFromNode ← stepState
+  └ stepTooltipText ← stepState + failure.{failureReason,failureScenario}
+```
+
+currentStepKey 不依赖 stepState；stepState 依赖 currentStepKey/currentStepIndex——单向，无循环。
+
+### 等价性 / 验证
+
+逐字迁移（currentStepKey/stepState/canRetryFromNode/stepTooltipText 与原组件字节等价），消费点解构同名。chapterGeneratingTiming 7 用例（mount 主组件断言 DOM，覆盖 currentStepKey/stepState/activeTrace/失败卡片/pipeline 标题顺序）全绿验证运行时等价。vue-tsc exit 0 / 全量 vitest / eslint 0 新增（1 预存 `@/api/novel` 警告，composable 不受限）。
+
+### 风险
+
+中。currentStepKey 55 行分支多，抄写偏差即改变步骤状态机。强回归网覆盖；逐字迁移 + 独立复核（逐函数比对）兜底。
+
+---
+
+## <500 缺口（Slice 4 后评估）
 
 | Slice | 主组件行数 |
 |---|---|
 | 起点 | 2261 |
 | Slice 1 后 | 1762 |
 | Slice 2 后 | 1664 |
-| **Slice 3 后** | **1559** |
+| Slice 3 后 | 1559 |
+| **Slice 4 后** | **1455** |
 
-仍远 >500。下一块建议：抽步骤状态机 `useGenerationPipeline`（pipelineSteps + currentStepKey + currentStepIndex + stepState + canRetryFromNode + stepExists + parsedStepPayload，~150 行，中风险——currentStepKey 分支多但 chapterGeneratingTiming 强回归网覆盖）。再之后 Slice 4-6 纯展示子组件（ChapterDraftPreview/ChapterFailedVersions/ChapterStepInspector，低风险，scoped style 随迁）。每会话一块。
+下一块建议：Slice 5-7 纯展示子组件（ChapterDraftPreview/ChapterFailedVersions/ChapterStepInspector，低风险，scoped style 随迁，每块 ~80-150 行），把 template/script/style 三段一起搬。每会话一块。
