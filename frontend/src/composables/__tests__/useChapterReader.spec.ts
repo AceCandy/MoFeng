@@ -378,6 +378,26 @@ describe('useChapterReader', () => {
     await playback
   })
 
+  it('merges a paragraph that hits the threshold exactly (≤ 20 chars incl. punctuation)', async () => {
+    const synthesize = vi.fn(async (text: string) => new Blob([text], { type: 'audio/mpeg' }))
+    const reader = useChapterReader({
+      loadConfig: async () => bundle(true),
+      synthesize,
+      notify: vi.fn(),
+    })
+    // 正好 20 字（含标点）的段落也应合并——"不超过 20 字"按 ≤ 判断，而非 <
+    const exact = '经纪人看着我的表情，把后半句话咽回去了。' // length === 20
+    const long = '这是一段足够长的正文内容不会被合并的测试用例。'
+    const playback = reader.start('标题', `${exact}\n\n${long}`)
+    await vi.waitFor(() => expect(FakeAudioElement.instances).toHaveLength(1))
+    // 标题 + (exact+long 合并) = 2 次请求；exact 不单独成段
+    expect(synthesize).toHaveBeenCalledTimes(2)
+    expect(synthesize.mock.calls.some((call) => call[0] === ` ${exact}。`)).toBe(false)
+    expect(synthesize.mock.calls.some((call) => call[0] === ` ${exact}\n${long}。`)).toBe(true)
+    reader.stop()
+    await playback
+  })
+
   it('continues from the failed model segment with browser speech', async () => {
     const synthesize = vi
       .fn()

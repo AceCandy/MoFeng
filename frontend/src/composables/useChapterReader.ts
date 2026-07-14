@@ -64,7 +64,7 @@ interface PlaybackSegment {
 }
 
 const TTS_LIMIT = 2500
-/** 短段合并阈值（字数）：< 此值的正文段开启合并组、吸收下一段一起合成。
+/** 短段合并阈值（字数）：≤ 此值的正文段开启合并组、吸收下一段一起合成。
  *  <audio> 对"长段后的短段"会静音（浏览器媒体管道 bug，JS 状态全正常但无声），
  *  合并后短段不单独播放即可规避；合并段覆盖多段高亮（paragraphEnd） */
 const SHORT_PARAGRAPH_MERGE_THRESHOLD = 20
@@ -123,7 +123,7 @@ const splitLongUnit = (unit: string, limit: number): string[] => {
   return chunks
 }
 
-/** 按正文展示段落构建朗读计划：标题段独立；正文段 < SHORT_PARAGRAPH_MERGE_THRESHOLD 时开启合并组
+/** 按正文展示段落构建朗读计划：标题段独立；正文段 ≤ SHORT_PARAGRAPH_MERGE_THRESHOLD 时开启合并组
  *  吸收下一段，合并后总长 ≤ MERGE_CONTINUE_THRESHOLD 则继续吸收，最多 MERGE_MAX_SEGMENTS 段
  *  （规避 <audio> 对短音频的静音 bug）；合并段覆盖多段区间高亮（paragraphEnd）。
  *  单段超 TTS 上限时内部切分；记录每段所属正文段落区间 */
@@ -137,7 +137,7 @@ const buildPlayback = (
     segments.push({ text: chunk, paragraphIndex: -1, paragraphEnd: -1 })
   }
   const paragraphs = splitChapterParagraphs(content)
-  // 逐段合并：< 阈值的段开启合并组吸收下一段；首段无条件吸收，后续需合并组总长 ≤ 续合阈值；
+  // 逐段合并：≤ 阈值的段开启合并组吸收下一段；首段无条件吸收，后续需合并组总长 ≤ 续合阈值；
   // 吸收后若已"够长"(> 续合阈值)或达段数上限则关闭组；末尾未关闭的合并组回并到上一段
   const merged: { text: string; start: number; end: number }[] = []
   let group: { text: string; start: number; end: number; count: number } | null = null
@@ -149,7 +149,7 @@ const buildPlayback = (
   }
   paragraphs.forEach((paragraph, index) => {
     if (group) {
-      // count===1 时无条件吸收（首段 < 阈值触发）；之后需合并组总长 ≤ 续合阈值才继续
+      // count===1 时无条件吸收（首段 ≤ 阈值触发）；之后需合并组总长 ≤ 续合阈值才继续
       const canAbsorb = group.count === 1 || group.text.length <= MERGE_CONTINUE_THRESHOLD
       if (group.count < MERGE_MAX_SEGMENTS && canAbsorb) {
         group.text = `${group.text}\n${paragraph}`
@@ -163,7 +163,7 @@ const buildPlayback = (
       }
       closeGroup()
     }
-    if (paragraph.length < SHORT_PARAGRAPH_MERGE_THRESHOLD) {
+    if (paragraph.length <= SHORT_PARAGRAPH_MERGE_THRESHOLD) {
       group = { text: paragraph, start: index, end: index, count: 1 }
     } else {
       merged.push({ text: paragraph, start: index, end: index })
