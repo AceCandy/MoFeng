@@ -52,10 +52,11 @@ describe('chapter draft finalization contracts', () => {
   })
 
   it('keeps finalized version labels aligned with candidate indexes', () => {
-    const workspace = readSource('src/components/writing-desk/WDWorkspace.vue')
+    // 版本卡片标签随 versions 面板抽至 ChapterVersionsPanel（Slice D 第 3 块），正序契约随之迁移
+    const versionsPanel = readSource('src/components/writing-desk/workspace/ChapterVersionsPanel.vue')
 
-    expect(workspace).toContain('版本 {{ index + 1 }}')
-    expect(workspace).not.toContain('版本 {{ availableVersions.length - index }}')
+    expect(versionsPanel).toContain('版本 {{ index + 1 }}')
+    expect(versionsPanel).not.toContain('版本 {{ availableVersions.length - index }}')
   })
 
   it('only keeps copy and export actions after finalization', () => {

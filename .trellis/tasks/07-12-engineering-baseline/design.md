@@ -130,14 +130,14 @@ Slice B 已抽 4 个 composable（script −447 行），但 template 525 / styl
 |---|---|---|---|---|---|
 | **EditChapterModal** | 440-524 (~85) | 1599-1638 (~40) | useEditChapterModal 全部返回值 + `selectedChapterNumber`(props) | **低**（composable 已抽，唯一遗留是 template） | ✅ 1（已完成 2026-07-13） |
 | **ChapterEvaluationPanel** | 300-434 (~135) | 1726-1843 (~118) | `parsedEvaluation`/`sortedEvaluationEntries`/`getEvaluationVersionNumber`/`parseMarkdown` + `selectedChapter.evaluation` + `evaluatingChapter`(props) | 中（4 符号纯展示逻辑，干净随迁；marked/DOMPurify import 随迁；`chapterDraftFinalizeStatic` 测试源码指针从 WDWorkspace 跟随至子组件） | ✅ 2（已完成 2026-07-14） |
-| ChapterVersionsPanel | 250-298 (~49) | 1801-1863 (~63) | `previewVersionIndex`/`previewVersionParagraphs`/`previewVersionWordCount`/`selectVersionFromTab`/`isCurrentVersion` + watch(props.selectedChapterNumber) | 中（状态群 + watch 迁移） | 3 |
+| **ChapterVersionsPanel** | 250-298 (~49) | 1470-1529 (~60) | `previewVersionIndex`/`previewVersionParagraphs`/`previewVersionWordCount`/`selectVersionFromTab`/`isCurrentVersion` + watch×2 + activeTab 共享态 | 中（watch 1 拆分：activeTab 重置留父、previewIndex 重置迁子；selectVersionFromTab 末尾 `activeTab='content'` 改 emit `switchToContent`；`chapterDraftFinalizeStatic` 版本标签指针从 WDWorkspace 跟随至子组件） | ✅ 3（已完成 2026-07-14） |
 | WorkspaceHeader | 6-164 (~159) | 1230-1572 (~340，含 status-tag/toolbar/ai-menu) | `isFinalizedSuccessful`/`isDraftWaitingConfirm`/`hasSelectedChapterContent`/`chapterStatusLabel`/`chapterStatusTone` + useAiMenu 全返回值 + Tooltip + 大量 emit | 高（耦合最紧，可能再拆 toolbar/ai-menu） | 4 |
 
 核心动态分发（232-248 `<component :is="currentComponent">` + currentComponentProps 107 行数据装配）**不抽**，留组件。
 
 ### WDWorkspace 拆至 <500 的缺口（2026-07-14 评估）
 
-WDWorkspace 当前 1530 行（Slice D 第 2 块 ChapterEvaluationPanel 抽出后，1844→1530，−314）。Slice D 余 2 块（ChapterVersionsPanel ~112 + WorkspaceHeader ~500 ≈ ~612）全做完仍 ~918 行 > 500。故 Slice D 2 块之外**还需继续找 ~418 行拆出**，候选：
+WDWorkspace 当前 1380 行（Slice D 第 3 块 ChapterVersionsPanel 抽出后，1530→1380，−150）。Slice D 余 1 块（WorkspaceHeader ~500）做完仍 ~880 行 > 500。故 WorkspaceHeader 之外**还需继续找 ~380 行拆出**，候选：
 
 - currentComponentProps（107 行数据装配）部分抽 composable（耦合朗读 ref + 锁定前置，需评估能否干净剥离）。
 - 朗读/通知相关逻辑余量（若已外移至 composable 则有限）。

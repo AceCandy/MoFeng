@@ -248,54 +248,14 @@
             />
 
             <!-- 2. 历史版本多维平铺查阅面板 -->
-            <div v-else-if="activeTab === 'versions'" class="writing-workspace__versions-panel flex flex-col h-full overflow-hidden">
-              <div class="flex-1 flex min-h-0 divide-x" style="border-color: var(--md-outline-variant)">
-                <!-- 左侧版本卡片列表 -->
-                <div class="w-64 overflow-y-auto pr-4 flex flex-col gap-3">
-                  <div
-                    v-for="(version, index) in availableVersions"
-                    :key="`version-tab-${index}`"
-                    class="writing-workspace__version-tab-card"
-                    :class="{ 'is-active': previewVersionIndex === index }"
-                    @click="previewVersionIndex = index"
-                  >
-                    <div class="flex items-center justify-between">
-                      <span class="version-label">版本 {{ index + 1 }}</span>
-                      <span class="version-badge">{{ version.style || '标准' }}</span>
-                    </div>
-                    <p class="version-preview-text line-clamp-2">
-                      {{ cleanVersionContent(version.content).substring(0, 50) }}...
-                    </p>
-                    <div class="version-meta">
-                      {{ countNonWhitespaceChars(version.content) }} 字
-                    </div>
-                  </div>
-                </div>
-
-                <!-- 右侧选定版本正文大卷预览 -->
-                <div class="flex-1 overflow-y-auto pl-6 flex flex-col justify-between">
-                  <div class="flex-1 whitespace-pre-wrap leading-relaxed prose max-w-none text-justify" style="color: var(--md-on-surface); font-family: var(--md-font-family);">
-                    <p v-for="(paragraph, pIndex) in previewVersionParagraphs" :key="`para-${pIndex}`" class="mb-4">
-                      {{ paragraph }}
-                    </p>
-                  </div>
-                  <div class="mt-6 pt-4 border-t flex items-center justify-between" style="border-top-color: var(--md-outline-variant)">
-                    <span class="text-sm md-on-surface-variant font-medium">
-                      此版本共 {{ previewVersionWordCount }} 字，风格为【{{ availableVersions[previewVersionIndex]?.style || '标准' }}】
-                    </span>
-                    <button
-                      type="button"
-                      class="md-btn md-btn-filled md-ripple flex items-center gap-2"
-                      style="background-color: var(--md-primary); color: var(--md-on-primary)"
-                      :disabled="isCurrentVersion(previewVersionIndex)"
-                      @click="selectVersionFromTab(previewVersionIndex)"
-                    >
-                      <span>{{ isCurrentVersion(previewVersionIndex) ? '当前正在使用' : '应用此版本为当前正文' }}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ChapterVersionsPanel
+              v-else-if="activeTab === 'versions'"
+              :available-versions="availableVersions"
+              :selected-chapter-number="selectedChapterNumber"
+              :resolved-content="selectedChapterResolvedContent"
+              @edit-chapter="$emit('editChapter', $event)"
+              @switch-to-content="activeTab = 'content'"
+            />
 
             <!-- 3. AI 章节评审反馈面板 -->
             <ChapterEvaluationPanel
@@ -340,6 +300,7 @@ import ChapterGenerating from './workspace/ChapterGenerating.vue'
 import ChapterReaderBar from './ChapterReaderBar.vue'
 import EditChapterModal from './workspace/EditChapterModal.vue'
 import ChapterEvaluationPanel from './workspace/ChapterEvaluationPanel.vue'
+import ChapterVersionsPanel from './workspace/ChapterVersionsPanel.vue'
 
 interface Props {
   project: NovelProject | null
@@ -861,60 +822,13 @@ const draftTraceReplayProps = computed(() => ({
 // 写作台正文/历史版本/AI评审三合一 Tab 切换区状态与逻辑
 // ==========================================================================
 const activeTab = ref<'content' | 'versions' | 'evaluation'>('content')
-const previewVersionIndex = ref<number>(0)
-
+// 切换章节时回到正文 tab（版本预览索引的重置随 ChapterVersionsPanel 迁入子组件）
 watch(
   () => props.selectedChapterNumber,
   () => {
     activeTab.value = 'content'
-    previewVersionIndex.value = 0
   }
 )
-
-watch(
-  () => props.availableVersions,
-  (newVersions) => {
-    if (previewVersionIndex.value >= newVersions.length) {
-      previewVersionIndex.value = 0
-    }
-  },
-  { deep: true }
-)
-
-const previewVersionResolvedContent = computed(() => {
-  const version = props.availableVersions[previewVersionIndex.value]
-  return version ? cleanVersionContent(version.content) : ''
-})
-
-const previewVersionParagraphs = computed(() => {
-  if (!previewVersionResolvedContent.value.trim()) return []
-  return previewVersionResolvedContent.value
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter(Boolean)
-})
-
-const previewVersionWordCount = computed(() => {
-  return countNonWhitespaceChars(previewVersionResolvedContent.value)
-})
-
-const selectVersionFromTab = (index: number) => {
-  const version = props.availableVersions[index]
-  if (!version || props.selectedChapterNumber === null) return
-  const cleanContent = cleanVersionContent(version.content)
-  emit('editChapter', {
-    chapterNumber: props.selectedChapterNumber,
-    content: cleanContent,
-  })
-  globalAlert.showToast('成功应用所选历史版本！', 'success')
-  activeTab.value = 'content' // 自动切回正文
-}
-
-const isCurrentVersion = (index: number) => {
-  const version = props.availableVersions[index]
-  if (!version) return false
-  return cleanVersionContent(version.content).trim() === selectedChapterResolvedContent.value.trim()
-}
 </script>
 
 <style scoped>
@@ -1462,69 +1376,5 @@ const isCurrentVersion = (index: number) => {
   letter-spacing: 0.02em;
   color: var(--md-on-surface-variant);
   font-style: normal;
-}
-
-/* ==========================================================================
-   历史版本预览面板
-   ========================================================================== */
-.writing-workspace__versions-panel {
-  height: 100%;
-}
-
-.writing-workspace__version-tab-card {
-  padding: var(--md-spacing-3);
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-xs);
-  background-color: rgba(28, 32, 34, 0.01);
-  cursor: pointer;
-  transition:
-    border-color 0.2s ease,
-    background-color 0.2s ease,
-    transform 0.2s ease;
-}
-
-.writing-workspace__version-tab-card:hover {
-  border-color: var(--md-outline);
-  background-color: var(--md-surface-container-low);
-  transform: translateX(2px);
-}
-
-.writing-workspace__version-tab-card.is-active {
-  border-color: var(--md-secondary);
-  background-color: rgba(184, 60, 50, 0.02);
-  box-shadow: inset 2px 0 0 var(--md-secondary);
-}
-
-.writing-workspace__version-tab-card .version-label {
-  font-family: var(--md-font-serif);
-  font-weight: 700;
-  font-size: 13.5px;
-  color: var(--md-primary-dark);
-}
-
-.writing-workspace__version-tab-card.is-active .version-label {
-  color: var(--md-secondary);
-}
-
-.writing-workspace__version-tab-card .version-badge {
-  font-size: 10.5px;
-  padding: 1px 4px;
-  border-radius: 2px;
-  border: 1px solid var(--md-outline-variant);
-  background-color: var(--md-surface-container);
-  color: var(--md-on-surface-variant);
-}
-
-.version-preview-text {
-  margin: var(--md-spacing-2) 0 4px;
-  color: var(--md-on-surface-variant);
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.version-meta {
-  color: var(--md-on-surface-variant);
-  font-size: 11px;
-  opacity: 0.8;
 }
 </style>
