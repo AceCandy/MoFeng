@@ -259,10 +259,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import Tooltip from '@/components/Tooltip.vue'
 import type { Chapter, ChapterGenerationTrace, ChapterVersion } from '@/api/novel'
 import { globalAlert } from '@/composables/useAlert'
+import { useGenerationTiming } from '@/composables/useGenerationTiming'
 import { cleanVersionContent, formatChapterGenerationError } from '@/utils/chapter'
 import { countNonWhitespaceChars } from '@/utils/text'
 import {
@@ -270,7 +271,6 @@ import {
   PIPELINE_LABELS,
   TRACE_STATUS_LABELS,
   parseStepPayload,
-  parseBackendTimestampToMs,
   normalizePipelineStepKey,
   traceMetadata,
   resolveTraceDurationMs,
@@ -315,27 +315,16 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits(['generateChapter', 'showVersionDetail', 'evaluateChapter', 'retryFromNode'])
 
-const clockNow = ref(Date.now())
-const localStartAt = ref(Date.now())
 const notifyWhenDone = ref(false)
-let timer: number | null = null
 
 const activeStepKey = ref<string | null>(null)
+
+const { elapsedText, etaText } = useGenerationTiming(props)
 
 const selectStep = (key: string, index: number) => {
   if (stepState(key, index).tone !== 'waiting') {
     activeStepKey.value = key
   }
-}
-
-const STAGE_CONFIG: Record<
-  'generating' | 'evaluating' | 'selecting' | 'finalizing',
-  { start: number; end: number; expectedSeconds: number; label: string }
-> = {
-  generating: { start: 8, end: 78, expectedSeconds: 190, label: '生成正文' },
-  evaluating: { start: 78, end: 92, expectedSeconds: 55, label: 'AI评审' },
-  selecting: { start: 92, end: 98, expectedSeconds: 38, label: '待人工确认' },
-  finalizing: { start: 90, end: 99, expectedSeconds: 180, label: '同步定稿' },
 }
 
 const pipelineSteps = computed(() => {
@@ -565,75 +554,6 @@ const currentStepIndex = computed(() => {
 
 const completedSteps = computed(() => Math.max(0, currentStepIndex.value))
 
-const parsedGenerationStartedAt = computed(() => parseBackendTimestampToMs(props.generationStartedAt))
-const parsedStatusUpdatedAt = computed(() => parseBackendTimestampToMs(props.statusUpdatedAt))
-
-const startTimestamp = computed(
-  () => parsedGenerationStartedAt.value ?? parsedStatusUpdatedAt.value ?? localStartAt.value,
-)
-
-const elapsedSeconds = computed(() => {
-  const delta = Math.floor((clockNow.value - startTimestamp.value) / 1000)
-  return Math.max(0, delta)
-})
-
-const backendProgress = computed(() => {
-  if (props.generationProgress === null || props.generationProgress === undefined) return null
-  if (!Number.isFinite(props.generationProgress)) return null
-  return Math.max(0, Math.min(100, props.generationProgress))
-})
-
-const currentStageConfig = computed(() => {
-  if (
-    props.status === 'generating' ||
-    props.status === 'evaluating' ||
-    props.status === 'selecting' ||
-    props.status === 'finalizing'
-  ) {
-    return STAGE_CONFIG[props.status]
-  }
-  return null
-})
-
-const progressPercent = computed(() => {
-  if (backendProgress.value !== null) {
-    return backendProgress.value
-  }
-  const config = currentStageConfig.value
-  if (!config) return 12
-  const span = config.end - config.start
-  const ratio = Math.min(elapsedSeconds.value / config.expectedSeconds, 0.98)
-  return config.start + span * ratio
-})
-
-const activeStageLabel = computed(() => {
-  const key = currentStepKey.value
-  return PIPELINE_LABELS[key] || currentStageConfig.value?.label || '处理中'
-})
-
-const etaText = computed(() => {
-  if (backendProgress.value !== null && backendProgress.value > 4 && elapsedSeconds.value > 8) {
-    const estimatedTotal = Math.ceil((elapsedSeconds.value * 100) / backendProgress.value)
-    const remain = Math.max(0, estimatedTotal - elapsedSeconds.value)
-    if (remain < 60) return '约 1 分钟内'
-    return `约 ${Math.ceil(remain / 60)} 分钟`
-  }
-
-  const config = currentStageConfig.value
-  if (!config) return '约 2 分钟'
-  const remain = config.expectedSeconds - elapsedSeconds.value
-  if (remain <= 0) return '即将完成'
-  if (remain < 60) return '不足 1 分钟'
-  return `约 ${Math.ceil(remain / 60)} 分钟`
-})
-
-const elapsedText = computed(() => {
-  const total = elapsedSeconds.value
-  const mins = Math.floor(total / 60)
-  const secs = total % 60
-  return `${mins} 分 ${String(secs).padStart(2, '0')} 秒`
-})
-
 const previewParagraphs = computed(() => {
   const raw = (props.chapterContentPreview || '').trim()
   if (!raw) return []
@@ -806,14 +726,6 @@ const toggleNotify = () => {
 }
 
 watch(
-  () => [props.chapterNumber, props.status, props.generationStartedAt],
-  () => {
-    localStartAt.value = Date.now()
-  },
-  { immediate: true },
-)
-
-watch(
   () => props.status,
   async (nextStatus, prevStatus) => {
     if (
@@ -829,16 +741,6 @@ watch(
 
 onMounted(() => {
   notifyWhenDone.value = localStorage.getItem('writing-desk-notify-when-done') === '1'
-  timer = window.setInterval(() => {
-    clockNow.value = Date.now()
-  }, 1000)
-})
-
-onUnmounted(() => {
-  if (timer !== null) {
-    window.clearInterval(timer)
-    timer = null
-  }
 })
 </script>
 

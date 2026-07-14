@@ -34,3 +34,33 @@ cd frontend && npx eslint src/components/writing-desk/workspace/ChapterGeneratin
 ## 提交边界
 
 单 commit：`refactor(frontend): 抽 generationTrace utils（#22 ChapterGenerating Slice 1）`。body 说明迁出符号 + 行数变化 + 三件套结果。三件套绿 + 复核通过后提交。
+
+---
+
+# Slice 2 实施清单：抽 `composables/useGenerationTiming.ts`
+
+## 步骤
+
+1. **新建** `frontend/src/composables/useGenerationTiming.ts`：按 `design.md` Slice 2 迁入状态（clockNow/localStartAt/timer）+ STAGE_CONFIG + 8 个时序 computed + 定时器 onMounted/onUnmounted + localStartAt 重置 watch。沿用 useChapterStatus 约定（props 子集 interface，不用 MaybeRefOrGetter）。返回 `{ elapsedText, etaText }`。
+2. **删 2 死 computed**：`progressPercent`/`activeStageLabel`（全项目零引用，落在时序区内，零行为变化）。
+3. **改 `ChapterGenerating.vue`**：删迁出符号 + 2 死 computed；`vue` import 去 `onUnmounted`；generationTrace import 去 `parseBackendTimestampToMs`；新增 composable import；onMounted 仅留 notifyWhenDone 读取；删 onUnmounted；插 `const { elapsedText, etaText } = useGenerationTiming(props)`。
+4. **复核**：diff 只含删除 + composable 调用，无逻辑改动；composable 逐函数与原组件逐字等价。
+
+## 验证（全绿）
+
+- `vue-tsc --noEmit` → exit 0
+- `vitest run chapterGeneratingTiming.spec.ts` → 7 绿
+- `vitest run`（全量）→ 137 绿
+- `eslint` 改动两文件 → 0 新增（1 预存 `@/api/novel` 警告，composable 不受限）
+
+## 结果
+
+主组件 1762 → **1664**（−98）；composable 110 行新增。集成测试 mount 主组件断言 DOM 全绿，运行时行为等价。
+
+## 回滚点
+
+`git checkout -- ChapterGenerating.vue && rm frontend/src/composables/useGenerationTiming.ts`，无副作用。
+
+## 提交边界
+
+单 commit：`refactor(frontend): 抽 useGenerationTiming composable（#22 ChapterGenerating Slice 2）`。body 说明迁出符号 + 删 2 死 computed + 行数变化 + 三件套结果。

@@ -87,6 +87,50 @@ parent `07-12-engineering-baseline` acceptance 第 4 项「5 大组件 <500 行�
 
 ---
 
-## <500 缺口（Slice 1 后评估）
+## Slice 2 详述：抽 `composables/useGenerationTiming.ts`
 
-Slice 1 后主组件约 2261 - 530 ≈ **1730**。仍远 >500，按 Slice 2-7 继续推进，每会话一块。Slice 2（时序）/3（失败分析）是 composable 抽取（中风险，需逐 computed 验证）；Slice 4-6 是纯展示子组件（低风险，scoped style 随迁）。具体边界推进到对应 slice 会话时在本文件追加契约表。
+### 边界
+
+时序相关状态 + computed + 定时器生命周期，依赖仅 props 子集（`chapterNumber`/`status`/`generationProgress`/`generationStartedAt`/`statusUpdatedAt`）。沿用 `useChapterStatus` 约定：composable 收 `props`（子集 interface），不用 `MaybeRefOrGetter`。返回 `{ elapsedText, etaText }` 供模板消费，其余时序中间量对本 composable 私有。
+
+### 迁出符号（→ composable）
+
+- 状态：`clockNow`/`localStartAt`/`timer`
+- 常量：`STAGE_CONFIG`
+- computed：`parsedGenerationStartedAt`/`parsedStatusUpdatedAt`/`startTimestamp`/`elapsedSeconds`/`backendProgress`/`currentStageConfig`/`etaText`/`elapsedText`
+- 生命周期：定时器 onMounted（仅 setInterval）+ onUnmounted（clearInterval）
+- watch：`[chapterNumber, status, generationStartedAt]` → 重置 localStartAt（`immediate: true`）
+
+### 删除（死代码，全项目零引用）
+
+- `progressPercent`（computed，从未被读）
+- `activeStageLabel`（computed，从未被读；依赖 `currentStepKey`，本属 Slice 3 范畴）
+
+抽时序时顺带删除这两个落在时序区内的死 computed，零运行时行为变化（git 可追溯）。
+
+### 留组件
+
+- `notifyWhenDone` ref + 其 onMounted（读 localStorage）+ toggleNotify + status→showSuccess watch（均非时序）
+- 其余失败分析/pipeline/inspector 逻辑
+
+### 组件 import 调整
+
+- `vue`：去 `onUnmounted`（组件不再用，定时器清理随 composable）
+- `@/utils/generationTrace`：去 `parseBackendTimestampToMs`（随 parsed* 迁入 composable，组件不再直接用）
+- 新增 `import { useGenerationTiming } from '@/composables/useGenerationTiming'`
+
+### 等价性 / 验证
+
+逐字迁移 + 删 2 死 computed。`chapterGeneratingTiming` 7 用例（mount 主组件断言 DOM）全绿验证行为等价。vue-tsc exit 0 / 全量 vitest 137 绿 / eslint 0 新增（1 预存 `@/api/novel` 警告，composable 不受限）。
+
+---
+
+## <500 缺口（Slice 2 后评估）
+
+| Slice | 主组件行数 |
+|---|---|
+| 起点 | 2261 |
+| Slice 1 后 | 1762 |
+| **Slice 2 后** | **1664** |
+
+仍远 >500，按 Slice 3-7 继续推进，每会话一块。Slice 3（失败分析 composable，含 currentStepKey 54 行分支，中风险）是下一块；Slice 4-6 是纯展示子组件（低风险，scoped style 随迁）。具体边界推进到对应 slice 会话时在本文件追加契约表。
