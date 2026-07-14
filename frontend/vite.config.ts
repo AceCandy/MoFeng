@@ -19,10 +19,15 @@ import vueJsx from '@vitejs/plugin-vue-jsx'
 const frontendHost = process.env.FRONTEND_HOST || '0.0.0.0'
 const frontendPort = Number(process.env.FRONTEND_PORT || '6100')
 const frontendHmrHost = process.env.FRONTEND_HMR_HOST || 'localhost'
-const frontendAllowedHosts = (process.env.FRONTEND_ALLOWED_HOSTS || 'test.acecandy.cn')
-  .split(',')
-  .map(host => host.trim())
-  .filter(Boolean)
+const rawAllowedHosts = process.env.FRONTEND_ALLOWED_HOSTS
+// 设为 true（不区分大小写）时禁用 Host 校验，方便远程/workspace 端口转发（如 cmux）访问
+const frontendAllowedHosts =
+  rawAllowedHosts && rawAllowedHosts.trim().toLowerCase() === 'true'
+    ? true
+    : (rawAllowedHosts || 'test.acecandy.cn')
+        .split(',')
+        .map(host => host.trim())
+        .filter(Boolean)
 const backendProxyHost = process.env.BACKEND_PROXY_HOST || '127.0.0.1'
 const backendPort = Number(process.env.BACKEND_PORT || '6101')
 const isProduction = process.env.NODE_ENV === 'production'
