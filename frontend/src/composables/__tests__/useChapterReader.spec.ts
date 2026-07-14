@@ -271,7 +271,7 @@ describe('useChapterReader', () => {
       notify: vi.fn(),
     })
 
-    const playback = reader.start('标题', '第一段正文内容必须超过二十个字才不会被合并。\n\n第二段正文内容同样超过二十个字不会被合并。')
+    const playback = reader.start('标题', '第一段正文内容必须超过二十个字才不会被合并。\n\n第二段正文内容同样超过二十个字不会被合并呀。')
     await vi.waitFor(() => expect(FakeAudioElement.instances).toHaveLength(1))
     // 逐段合成：标题 + 两段正文 = 3 段，启动即预热这 3 段（PREFETCH_AHEAD=2）
     expect(synthesize).toHaveBeenCalledTimes(3)
@@ -317,9 +317,9 @@ describe('useChapterReader', () => {
       notify: vi.fn(),
     })
     // 长段 + 短段(<15) + 长段：短段并入后一段，不单独合成（规避 <audio> 对短音频的静音 bug）
-    const longA = '这是第一段足够长不会被合并的正文内容测试。'
+    const longA = '这是第一段足够长不会被合并的正文内容测试呀。'
     const short = '他笑了。'
-    const longB = '这是第三段足够长不会被合并的正文内容测试。'
+    const longB = '这是第三段足够长不会被合并的正文内容测试呀。'
     const playback = reader.start('标题', `${longA}\n\n${short}\n\n${longB}`)
     await vi.waitFor(() => expect(FakeAudioElement.instances).toHaveLength(1))
     // 标题 + longA + (short+longB 合并) = 3 次请求；short 不单独成段
@@ -339,7 +339,7 @@ describe('useChapterReader', () => {
       notify: vi.fn(),
     })
     // 长段 + 末尾短段：末尾短段无下一段可合并，回并到上一段一起合成
-    const longA = '这是第一段足够长不会被合并的正文内容测试。'
+    const longA = '这是第一段足够长不会被合并的正文内容测试呀。'
     const trailing = '他走了。'
     const playback = reader.start('标题', `${longA}\n\n${trailing}`)
     await vi.waitFor(() => expect(FakeAudioElement.instances).toHaveLength(1))
@@ -378,15 +378,15 @@ describe('useChapterReader', () => {
     await playback
   })
 
-  it('merges a paragraph that hits the threshold exactly (≤ 20 chars incl. punctuation)', async () => {
+  it('merges by character count excluding punctuation (含标点 >20 但纯字数 ≤20 仍合并)', async () => {
     const synthesize = vi.fn(async (text: string) => new Blob([text], { type: 'audio/mpeg' }))
     const reader = useChapterReader({
       loadConfig: async () => bundle(true),
       synthesize,
       notify: vi.fn(),
     })
-    // 正好 20 字（含标点）的段落也应合并——"不超过 20 字"按 ≤ 判断，而非 <
-    const exact = '经纪人看着我的表情，把后半句话咽回去了。' // length === 20
+    // 阈值按纯字数（去标点）判断：这句含标点 22、纯汉字 19，仍应合并（旧含标点口径会判 >20 不合并）
+    const exact = '经纪人看着我的表情，把后半句话，咽回去了啊。' // length=22, 纯字数=19
     const long = '这是一段足够长的正文内容不会被合并的测试用例。'
     const playback = reader.start('标题', `${exact}\n\n${long}`)
     await vi.waitFor(() => expect(FakeAudioElement.instances).toHaveLength(1))

@@ -64,14 +64,16 @@ interface PlaybackSegment {
 }
 
 const TTS_LIMIT = 2500
-/** 短段合并阈值（字数）：≤ 此值的正文段开启合并组、吸收下一段一起合成。
+/** 短段合并阈值（纯字数）：≤ 此值（去标点后的汉字+字母+数字）的正文段开启合并组、吸收下一段一起合成。
  *  <audio> 对"长段后的短段"会静音（浏览器媒体管道 bug，JS 状态全正常但无声），
  *  合并后短段不单独播放即可规避；合并段覆盖多段高亮（paragraphEnd） */
 const SHORT_PARAGRAPH_MERGE_THRESHOLD = 20
-/** 合并组续合阈值（字数）：合并后总长 ≤ 此值才继续吸收下一段（针对"嗯。""啊。"等极短段） */
+/** 合并组续合阈值（纯字数）：合并后纯字数 ≤ 此值才继续吸收下一段（针对"嗯。""啊。"等极短段） */
 const MERGE_CONTINUE_THRESHOLD = 10
 /** 单个合并组最多段数：达到即关闭，防止极短段无限合并 */
 const MERGE_MAX_SEGMENTS = 3
+/** 纯字数：去掉标点/符号/空白后的字符数（汉字+字母+数字）；短段与续合阈值按此判断 */
+const charCount = (text: string): number => text.replace(/[^\p{Script=Han}\p{L}\p{N}]/gu, '').length
 /** 段间停顿：连续段落衔接需要自然换气，同时留白让播放引擎收敛、避免裁首尾音 */
 const SEGMENT_GAP_MS = 400
 /** 段首静音填充：合成音频会裁掉开头若干毫秒，前置空格让被裁的是填充而非正文首字 */
@@ -150,20 +152,20 @@ const buildPlayback = (
   paragraphs.forEach((paragraph, index) => {
     if (group) {
       // count===1 时无条件吸收（首段 ≤ 阈值触发）；之后需合并组总长 ≤ 续合阈值才继续
-      const canAbsorb = group.count === 1 || group.text.length <= MERGE_CONTINUE_THRESHOLD
+      const canAbsorb = group.count === 1 || charCount(group.text) <= MERGE_CONTINUE_THRESHOLD
       if (group.count < MERGE_MAX_SEGMENTS && canAbsorb) {
         group.text = `${group.text}\n${paragraph}`
         group.end = index
         group.count += 1
         // 吸收后已够长或达上限：立即关闭，避免末尾过度回并到上一段
-        if (group.count >= MERGE_MAX_SEGMENTS || group.text.length > MERGE_CONTINUE_THRESHOLD) {
+        if (group.count >= MERGE_MAX_SEGMENTS || charCount(group.text) > MERGE_CONTINUE_THRESHOLD) {
           closeGroup()
         }
         return
       }
       closeGroup()
     }
-    if (paragraph.length <= SHORT_PARAGRAPH_MERGE_THRESHOLD) {
+    if (charCount(paragraph) <= SHORT_PARAGRAPH_MERGE_THRESHOLD) {
       group = { text: paragraph, start: index, end: index, count: 1 }
     } else {
       merged.push({ text: paragraph, start: index, end: index })
