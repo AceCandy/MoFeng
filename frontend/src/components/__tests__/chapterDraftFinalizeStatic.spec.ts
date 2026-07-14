@@ -92,7 +92,8 @@ describe('chapter draft finalization contracts', () => {
   })
 
   it('labels finalization trace nodes in the console', () => {
-    const generating = readSource('src/components/writing-desk/workspace/ChapterGenerating.vue')
+    // finalization 节点 key/标签随 Slice 1 抽至 utils/generationTrace.ts（PIPELINE_LABELS/STEP_DETAILS）
+    const generating = readSource('src/utils/generationTrace.ts')
 
     for (const key of [
       'confirm_finalize',

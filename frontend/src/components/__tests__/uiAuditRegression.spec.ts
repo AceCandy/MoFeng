@@ -250,7 +250,8 @@ describe('UI audit regressions', () => {
     expect(workspaceSource).toContain('selectedChapter.value?.generation_traces ?? []')
     expect(generatingSource).toContain('generationTraces?: ChapterGenerationTrace[]')
     expect(generatingSource).toContain('const activeTrace = computed')
-    expect(generatingSource).toContain('trace.metadata')
+    // traceMetadata 随 Slice 1 抽至 utils，组件 import 后在 activeStepDetails 内调用
+    expect(generatingSource).toContain('traceMetadata')
   })
 
   it('does not show fabricated prompt or response content when a trace is missing', () => {
@@ -265,15 +266,17 @@ describe('UI audit regressions', () => {
 
   it('labels chapter trace details by action instead of pretending every node is an LLM call', () => {
     const source = readSource('src/components/writing-desk/workspace/ChapterGenerating.vue')
+    // trace 格式化函数随 Slice 1 抽至 utils/generationTrace.ts，契约分两处校验
+    const traceUtils = readSource('src/utils/generationTrace.ts')
 
     expect(source).toContain('输入材料')
     expect(source).toContain('实际动作')
     expect(source).toContain('产出结果')
     expect(source).toContain('调用类型')
     expect(source).toContain('LLM 调用：{{ activeStepDetails.llmUsage }}')
-    expect(source).toContain('trace.uses_llm')
+    expect(source).toContain('traceUsesLlm')
     expect(source).toContain('formatTraceActions')
-    expect(source).toContain('formatModelCall')
+    expect(traceUtils).toContain('formatModelCall')
     expect(source).not.toContain('发送给 LLM 的输入 (Prompt)')
     expect(source).not.toContain('LLM 生成的响应 (Response)')
     expect(source).not.toContain('【系统 Prompt / 节点输入】')
