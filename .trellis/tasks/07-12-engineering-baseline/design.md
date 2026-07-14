@@ -129,11 +129,21 @@ Slice B 已抽 4 个 composable（script −447 行），但 template 525 / styl
 | 子组件 | template 行 | style 行 | 耦合符号 | 风险 | 顺序 |
 |---|---|---|---|---|---|
 | **EditChapterModal** | 440-524 (~85) | 1599-1638 (~40) | useEditChapterModal 全部返回值 + `selectedChapterNumber`(props) | **低**（composable 已抽，唯一遗留是 template） | ✅ 1（已完成 2026-07-13） |
-| ChapterEvaluationPanel | 300-434 (~135) | 1865-1980 (~116) | `parsedEvaluation`/`sortedEvaluationEntries`/`getEvaluationVersionNumber`/`parseMarkdown` + `selectedChapter.evaluation` + `evaluatingChapter`(props) | 中（4 个逻辑符号 + marked/DOMPurify 迁移） | 2 |
+| **ChapterEvaluationPanel** | 300-434 (~135) | 1726-1843 (~118) | `parsedEvaluation`/`sortedEvaluationEntries`/`getEvaluationVersionNumber`/`parseMarkdown` + `selectedChapter.evaluation` + `evaluatingChapter`(props) | 中（4 符号纯展示逻辑，干净随迁；marked/DOMPurify import 随迁；`chapterDraftFinalizeStatic` 测试源码指针从 WDWorkspace 跟随至子组件） | ✅ 2（已完成 2026-07-14） |
 | ChapterVersionsPanel | 250-298 (~49) | 1801-1863 (~63) | `previewVersionIndex`/`previewVersionParagraphs`/`previewVersionWordCount`/`selectVersionFromTab`/`isCurrentVersion` + watch(props.selectedChapterNumber) | 中（状态群 + watch 迁移） | 3 |
 | WorkspaceHeader | 6-164 (~159) | 1230-1572 (~340，含 status-tag/toolbar/ai-menu) | `isFinalizedSuccessful`/`isDraftWaitingConfirm`/`hasSelectedChapterContent`/`chapterStatusLabel`/`chapterStatusTone` + useAiMenu 全返回值 + Tooltip + 大量 emit | 高（耦合最紧，可能再拆 toolbar/ai-menu） | 4 |
 
 核心动态分发（232-248 `<component :is="currentComponent">` + currentComponentProps 107 行数据装配）**不抽**，留组件。
+
+### WDWorkspace 拆至 <500 的缺口（2026-07-14 评估）
+
+WDWorkspace 当前 1530 行（Slice D 第 2 块 ChapterEvaluationPanel 抽出后，1844→1530，−314）。Slice D 余 2 块（ChapterVersionsPanel ~112 + WorkspaceHeader ~500 ≈ ~612）全做完仍 ~918 行 > 500。故 Slice D 2 块之外**还需继续找 ~418 行拆出**，候选：
+
+- currentComponentProps（107 行数据装配）部分抽 composable（耦合朗读 ref + 锁定前置，需评估能否干净剥离）。
+- 朗读/通知相关逻辑余量（若已外移至 composable 则有限）。
+- 余下 template 区块逐块评估。
+
+具体边界在推进到 WDWorkspace 收尾会话时定，届时补契约表。其余 4 大组件（PersonalModelRouting / ChapterGenerating / WritingDesk / NovelDetailShell）的拆分边界由各自 child 的 `design.md` 承载，不在本 design。
 
 ### 本次：EditChapterModal 抽取
 

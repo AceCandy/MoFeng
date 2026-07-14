@@ -69,17 +69,18 @@ describe('chapter draft finalization contracts', () => {
   })
 
   it('renders multi-version evaluations in numeric version order', () => {
-    const workspace = readSource('src/components/writing-desk/WDWorkspace.vue')
+    // 评审展示随 template 抽至 ChapterEvaluationPanel（Slice D 第 2 块），排序契约随之迁移
+    const evaluationPanel = readSource('src/components/writing-desk/workspace/ChapterEvaluationPanel.vue')
     const detailModal = readSource('src/components/writing-desk/WDEvaluationDetailModal.vue')
     const chaptersSection = readSource('src/components/novel-detail/ChaptersSection.vue')
 
-    for (const source of [workspace, detailModal, chaptersSection]) {
+    for (const source of [evaluationPanel, detailModal, chaptersSection]) {
       expect(source).toContain('sortedEvaluationEntries')
       expect(source).toContain('versionNumber')
       expect(source).toContain('.sort((a, b) => a.versionNumber - b.versionNumber)')
     }
 
-    expect(workspace).not.toContain('v-for="(evalResult, versionName) in parsedEvaluation.evaluation"')
+    expect(evaluationPanel).not.toContain('v-for="(evalResult, versionName) in parsedEvaluation.evaluation"')
     expect(detailModal).not.toContain(
       'v-for="(evalResult, versionName) in parsedEvaluation.evaluation"',
     )
