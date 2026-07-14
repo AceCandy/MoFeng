@@ -68,8 +68,8 @@ const TTS_LIMIT = 2500
  *  <audio> 对"长段后的短段"会静音（浏览器媒体管道 bug，JS 状态全正常但无声），
  *  合并后短段不单独播放即可规避；合并段覆盖多段高亮（paragraphEnd） */
 const SHORT_PARAGRAPH_MERGE_THRESHOLD = 20
-/** 合并组续合阈值（纯字数）：合并后纯字数 ≤ 此值才继续吸收下一段（针对"嗯。""啊。"等极短段） */
-const MERGE_CONTINUE_THRESHOLD = 10
+/** 合并组续合阈值（纯字数）：合并两段后总纯字数 ≤ 此值才继续吸收第三段 */
+const MERGE_CONTINUE_THRESHOLD = 20
 /** 单个合并组最多段数：达到即关闭，防止极短段无限合并 */
 const MERGE_MAX_SEGMENTS = 3
 /** 纯字数：去掉标点/符号/空白后的字符数（汉字+字母+数字）；短段与续合阈值按此判断 */
