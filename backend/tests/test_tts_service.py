@@ -64,6 +64,8 @@ def _read_bits_per_sample(wav: bytes) -> int:
 
 class FakeAsyncClient:
     response = None
+    # 可选：按调用顺序的响应序列（优先于 response）；用尽或为空时回退 response。用于重试场景
+    responses = None
     request = None
 
     def __init__(self, *, timeout):
@@ -75,11 +77,17 @@ class FakeAsyncClient:
     async def __aexit__(self, exc_type, exc, traceback):
         return False
 
+    def _next(self):
+        if type(self).responses:
+            return type(self).responses.pop(0)
+        return type(self).response
+
     async def post(self, url, *, headers, json):
         type(self).request = {"url": url, "headers": headers, "json": json, "timeout": self.timeout}
-        if isinstance(type(self).response, Exception):
-            raise type(self).response
-        return type(self).response
+        resp = self._next()
+        if isinstance(resp, Exception):
+            raise resp
+        return resp
 
     def stream(self, method, url, *, headers, json):
         type(self).request = {
@@ -89,7 +97,7 @@ class FakeAsyncClient:
             "json": json,
             "timeout": self.timeout,
         }
-        return FakeResponseStream(type(self).response)
+        return FakeResponseStream(self._next())
 
 
 class FakeResponseStream:
@@ -188,6 +196,48 @@ async def test_synthesis_maps_timeout_without_exposing_upstream(monkeypatch):
 
     with pytest.raises(TimeoutError, match="语音模型响应超时"):
         await service.synthesize(7, "不能写入日志的正文")
+
+
+@pytest.mark.asyncio
+async def test_mimo_synthesis_retries_after_timeout_then_succeeds(monkeypatch):
+    # 首次上游超时、第二次成功：验证超时已纳入重试范围（原逻辑超时直接抛出不重试）
+    wav = _make_wav()
+    encoded = base64.b64encode(wav).decode("ascii")
+    success = httpx.Response(
+        200,
+        json={"choices": [{"message": {"audio": {"data": encoded}}}]},
+        request=httpx.Request("POST", "http://127.0.0.1:8000/v1/chat/completions"),
+    )
+    FakeAsyncClient.responses = [httpx.ReadTimeout("first attempt slow"), success]
+    monkeypatch.setattr(httpx, "AsyncClient", FakeAsyncClient)
+    service = TTSService(AsyncMock())
+    service.model_repo = SimpleNamespace(get_default_tts=AsyncMock(return_value=_model()))
+
+    result = await service.synthesize(7, "正文")
+
+    assert result.content == wav
+    assert result.media_type == "audio/wav"
+
+
+@pytest.mark.asyncio
+async def test_openai_synthesis_retries_after_timeout_then_succeeds(monkeypatch):
+    success = httpx.Response(
+        200,
+        content=b"ID3mp3-data",
+        headers={"content-type": "audio/mpeg"},
+        request=httpx.Request("POST", "http://127.0.0.1:8000/v1/audio/speech"),
+    )
+    FakeAsyncClient.responses = [httpx.ReadTimeout("first attempt slow"), success]
+    monkeypatch.setattr(httpx, "AsyncClient", FakeAsyncClient)
+    service = TTSService(AsyncMock())
+    service.model_repo = SimpleNamespace(
+        get_default_tts=AsyncMock(return_value=_model(protocol="openai_speech"))
+    )
+
+    result = await service.synthesize(7, "正文")
+
+    assert result.content == b"ID3mp3-data"
+    assert result.media_type == "audio/mpeg"
 
 
 @pytest.mark.asyncio

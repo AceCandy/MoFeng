@@ -5,7 +5,7 @@ import json
 import logging
 import struct
 from dataclasses import dataclass
-from typing import Optional
+from typing import Callable, Optional
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,6 +40,10 @@ class TTSService:
     MAX_UPSTREAM_RESPONSE_BYTES = 32 * 1024 * 1024
     # 有效 wav 最小字节数：仅 wav 头（约 44 字节）而无 PCM 数据视为空音频
     MIN_AUDIO_BYTES = 1000
+    # 上游单次请求超时（秒）：缩短单次、配合多次重试，避免单段长时间卡死
+    UPSTREAM_TIMEOUT_SECONDS = 15.0
+    # 上游重试总尝试次数（含首次）：超时/HTTP错误/音频无效/解析失败均重试，响应过大不重试
+    UPSTREAM_RETRY_ATTEMPTS = 3
 
     def __init__(self, session: AsyncSession):
         self.model_repo = UserAIModelRepository(session)
@@ -221,6 +225,38 @@ class TTSService:
             return bytes(out)
         return pcm[: len(pcm) // 2 * 2]
 
+    async def _request_upstream_with_retry(
+        self,
+        url: str,
+        headers: dict[str, str],
+        payload: dict,
+        parse_response: Callable[[bytes, str], Optional[SpeechAudio]],
+    ) -> SpeechAudio:
+        """对上游 TTS 端点带重试 POST。parse_response 解析响应体：
+        返回 SpeechAudio 表示成功；返回 None 表示本次响应无效（触发重试）；
+        抛 TTSUpstreamError 表示不可重试（如响应过大，立即抛出）。
+        超时 / HTTP 错误 / 解析异常 / 无效响应均重试，耗尽后抛最后一次错误。"""
+        last_error: Optional[Exception] = None
+        for attempt in range(self.UPSTREAM_RETRY_ATTEMPTS):
+            try:
+                async with httpx.AsyncClient(timeout=self.UPSTREAM_TIMEOUT_SECONDS) as client:
+                    body, media_type = await self._post_limited(client, url, headers=headers, json=payload)
+                audio = parse_response(body, media_type)
+                if audio is not None:
+                    return audio
+                last_error = TTSUpstreamError("语音模型未返回有效音频")
+                logger.warning("上游 TTS 返回无效音频 attempt=%d/%d", attempt + 1, self.UPSTREAM_RETRY_ATTEMPTS)
+            except httpx.TimeoutException:
+                last_error = TimeoutError("语音模型响应超时")
+                logger.warning("上游 TTS 超时 attempt=%d/%d", attempt + 1, self.UPSTREAM_RETRY_ATTEMPTS)
+            except httpx.HTTPError as exc:
+                last_error = TTSUpstreamError("语音模型调用失败")
+                logger.warning("上游 TTS HTTP 错误 attempt=%d/%d: %s", attempt + 1, self.UPSTREAM_RETRY_ATTEMPTS, exc)
+            except (KeyError, IndexError, TypeError, ValueError, binascii.Error) as exc:
+                last_error = TTSUpstreamError("语音模型未返回有效音频")
+                logger.warning("上游 TTS 响应解析失败 attempt=%d/%d: %s", attempt + 1, self.UPSTREAM_RETRY_ATTEMPTS, exc)
+        raise last_error or TTSUpstreamError("语音模型未返回有效音频")
+
     async def _synthesize_mimo(self, model, text: str, voice: str) -> SpeechAudio:
         # MiMo TTS 契约：语气指令放 user 消息、待朗读原文放 assistant 消息；
         # 该端点不接受 system 角色（上游返回 4xx）。
@@ -243,32 +279,17 @@ class TTSService:
         }
         url = f"{model.provider.base_url.rstrip('/')}/chat/completions"
         headers = self._headers(decrypt(model.provider.api_key_encrypted))
-        try:
-            # 上游偶发返回截断/空 wav（HTTP 流不完整），完整性校验不过则重试一次
-            for attempt in range(2):
-                async with httpx.AsyncClient(timeout=60.0) as client:
-                    body, _ = await self._post_limited(client, url, headers=headers, json=payload)
-                encoded = json.loads(body)["choices"][0]["message"]["audio"]["data"]
-                audio = base64.b64decode(encoded, validate=True) if encoded else b""
-                if len(audio) > self.MAX_AUDIO_BYTES:
-                    raise TTSUpstreamError("语音模型响应过大")
-                if self._is_valid_wav(audio):
-                    return SpeechAudio(
-                        content=self._normalize_to_pcm16_wav(audio),
-                        media_type="audio/wav",
-                    )
-                logger.warning(
-                    "MiMo 返回无效/截断音频，字节数=%d attempt=%d", len(audio), attempt + 1
-                )
-            raise TTSUpstreamError("语音模型未返回有效音频")
-        except httpx.TimeoutException as exc:
-            raise TimeoutError("语音模型响应超时") from exc
-        except httpx.HTTPError as exc:
-            raise TTSUpstreamError("语音模型调用失败") from exc
-        except TTSUpstreamError:
-            raise
-        except (KeyError, IndexError, TypeError, ValueError, binascii.Error) as exc:
-            raise TTSUpstreamError("语音模型未返回有效音频") from exc
+
+        def parse_response(body: bytes, _media_type: str) -> Optional[SpeechAudio]:
+            encoded = json.loads(body)["choices"][0]["message"]["audio"]["data"]
+            audio = base64.b64decode(encoded, validate=True) if encoded else b""
+            if len(audio) > self.MAX_AUDIO_BYTES:
+                raise TTSUpstreamError("语音模型响应过大")
+            if not self._is_valid_wav(audio):
+                return None
+            return SpeechAudio(content=self._normalize_to_pcm16_wav(audio), media_type="audio/wav")
+
+        return await self._request_upstream_with_retry(url, headers, payload, parse_response)
 
     async def _synthesize_openai(self, model, text: str, voice: str, speed: float) -> SpeechAudio:
         payload = {
@@ -278,22 +299,14 @@ class TTSService:
             "speed": speed,
             "response_format": "mp3",
         }
-        try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                content, media_type = await self._post_limited(
-                    client,
-                    f"{model.provider.base_url.rstrip('/')}/audio/speech",
-                    headers=self._headers(decrypt(model.provider.api_key_encrypted)),
-                    json=payload,
-                )
-            if (
-                len(content) > self.MAX_AUDIO_BYTES
-                or media_type not in {"audio/mpeg", "audio/mp3"}
-                or not self._is_mp3(content)
-            ):
-                raise TTSUpstreamError("语音模型未返回有效音频")
-            return SpeechAudio(content=content, media_type="audio/mpeg")
-        except httpx.TimeoutException as exc:
-            raise TimeoutError("语音模型响应超时") from exc
-        except httpx.HTTPError as exc:
-            raise TTSUpstreamError("语音模型调用失败") from exc
+        url = f"{model.provider.base_url.rstrip('/')}/audio/speech"
+        headers = self._headers(decrypt(model.provider.api_key_encrypted))
+
+        def parse_response(body: bytes, media_type: str) -> Optional[SpeechAudio]:
+            if len(body) > self.MAX_AUDIO_BYTES:
+                raise TTSUpstreamError("语音模型响应过大")
+            if media_type not in {"audio/mpeg", "audio/mp3"} or not self._is_mp3(body):
+                return None
+            return SpeechAudio(content=body, media_type="audio/mpeg")
+
+        return await self._request_upstream_with_retry(url, headers, payload, parse_response)
