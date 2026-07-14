@@ -214,3 +214,41 @@ cd frontend && npx eslint src/components/writing-desk/workspace/ChapterGeneratin
 ## 提交边界
 
 单 commit：`refactor(frontend): 抽 ChapterFailedVersions 子组件（#22 ChapterGenerating Slice 6）`。仅含 ChapterGenerating.vue + ChapterFailedVersions.vue + useGenerationFailure.ts + design.md + implement.md；不含 backend/app/services/tts_service.py（reader/TTS 会话残留）。
+
+---
+
+# Slice 7 实施清单：抽子组件 `ChapterStepInspector.vue`
+
+## 步骤
+
+1. 新建 `ChapterStepInspector.vue`：template 逐字搬节点详情面板 DOM（去 `v-if`，条件留父标签）；script 仅 `import type { ActiveStepDetails }` + 单 prop `activeStepDetails: ActiveStepDetails`（无 computed/emit/ref）；scoped style 含 inspector-card/-header/-title-group/-badge/-title/-subtitle/-meta + call-type/llm-usage/trace-status（共享三选择器）+ trace-status.is-failed + inspector-grids(+@media) + inspector-panel/panel-title/panel-code-wrapper/panel-code + `@keyframes fadeInInspector` 全部逐字搬迁。
+2. 改 ChapterGenerating.vue：
+   - template 节点详情面板 `<article v-if=...>` → `<ChapterStepInspector v-if="activeStepDetails && (!props.readOnly || activeStepKey)" :active-step-details="activeStepDetails" />`（v-if 条件同原；条件链 v-if→v-else-if→v-if 保持）
+   - 新增 `import ChapterStepInspector from './ChapterStepInspector.vue'`
+   - style：删 inspector/panel 整段（is-selected.is-done 之后到 panel-code）；删 `@keyframes fadeInInspector`（orphan）
+   - **保留** `.chapter-console--read-only .chapter-console__inspector-card` 只读覆写（与 pipeline-card 共享选择器组，inspector-card 作子组件根继承父 data-v，仍命中）
+3. 测试指针跟随：`uiAuditRegression.spec.ts` 的 `labels chapter trace details...` 用例，面板标签断言改读 `ChapterStepInspector.vue` 源码，逻辑引用断言仍指父。
+4. 复核：diff 只含子组件新建 + 父 template/import/删 style + 测试指针；节点详情面板 template/style 与子组件逐字等价；activeStepDetails computed 留父（读 currentStepKey/activeTrace/STEP_DETAILS/失败分析）。
+
+## 验证（全绿）
+
+- vue-tsc --noEmit → exit 0
+- vitest run chapterGeneratingTiming.spec.ts → 7 绿
+- vitest run（全量）→ 139 绿 0 失败
+- eslint 改动两文件 → 0 新增（仅父 1 预存 @/api/novel 警告；子组件 import `@/utils/generationTrace` 的 ActiveStepDetails 类型，非受限路径）
+
+## 结果
+
+主组件 1167 → **977**（−190）；子组件 206 行新增。diff（父）16 insertions / 202 deletions，纯 template/style 迁移 + import + orphan 清理；测试指针跟随 +4/-4 行。
+
+## scoped 关键点
+
+`.chapter-console__inspector-card` 是子组件根 → Vue「子组件根同时承载父级 data-v」→ 父级 `.chapter-console--read-only .chapter-console__inspector-card` 只读覆写不迁移仍命中（特异性 (0,4,0) > 子基样式 (0,2,0)）。本 slice 因此无需拆共享选择器组，比 Slice 5/6 更省事。
+
+## 回滚点
+
+`git checkout -- ChapterGenerating.vue frontend/src/components/__tests__/uiAuditRegression.spec.ts && rm frontend/src/components/writing-desk/workspace/ChapterStepInspector.vue`，无副作用。
+
+## 提交边界
+
+单 commit：`refactor(frontend): 抽 ChapterStepInspector 子组件（#22 ChapterGenerating Slice 7）`。仅含 ChapterGenerating.vue + ChapterStepInspector.vue + uiAuditRegression.spec.ts + design.md + implement.md；不含 backend/app/services/tts_service.py（reader/TTS 会话残留）。

@@ -308,7 +308,43 @@ template/script/style 逐字搬迁 + emit 拆分（handler 留父）。chapterGe
 
 ---
 
-## <500 缺口（Slice 6 后评估）
+## Slice 7 详述：抽子组件 `ChapterStepInspector.vue`
+
+### 边界
+
+把"节点详情面板"（template `chapter-console__inspector-card` 整块 + inspector/panel scoped style）抽成纯展示子组件。`activeStepDetails`（重型 computed，依赖 currentStepKey/activeTrace/STEP_DETAILS/失败分析等）留父，作 prop 透传。沿用 Slice 5/6 的 scoped 三段同迁范式。
+
+### 迁出（→ 子组件）
+
+- template：节点详情面板 DOM 逐字搬迁（`v-if="activeStepDetails && (!props.readOnly || activeStepKey)"` 条件留父的子组件标签，保持「失败区 v-if → 草稿预览 v-else-if → 节点详情 v-if」条件链）
+- script：无业务逻辑迁移——子组件仅 `import type { ActiveStepDetails }` + 单 prop `activeStepDetails: ActiveStepDetails`（9 字段全 string）。零 computed/emit/ref，纯展示。
+- style（scoped）：inspector-card/-header/-title-group/-badge/-title/-subtitle/-meta + call-type/llm-usage/trace-status（共享三选择器，全 inspector 独占）+ trace-status.is-failed + inspector-grids(+@media) + inspector-panel/panel-title/panel-code-wrapper/panel-code + `@keyframes fadeInInspector` 全部逐字搬迁
+
+### scoped 关键点（本 slice 比 Slice 5/6 更省事之处）
+
+父级 `.chapter-console--read-only .chapter-console__inspector-card`（只读覆写 border-radius:0/box-shadow:none，与 pipeline-card 共享选择器组）**不迁移、保留在父**。理由：`.chapter-console__inspector-card` 是子组件根元素，Vue scoped CSS 规则「子组件根节点同时承载父级 data-v」→ 父级该后代选择器编译为 `.chapter-console--read-only[data-v-parent] .chapter-console__inspector-card[data-v-parent]`，子根继承 data-v-parent 仍命中。特异性：只读覆写 (0,4,0) > 子组件基样式 (0,2,0)，覆写仍生效。故本 slice 无需像 Slice 5 拆共享选择器组——直接整段迁出，父只读覆写天然兼容。
+
+inspector/panel/call-type/llm-usage/trace-status 选择器全部 inspector 独占（不在 border/padding/h4 共享组），整段搬迁无需拆分。
+
+### 父组件 import 调整
+
+- 新增 `import ChapterStepInspector from './ChapterStepInspector.vue'`
+
+### 测试指针跟随（uiAuditRegression.spec.ts）
+
+`labels chapter trace details by action...` 用例原读 `ChapterGenerating.vue` 源码断言面板标签「输入材料/实际动作/产出结果/调用类型/LLM 调用」。这些文本随 Slice 7 迁入子组件 → 断言改为读 `ChapterStepInspector.vue` 源码（`inspectorSource`）；逻辑引用 `traceUsesLlm`/`formatTraceActions` 仍在父 activeStepDetails computed，断言仍指 `source`。语义不变，仅换读源目标。沿用 Slice 1 在同文件的指针跟随先例（L253-254/L269 注释）。
+
+### 等价性 / 验证
+
+template/style 逐字搬迁 + 单 prop 透传 + 测试指针跟随。chapterGeneratingTiming 7 用例（mount 主组件断言 DOM，activeStepDetails 经 formatSystemDuration/formatTrace* 组装）全绿验证运行时等价。vue-tsc exit 0 / 全量 vitest **139 绿 0 失败** / eslint 0 新增（仅父 1 预存 @/api/novel 警告，子组件用 `@/utils/generationTrace` 的 ActiveStepDetails 类型，非受限路径）。
+
+### 风险
+
+低。纯展示，无业务逻辑迁移。**唯一理论等价点（无 spec 覆盖）**：只读模式下 inspector-card 的 border-radius:0/box-shadow:none 覆写靠 Vue「子组件根继承父 data-v」机制生效——属 CSS 行为，timing 测试断言 DOM 不覆盖样式细节，需人工目视只读回溯场景的节点详情面板边框/阴影。
+
+---
+
+## <500 缺口（Slice 7 后评估）
 
 | Slice | 主组件行数 |
 |---|---|
@@ -318,6 +354,7 @@ template/script/style 逐字搬迁 + emit 拆分（handler 留父）。chapterGe
 | Slice 3 后 | 1559 |
 | Slice 4 后 | 1455 |
 | Slice 5 后 | 1330 |
-| **Slice 6 后** | **1167** |
+| Slice 6 后 | 1167 |
+| **Slice 7 后** | **977** |
 
-下一块建议：Slice 7 抽 `ChapterStepInspector`（节点详情面板，template inspector-card 整块 + activeStepDetails 透传 prop + inspector/panel-code scoped style，纯展示，沿用 scoped 三段同迁范式）。剩余 1167 → 仍需继续拆分至 <500。每会话一块。
+节点详情面板已抽出。主组件 977 行，仍 >500，需继续拆分：pipeline 进度卡（步骤 ol + Tooltip + 节点重试，~80 行 template + 大量 pipeline/dot/连线/badge style）与 footer actions（~20 行）是剩余可抽的展示块；script 区（activeStepDetails/activeTrace/activeStepTraces/pipelineSteps/selectStep/动作/watch）仍是主体，可考虑抽 `useChapterGenerationTrace` composable 收 trace 组装逻辑。每会话一块。
