@@ -264,8 +264,7 @@ import Tooltip from '@/components/Tooltip.vue'
 import type { Chapter, ChapterGenerationTrace, ChapterVersion } from '@/api/novel'
 import { globalAlert } from '@/composables/useAlert'
 import { useGenerationTiming } from '@/composables/useGenerationTiming'
-import { cleanVersionContent, formatChapterGenerationError } from '@/utils/chapter'
-import { countNonWhitespaceChars } from '@/utils/text'
+import { useGenerationFailure } from '@/composables/useGenerationFailure'
 import {
   STEP_DETAILS,
   PIPELINE_LABELS,
@@ -348,101 +347,14 @@ const pipelineSteps = computed(() => {
 
 const parsedStepPayload = computed(() => parseStepPayload(props.generationStep))
 
-const isFailureStatus = computed(
-  () => props.status === 'failed' || props.status === 'evaluation_failed',
-)
-
-const stepExists = (key: string) => pipelineSteps.value.some((item) => item.key === key)
-
-const terminalFailedTrace = computed(() => {
-  return [...props.generationTraces].reverse().find((trace) => trace.status === 'failed') ?? null
-})
-
-const failureReason = computed(() => {
-  const traceError = terminalFailedTrace.value
-    ?.error
-    ?.trim()
-  if (isFailureStatus.value && traceError) {
-    return formatChapterGenerationError(traceError)
-  }
-
-  const step = (props.generationStep || '').trim()
-  if (!step) {
-    return ''
-  }
-
-  const parsed = parseStepPayload(step)
-  let rawError = step
-  if (parsed.meta.error) {
-    rawError = parsed.meta.error
-  } else if (parsed.baseKey && stepExists(normalizePipelineStepKey(parsed.baseKey))) {
-    const pipeIdx = step.indexOf('|')
-    if (pipeIdx >= 0) {
-      rawError = step.slice(pipeIdx + 1)
-    }
-  }
-
-  if (
-    isFailureStatus.value &&
-    (parsed.baseKey === 'failed' || parsed.baseKey === 'evaluation_failed') &&
-    !parsed.meta.error
-  ) {
-    return ''
-  }
-
-  // 仅在非明确失败状态下，才利用正则过滤标准运行步骤名
-  if (!isFailureStatus.value) {
-    if (/^[a-z_]+(?:\|.*)?$/i.test(step)) {
-      return ''
-    }
-  }
-
-  return formatChapterGenerationError(rawError)
-})
-
-const failureScenario = computed(() => {
-  const step = (props.generationStep || '').toLowerCase()
-
-  if (failureReason.value) {
-    return {
-      title: '已定位错误原因',
-      description: failureReason.value,
-    }
-  }
-
-  if (props.status === 'evaluation_failed') {
-    return {
-      title: 'AI评审失败',
-      description: '评审节点未返回更具体的失败原因，请查看节点详情、后端日志，或重新评审。',
-    }
-  }
-
-  if (step.includes('timeout') || step.includes('time_out')) {
-    return {
-      title: '模型超时',
-      description: '模型响应超时，可能是瞬时拥塞或模型负载过高。',
-    }
-  }
-
-  if (step.includes('context') || step.includes('length') || step.includes('token')) {
-    return {
-      title: '上下文过长',
-      description: '本章输入上下文超出稳定范围，请精简前文摘要后再点击重试。',
-    }
-  }
-
-  if (step.includes('persist') || step.includes('save')) {
-    return {
-      title: '保存失败',
-      description: '草稿生成后写入版本库失败，请确认当前章节状态后再点击重试生成。',
-    }
-  }
-
-  return {
-    title: '生成流程中断',
-    description: '本轮草稿生成未完成，可直接重试本章生成。',
-  }
-})
+const {
+  isFailureStatus,
+  terminalFailedTrace,
+  failureReason,
+  failureScenario,
+  failedVersionCards,
+  stepExists,
+} = useGenerationFailure(props, pipelineSteps)
 
 const retryGenerateLabel = computed(() =>
   props.status === 'evaluation_failed' ? '放弃本轮草稿并重新生成' : '整章重新生成',
@@ -529,23 +441,6 @@ const stepTooltipText = (key: string, index: number) => {
   }
   return STEP_DETAILS[key]?.summary || ''
 }
-
-const failedVersionCards = computed(() =>
-  props.availableVersions
-    .map((version, index) => {
-      const content = cleanVersionContent(version.content || '').trim()
-      if (!content) return null
-      const preview = content.replace(/\s+/g, ' ').slice(0, 96)
-      return {
-        index,
-        displayIndex: index + 1,
-        style: version.style || '标准',
-        wordCount: countNonWhitespaceChars(content),
-        preview: preview ? `${preview}${content.length > 96 ? '...' : ''}` : '暂无正文预览',
-      }
-    })
-    .filter((item): item is NonNullable<typeof item> => item !== null),
-)
 
 const currentStepIndex = computed(() => {
   const index = pipelineSteps.value.findIndex((item) => item.key === currentStepKey.value)

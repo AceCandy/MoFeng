@@ -125,12 +125,47 @@ parent `07-12-engineering-baseline` acceptance 第 4 项「5 大组件 <500 行�
 
 ---
 
-## <500 缺口（Slice 2 后评估）
+## Slice 3 详述：抽 `composables/useGenerationFailure.ts`
+
+### 边界（相对原计划的调整）
+
+原计划把 `currentStepKey`（54 行分支）纳入本 slice。深入依赖图后发现 `currentStepKey` 是**横跨正常/失败的步骤状态机枢纽**——被 `activeStepTraces`/`activeTrace`/`activeStepDetails`/`currentStepIndex`/`stepState`/`canRetryFromNode`/`selectStep`/`stepTooltipText`/2 个 watch 几乎整个 script 消费。强行抽走会牵动大半个组件、命名失真（并非"失败分析"）、风险升到中高。
+
+故本 slice **只抽纯失败展示** 5 符号（依赖闭合于 props 子集 + utils），`currentStepKey` 系列状态机留后续 slice（建议命名 `useGenerationPipeline`，风险更高值得独占注意力）。按 CLAUDE.md「风险更低/diff 更小优先」。
+
+### 迁出符号（→ composable）
+
+- `isFailureStatus`、`terminalFailedTrace`、`failureReason`、`failureScenario`、`failedVersionCards`（5 符号逐字迁移）
+- `stepExists`（failureReason 依赖它判断步骤键合法性；composable 内自建，同时返回供组件 currentStepKey 复用）
+
+### composable 签名
+
+`useGenerationFailure(props: GenerationFailureProps, pipelineSteps: ComputedRef<PipelineStep[]>)`。第二参数 pipelineSteps 是对 useChapterStatus「只收 props」范式的唯一偏离——failureReason 的 stepExists 分支需要步骤键集合，而 pipelineSteps 随 status 变化不可硬编码。注释已说明。
+
+### 留组件（步骤状态机，后续 slice）
+
+`pipelineSteps`、`parsedStepPayload`、`currentStepKey`、`currentStepIndex`、`stepState`、`canRetryFromNode`、`retryGenerateLabel`、`selectStep`、`stepTooltipText`、`completedSteps`、`activeStepTraces`/`activeTrace`/`activeStepDetails`、watch/lifecycle。这些消费 composable 返回的 isFailureStatus/terminalFailedTrace/failureReason/failureScenario/stepExists（解构同名，.value 引用零改动）。
+
+### 组件 import 调整
+
+- `@/utils/chapter`：整行删（cleanVersionContent + formatChapterGenerationError 随 failureReason/failedVersionCards 迁出，组件无其他消费点）
+- `@/utils/text`：整行删（countNonWhitespaceChars 随 failedVersionCards 迁出）
+- 新增 `import { useGenerationFailure } from '@/composables/useGenerationFailure'`
+- `@/utils/generationTrace`：parseStepPayload/normalizePipelineStepKey 保留（parsedStepPayload/currentStepKey/activeStepTraces 仍用）
+
+### 等价性 / 验证
+
+逐字迁移，消费点零逻辑改动（解构同名）。chapterGeneratingTiming 7 用例（mount 主组件断言 DOM，覆盖 failureReason/failureScenario/failedVersionCards/currentStepKey）全绿验证运行时等价。vue-tsc exit 0 / 全量 vitest 137 绿 / eslint 0 新增（1 预存 `@/api/novel` 警告，composable 不受限）。
+
+---
+
+## <500 缺口（Slice 3 后评估）
 
 | Slice | 主组件行数 |
 |---|---|
 | 起点 | 2261 |
 | Slice 1 后 | 1762 |
-| **Slice 2 后** | **1664** |
+| Slice 2 后 | 1664 |
+| **Slice 3 后** | **1559** |
 
-仍远 >500，按 Slice 3-7 继续推进，每会话一块。Slice 3（失败分析 composable，含 currentStepKey 54 行分支，中风险）是下一块；Slice 4-6 是纯展示子组件（低风险，scoped style 随迁）。具体边界推进到对应 slice 会话时在本文件追加契约表。
+仍远 >500。下一块建议：抽步骤状态机 `useGenerationPipeline`（pipelineSteps + currentStepKey + currentStepIndex + stepState + canRetryFromNode + stepExists + parsedStepPayload，~150 行，中风险——currentStepKey 分支多但 chapterGeneratingTiming 强回归网覆盖）。再之后 Slice 4-6 纯展示子组件（ChapterDraftPreview/ChapterFailedVersions/ChapterStepInspector，低风险，scoped style 随迁）。每会话一块。

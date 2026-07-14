@@ -64,3 +64,36 @@ cd frontend && npx eslint src/components/writing-desk/workspace/ChapterGeneratin
 ## 提交边界
 
 单 commit：`refactor(frontend): 抽 useGenerationTiming composable（#22 ChapterGenerating Slice 2）`。body 说明迁出符号 + 删 2 死 computed + 行数变化 + 三件套结果。
+
+---
+
+# Slice 3 实施清单：抽 `composables/useGenerationFailure.ts`
+
+## 边界调整
+
+原计划含 currentStepKey，实施时发现它是横跨正常/失败的步骤状态机枢纽（被 activeStepTraces/activeTrace/activeStepDetails/currentStepIndex/stepState/canRetryFromNode/selectStep/stepTooltipText/watch 大量消费）。本 slice 缩边界为纯失败展示 5 符号，currentStepKey 系列留后续 useGenerationPipeline slice。理由：风险更低、命名准确、验证可靠。
+
+## 步骤
+
+1. 新建 `useGenerationFailure.ts`：迁入 isFailureStatus/terminalFailedTrace/failureReason/failureScenario/failedVersionCards + 内部 stepExists。签名收 props 子集 + pipelineSteps(ComputedRef) 入参。返回 6 符号（含 stepExists 供组件复用）。
+2. 改 ChapterGenerating.vue：删 5 符号定义 + 组件内 stepExists + failedVersionCards；import 去 @/utils/chapter、@/utils/text，加 useGenerationFailure；插 composable 解构调用。
+3. 复核：消费点（currentStepKey/activeTrace/activeStepDetails/stepTooltipText/canRetryFromNode）零逻辑改动，解构同名 .value 不变。
+
+## 验证（全绿）
+
+- vue-tsc --noEmit → exit 0
+- vitest run chapterGeneratingTiming.spec.ts → 7 绿
+- vitest run（全量）→ 137 绿
+- eslint 改动两文件 → 0 新增（1 预存 @/api/novel 警告）
+
+## 结果
+
+主组件 1664 → **1559**（−105）；composable 151 行新增。diff 9 insertions / 114 deletions，纯符号迁移 + import 调整。
+
+## 回滚点
+
+`git checkout -- ChapterGenerating.vue && rm frontend/src/composables/useGenerationFailure.ts`，无副作用。
+
+## 提交边界
+
+单 commit：`refactor(frontend): 抽 useGenerationFailure composable（#22 ChapterGenerating Slice 3）`。
