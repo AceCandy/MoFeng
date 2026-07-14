@@ -141,3 +141,38 @@ cd frontend && npx eslint src/components/writing-desk/workspace/ChapterGeneratin
 ## 提交边界
 
 单 commit：`refactor(frontend): 抽 useGenerationPipeline composable（#22 ChapterGenerating Slice 4）`。
+
+---
+
+# Slice 5 实施清单：抽子组件 `ChapterDraftPreview.vue`
+
+## 步骤
+
+1. 新建 `ChapterDraftPreview.vue`：template 逐字搬草稿预览卡 DOM（去 `v-else-if`，条件留父标签）；script 收 `chapterContentPreview` prop + 逐字迁 `previewParagraphs`/`previewModeLabel`；scoped style 含骨架（border/radius/bg/shadow/padding/h4）+ 独占规则逐字 + 自带 `@keyframes blink-cursor` + reduced-motion cursor。
+2. 改 ChapterGenerating.vue：
+   - template 草稿预览卡 → `<ChapterDraftPreview v-else-if="!props.readOnly" :chapter-content-preview="props.chapterContentPreview" />`
+   - 新增 `import ChapterDraftPreview from './ChapterDraftPreview.vue'`
+   - 删 `previewParagraphs`/`previewModeLabel` computed
+   - style：border/padding/h4 三处共享选择器删 preview-card；删 preview 独占段；reduced-motion 删 cursor selector；删 `@keyframes blink-cursor`（orphan）
+3. 复核：diff 只含子组件新建 + 父删 template/script/style + import + 共享选择器拆分；template/script/style 三段与子组件逐字等价；条件链 v-if→v-else-if→v-if 不变。
+
+## 验证（全绿）
+
+- vue-tsc --noEmit → exit 0
+- vitest run chapterGeneratingTiming.spec.ts → 7 绿
+- vitest run（全量）→ 除 useChapterReader 1 个 pre-existing 失败外 138 绿（reader 失败属 reader 会话残留，非本 slice 引入，不在范围）
+- eslint 改动两文件 → 0 新增（1 预存 @/api/novel 警告）
+
+## 结果
+
+主组件 1455 → **1330**（−125）；子组件 164 行新增。diff 7 insertions / 132 deletions，纯 template/script/style 迁移 + 共享选择器拆分 + orphan 清理。
+
+## 范式确立点（首个子组件 slice）
+
+- scoped style 随迁：父 `<style scoped>` 选不到子组件元素 → 子组件自带 scoped style，卡片骨架重复声明（两处维护，scoped 固有代价）。
+- @keyframes 自带：scoped 给 keyframes 名加 data-v hash → 子组件引用父 keyframes 失配，必须自带 `@keyframes blink-cursor`。
+- 条件链保留：`v-else-if` 留在父的子组件标签上，保持「失败区 → 草稿预览 → 节点详情」三段条件。
+
+## 提交边界
+
+单 commit：`refactor(frontend): 抽 ChapterDraftPreview 子组件（#22 ChapterGenerating Slice 5）`。仅含 ChapterGenerating.vue + ChapterDraftPreview.vue + design.md + implement.md；不含 useChapterReader.ts/.spec.ts（reader 会话残留）。

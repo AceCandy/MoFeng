@@ -224,7 +224,46 @@ currentStepKey 不依赖 stepState；stepState 依赖 currentStepKey/currentStep
 
 ---
 
-## <500 缺口（Slice 4 后评估）
+## Slice 5 详述：抽子组件 `ChapterDraftPreview.vue`
+
+### 边界
+
+把"正常生成中"草稿预览卡（template `chapter-console__preview-card` 整块 + 专属 `previewParagraphs`/`previewModeLabel` computed + preview/strategy scoped style）整体抽成纯展示子组件。首个子组件 slice，确立 template/script/style 三段同迁范式。
+
+### 迁出（→ 子组件）
+
+- template：草稿预览卡 DOM（逐字搬迁；`v-else-if="!props.readOnly"` 条件留在父的子组件标签上，保持「失败区 v-if → 草稿预览 v-else-if → 节点详情 v-if」条件链）
+- script：`previewParagraphs`/`previewModeLabel`（逐字迁移；子组件收 `chapterContentPreview` prop，逻辑内聚，无对外依赖）
+- style（scoped）：preview-card/header/body/cursor/strategy 独占规则（逐字）+ 卡片骨架（border/radius/bg/shadow/padding/h4，源自父 3 处共享选择器）+ `@keyframes blink-cursor` + reduced-motion cursor
+
+### scoped 关键点（首个子组件踩到的范式坑）
+
+1. 父 `<style scoped>` 选不到子组件元素 → 子组件必须自带 scoped style，含卡片骨架（与父其余 card 重复声明，两处维护，系 scoped 子组件固有代价，与 ChapterToolbar 范式一致）。
+2. `.chapter-console__cursor { animation: blink-cursor }` → Vue scoped 给 keyframes 名加 data-v hash，子组件引用父 keyframes 会失配 → 子组件**自带 `@keyframes blink-cursor`**。
+
+### 父组件 import 调整
+
+- 新增 `import ChapterDraftPreview from './ChapterDraftPreview.vue'`
+
+### 父组件 style 清理（共享选择器拆 preview-card + orphan）
+
+- border 共享组（7 card）：删 `.chapter-console__preview-card,`
+- padding 共享组（5 card）：删 `.chapter-console__preview-card,`
+- h4 共享组：`.chapter-console__pipeline-card h4, .chapter-console__preview-card h4` → `.chapter-console__pipeline-card h4`
+- reduced-motion：删 `.chapter-console__cursor` selector（保留 pipeline dot）
+- `@keyframes blink-cursor`：删除（引用随 `.cursor` 迁出后成 orphan，本次改动产生，按 CLAUDE.md 清理自身 orphan）
+
+### 等价性 / 验证
+
+template/script/style 逐字搬迁，子组件骨架补全与父原值一致。chapterGeneratingTiming 7 用例（mount 主组件）全绿验证主组件渲染不破。**草稿预览卡本身无 spec 覆盖**（timing 用例均为失败/评审/pipeline 场景），等价性靠逐字搬迁 + 主组件 mount 不报错双保险；样式细节（光标动画等）需人工目视。vue-tsc exit 0 / 全量 vitest 除 reader pre-existing 失败外 138 绿 / eslint 0 新增（1 预存 @/api/novel 警告）。
+
+### 风险
+
+低-中。纯展示，但 scoped 骨架重复声明 + keyframes 自带是首个子组件 slice 的范式确立点，抄写偏差（骨架属性漏抄/keyframes 漏带）即视觉走样。逐字核对兜底。
+
+---
+
+## <500 缺口（Slice 5 后评估）
 
 | Slice | 主组件行数 |
 |---|---|
@@ -232,6 +271,7 @@ currentStepKey 不依赖 stepState；stepState 依赖 currentStepKey/currentStep
 | Slice 1 后 | 1762 |
 | Slice 2 后 | 1664 |
 | Slice 3 后 | 1559 |
-| **Slice 4 后** | **1455** |
+| Slice 4 后 | 1455 |
+| **Slice 5 后** | **1330** |
 
-下一块建议：Slice 5-7 纯展示子组件（ChapterDraftPreview/ChapterFailedVersions/ChapterStepInspector，低风险，scoped style 随迁，每块 ~80-150 行），把 template/script/style 三段一起搬。每会话一块。
+下一块建议：Slice 6-7 纯展示子组件（ChapterFailedVersions 失败区 / ChapterStepInspector 节点详情面板，低-中风险，沿用本 slice 的 scoped 三段同迁范式）。每会话一块。
