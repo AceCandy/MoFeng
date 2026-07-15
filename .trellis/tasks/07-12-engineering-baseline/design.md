@@ -143,11 +143,12 @@ Slice B 已抽 4 个 composable（script −447 行），但 template 525 / styl
 | Slice D 第 4b 块后 | 814 |
 | Slice E 后 | 713 |
 | Slice F 后（3dc9640 reader 音色过滤 revert 后基准 707） | **638** |
+| Slice G 后 | **568** |
+| Slice H 后 | **519** |
 
-WorkspaceHeader 已整块抽完（4a ChapterMeta + 4b ChapterToolbar）。Slice E 抽出 currentComponentProps+draftTraceReplayProps，Slice F 抽出朗读胶水（见下）。仍 638>500，**还需约 138 行**，候选：
+WorkspaceHeader 已整块抽完（4a ChapterMeta + 4b ChapterToolbar）。Slice E 抽出 currentComponentProps+draftTraceReplayProps，Slice F 抽出朗读胶水，Slice G 抽出 ChapterTabs，Slice H 抽出复制胶水 useChapterClipboard（见下）。仍 519>500，**还需约 19 行**，候选：
 
-- tabs-row template ~33 行 + 其 scoped style ~59 行，可抽 `ChapterTabs` 子组件（activeTab 经 v-model 共享，tabs-row 容器 v-if=isFinalizedSuccessful 留父）。
-- locked 前置 ~34 行 / formatDateTime+meta ~24 行，可并入 `useChapterStatus`（注意 lockedPrerequisiteChapterNumber/Title 同时被 useChapterBodyProps 消费，需 composable 间透传）。
+- locked 前置 ~34 行 / formatDateTime+meta ~24 行，可并入 `useChapterStatus`（注意 lockedPrerequisiteChapterNumber/Title 同时被 useChapterBodyProps 消费，需 composable 间透传）。抽此项可达 <500。
 
 具体边界在收尾会话定，届时补契约表。其余 4 大组件（PersonalModelRouting / ChapterGenerating / WritingDesk / NovelDetailShell）的拆分边界由各自 child 的 `design.md` 承载，不在本 design。
 
@@ -246,4 +247,62 @@ vue-tsc 0 / 全量 vitest 141 绿（wdWorkspaceLockedChapter 10/10 + useChapterR
 
 - ChapterEvaluationPanel：纯展示子组件，props 收 `evaluation: string` + `evaluatingChapter`，内部重算 parsedEvaluation/sortedEvaluationEntries/parseMarkdown。收益最大（~251 行）但 marked 版本兼容分支需整迁。
 - ChapterVersionsPanel / WorkspaceHeader：见契约表，按风险递增跨会话推进。
+
+## Slice G 设计：抽 `ChapterTabs` 子组件（三合一分区切换栏，2026-07-15）
+
+Slice F 后 WDWorkspace 638 行。三合一 Tab 切换栏（正文/版本/评审 nav + 其 scoped 朱砂笺条样式 ~70 行）是剩余最大内聚 template+style 块，且 activeTab 是本地共享态（无跨 composable 透传），抽成纯展示子组件 `workspace/ChapterTabs.vue`。
+
+### 边界
+
+| 迁出符号 | 去向 |
+|---|---|
+| `<nav class="writing-workspace__tabs">` + 3 button（template ~26 行） | ChapterTabs 根（nav），逐字搬迁 |
+| `.writing-workspace__tabs` / `.writing-workspace__tab-btn`(+`:hover`/`.is-active`) / `.tab-badge`（scoped ~46 行） | ChapterTabs scoped，逐字搬迁 |
+| `tabs-row` 容器 `<div v-if=... class="writing-workspace__tabs-row">` + 其样式 | **留父**（v-if=isFinalizedSuccessful 守卫 + 容器布局属父） |
+| `activeTab` ref + watch(切章重置) | **留父**（body 三分支 v-if/v-else-if + ChapterVersionsPanel @switch-to-content 仍消费） |
+
+### 契约（v-model）
+
+子组件 props `{ activeTab: 'content'|'versions'|'evaluation'; versionsCount: number }` + emit `update:activeTab`。父 `<ChapterTabs v-model:active-tab="activeTab" :versions-count="availableVersions.length" />`。3 按钮 `@click="activeTab='x'"` 改 `@click="$emit('update:activeTab','x')"`（子→父唯一必要适配）。`availableVersions.length` 由父透传为 `versionsCount`。
+
+### scoped 迁移安全性
+
+子根 `<nav>` 带 data-v-child，子 scoped 的 `.writing-workspace__tab-btn` 等命中子内部 button/span ✓。无只读覆写、无父后代选择器引用 tab 元素（`.writing-workspace__tabs-row` 是父自有元素独立样式）→ 比 Slice 7/9（需处理只读覆写）更简，同 Slice 5/6 范式。
+
+### 测试指针跟随
+
+rg 全仓 test 无 `tab-btn`/`writing-workspace__tabs`/`tab-badge`/「查看版本」等源码或 DOM 断言（仅 ForeshadowingSection 的无关 `foreshadowing-tab-badge`）。同 Slice 9（ChapterPipeline 无测试指针），无需 readSource 重定向。mount 网 `wdWorkspaceLockedChapter` 仅「shows the reading control only for finalized chapter content」命 successful+content 会渲染 tabs，但只断言 `[aria-label="朗读"]`，子组件渲染不破坏。
+
+### 验证
+
+vue-tsc 0（v-model 契约 + 类型）/ 全量 vitest 141 绿（wdWorkspaceLockedChapter 10/10 mount 网通过）/ eslint 0 新增（ChapterTabs.vue 0 warning；WDWorkspace `@/api/novel` type import warning 预存）。638→568（净 −70，diff 5 插入/75 删除 + 新建子组件 94 行）。
+
+## Slice H 设计：抽 `useChapterClipboard` composable（章节复制胶水，2026-07-15）
+
+Slice G 后 WDWorkspace 568 行。复制胶水（copyTextLegacy/copyText/copySelectedChapterTitle/copySelectedChapterContent/chapterTitleTooltipText/resetChapterTitleTooltip ~59 行）是剩余最大内聚 script 块，且依赖仅 selectedChapterOutline + selectedChapterResolvedContent（无跨 composable 透传），抽成 `composables/useChapterClipboard.ts`。
+
+### 边界
+
+| 迁出符号 | 去向 |
+|---|---|
+| copyTextLegacy / copyText（execCommand 兜底 + clipboard API 封装） | composable 内部私有，不返回 |
+| chapterTitleTooltipText ref + resetChapterTitleTooltip | 返回（ChapterMeta `:title-tooltip-text` / `@reset-title-tooltip` 消费） |
+| copySelectedChapterTitle / copySelectedChapterContent | 返回（ChapterMeta `@copy-title` / ChapterToolbar `@copy-content` 消费） |
+
+### 契约
+
+composable 入参 `{ selectedChapterOutline: ComputedRef<ChapterOutline|null>; selectedChapterResolvedContent: ComputedRef<string> }`，返回 `{ chapterTitleTooltipText, resetChapterTitleTooltip, copySelectedChapterTitle, copySelectedChapterContent }`。父在 useVersionResolver 块后解构（依赖 selectedChapterResolvedContent 输出）。template ChapterMeta/ChapterToolbar 的 props/event 名不变，零适配。
+
+### 测试指针跟随
+
+rg 全仓 spec 无 copyText/copySelectedChapter/chapterTitleTooltipText/resetChapterTitleTooltip 断言（剪贴板在 jsdom 不可用，无覆盖）。同 Slice 9 范式，无 readSource 重定向。mount 网 wdWorkspaceLockedChapter 不触发复制点击，composable 迁入不影响渲染。
+
+### 备注
+
+ChapterContent.vue 另有同名 copyTextLegacy/copyText 独立副本（L503/L525），本次 scope 限定 WDWorkspace 不动；composable 签名通用，将来 ChapterContent 可接入去重。
+
+### 验证
+
+vue-tsc 0 / 全量 vitest 141 绿（wdWorkspaceLockedChapter 10/10）/ eslint 0 新增（useChapterClipboard.ts 0 warning；WDWorkspace `@/api/novel` type import warning 预存，因 +1 import 从 L134→L135 位移）。568→519（净 −49，diff +10/−61 + 新建 composable 88 行）。
+
 

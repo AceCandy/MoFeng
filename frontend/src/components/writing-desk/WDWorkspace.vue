@@ -131,6 +131,7 @@ import { useChapterReaderBar } from '@/composables/useChapterReaderBar'
 import { useVersionResolver } from '@/composables/useVersionResolver'
 import { useChapterStatus } from '@/composables/useChapterStatus'
 import { useChapterBodyProps } from '@/composables/useChapterBodyProps'
+import { useChapterClipboard } from '@/composables/useChapterClipboard'
 import type {
   Chapter,
   ChapterOutline,
@@ -186,66 +187,6 @@ interface ChapterContentExpose {
 
 const bodyComponentRef = ref<ChapterContentExpose | null>(null)
 
-const copyTextLegacy = (text: string): boolean => {
-  const textarea = document.createElement('textarea')
-  textarea.value = text
-  textarea.setAttribute('readonly', 'readonly')
-  textarea.style.position = 'fixed'
-  textarea.style.top = '-9999px'
-  textarea.style.left = '-9999px'
-  document.body.appendChild(textarea)
-  textarea.focus()
-  textarea.select()
-
-  let copied = false
-  try {
-    copied = document.execCommand('copy')
-  } catch (error) {
-    copied = false
-  }
-
-  document.body.removeChild(textarea)
-  return copied
-}
-
-const chapterTitleTooltipText = ref('点击复制')
-
-const resetChapterTitleTooltip = () => {
-  chapterTitleTooltipText.value = '点击复制'
-}
-
-const copyText = async (text: string) => {
-  try {
-    if (window.isSecureContext && navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text)
-      return true
-    }
-
-    return copyTextLegacy(text)
-  } catch (error) {
-    console.error('复制失败:', error)
-    return copyTextLegacy(text)
-  }
-}
-
-const copySelectedChapterTitle = async () => {
-  const title = (selectedChapterOutline.value?.title || '未知标题').trim()
-  if (!title) return
-
-  const copied = await copyText(title)
-  chapterTitleTooltipText.value = copied ? '复制成功' : '复制失败'
-}
-
-const copySelectedChapterContent = async () => {
-  const content = selectedChapterResolvedContent.value.trim()
-  if (!content) return
-
-  const copied = await copyText(content)
-  if (!copied) {
-    globalAlert.showError('复制失败，请手动选择文本复制。')
-  }
-}
-
 const selectedChapter = computed<Chapter | null>(() => {
   if (!props.project || props.selectedChapterNumber === null) return null
   return (
@@ -271,6 +212,16 @@ const {
   selectedChapter,
   availableVersions: computed(() => props.availableVersions),
   selectedVersionIndex: computed(() => props.selectedVersionIndex),
+})
+
+const {
+  chapterTitleTooltipText,
+  resetChapterTitleTooltip,
+  copySelectedChapterTitle,
+  copySelectedChapterContent,
+} = useChapterClipboard({
+  selectedChapterOutline,
+  selectedChapterResolvedContent,
 })
 
 const editModalRef = ref<InstanceType<typeof EditChapterModal> | null>(null)
