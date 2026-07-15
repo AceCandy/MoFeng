@@ -145,12 +145,11 @@ Slice B 已抽 4 个 composable（script −447 行），但 template 525 / styl
 | Slice F 后（3dc9640 reader 音色过滤 revert 后基准 707） | **638** |
 | Slice G 后 | **568** |
 | Slice H 后 | **519** |
+| Slice I 后 | **498** |
 
-WorkspaceHeader 已整块抽完（4a ChapterMeta + 4b ChapterToolbar）。Slice E 抽出 currentComponentProps+draftTraceReplayProps，Slice F 抽出朗读胶水，Slice G 抽出 ChapterTabs，Slice H 抽出复制胶水 useChapterClipboard（见下）。仍 519>500，**还需约 19 行**，候选：
+WorkspaceHeader 已整块抽完（4a ChapterMeta + 4b ChapterToolbar）。Slice E 抽出 currentComponentProps+draftTraceReplayProps，Slice F 抽出朗读胶水，Slice G 抽出 ChapterTabs，Slice H 抽出复制胶水 useChapterClipboard，Slice I 抽出章节元信息 useChapterInlineMeta（见下）。**498<500，acceptance 达成。**
 
-- locked 前置 ~34 行 / formatDateTime+meta ~24 行，可并入 `useChapterStatus`（注意 lockedPrerequisiteChapterNumber/Title 同时被 useChapterBodyProps 消费，需 composable 间透传）。抽此项可达 <500。
-
-具体边界在收尾会话定，届时补契约表。其余 4 大组件（PersonalModelRouting / ChapterGenerating / WritingDesk / NovelDetailShell）的拆分边界由各自 child 的 `design.md` 承载，不在本 design。
+具体边界见各 Slice 设计段。其余 4 大组件（PersonalModelRouting / ChapterGenerating / WritingDesk / NovelDetailShell）的拆分边界由各自 child 的 `design.md` 承载，不在本 design。
 
 ## Slice E 设计：抽 `useChapterBodyProps`（currentComponentProps + draftTraceReplayProps，2026-07-15）
 
@@ -304,5 +303,28 @@ ChapterContent.vue 另有同名 copyTextLegacy/copyText 独立副本（L503/L525
 ### 验证
 
 vue-tsc 0 / 全量 vitest 141 绿（wdWorkspaceLockedChapter 10/10）/ eslint 0 新增（useChapterClipboard.ts 0 warning；WDWorkspace `@/api/novel` type import warning 预存，因 +1 import 从 L134→L135 位移）。568→519（净 −49，diff +10/−61 + 新建 composable 88 行）。
+
+## Slice I 设计：抽 `useChapterInlineMeta` composable（章节元信息，2026-07-15）
+
+Slice H 后 WDWorkspace 519 行。章节元信息胶水（`formatDateTime` 本地纯函数 + `selectedChapterWordCount` + `chapterLastEditedText` + `chapterInlineMeta`，script ~25 行）是剩余最大内聚 script 块，且依赖仅 selectedChapter + selectedChapterResolvedContent + hasSelectedChapterContent（父已具备，无跨 composable 透传），抽成 `composables/useChapterInlineMeta.ts`。
+
+### 边界
+
+| 符号 | 去向 |
+|---|---|
+| `formatDateTime`（本地纯函数，≠ `@/utils/date` 同名导出：本地版 `YYYY/MM/DD HH:mm`、空值 `--`）| composable 内部私有 |
+| `selectedChapterWordCount` | 内部中间量（唯一消费者 chapterInlineMeta）|
+| `chapterLastEditedText` | 内部中间量（唯一消费者 chapterInlineMeta）|
+| `chapterInlineMeta` | **返回**（ChapterMeta `:inline-meta` 消费）|
+
+入参 3 个 ComputedRef（selectedChapter / selectedChapterResolvedContent / hasSelectedChapterContent），父 useChapterStatus 解构块后解构。template `:inline-meta="chapterInlineMeta"` props 名不变，零适配。`countNonWhitespaceChars` import 随 selectedChapterWordCount 迁入 composable，WDWorkspace 删 orphan import。
+
+### 测试指针跟随
+
+rg 全仓 spec 无 selectedChapterWordCount / chapterLastEditedText / chapterInlineMeta / 「最后编辑」断言。同 Slice 9/H 范式，无 readSource 重定向。mount 网 wdWorkspaceLockedChapter 断言 successful + content 渲染覆盖 ChapterMeta 渲染路径，等价性靠逐字搬迁 + mount 不报错。
+
+### 验证
+
+vue-tsc 0 / 全量 vitest 141 绿（wdWorkspaceLockedChapter 10/10）/ eslint 0 新增（useChapterInlineMeta.ts 0 warning；WDWorkspace `@/api/novel` type import warning 预存，因 +1 import 从 L135→L136 位移）。519→498（净 −21，diff +6/−27 + 新建 composable 48 行）。
 
 

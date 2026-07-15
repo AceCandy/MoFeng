@@ -132,6 +132,7 @@ import { useVersionResolver } from '@/composables/useVersionResolver'
 import { useChapterStatus } from '@/composables/useChapterStatus'
 import { useChapterBodyProps } from '@/composables/useChapterBodyProps'
 import { useChapterClipboard } from '@/composables/useChapterClipboard'
+import { useChapterInlineMeta } from '@/composables/useChapterInlineMeta'
 import type {
   Chapter,
   ChapterOutline,
@@ -139,7 +140,6 @@ import type {
   ChapterVersion,
   NovelProject,
 } from '@/api/novel'
-import { countNonWhitespaceChars } from '@/utils/text'
 import ChapterGenerating from './workspace/ChapterGenerating.vue'
 import ChapterReaderBar from './ChapterReaderBar.vue'
 import EditChapterModal from './workspace/EditChapterModal.vue'
@@ -263,8 +263,6 @@ const shouldShowDraftTraceReplay = computed(() => {
   return isDraftWaitingConfirm.value && hasSelectedChapterContent.value
 })
 
-const selectedChapterWordCount = computed(() => countNonWhitespaceChars(selectedChapterResolvedContent.value))
-
 const lockedPrerequisiteChapterNumber = computed(() => {
   if (props.selectedChapterNumber === null || !props.project?.blueprint?.chapter_outline) {
     return null
@@ -325,29 +323,10 @@ const {
   isDraftWaitingConfirm,
 })
 
-const formatDateTime = (value?: string | null) => {
-  if (!value) return '--'
-  const parsed = new Date(value)
-  if (Number.isNaN(parsed.getTime())) return '--'
-  const year = parsed.getFullYear()
-  const month = String(parsed.getMonth() + 1).padStart(2, '0')
-  const day = String(parsed.getDate()).padStart(2, '0')
-  const hour = String(parsed.getHours()).padStart(2, '0')
-  const minute = String(parsed.getMinutes()).padStart(2, '0')
-  return `${year}/${month}/${day} ${hour}:${minute}`
-}
-
-const chapterLastEditedText = computed(() =>
-  formatDateTime(selectedChapter.value?.status_updated_at ?? selectedChapter.value?.generation_started_at),
-)
-
-const chapterInlineMeta = computed(() => {
-  const segments: string[] = []
-  if (hasSelectedChapterContent.value) {
-    segments.push(`${selectedChapterWordCount.value}字`)
-  }
-  segments.push(`最后编辑 ${chapterLastEditedText.value}`)
-  return segments.join(' · ')
+const { chapterInlineMeta } = useChapterInlineMeta({
+  selectedChapter,
+  selectedChapterResolvedContent,
+  hasSelectedChapterContent,
 })
 
 const openVersionDetail = () => {
