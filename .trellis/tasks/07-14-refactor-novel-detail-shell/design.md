@@ -26,7 +26,7 @@
 | **2** ✅ | ShellDrawerNav 子组件（aside drawer+nav+backdrop template + drawer/nav-item/nav-icon/nav-label style + @media sticky） | 展示子组件 | −181 | **1426** |
 | **3** ✅ | OverviewStrip 子组件（overview-strip template + overview/scroll/status/metric/kicker style + 4 @media 响应式，computed 群 props 透传） | 展示子组件 | −362 | **1064** |
 | **4** ✅ | `useShellSectionNavigation` composable（sections/sectionLoaders/sectionComponents/resolveInitialSection/isNovelSectionKey/prefetch·switch·load·reloadSection + overview·sectionQuery，activeNovelSection 内部） | composable | −90 | **974** |
-| 5 | AddChapterDialog 子组件（modal template + state + saveNewChapter/startAddChapter/cancelNewChapter） | 子组件 | ~90 | ~998 |
+| **5** ✅ | AddChapterDialog 子组件（modal template + 表单 state + useDialogA11y + md-scale-\* scoped；父留 startAddChapter/saveNewChapter 重副作用 + isAddChapterModalOpen） | 子组件 | −79 | **895** |
 | 6 | `useShellBlueprintEdit` composable（modal state + handleSectionEdit/handleSave/resolveSectionKey） | composable | ~55 | ~943 |
 | 7 | `useShellOverview` composable（projectStatus/characterCount/chapterTotal/chapterCompleted/currentChapterLabel/foreshadowingOverview/overviewData/overviewMeta/formattedTitle） | composable | ~65 | ~878 |
 | 8 | `useShellSectionContent` composable（componentProps/activeQuery/currentSectionResponse/currentSectionData/currentComponent/isSectionLoading/currentError/contentCardClass/componentContainerClass） | composable | ~75 | ~803 |
@@ -228,4 +228,53 @@ useShellSectionNavigation({
 - `eslint`：useShellSectionNavigation.ts **0 warning**（composables/ 不受 components/views 的 `@/api` no-restricted-imports 限制）；NovelDetailShell.vue 仅预存 L220 `@/api/novel` type import warning（原 L221，删 NovelSectionType 前移 1 行，未新增）。
 - 关键清理：父删 `defineAsyncComponent`/`onMounted`/`Component`(vue)、`useNovelSectionQuery`(queries)、`NovelSectionType`(api type) 五个 orphan import；`activeNovelSection` 不返回（仅 sectionQuery 内部驱动）。
 - 行为等价：`onMounted(async () => prefetch...)` → composable 内 `onMounted(() => prefetch...)`（去 async 无 await，等价）；`switchSection` 关侧栏逻辑经 onAfterSwitch 回调逐字保留。
+
+## Slice 5 设计：抽 `AddChapterDialog.vue`（新增章节 Modal，2026-07-15）
+
+### 边界
+
+| 符号 | 原位置 | 去向 | 备注 |
+|---|---|---|---|
+| `<transition md-scale-*>` + modal template（overlay/dialog/header/content/actions） | template L148-208 | `novel-detail/AddChapterDialog.vue` template | 逐字搬迁；v-if/refs/v-model 重命名 |
+| `addChapterDialogRef`/`addChapterCancelButtonRef`/`addChapterDialogTitleId`/`newChapterTitle`/`newChapterSummary` | state L293-298 | 子组件 dialogRef/cancelButtonRef/dialogTitleId/title/summary | 逐字搬迁（重命名） |
+| `useDialogA11y` 调用块 | L524-529 | 子组件 | `active: toRef(props,'isOpen')` 范式（同 BlueprintEditModal/CustomAlert/WDEvaluationDetailModal） |
+| `md-scale-*` scoped 定义（250ms cubic-bezier） | style L918-930 | 子组件 scoped | **随迁**：父 scoped 覆写全局 main.css:2344，modal 是父唯一 md-scale 用法 |
+| `useDialogA11y` import | L229 | **删**（orphan） | 迁子后父无调用 |
+| `isAddChapterModalOpen` | state | **留父** | 开关归父（startAddChapter/saveNewChapter/cancelNewChapter 控制） |
+| `startAddChapter`/`saveNewChapter`/`cancelNewChapter` | L509-562 | **留父** | 重副作用（ensureProjectLoaded/updateBlueprintMutation/loadSection）；saveNewChapter 改签名接收 payload |
+| `newChapterInitialTitle`（新） | state | 父 | 传子组件 `:initial-title` prop（startAddChapter 计算的「新章节 N」） |
+
+### 契约
+
+```vue
+<AddChapterDialog
+  v-if="!isAdmin"
+  :is-open="isAddChapterModalOpen"
+  :initial-title="newChapterInitialTitle"
+  @cancel="cancelNewChapter"
+  @confirm="saveNewChapter"
+/>
+```
+
+子组件 `defineProps<{ isOpen: boolean; initialTitle?: string }>()` + `defineEmits<{ cancel: []; confirm: [payload: { title: string; summary: string }] }>()`。表单 title/summary 在子组件内部 ref，打开时 watch isOpen 重置（title=initialTitle, summary=''），与原父 startAddChapter 设值等价。saveNewChapter 改 `(payload) => void`，trim/title/summary 取自 payload。
+
+### transition / scoped 处理（关键）
+
+- `md-scale-*` 父 scoped 定义（250ms cubic-bezier）**覆写**全局 main.css:2344（`var(--md-duration-medium) var(--md-easing-emphasized)`，值不同）。modal 是父组件里唯一用 md-scale-\* 处，迁子后该 scoped 定义成 orphan，**随迁入子组件 scoped**（子组件 transition 元素带子 scope id，命中子 scoped 的 250ms 定义，行为与原父完全一致；不依赖全局兜底）。
+- 其余 modal class（`md-dialog-overlay`/`md-dialog`/`md-dialog-header`/`md-dialog-title`/`md-dialog-content`/`md-dialog-actions`/`md-text-field*`/`md-textarea`/`md-btn*`）均来自全局 main.css，子组件直接用，无需迁样式。
+- 与 Slice 2/3 区别：本 slice 无 `detail-shell__*` 类参与（modal 用全局 md-\* class），故无父 scoped 跨组件依赖，子组件 scoped 只含 md-scale-\* 覆写。
+
+### 测试指针跟随
+
+- rg 确认 uiAuditRegression（transition-all/background-clip/classical/flat）+ novelDetailHeading（h1/h2/topbar/back/write/overview-strip）2 spec 均**不涉及** addChapter/NewChapter/md-scale → **零指针重定向**。
+- 无运行时测试 → 等价性靠逐字搬迁 + 三件套绿 + diff 复核。
+
+### 验证（实际，2026-07-15）
+
+- 行数：974 → **895**（−79；roadmap 预估 ~90，略少）。AddChapterDialog.vue 130 行（新）。
+- `vue-tsc --noEmit` exit 0（emit payload 类型 + saveNewChapter 签名 + AddChapterDialog props 全通过）。
+- `vitest run` 21 files / 141 tests 全绿（零指针重定向）。
+- `eslint`：AddChapterDialog.vue **0 warning**（不 import @/api，不受 components/ no-restricted-imports 限制）；NovelDetailShell.vue 仅预存 L167 `@/api/novel` type import warning（原 L220，本 slice 删行前移，未新增）。
+- 关键清理：父删 `useDialogA11y` import + `md-scale-*` scoped 定义（迁子后 orphan）；5 个 add-chapter state ref/id 迁子；`newChapterTitle.value`/`newChapterSummary.value` → `newChapterInitialTitle.value`/payload。
+- 行为等价：表单 state 从父 ref → 子组件 ref，值经 emit payload 流转；表单重置从 startAddChapter 同步设值 → 子组件 watch isOpen 打开时重置（时序等价：startAddChapter 同步设 initialTitle + isOpen=true，下个 tick watch 触发）；useDialogA11y `active: toRef(props,'isOpen')` 等价原 `isAddChapterModalOpen`，onClose 链路 handleCancel→emit cancel→父 cancelNewChapter。
 

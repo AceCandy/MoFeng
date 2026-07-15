@@ -146,66 +146,13 @@
     />
 
     <!-- Material 3 Add Chapter Modal -->
-    <transition
-      enter-active-class="md-scale-enter-active"
-      leave-active-class="md-scale-leave-active"
-      enter-from-class="md-scale-enter-from"
-      leave-to-class="md-scale-leave-to"
-    >
-      <div
-        v-if="isAddChapterModalOpen && !isAdmin"
-        class="md-dialog-overlay"
-        @click.self="cancelNewChapter"
-      >
-        <div
-          ref="addChapterDialogRef"
-          class="md-dialog relative w-full max-w-lg mx-4"
-          role="dialog"
-          aria-modal="true"
-          :aria-labelledby="addChapterDialogTitleId"
-        >
-          <div class="md-dialog-header">
-            <h3 :id="addChapterDialogTitleId" class="md-dialog-title">新增章节大纲</h3>
-          </div>
-          <div class="md-dialog-content space-y-6">
-            <div class="md-text-field">
-              <label for="new-chapter-title" class="md-text-field-label"> 章节标题 </label>
-              <input
-                id="new-chapter-title"
-                v-model="newChapterTitle"
-                type="text"
-                class="md-text-field-input"
-                placeholder="例如：意外的相遇"
-              />
-            </div>
-            <div class="md-text-field">
-              <label for="new-chapter-summary" class="md-text-field-label"> 章节摘要 </label>
-              <textarea
-                id="new-chapter-summary"
-                v-model="newChapterSummary"
-                rows="4"
-                class="md-textarea w-full"
-                placeholder="简要描述本章发生的主要事件"
-              ></textarea>
-            </div>
-          </div>
-          <div class="md-dialog-actions">
-            <button
-              ref="addChapterCancelButtonRef"
-              data-dialog-initial-focus
-              type="button"
-              class="md-btn md-btn-text md-ripple"
-              @click="cancelNewChapter"
-            >
-              取消
-            </button>
-            <button type="button" class="md-btn md-btn-filled md-ripple" @click="saveNewChapter">
-              保存
-            </button>
-          </div>
-        </div>
-      </div>
-    </transition>
+    <AddChapterDialog
+      v-if="!isAdmin"
+      :is-open="isAddChapterModalOpen"
+      :initial-title="newChapterInitialTitle"
+      @cancel="cancelNewChapter"
+      @confirm="saveNewChapter"
+    />
   </div>
 </template>
 
@@ -226,8 +173,8 @@ import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
 import { useShellSectionNavigation } from '@/composables/useShellSectionNavigation'
 import { resolveChapterNumberForEntry } from '@/utils/chapter'
 import { globalAlert } from '@/composables/useAlert'
-import { useDialogA11y } from '@/composables/useDialogA11y'
 import BlueprintEditModal from '@/components/BlueprintEditModal.vue'
+import AddChapterDialog from '@/components/novel-detail/AddChapterDialog.vue'
 import ShellDrawerNav from '@/components/novel-detail/ShellDrawerNav.vue'
 import OverviewStrip from '@/components/novel-detail/OverviewStrip.vue'
 import '@/assets/blueprint.css'
@@ -291,11 +238,7 @@ const modalField = ref('')
 
 // Add chapter modal state (user mode only)
 const isAddChapterModalOpen = ref(false)
-const addChapterDialogRef = ref<HTMLElement | null>(null)
-const addChapterCancelButtonRef = ref<HTMLElement | null>(null)
-const addChapterDialogTitleId = 'novel-detail-add-chapter-title'
-const newChapterTitle = ref('')
-const newChapterSummary = ref('')
+const newChapterInitialTitle = ref('')
 const novel = computed<NovelProject | null>(() =>
   !props.isAdmin ? (projectQuery.data.value ?? null) : null,
 )
@@ -512,8 +455,7 @@ const startAddChapter = async () => {
   const outline = novel.value?.blueprint?.chapter_outline || []
   const nextNumber =
     outline.length > 0 ? Math.max(...outline.map((item: any) => item.chapter_number)) + 1 : 1
-  newChapterTitle.value = `新章节 ${nextNumber}`
-  newChapterSummary.value = ''
+  newChapterInitialTitle.value = `新章节 ${nextNumber}`
   isAddChapterModalOpen.value = true
 }
 
@@ -521,19 +463,12 @@ const cancelNewChapter = () => {
   isAddChapterModalOpen.value = false
 }
 
-useDialogA11y({
-  active: isAddChapterModalOpen,
-  dialogRef: addChapterDialogRef,
-  onClose: cancelNewChapter,
-  initialFocusRef: addChapterCancelButtonRef,
-})
-
-const saveNewChapter = async () => {
+const saveNewChapter = async (payload: { title: string; summary: string }) => {
   if (props.isAdmin) return
   await ensureProjectLoaded()
   const project = novel.value
   if (!project) return
-  if (!newChapterTitle.value.trim()) {
+  if (!payload.title.trim()) {
     globalAlert.showError('章节标题不能为空', '无法新增章节')
     return
   }
@@ -545,8 +480,8 @@ const saveNewChapter = async () => {
     ...existingOutline,
     {
       chapter_number: nextNumber,
-      title: newChapterTitle.value,
-      summary: newChapterSummary.value,
+      title: payload.title,
+      summary: payload.summary,
     },
   ]
 
@@ -913,20 +848,6 @@ watch(
   .detail-shell__write-label-compact {
     display: inline;
   }
-}
-
-/* Material 3 Transition Classes */
-.md-scale-enter-active,
-.md-scale-leave-active {
-  transition:
-    opacity 250ms cubic-bezier(0.2, 0, 0, 1),
-    transform 250ms cubic-bezier(0.2, 0, 0, 1);
-}
-
-.md-scale-enter-from,
-.md-scale-leave-to {
-  opacity: 0;
-  transform: scale(0.95);
 }
 
 /* ==========================================================================
