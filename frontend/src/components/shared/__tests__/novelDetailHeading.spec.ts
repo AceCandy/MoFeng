@@ -20,6 +20,8 @@ describe('NovelDetailShell heading semantics', () => {
     expect(source).toContain('detail-shell__write-button')
     expect(source).toContain('detail-shell__write-label-full')
     expect(source).toContain('detail-shell__write-label-compact')
-    expect(source).toContain('<h2>{{ formattedTitle }}</h2>')
+    // overview-strip 的标题 h2 已抽到 OverviewStrip 子组件（{{ title }} 由父 :title="formattedTitle" 传入）
+    const overviewStripSource = readSource('src/components/novel-detail/OverviewStrip.vue')
+    expect(overviewStripSource).toContain('<h2>{{ title }}</h2>')
   })
 })

@@ -24,7 +24,7 @@
 |---|---|---|---|---|
 | **1** ✅ | `getSectionIcon` + 8 SVG → `novel-detail/sectionIcons.ts` | ts 纯数据 | −55 | **1607** |
 | **2** ✅ | ShellDrawerNav 子组件（aside drawer+nav+backdrop template + drawer/nav-item/nav-icon/nav-label style + @media sticky） | 展示子组件 | −181 | **1426** |
-| 3 | OverviewStrip 子组件（overview-strip template + overview/scroll/status/metric style ~256，computed 群 props 透传） | 展示子组件 | ~290 | ~1168 |
+| **3** ✅ | OverviewStrip 子组件（overview-strip template + overview/scroll/status/metric/kicker style + 4 @media 响应式，computed 群 props 透传） | 展示子组件 | −362 | **1064** |
 | 4 | `useShellSectionNavigation` composable（sectionLoaders/sectionComponents/prefetch/switchSection/loadSection/reloadSection/resolveInitialSection） | composable | ~80 | ~1088 |
 | 5 | AddChapterDialog 子组件（modal template + state + saveNewChapter/startAddChapter/cancelNewChapter） | 子组件 | ~90 | ~998 |
 | 6 | `useShellBlueprintEdit` composable（modal state + handleSectionEdit/handleSave/resolveSectionKey） | composable | ~55 | ~943 |
@@ -128,3 +128,56 @@ drawer 作为子组件根（fragment：`<aside>` + `<transition>` → backdrop `
 - `vitest run` 21 files / 141 tests 全绿。
 - `eslint`：ShellDrawerNav.vue / sectionIcons.ts **0 warning**；NovelDetailShell.vue 仅预存 L256 `@/api/novel` type import warning（原 L290，删行前移，未新增）。
 - 关键清理：`getSectionIcon` import 删除（drawer 迁出后父无引用，orphan）；drawer-toggle 顶栏按钮 + 样式留父（Slice 9）。
+
+## Slice 3 设计：抽 `OverviewStrip.vue`（小说概览长卷，2026-07-15）
+
+### 边界
+
+| 符号 | 原位置 | 去向 | 备注 |
+|---|---|---|---|
+| `<section class="detail-shell__overview-strip">` + scroll-main/scroll-metrics 全系 | template L44-90（`v-if="isAdmin"`） | `novel-detail/OverviewStrip.vue` template | 逐字搬迁；`v-if="isAdmin"` 上提到父组件的 `<OverviewStrip>` 标签 |
+| `.detail-shell__overview-strip`/`__overview-scroll`/`__scroll-main`/`__scroll-header`/`__kicker`/`__scroll-main h2`/`__scroll-desc`/`__scroll-status`/`__status-pill`全系/`__status-meta`/`__scroll-time`/`__scroll-metrics`/`__scroll-metric`全系/`is-alert` | style 主块 L843-977 + L1007-1099 | 子组件 scoped | 逐字搬迁 |
+| 4 个 @media 内的 overview/scroll 规则 | style @media L1203-1205/L1222-1234/L1243-1249/L1268-1280/L1313-1367 | 子组件 scoped（按 media query 重组） | **必须随迁**：父 scoped 选择器匹配不到子组件内部元素 |
+| @media 内 `.detail-shell` 根变量覆写（`--detail-shell-overview-height`/`--detail-shell-outer-gap`）+ `.detail-shell__content-wrap`/`__body`/`__content-surface` + drawer-collapsed + topbar 系 | style @media | **留父** | 针对父根或顶栏/内容区，非 overview |
+| `.detail-shell__action-btn`（L980-1005） | style | **留父**（不动） | 预存死代码（模板无引用，非本次 orphan）；按规约仅 mention 不删 |
+| `formatDateTime` import | L263 | **删**（orphan） | overview 迁出后父无引用；子组件自行 import |
+| computed 群（projectStatus/characterCount/chapterTotal/chapterCompleted/currentChapterLabel/foreshadowingOverview/overviewData/overviewMeta/formattedTitle） | script | **留父**（Slice 7 才抽 composable） | 本 slice 仅 props 透传，不搬逻辑 |
+
+### 契约
+
+```vue
+<OverviewStrip
+  v-if="isAdmin"
+  :title="formattedTitle"
+  :summary="overviewData?.one_sentence_summary"
+  :status="projectStatus"
+  :current-chapter-label="currentChapterLabel"
+  :updated-at="overviewMeta.updated_at"
+  :character-count="characterCount"
+  :chapter-completed="chapterCompleted"
+  :chapter-total="chapterTotal"
+  :foreshadowing-overdue="foreshadowingOverview.overdue"
+/>
+```
+
+子组件 `defineProps<{ title; summary?; status: { label; tone: 'done'|'active'|'draft' }; currentChapterLabel; updatedAt?; characterCount; chapterCompleted; chapterTotal; foreshadowingOverdue }>()`，无 emits。`summary` 默认值 `|| '从侧边分区查看...'` 留在子模板（展示关注点内聚）。
+
+### scoped 跨组件处理（关键）
+
+- **overview/scroll/status/metric 规则全部迁子，无 :deep**：父 scoped 选择器只命中子组件**根**（继承父 scope id），命中不了子组件**内部元素**（如 `.detail-shell__scroll-metric`）。故这些规则必须在子组件 scoped 内。父迁出后无任何 `.detail-shell__overview-*`/`.detail-shell__scroll-*` 残留（rg EXIT=1 证实），无跨组件依赖。
+- **CSS 变量经 DOM 继承**：`--detail-shell-overview-height` 设在父根 `.detail-shell`（含 @media 覆写，留父），子组件 `.detail-shell__overview-scroll { height: var(--detail-shell-overview-height) }` 作为 DOM 后代自动继承取值，无需 :deep/透传。
+- 与 Slice 2 区别：Slice 2 是「依赖父根 class 的规则留父靠子根继承」；Slice 3 是「子内部元素规则全迁子」——因 overview 类无父根依赖，更干净。
+
+### 测试指针跟随
+
+- `novelDetailHeading.spec.ts` L23 断言 `<h2>{{ formattedTitle }}</h2>`（原 overview-strip h2）→ 迁子后变 `<h2>{{ title }}</h2>`。**重定向**：改为读 `OverviewStrip.vue` 源码断言 `<h2>{{ title }}</h2>`（注释说明由父 `:title="formattedTitle"` 传入）。L18 `{{ formattedTitle }}` 仍命中父 topbar L30 + OverviewStrip 绑定，不受影响。
+- `uiAuditRegression.spec.ts`（transition-all/background-clip/classical/flat）不涉及 overview/scroll 类 → 零指针。
+
+### 验证（实际，2026-07-15）
+
+- 行数：1426 → **1064**（−362；远优于 roadmap 预估 ~290，因 4 个 @media 的 overview 规则一并迁出）。OverviewStrip.vue 404 行（新）。
+- `vue-tsc --noEmit` exit 0（props 类型与父 computed 联合兼容）。
+- `vitest run` 21 files / 141 tests 全绿（含重定向后的 novelDetailHeading）。
+- `eslint`：OverviewStrip.vue / novelDetailHeading.spec.ts **0 warning**；NovelDetailShell.vue 仅预存 L221 `@/api/novel` type import warning（原 L256，删行前移，未新增）。
+- 关键清理：`formatDateTime` import 删除（overview 迁出后父无引用，orphan）；`.detail-shell__action-btn` 预存死代码留父（仅 mention）。
+
