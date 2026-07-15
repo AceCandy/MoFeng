@@ -273,3 +273,36 @@ Slice 8 抽 useChapterGenerationTrace composable（trace 组装三 computed acti
 ### Next Steps
 
 - None - task complete
+
+
+## Session 9: NovelDetailShell Slice 10：抽 ShellContent 子组件（达标 <500）
+
+**Date**: 2026-07-16
+**Task**: NovelDetailShell Slice 10：抽 ShellContent 子组件（达标 <500）
+**Branch**: `main`
+
+### Summary
+
+NovelDetailShell Slice 10：抽 novel-detail/ShellContent.vue 子组件（content 区 main→content-wrap→content-frame→content-surface + loading/error/component 三分支 template + content-surface 系 style 连续块 + 3 个 @media content 部分 + classical :deep 覆写 5 条逐字迁子）。父透传 6 props（useShellSectionContent 返回值 currentComponent/isSectionLoading/currentError/componentProps/contentCardClass/componentContainerClass）+ emit edit/add/retry（retry 无参父侧 ()=>reloadSection(activeSection,true) 内联）。componentProps 用 Record<string,unknown>（动态 component v-bind 不强校验）。父 script 零改动无 orphan。scoped 跨组件：content-surface 系内部元素规则全迁子，:deep 对动态 <component> 覆写靠 DOM 祖孙等价（区别 Slice2 子根留父）。@media 拆分（drawer-collapsed/body height/根变量留父，content-wrap/content-surface padding 迁子）。uiAuditRegression content-surface classical/flat 断言重定向 ShellContent.vue。action-btn 预存死代码留父。613→432（−181，<500 达标）。10-slice 完成，NovelDetailShell acceptance 达成，parent #22 进度 3/5（ChapterGenerating 394 + WDWorkspace 498 + NovelDetailShell 432）。vue-tsc 0 / vitest 141 绿 / eslint 0 新增。归档 child task。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2ace11b` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
