@@ -210,21 +210,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, ref, type Component, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   useForeshadowingQuery,
   useNovelProjectQuery,
-  useNovelSectionQuery,
   useUpdateBlueprintMutation,
 } from '@/queries/novel'
 import type {
   NovelProject,
-  NovelSectionType,
   AllSectionType,
 } from '@/api/novel'
 import { desktopMin } from '@/constants/responsive'
 import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
+import { useShellSectionNavigation } from '@/composables/useShellSectionNavigation'
 import { resolveChapterNumberForEntry } from '@/utils/chapter'
 import { globalAlert } from '@/composables/useAlert'
 import { useDialogA11y } from '@/composables/useDialogA11y'
@@ -254,84 +253,35 @@ const viewport = useResponsiveViewport()
 const isDesktopViewport = computed(() => viewport.width.value >= desktopMin)
 const isSidebarOpen = ref(isDesktopViewport.value)
 
-const sections: Array<{ key: SectionKey; label: string }> = [
-  { key: 'overview', label: '项目概览' },
-  { key: 'world_setting', label: '世界设定' },
-  { key: 'characters', label: '主要角色' },
-  { key: 'relationships', label: '人物关系' },
-  { key: 'chapter_outline', label: '章节大纲' },
-  { key: 'emotion_curve', label: '情感曲线' },
-  { key: 'foreshadowing', label: '伏笔管理' },
-]
-
-const sectionKeys = sections.map((section) => section.key)
-
-const resolveInitialSection = (): SectionKey => {
-  const rawSection = Array.isArray(route.query.section)
-    ? route.query.section[0]
-    : route.query.section
-  return sectionKeys.includes(rawSection as SectionKey) ? (rawSection as SectionKey) : 'overview'
+const toggleSidebar = () => {
+  isSidebarOpen.value = !isSidebarOpen.value
 }
 
-const initialSection = resolveInitialSection()
-
-type AsyncSectionModule = { default: Component }
-
-const sectionLoaders: Record<SectionKey, () => Promise<AsyncSectionModule>> = {
-  overview: () => import('@/components/novel-detail/OverviewSection.vue'),
-  world_setting: () => import('@/components/novel-detail/WorldSettingSection.vue'),
-  characters: () => import('@/components/novel-detail/CharactersSection.vue'),
-  relationships: () => import('@/components/novel-detail/RelationshipsSection.vue'),
-  chapter_outline: () => import('@/components/novel-detail/ChapterOutlineSection.vue'),
-  chapters: () => import('@/components/novel-detail/ChaptersSection.vue'),
-  emotion_curve: () => import('@/components/novel-detail/EmotionCurveSection.vue'),
-  foreshadowing: () => import('@/components/novel-detail/ForeshadowingSection.vue'),
+const closeSidebar = () => {
+  isSidebarOpen.value = false
 }
 
-const sectionComponents = Object.fromEntries(
-  Object.entries(sectionLoaders).map(([key, loader]) => [key, defineAsyncComponent(loader)]),
-) as Record<SectionKey, ReturnType<typeof defineAsyncComponent>>
-
-const prefetchedSections = new Set<SectionKey>()
-const prefetchInFlight = new Map<SectionKey, Promise<void>>()
-
-const prefetchSectionComponent = (key: SectionKey) => {
-  if (prefetchedSections.has(key)) {
-    return
-  }
-
-  const existingRequest = prefetchInFlight.get(key)
-  if (existingRequest) {
-    return
-  }
-
-  const request = sectionLoaders[key]()
-    .then(() => {
-      prefetchedSections.add(key)
-    })
-    .catch(() => {
-      // 预取失败不阻塞切换，点击分区后会自动重试。
-    })
-    .finally(() => {
-      prefetchInFlight.delete(key)
-    })
-
-  prefetchInFlight.set(key, request)
-}
-
-const isNovelSectionKey = (section: SectionKey): section is NovelSectionType =>
-  !['emotion_curve', 'foreshadowing'].includes(section)
-
-const activeSection = ref<SectionKey>(initialSection)
-const activeNovelSection = computed<NovelSectionType | null>(() =>
-  isNovelSectionKey(activeSection.value) ? activeSection.value : null,
-)
-const overviewQuery = useNovelSectionQuery(() => projectId, 'overview', () => props.isAdmin)
-const sectionQuery = useNovelSectionQuery(
-  () => projectId,
-  () => activeNovelSection.value,
-  () => props.isAdmin,
-)
+const {
+  sections,
+  activeSection,
+  sectionComponents,
+  isNovelSectionKey,
+  overviewQuery,
+  sectionQuery,
+  switchSection,
+  prefetchSectionComponent,
+  loadSection,
+  reloadSection,
+} = useShellSectionNavigation({
+  projectId,
+  isAdmin: () => props.isAdmin,
+  // 非桌面态切换分区后收起侧栏（侧栏状态归父，composable 经回调知情不持有）
+  onAfterSwitch: () => {
+    if (!isDesktopViewport.value) {
+      closeSidebar()
+    }
+  },
+})
 
 // Modal state (user mode only)
 const isModalOpen = ref(false)
@@ -428,42 +378,6 @@ const ensureProjectLoaded = async () => {
   if (props.isAdmin || !projectId) return
   if (novel.value) return // 已加载
   await projectQuery.refetch()
-}
-
-const toggleSidebar = () => {
-  isSidebarOpen.value = !isSidebarOpen.value
-}
-
-const closeSidebar = () => {
-  isSidebarOpen.value = false
-}
-
-const loadSection = async (section: SectionKey, _force = false) => {
-  if (!projectId) return
-
-  if (!isNovelSectionKey(section)) {
-    return
-  }
-
-  if (section === 'overview') {
-    await overviewQuery.refetch()
-    return
-  }
-  if (section === activeSection.value) {
-    await sectionQuery.refetch()
-  }
-}
-
-const reloadSection = (section: SectionKey, force = false) => {
-  loadSection(section, force)
-}
-
-const switchSection = (section: SectionKey) => {
-  activeSection.value = section
-  prefetchSectionComponent(section)
-  if (!isDesktopViewport.value) {
-    closeSidebar()
-  }
 }
 
 const goBack = () => {
@@ -646,10 +560,6 @@ const saveNewChapter = async () => {
     console.error('新增章节失败:', error)
   }
 }
-
-onMounted(async () => {
-  prefetchSectionComponent(activeSection.value)
-})
 
 watch(
   () => isDesktopViewport.value,

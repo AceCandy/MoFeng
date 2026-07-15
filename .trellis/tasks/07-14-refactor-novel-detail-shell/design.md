@@ -25,7 +25,7 @@
 | **1** ✅ | `getSectionIcon` + 8 SVG → `novel-detail/sectionIcons.ts` | ts 纯数据 | −55 | **1607** |
 | **2** ✅ | ShellDrawerNav 子组件（aside drawer+nav+backdrop template + drawer/nav-item/nav-icon/nav-label style + @media sticky） | 展示子组件 | −181 | **1426** |
 | **3** ✅ | OverviewStrip 子组件（overview-strip template + overview/scroll/status/metric/kicker style + 4 @media 响应式，computed 群 props 透传） | 展示子组件 | −362 | **1064** |
-| 4 | `useShellSectionNavigation` composable（sectionLoaders/sectionComponents/prefetch/switchSection/loadSection/reloadSection/resolveInitialSection） | composable | ~80 | ~1088 |
+| **4** ✅ | `useShellSectionNavigation` composable（sections/sectionLoaders/sectionComponents/resolveInitialSection/isNovelSectionKey/prefetch·switch·load·reloadSection + overview·sectionQuery，activeNovelSection 内部） | composable | −90 | **974** |
 | 5 | AddChapterDialog 子组件（modal template + state + saveNewChapter/startAddChapter/cancelNewChapter） | 子组件 | ~90 | ~998 |
 | 6 | `useShellBlueprintEdit` composable（modal state + handleSectionEdit/handleSave/resolveSectionKey） | composable | ~55 | ~943 |
 | 7 | `useShellOverview` composable（projectStatus/characterCount/chapterTotal/chapterCompleted/currentChapterLabel/foreshadowingOverview/overviewData/overviewMeta/formattedTitle） | composable | ~65 | ~878 |
@@ -180,4 +180,52 @@ drawer 作为子组件根（fragment：`<aside>` + `<transition>` → backdrop `
 - `vitest run` 21 files / 141 tests 全绿（含重定向后的 novelDetailHeading）。
 - `eslint`：OverviewStrip.vue / novelDetailHeading.spec.ts **0 warning**；NovelDetailShell.vue 仅预存 L221 `@/api/novel` type import warning（原 L256，删行前移，未新增）。
 - 关键清理：`formatDateTime` import 删除（overview 迁出后父无引用，orphan）；`.detail-shell__action-btn` 预存死代码留父（仅 mention）。
+
+## Slice 4 设计：抽 `useShellSectionNavigation.ts`（分区导航状态机，2026-07-15）
+
+### 边界
+
+| 符号 | 原位置 | 去向 | 备注 |
+|---|---|---|---|
+| `sections`/`sectionKeys`/`resolveInitialSection`/`initialSection` | L257-276 | composable | sectionKeys/resolveInitialSection/initialSection 内部用，不返回 |
+| `AsyncSectionModule`/`sectionLoaders`/`sectionComponents` | L278-293 | composable | sectionComponents **返回**（currentComponent 消费） |
+| `prefetchedSections`/`prefetchInFlight`/`prefetchSectionComponent` | L295-320 | composable | 内部状态；prefetchSectionComponent **返回**（ShellDrawerNav @prefetch） |
+| `isNovelSectionKey` | L322-323 | composable | **返回**（父 currentSectionResponse/isSectionLoading/currentError 仍消费） |
+| `activeSection`/`activeNovelSection` | L325-328 | composable | activeSection **返回**（多处消费）；activeNovelSection 仅驱动 sectionQuery，**内部不返回** |
+| `overviewQuery`/`sectionQuery` | L329-334 | composable | **返回**（父 activeQuery/currentSectionResponse/overviewData 消费） |
+| `loadSection`/`reloadSection`/`switchSection` | L441-467 | composable | **返回**（handleSave/saveNewChapter/template 消费） |
+| `onMounted` prefetch | L650-652 | composable 内 onMounted | 父 onMounted 删除 |
+| `toggleSidebar`/`closeSidebar` | L433-439 | **留父，上移**到 isSidebarOpen 后 | 侧栏 UI 状态归父；上移以让 onAfterSwitch 回调引用时已定义 |
+
+### 契约
+
+```ts
+useShellSectionNavigation({
+  projectId: string
+  isAdmin: () => boolean        // 透传给 useNovelSectionQuery 第三参数
+  onAfterSwitch?: () => void    // switchSection 末尾调用（父用于非桌面态收侧栏）
+})
+→ { sections, activeSection, sectionComponents, isNovelSectionKey, overviewQuery, sectionQuery,
+    switchSection, prefetchSectionComponent, loadSection, reloadSection }
+```
+
+### TDZ / 接线处理（关键）
+
+- **const TDZ 顺序约束**：`activeSection`/`overviewQuery`/`sectionQuery` 从 composable 解构后被 L343 起 `activeQuery` 等 computed 消费 → composable 调用点必须在 L343 之前；但原 `switchSection`(L461) 依赖 `closeSidebar`(L437)，若直传 closeSidebar 作入参会在其定义前求值。
+- **解法**：① `toggleSidebar`/`closeSidebar` 上移到 `isSidebarOpen` 紧邻处，定义先于 composable 调用；② 关侧栏副作用改用 `onAfterSwitch` 箭头函数回调，composable 内 `switchSection` 末尾 `onAfterSwitch?.()`。composable 不持有侧栏状态，保持内聚。
+- eslint 无 `no-use-before-define` 规则，零告警；`onAfterSwitch` 闭包引用的 closeSidebar/isDesktopViewport 均已在前定义。
+
+### 测试指针跟随
+
+- `novelDetailHeading.spec.ts`（h2/topbar/back/write/overview-strip）+ `uiAuditRegression.spec.ts`（transition-all/background-clip/classical/flat）2 spec 均**不涉及** section navigation 符号 → **零指针重定向**。
+- 无运行时测试 → 等价性靠逐字搬迁 + 三件套绿 + diff 复核。
+
+### 验证（实际，2026-07-15）
+
+- 行数：1064 → **974**（−90）。useShellSectionNavigation.ts 161 行（新）。
+- `vue-tsc --noEmit` exit 0（返回类型流转 + isNovelSectionKey 类型守卫跨 composable 边界保留）。
+- `vitest run` 21 files / 141 tests 全绿（零指针重定向）。
+- `eslint`：useShellSectionNavigation.ts **0 warning**（composables/ 不受 components/views 的 `@/api` no-restricted-imports 限制）；NovelDetailShell.vue 仅预存 L220 `@/api/novel` type import warning（原 L221，删 NovelSectionType 前移 1 行，未新增）。
+- 关键清理：父删 `defineAsyncComponent`/`onMounted`/`Component`(vue)、`useNovelSectionQuery`(queries)、`NovelSectionType`(api type) 五个 orphan import；`activeNovelSection` 不返回（仅 sectionQuery 内部驱动）。
+- 行为等价：`onMounted(async () => prefetch...)` → composable 内 `onMounted(() => prefetch...)`（去 async 无 await，等价）；`switchSection` 关侧栏逻辑经 onAfterSwitch 回调逐字保留。
 
