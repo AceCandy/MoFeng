@@ -293,14 +293,15 @@ describe('UI audit regressions', () => {
 
   it('keeps the overview blueprint page aligned with the shared archive vocabulary', () => {
     const overviewSource = readSource('src/components/novel-detail/OverviewSection.vue')
-    const shellSource = readSource('src/components/shared/NovelDetailShell.vue')
+    // content-surface 的 classical 装订框已抽到 ShellContent 子组件
+    const contentSource = readSource('src/components/novel-detail/ShellContent.vue')
 
     expect(overviewSource).toContain('archive-overview__summary-aside')
     expect(overviewSource).toContain('aria-label="蓝图资料状态"')
     expect(overviewSource).toContain('role="meter"')
     expect(overviewSource).toContain('archive-overview__readiness-card')
-    expect(shellSource).toContain('detail-shell__content-surface--classical')
-    expect(shellSource).not.toContain('detail-shell__content-surface--flat')
+    expect(contentSource).toContain('detail-shell__content-surface--classical')
+    expect(contentSource).not.toContain('detail-shell__content-surface--flat')
   })
 
   it('keeps the mobile chapter drawer out of the focus order when closed', () => {

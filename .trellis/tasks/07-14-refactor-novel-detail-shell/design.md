@@ -31,7 +31,7 @@
 | **7** ✅ | `useShellOverview` composable（projectStatus/characterCount/chapterTotal/chapterCompleted/currentChapterLabel/foreshadowingOverview/overviewData/overviewMeta/formattedTitle；父透传 novel/foreshadowingQuery/overviewQuery） | composable | −34 | **815** |
 | **8** ✅ | `useShellSectionContent` composable（componentProps/activeQuery/currentSectionResponse/currentSectionData/currentComponent/isSectionLoading/currentError/contentCardClass/componentContainerClass；父透传 navigation/novel/characterCount/chapterTotal/isAdmin） | composable | −60 | **755** |
 | **9** ✅ | ShellTopbar 子组件（topbar template + topbar style 主块 + @media 833px topbar 部分，toggleSidebar/goBack/goToWritingDesk emit；父透传 title/isAdmin/isSidebarOpen） | 展示子组件 | −142 | **613** |
-| 10 | 剩余 style 分批收敛 + 杂项 | 混合 | ~200 | **<500** |
+| **10** ✅ | ShellContent 子组件（content 区 main→content-wrap→content-frame→content-surface + loading/error/component 三分支 + content-surface/main/wrap/frame/scrollbar/classical/fill style + 3 @media content 部分 + classical :deep 覆写；父透传 6 props currentComponent/isSectionLoading/currentError/componentProps/contentCardClass/componentContainerClass，emit edit/add/retry） | 展示子组件 | −181 | **432** |
 
 约 8-10 slice。各 slice 边界/契约在实施时补本文件对应小节。
 
@@ -468,4 +468,86 @@ composable 内 `const { activeSection, sectionComponents, isNovelSectionKey, ove
 - `eslint`：ShellTopbar.vue / novelDetailHeading.spec.ts **0 warning**；NovelDetailShell.vue 仅预存 L143 `@/api/novel` type import warning（原 L167，删 topbar template −24 行前移，未新增）。
 - 关键点：topbar template + style（主块 + @media topbar 部分）逐字搬迁；header `v-if="isAdmin"` 上提父标签；3 个 @click→emit；@media 833px 根变量留父；write-button 死代码忠实搬迁不清理。
 - 行为等价：3 props 透传 → 子组件渲染 → 3 emit → 父 toggleSidebar/goBack/goToWritingDesk 接线；header 显隐由父 `v-if="isAdmin"` gate 等价；scoped 跨组件经 DOM 后代/继承命中。
+
+## Slice 10 设计：抽 `ShellContent.vue`（content 区，2026-07-16）
+
+### 边界
+
+| 符号 | 原位置 | 去向 | 备注 |
+|---|---|---|---|
+| content 区 template（main→content-wrap→content-frame→content-surface + loading/error/component 三分支） | L46-110（65 行） | `novel-detail/ShellContent.vue` template | 逐字搬迁，3 个 @click→$emit（edit/add/retry） |
+| `.detail-shell__main`/`__content-wrap`/`__content-frame`/`__content-surface`(+`::-webkit-scrollbar`×4)/`--classical`/`--fill` | L423-512 连续块 | ShellContent.vue scoped | 逐字搬迁 |
+| @media 1200px content-wrap padding / 1200px+max-height content-surface padding / 834px content-surface padding | L524-526 / L546-548 / L551-555 | ShellContent.vue scoped（各带 @media 包裹） | 拆分迁出，父留 drawer/body/根变量 |
+| `.detail-shell__content-surface--classical :deep(...)` 系列（bg/rounded-2xl/xl/lg/shadow-sm） | L571-593 | ShellContent.vue scoped | 逐字搬迁 |
+| `.detail-shell__body`（height calc 消费 `--detail-shell-*` 局部变量） | L376-393 | **留父**（不动） | body 是父直接子元素（ShellDrawerNav+ShellContent 布局容器），消费局部 CSS 变量 |
+| `.detail-shell__action-btn`(+`:hover`) | L395-421 | **留父**（不动） | 预存死代码（模板无引用，Slice 3 既定 mention 不删） |
+| @media 1200px drawer-collapsed+body / 1200px+max-height 根变量 / 1199px 根变量 / 833px 根变量 / `:not(--embedded)` body+drawer | L514-538 等 | **留父** | drawer/body/根变量归属父 |
+
+- content 区 style **不依赖** `--detail-shell-*` 局部变量（content-surface 用 `--md-spacing-*`/`--md-radius-*` 全局变量 + `height:100%` 靠 flex 链从 body 继承）→ 迁子无需传 CSS 变量。
+
+### 契约
+
+```vue
+<!-- 父 NovelDetailShell.vue -->
+<ShellContent
+  :current-component="currentComponent"
+  :is-section-loading="isSectionLoading"
+  :current-error="currentError"
+  :component-props="componentProps"
+  :content-card-class="contentCardClass"
+  :component-container-class="componentContainerClass"
+  @edit="handleSectionEdit"
+  @add="startAddChapter"
+  @retry="() => reloadSection(activeSection, true)"
+/>
+```
+
+```ts
+// ShellContent.vue
+defineProps<{
+  currentComponent: Component | undefined
+  isSectionLoading: boolean
+  currentError: string | null
+  componentProps: Record<string, unknown>
+  contentCardClass: string
+  componentContainerClass: string
+}>()
+defineEmits<{ edit: []; add: []; retry: [] }>()
+```
+
+- 6 props 全是 `useShellSectionContent` 返回值（父已解构）直接透传；`componentProps` 用 `Record<string, unknown>`（动态 `<component :is>` v-bind 不强校验，避免重复定义异构 union）。
+- `activeSection`/`reloadSection` 在父 navigation 解构已有 → retry emit **无参**，父侧 `() => reloadSection(activeSection, true)` 内联（ShellContent 无需 activeSection prop）。
+- 父 script **零改动**：6 个 useShellSectionContent 返回值 + handleSectionEdit/startAddChapter/activeSection/reloadSection 全仍被 template（ShellContent 标签）消费，无 orphan。
+
+### scoped 跨组件处理（同 Slice 3/9 范式）
+
+- content-surface/main/wrap/frame 都是 ShellContent **内部元素**（非子组件根）→ 父 scoped 命中不到 → 规则**全迁子**（父迁出后 content-surface 系列类 rg EXIT=1 零残留）。
+- **`.detail-shell__content-surface--classical :deep(.bg-...)` 关键点**：对动态 `<component :is="currentComponent">` 注入的分区组件内部元素的覆写。迁子后子 scoped 编译为 `.detail-shell__content-surface--classical[data-v-child] .bg-...`——content-surface--classical 是子内部元素（带 data-v-child）✓，`:deep()` 内 `.bg-...` 不加 scope id、穿透到动态 component 内部 ✓。DOM 祖孙关系不变（content-surface 还是那个 section，里面 `<component>` 注入同样分区组件），`:deep` 行为只取决于 DOM 祖孙不取决于哪个 SFC 定义规则 → **行为等价**。区别 Slice 2（drawer 是子根→留父靠继承 data-v）。
+- ShellContent 根 `.detail-shell__main` 继承父 data-v，但父 scoped 无 `.detail-shell__main` 规则（已迁子）→ 无冲突。
+
+### @media 拆分
+
+- @media (min-width: 1200px)：父留 drawer-collapsed + body height；content-wrap padding 迁子。
+- @media (min-width: 1200px) and (max-height: 700px)：父留 `.detail-shell` 根变量；content-surface padding 迁子。
+- @media (min-width: 834px)：整块（content-surface padding）迁子，父此 @media 消失。
+- @media (max-width: 833px)：根变量留父（Slice 9 已迁走 topbar 部分，本 slice 无关）。
+
+### 测试指针跟随（重定向）
+
+- `uiAuditRegression.spec.ts` L296/302-303（test "keeps the overview blueprint page aligned with the shared archive vocabulary"）原 `shellSource` 读父断言 `toContain('detail-shell__content-surface--classical')` + `not.toContain('detail-shell__content-surface--flat')` → content-surface CSS 迁子后父源码不含 classical → **重定向**：`shellSource`→`contentSource` 读 `ShellContent.vue`（L296 改路径+变量名，L302-303 改引用）。ShellContent.vue 含 classical 不含 flat → 两断言稳过。
+- `novelDetailHeading.spec.ts` 不涉及 content-surface → 零指针。
+
+### 验证（实际，2026-07-16）
+
+- 行数：613 → **432**（−181；roadmap 预估 ~200，达标 <500）。ShellContent.vue 220 行（新）。
+- `vue-tsc --noEmit` exit 0（6 props 类型 + componentProps Record + 动态 component v-bind）。
+- `vitest run` 21 files / 141 tests 全绿（含重定向后的 uiAuditRegression）。
+- `eslint`：ShellContent.vue / uiAuditRegression.spec.ts **0 warning**；NovelDetailShell.vue 仅预存 L90 `@/api/novel` type import warning（原 L143，删 content template −53 行前移，未新增）。
+- 关键点：content template + style（main/wrap/frame/content-surface/scrollbar/classical/fill + 3 @media content 部分 + classical :deep）逐字搬迁；@media 拆分（drawer/body/根变量留父）；action-btn 死代码留父（Slice 3 既定）；retry emit 无参父侧用 activeSection。
+- 行为等价：6 props 透传 → 子渲染 loading/error/component 三分支 → 3 emit → 父 handleSectionEdit/startAddChapter/reloadSection 接线；scoped 跨组件 :deep 经 DOM 后代命中动态 component 内部；content-surface height 靠 flex 链从 body（留父）继承。
+
+### NovelDetailShell 达标
+
+- 1662 → 1607 → 1426 → 1064 → 974 → 895 → 849 → 815 → 755 → 613 → **432**（10 slice，<500 达标 ✅）。
+- 父 #22 acceptance "5 大组件 <500 行" 进度：3/5（ChapterGenerating 394 + WDWorkspace 498 + NovelDetailShell 432）。
 
