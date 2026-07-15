@@ -239,3 +239,37 @@ MiMo 朗读链路改造：(1) _synthesize_mimo 删除 speed 形参与「正常�
 ### Next Steps
 
 - None - task complete
+
+
+## Session 8: ChapterGenerating 拆分完成（Slice 8-9，2261→394 达成 <500）
+
+**Date**: 2026-07-15
+**Task**: ChapterGenerating 拆分完成（Slice 8-9，2261→394 达成 <500）
+**Branch**: `main`
+
+### Summary
+
+Slice 8 抽 useChapterGenerationTrace composable（trace 组装三 computed activeStepTraces/activeTrace/activeStepDetails，977→900，3 用例指针跟随）；Slice 9 抽 ChapterPipeline 子组件（pipeline 进度卡 article+style+keyframes+@media，解决 scoped 只读覆写内部元素难题：根级覆写留父靠子根继承 data-v + 3 条内部元素级迁子组件收 readOnly prop 自绑 is-read-only 类，未用 :deep），900→394，acceptance <500 达成。9-slice 完成，child task 归档。验证 vue-tsc 0 / timing 7+7 / 全量 vitest 141 / eslint 0 新增。剩余人工目视：只读模式 pipeline 样式（timing 不覆盖样式）。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9c86955` | (see git log) |
+| `df9ce7c` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

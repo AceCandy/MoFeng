@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 7
-- **Last Active**: 2026-07-13
+- **Total Sessions**: 8
+- **Last Active**: 2026-07-15
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~241 | Active |
+| `journal-1.md` | ~275 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 8 | 2026-07-15 | ChapterGenerating 拆分完成（Slice 8-9，2261→394 达成 <500） | `9c86955`, `df9ce7c` | `main` |
 | 7 | 2026-07-13 | 朗读变速保调：audio 元素替换 Web Audio 主路径 | `ec98988` | `main` |
 | 6 | 2026-07-13 | TTS 朗读语气优化：有声书主播提示词 + 去模型侧变速 | `6e98eef` | `main` |
 | 5 | 2026-07-12 | TTS 朗读：回退短段合并为逐段 + 流式评估后弃 | `e831569` | `main` |
