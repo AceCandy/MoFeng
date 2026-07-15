@@ -155,6 +155,7 @@ import { globalAlert } from '@/composables/useAlert'
 import { useChapterReader } from '@/composables/useChapterReader'
 import { useVersionResolver } from '@/composables/useVersionResolver'
 import { useChapterStatus } from '@/composables/useChapterStatus'
+import { useChapterBodyProps } from '@/composables/useChapterBodyProps'
 import type {
   Chapter,
   ChapterOutline,
@@ -163,7 +164,6 @@ import type {
   NovelProject,
 } from '@/api/novel'
 import { countNonWhitespaceChars } from '@/utils/text'
-import { cleanVersionContent } from '@/utils/chapter'
 import ChapterGenerating from './workspace/ChapterGenerating.vue'
 import ChapterReaderBar from './ChapterReaderBar.vue'
 import EditChapterModal from './workspace/EditChapterModal.vue'
@@ -545,133 +545,23 @@ onUnmounted(() => {
   chapterReader.stop()
 })
 
-const currentComponentProps = computed(() => {
-  if (props.selectedChapterNumber === null) {
-    return {}
-  }
-  const status = props.evaluatingChapter === props.selectedChapterNumber
-    ? 'evaluating'
-    : selectedChapter.value?.generation_status
-  const isBackendInProgress = isInProgressStatus(status)
-  const isFailed = status === 'failed' || status === 'evaluation_failed'
-  const shouldRenderGenerating =
-    (isBackendInProgress || isGeneratingInFlight.value || isFailed) &&
-    !(status === 'successful' && hasSelectedChapterContent.value)
-  if (shouldRenderGenerating) {
-    // 重试请求仍在途时，忽略旧 failed 快照，避免轮询旧响应把进度条拉回失败节点。
-    const renderAsLocalGenerating = isGeneratingInFlight.value && !isBackendInProgress
-    const renderStatus = renderAsLocalGenerating ? 'generating' : status
-    const generationProgress = renderAsLocalGenerating
-      ? 0
-      : isBackendInProgress
-        ? (selectedChapter.value?.generation_progress ?? null)
-        : null
-    const generationStep = renderAsLocalGenerating
-      ? 'context_prep'
-      : isBackendInProgress || isFailed
-        ? (selectedChapter.value?.generation_step ?? null)
-        : null
-    const generationStepIndex = renderAsLocalGenerating
-      ? 1
-      : isBackendInProgress
-        ? (selectedChapter.value?.generation_step_index ?? null)
-        : null
-    const generationStepTotal = renderAsLocalGenerating
-      ? 7
-      : isBackendInProgress
-        ? (selectedChapter.value?.generation_step_total ?? null)
-        : null
-
-    return {
-      chapterNumber: props.selectedChapterNumber,
-      chapterTitle: selectedChapterOutline.value?.title || '',
-      chapterSummary: selectedChapterOutline.value?.summary || '',
-      chapterContentPreview: cleanVersionContent(selectedChapter.value?.content || ''),
-      status: renderStatus,
-      generationProgress,
-      generationStep,
-      generationStepIndex,
-      generationStepTotal,
-      generationStartedAt: isBackendInProgress
-        ? (selectedChapter.value?.generation_started_at ?? null)
-        : null,
-      statusUpdatedAt: isBackendInProgress
-        ? (selectedChapter.value?.status_updated_at ?? null)
-        : null,
-      generationTraces: renderAsLocalGenerating
-        ? []
-        : (selectedChapter.value?.generation_traces ?? []),
-      generatingChapter: props.generatingChapter,
-      availableVersions: props.availableVersions,
-      selectedVersionIndex: props.selectedVersionIndex,
-    }
-  }
-
-  if (status === 'waiting_for_confirm') {
-    if (hasSelectedChapterContent.value) {
-      return {
-        selectedChapter: selectedChapterForDisplay.value,
-        projectId: props.project?.id,
-        activeParagraphIndex: readerCurrentParagraphIndex.value,
-        activeParagraphEnd: readerCurrentParagraphEnd.value,
-      }
-    }
-
-    return {
-      selectedChapter: selectedChapter.value,
-      chapterGenerationResult: props.chapterGenerationResult,
-      availableVersions: props.availableVersions,
-      selectedVersionIndex: props.selectedVersionIndex,
-      isSelectingVersion: props.isSelectingVersion,
-      evaluatingChapter: props.evaluatingChapter,
-      isEvaluationFailed: isChapterEvaluationFailed(props.selectedChapterNumber),
-    }
-  }
-  if (hasSelectedChapterContent.value) {
-    return {
-      selectedChapter: selectedChapterForDisplay.value,
-      projectId: props.project?.id,
-      activeParagraphIndex: readerCurrentParagraphIndex.value,
-      activeParagraphEnd: readerCurrentParagraphEnd.value,
-    }
-  }
-  if (isChapterFailed(props.selectedChapterNumber)) {
-    return {
-      chapterNumber: props.selectedChapterNumber,
-      generatingChapter: props.generatingChapter,
-      generationStatus: selectedChapter.value?.generation_status ?? 'failed',
-      generationStep: selectedChapter.value?.generation_step ?? null,
-    }
-  }
-  return {
-    chapterNumber: props.selectedChapterNumber,
-    generatingChapter: props.generatingChapter,
-    canGenerate: canGenerateChapter(props.selectedChapterNumber),
-    lockedPrerequisiteChapterNumber: lockedPrerequisiteChapterNumber.value,
-    lockedPrerequisiteChapterTitle: lockedPrerequisiteChapterTitle.value,
-    chapterOutline: selectedChapterOutline.value,
-    project: props.project,
-  }
+const { currentComponentProps, draftTraceReplayProps } = useChapterBodyProps({
+  props,
+  selectedChapter,
+  selectedChapterOutline,
+  selectedChapterForDisplay,
+  selectedChapterResolvedContent,
+  hasSelectedChapterContent,
+  readerCurrentParagraphIndex,
+  readerCurrentParagraphEnd,
+  lockedPrerequisiteChapterNumber,
+  lockedPrerequisiteChapterTitle,
+  isInProgressStatus,
+  isGeneratingInFlight,
+  isChapterFailed,
+  isChapterEvaluationFailed,
+  canGenerateChapter,
 })
-
-const draftTraceReplayProps = computed(() => ({
-  chapterNumber: props.selectedChapterNumber,
-  chapterTitle: selectedChapterOutline.value?.title || '',
-  chapterSummary: selectedChapterOutline.value?.summary || '',
-  chapterContentPreview: selectedChapterResolvedContent.value,
-  status: selectedChapter.value?.generation_status ?? null,
-  generationProgress: selectedChapter.value?.generation_progress ?? null,
-  generationStep: selectedChapter.value?.generation_step ?? 'waiting_for_confirm',
-  generationStepIndex: selectedChapter.value?.generation_step_index ?? null,
-  generationStepTotal: selectedChapter.value?.generation_step_total ?? null,
-  generationStartedAt: selectedChapter.value?.generation_started_at ?? null,
-  statusUpdatedAt: selectedChapter.value?.status_updated_at ?? null,
-  generationTraces: selectedChapter.value?.generation_traces ?? [],
-  generatingChapter: props.generatingChapter,
-  availableVersions: props.availableVersions,
-  selectedVersionIndex: props.selectedVersionIndex,
-  readOnly: true,
-}))
 
 // ==========================================================================
 // 写作台正文/历史版本/AI评审三合一 Tab 切换区状态与逻辑

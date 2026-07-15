@@ -136,15 +136,48 @@ Slice B 已抽 4 个 composable（script −447 行），但 template 525 / styl
 
 核心动态分发（232-248 `<component :is="currentComponent">` + currentComponentProps 107 行数据装配）**不抽**，留组件。
 
-### WDWorkspace 拆至 <500 的缺口（2026-07-14 评估）
+### WDWorkspace 拆至 <500 的进度
 
-WDWorkspace 当前 814 行（Slice D 第 4b 块 ChapterToolbar 抽出后，1209→814，−395）。WorkspaceHeader 已整块抽完（4a ChapterMeta + 4b ChapterToolbar）。仍 >500，**还需继续找 ~315 行拆出**，候选：
+| 阶段 | 行数 |
+|---|---|
+| Slice D 第 4b 块后 | 814 |
+| **Slice E 后** | **713** |
 
-- currentComponentProps（107 行数据装配）部分抽 composable（耦合朗读 ref + 锁定前置，需评估能否干净剥离）。
-- 朗读/通知相关逻辑余量（若已外移至 composable 则有限）。
-- 余下 template 区块逐块评估。
+WorkspaceHeader 已整块抽完（4a ChapterMeta + 4b ChapterToolbar）。Slice E 抽出 currentComponentProps+draftTraceReplayProps（见下）。仍 713>500，**还需约 213 行**，候选：
 
-具体边界在推进到 WDWorkspace 收尾会话时定，届时补契约表。其余 4 大组件（PersonalModelRouting / ChapterGenerating / WritingDesk / NovelDetailShell）的拆分边界由各自 child 的 `design.md` 承载，不在本 design。
+- 朗读胶水 ~94 行（VOICE_CN_LABEL/browser 音色刷新/handleReader*/lifecycle/watch.stop），可抽 `useChapterReaderBar`。
+- tabs-row template ~33 行 + 其 scoped style ~59 行，可抽 `ChapterTabs` 子组件。
+- locked 前置 ~34 行 / formatDateTime+meta ~24 行，可并入 `useChapterStatus`。
+
+具体边界在收尾会话定，届时补契约表。其余 4 大组件（PersonalModelRouting / ChapterGenerating / WritingDesk / NovelDetailShell）的拆分边界由各自 child 的 `design.md` 承载，不在本 design。
+
+## Slice E 设计：抽 `useChapterBodyProps`（currentComponentProps + draftTraceReplayProps，2026-07-15）
+
+Slice D 抽完 WorkspaceHeader 后 WDWorkspace 814 行。script 最大单块 = currentComponentProps（原 L548-655，~108 行数据装配）+ 同源 draftTraceReplayProps（原 L657-674，~18 行），二者均只喂 `v-bind`、零 DOM/副作用。抽入 composable `useChapterBodyProps.ts`。
+
+### 边界
+
+| 迁出符号 | 去向 |
+|---|---|
+| `currentComponentProps` computed | useChapterBodyProps（逐字搬迁） |
+| `draftTraceReplayProps` computed | useChapterBodyProps（逐字搬迁） |
+| `cleanVersionContent` import | 删（orphan，随 computed 迁入 composable 自行 import） |
+
+### 入参契约（15 依赖）
+
+props 子集（`BodyProps`：selectedChapterNumber/evaluatingChapter/generatingChapter/availableVersions/selectedVersionIndex/isSelectingVersion/chapterGenerationResult/project）+ selectedChapter/selectedChapterOutline/selectedChapterForDisplay/selectedChapterResolvedContent/hasSelectedChapterContent + readerCurrentParagraphIndex/End + lockedPrerequisiteChapterNumber/Title + isInProgressStatus/isGeneratingInFlight/isChapterFailed/isChapterEvaluationFailed/canGenerateChapter。
+
+**利落点**：WDWorkspace 已把这些依赖解构成同名局部 const，composable 从 options 解构同名后，两个 computed 函数体**逐字不变**（零替换）。
+
+**仅透传**：selectedChapterForDisplay / readerCurrentParagraphEnd / isInProgressStatus / isChapterFailed / isChapterEvaluationFailed / canGenerateChapter / lockedPrerequisiteChapterTitle 在父组件仅余 destructure/def + 透传给 composable（rg 确认无其他引用，非真 orphan，保留）。
+
+### 测试指针跟随
+
+`uiAuditRegression.spec.ts` L251-252 原断言 `workspaceSource.toContain('generationTraces: renderAsLocalGenerating')` + `('selectedChapter.value?.generation_traces ?? []')`——两字面量随 computed 迁入 composable，断言改读 `useChapterBodyProps.ts` 源码（同 Slice 7/8 范式 + 注释），并移除随之 orphan 的 `workspaceSource` 声明。`wdWorkspaceLockedChapter` reader 断言、`chapterDraftFinalizeStatic` 的 `ChapterGenerating` 断言不受影响（reader 未动 / ChapterGenerating 仍被引用）。
+
+### 验证
+
+vue-tsc 0 / 全量 vitest 141 绿 / eslint 0 新增（L159 `@/api/novel` warning 预存，HEAD 即有，非本次引入）。814→713（净 −101，diff 21 插入/130 删除 + 新建 composable 199 行）。
 
 ### 本次：EditChapterModal 抽取
 

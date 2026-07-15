@@ -238,18 +238,19 @@ describe('UI audit regressions', () => {
 
   it('uses real chapter generation traces before static node inspector fallback', () => {
     const apiSource = readSource('src/api/novel.ts')
-    const workspaceSource = readSource('src/components/writing-desk/WDWorkspace.vue')
     const generatingSource = readSource(
       'src/components/writing-desk/workspace/ChapterGenerating.vue',
     )
     // activeTrace/activeStepDetails 组装随 Slice 8 抽至 useChapterGenerationTrace，断言改读 composable 源码
     const traceSource = readSource('src/composables/useChapterGenerationTrace.ts')
+    // currentComponentProps 装配随 composable 抽至 useChapterBodyProps，断言改读 composable 源码
+    const bodyPropsSource = readSource('src/composables/useChapterBodyProps.ts')
 
     expect(apiSource).toContain('export interface ChapterGenerationTrace')
     expect(apiSource).toContain('generation_traces?: ChapterGenerationTrace[]')
     expect(apiSource).toContain('uses_llm: boolean')
-    expect(workspaceSource).toContain('generationTraces: renderAsLocalGenerating')
-    expect(workspaceSource).toContain('selectedChapter.value?.generation_traces ?? []')
+    expect(bodyPropsSource).toContain('generationTraces: renderAsLocalGenerating')
+    expect(bodyPropsSource).toContain('selectedChapter.value?.generation_traces ?? []')
     expect(generatingSource).toContain('generationTraces?: ChapterGenerationTrace[]')
     expect(traceSource).toContain('const activeTrace = computed')
     // traceMetadata 随 Slice 1 抽至 utils，composable import 后在 activeStepDetails 内调用
