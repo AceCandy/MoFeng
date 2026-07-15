@@ -320,9 +320,15 @@ const readerForceBrowser = chapterReader.forceBrowser
 // 浏览器朗读音色：仅在浏览器 fallback 时可选，选项来自本机 getVoices，存 localStorage
 const browserVoiceOptions = ref<SpeechSynthesisVoice[]>([])
 const refreshBrowserVoices = () => {
-  browserVoiceOptions.value = (window.speechSynthesis?.getVoices?.() ?? []).filter(
-    (voice) => /^zh/i.test(voice.lang) && /natural|neural/i.test(voice.name),
+  // 列出全部中文语音；在线神经语音(natural/neural)质量更好，排前面优先展示。
+  // 不再硬性过滤为仅神经语音——否则未装在线神经语音的机器切到浏览器语音后会无音色可选。
+  const zhVoices = (window.speechSynthesis?.getVoices?.() ?? []).filter((voice) =>
+    /^zh/i.test(voice.lang),
   )
+  zhVoices.sort(
+    (a, b) => Number(/natural|neural/i.test(b.name)) - Number(/natural|neural/i.test(a.name)),
+  )
+  browserVoiceOptions.value = zhVoices
 }
 // 微软在线神经语音英文名 → 中文友好名（带性别/地区），未命中的回退原英文名
 const VOICE_CN_LABEL: Record<string, string> = {

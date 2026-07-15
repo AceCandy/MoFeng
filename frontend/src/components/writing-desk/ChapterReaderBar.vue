@@ -71,7 +71,7 @@
           :checked="forceBrowser"
           @change="emit('force-browser-change', ($event.target as HTMLInputElement).checked)"
         />
-        <span>浏览器语音</span>
+        <span>兼容</span>
       </label>
 
       <select
