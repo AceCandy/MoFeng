@@ -1,7 +1,7 @@
 import { h } from 'vue'
 
 // 小说档案分区 key，与 @/api/novel 的 AllSectionType 对齐（新增分区需同步）。
-type SectionKey =
+export type SectionKey =
   | 'overview'
   | 'world_setting'
   | 'characters'

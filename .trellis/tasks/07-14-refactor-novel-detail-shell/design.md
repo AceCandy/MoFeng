@@ -23,7 +23,7 @@
 | Slice | 内容 | 类型 | 预估净减 | 累计 |
 |---|---|---|---|---|
 | **1** ✅ | `getSectionIcon` + 8 SVG → `novel-detail/sectionIcons.ts` | ts 纯数据 | −55 | **1607** |
-| 2 | ShellDrawerNav 子组件（nav template + drawer/nav-item/nav-icon/nav-label style ~120） | 展示子组件 | ~150 | ~1458 |
+| **2** ✅ | ShellDrawerNav 子组件（aside drawer+nav+backdrop template + drawer/nav-item/nav-icon/nav-label style + @media sticky） | 展示子组件 | −181 | **1426** |
 | 3 | OverviewStrip 子组件（overview-strip template + overview/scroll/status/metric style ~256，computed 群 props 透传） | 展示子组件 | ~290 | ~1168 |
 | 4 | `useShellSectionNavigation` composable（sectionLoaders/sectionComponents/prefetch/switchSection/loadSection/reloadSection/resolveInitialSection） | composable | ~80 | ~1088 |
 | 5 | AddChapterDialog 子组件（modal template + state + saveNewChapter/startAddChapter/cancelNewChapter） | 子组件 | ~90 | ~998 |
@@ -76,3 +76,55 @@ export const getSectionIcon = (key: SectionKey) => sectionIcons[key]
 - `eslint`：sectionIcons.ts **0 warning**（本地 `SectionKey` 字面量联合避开 `components/` no-restricted-imports `@/api` 规则；`AllSectionType = NovelSectionType(6) | AnalysisSectionType(2)` 共 8 字面量，与本地联合逐字匹配，未来加 key 时调用处类型报错强制同步）；NovelDetailShell.vue 仅预存 L290 `@/api/novel` type import warning（未新增）。
 - 关键调整：`h` 从 `vue` import 删除（`getSectionIcon` 是 `h` 唯一消费者，迁出后 orphan）；`Component` 保留（L346 `AsyncSectionModule` 仍用）。
 - 无运行时测试 → 等价性靠逐字搬迁 + 三件套绿 + 源码静态断言不涉及。
+
+## Slice 2 设计：抽 `ShellDrawerNav.vue`（导航抽屉，2026-07-15）
+
+### 边界
+
+| 符号 | 原位置 | 去向 | 备注 |
+|---|---|---|---|
+| `<aside class="detail-shell__drawer">` + nav + backdrop transition | template L94-137 | `novel-detail/ShellDrawerNav.vue` template | 逐字搬迁；状态改 props、事件改 emits |
+| `.detail-shell__drawer`/`.is-open`/`-backdrop`/`__nav`/`__nav-item` 全系/`__nav-icon`/`__nav-label` | style L1135-1270 | 子组件 scoped | 逐字搬迁 |
+| `.detail-shell__drawer` @media 1200px sticky | style L1364-1372 | 子组件 scoped | drawer 自身布局 |
+| `.detail-shell--drawer-collapsed .detail-shell__drawer` | style L1374-1381 | **留父** | 依赖父根 class，靠子根继承 scope id 命中 |
+| `:not(--embedded) .detail-shell__drawer` | style L1602-1605 | **留父** | 同上 |
+| `getSectionIcon` import | L302 | **删**（orphan） | drawer 迁出后父无引用；子组件自行 import |
+| drawer-toggle（顶栏按钮+样式） | L12-25 / L765-840 | **留父** | 属顶栏，Slice 9 才动 |
+
+### 契约
+
+```vue
+<ShellDrawerNav
+  :sections="sections"
+  :active-section="activeSection"
+  :is-open="isSidebarOpen"
+  :is-desktop="isDesktopViewport"
+  @switch="switchSection"
+  @prefetch="prefetchSectionComponent"
+  @close="closeSidebar"
+/>
+```
+
+子组件 `defineProps<{ sections; activeSection: SectionKey; isOpen; isDesktop }>()` + `defineEmits<{ switch(key); prefetch(key); close() }>()`。`SectionKey` 从 `sectionIcons.ts` 复用（本 slice 新增 `export type SectionKey`，DRY，避免父子三处重复联合）。
+
+### scoped 跨组件处理（关键）
+
+drawer 作为子组件根（fragment：`<aside>` + `<transition>` → backdrop `<div>`），根元素继承父 scope id。故两条依赖父根 class 的规则**留父**即可命中子根：
+
+- `.detail-shell--drawer-collapsed .detail-shell__drawer`（折叠时 drawer 缩进）
+- `.detail-shell:not(.detail-shell--embedded) .detail-shell__drawer`（非嵌入态全高）
+
+未用 `:deep()`（同 ChapterPipeline Slice 9 范式）。
+
+### 测试指针跟随
+
+- rg 确认 uiAuditRegression（transition-all/background-clip/classical/flat）+ novelDetailHeading（h1/h2/topbar/back/write/overview-strip）2 spec 均**不涉及** drawer/nav → **零指针重定向**。
+- 无运行时测试 → 等价性靠逐字搬迁 + 三件套。
+
+### 验证（实际，2026-07-15）
+
+- 行数：1607 → **1426**（−181；优于 roadmap 预估 ~1458）。ShellDrawerNav.vue 214 行（新）。
+- `vue-tsc --noEmit` exit 0（ShellDrawerNav 本地 SectionKey 与父 AllSectionType 8 字面量结构兼容）。
+- `vitest run` 21 files / 141 tests 全绿。
+- `eslint`：ShellDrawerNav.vue / sectionIcons.ts **0 warning**；NovelDetailShell.vue 仅预存 L256 `@/api/novel` type import warning（原 L290，删行前移，未新增）。
+- 关键清理：`getSectionIcon` import 删除（drawer 迁出后父无引用，orphan）；drawer-toggle 顶栏按钮 + 样式留父（Slice 9）。
