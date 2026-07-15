@@ -9,17 +9,19 @@ const readSource = (relativePath: string) =>
 describe('NovelDetailShell heading semantics', () => {
   it('uses a single semantic page title level and preserves detail shell structure', () => {
     const source = readSource('src/components/shared/NovelDetailShell.vue')
-    const normalizedSource = source.replace(/\s+/g, ' ')
 
     expect(source).not.toContain('<h1')
-    expect(normalizedSource).toContain(
+    // topbar 的标题 h2 + 返回/写作台按钮已抽到 ShellTopbar 子组件（{{ title }} 由父 :title="formattedTitle" 传入）
+    const topbarSource = readSource('src/components/novel-detail/ShellTopbar.vue')
+    const normalizedTopbarSource = topbarSource.replace(/\s+/g, ' ')
+    expect(normalizedTopbarSource).toContain(
       '<h2 class="detail-shell__title md-title-large truncate" style="color: var(--md-on-surface)"',
     )
-    expect(source).toContain('{{ formattedTitle }}')
-    expect(source).toContain('detail-shell__back-button')
-    expect(source).toContain('detail-shell__write-button')
-    expect(source).toContain('detail-shell__write-label-full')
-    expect(source).toContain('detail-shell__write-label-compact')
+    expect(topbarSource).toContain('{{ title }}')
+    expect(topbarSource).toContain('detail-shell__back-button')
+    expect(topbarSource).toContain('detail-shell__write-button')
+    expect(topbarSource).toContain('detail-shell__write-label-full')
+    expect(topbarSource).toContain('detail-shell__write-label-compact')
     // overview-strip 的标题 h2 已抽到 OverviewStrip 子组件（{{ title }} 由父 :title="formattedTitle" 传入）
     const overviewStripSource = readSource('src/components/novel-detail/OverviewStrip.vue')
     expect(overviewStripSource).toContain('<h2>{{ title }}</h2>')

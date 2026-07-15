@@ -30,7 +30,7 @@
 | **6** ✅ | `useShellBlueprintEdit` composable（modal state + handleSectionEdit/handleSave/resolveSectionKey；父透传 isAdmin/novel/ensureProjectLoaded/updateBlueprintMutation/loadSection） | composable | −46 | **849** |
 | **7** ✅ | `useShellOverview` composable（projectStatus/characterCount/chapterTotal/chapterCompleted/currentChapterLabel/foreshadowingOverview/overviewData/overviewMeta/formattedTitle；父透传 novel/foreshadowingQuery/overviewQuery） | composable | −34 | **815** |
 | **8** ✅ | `useShellSectionContent` composable（componentProps/activeQuery/currentSectionResponse/currentSectionData/currentComponent/isSectionLoading/currentError/contentCardClass/componentContainerClass；父透传 navigation/novel/characterCount/chapterTotal/isAdmin） | composable | −60 | **755** |
-| 9 | ShellTopbar 子组件（topbar template + topbar style ~90，goBack/goToWritingDesk emit） | 展示子组件 | ~110 | ~693 |
+| **9** ✅ | ShellTopbar 子组件（topbar template + topbar style 主块 + @media 833px topbar 部分，toggleSidebar/goBack/goToWritingDesk emit；父透传 title/isAdmin/isSidebarOpen） | 展示子组件 | −142 | **613** |
 | 10 | 剩余 style 分批收敛 + 杂项 | 混合 | ~200 | **<500** |
 
 约 8-10 slice。各 slice 边界/契约在实施时补本文件对应小节。
@@ -415,4 +415,57 @@ composable 内 `const { activeSection, sectionComponents, isNovelSectionKey, ove
 - `eslint`：useShellSectionContent.ts **0 warning**（composables/ 不受 components/views 的 `@/api` no-restricted-imports 限制）；NovelDetailShell.vue 仅预存 L167 `@/api/novel` type import warning（Slice 5 起在 L167，本 slice import 加在 L173 之后不影响其位置，未新增）。
 - 关键点：9 个 computed 逐字搬迁（逻辑零改动，仅 componentProps 的 `props.isAdmin` → `isAdmin()` 入参化，同 Slice 6 范式）；3 个内部中间量（activeQuery/currentSectionResponse/currentSectionData）不返回（同 Slice 7 范式）；父删 `type SectionKey = AllSectionType` + `AllSectionType` import（componentContainerClass 迁出后双 orphan）；navigation 改实例化供 composable 透传。
 - 行为等价：5 入参透传 → composable 内 navigation 解构 5 符号 + characterCount/chapterTotal/novel/isAdmin 引用 → 9 computed（6 返回 + 3 中间量）→ 父解构 6 → template/component 消费，全链路响应式保持。
+
+## Slice 9 设计：抽 `ShellTopbar.vue`（顶栏，2026-07-15）
+
+### 边界
+
+| 符号 | 原位置 | 去向 | 备注 |
+|---|---|---|---|
+| `<header class="detail-shell__topbar">` + topbar-inner/drawer-toggle/back-button/title h2/mode-chip/write-button | template L10-42 | `novel-detail/ShellTopbar.vue` template | 逐字搬迁；`v-if="isAdmin"` 上提到父 `<ShellTopbar>`；formattedTitle→`:title` prop；3 个 `@click`→emit |
+| `.detail-shell__topbar`/`__topbar-inner`/`__title`/`__back-button`+`__write-button`/`__write-label-compact`/`__drawer-toggle` 全系（base/hover/focus-visible/drawer-collapsed/svg）/`__mode-chip` | style L399-492 | 子组件 scoped | 逐字搬迁 |
+| @media 833px 的 topbar 规则（topbar-inner/drawer-toggle/back+write-button/write-label-full/write-label-compact） | style L688-710 | 子组件 scoped | 子内部元素，必须随迁（父 scoped 命中不到子内部） |
+| @media 833px 的 `.detail-shell` 根变量（overview-height/outer-gap） | style L683-686 | **留父** | 父根变量，非 topbar |
+| `goBack`/`goToWritingDesk`/`toggleSidebar` | script | **留父**，经 emit 接线 | 父侧重副作用（router/侧栏状态）；emit 名 toggleSidebar/back/goToWritingDesk |
+
+### 契约
+
+```vue
+<ShellTopbar
+  v-if="isAdmin"
+  :title="formattedTitle"
+  :is-admin="isAdmin"
+  :is-sidebar-open="isSidebarOpen"
+  @toggle-sidebar="toggleSidebar"
+  @back="goBack"
+  @go-to-writing-desk="goToWritingDesk"
+/>
+```
+
+子组件 `defineProps<{ title: string; isAdmin: boolean; isSidebarOpen: boolean }>()` + `defineEmits<{ toggleSidebar: []; back: []; goToWritingDesk: [] }>()`。
+
+### scoped 跨组件处理（关键）
+
+- **子内部元素规则全迁子**（同 Slice 3 OverviewStrip 范式）：topbar-inner/title/back-button/drawer-toggle/mode-chip/write-* 均为 header 的内部元素（非子组件根），父 scoped 命中不到 → 必须迁子。父迁出后 topbar class 零残留（rg EXIT=1 证实）。
+- **`.detail-shell--drawer-collapsed .detail-shell__drawer-toggle` 迁子**：drawer-toggle 是子内部元素（非根，不继承父 scope id），故此依赖父根 class 的规则**留父会失效**（父 scoped 要求 drawer-toggle 带 data-v-父，实际只带 data-v-子）。迁子后子 scoped 编译为 `.detail-shell--drawer-collapsed .detail-shell__drawer-toggle[data-v-子]`，后代选择器只约束最后元素，drawer-toggle 带 data-v-子 ✓，祖先 `.detail-shell--drawer-collapsed`（父根 class）无需 scope id ✓ → 能命中。与 Slice 2（drawer 是子根→留父靠继承）区别：本 slice drawer-toggle 非根→迁子靠 DOM 后代关系。
+- **CSS 变量经 DOM 继承**：`--detail-shell-topbar-height` 设在父根 `.detail-shell`（L389），子 `.detail-shell__topbar-inner { min-height: var(...) }` 作为 DOM 后代自动继承取值（同 Slice 3 `--detail-shell-overview-height` 范式）。
+
+### 死代码发现（mention 不删）
+
+- **write-button 是死代码**：`<header v-if="isAdmin">`（L10）内嵌 `<button v-if="!isAdmin">`（L33），header 渲染时 isAdmin 必为 true → write-button 的 `v-if="!isAdmin"` 恒假 → **永不渲染**。`goToWritingDesk`（script L293）仅被此 write-button `@click` 引用 → 事实执行不到。
+- 本 slice **忠实搬迁**（write-button + goToWritingDesk emit 一并搬入子组件，保留 v-if 原样），行为零变化；不清理（不扩大范围）。子组件 isAdmin prop 因父 `v-if="isAdmin"` 恒为 true，mode-chip `v-if="isAdmin"` 恒显、write-button `v-if="!isAdmin"` 恒不显、goToWritingDesk emit 永不触发——均为忠实搬迁的代价。建议后续单独确认是否清理 write-button + goToWritingDesk。
+
+### 测试指针跟随（重定向）
+
+- `novelDetailHeading.spec.ts` L15-22 共 6 个断言（topbar h2 含完整 class+style 属性 / `{{ formattedTitle }}` / back-button / write-button / write-label-full / write-label-compact）原读父 `NovelDetailShell.vue` 源码 → topbar 迁子后父源码不含这些 → **重定向到 `ShellTopbar.vue` 源码**（topbarSource/normalizedTopbarSource），`{{ formattedTitle }}`→`{{ title }}`（同 Slice 3 OverviewStrip 范式）。L14 `not.toContain('<h1')` 仍读父（父无 h1 ✓）。删 orphan `normalizedSource`。
+- `uiAuditRegression.spec.ts`（transition-all/background-clip/classical/flat 均为 content-surface 相关）不涉及 topbar → 零指针。
+
+### 验证（实际，2026-07-15）
+
+- 行数：755 → **613**（−142；roadmap 预估 ~110，实际多因 drawer-toggle 全系 43 行 + @media topbar 24 行一并迁出）。ShellTopbar.vue 172 行（新）。
+- `vue-tsc --noEmit` exit 0（props/emits 类型 + formattedTitle→title 流转）。
+- `vitest run` 21 files / 141 tests 全绿（含重定向后的 novelDetailHeading）。
+- `eslint`：ShellTopbar.vue / novelDetailHeading.spec.ts **0 warning**；NovelDetailShell.vue 仅预存 L143 `@/api/novel` type import warning（原 L167，删 topbar template −24 行前移，未新增）。
+- 关键点：topbar template + style（主块 + @media topbar 部分）逐字搬迁；header `v-if="isAdmin"` 上提父标签；3 个 @click→emit；@media 833px 根变量留父；write-button 死代码忠实搬迁不清理。
+- 行为等价：3 props 透传 → 子组件渲染 → 3 emit → 父 toggleSidebar/goBack/goToWritingDesk 接线；header 显隐由父 `v-if="isAdmin"` gate 等价；scoped 跨组件经 DOM 后代/继承命中。
 
