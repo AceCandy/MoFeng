@@ -272,7 +272,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, defineAsyncComponent, nextTick, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { NovelAPI } from '@/api/novel'
 import type {
@@ -297,8 +297,7 @@ import {
 } from '@/queries/novel'
 import { globalAlert } from '@/composables/useAlert'
 import { useDialogA11y } from '@/composables/useDialogA11y'
-import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
-import { desktopMin, mobileMax } from '@/constants/responsive'
+import { useWritingDeskDrawers } from '@/composables/useWritingDeskDrawers'
 import { countNonWhitespaceChars } from '@/utils/text'
 import {
   cleanVersionContent,
@@ -311,7 +310,6 @@ import {
   resolveChapterNumberForProjectEntry,
   tryParseOptimizerPayload,
 } from '@/utils/chapter'
-import { useNovelStore } from '@/stores/novel'
 import WDSidebar from '@/components/writing-desk/WDSidebar.vue'
 import WDWorkspace from '@/components/writing-desk/WDWorkspace.vue'
 
@@ -366,21 +364,20 @@ const isOptimizingRecommendedVersion = computed(
 const isApplyingRecommendedOptimization = computed(() => applyOptimizationMutation.isPending.value)
 const recommendedOptimizedContent = ref('')
 const recommendedOptimizeResultNotes = ref('')
-const viewport = useResponsiveViewport()
-const viewportWidth = computed(() => viewport.width.value)
-const novelStore = useNovelStore()
-const isSidebarDrawerOpen = ref(false)
-const isAssistantDrawerOpen = ref(false)
-const isAssistantPanelVisible = computed({
-  get: () => novelStore.isAssistantPanelVisible,
-  set: (val) => {
-    novelStore.isAssistantPanelVisible = val
-    persistAssistantPanelVisibility(val)
-  }
+const {
+  isSidebarDrawerOpen,
+  isAssistantDrawerOpen,
+  isAssistantPanelVisible,
+  useSidebarDrawer,
+  useAssistantDrawer,
+  assistantToggleActive,
+  isDrawerBackdropVisible,
+  closeAllDrawers,
+  toggleSidebarDrawer,
+  toggleAssistantVisibility,
+} = useWritingDeskDrawers({
+  loadAssistantPanel: loadWDAssistantPanel,
 })
-const SIDEBAR_DRAWER_BREAKPOINT = mobileMax
-const ASSISTANT_DRAWER_BREAKPOINT = desktopMin - 1
-const ASSISTANT_PANEL_VISIBILITY_STORAGE_KEY = 'mofeng.writingDesk.assistant.visible'
 
 const chapterQuery = useNovelChapterQuery(() => props.id, selectedChapterNumber)
 const { refreshProjectQueries, upsertChapterInProjectCache } = useNovelMutationRefresh(
@@ -402,38 +399,7 @@ const projectError = computed(() => {
   return error instanceof Error ? error.message : error ? '加载项目失败' : null
 })
 
-const useSidebarDrawer = computed(() => viewportWidth.value <= SIDEBAR_DRAWER_BREAKPOINT)
-const useAssistantDrawer = computed(() => viewportWidth.value <= ASSISTANT_DRAWER_BREAKPOINT)
 const shouldRenderAssistantShell = computed(() => !!project.value)
-const assistantToggleActive = computed(() =>
-  useAssistantDrawer.value ? isAssistantDrawerOpen.value : isAssistantPanelVisible.value,
-)
-
-const isDrawerBackdropVisible = computed(
-  () =>
-    (useSidebarDrawer.value && isSidebarDrawerOpen.value) ||
-    (useAssistantDrawer.value && isAssistantDrawerOpen.value),
-)
-
-watch(
-  () => useSidebarDrawer.value,
-  (enabled) => {
-    if (!enabled) {
-      isSidebarDrawerOpen.value = false
-    }
-  },
-  { immediate: true },
-)
-
-watch(
-  () => useAssistantDrawer.value,
-  (enabled) => {
-    if (!enabled) {
-      isAssistantDrawerOpen.value = false
-    }
-  },
-  { immediate: true },
-)
 
 const getQueryChapterNumber = () => {
   const rawChapterNumber = Array.isArray(route.query.chapter_number)
@@ -497,61 +463,6 @@ watch(
     stopChapterStatusStream()
   },
 )
-
-const closeAllDrawers = () => {
-  isSidebarDrawerOpen.value = false
-  isAssistantDrawerOpen.value = false
-}
-
-const persistAssistantPanelVisibility = (visible: boolean) => {
-  if (typeof window === 'undefined') return
-  try {
-    window.localStorage.setItem(ASSISTANT_PANEL_VISIBILITY_STORAGE_KEY, visible ? '1' : '0')
-  } catch (error) {
-    console.warn('保存辅助信息面板状态失败:', error)
-  }
-}
-
-const restoreAssistantPanelVisibility = () => {
-  if (typeof window === 'undefined') return
-  try {
-    const stored = window.localStorage.getItem(ASSISTANT_PANEL_VISIBILITY_STORAGE_KEY)
-    if (stored === '0') {
-      isAssistantPanelVisible.value = false
-    } else if (stored === '1') {
-      isAssistantPanelVisible.value = true
-    }
-  } catch (error) {
-    console.warn('读取辅助信息面板状态失败:', error)
-  }
-}
-
-const toggleSidebarDrawer = () => {
-  if (!useSidebarDrawer.value) return
-  isSidebarDrawerOpen.value = !isSidebarDrawerOpen.value
-  if (isSidebarDrawerOpen.value) {
-    isAssistantDrawerOpen.value = false
-  }
-}
-
-const toggleAssistantDrawer = () => {
-  if (!useAssistantDrawer.value) return
-  void loadWDAssistantPanel()
-  isAssistantDrawerOpen.value = !isAssistantDrawerOpen.value
-  if (isAssistantDrawerOpen.value && useSidebarDrawer.value) {
-    isSidebarDrawerOpen.value = false
-  }
-}
-
-const toggleAssistantVisibility = () => {
-  if (useAssistantDrawer.value) {
-    toggleAssistantDrawer()
-    return
-  }
-  void loadWDAssistantPanel()
-  isAssistantPanelVisible.value = !isAssistantPanelVisible.value
-  persistAssistantPanelVisibility(isAssistantPanelVisible.value)
-}
 
 const selectedChapter = computed(() => {
   if (!project.value || selectedChapterNumber.value === null) return null
@@ -986,10 +897,6 @@ const applyRecommendedOptimization = async () => {
     globalAlert.showError(error.message || '应用优化失败，请稍后重试')
   }
 }
-
-onMounted(() => {
-  restoreAssistantPanelVisibility()
-})
 
 onUnmounted(() => {
   stopChapterStatusStream()

@@ -36,7 +36,7 @@ parent `07-12-engineering-baseline` acceptance 第 4 项「5 大前端组件 <50
 | # | 内容 | 类型 | 估收益 | 累计 |
 |---|---|---|---|---|
 | **1** ✅ | 5 payload 纯函数去重（tryParseOptimizerPayload/decodeJsonStringFragment/extractJsonField/normalizeOptimizeResult/parseEvaluationPayload 删本地副本 import @/utils/chapter） | 去重 | ~99 | 1910 |
-| 2 | useWritingDeskDrawers composable（drawer refs+computed+方法，viewport 透传） | composable | ~77 | 1833 |
+| **2** ✅ | useWritingDeskDrawers composable（drawer refs+computed+方法+watch+onMounted，viewport/novelStore 内化，loadAssistantPanel 入参） | composable | ~93 | 1817 |
 | 3 | useWritingDeskChapterOps composable（generateChapter/retryFromNode/regenerateChapter/evaluateChapter/deleteChapter/confirmVersionSelection N 块） | composable | ~300 | 1533 |
 | 4 | useWritingDeskVersionDetail composable（版本提取群 extractVersionContent/extractVersionMetadata/toBoundedVersionIndex/resolveRecommendedVersionIndex/availableVersions/syncRecommendedVersionSelection/showVersionDetail/closeVersionDetail/selectVersionFromDetail/isCurrentVersion 内聚，**含 spec L333 指针跟随**） | composable | ~200 | 1333 |
 | 5 | WDRecommendedOptimizeResultModal 子组件（template L164-259 + 推荐优化 state/close/optimize/apply 方法 + style） | 子组件 | ~216 | 1117 |
@@ -103,3 +103,49 @@ parent `07-12-engineering-baseline` acceptance 第 4 项「5 大前端组件 <50
 - 2009 → 1910（-99）。
 - vue-tsc 0 / vitest 141 绿（wdWorkspaceLockedChapter 10/10）/ eslint 0 新增（L277/278 `@/api/novel` 预存 warnings 非本次）。
 - 独立复核 git diff：仅 import +5 名 + 删 5 函数块，无其他改动。
+
+---
+
+## Slice 2 设计：useWritingDeskDrawers composable（2026-07-16）✅ 1910→1817
+
+抽 drawer 状态机：侧栏/助手栏抽屉开关与互斥 + 助手面板可见性（novelStore + localStorage 持久化）。
+
+### 边界（迁入 composable）
+
+- refs：isSidebarDrawerOpen / isAssistantDrawerOpen
+- computed（get/set）：isAssistantPanelVisible（setter 调 persist）
+- computed：useSidebarDrawer / useAssistantDrawer / assistantToggleActive / isDrawerBackdropVisible
+- 方法：closeAllDrawers / toggleSidebarDrawer / toggleAssistantDrawer（内部，不返回）/ toggleAssistantVisibility
+- 内部不返回：persistAssistantPanelVisibility / restoreAssistantPanelVisibility（onMounted 内部调）
+- watch ×2（断点切换关抽屉，{immediate:true}）
+- onMounted（restoreAssistantPanelVisibility）
+- 内化依赖：viewport=useResponsiveViewport() / viewportWidth / novelStore=useNovelStore() / 3 常量 / mobileMax,desktopMin
+
+### 入参
+
+- `loadAssistantPanel: () => void`（父传 loadWDAssistantPanel，toggle 时预加载 WDAssistantPanel；Promise 返回协变到 void）
+
+### 留父
+
+- shouldRenderAssistantShell（依赖 project.value，非 drawer）
+- getQueryChapterNumber + 3 watch（project/route/props.id，章节选择 Slice 6）
+- onUnmounted（stopChapterStatusStream）
+
+### orphan 清理（4 import）
+
+- useResponsiveViewport / desktopMin,mobileMax / useNovelStore（仅 drawer 用，rg 确认全文件仅 drawer 块消费）
+- onMounted（仅 restore 用，迁入 composable）
+
+### const TDZ
+
+composable 内顺序：persist → isAssistantPanelVisible（setter 用 persist）→ restore → computed → 方法 → watch → onMounted。无 forward reference。
+
+### spec
+
+drawer 符号无 spec 断言（wdWorkspaceLockedChapter 只守护版本逻辑 L330-338）。零指针重定向。
+
+### 完成（2026-07-16）
+
+- 1910 → 1817（-93，优于预估 ~77）。
+- vue-tsc 0 / vitest 141 绿 / eslint 0 新增（WritingDesk + composable 均 0 warning，L277/278 @/api 预存）。
+- 独立复核 git diff：6 处精确删除（import×2 + refs + computed/watch + 方法 + onMounted），保留 shouldRenderAssistantShell/getQueryChapterNumber/selectedChapter/onUnmounted。
