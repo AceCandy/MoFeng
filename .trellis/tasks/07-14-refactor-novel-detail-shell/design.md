@@ -28,7 +28,7 @@
 | **4** ✅ | `useShellSectionNavigation` composable（sections/sectionLoaders/sectionComponents/resolveInitialSection/isNovelSectionKey/prefetch·switch·load·reloadSection + overview·sectionQuery，activeNovelSection 内部） | composable | −90 | **974** |
 | **5** ✅ | AddChapterDialog 子组件（modal template + 表单 state + useDialogA11y + md-scale-\* scoped；父留 startAddChapter/saveNewChapter 重副作用 + isAddChapterModalOpen） | 子组件 | −79 | **895** |
 | **6** ✅ | `useShellBlueprintEdit` composable（modal state + handleSectionEdit/handleSave/resolveSectionKey；父透传 isAdmin/novel/ensureProjectLoaded/updateBlueprintMutation/loadSection） | composable | −46 | **849** |
-| 7 | `useShellOverview` composable（projectStatus/characterCount/chapterTotal/chapterCompleted/currentChapterLabel/foreshadowingOverview/overviewData/overviewMeta/formattedTitle） | composable | ~65 | ~878 |
+| **7** ✅ | `useShellOverview` composable（projectStatus/characterCount/chapterTotal/chapterCompleted/currentChapterLabel/foreshadowingOverview/overviewData/overviewMeta/formattedTitle；父透传 novel/foreshadowingQuery/overviewQuery） | composable | −34 | **815** |
 | 8 | `useShellSectionContent` composable（componentProps/activeQuery/currentSectionResponse/currentSectionData/currentComponent/isSectionLoading/currentError/contentCardClass/componentContainerClass） | composable | ~75 | ~803 |
 | 9 | ShellTopbar 子组件（topbar template + topbar style ~90，goBack/goToWritingDesk emit） | 展示子组件 | ~110 | ~693 |
 | 10 | 剩余 style 分批收敛 + 杂项 | 混合 | ~200 | **<500** |
@@ -322,4 +322,48 @@ useShellBlueprintEdit({
 - `eslint`：useShellBlueprintEdit.ts **0 warning**（composables/ 不受 components/views 的 `@/api` no-restricted-imports 限制）；NovelDetailShell.vue 仅预存 L167 `@/api/novel` type import warning（Slice 5 起在 L167，本 slice import 加在 L174 之后不影响其位置，未新增）。
 - 关键点：`resolveSectionKey` 不返回（仅 handleSave 内部用）；父 `type SectionKey = AllSectionType` 保留（componentContainerClass 仍用）；无新 orphan import（`ref` 仍被 isSidebarOpen/isAddChapterModalOpen/newChapterInitialTitle 消费）。
 - 行为等价：`props.isAdmin` → `isAdmin()`（入参 `() => props.isAdmin`）；Modal state 从父 ref → composable ref 解构回父，template `@close="isModalOpen = false"` 自动解包写 .value 不变；handleSave 逻辑逐字（payload 拼装/mutateAsync/resolveSectionKey+loadSection reload/isModalOpen=false）。
+
+## Slice 7 设计：抽 `useShellOverview.ts`（概览指标计算群，2026-07-15）
+
+### 边界
+
+| 符号 | 原位置 | 去向 | 备注 |
+|---|---|---|---|
+| `projectStatus`/`characterCount`/`chapterTotal`/`chapterCompleted`/`currentChapterLabel`/`foreshadowingOverview` | script L240-279 | composable | **返回**（OverviewStrip props + componentProps 消费） |
+| `overviewData`/`overviewMeta`/`formattedTitle` | script L291-300 | composable | **返回**（OverviewStrip props + topbar/OverviewStrip `{{ formattedTitle }}` 消费） |
+| `resolveChapterNumberForEntry` import | 父 L175 | **留父**（composable 内另行 import） | 父 goToWritingDesk(L312) 仍用，import 非 orphan；composable 内 currentChapterLabel 用，独立 import |
+| `novel`/`foreshadowingQuery`/`overviewQuery` | 父 computed/query | **留父**，入参透传 | novel 多处消费（useShellBlueprintEdit/goToWritingDesk/componentProps…）；两 query 仅 composable 入参引用 |
+
+### 契约
+
+```ts
+useShellOverview({
+  novel: Ref<NovelProject | null>,
+  foreshadowingQuery: ReturnType<typeof useForeshadowingQuery>,
+  overviewQuery: ReturnType<typeof useShellSectionNavigation>['overviewQuery'],
+})
+→ { projectStatus, characterCount, chapterTotal, chapterCompleted, currentChapterLabel,
+    foreshadowingOverview, overviewData, overviewMeta, formattedTitle }
+```
+
+### TDZ / 接线处理
+
+- composable 入参 novel(L238)/foreshadowingQuery(L199)/overviewQuery(L217 解构) 均在 composable 调用点(L241)之前定义 → **无 const TDZ**。
+- composable 调用点紧邻 novel 之后、activeQuery 之前；解构出的 characterCount/chapterTotal 被 componentProps(L341) 消费 → 调用点先于 componentProps，无 TDZ。
+- 9 个 computed 原分两段（L240-279 连续 6 个 + L291-300 连续 3 个，中间夹 Slice 8 的 activeQuery/currentSectionResponse/currentSectionData），迁入 composable 后统一解构；Slice 8 内容原位保留不动。
+- `ReturnType<typeof useForeshadowingQuery>` / `ReturnType<typeof useShellSectionNavigation>['overviewQuery']` 入参类型与父 foreshadowingQuery/overviewQuery **完全同型**（同一 hook 的 ReturnType），零结构兼容风险。
+
+### 测试指针跟随
+
+- rg 确认 2 spec 对被迁 8 个 computed（projectStatus/characterCount/…/overviewMeta）**零引用**（EXIT=1）→ 零指针重定向。
+- `formattedTitle`：novelDetailHeading L18 仅断言父 template 字符串 `{{ formattedTitle }}`（topbar L30 + OverviewStrip `:title` 绑定），变量从 composable 解构回父，template 引用不变 → 零指针。
+
+### 验证（实际，2026-07-15）
+
+- 行数：849 → **815**（−34；roadmap 预估 ~65，实际少因 9 computed 中含多行单语句 + composable 调用块 15 行占回）。useShellOverview.ts 91 行（新）。
+- `vue-tsc --noEmit` exit 0（两个 ReturnType 入参同型 + overviewQuery.data 跨 composable 边界类型流转）。
+- `vitest run` 21 files / 141 tests 全绿（零指针重定向）。
+- `eslint`：useShellOverview.ts **0 warning**（composables/ 不受 components/views 的 `@/api` no-restricted-imports 限制）；NovelDetailShell.vue 仅预存 L167 `@/api/novel` type import warning（Slice 5 起在 L167，本 slice import 加在 L175 之后不影响其位置，未新增）。
+- 关键点：9 个 computed 逐字搬迁，逻辑零改动；`resolveChapterNumberForEntry` 父 import 保留（goToWritingDesk L312 用，非 orphan），composable 内独立 import；无新 orphan（`computed` import 仍被 11 处消费，`ref` 仍被多处消费）。
+- 行为等价：3 入参透传 → composable 内同名引用 → 9 computed 返回 → 父解构 → template/OverviewStrip props/componentProps 消费，全链路响应式保持（computed 对象解构不丢响应性）。
 

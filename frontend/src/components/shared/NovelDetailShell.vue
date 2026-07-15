@@ -172,6 +172,7 @@ import { desktopMin } from '@/constants/responsive'
 import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
 import { useShellSectionNavigation } from '@/composables/useShellSectionNavigation'
 import { useShellBlueprintEdit } from '@/composables/useShellBlueprintEdit'
+import { useShellOverview } from '@/composables/useShellOverview'
 import { resolveChapterNumberForEntry } from '@/utils/chapter'
 import { globalAlert } from '@/composables/useAlert'
 import BlueprintEditModal from '@/components/BlueprintEditModal.vue'
@@ -237,45 +238,20 @@ const newChapterInitialTitle = ref('')
 const novel = computed<NovelProject | null>(() =>
   !props.isAdmin ? (projectQuery.data.value ?? null) : null,
 )
-const projectStatus = computed(() => {
-  const total = novel.value?.blueprint?.chapter_outline?.length ?? 0
-  const completed =
-    novel.value?.chapters?.filter((chapter) => chapter.generation_status === 'successful').length ?? 0
-  if (total > 0 && completed >= total) {
-    return { label: '已完稿', tone: 'done' as const }
-  }
-  if (completed > 0) {
-    return { label: '创作中', tone: 'active' as const }
-  }
-  return { label: '筹备中', tone: 'draft' as const }
-})
-const characterCount = computed(() => novel.value?.blueprint?.characters?.length ?? 0)
-const chapterTotal = computed(() => novel.value?.blueprint?.chapter_outline?.length ?? 0)
-const chapterCompleted = computed(
-  () => novel.value?.chapters?.filter((chapter) => chapter.generation_status === 'successful').length ?? 0,
-)
-const currentChapterLabel = computed(() => {
-  if (!chapterTotal.value) return '未开始'
-  const nextChapterNumber = resolveChapterNumberForEntry({
-    outlines: novel.value?.blueprint?.chapter_outline ?? [],
-    chapters: novel.value?.chapters ?? [],
-  })
-  if (nextChapterNumber === null) return `已完成 ${chapterTotal.value} 章`
-  const completed =
-    novel.value?.chapters?.filter((chapter) => chapter.generation_status === 'successful').length ?? 0
-  if (completed >= chapterTotal.value) return `已完成 ${chapterTotal.value} 章`
-  return `第 ${nextChapterNumber} 章`
-})
-const foreshadowingOverview = computed(() => {
-  const payload = foreshadowingQuery.data.value
-  if (!payload) {
-    return { overdue: 0, pending: 0, paidOff: 0 }
-  }
-  return {
-    overdue: payload.overdue_count,
-    pending: payload.planted_count,
-    paidOff: payload.paid_off_count,
-  }
+const {
+  projectStatus,
+  characterCount,
+  chapterTotal,
+  chapterCompleted,
+  currentChapterLabel,
+  foreshadowingOverview,
+  overviewData,
+  overviewMeta,
+  formattedTitle,
+} = useShellOverview({
+  novel,
+  foreshadowingQuery,
+  overviewQuery,
 })
 
 const activeQuery = computed(() => (activeSection.value === 'overview' ? overviewQuery : sectionQuery))
@@ -288,16 +264,6 @@ const currentSectionResponse = computed(() => {
     : sectionQuery.data.value
 })
 const currentSectionData = computed(() => currentSectionResponse.value?.data ?? null)
-const overviewData = computed(() => overviewQuery.data.value?.data ?? null)
-const overviewMeta = computed(() => ({
-  title: overviewData.value?.title || novel.value?.title || '加载中...',
-  updated_at: overviewData.value?.updated_at || null,
-}))
-
-const formattedTitle = computed(() => {
-  const title = overviewMeta.value.title || '加载中...'
-  return title.startsWith('《') && title.endsWith('》') ? title : `《${title}》`
-})
 
 const componentContainerClass = computed(() => {
   const fillSections: SectionKey[] = ['chapters']
