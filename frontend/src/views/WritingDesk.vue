@@ -302,9 +302,14 @@ import { desktopMin, mobileMax } from '@/constants/responsive'
 import { countNonWhitespaceChars } from '@/utils/text'
 import {
   cleanVersionContent,
+  decodeJsonStringFragment,
+  extractJsonField,
   formatChapterGenerationError,
+  normalizeOptimizeResult,
+  parseEvaluationPayload,
   resolveChapterNumberForEntry,
   resolveChapterNumberForProjectEntry,
+  tryParseOptimizerPayload,
 } from '@/utils/chapter'
 import { useNovelStore } from '@/stores/novel'
 import WDSidebar from '@/components/writing-desk/WDSidebar.vue'
@@ -873,110 +878,6 @@ const recommendedOptimizedParagraphs = computed(() => {
 const recommendedOptimizedWordCount = computed(() => {
   return countNonWhitespaceChars(recommendedOptimizedContent.value)
 })
-
-const tryParseOptimizerPayload = (rawText: string): Record<string, unknown> | null => {
-  if (!rawText) return null
-  const text = rawText.trim()
-  if (!text) return null
-
-  const candidates: string[] = [text]
-  const fenceMatch = text.match(/```(?:json|JSON)?\s*([\s\S]*?)\s*```/)
-  if (fenceMatch?.[1]) {
-    const fenced = fenceMatch[1].trim()
-    if (fenced && fenced !== text) candidates.unshift(fenced)
-  }
-
-  for (const candidate of candidates) {
-    try {
-      const parsed = JSON.parse(candidate)
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        return parsed as Record<string, unknown>
-      }
-    } catch {
-      // ignore
-    }
-  }
-  return null
-}
-
-const decodeJsonStringFragment = (fragment: string): string => {
-  try {
-    return JSON.parse(`"${fragment}"`) as string
-  } catch {
-    return fragment.replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\t/g, '\t')
-  }
-}
-
-const extractJsonField = (
-  rawText: string,
-  field: 'optimized_content' | 'optimization_notes',
-): string | null => {
-  const pattern = new RegExp(`"${field}"\\s*:\\s*"((?:\\\\.|[^"\\\\])*)"`, 's')
-  const match = rawText.match(pattern)
-  if (!match?.[1]) return null
-  return decodeJsonStringFragment(match[1])
-}
-
-const normalizeOptimizeResult = (
-  contentRaw: string,
-  notesRaw: string,
-): { content: string; notes: string } => {
-  let content = (contentRaw || '').trim()
-  let notes = (notesRaw || '').trim()
-  const seen = new Set<string>()
-
-  for (let i = 0; i < 2; i++) {
-    if (!content || seen.has(content)) break
-    seen.add(content)
-    const payload = tryParseOptimizerPayload(content)
-    if (!payload) break
-    const nestedContent = payload.optimized_content
-    if (typeof nestedContent !== 'string' || !nestedContent.trim()) break
-    content = nestedContent.trim()
-    if (!notes && typeof payload.optimization_notes === 'string') {
-      notes = payload.optimization_notes.trim()
-    }
-  }
-
-  if (content.includes('"optimized_content"')) {
-    const extractedContent = extractJsonField(content, 'optimized_content')
-    if (extractedContent?.trim()) {
-      content = extractedContent.trim()
-    }
-    if (!notes) {
-      const extractedNotes = extractJsonField(contentRaw, 'optimization_notes')
-      if (extractedNotes?.trim()) {
-        notes = extractedNotes.trim()
-      }
-    }
-  }
-
-  const fenced = content.match(/```(?:json|JSON)?\s*([\s\S]*?)\s*```/)
-  if (fenced?.[1]) {
-    content = fenced[1].trim()
-  }
-
-  return {
-    content,
-    notes: notes || '优化完成',
-  }
-}
-
-const parseEvaluationPayload = (evaluation: string | null): Record<string, any> | null => {
-  if (!evaluation) return null
-  try {
-    let data = JSON.parse(evaluation)
-    if (typeof data === 'string') {
-      data = JSON.parse(data)
-    }
-    if (data && typeof data === 'object' && !Array.isArray(data)) {
-      return data as Record<string, any>
-    }
-  } catch (error) {
-    console.error('解析评审结果失败:', error)
-  }
-  return null
-}
 
 watch(
   [
