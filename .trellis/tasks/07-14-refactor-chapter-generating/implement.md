@@ -252,3 +252,41 @@ cd frontend && npx eslint src/components/writing-desk/workspace/ChapterGeneratin
 ## 提交边界
 
 单 commit：`refactor(frontend): 抽 ChapterStepInspector 子组件（#22 ChapterGenerating Slice 7）`。仅含 ChapterGenerating.vue + ChapterStepInspector.vue + uiAuditRegression.spec.ts + design.md + implement.md；不含 backend/app/services/tts_service.py（reader/TTS 会话残留）。
+
+---
+
+# Slice 8 实施清单：抽 `composables/useChapterGenerationTrace.ts`
+
+## 步骤
+
+1. 新建 `useChapterGenerationTrace.ts`：逐字迁入 activeStepTraces/activeTrace/activeStepDetails 三 computed。签名收 props 子集 `{ generationTraces }` + TraceDeps（activeStepKey/currentStepKey/isFailureStatus/terminalFailedTrace/failureReason/failureScenario 透传引用）。返回 `{ activeStepDetails }`，activeStepTraces/activeTrace 内部中间量。import @/utils/generationTrace 的 13 符号 + ActiveStepDetails type（同原组件 activeStepDetails 用法）。
+2. 改 ChapterGenerating.vue：
+   - 删 activeStepTraces/activeTrace/activeStepDetails 三 computed 定义
+   - `@/utils/generationTrace` 整段 import 删除（13 符号 + type 全随迁，组件无其他消费点）
+   - 新增 `import { useChapterGenerationTrace } from '@/composables/useChapterGenerationTrace'`
+   - 在 useGenerationPipeline 解构后插 `const { activeStepDetails } = useChapterGenerationTrace(props, { activeStepKey, currentStepKey, isFailureStatus, terminalFailedTrace, failureReason, failureScenario })`
+3. 测试指针跟随：uiAuditRegression.spec.ts 3 用例（`uses real chapter generation traces...` / `does not show fabricated prompt...` / `labels chapter trace details...`）原 `source` 断言改读 `traceSource`（composable 源码）；`generationTraces?: ChapterGenerationTrace[]`（Props 仍在组件）保持 generatingSource。
+4. 复核：三 computed 与原组件逐字等价；消费点（template activeStepDetails / ChapterStepInspector prop）零逻辑改动，解构同名。
+
+## 验证（全绿）
+
+- vue-tsc --noEmit → exit 0（TraceDeps 契约匹配：currentStepKey ComputedRef<string>，failureScenario {title,description}）
+- vitest run chapterGeneratingTiming.spec.ts → 7 绿
+- vitest run（全量）→ 141 绿 0 失败
+- eslint 改动三文件 → 0 新增（仅父 1 预存 @/api/novel 警告；composable 不受限，同 useGenerationFailure）
+
+## 实施偏差（已修正）
+
+首次全量 vitest 1 失败：`uiAuditRegression.spec.ts:252 expect(generatingSource).toContain('const activeTrace = computed')`——rg 预扫描只搜了 traceUsesLlm/formatTraceActions，漏了第 3 个用例的 `const activeTrace`/`traceMetadata` 断言。补该用例指针跟随（→ traceSource）后全绿。教训：迁移 computed/符号前，rg 应覆盖**所有**指向被迁符号源码的测试断言（activeTrace/traceMetadata/兜底文案），不止主调用名。
+
+## 结果
+
+主组件 977 → **900**（−77）；composable 119 行新增。diff（父）8 insertions / 84 deletions，纯 computed 迁移 + import 整段迁走 + composable 调用；测试指针跟随 3 用例（+3 traceSource 声明 / 6 断言换源）。
+
+## 回滚点
+
+`git checkout -- ChapterGenerating.vue frontend/src/components/__tests__/uiAuditRegression.spec.ts && rm frontend/src/composables/useChapterGenerationTrace.ts`，无副作用。
+
+## 提交边界
+
+单 commit：`refactor(frontend): 抽 useChapterGenerationTrace composable（#22 ChapterGenerating Slice 8）`。仅含 ChapterGenerating.vue + useChapterGenerationTrace.ts + uiAuditRegression.spec.ts + design.md + implement.md；不含 backend/app/services/tts_service.py（reader/TTS 会话残留）。

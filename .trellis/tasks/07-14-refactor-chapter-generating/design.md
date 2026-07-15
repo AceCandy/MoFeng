@@ -344,7 +344,55 @@ template/style 逐字搬迁 + 单 prop 透传 + 测试指针跟随。chapterGene
 
 ---
 
-## <500 缺口（Slice 7 后评估）
+## Slice 8 详述：抽 `composables/useChapterGenerationTrace.ts`
+
+### 边界
+
+把 trace 组装三 computed（activeStepTraces/activeTrace/activeStepDetails，~71 行）整体抽入 composable。activeStepDetails 是节点详情面板的数据源（label/summary/callType/llmUsage/status/systemDuration/inputs/actions/outputs），依赖步骤键 + 失败分析 + 大量 utils 格式化函数。纯逻辑迁移，零 template/style 牵连。
+
+### 迁出符号（→ composable）
+
+- `activeStepTraces`（computed，内部中间量，不返回）
+- `activeTrace`（computed，内部中间量，失败态优先取失败 trace，不返回）
+- `activeStepDetails`（computed，逐字迁移；返回，组件 template + ChapterStepInspector prop 消费）
+
+### composable 签名
+
+`useChapterGenerationTrace(props: GenerationTraceProps, deps: TraceDeps)`。
+- `GenerationTraceProps`：`{ generationTraces: ChapterGenerationTrace[] }`
+- `TraceDeps`：步骤状态机 + 失败分析透传引用——`activeStepKey: Ref<string|null>`、`currentStepKey: ComputedRef<string>`、`isFailureStatus: ComputedRef<boolean>`、`terminalFailedTrace: ComputedRef<ChapterGenerationTrace|null>`、`failureReason: ComputedRef<string>`、`failureScenario: ComputedRef<{title,description}>`。均来自 ChapterGenerating 已解构的 useGenerationPipeline/useGenerationFailure 返回 + 组件 activeStepKey ref。
+
+返回 `{ activeStepDetails }`。activeStepTraces/activeTrace 为内部中间量（仅 activeStepDetails 消费），不对外暴露。
+
+### 组件 import 调整
+
+- `@/utils/generationTrace`：**整段 import 删除**（13 符号 + type ActiveStepDetails 全随 activeStepDetails 迁入 composable，组件无其他消费点）
+- 新增 `import { useChapterGenerationTrace } from '@/composables/useChapterGenerationTrace'`
+
+### 测试指针跟随（uiAuditRegression.spec.ts）
+
+trace 组装迁出后，3 个用例的原 `source`（ChapterGenerating.vue）断言失效，改读 `traceSource`（composable 源码）：
+- `uses real chapter generation traces...`：`const activeTrace = computed` / `traceMetadata` → traceSource（`generationTraces?: ChapterGenerationTrace[]` 仍在组件 Props，保持 generatingSource）
+- `does not show fabricated prompt...`：`该节点暂未收到真实运行记录。` + 4 负面断言 → traceSource
+- `labels chapter trace details...`：`traceUsesLlm` / `formatTraceActions` → traceSource（inspectorSource/traceUtils 不变）
+
+沿用 Slice 1/7 指针跟随先例。
+
+### 等价性 / 验证
+
+逐字迁移（三 computed 与原组件字节等价），消费点解构同名。chapterGeneratingTiming 7 用例（mount 主组件断言 DOM，activeStepDetails 经 formatSystemDuration/formatTrace* 组装、失败 trace 兜底、evaluation_failed 不复用旧 trace 全覆盖）全绿验证运行时等价。vue-tsc exit 0 / 全量 vitest **141 绿 0 失败** / eslint 0 新增（仅父 1 预存 @/api/novel 警告；composable 不受限，同 useGenerationFailure）。
+
+### 风险
+
+低。纯逻辑迁移，无 template/style 牵连（避开 pipeline 卡的 scoped 只读覆写内部元素难题）。**抄写偏差点**：activeStepDetails 三分支兜底（trace 存在 / 失败节点无 trace / 无记录），逐字搬迁 + timing 强回归网兜底。
+
+### 选型理由（为何本块优先于 pipeline 卡）
+
+pipeline 进度卡虽收益最大（~480 行，冲 <500 关键），但其只读覆写 `.chapter-console--read-only .chapter-console__pipeline(-item/-title)` 涉及子组件**内部元素**（非子根），父 scoped 后代选择器编译后选不到，需 `:deep()` 或子组件收 readOnly prop 自绑类重设——scoped 范式风险中高。按 CLAUDE.md「风险更低、diff 更小、易验证」优先，本会话先抽纯逻辑的 trace 组装，pipeline 卡留作后续会话专项规划 scoped 只读方案。
+
+---
+
+## <500 缺口（Slice 8 后评估）
 
 | Slice | 主组件行数 |
 |---|---|
@@ -355,6 +403,7 @@ template/style 逐字搬迁 + 单 prop 透传 + 测试指针跟随。chapterGene
 | Slice 4 后 | 1455 |
 | Slice 5 后 | 1330 |
 | Slice 6 后 | 1167 |
-| **Slice 7 后** | **977** |
+| Slice 7 后 | 977 |
+| **Slice 8 后** | **900** |
 
-节点详情面板已抽出。主组件 977 行，仍 >500，需继续拆分：pipeline 进度卡（步骤 ol + Tooltip + 节点重试，~80 行 template + 大量 pipeline/dot/连线/badge style）与 footer actions（~20 行）是剩余可抽的展示块；script 区（activeStepDetails/activeTrace/activeStepTraces/pipelineSteps/selectStep/动作/watch）仍是主体，可考虑抽 `useChapterGenerationTrace` composable 收 trace 组装逻辑。每会话一块。
+trace 组装（activeStepTraces/activeTrace/activeStepDetails）已抽至 `useChapterGenerationTrace` composable，组件 `@/utils/generationTrace` import 整段迁走。主组件 900 行，仍 >500，剩余可拆：pipeline 进度卡（步骤 ol + Tooltip + 节点重试，~80 行 template + 大量 pipeline/dot/连线/badge style，**注意只读覆写 `.chapter-console--read-only .chapter-console__pipeline(-item/-title)` 涉及子组件内部元素，父 scoped 后代选择器选不到，需 `:deep()` 或子组件收 readOnly prop 自绑类**）与 footer actions（~20 行）是剩余展示块；script 区现剩 pipelineSteps/selectStep/动作/watch/lifecycle。每会话一块。

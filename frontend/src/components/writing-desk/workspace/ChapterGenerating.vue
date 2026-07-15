@@ -142,21 +142,7 @@ import { globalAlert } from '@/composables/useAlert'
 import { useGenerationTiming } from '@/composables/useGenerationTiming'
 import { useGenerationFailure } from '@/composables/useGenerationFailure'
 import { useGenerationPipeline } from '@/composables/useGenerationPipeline'
-import {
-  STEP_DETAILS,
-  PIPELINE_LABELS,
-  TRACE_STATUS_LABELS,
-  normalizePipelineStepKey,
-  traceMetadata,
-  resolveTraceDurationMs,
-  formatSystemDuration,
-  traceUsesLlm,
-  formatTraceInputs,
-  formatTraceActions,
-  formatTraceOutputs,
-  resolveTraceCallType,
-  type ActiveStepDetails,
-} from '@/utils/generationTrace'
+import { useChapterGenerationTrace } from '@/composables/useChapterGenerationTrace'
 
 interface Props {
   chapterNumber: number | null
@@ -263,76 +249,13 @@ watch(
   },
 )
 
-const activeStepTraces = computed(() => {
-  const key = activeStepKey.value || currentStepKey.value
-  return props.generationTraces.filter((trace) => normalizePipelineStepKey(trace.node_key) === key)
-})
-
-const activeTrace = computed(() => {
-  const key = activeStepKey.value || currentStepKey.value
-  const traces = activeStepTraces.value
-  if (isFailureStatus.value && key === currentStepKey.value) {
-    const failedTrace = [...traces].reverse().find((trace) => trace.status === 'failed')
-    if (failedTrace) return failedTrace
-    return terminalFailedTrace.value
-  }
-  return traces.length ? traces[traces.length - 1] : null
-})
-
-const activeStepDetails = computed<ActiveStepDetails>(() => {
-  const key = activeStepKey.value || currentStepKey.value
-  const stepConfig = STEP_DETAILS[key] ?? {
-    summary: '正在处理当前章节请求。',
-    inputs: '系统自动组装',
-    outputs: '处理中',
-    next: '请稍候',
-  }
-  const trace = activeTrace.value
-
-  if (trace) {
-    const metadata = traceMetadata(trace)
-    return {
-      label: PIPELINE_LABELS[key] || trace.node_label || stepConfig.summary,
-      summary: metadata.summary || (trace.status === 'failed'
-        ? `真实运行记录：${trace.node_label || stepConfig.summary} 执行失败`
-        : `真实运行记录：${trace.node_label || stepConfig.summary}`),
-      callType: resolveTraceCallType(trace),
-      llmUsage: traceUsesLlm(trace) ? '是' : '否',
-      status: TRACE_STATUS_LABELS[trace.status] || trace.status || '',
-      systemDuration: formatSystemDuration(resolveTraceDurationMs(trace)),
-      inputs: formatTraceInputs(trace),
-      actions: formatTraceActions(trace),
-      outputs: formatTraceOutputs(trace),
-    }
-  }
-
-  if (isFailureStatus.value && key === currentStepKey.value) {
-    const label = PIPELINE_LABELS[key] || stepConfig.summary
-    const reason = failureReason.value || failureScenario.value.description
-    return {
-      label,
-      summary: `${label}执行失败，当前章节流程已停止。`,
-      callType: '失败节点',
-      llmUsage: key === 'quality_review' || key === 'review_refinement' ? '是' : '待确认',
-      status: '失败',
-      systemDuration: '未记录',
-      inputs: stepConfig.inputs,
-      actions: '该失败节点未返回完整 trace，前端已按章节失败状态显示兜底详情。',
-      outputs: `错误：\n${reason}`,
-    }
-  }
-
-  return {
-    label: PIPELINE_LABELS[key] || stepConfig.summary,
-    summary: `暂未收到 ${PIPELINE_LABELS[key] || stepConfig.summary} 的真实运行记录`,
-    callType: '等待记录',
-    llmUsage: '待记录',
-    status: '',
-    systemDuration: '未记录',
-    inputs: '该节点暂未收到真实运行记录。',
-    actions: '该节点暂未收到真实运行记录。',
-    outputs: '该节点暂未收到真实运行记录。',
-  }
+const { activeStepDetails } = useChapterGenerationTrace(props, {
+  activeStepKey,
+  currentStepKey,
+  isFailureStatus,
+  terminalFailedTrace,
+  failureReason,
+  failureScenario,
 })
 
 const moveToBackground = () => {

@@ -242,6 +242,8 @@ describe('UI audit regressions', () => {
     const generatingSource = readSource(
       'src/components/writing-desk/workspace/ChapterGenerating.vue',
     )
+    // activeTrace/activeStepDetails 组装随 Slice 8 抽至 useChapterGenerationTrace，断言改读 composable 源码
+    const traceSource = readSource('src/composables/useChapterGenerationTrace.ts')
 
     expect(apiSource).toContain('export interface ChapterGenerationTrace')
     expect(apiSource).toContain('generation_traces?: ChapterGenerationTrace[]')
@@ -249,37 +251,39 @@ describe('UI audit regressions', () => {
     expect(workspaceSource).toContain('generationTraces: renderAsLocalGenerating')
     expect(workspaceSource).toContain('selectedChapter.value?.generation_traces ?? []')
     expect(generatingSource).toContain('generationTraces?: ChapterGenerationTrace[]')
-    expect(generatingSource).toContain('const activeTrace = computed')
-    // traceMetadata 随 Slice 1 抽至 utils，组件 import 后在 activeStepDetails 内调用
-    expect(generatingSource).toContain('traceMetadata')
+    expect(traceSource).toContain('const activeTrace = computed')
+    // traceMetadata 随 Slice 1 抽至 utils，composable import 后在 activeStepDetails 内调用
+    expect(traceSource).toContain('traceMetadata')
   })
 
   it('does not show fabricated prompt or response content when a trace is missing', () => {
-    const source = readSource('src/components/writing-desk/workspace/ChapterGenerating.vue')
+    // activeStepDetails 兜底文案随 Slice 8 抽至 useChapterGenerationTrace，断言改读 composable 源码
+    const traceSource = readSource('src/composables/useChapterGenerationTrace.ts')
 
-    expect(source).toContain('该节点暂未收到真实运行记录。')
-    expect(source).not.toContain('姜沉河')
-    expect(source).not.toContain('AI导演剧情蓝图')
-    expect(source).not.toContain('商业擂台直播')
-    expect(source).not.toContain('主角“林拓”')
+    expect(traceSource).toContain('该节点暂未收到真实运行记录。')
+    expect(traceSource).not.toContain('姜沉河')
+    expect(traceSource).not.toContain('AI导演剧情蓝图')
+    expect(traceSource).not.toContain('商业擂台直播')
+    expect(traceSource).not.toContain('主角“林拓”')
   })
 
   it('labels chapter trace details by action instead of pretending every node is an LLM call', () => {
-    const source = readSource('src/components/writing-desk/workspace/ChapterGenerating.vue')
     // 节点详情面板随 Slice 7 抽至 ChapterStepInspector.vue，展示文本随之迁移
     const inspectorSource = readSource(
       'src/components/writing-desk/workspace/ChapterStepInspector.vue',
     )
     // trace 格式化函数随 Slice 1 抽至 utils/generationTrace.ts，契约分两处校验
     const traceUtils = readSource('src/utils/generationTrace.ts')
+    // activeStepDetails 组装随 Slice 8 抽至 useChapterGenerationTrace，traceUsesLlm/formatTraceActions 引用随之迁移
+    const traceSource = readSource('src/composables/useChapterGenerationTrace.ts')
 
     expect(inspectorSource).toContain('输入材料')
     expect(inspectorSource).toContain('实际动作')
     expect(inspectorSource).toContain('产出结果')
     expect(inspectorSource).toContain('调用类型')
     expect(inspectorSource).toContain('LLM 调用：{{ activeStepDetails.llmUsage }}')
-    expect(source).toContain('traceUsesLlm')
-    expect(source).toContain('formatTraceActions')
+    expect(traceSource).toContain('traceUsesLlm')
+    expect(traceSource).toContain('formatTraceActions')
     expect(traceUtils).toContain('formatModelCall')
     expect(inspectorSource).not.toContain('发送给 LLM 的输入 (Prompt)')
     expect(inspectorSource).not.toContain('LLM 生成的响应 (Response)')
