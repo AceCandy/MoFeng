@@ -392,7 +392,46 @@ pipeline 进度卡虽收益最大（~480 行，冲 <500 关键），但其只读
 
 ---
 
-## <500 缺口（Slice 8 后评估）
+## Slice 9 详述：抽子组件 `ChapterPipeline.vue`（达成 <500）
+
+### 边界
+
+把 pipeline 进度卡（template `<article class="chapter-console__pipeline-card">` 整块 + 全部 pipeline/dot/连线/badge/retry style + @keyframes + @media pipeline 部分）抽成子组件。冲 <500 的关键块（~506 行收益）。沿用 Slice 5/6/7 的 template/script/style 三段同迁 + 自带骨架范式，并解决只读覆写指向子组件内部元素的 scoped 难题。
+
+### 迁出（→ 子组件）
+
+- template：pipeline 卡 DOM 逐字搬迁（article/header/ol/li/Tooltip/badge/retry 全部）；`@click="selectStep(...)"` → `emit('select', key, index)`；`emit('retryFromNode', {...})` 保留为子组件 emit；根 article 绑 `:class="{ 'is-read-only': readOnly }"`
+- script：零业务逻辑迁移——子组件仅收 12 props（pipelineSteps/stepState/stepTooltipText/shouldShowManualConfirmBadge/canRetryFromNode 为函数 prop；activeStepKey/status/readOnly/generatingChapter/chapterNumber/elapsedText/etaText 为值 prop）+ 类型化 emit（select/retryFromNode）。无 computed/ref
+- style（scoped）：pipeline-card 自带骨架（border/radius/bg/shadow/padding，scoped 隔离重复声明，同 Slice 5 范式）+ pipeline 全系规则（title-group/read-only-badge/header-main/meta-*/pipeline/pipeline-item/marker/dot/content/header/title/badge/is-*/tooltip-wrapper/retry/clickable/selected）+ 3 条只读内部元素覆写（改写为 `.chapter-console__pipeline-card.is-read-only ...`）+ @keyframes（dot-ripple/line-flow/line-flow-vertical）+ @media（hover/reduced-motion/max-width pipeline 部分）
+
+### scoped 只读覆写难题（本 slice 核心决策）
+
+只读覆写分两类：
+1. **根级**（`.chapter-console--read-only .chapter-console__pipeline-card`，border-radius:0/box-shadow:none/padding/bg）**留父**——pipeline-card 是子组件根，Vue scoped「子组件根继承父级 data-v」机制下，父后代选择器编译为 `.chapter-console--read-only[data-v-parent] .chapter-console__pipeline-card[data-v-parent]`，子根继承 data-v-parent 仍命中（同 Slice 7 inspector-card 范式）
+2. **内部元素级**（`.pipeline`/`.pipeline-item`/`.pipeline-title` 3 条）**迁入子组件**——子组件内部元素不继承父 data-v，父 scoped 后代选择器编译后选不到。解法：子组件收 readOnly prop，根绑 is-read-only 类，3 条规则改写为 `.chapter-console__pipeline-card.is-read-only .chapter-console__pipeline(-item/-title)`，全在子 scoped 范围内（编译后带 data-v-child）能选到内部元素
+
+未采用 `:deep()` 方案——readOnly prop 自绑类更内聚（只读样式完全属于 pipeline 卡展示细节），与 Slice 5/6/7 子组件自带 scoped 范式一致。
+
+### emit 契约
+
+- `select: [key: string, index: number]`——父 `@select="selectStep"` 直接对接（Vue emit 多参数传 handler，零 wrapper）
+- `retryFromNode: [{ chapterNumber: number; nodeKey: string }]`——父 `@retry-from-node="(payload) => emit('retryFromNode', payload)"` 转发给祖父
+
+### 无测试指针跟随
+
+timing 7 用例的 pipeline 断言（`.pipeline-item.is-failed`/`.pipeline-title` 文本顺序/「待人工确认」badge/readOnly 场景）均为 DOM querySelector 断言，不受 scoped data-v 影响——子组件渲染的元素仍带这些类名。故 timing 无需改源码读目标，只要子组件 DOM 结构/类名/文本逐字等价即全绿。uiAuditRegression 无 pipeline 断言。
+
+### 等价性 / 验证
+
+template/style 逐字搬迁 + emit 拆分 + readOnly prop 自绑类。chapterGeneratingTiming 7 用例（pipeline-item.is-failed/pipeline-title 文本顺序/待人工确认/readOnly 场景全覆盖）全绿验证运行时等价。vue-tsc exit 0（12 props + emit 契约类型匹配）/ 全量 vitest **141 绿 0 失败** / eslint 0 新增（ChapterPipeline.vue 0 警告；仅父 1 预存 @/api/novel 警告）。
+
+### 风险
+
+中-高（scoped 只读覆写改写是本 slice 难点）。逐字搬迁 + timing 强回归网兜底。**剩余人工目视点（timing 不覆盖样式）**：① 只读模式下 pipeline 内部元素间距/字号（margin-top/padding-bottom/font-size）靠 is-read-only 类生效；② pipeline-card 根级 border-radius:0/box-shadow:none/padding/bg 靠子根继承父 data-v 生效（同 Slice 7 已验证范式）。两者均需只读回溯场景人工目视。
+
+---
+
+## 进度（Slice 9 后：达成 <500）
 
 | Slice | 主组件行数 |
 |---|---|
@@ -405,5 +444,6 @@ pipeline 进度卡虽收益最大（~480 行，冲 <500 关键），但其只读
 | Slice 6 后 | 1167 |
 | Slice 7 后 | 977 |
 | **Slice 8 后** | **900** |
+| **Slice 9 后** | **394** ✅ |
 
-trace 组装（activeStepTraces/activeTrace/activeStepDetails）已抽至 `useChapterGenerationTrace` composable，组件 `@/utils/generationTrace` import 整段迁走。主组件 900 行，仍 >500，剩余可拆：pipeline 进度卡（步骤 ol + Tooltip + 节点重试，~80 行 template + 大量 pipeline/dot/连线/badge style，**注意只读覆写 `.chapter-console--read-only .chapter-console__pipeline(-item/-title)` 涉及子组件内部元素，父 scoped 后代选择器选不到，需 `:deep()` 或子组件收 readOnly prop 自绑类**）与 footer actions（~20 行）是剩余展示块；script 区现剩 pipelineSteps/selectStep/动作/watch/lifecycle。每会话一块。
+pipeline 进度卡（article + 全部 pipeline style + keyframes + @media）已抽至 `ChapterPipeline.vue` 子组件（569 行），父组件 900 → **394**，**acceptance「<500」达成**。scoped 只读覆写难题用「根级留父 + 内部元素级子组件收 readOnly prop 自绑 is-read-only 类」解决。父组件剩余：footer actions（~20 行，可抽但 acceptance 已达成无需再拆）+ script 区（pipelineSteps/selectStep/动作/watch/lifecycle，组件粘合剂，抽出意义不大）+ pre-existing dead style（header/title/summary/log/fadeInTooltip，非本次产物，未动）。

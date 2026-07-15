@@ -290,3 +290,41 @@ cd frontend && npx eslint src/components/writing-desk/workspace/ChapterGeneratin
 ## 提交边界
 
 单 commit：`refactor(frontend): 抽 useChapterGenerationTrace composable（#22 ChapterGenerating Slice 8）`。仅含 ChapterGenerating.vue + useChapterGenerationTrace.ts + uiAuditRegression.spec.ts + design.md + implement.md；不含 backend/app/services/tts_service.py（reader/TTS 会话残留）。
+
+---
+
+# Slice 9 实施清单：抽 `ChapterPipeline.vue`（达成 <500）
+
+## 目标
+
+把 pipeline 进度卡（template article + 全部 pipeline style + keyframes + @media）抽成 `ChapterPipeline.vue` 子组件。冲 <500 关键块。
+
+## 步骤
+
+1. 新建 `ChapterPipeline.vue`：template 逐字迁入 article 整块（`@click="selectStep"` → `emit('select', key, index)`；retryFromNode emit 保留；根 article 绑 `is-read-only` 类）；script 收 12 props（5 函数 prop：pipelineSteps/stepState/stepTooltipText/shouldShowManualConfirmBadge/canRetryFromNode；7 值 prop：activeStepKey/status/readOnly/generatingChapter/chapterNumber/elapsedText/etaText）+ 类型化 emit（select/retryFromNode），零 computed/ref；style 自带骨架 + pipeline 全系规则 + 3 条只读内部覆写改 `.pipeline-card.is-read-only` + keyframes + @media。
+2. 改 ChapterGenerating.vue：template article → `<ChapterPipeline>` 标签（12 props + `@select="selectStep"` + `@retry-from-node` 转发）；import Tooltip → ChapterPipeline（Tooltip 现仅子组件用）；style 删全部 pipeline 规则（9 个 Edit），保留 read-only 根级覆写（子根继承 data-v 命中，同 Slice 7 范式）+ pre-existing dead（header/title/summary/log/fadeInTooltip，未动）+ footer actions。
+3. 无测试指针跟随（timing DOM querySelector 断言不受 scoped data-v 影响；uiAuditRegression 无 pipeline 断言）。
+4. 复核：template 逐字搬迁（article 文本与原 L8-86 字节等价）；style 迁移规则逐条比对；read-only 根级留父靠子根继承 data-v 命中。
+
+## 验证（全绿）
+
+- vue-tsc --noEmit → exit 0（12 props + emit 契约类型匹配；父传 props 类型协变安全）
+- vitest run chapterGeneratingTiming.spec.ts → 7 绿（pipeline-item.is-failed / pipeline-title 文本顺序 / 待人工确认 / readOnly 场景全覆盖）
+- vitest run（全量）→ 141 绿 0 失败
+- eslint 改动两文件 → 0 新增（ChapterPipeline.vue 0 警告；仅父 1 预存 @/api/novel 警告）
+
+## 结果
+
+主组件 900 → **394**（−506，**acceptance <500 达成**）；ChapterPipeline.vue 569 行新增。diff（父）17 insertions / 523 deletions；纯 template 子组件化 + import 一行换 + style 删减。**9-slice 完成**。
+
+## 剩余人工目视（timing 不覆盖样式）
+
+① 只读模式 pipeline 内部元素间距/字号（is-read-only 类生效）；② pipeline-card 根级 border-radius:0/box-shadow/padding/bg（子根继承父 data-v 生效）。均需只读回溯场景目视。
+
+## 回滚点
+
+`git checkout -- ChapterGenerating.vue && rm frontend/src/components/writing-desk/workspace/ChapterPipeline.vue`，无副作用。
+
+## 提交边界
+
+单 commit：`refactor(frontend): 抽 ChapterPipeline 子组件（#22 ChapterGenerating Slice 9 达成 <500）`。仅含 ChapterGenerating.vue + ChapterPipeline.vue + design.md + implement.md。
