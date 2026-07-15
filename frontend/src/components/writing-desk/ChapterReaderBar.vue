@@ -60,6 +60,20 @@
 
       <span class="reader-float__status">{{ statusLabel }}</span>
 
+      <label
+        v-if="hasModelTTS"
+        class="reader-float__engine"
+        title="勾选后即使配了模型，也用浏览器内置语音朗读"
+      >
+        <input
+          type="checkbox"
+          class="reader-float__checkbox"
+          :checked="forceBrowser"
+          @change="emit('force-browser-change', ($event.target as HTMLInputElement).checked)"
+        />
+        <span>浏览器语音</span>
+      </label>
+
       <select
         v-if="useModelVoice"
         class="reader-float__select"
@@ -162,6 +176,7 @@ interface Props {
   paragraphCount: number
   voiceURI: string
   rate: number
+  forceBrowser: boolean
   voiceOptions: { uri: string; label: string }[]
   rateOptions: number[]
 }
@@ -174,14 +189,15 @@ const emit = defineEmits<{
   reset: []
   'voice-change': [uri: string]
   'model-voice-change': [voice: string]
+  'force-browser-change': [force: boolean]
   'rate-change': [rate: number]
   'preview-voice': []
 }>()
 
 // idle 也露出音色+试听，供朗读前预选预听；模型 TTS 播放中隐藏
-const showVoiceControl = computed(() => props.isBrowserFallback || props.status === 'idle')
-// 配了默认 TTS 模型且未回退浏览器时，音色由后端模型决定，控件只读展示模型音色
-const useModelVoice = computed(() => props.hasModelTTS && !props.isBrowserFallback)
+const showVoiceControl = computed(() => props.forceBrowser || props.isBrowserFallback || props.status === 'idle')
+// 配了默认 TTS 模型、未回退浏览器、且未强制浏览器语音时，音色由后端模型决定，控件只读展示模型音色
+const useModelVoice = computed(() => props.hasModelTTS && !props.isBrowserFallback && !props.forceBrowser)
 
 const statusLabel = computed(() => {
   const idx = props.currentParagraphIndex
@@ -291,6 +307,23 @@ const onMainClick = () => {
   max-width: 16ch;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.reader-float__engine {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--md-on-surface-variant);
+  cursor: pointer;
+  user-select: none;
+}
+
+.reader-float__checkbox {
+  width: 14px;
+  height: 14px;
+  accent-color: #9c2720; /* 朱砂，呼应引首竖线 */
+  cursor: pointer;
 }
 
 .reader-float__select {

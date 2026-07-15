@@ -43,6 +43,8 @@ interface ChapterReader {
   voiceURI: Readonly<Ref<string>>
   /** 朗读倍速，浏览器与模型 TTS 通用 */
   rate: Readonly<Ref<number>>
+  /** 强制浏览器语音：勾选后朗读与试听都走 speechSynthesis，忽略已配模型 */
+  forceBrowser: Readonly<Ref<boolean>>
   start: (title: string, content: string) => Promise<void>
   pause: () => void
   resume: () => void
@@ -50,6 +52,7 @@ interface ChapterReader {
   setVoiceURI: (uri: string) => void
   setRate: (rate: number) => void
   setModelVoice: (voice: string) => void
+  setForceBrowser: (force: boolean) => void
   previewVoice: () => Promise<void>
   /** 重新拉取配置，刷新 hasModelTTS / modelVoiceLabel */
   refreshTTSConfig: () => Promise<void>
@@ -88,6 +91,8 @@ const VOICE_STORAGE_KEY = 'mofeng:reader-voice'
 const RATE_STORAGE_KEY = 'mofeng:reader-rate'
 /** 模型 TTS 全局音色偏好（朗读控件选择，按协议匹配候选），每台机器独立、存 localStorage */
 const MODEL_VOICE_STORAGE_KEY = 'mofeng:reader-model-voice'
+/** 强制浏览器语音偏好：勾选后即使配了模型也走浏览器 speechSynthesis（每台机器独立、存 localStorage） */
+const FORCE_BROWSER_STORAGE_KEY = 'mofeng:reader-force-browser'
 interface ModelVoiceOption {
   /** 传后端的音色 id */
   voice: string
@@ -231,6 +236,12 @@ export const useChapterReader = (
   const modelVoice = ref(
     typeof localStorage !== 'undefined' ? localStorage.getItem(MODEL_VOICE_STORAGE_KEY) ?? '' : '',
   )
+  /** 强制浏览器语音（用户偏好）：勾选后朗读与试听都走 speechSynthesis，忽略已配模型 */
+  const forceBrowser = ref(
+    typeof localStorage !== 'undefined'
+      ? localStorage.getItem(FORCE_BROWSER_STORAGE_KEY) === '1'
+      : false,
+  )
   const currentParagraphIndex = ref(-1)
   const currentParagraphEnd = ref(-1)
   const paragraphCount = ref(0)
@@ -367,6 +378,11 @@ export const useChapterReader = (
     persistModelVoice(voice)
   }
 
+  const setForceBrowser = (next: boolean) => {
+    forceBrowser.value = next
+    if (typeof localStorage !== 'undefined') localStorage.setItem(FORCE_BROWSER_STORAGE_KEY, next ? '1' : '0')
+  }
+
   /** 拉取配置，更新模型音色相关状态；挂载与每次朗读前调用 */
   const refreshTTSConfig = async () => {
     try {
@@ -450,7 +466,7 @@ export const useChapterReader = (
   /** 试听当前音色：仅 idle 可用；配了模型走模型合成，否则浏览器 speechSynthesis */
   const previewVoice = async () => {
     if (status.value !== 'idle') return
-    if (hasModelTTS.value) {
+    if (hasModelTTS.value && !forceBrowser.value) {
       await previewModelVoice()
       return
     }
@@ -692,7 +708,7 @@ export const useChapterReader = (
     await refreshTTSConfig()
     if (currentRun !== runId) return
     try {
-      if (hasModelTTS.value) {
+      if (hasModelTTS.value && !forceBrowser.value) {
         await playModelSegments(playback, currentRun)
       } else {
         await playBrowserSegments(playback, 0, currentRun)
@@ -769,6 +785,7 @@ export const useChapterReader = (
     paragraphCount: readonly(paragraphCount),
     voiceURI: readonly(voiceURI),
     rate: readonly(rate),
+    forceBrowser: readonly(forceBrowser),
     start,
     pause,
     resume,
@@ -776,6 +793,7 @@ export const useChapterReader = (
     setVoiceURI,
     setRate,
     setModelVoice,
+    setForceBrowser,
     previewVoice,
     refreshTTSConfig,
   }

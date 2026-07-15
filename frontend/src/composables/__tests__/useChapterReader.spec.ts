@@ -234,6 +234,33 @@ describe('useChapterReader', () => {
     expect(reader.status.value).toBe('idle')
   })
 
+  it('uses browser speech even when model TTS is configured if forceBrowser is set', async () => {
+    const synthesize = vi.fn(async () => new Blob(['x'], { type: 'audio/mpeg' }))
+    const reader = useChapterReader({
+      loadConfig: async () => bundle(true),
+      synthesize,
+      notify: vi.fn(),
+    })
+    reader.setForceBrowser(true)
+
+    await reader.start('第一章', '正文。')
+
+    // 配了模型但强制浏览器 → 不调用模型合成，直接走浏览器 speech
+    expect(synthesize).not.toHaveBeenCalled()
+    expect(browserSpeech.spoken.map((text) => text.trim())).toEqual(['第一章', '正文。'])
+    expect(localStorage.getItem('mofeng:reader-force-browser')).toBe('1')
+  })
+
+  it('restores forceBrowser preference from localStorage on init', () => {
+    localStorage.setItem('mofeng:reader-force-browser', '1')
+    const reader = useChapterReader({
+      loadConfig: async () => bundle(true),
+      synthesize: vi.fn(),
+      notify: vi.fn(),
+    })
+    expect(reader.forceBrowser.value).toBe(true)
+  })
+
   it('clears the speech queue before each segment to avoid clipped first chars', async () => {
     const reader = useChapterReader({
       loadConfig: async () => bundle(false),

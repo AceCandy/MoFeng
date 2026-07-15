@@ -79,6 +79,7 @@
             :paragraphCount="readerParagraphCount"
             :voiceURI="readerVoiceURI"
             :rate="readerRate"
+            :forceBrowser="readerForceBrowser"
             :voiceOptions="readerVoiceOptions"
             :rateOptions="READER_RATE_OPTIONS"
             @start="handleReaderStart"
@@ -86,6 +87,7 @@
             @reset="handleReaderReset"
             @voice-change="chapterReader.setVoiceURI"
             @model-voice-change="chapterReader.setModelVoice"
+            @force-browser-change="chapterReader.setForceBrowser"
             @rate-change="chapterReader.setRate"
             @preview-voice="chapterReader.previewVoice"
           />
@@ -313,6 +315,7 @@ const readerModelVoice = chapterReader.modelVoice
 const readerModelVoiceOptions = chapterReader.modelVoiceOptions
 const readerVoiceURI = chapterReader.voiceURI
 const readerRate = chapterReader.rate
+const readerForceBrowser = chapterReader.forceBrowser
 
 // 浏览器朗读音色：仅在浏览器 fallback 时可选，选项来自本机 getVoices，存 localStorage
 const browserVoiceOptions = ref<SpeechSynthesisVoice[]>([])
