@@ -171,6 +171,7 @@ import type {
 import { desktopMin } from '@/constants/responsive'
 import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
 import { useShellSectionNavigation } from '@/composables/useShellSectionNavigation'
+import { useShellBlueprintEdit } from '@/composables/useShellBlueprintEdit'
 import { resolveChapterNumberForEntry } from '@/utils/chapter'
 import { globalAlert } from '@/composables/useAlert'
 import BlueprintEditModal from '@/components/BlueprintEditModal.vue'
@@ -229,12 +230,6 @@ const {
     }
   },
 })
-
-// Modal state (user mode only)
-const isModalOpen = ref(false)
-const modalTitle = ref('')
-const modalContent = ref<any>('')
-const modalField = ref('')
 
 // Add chapter modal state (user mode only)
 const isAddChapterModalOpen = ref(false)
@@ -323,6 +318,15 @@ const ensureProjectLoaded = async () => {
   await projectQuery.refetch()
 }
 
+const { isModalOpen, modalTitle, modalContent, modalField, handleSectionEdit, handleSave } =
+  useShellBlueprintEdit({
+    isAdmin: () => props.isAdmin,
+    novel,
+    ensureProjectLoaded,
+    updateBlueprintMutation,
+    loadSection,
+  })
+
 const goBack = () => {
   if (props.isAdmin) {
     router.push({ name: 'admin', query: { tab: 'novels' } })
@@ -398,56 +402,6 @@ const componentProps = computed(() => {
       return {}
   }
 })
-
-const handleSectionEdit = (payload: { field: string; title: string; value: any }) => {
-  if (props.isAdmin) return
-  modalField.value = payload.field
-  modalTitle.value = payload.title
-  modalContent.value = payload.value
-  isModalOpen.value = true
-}
-
-const resolveSectionKey = (field: string): SectionKey => {
-  if (field.startsWith('world_setting')) return 'world_setting'
-  if (field.startsWith('characters')) return 'characters'
-  if (field.startsWith('relationships')) return 'relationships'
-  if (field.startsWith('chapter_outline')) return 'chapter_outline'
-  return 'overview'
-}
-
-const handleSave = async (data: { field: string; content: any }) => {
-  if (props.isAdmin) return
-  await ensureProjectLoaded()
-  const project = novel.value
-  if (!project) return
-
-  const { field, content } = data
-  const payload: Record<string, any> = {}
-
-  if (field.includes('.')) {
-    const [parentField, childField] = field.split('.')
-    payload[parentField] = {
-      ...(project.blueprint?.[parentField as keyof typeof project.blueprint] as
-        | Record<string, any>
-        | undefined),
-      [childField]: content,
-    }
-  } else {
-    payload[field] = content
-  }
-
-  try {
-    await updateBlueprintMutation.mutateAsync(payload)
-    const sectionToReload = resolveSectionKey(field)
-    await loadSection(sectionToReload, true)
-    if (sectionToReload !== 'overview') {
-      await loadSection('overview', true)
-    }
-    isModalOpen.value = false
-  } catch (error) {
-    console.error('保存变更失败:', error)
-  }
-}
 
 const startAddChapter = async () => {
   if (props.isAdmin) return

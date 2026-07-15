@@ -27,7 +27,7 @@
 | **3** ✅ | OverviewStrip 子组件（overview-strip template + overview/scroll/status/metric/kicker style + 4 @media 响应式，computed 群 props 透传） | 展示子组件 | −362 | **1064** |
 | **4** ✅ | `useShellSectionNavigation` composable（sections/sectionLoaders/sectionComponents/resolveInitialSection/isNovelSectionKey/prefetch·switch·load·reloadSection + overview·sectionQuery，activeNovelSection 内部） | composable | −90 | **974** |
 | **5** ✅ | AddChapterDialog 子组件（modal template + 表单 state + useDialogA11y + md-scale-\* scoped；父留 startAddChapter/saveNewChapter 重副作用 + isAddChapterModalOpen） | 子组件 | −79 | **895** |
-| 6 | `useShellBlueprintEdit` composable（modal state + handleSectionEdit/handleSave/resolveSectionKey） | composable | ~55 | ~943 |
+| **6** ✅ | `useShellBlueprintEdit` composable（modal state + handleSectionEdit/handleSave/resolveSectionKey；父透传 isAdmin/novel/ensureProjectLoaded/updateBlueprintMutation/loadSection） | composable | −46 | **849** |
 | 7 | `useShellOverview` composable（projectStatus/characterCount/chapterTotal/chapterCompleted/currentChapterLabel/foreshadowingOverview/overviewData/overviewMeta/formattedTitle） | composable | ~65 | ~878 |
 | 8 | `useShellSectionContent` composable（componentProps/activeQuery/currentSectionResponse/currentSectionData/currentComponent/isSectionLoading/currentError/contentCardClass/componentContainerClass） | composable | ~75 | ~803 |
 | 9 | ShellTopbar 子组件（topbar template + topbar style ~90，goBack/goToWritingDesk emit） | 展示子组件 | ~110 | ~693 |
@@ -277,4 +277,49 @@ useShellSectionNavigation({
 - `eslint`：AddChapterDialog.vue **0 warning**（不 import @/api，不受 components/ no-restricted-imports 限制）；NovelDetailShell.vue 仅预存 L167 `@/api/novel` type import warning（原 L220，本 slice 删行前移，未新增）。
 - 关键清理：父删 `useDialogA11y` import + `md-scale-*` scoped 定义（迁子后 orphan）；5 个 add-chapter state ref/id 迁子；`newChapterTitle.value`/`newChapterSummary.value` → `newChapterInitialTitle.value`/payload。
 - 行为等价：表单 state 从父 ref → 子组件 ref，值经 emit payload 流转；表单重置从 startAddChapter 同步设值 → 子组件 watch isOpen 打开时重置（时序等价：startAddChapter 同步设 initialTitle + isOpen=true，下个 tick watch 触发）；useDialogA11y `active: toRef(props,'isOpen')` 等价原 `isAddChapterModalOpen`，onClose 链路 handleCancel→emit cancel→父 cancelNewChapter。
+
+## Slice 6 设计：抽 `useShellBlueprintEdit.ts`（蓝图字段编辑状态机，2026-07-15）
+
+### 边界
+
+| 符号 | 原位置 | 去向 | 备注 |
+|---|---|---|---|
+| `isModalOpen`/`modalTitle`/`modalContent`/`modalField` | state L233-237 | composable | **返回**（template BlueprintEditModal `:show`/`:title`/`:content`/`:field` + `@close` 消费） |
+| `handleSectionEdit` | L402-408 | composable | **返回**（component `@edit` 消费）；`props.isAdmin` → `isAdmin()` |
+| `resolveSectionKey` | L410-416 | composable | **内部不返回**（仅 handleSave 用） |
+| `handleSave` | L418-450 | composable | **返回**（BlueprintEditModal `@save` 消费）；`props.isAdmin` → `isAdmin()`；ensureProjectLoaded/novel/updateBlueprintMutation/loadSection 经入参透传 |
+
+### 契约
+
+```ts
+useShellBlueprintEdit({
+  isAdmin: () => boolean,
+  novel: Ref<NovelProject | null>,
+  ensureProjectLoaded: () => Promise<void>,
+  updateBlueprintMutation: ReturnType<typeof useUpdateBlueprintMutation>,
+  loadSection: (section: SectionKey, force?: boolean) => Promise<void>,
+})
+→ { isModalOpen, modalTitle, modalContent, modalField, handleSectionEdit, handleSave }
+```
+
+### TDZ / 接线处理（关键）
+
+- handleSave 依赖 ensureProjectLoaded/novel，二者原本在 Modal state（L233）之后定义（novel L242 / ensureProjectLoaded L320）。若 composable 调用留在原 Modal state 位置（L233）会引用未定义符号（const TDZ）。
+- **解法**：composable 调用点下移到 ensureProjectLoaded（L322）之后；此时 novel(L242)/ensureProjectLoaded(L322)/updateBlueprintMutation(L197)/loadSection(L211) 均已定义，无 TDZ。Modal state ref 随 composable 内化，原 L233 位置删除。
+- composable 解构出的 isModalOpen 等仍被 template（L140-145）引用——setup 变量声明顺序不影响 template render 时引用。
+- `resolveSectionKey` 仅 handleSave 内部调用 → 留 composable 内部不返回；父 `type SectionKey = AllSectionType` 保留（componentContainerClass 的 `SectionKey[]` 仍用，非 orphan）。
+
+### 测试指针跟随
+
+- rg 确认 `uiAuditRegression`（L86/L107 读 `BlueprintEditModal.vue` 源码做断言，**独立组件本 slice 不动**）+ `novelDetailHeading`（h2/topbar）2 spec 均**不涉及** handleSectionEdit/handleSave/resolveSectionKey/isModalOpen/modal* → **零指针重定向**。
+- 无运行时测试 → 等价性靠逐字搬迁 + 三件套绿 + diff 复核。
+
+### 验证（实际，2026-07-15）
+
+- 行数：895 → **849**（−46；roadmap 预估 ~55，略少，因 composable 调用块 8 行占回部分）。useShellBlueprintEdit.ts 92 行（新）。
+- `vue-tsc --noEmit` exit 0（`ReturnType<typeof useUpdateBlueprintMutation>` 入参与父 updateBlueprintMutation 同型；loadSection 签名跨 composable 兼容；handleSave 内 `typeof project.blueprint` 类型与父一致）。
+- `vitest run` 21 files / 141 tests 全绿（零指针重定向）。
+- `eslint`：useShellBlueprintEdit.ts **0 warning**（composables/ 不受 components/views 的 `@/api` no-restricted-imports 限制）；NovelDetailShell.vue 仅预存 L167 `@/api/novel` type import warning（Slice 5 起在 L167，本 slice import 加在 L174 之后不影响其位置，未新增）。
+- 关键点：`resolveSectionKey` 不返回（仅 handleSave 内部用）；父 `type SectionKey = AllSectionType` 保留（componentContainerClass 仍用）；无新 orphan import（`ref` 仍被 isSidebarOpen/isAddChapterModalOpen/newChapterInitialTitle 消费）。
+- 行为等价：`props.isAdmin` → `isAdmin()`（入参 `() => props.isAdmin`）；Modal state 从父 ref → composable ref 解构回父，template `@close="isModalOpen = false"` 自动解包写 .value 不变；handleSave 逻辑逐字（payload 拼装/mutateAsync/resolveSectionKey+loadSection reload/isModalOpen=false）。
 
