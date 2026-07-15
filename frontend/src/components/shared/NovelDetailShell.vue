@@ -164,15 +164,13 @@ import {
   useNovelProjectQuery,
   useUpdateBlueprintMutation,
 } from '@/queries/novel'
-import type {
-  NovelProject,
-  AllSectionType,
-} from '@/api/novel'
+import type { NovelProject } from '@/api/novel'
 import { desktopMin } from '@/constants/responsive'
 import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
 import { useShellSectionNavigation } from '@/composables/useShellSectionNavigation'
 import { useShellBlueprintEdit } from '@/composables/useShellBlueprintEdit'
 import { useShellOverview } from '@/composables/useShellOverview'
+import { useShellSectionContent } from '@/composables/useShellSectionContent'
 import { resolveChapterNumberForEntry } from '@/utils/chapter'
 import { globalAlert } from '@/composables/useAlert'
 import BlueprintEditModal from '@/components/BlueprintEditModal.vue'
@@ -184,8 +182,6 @@ import '@/assets/blueprint.css'
 interface Props {
   isAdmin?: boolean
 }
-
-type SectionKey = AllSectionType
 
 const props = withDefaults(defineProps<Props>(), {
   isAdmin: false,
@@ -210,6 +206,16 @@ const closeSidebar = () => {
   isSidebarOpen.value = false
 }
 
+const navigation = useShellSectionNavigation({
+  projectId,
+  isAdmin: () => props.isAdmin,
+  // 非桌面态切换分区后收起侧栏（侧栏状态归父，composable 经回调知情不持有）
+  onAfterSwitch: () => {
+    if (!isDesktopViewport.value) {
+      closeSidebar()
+    }
+  },
+})
 const {
   sections,
   activeSection,
@@ -221,16 +227,7 @@ const {
   prefetchSectionComponent,
   loadSection,
   reloadSection,
-} = useShellSectionNavigation({
-  projectId,
-  isAdmin: () => props.isAdmin,
-  // 非桌面态切换分区后收起侧栏（侧栏状态归父，composable 经回调知情不持有）
-  onAfterSwitch: () => {
-    if (!isDesktopViewport.value) {
-      closeSidebar()
-    }
-  },
-})
+} = navigation
 
 // Add chapter modal state (user mode only)
 const isAddChapterModalOpen = ref(false)
@@ -254,27 +251,19 @@ const {
   overviewQuery,
 })
 
-const activeQuery = computed(() => (activeSection.value === 'overview' ? overviewQuery : sectionQuery))
-const currentSectionResponse = computed(() => {
-  if (!isNovelSectionKey(activeSection.value)) {
-    return null
-  }
-  return activeSection.value === 'overview'
-    ? overviewQuery.data.value
-    : sectionQuery.data.value
-})
-const currentSectionData = computed(() => currentSectionResponse.value?.data ?? null)
-
-const componentContainerClass = computed(() => {
-  const fillSections: SectionKey[] = ['chapters']
-  return fillSections.includes(activeSection.value)
-    ? 'flex-1 min-h-0 h-full flex flex-col overflow-hidden'
-    : 'min-w-0'
-})
-
-const contentCardClass = computed(() => {
-  // 所有蓝图分区共享同一装订外框，概览页不再使用特殊透明托盘。
-  return 'detail-shell__content-surface--fill detail-shell__content-surface--classical overflow-y-auto overscroll-contain'
+const {
+  currentComponent,
+  isSectionLoading,
+  currentError,
+  componentProps,
+  contentCardClass,
+  componentContainerClass,
+} = useShellSectionContent({
+  navigation,
+  novel,
+  characterCount,
+  chapterTotal,
+  isAdmin: () => props.isAdmin,
 })
 
 // 懒加载完整项目（仅在需要编辑时）
@@ -319,55 +308,6 @@ const goToWritingDesk = async () => {
     query: chapterNumber === null ? undefined : { chapter_number: String(chapterNumber) },
   })
 }
-
-const currentComponent = computed(() => sectionComponents[activeSection.value])
-const isSectionLoading = computed(() => {
-  if (!isNovelSectionKey(activeSection.value)) {
-    return false
-  }
-  return activeQuery.value.isLoading.value || activeQuery.value.isFetching.value
-})
-const currentError = computed(() => {
-  if (!isNovelSectionKey(activeSection.value)) {
-    return null
-  }
-  const error = activeQuery.value.error.value
-  if (!error) {
-    return null
-  }
-  return error instanceof Error ? error.message : String(error)
-})
-
-const componentProps = computed(() => {
-  const data = currentSectionData.value
-  const editable = !props.isAdmin
-
-  switch (activeSection.value) {
-    case 'overview':
-      return {
-        data: data || null,
-        editable,
-        characterCount: characterCount.value,
-        chapterCount: chapterTotal.value,
-      }
-    case 'world_setting':
-      return { data: data || null, editable }
-    case 'characters':
-      return { data: data || null, editable }
-    case 'relationships':
-      return { data: data || null, editable }
-    case 'chapter_outline':
-      return { outline: data?.chapter_outline || [], editable }
-    case 'chapters':
-      return {
-        chapters: data?.chapters || [],
-        chapterOutlines: novel.value?.blueprint?.chapter_outline || [],
-        isAdmin: props.isAdmin,
-      }
-    default:
-      return {}
-  }
-})
 
 const startAddChapter = async () => {
   if (props.isAdmin) return
