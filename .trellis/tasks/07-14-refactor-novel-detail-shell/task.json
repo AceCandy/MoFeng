@@ -3,7 +3,7 @@
   "name": "refactor-novel-detail-shell",
   "title": "拆 NovelDetailShell.vue（1662 行→<500）",
   "description": "拆 shared/NovelDetailShell.vue 至 <500 行，行为等价",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
