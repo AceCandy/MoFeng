@@ -392,7 +392,8 @@ describe('WDWorkspace locked chapter state', () => {
   })
 
   it('wires the reading toolbar to playback state and chapter cleanup', () => {
-    const source = readSource('src/components/writing-desk/WDWorkspace.vue')
+    // reader 胶水（chapterReader 实例 + handleReader* + 朗读生命周期）随 useChapterReaderBar 抽至 composable，断言改读 composable 源码
+    const source = readSource('src/composables/useChapterReaderBar.ts')
 
     expect(source).toContain('useChapterReader()')
     expect(source).toContain("readerStatus.value === 'playing'")

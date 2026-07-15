@@ -141,13 +141,13 @@ Slice B 已抽 4 个 composable（script −447 行），但 template 525 / styl
 | 阶段 | 行数 |
 |---|---|
 | Slice D 第 4b 块后 | 814 |
-| **Slice E 后** | **713** |
+| Slice E 后 | 713 |
+| Slice F 后（3dc9640 reader 音色过滤 revert 后基准 707） | **638** |
 
-WorkspaceHeader 已整块抽完（4a ChapterMeta + 4b ChapterToolbar）。Slice E 抽出 currentComponentProps+draftTraceReplayProps（见下）。仍 713>500，**还需约 213 行**，候选：
+WorkspaceHeader 已整块抽完（4a ChapterMeta + 4b ChapterToolbar）。Slice E 抽出 currentComponentProps+draftTraceReplayProps，Slice F 抽出朗读胶水（见下）。仍 638>500，**还需约 138 行**，候选：
 
-- 朗读胶水 ~94 行（VOICE_CN_LABEL/browser 音色刷新/handleReader*/lifecycle/watch.stop），可抽 `useChapterReaderBar`。
-- tabs-row template ~33 行 + 其 scoped style ~59 行，可抽 `ChapterTabs` 子组件。
-- locked 前置 ~34 行 / formatDateTime+meta ~24 行，可并入 `useChapterStatus`。
+- tabs-row template ~33 行 + 其 scoped style ~59 行，可抽 `ChapterTabs` 子组件（activeTab 经 v-model 共享，tabs-row 容器 v-if=isFinalizedSuccessful 留父）。
+- locked 前置 ~34 行 / formatDateTime+meta ~24 行，可并入 `useChapterStatus`（注意 lockedPrerequisiteChapterNumber/Title 同时被 useChapterBodyProps 消费，需 composable 间透传）。
 
 具体边界在收尾会话定，届时补契约表。其余 4 大组件（PersonalModelRouting / ChapterGenerating / WritingDesk / NovelDetailShell）的拆分边界由各自 child 的 `design.md` 承载，不在本 design。
 
@@ -178,6 +178,39 @@ props 子集（`BodyProps`：selectedChapterNumber/evaluatingChapter/generatingC
 ### 验证
 
 vue-tsc 0 / 全量 vitest 141 绿 / eslint 0 新增（L159 `@/api/novel` warning 预存，HEAD 即有，非本次引入）。814→713（净 −101，diff 21 插入/130 删除 + 新建 composable 199 行）。
+
+## Slice F 设计：抽 `useChapterReaderBar`（朗读胶水，2026-07-15）
+
+Slice E 后 WDWorkspace 707 行（3dc9640 reader 音色过滤 revert 后基准）。朗读胶水（chapterReader 实例 + 11 别名 + browser 音色 VOICE_CN_LABEL/refresh/readerVoiceLabel/readerVoiceOptions + READER_RATE_OPTIONS + handleReaderStart/PlayPause/Reset + watch 切章停止 + onMounted/onUnmounted）是最大内聚 script 块，且 chapterReader 全程 reader-block-local（rg 确认仅 reader 块引用），整体抽入 composable `useChapterReaderBar.ts`。script-only，无 template/style 迁移。
+
+### 边界
+
+| 迁出符号 | 去向 |
+|---|---|
+| chapterReader 实例（useChapterReader()） | composable 内创建并返回 |
+| 11 reader* 别名（readerStatus/readerCurrentParagraphIndex/End/readerParagraphCount/...） | composable 返回，父解构 |
+| browserVoiceOptions/refreshBrowserVoices/VOICE_CN_LABEL/readerVoiceLabel | composable 内部（readerVoiceOptions 的依赖，不返回） |
+| readerVoiceOptions computed / READER_RATE_OPTIONS const | composable 返回 |
+| handleReaderStart/PlayPause/Reset | composable 返回 |
+| watch(chapterNumber→stop) + onMounted(刷新音色+监听) + onUnmounted(摘监听+stop) | composable 内注册 |
+
+### 入参契约（3 依赖）
+
+`props`（子集 ReaderBarProps { selectedChapterNumber }，handleReaderStart 拼「第N章」标题 + watch 源）+ `selectedChapterOutline`（ComputedRef，标题兜底）+ `selectedChapterResolvedContent`（ComputedRef，朗读正文）。composable 返回 chapterReader 全实例 + 14 装配值 + 3 handler。
+
+**生命周期归属**：onMounted/onUnmounted/watch 随 reader 胶水迁入 composable，在 WDWorkspace setup 同步调用 → 绑回 WDWorkspace 实例（ChapterReaderBar 在 WDWorkspace template 内），行为等价。同 useEditChapterModal 内 useDialogA11y（watch+onBeforeUnmount）范式。
+
+**透传**：readerCurrentParagraphIndex/End 仍由父解构后透传 useChapterBodyProps（解构点在 useChapterBodyProps 调用之前，顺序正确）。
+
+**注释调整**：原 watch 内 `// closeAiMenu 随 useAiMenu/ChapterToolbar 迁入子组件...` 引用父侧 ChapterToolbar 逻辑，在 composable 范围内无意义，改为 `// 切换章节时停止上一章朗读`（行为不变，仅注释贴合 composable 职责）。
+
+### 测试指针跟随
+
+`wdWorkspaceLockedChapter.spec.ts` 原 L395-403 读 WDWorkspace 源码断言 7 字面量（useChapterReader()/readerStatus.value==='playing'/'paused'/chapterReader.pause()/resume()/stop()/selectedChapterOutline.value?.title），全随 reader 胶水迁入 composable → readSource 改读 useChapterReaderBar.ts + 注释（同 Slice 7/8/E 范式）。useChapterReader.spec.ts 测的是 useChapterReader.ts 本体（未迁移），不受影响。
+
+### 验证
+
+vue-tsc 0 / 全量 vitest 141 绿（wdWorkspaceLockedChapter 10/10 + useChapterReader 22/22）/ eslint 0 新增（WDWorkspace L159 + spec L8 两处 @/api/novel warning 均预存）。707→638（净 −69，diff 27 插入/95 删除 + 新建 composable）。
 
 ### 本次：EditChapterModal 抽取
 

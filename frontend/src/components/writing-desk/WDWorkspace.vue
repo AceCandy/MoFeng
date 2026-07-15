@@ -150,9 +150,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { globalAlert } from '@/composables/useAlert'
-import { useChapterReader } from '@/composables/useChapterReader'
+import { useChapterReaderBar } from '@/composables/useChapterReaderBar'
 import { useVersionResolver } from '@/composables/useVersionResolver'
 import { useChapterStatus } from '@/composables/useChapterStatus'
 import { useChapterBodyProps } from '@/composables/useChapterBodyProps'
@@ -209,8 +209,6 @@ interface ChapterContentExpose {
 }
 
 const bodyComponentRef = ref<ChapterContentExpose | null>(null)
-const chapterReader = useChapterReader()
-const readerStatus = chapterReader.status
 
 const copyTextLegacy = (text: string): boolean => {
   const textarea = document.createElement('textarea')
@@ -305,78 +303,29 @@ const isFinalizedSuccessful = computed(() => {
   return selectedChapter.value?.generation_status === 'successful' && hasSelectedChapterContent.value
 })
 
-// 朗读控件：入口仅在 idle 显示，点击后原地展开为播放条；重置即停止回到入口
-const readerCurrentParagraphIndex = chapterReader.currentParagraphIndex
-const readerCurrentParagraphEnd = chapterReader.currentParagraphEnd
-const readerParagraphCount = chapterReader.paragraphCount
-const readerIsBrowserFallback = chapterReader.isBrowserFallback
-const readerHasModelTTS = chapterReader.hasModelTTS
-const readerModelVoice = chapterReader.modelVoice
-const readerModelVoiceOptions = chapterReader.modelVoiceOptions
-const readerVoiceURI = chapterReader.voiceURI
-const readerRate = chapterReader.rate
-const readerForceBrowser = chapterReader.forceBrowser
-
-// 浏览器朗读音色：仅在浏览器 fallback 时可选，选项来自本机 getVoices，存 localStorage
-const browserVoiceOptions = ref<SpeechSynthesisVoice[]>([])
-const refreshBrowserVoices = () => {
-  browserVoiceOptions.value = (window.speechSynthesis?.getVoices?.() ?? []).filter(
-    (voice) => /^zh/i.test(voice.lang) && /natural|neural/i.test(voice.name),
-  )
-}
-// 微软在线神经语音英文名 → 中文友好名（带性别/地区），未命中的回退原英文名
-const VOICE_CN_LABEL: Record<string, string> = {
-  Xiaoxiao: '晓晓（女）',
-  Xiaoyi: '晓伊（女）',
-  Yunjian: '云健（男）',
-  Yunxi: '云希（男）',
-  Yunxia: '云夏（女）',
-  Yunyang: '云扬（男）',
-  Xiaobei: '晓北（女·东北话）',
-  Xiaoni: '晓妮（女·陕西话）',
-  HsiaoChen: '晓臻（女·台湾）',
-  HsiaoYu: '晓雨（女·台湾）',
-  YunJhe: '云哲（男·台湾）',
-  HiuGaai: '曉佳（女·粤语）',
-  HiuMaan: '曉敏（女·粤语）',
-  WanLung: '雲龍（男·粤语）',
-}
-const readerVoiceLabel = (voice: SpeechSynthesisVoice) => {
-  const match = voice.name.match(/Microsoft\s+([A-Za-z]+)/i)
-  return (match && VOICE_CN_LABEL[match[1]]) || voice.name
-}
-
-// 悬浮控件音色选项（URI + 清洗后的标签）
-const readerVoiceOptions = computed(() =>
-  browserVoiceOptions.value.map((voice) => ({ uri: voice.voiceURI, label: readerVoiceLabel(voice) })),
-)
-
-// 朗读倍速：浏览器与模型 TTS 通用
-const READER_RATE_OPTIONS = [0.75, 1, 1.25, 1.5, 2]
-
-const handleReaderStart = () => {
-  const chapterTitle = `第${props.selectedChapterNumber}章 ${selectedChapterOutline.value?.title || '未知标题'}`
-  void chapterReader.start(chapterTitle, selectedChapterResolvedContent.value)
-}
-
-const handleReaderPlayPause = () => {
-  if (readerStatus.value === 'playing') {
-    chapterReader.pause()
-    return
-  }
-  if (readerStatus.value === 'paused') {
-    chapterReader.resume()
-    return
-  }
-  if (readerStatus.value === 'generating') {
-    chapterReader.stop()
-  }
-}
-
-// 重置：停止朗读，收缩回「准备播放」入口
-const handleReaderReset = () => {
-  chapterReader.stop()
-}
+const {
+  chapterReader,
+  readerStatus,
+  readerCurrentParagraphIndex,
+  readerCurrentParagraphEnd,
+  readerParagraphCount,
+  readerIsBrowserFallback,
+  readerHasModelTTS,
+  readerModelVoice,
+  readerModelVoiceOptions,
+  readerVoiceURI,
+  readerRate,
+  readerForceBrowser,
+  readerVoiceOptions,
+  READER_RATE_OPTIONS,
+  handleReaderStart,
+  handleReaderPlayPause,
+  handleReaderReset,
+} = useChapterReaderBar({
+  props,
+  selectedChapterOutline,
+  selectedChapterResolvedContent,
+})
 
 const isDraftWaitingConfirm = computed(() => {
   const status = selectedChapter.value?.generation_status
@@ -520,24 +469,6 @@ watch(
   },
   { immediate: true },
 )
-
-watch(
-  () => props.selectedChapterNumber,
-  () => {
-    // closeAiMenu 随 useAiMenu/ChapterToolbar 迁入子组件，切章收起由子组件 watch chapterNumber 处理
-    chapterReader.stop()
-  },
-)
-
-onMounted(() => {
-  refreshBrowserVoices()
-  window.speechSynthesis?.addEventListener('voiceschanged', refreshBrowserVoices)
-})
-
-onUnmounted(() => {
-  window.speechSynthesis?.removeEventListener('voiceschanged', refreshBrowserVoices)
-  chapterReader.stop()
-})
 
 const { currentComponentProps, draftTraceReplayProps } = useChapterBodyProps({
   props,
