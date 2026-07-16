@@ -33,7 +33,8 @@ const readLightThemeCustomProperty = (source: string, property: string) => {
 }
 
 const readCssBlock = (source: string, selector: string) => {
-  const block = source.match(new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([\\s\\S]*?)\\}`))
+  // lookbehind 排除选择器子串误匹配（如 selector='body' 误匹配 '.n-spin-body'）
+  const block = source.match(new RegExp(`(?<![\\w-])${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([\\s\\S]*?)\\}`))
   if (!block) {
     throw new Error(`Missing ${selector} block`)
   }

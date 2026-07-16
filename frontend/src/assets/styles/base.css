@@ -1,0 +1,153 @@
+/* AIMETA P=全局基础_重置与排版|R=base 全局reset+Typography排版类|NR=不含组件域|E=-|X=internal|A=基础层|D=tailwindcss|S=dom|RD=./README.ai */
+/* ============================================
+   墨风 Design System
+   AI Novel Writing Control Center
+   ============================================ */
+
+
+/* ============================================
+   Base Styles
+   ============================================ */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--md-font-family);
+  font-size: var(--md-body-medium);
+  font-weight: 500 !important; /* 提升全局默认字重至 500 Medium，避免 Regular 400 的干细缺陷 */
+  line-height: 1.65;
+  color: var(--md-on-background);
+  /* 国风柔和纸质微弱墨晕背景 */
+  background:
+    radial-gradient(circle at 5% 5%, rgba(46, 92, 138, 0.035), transparent 40%),
+    radial-gradient(circle at 95% 15%, rgba(184, 60, 50, 0.02), transparent 40%),
+    linear-gradient(
+      180deg,
+      var(--md-surface) 0%,
+      var(--md-background) 65%,
+      var(--md-surface-dim) 100%
+    );
+  margin: 0;
+  padding: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--md-font-display);
+  letter-spacing: 0.06em; /* 碑拓骨力规则：显式拉开字间距，展现大气格局 */
+  font-weight: 600 !important; /* 标题使用 600 SemiBold，展现风骨锋芒而不臃肿 */
+  color: var(--md-primary);
+}
+
+/* ============================================
+   Typography Classes
+   ============================================ */
+.md-display-large {
+  font-size: var(--md-display-large);
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+
+.md-display-medium {
+  font-size: var(--md-display-medium);
+  font-weight: 400;
+  line-height: 1.16;
+}
+
+.md-display-small {
+  font-size: var(--md-display-small);
+  font-weight: 400;
+  line-height: 1.22;
+}
+
+.md-headline-large {
+  font-size: var(--md-headline-large);
+  font-weight: 400;
+  line-height: 1.25;
+}
+
+.md-headline-medium {
+  font-size: var(--md-headline-medium);
+  font-weight: 400;
+  line-height: 1.29;
+}
+
+.md-headline-small {
+  font-size: var(--md-headline-small);
+  font-weight: 400;
+  line-height: 1.33;
+}
+
+.md-title-large {
+  font-size: var(--md-title-large);
+  font-weight: 500;
+  line-height: 1.27;
+}
+
+.md-title-medium {
+  font-size: var(--md-title-medium);
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0.15px;
+}
+
+.md-title-small {
+  font-size: var(--md-title-small);
+  font-weight: 500;
+  line-height: 1.43;
+  letter-spacing: 0.1px;
+}
+
+.md-body-large {
+  font-size: var(--md-body-large);
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: 0.5px;
+}
+
+.md-body-medium {
+  font-size: var(--md-body-medium);
+  font-weight: 400;
+  line-height: 1.43;
+  letter-spacing: 0.25px;
+}
+
+.md-body-small {
+  font-size: var(--md-body-small);
+  font-weight: 400;
+  line-height: 1.33;
+  letter-spacing: 0.4px;
+}
+
+.md-label-large {
+  font-size: var(--md-label-large);
+  font-weight: 500;
+  line-height: 1.43;
+  letter-spacing: 0.1px;
+}
+
+.md-label-medium {
+  font-size: var(--md-label-medium);
+  font-weight: 500;
+  line-height: 1.33;
+  letter-spacing: 0.5px;
+}
+
+.md-label-small {
+  font-size: var(--md-label-small);
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: 0.5px;
+}
