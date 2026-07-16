@@ -22,7 +22,7 @@
             :is-draft-waiting-confirm="isDraftWaitingConfirm"
             :has-selected-chapter-content="hasSelectedChapterContent"
             :is-chapter-content-view="isChapterContentView"
-            :is-ai-menu-disabled="isAiMenuDisabled"
+            :is-ai-menu-disabled="isAiMenuDisabled ?? false"
             :body-component-ref="bodyComponentRef"
             @copy-content="copySelectedChapterContent"
             @open-edit-modal="editModalRef?.openEditModal()"

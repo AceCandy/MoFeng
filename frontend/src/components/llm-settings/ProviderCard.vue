@@ -104,8 +104,8 @@
 import type { UserAIModel, UserModelProvider } from '@/api/llm'
 import type { ProviderFetchState, ProviderForm, RoutingSection } from './modelRoutingTypes'
 import { providerTypeLabel } from './modelRoutingHelpers'
-import { ProviderFormPanel } from './ProviderFormPanel'
-import { SelectedModelChips } from './SelectedModelChips'
+import ProviderFormPanel from './ProviderFormPanel.vue'
+import SelectedModelChips from './SelectedModelChips.vue'
 
 defineProps<{
   provider: UserModelProvider
@@ -125,7 +125,7 @@ const emit = defineEmits<{
   (event: 'toggle'): void
   (event: 'delete'): void
   (event: 'edit'): void
-  (event: 'open-picker', e: Event): void
+  (event: 'open-picker', e: MouseEvent): void
   (event: 'delete-model', modelName: string): void
 }>()
 

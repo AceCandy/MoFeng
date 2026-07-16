@@ -128,7 +128,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch, type Ref } from 'vue'
+import { computed, toRef, watch } from 'vue'
 import { useAiMenu } from '@/composables/useAiMenu'
 
 /** 章节正文组件对外暴露的优化器/导出方法（与 useAiMenu 内 BodyComponentExpose 同构） */
@@ -147,7 +147,7 @@ interface Props {
   isChapterContentView: boolean
   isAiMenuDisabled: boolean
   /** 章节正文动态组件实例引用（触发优化器面板/导出），由父组件传入共享 */
-  bodyComponentRef: Ref<BodyComponentExpose | null>
+  bodyComponentRef: BodyComponentExpose | null
 }
 
 const props = defineProps<Props>()
@@ -172,7 +172,7 @@ const {
 } = useAiMenu({
   isAiMenuDisabled: computed(() => props.isAiMenuDisabled),
   isChapterContentView: computed(() => props.isChapterContentView),
-  bodyComponentRef: props.bodyComponentRef,
+  bodyComponentRef: toRef(props, 'bodyComponentRef'),
 })
 
 // 切换章节时收起 AI 菜单（从 WDWorkspace watch selectedChapterNumber 拆出，closeAiMenu 随 useAiMenu 迁入）

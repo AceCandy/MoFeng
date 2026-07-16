@@ -177,12 +177,13 @@ const buildPlayback = (
     }
   })
   if (group) {
+    const tail: { text: string; start: number; end: number; count: number } = group
     if (merged.length > 0) {
       const last = merged[merged.length - 1]
-      last.text = `${last.text}\n${group.text}`
-      last.end = group.end
+      last.text = `${last.text}\n${tail.text}`
+      last.end = tail.end
     } else {
-      merged.push({ text: group.text, start: group.start, end: group.end })
+      merged.push({ text: tail.text, start: tail.start, end: tail.end })
     }
   }
   for (const unit of merged) {

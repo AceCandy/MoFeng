@@ -72,7 +72,7 @@
                 type="button"
                 class="chapter-console__pipeline-retry"
                 :disabled="generatingChapter === chapterNumber"
-                @click.stop="emit('retryFromNode', { chapterNumber: chapterNumber, nodeKey: item.key })"
+                @click.stop="emit('retryFromNode', { chapterNumber: chapterNumber!, nodeKey: item.key })"
               >
                 从此节点重试
               </button>

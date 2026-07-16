@@ -4704,8 +4704,6 @@ select.md-text-field-input {
 }
 
 /* 暗色模式下更换为浅色小箭头 */
-:global([data-theme='dark']) select.md-text-field-input,
-:global(.dark) select.md-text-field-input,
 [data-theme='dark'] select.md-text-field-input {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e5dec9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
 }

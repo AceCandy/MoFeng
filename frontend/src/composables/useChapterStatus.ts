@@ -104,13 +104,13 @@ export function useChapterStatus(options: UseChapterStatusOptions) {
   const isChapterFailed = (chapterNumber: number) => {
     if (!props.project?.chapters) return false
     const chapter = props.project.chapters.find((ch) => ch.chapter_number === chapterNumber)
-    return chapter && chapter.generation_status === 'failed'
+    return chapter?.generation_status === 'failed'
   }
 
   const isChapterEvaluationFailed = (chapterNumber: number) => {
     if (!props.project?.chapters) return false
     const chapter = props.project.chapters.find((ch) => ch.chapter_number === chapterNumber)
-    return chapter && chapter.generation_status === 'evaluation_failed'
+    return chapter?.generation_status === 'evaluation_failed'
   }
 
   const isInProgressStatus = (status: Chapter['generation_status'] | null | undefined) => {

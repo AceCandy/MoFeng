@@ -141,7 +141,7 @@ defineProps<{
   isChatPickerDirty: boolean
   modelPickerQuery: string
   pendingChatModelNames: Set<string>
-  pendingTTSModelName: string
+  pendingTTSModelName?: string
   filteredModelNamesForProvider: (providerId: number) => string[]
   isModelSelectedForActiveSection: (providerId: number, modelName: string) => boolean
   activeModelStateLabel: (providerId: number, modelName: string) => string

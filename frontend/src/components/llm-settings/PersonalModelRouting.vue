@@ -107,7 +107,7 @@
             :provider-fetch-state="providerFetchState"
             :set-model-picker-dialog-ref="setModelPickerDialogRef"
             :set-model-picker-search-input-ref="setModelPickerSearchInputRef"
-            @update-query="(value) => { modelPickerQuery = value }"
+            @update-query="modelPickerQuery = $event"
             @toggle-chat="(modelName, event) => togglePendingChatModel(provider, modelName, event)"
             @select-embedding="(modelName) => selectEmbeddingModel(provider, modelName)"
             @select-tts="(modelName) => selectPendingTTSModel(provider, modelName)"
@@ -147,14 +147,14 @@ import { useStageRoutes } from './useStageRoutes'
 import { useProviderForm } from './useProviderForm'
 import { useModelPicker } from './useModelPicker'
 import { useModelSelection } from './useModelSelection'
-import { FeedbackPanel } from './FeedbackPanel'
-import { ReadinessPanel } from './ReadinessPanel'
-import { RoutingStagesPanel } from './RoutingStagesPanel'
-import { ProviderFormPanel } from './ProviderFormPanel'
-import { PrimaryModelPanel } from './PrimaryModelPanel'
-import { ModelPickerDialog } from './ModelPickerDialog'
-import { SelectedModelChips } from './SelectedModelChips'
-import { ProviderCard } from './ProviderCard'
+import FeedbackPanel from './FeedbackPanel.vue'
+import ReadinessPanel from './ReadinessPanel.vue'
+import RoutingStagesPanel from './RoutingStagesPanel.vue'
+import ProviderFormPanel from './ProviderFormPanel.vue'
+import PrimaryModelPanel from './PrimaryModelPanel.vue'
+import ModelPickerDialog from './ModelPickerDialog.vue'
+import SelectedModelChips from './SelectedModelChips.vue'
+import ProviderCard from './ProviderCard.vue'
 import type {
   ProviderForm,
   RoutingSection,

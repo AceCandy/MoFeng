@@ -12,7 +12,7 @@ if (typeof globalThis.localStorage === 'undefined' || !globalThis.localStorage |
 }
 import { fileURLToPath, URL } from 'node:url'
 
-import { defineConfig } from 'vite'
+import { defineConfig, type UserConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 
@@ -53,10 +53,10 @@ const vendorChunks: Array<[string, string[]]> = [
 const normalizeChunkName = (name: string): string =>
   name.replace(/[^a-z0-9-_]/gi, '-')
 
-const resolveNaiveUiChunk = (id: string): string | undefined => {
+const resolveNaiveUiChunk = (id: string): string | null => {
   const naiveUiPathMarker = '/node_modules/naive-ui/es/'
   if (!id.includes(naiveUiPathMarker)) {
-    return undefined
+    return null
   }
 
   const naiveUiPath = id.split(naiveUiPathMarker)[1]
@@ -81,9 +81,9 @@ const resolveNaiveUiChunk = (id: string): string | undefined => {
   return `naive-ui-${normalizeChunkName(moduleName)}`
 }
 
-const resolveVendorChunk = (id: string) => {
+const resolveVendorChunk = (id: string): string | null => {
   if (!id.includes('/node_modules/')) {
-    return undefined
+    return null
   }
 
   const naiveUiChunk = resolveNaiveUiChunk(id)
@@ -102,23 +102,23 @@ const resolveVendorChunk = (id: string) => {
 
 const loadVueDevToolsPlugin = async () => {
   if (!enableVueDevTools) {
-    return false
+    return []
   }
 
   // Node 25 会暴露不完整的 localStorage 对象，DevTools 包必须在上方 shim 完成后再加载。
   const { default: vueDevTools } = await import('vite-plugin-vue-devtools')
-  return vueDevTools()
+  return [vueDevTools()]
 }
 
 // https://vitejs.dev/config/
-export default defineConfig(async () => {
+export default defineConfig(async (): Promise<UserConfig> => {
   const vueDevToolsPlugin = await loadVueDevToolsPlugin()
 
   return {
     plugins: [
       vue(),
       vueJsx(),
-      vueDevToolsPlugin,
+      ...vueDevToolsPlugin,
     ],
     resolve: {
       alias: {

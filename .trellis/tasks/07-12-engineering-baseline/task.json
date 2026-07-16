@@ -22,7 +22,8 @@
     "07-14-refactor-personal-model-routing",
     "07-14-refactor-chapter-generating",
     "07-14-refactor-writing-desk",
-    "07-14-refactor-novel-detail-shell"
+    "07-14-refactor-novel-detail-shell",
+    "07-17-fix-frontend-baseline"
   ],
   "parent": null,
   "relatedFiles": [],

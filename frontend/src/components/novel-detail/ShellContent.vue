@@ -56,7 +56,7 @@
             :is="currentComponent"
             v-bind="componentProps"
             :class="componentContainerClass"
-            @edit="$emit('edit')"
+            @edit="(payload: { field: string; title: string; value: unknown }) => $emit('edit', payload)"
             @add="$emit('add')"
           />
         </section>
@@ -78,7 +78,7 @@ defineProps<{
 }>()
 
 defineEmits<{
-  edit: []
+  edit: [payload: { field: string; title: string; value: unknown }]
   add: []
   retry: []
 }>()
