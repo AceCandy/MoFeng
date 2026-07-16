@@ -379,3 +379,34 @@ PMR 2684->493 <500 达标（15-slice 完成）。Slice 14 抽 ReadinessPanel 子
 ### Next Steps
 
 - None - task complete
+
+
+## Session 12: 前端基线修复
+
+**Date**: 2026-07-17
+**Task**: 前端基线修复
+**Branch**: `main`
+
+### Summary
+
+修复前端基线破损：build 失败（PMR import 无 .vue + 具名 import SFC）+ vue-tsc 34->0 error + :global warning。四件套绿（vue-tsc 0 / vitest 152 / build 绿无 warning / eslint 0 error）。暴露历史 PMR/NovelDetailShell/WDWorkspace 收口三件套绿假绿（漏 cd 跑 tsc help + 未跑 build），沉淀 memory 四件套验证流程。#28 Phase 1 暂停待续。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+(No commits - planning session)
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

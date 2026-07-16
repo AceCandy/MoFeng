@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 11
-- **Last Active**: 2026-07-16
+- **Total Sessions**: 12
+- **Last Active**: 2026-07-17
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~381 | Active |
+| `journal-1.md` | ~412 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 12 | 2026-07-17 | 前端基线修复 | - | `main` |
 | 11 | 2026-07-16 | PersonalModelRouting Slice 14-15 收口 <500 | `589d17a`, `5f3e2c1`, `e825d7a`, `c19c04e` | `main` |
 | 10 | 2026-07-16 | WritingDesk 拆分收口（Slice 11-15，2009→619） | `fa9a3ba`, `3ebd274`, `2acc53a`, `0d9c201`, `2f55914` | `main` |
 | 9 | 2026-07-16 | NovelDetailShell Slice 10：抽 ShellContent 子组件（达标 <500） | `2ace11b` | `main` |
