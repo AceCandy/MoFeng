@@ -85,11 +85,12 @@
 - [x] 单根 `<section>`[create=panel+provider-form / edit=新类 provider-form-edit+grid-gap 复刻原 card 间距]；标题 `<component :is="h3/h4">`；父侧 updateProviderField 适配器 cast Record 规避 TS union-write never
 - [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error + 8 同类 @/api warning，ProviderFormPanel 未 import @/api 故 +0 新增，无 vue/no-mutating-props warn）+ wc（1578→1395）；手测 create/edit 表单保存待用户跑
 
-## Slice 11 — SelectedModelChips.vue + PrimaryModelPanel.vue
+## Slice 11 — SelectedModelChips.vue + PrimaryModelPanel.vue ✅
 
-- [ ] 建 2 子组件（含 AIMETA）：L476-513 chips + L176-198 primary panel
-- [ ] scoped 迁移
-- [ ] 验证：三件套 + wc
+- [x] 建 2 子组件：PrimaryModelPanel（llm 主模型面板 L80-102）+ SelectedModelChips（已选模型 chip 列表 L324-361）
+- [x] PrimaryModelPanel props enabledChatModels/primaryChatModel/providerName + emit set-primary（直绑 setPrimaryChatModelById）；SelectedModelChips props chips/activeSection + emit delete(modelName)
+- [x] scoped 迁移：独占规则全迁子（primary-panel/copy/field/@media860 + selected-models/model-list-title/selected-chip[合并 mixed gap+standalone]/hover/chip-name/stamp-label/delete-btn 全家+focus-visible）+ 3 处混合选择器拆分[model-list grid 留 bare pre-existing dead|picker-head/picker-row flex|focus-visible] + `.panel` orphan 随 PrimaryModelPanel 迁子[父 0 消费] + 共享 .hint/.empty 复制子留父；父独占 class rg 零残留，CSS 大括号 85=85 配平
+- [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error + 10 同类 @/api warning，2 新子组件各 +1 同 S9 RoutingStagesPanel 范式，无 vue/no-mutating-props）+ wc（1395→1197）；手测主模型切换/chip 删除待用户跑
 
 ## Slice 12 — ModelPickerDialog.vue 子组件（最高风险）
 
