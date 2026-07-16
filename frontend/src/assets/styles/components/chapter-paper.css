@@ -1,0 +1,99 @@
+/* AIMETA P=章节纸张_宣纸信笺八行笺|R=chapter-paper 章节阅读编辑区+dark覆写|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* ============================================
+   1. 章节阅读与编辑区（宣纸信笺八行笺）
+   ============================================ */
+
+/* 章节阅读纸张：微直角、古籍双粗细线框、纵向朱砂红信笺界格底纹 */
+body .chapter-paper {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  border-radius: var(--md-radius-xs) !important;
+  border: 3px double var(--md-outline) !important;
+  padding: var(--md-spacing-8) !important;
+  background:
+    /* 纵向朱砂红信笺界格（38px 循环，高雅轻透明度，护眼润字） */
+    repeating-linear-gradient(90deg, transparent, transparent 38px, rgba(184, 60, 50, 0.04) 38px, rgba(184, 60, 50, 0.05) 40px),
+    /* 熟宣色温润底色 */
+    linear-gradient(var(--md-surface), var(--md-surface)) !important;
+  background-attachment: local !important;
+  box-shadow: var(--md-elevation-1) !important;
+  transition:
+    background-color var(--md-duration-medium) var(--md-easing-standard),
+    border-color var(--md-duration-medium) var(--md-easing-standard),
+    box-shadow var(--md-duration-medium) var(--md-easing-standard),
+    color var(--md-duration-medium) var(--md-easing-standard);
+}
+
+/* 深夜书房暗色模式自适应朱红暗化 */
+:root[data-theme='dark'] body .chapter-paper {
+  background:
+    /* 暗砂红格线 */
+    repeating-linear-gradient(90deg, transparent, transparent 38px, rgba(140, 36, 28, 0.16) 38px, rgba(140, 36, 28, 0.22) 40px),
+    /* 焦墨深夜底色 */
+    linear-gradient(var(--md-surface), var(--md-surface)) !important;
+}
+
+/* 章节正文古宋体碑拓骨力展现 */
+body .chapter-prose {
+  font-family: var(--md-font-display) !important;
+  font-size: 18px !important;
+  letter-spacing: 0.035em !important;
+  font-weight: 600 !important; /* 稿纸正文使用稳重清晰的 600 SemiBold */
+  color: var(--md-on-surface) !important;
+  max-width: 72ch !important;
+  line-height: 2 !important;
+}
+
+body .chapter-prose p {
+  line-height: 2 !important;
+  text-indent: 2em !important;
+  margin-bottom: 1.25em !important;
+}
+
+/* 章节正文标题 */
+body .chapter-paper__title {
+  font-family: var(--md-font-display) !important;
+  letter-spacing: 0.06em !important;
+  font-weight: 600 !important;
+  color: var(--md-primary) !important;
+}
+
+/* 编辑章节文本域（笺格写字板）：带横向红色格线底纹，还原落笔书笺的意境 */
+body .md-textarea {
+  border-radius: var(--md-radius-xs) !important;
+  border: 1px solid var(--md-outline) !important;
+  background-color: var(--md-surface) !important;
+  color: var(--md-on-surface) !important;
+  line-height: 2 !important;
+  font-size: var(--md-body-large) !important;
+  font-family: var(--md-font-family) !important;
+  font-weight: 500 !important; /* 写字板输入框使用 500 Medium，笔迹温润饱满 */
+  padding: 1.5rem !important;
+  box-shadow: inset 1px 1px 3px rgba(28, 32, 34, 0.03) !important;
+  /* 笺纸横向书写红线 */
+  background-image: repeating-linear-gradient(
+    rgba(184, 60, 50, 0.03) 0px,
+    rgba(184, 60, 50, 0.03) 1px,
+    transparent 1px,
+    transparent 2rem
+  ) !important;
+  background-size: 100% 2rem !important;
+  background-attachment: local !important;
+  transition: border-color var(--md-duration-short) var(--md-easing-standard), box-shadow var(--md-duration-short) !important;
+}
+
+body .md-textarea:focus {
+  outline: none !important;
+  border-color: var(--md-primary) !important;
+  box-shadow: var(--md-shadow-primary-1) !important;
+}
+
+/* 暗色模式下写字格线自适应变暗 */
+:root[data-theme='dark'] body .md-textarea {
+  background-image: repeating-linear-gradient(
+    rgba(140, 36, 28, 0.1) 0px,
+    rgba(140, 36, 28, 0.1) 1px,
+    transparent 1px,
+    transparent 2rem
+  ) !important;
+}
