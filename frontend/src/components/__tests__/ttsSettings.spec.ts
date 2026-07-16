@@ -31,10 +31,12 @@ describe('TTS settings integration', () => {
     const routing = source('src/components/llm-settings/PersonalModelRouting.vue')
     // Capability/RoutingSection 类型定义已抽离到 modelRoutingTypes.ts
     const types = source('src/components/llm-settings/modelRoutingTypes.ts')
+    // saveTTSSelection 的 is_default_tts 写入逻辑已抽离到 useModelSelection.ts（Slice 8）
+    const selection = source('src/components/llm-settings/useModelSelection.ts')
 
     expect(types).toContain("type Capability = 'chat' | 'embedding' | 'tts'")
     expect(types).toContain("type RoutingSection = 'llm' | 'embedding' | 'tts' | 'routes'")
-    expect(routing).toContain('is_default_tts: true')
+    expect(selection).toContain('is_default_tts: true')
     // 协议/音色/倍速表单已从设置页移除，改在朗读控件配置
     expect(routing).not.toContain('MiMo Chat Audio')
     expect(routing).not.toContain('ttsForm.speed')
@@ -45,11 +47,13 @@ describe('TTS settings integration', () => {
     const routing = source('src/components/llm-settings/PersonalModelRouting.vue')
     // picker 弹窗状态机（含 useDialogA11y 的 onClose 关闭逻辑）已抽离到 useModelPicker.ts（Slice 7）
     const picker = source('src/components/llm-settings/useModelPicker.ts')
+    // saveTTSSelection 等模型选择保存方法已抽离到 useModelSelection.ts（Slice 8）
+    const selection = source('src/components/llm-settings/useModelSelection.ts')
 
     expect(routing).toContain('@click="savePickerSelections(provider)"')
     expect(routing).toContain('@change="selectPendingTTSModel(provider, modelName)"')
     expect(routing).toContain(':disabled="!provider.is_enabled || isSavingPicker"')
-    expect(routing).toContain('const saveTTSSelection = async (provider: UserModelProvider)')
+    expect(selection).toContain('const saveTTSSelection = async (provider: UserModelProvider)')
     expect(routing).toContain("v-if=\"activeSection === 'tts' || !isChatPickerDirty\"")
     expect(routing).toContain('@keydown.esc.stop.prevent="!isSavingPicker && closeModelPicker()"')
     expect(routing).toMatch(

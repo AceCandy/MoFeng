@@ -64,9 +64,10 @@
 
 ## Slice 8 — useModelSelection composable
 
-- [ ] 建 `useModelSelection.ts`：upsertModelForCapability/togglePendingChatModel/saveChatSelections/savePickerSelections/setPrimaryChatModel/setById/selectEmbeddingModel/selectPendingTTSModel/saveTTSSelection/deleteModelForActiveSection + 派生 modelNamesForProvider/filteredModelNamesForProvider/selectedModelChipsForProvider/savedModelForActiveSection/isModelSelectedForActiveSection/activeModelStateLabel
-- [ ] 入参透传 bundle + activeSection + sectionMeta + picker(pending/isSavingPicker/closeModelPicker) + mutations + loadBundle
-- [ ] 验证：三件套 + wc + 手测三种能力选择/保存/删除
+- [x] 建 `useModelSelection.ts`：upsertModelForCapability/togglePendingChatModel/saveChatSelections/savePickerSelections/setPrimaryChatModel/setById/selectEmbeddingModel/selectPendingTTSModel/saveTTSSelection/deleteModelForActiveSection + 派生 modelNamesForProvider/filteredModelNamesForProvider/selectedModelChipsForProvider/savedModelForActiveSection/isModelSelectedForActiveSection/activeModelStateLabel + 内部 chatModelForName/embeddingModelForName/ttsModelForName/activeModelCapability（capabilityForSection 等价 wrapper）
+- [x] 入参透传 models/activeSection + sectionMeta(chatModelsByProvider/embeddingModelsByProvider/ttsModelsByProvider/primaryChatModel) + picker(modelPickerQuery/activeModelPickerProviderId/pendingChatModelNames/pendingTTSModelName/isSavingPicker/closeModelPicker) + 3 mutations + loadBundle/setFeedback + onSaved（替代 emit('saved')，延迟绑定规避 const TDZ）；调用点 useModelPicker 之后规避 const TDZ（单向 picker→selection 无循环）
+- [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error，7 同类 @/api warning，useModelSelection 新增 1）+ wc（1936→1651）；手测三种能力选择/保存/删除待用户跑
+- [x] review gate：循环依赖未触发——picker 不需 selection（单向 selection→picker 反向，selection 调 picker 的 closeModelPicker/pending，picker 不调 selection），与 Slice 7 review 结论一致；saveTTSSelection 提前到 savePickerSelections 前消除原前向引用（const 箭头函数声明顺序调整，运行时行为等价）；删 5 orphan import 零残留 rg 验证
 
 ## Slice 9 — RoutingStagesPanel.vue 子组件
 
