@@ -62,7 +62,7 @@
 |---|---|---|---|---|
 | 1 ✅ | `stageDefinitions.ts`（stageGroups）+ `modelRoutingTypes.ts` + ttsSettings.spec 指针跟随 | data | 极低 | 2684 → **2513** |
 | 2 ✅ | `modelRoutingHelpers.ts`（8 纯函数/常量参数化）+ createModelPayload 单测（10 tests） | data+test | 低 | 2513 → **2416** |
-| 3 | `useModelBundle` composable | composable | 低 | ~2420 → ~2310 |
+| 3 ✅ | `useModelBundle` composable（bundleQuery+7mutation+5computed+feedback+loadBundle+watch error；onLoaded 回调透传 sync 规避 const TDZ） | composable | 低 | 2416 → **2382** |
 | 4 | `useSectionMeta` composable | composable | 低 | ~2310 → ~2150 |
 | 5 | `useStageRoutes` composable（含 isDirty routes 分支） | composable | 中 | ~2150 → ~2050 |
 | 6 | `useProviderForm` composable | composable | 中 | ~2050 → ~1880 |

@@ -28,11 +28,11 @@
 - [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error，4 同类 type-only warning）+ wc（2513→2416）
 - [x] review gate：helpers 纯函数化后调用点签名兼容（activeModelCapability wrapper 规避 7 处调用点改动）
 
-## Slice 3 — useModelBundle composable
+## Slice 3 — useModelBundle composable ✅
 
-- [ ] 建 `useModelBundle.ts`：bundleQuery + 9 mutation + providers/models/isLoading/isSavingProvider/isSavingRoutes + feedback/setFeedback + loadBundle + watch(bundleQuery.error)
-- [ ] 主组件解构替换；onMounted 内 loadBundle 调用留主或入参回调
-- [ ] 验证：三件套 + wc
+- [x] 建 `useModelBundle.ts`：bundleQuery + 7 mutation（saveProvider/toggle/deleteProvider/saveUserModel/updateUserModel/deleteUserModel/saveStageRoutes）+ providers/models/isLoading/isSavingProvider/isSavingRoutes + feedback/setFeedback + loadBundle + watch(bundleQuery.error)；onLoaded 回调交父（透传 syncRouteSelectionsFromBundle 箭头延迟绑定规避 const TDZ，同 WritingDesk onAfterSwitch）
+- [x] 主组件解构替换（16 符号）；watch(bundleQuery.data→sync) 留父（Slice 5 抽，依赖 sync）；onMounted 内 loadBundle 调用留父
+- [x] 验证：三件套（vue-tsc 0 const TDZ 通过 / vitest 151 绿 / eslint 0 error，3 同类 type-only warning）+ wc（2416→2382，composable 解构块抵消部分收益属正常）
 
 ## Slice 4 — useSectionMeta composable
 

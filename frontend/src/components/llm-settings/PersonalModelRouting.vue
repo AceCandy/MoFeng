@@ -551,17 +551,8 @@ import type {
 } from '@/api/llm'
 import { globalAlert } from '@/composables/useAlert'
 import { useDialogA11y } from '@/composables/useDialogA11y'
-import {
-  useDeleteProviderMutation,
-  useDeleteUserModelMutation,
-  useLLMConfigBundleQuery,
-  useProviderModelsQuery,
-  useSaveProviderMutation,
-  useSaveStageRoutesMutation,
-  useSaveUserModelMutation,
-  useToggleProviderMutation,
-  useUpdateUserModelMutation,
-} from '@/queries/llm'
+import { useProviderModelsQuery } from '@/queries/llm'
+import { useModelBundle } from '@/composables/useModelBundle'
 import type {
   Capability,
   ProviderFetchState,
@@ -599,27 +590,29 @@ const props = withDefaults(
 
 const activeSection = computed<RoutingSection>(() => props.activeSection || 'llm')
 
-const bundleQuery = useLLMConfigBundleQuery()
-const saveProviderMutation = useSaveProviderMutation()
-const toggleProviderMutation = useToggleProviderMutation()
-const deleteProviderMutation = useDeleteProviderMutation()
-const saveUserModelMutation = useSaveUserModelMutation()
-const updateUserModelMutation = useUpdateUserModelMutation()
-const deleteUserModelMutation = useDeleteUserModelMutation()
-const saveStageRoutesMutation = useSaveStageRoutesMutation()
-const providers = computed<UserModelProvider[]>(() => bundleQuery.data.value?.providers ?? [])
-const models = computed<UserAIModel[]>(() => bundleQuery.data.value?.models ?? [])
+const {
+  bundleQuery,
+  saveProviderMutation,
+  toggleProviderMutation,
+  deleteProviderMutation,
+  saveUserModelMutation,
+  updateUserModelMutation,
+  deleteUserModelMutation,
+  saveStageRoutesMutation,
+  providers,
+  models,
+  isLoading,
+  isSavingProvider,
+  isSavingRoutes,
+  feedback,
+  setFeedback,
+  loadBundle,
+} = useModelBundle({
+  onLoaded: () => syncRouteSelectionsFromBundle(),
+})
 const routeSelections = reactive<Record<string, string>>({})
 const initialRouteSelections = ref<Record<string, string>>({})
 const providerFetchStates = reactive<Record<number, ProviderFetchState>>({})
-const isLoading = computed(() => bundleQuery.isLoading.value || bundleQuery.isFetching.value)
-const isSavingProvider = computed(
-  () =>
-    saveProviderMutation.isPending.value ||
-    toggleProviderMutation.isPending.value ||
-    deleteProviderMutation.isPending.value,
-)
-const isSavingRoutes = computed(() => saveStageRoutesMutation.isPending.value)
 const editingProviderId = ref<number | null>(null)
 const providerFormMode = ref<ProviderFormMode>(null)
 const activeModelPickerProviderId = ref<number | null>(null)
@@ -641,10 +634,6 @@ const setModelPickerSearchInputRef = (el: Element | ComponentPublicInstance | nu
 const pendingChatModelNames = ref<Set<string>>(new Set())
 const pendingTTSModelName = ref('')
 const isSavingPicker = ref(false)
-const feedback = ref<{ type: 'success' | 'error'; message: string }>({
-  type: 'success',
-  message: '',
-})
 const emptyProviderForm = (): ProviderForm => ({
   name: '',
   provider_type: 'openai_compatible',
@@ -857,10 +846,6 @@ const activeModelStateLabel = (providerId: number, modelName: string): string =>
   return model.is_default_chat ? '主模型' : '已启用'
 }
 
-const setFeedback = (type: 'success' | 'error', message: string) => {
-  feedback.value = { type, message }
-}
-
 const assignProviderForm = (next: ProviderForm) => {
   Object.assign(providerForm, next)
 }
@@ -938,16 +923,6 @@ const syncRouteSelectionsFromBundle = () => {
   }
   // 备份一份初始状态，以便判断脏数据
   initialRouteSelections.value = { ...routeSelections }
-}
-
-const loadBundle = async () => {
-  const result = await bundleQuery.refetch()
-  if (result.error) {
-    const message = result.error instanceof Error ? result.error.message : '未知错误'
-    setFeedback('error', `读取模型设置失败：${message}`)
-    return
-  }
-  syncRouteSelectionsFromBundle()
 }
 
 const beginCreateProvider = () => {
@@ -1433,15 +1408,6 @@ watch(
     syncRouteSelectionsFromBundle()
   },
   { immediate: true },
-)
-
-watch(
-  () => bundleQuery.error.value,
-  (error) => {
-    if (!error) return
-    const message = error instanceof Error ? error.message : '未知错误'
-    setFeedback('error', `读取模型设置失败：${message}`)
-  },
 )
 
 watch(
