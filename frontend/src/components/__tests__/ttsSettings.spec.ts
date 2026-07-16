@@ -29,9 +29,11 @@ describe('TTS settings integration', () => {
 
   it('keeps TTS settings to model selection only — voice/speed moved to the reader control', () => {
     const routing = source('src/components/llm-settings/PersonalModelRouting.vue')
+    // Capability/RoutingSection 类型定义已抽离到 modelRoutingTypes.ts
+    const types = source('src/components/llm-settings/modelRoutingTypes.ts')
 
-    expect(routing).toContain("type Capability = 'chat' | 'embedding' | 'tts'")
-    expect(routing).toContain("type RoutingSection = 'llm' | 'embedding' | 'tts' | 'routes'")
+    expect(types).toContain("type Capability = 'chat' | 'embedding' | 'tts'")
+    expect(types).toContain("type RoutingSection = 'llm' | 'embedding' | 'tts' | 'routes'")
     expect(routing).toContain('is_default_tts: true')
     // 协议/音色/倍速表单已从设置页移除，改在朗读控件配置
     expect(routing).not.toContain('MiMo Chat Audio')

@@ -60,7 +60,7 @@
 
 | Slice | 内容 | 类型 | 风险 | 预估主组件行数变化 |
 |---|---|---|---|---|
-| 1 | `stageDefinitions.ts`（stageGroups 145 行）+ `modelRoutingTypes.ts` | data | 极低 | 2684 → ~2540 |
+| 1 ✅ | `stageDefinitions.ts`（stageGroups）+ `modelRoutingTypes.ts` + ttsSettings.spec 指针跟随 | data | 极低 | 2684 → **2513** |
 | 2 | `modelRoutingHelpers.ts`（纯函数）+ createModelPayload 单测 | data+test | 低 | ~2540 → ~2420 |
 | 3 | `useModelBundle` composable | composable | 低 | ~2420 → ~2310 |
 | 4 | `useSectionMeta` composable | composable | 低 | ~2310 → ~2150 |
