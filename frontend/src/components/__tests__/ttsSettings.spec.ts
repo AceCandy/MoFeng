@@ -49,14 +49,18 @@ describe('TTS settings integration', () => {
     const picker = source('src/components/llm-settings/useModelPicker.ts')
     // saveTTSSelection 等模型选择保存方法已抽离到 useModelSelection.ts（Slice 8）
     const selection = source('src/components/llm-settings/useModelSelection.ts')
+    // 拉取弹窗 template（含保存/选择/esc/disabled 守卫）已抽离到 ModelPickerDialog.vue（Slice 12）
+    const pickerDialog = source('src/components/llm-settings/ModelPickerDialog.vue')
 
-    expect(routing).toContain('@click="savePickerSelections(provider)"')
-    expect(routing).toContain('@change="selectPendingTTSModel(provider, modelName)"')
-    expect(routing).toContain(':disabled="!provider.is_enabled || isSavingPicker"')
+    // 保存与 TTS 选择经事件接线回父级方法
+    expect(routing).toContain('@save="() => savePickerSelections(provider)"')
+    expect(routing).toContain('@select-tts="(modelName) => selectPendingTTSModel(provider, modelName)"')
     expect(selection).toContain('const saveTTSSelection = async (provider: UserModelProvider)')
-    expect(routing).toContain("v-if=\"activeSection === 'tts' || !isChatPickerDirty\"")
-    expect(routing).toContain('@keydown.esc.stop.prevent="!isSavingPicker && closeModelPicker()"')
-    expect(routing).toMatch(
+    // 弹窗内 TTS 单选禁用守卫、关闭按钮脏数据守卫、esc 关闭守卫
+    expect(pickerDialog).toContain(':disabled="!provider.is_enabled || isSavingPicker"')
+    expect(pickerDialog).toContain("v-if=\"activeSection === 'tts' || !isChatPickerDirty\"")
+    expect(pickerDialog).toContain("@keydown.esc.stop.prevent=\"!isSavingPicker && emit('close')\"")
+    expect(pickerDialog).toMatch(
       /v-if="activeSection === 'tts' \|\| !isChatPickerDirty"[\s\S]{0,180}:disabled="isSavingPicker"/,
     )
     expect(picker).toContain('onClose: () => {')

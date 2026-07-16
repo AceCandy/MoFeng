@@ -92,13 +92,13 @@
 - [x] scoped 迁移：独占规则全迁子（primary-panel/copy/field/@media860 + selected-models/model-list-title/selected-chip[合并 mixed gap+standalone]/hover/chip-name/stamp-label/delete-btn 全家+focus-visible）+ 3 处混合选择器拆分[model-list grid 留 bare pre-existing dead|picker-head/picker-row flex|focus-visible] + `.panel` orphan 随 PrimaryModelPanel 迁子[父 0 消费] + 共享 .hint/.empty 复制子留父；父独占 class rg 零残留，CSS 大括号 85=85 配平
 - [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error + 10 同类 @/api warning，2 新子组件各 +1 同 S9 RoutingStagesPanel 范式，无 vue/no-mutating-props）+ wc（1395→1197）；手测主模型切换/chip 删除待用户跑
 
-## Slice 12 — ModelPickerDialog.vue 子组件（最高风险）
+## Slice 12 — ModelPickerDialog.vue 子组件（最高风险） ✅
 
-- [ ] 建子组件：迁 template L342-467（Teleport 弹窗）+ 全量 picker scoped style
-- [ ] **保留 Teleport to body + fixed 定位 + id 选择器 + 函数 ref**
-- [ ] props 大量透传（provider/activeSection/filteredModelNames/isLoading/isSavingPicker/pending sets/style/isChatPickerDirty/ref setters/state labels）；emit close/save/toggle-chat/select-embedding/select-tts
-- [ ] onPickerClickOutside/onPickerViewportChange 监听归属（留父 document 级 或迁子 onMounted），行为等价验证
-- [ ] 验证：三件套 + wc + 手测弹窗完整流程
+- [x] 建子组件：迁 template L174-299（Teleport 弹窗整块）+ 全量 picker scoped style
+- [x] **保留 Teleport to body + fixed 定位 + id 选择器 + 函数 ref**（根 `<Teleport to="body">`；`id="model-picker-${id}"` + setModelPickerDialogRef/setModelPickerSearchInputRef 函数 ref + data-dialog-initial-focus）
+- [x] props 透传 15 + emit 6（close/save/toggle-chat/select-embedding/select-tts/update-query）；modelPickerQuery v-model→:value+@input emit 规避 vue/no-mutating-props；监听归属不变（onPickerClickOutside/onPickerViewportChange 留 useModelPicker document/window 级靠 id 查 DOM，行为等价）；v-if=isModelPickerOpen 提到父 `<ModelPickerDialog v-if>` 整体挂卸避空 Teleport 节点
+- [x] **顺手清 Slice 8 回归**：embedding radio :checked 的 embeddingModelForName（移进 composable 内部未同步 template）→savedModelForActiveSection（embedding 分支恒等价，零 composable 改动）
+- [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error + 11 同类 @/api warning，无 no-mutating-props）+ wc（1197→996）；spec 指针跟随 2 处；手测弹窗完整流程待用户跑
 
 ## Slice 13-15 — style 余量收口 + <500 验收
 

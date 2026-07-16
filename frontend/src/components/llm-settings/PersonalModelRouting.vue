@@ -171,132 +171,30 @@
               </button>
             </div>
 
-          <Teleport to="body">
-            <div
-              v-if="isModelPickerOpen(provider.id)"
-              :id="`model-picker-${provider.id}`"
-              :ref="setModelPickerDialogRef"
-              class="model-routing__model-picker"
-              role="dialog"
-              aria-modal="false"
-              :style="modelPickerStyle"
-              :aria-labelledby="`model-picker-title-${provider.id}`"
-              @keydown.esc.stop.prevent="!isSavingPicker && closeModelPicker()"
-              @click.stop
-            >
-              <div class="model-routing__picker-head">
-                <div>
-                  <strong :id="`model-picker-title-${provider.id}`">{{
-                    activeSection === 'llm'
-                      ? '选择文本生成模型'
-                      : activeSection === 'embedding'
-                        ? '选择记忆检索模型'
-                        : '选择语音朗读模型'
-                  }}</strong>
-                  <p class="model-routing__hint">
-                    {{
-                      activeSection === 'llm'
-                        ? '勾选后点右上角"保存"生效。'
-                        : activeSection === 'embedding'
-                          ? '单选后作为当前检索模型。'
-                          : '选择默认语音朗读模型；音色与倍速在朗读控件里调整。'
-                    }}
-                  </p>
-                </div>
-                <button
-                  v-if="activeSection === 'tts' || !isChatPickerDirty"
-                  type="button"
-                  class="model-routing__link"
-                  :disabled="isSavingPicker"
-                  @click="closeModelPicker"
-                >
-                  关闭
-                </button>
-                <button
-                  v-if="activeSection === 'tts' || isChatPickerDirty"
-                  type="button"
-                  class="md-btn md-btn-filled md-ripple model-routing__picker-save"
-                  :disabled="isSavingPicker"
-                  @click="savePickerSelections(provider)"
-                >
-                  {{ isSavingPicker ? '保存中...' : '保存' }}
-                </button>
-              </div>
-
-              <label class="md-text-field model-routing__picker-search">
-                <span class="md-text-field-label">搜索模型</span>
-                <input
-                  :ref="setModelPickerSearchInputRef"
-                  data-dialog-initial-focus
-                  v-model="modelPickerQuery"
-                  class="md-text-field-input"
-                  type="search"
-                  placeholder="输入模型名过滤"
-                />
-              </label>
-
-              <p v-if="providerFetchState(provider.id).isLoading" class="model-routing__empty">
-                正在拉取模型...
-              </p>
-              <p
-                v-else-if="filteredModelNamesForProvider(provider.id).length === 0"
-                class="model-routing__empty"
-              >
-                没有可选模型。
-              </p>
-              <div v-else class="model-routing__picker-list">
-                <label
-                  v-for="modelName in filteredModelNamesForProvider(provider.id)"
-                  :key="`${provider.id}-${modelName}`"
-                  :class="[
-                    'model-routing__picker-row',
-                    {
-                      'is-selected': isModelSelectedForActiveSection(provider.id, modelName),
-                    },
-                  ]"
-                >
-                  <span class="model-routing__picker-model-name">
-                    {{ modelName }}
-                    <small v-if="activeModelStateLabel(provider.id, modelName)">
-                      {{ activeModelStateLabel(provider.id, modelName) }}
-                    </small>
-                  </span>
-                  <input
-                    v-if="activeSection === 'llm'"
-                    type="checkbox"
-                    :checked="pendingChatModelNames.has(modelName)"
-                    :disabled="!provider.is_enabled"
-                    :aria-label="`启用文本生成模型 ${modelName}`"
-                    @change="togglePendingChatModel(provider, modelName, $event)"
-                  />
-                  <input
-                    v-else-if="activeSection === 'embedding'"
-                    name="embedding-model"
-                    type="radio"
-                    :checked="
-                      Boolean(
-                        embeddingModelForName(provider.id, modelName)?.is_enabled &&
-                        embeddingModelForName(provider.id, modelName)?.is_default_embedding,
-                      )
-                    "
-                    :disabled="!provider.is_enabled"
-                    :aria-label="`选择向量模型 ${modelName}`"
-                    @change="selectEmbeddingModel(provider, modelName)"
-                  />
-                  <input
-                    v-else
-                    name="tts-model"
-                    type="radio"
-                    :checked="pendingTTSModelName === modelName"
-                    :disabled="!provider.is_enabled || isSavingPicker"
-                    :aria-label="`选择语音朗读模型 ${modelName}`"
-                    @change="selectPendingTTSModel(provider, modelName)"
-                  />
-                </label>
-              </div>
-
-            </div>
-          </Teleport>
+          <ModelPickerDialog
+            v-if="isModelPickerOpen(provider.id)"
+            :provider="provider"
+            :active-section="activeSection"
+            :model-picker-style="modelPickerStyle"
+            :is-saving-picker="isSavingPicker"
+            :is-chat-picker-dirty="isChatPickerDirty"
+            :model-picker-query="modelPickerQuery"
+            :pending-chat-model-names="pendingChatModelNames"
+            :pending-tts-model-name="pendingTTSModelName"
+            :filtered-model-names-for-provider="filteredModelNamesForProvider"
+            :is-model-selected-for-active-section="isModelSelectedForActiveSection"
+            :active-model-state-label="activeModelStateLabel"
+            :saved-model-for-active-section="savedModelForActiveSection"
+            :provider-fetch-state="providerFetchState"
+            :set-model-picker-dialog-ref="setModelPickerDialogRef"
+            :set-model-picker-search-input-ref="setModelPickerSearchInputRef"
+            @update-query="(value) => { modelPickerQuery = value }"
+            @toggle-chat="(modelName, event) => togglePendingChatModel(provider, modelName, event)"
+            @select-embedding="(modelName) => selectEmbeddingModel(provider, modelName)"
+            @select-tts="(modelName) => selectPendingTTSModel(provider, modelName)"
+            @save="() => savePickerSelections(provider)"
+            @close="closeModelPicker"
+          />
 
             <p v-if="!provider.is_enabled" class="model-routing__hint">
               启用供应商后才能使用里面的模型。
@@ -350,6 +248,7 @@ import { useModelSelection } from './useModelSelection'
 import { RoutingStagesPanel } from './RoutingStagesPanel'
 import { ProviderFormPanel } from './ProviderFormPanel'
 import { PrimaryModelPanel } from './PrimaryModelPanel'
+import { ModelPickerDialog } from './ModelPickerDialog'
 import { SelectedModelChips } from './SelectedModelChips'
 import type {
   ProviderForm,
@@ -750,89 +649,6 @@ defineExpose({
   gap: var(--md-spacing-2);
 }
 
-.model-routing__model-picker {
-  position: fixed;
-  z-index: 1050;
-  width: min(420px, calc(100vw - 16px));
-  max-height: 420px;
-  overflow: auto;
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-sm);
-  padding: var(--md-spacing-3);
-  background: var(--md-surface);
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.15);
-}
-
-.model-routing__picker-head,
-.model-routing__picker-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--md-spacing-3);
-}
-
-.model-routing__picker-head {
-  margin-bottom: var(--md-spacing-3);
-  color: var(--md-on-surface);
-}
-
-.model-routing__picker-search {
-  margin-bottom: var(--md-spacing-3);
-}
-
-.model-routing__picker-list {
-  display: grid;
-  gap: var(--md-spacing-1);
-}
-
-.model-routing__picker-row {
-  min-height: 44px;
-  border: 1px solid transparent;
-  border-radius: var(--md-radius-xs);
-  padding: var(--md-spacing-2) var(--md-spacing-3);
-  color: var(--md-on-surface);
-  cursor: pointer;
-  transition:
-    background-color var(--md-duration-short) var(--md-easing-standard),
-    border-color var(--md-duration-short) var(--md-easing-standard);
-}
-
-.model-routing__picker-row:hover {
-  background: var(--md-surface-container);
-}
-
-.model-routing__picker-row.is-selected {
-  border-color: var(--md-primary);
-  background: var(--md-primary-container);
-  color: var(--md-on-primary-container);
-}
-
-.model-routing__picker-model-name {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: var(--md-spacing-2);
-}
-
-.model-routing__picker-model-name,
-.model-routing__picker-model-name > small {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.model-routing__picker-model-name > small {
-  flex: 0 0 auto;
-  border-radius: var(--md-radius-xs);
-  padding: 2px 6px;
-  background: var(--md-surface);
-  color: var(--md-primary-dark);
-  font-size: var(--md-label-small);
-  font-weight: 600;
-}
-
-
 .model-routing__model-row {
   width: 100%;
   border: 1px solid var(--md-outline-variant);
@@ -972,27 +788,14 @@ defineExpose({
   box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.2);
 }
 
-.model-routing__model-controls input,
-.model-routing__picker-row input {
+.model-routing__model-controls input {
   width: 20px;
   height: 20px;
   flex: 0 0 auto;
 }
 
-.model-routing__link {
-  border: none;
-  background: transparent;
-  color: var(--md-primary-dark);
-  cursor: pointer;
-  font-weight: 600;
-  min-height: 44px;
-  padding: 0 var(--md-spacing-2);
-}
-
-.model-routing__link:focus-visible,
 .model-routing__toggle:focus-visible,
-.model-routing__provider-delete:focus-visible,
-.model-routing__picker-row:focus-within {
+.model-routing__provider-delete:focus-visible {
   outline: 2px solid var(--md-primary);
   outline-offset: 2px;
 }
@@ -1067,10 +870,6 @@ defineExpose({
 
   .model-routing__topbar {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .model-routing__model-picker {
-    max-height: 360px;
   }
 }
 
