@@ -67,70 +67,15 @@
     </template>
 
     <template v-else>
-      <section v-if="providerFormMode === 'create'" class="model-routing__panel model-routing__provider-form">
-        <div class="model-routing__form-head">
-          <h3 class="md-title-medium">新增供应商</h3>
-          <button type="button" class="model-routing__link" @click="cancelProviderForm">
-            取消
-          </button>
-        </div>
-
-        <div class="model-routing__form">
-          <label class="md-text-field">
-            <span class="md-text-field-label">名称</span>
-            <input
-              v-model="providerForm.name"
-              class="md-text-field-input"
-              type="text"
-              placeholder="如 OpenAI / Anthropic / DeepSeek / 本地 Ollama"
-            />
-          </label>
-
-          <label class="md-text-field">
-            <span class="md-text-field-label">类型</span>
-            <select v-model="providerForm.provider_type" class="md-text-field-input">
-              <option value="openai_compatible">OpenAI 兼容</option>
-              <option value="anthropic">Anthropic</option>
-              <option value="ollama">Ollama</option>
-              <option value="custom">自定义</option>
-            </select>
-          </label>
-
-          <label class="md-text-field">
-            <span class="md-text-field-label">API URL</span>
-            <input
-              v-model="providerForm.base_url"
-              class="md-text-field-input"
-              type="text"
-              placeholder="https://api.example.com/v1"
-            />
-          </label>
-
-          <label class="md-text-field">
-            <span class="md-text-field-label">API Key</span>
-            <input
-              v-model="providerForm.api_key"
-              class="md-text-field-input"
-              type="password"
-              placeholder="请输入 API Key，Ollama 可留空"
-            />
-          </label>
-
-          <label class="model-routing__check">
-            <input v-model="providerForm.is_enabled" type="checkbox" />
-            <span>启用供应商</span>
-          </label>
-
-          <button
-            type="button"
-            class="md-btn md-btn-filled md-ripple"
-            :disabled="isSavingProvider"
-            @click="saveProviderForm"
-          >
-            {{ isSavingProvider ? '保存中...' : '保存供应商' }}
-          </button>
-        </div>
-      </section>
+      <ProviderFormPanel
+        v-if="providerFormMode === 'create'"
+        mode="create"
+        :provider-form="providerForm"
+        :is-saving-provider="isSavingProvider"
+        @update-field="updateProviderField"
+        @save="saveProviderForm"
+        @cancel="cancelProviderForm"
+      />
 
       <section
         v-if="activeSection === 'llm'"
@@ -167,70 +112,14 @@
         >
           <!-- 行内编辑表单模式 -->
           <template v-if="providerFormMode === 'edit' && editingProviderId === provider.id">
-            <div class="model-routing__inline-form-head">
-              <h4 class="md-title-medium">编辑供应商</h4>
-              <button type="button" class="model-routing__inline-cancel" @click="cancelProviderForm">
-                取消
-              </button>
-            </div>
-
-            <div class="model-routing__inline-form">
-              <label class="md-text-field">
-                <span class="md-text-field-label">名称</span>
-                <input
-                  v-model="providerForm.name"
-                  class="md-text-field-input"
-                  type="text"
-                  placeholder="如 OpenAI / Anthropic / DeepSeek"
-                />
-              </label>
-
-              <label class="md-text-field">
-                <span class="md-text-field-label">类型</span>
-                <select v-model="providerForm.provider_type" class="md-text-field-input">
-                  <option value="openai_compatible">OpenAI 兼容</option>
-                  <option value="anthropic">Anthropic</option>
-                  <option value="ollama">Ollama</option>
-                  <option value="custom">自定义</option>
-                </select>
-              </label>
-
-              <label class="md-text-field">
-                <span class="md-text-field-label">API URL</span>
-                <input
-                  v-model="providerForm.base_url"
-                  class="md-text-field-input"
-                  type="text"
-                  placeholder="https://api.example.com/v1"
-                />
-              </label>
-
-              <label class="md-text-field">
-                <span class="md-text-field-label">API Key</span>
-                <input
-                  v-model="providerForm.api_key"
-                  class="md-text-field-input"
-                  type="password"
-                  placeholder="留空则保留已保存 Key"
-                />
-              </label>
-
-              <div class="model-routing__inline-form-footer">
-                <label class="model-routing__check">
-                  <input v-model="providerForm.is_enabled" type="checkbox" />
-                  <span>启用供应商</span>
-                </label>
-
-                <button
-                  type="button"
-                  class="md-btn md-btn-filled md-ripple"
-                  :disabled="isSavingProvider"
-                  @click="saveProviderForm"
-                >
-                  {{ isSavingProvider ? '保存中...' : '保存供应商' }}
-                </button>
-              </div>
-            </div>
+            <ProviderFormPanel
+              mode="edit"
+              :provider-form="providerForm"
+              :is-saving-provider="isSavingProvider"
+              @update-field="updateProviderField"
+              @save="saveProviderForm"
+              @cancel="cancelProviderForm"
+            />
           </template>
 
           <!-- 常态展示模式 -->
@@ -508,7 +397,9 @@ import { useProviderForm } from './useProviderForm'
 import { useModelPicker } from './useModelPicker'
 import { useModelSelection } from './useModelSelection'
 import { RoutingStagesPanel } from './RoutingStagesPanel'
+import { ProviderFormPanel } from './ProviderFormPanel'
 import type {
+  ProviderForm,
   RoutingSection,
 } from './modelRoutingTypes'
 import {
@@ -575,6 +466,11 @@ const {
   setFeedback,
   onSaved: () => emit('saved'),
 })
+
+/** 供应商表单字段回写（ProviderFormPanel emit update-field；cast 规避 reactive 索引写入的 union 缩窄） */
+const updateProviderField = (field: keyof ProviderForm, value: string | boolean) => {
+  ;(providerForm as Record<string, string | boolean>)[field] = value
+}
 
 const {
   routeSelections,
@@ -705,7 +601,6 @@ defineExpose({
 }
 
 .model-routing__topbar,
-.model-routing__form-head,
 .model-routing__provider-head,
 .model-routing__model-row {
   display: flex;
@@ -821,7 +716,6 @@ defineExpose({
 }
 
 
-.model-routing__form,
 .model-routing__model-list,
 .model-routing__selected-models {
   display: grid;
@@ -851,8 +745,7 @@ defineExpose({
   margin: 0;
 }
 
-.model-routing__provider-head h3,
-.model-routing__form-head h3 {
+.model-routing__provider-head h3 {
   margin: 0;
   color: var(--md-on-surface);
 }
@@ -1270,17 +1163,6 @@ defineExpose({
   box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.2);
 }
 
-.model-routing__check {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--md-spacing-2);
-  color: var(--md-on-surface);
-  font-size: var(--md-body-medium);
-  min-height: 44px;
-  cursor: pointer;
-}
-
-.model-routing__check input,
 .model-routing__model-controls input,
 .model-routing__picker-row input {
   width: 20px;
@@ -1362,28 +1244,10 @@ defineExpose({
   .model-routing__provider-grid > .model-routing__provider-card.is-editing {
     grid-column: 1 / -1 !important;
   }
-
-  /* 原地编辑表单内部排版升级：名称与类型并排，API 地址和 API Key 独占一行，空间拉满 */
-  .model-routing__inline-form {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: var(--md-spacing-3) var(--md-spacing-4) !important;
-  }
-
-  .model-routing__inline-form > .md-text-field:nth-child(1),
-  .model-routing__inline-form > .md-text-field:nth-child(2) {
-    grid-column: span 1;
-  }
-
-  .model-routing__inline-form > .md-text-field:nth-child(3), /* API URL */
-  .model-routing__inline-form > .md-text-field:nth-child(4), /* API Key */
-  .model-routing__inline-form-footer {
-    grid-column: 1 / -1 !important;
-  }
 }
 
 @media (max-width: 640px) {
   .model-routing__topbar,
-  .model-routing__form-head,
   .model-routing__provider-head,
   .model-routing__provider-actions,
   .model-routing__model-row {
@@ -1514,53 +1378,6 @@ defineExpose({
 
 .model-routing__provider-actions .md-btn-text:active {
   transform: translate(1px, 1px);
-}
-
-/* 卡片原地编辑表单样式 */
-.model-routing__inline-form-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px dashed var(--md-outline-variant);
-  padding-bottom: var(--md-spacing-2);
-  margin-bottom: var(--md-spacing-2);
-}
-
-.model-routing__inline-form-head h4 {
-  margin: 0;
-  color: var(--md-primary-dark);
-}
-
-.model-routing__inline-cancel {
-  border: none;
-  background: transparent;
-  color: var(--md-on-surface-variant);
-  cursor: pointer;
-  font-size: var(--md-label-small);
-  font-weight: 600;
-  transition: color var(--md-duration-short) var(--md-easing-standard);
-  min-height: 28px;
-  padding: 0 var(--md-spacing-2);
-}
-
-.model-routing__inline-cancel:hover {
-  color: var(--md-secondary);
-}
-
-.model-routing__inline-form {
-  display: grid;
-  gap: var(--md-spacing-3);
-  z-index: 2;
-  position: relative;
-}
-
-.model-routing__inline-form-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: var(--md-spacing-2);
-  gap: var(--md-spacing-3);
-  flex-wrap: wrap;
 }
 
 /* 正在编辑中的卡片视觉增强 */

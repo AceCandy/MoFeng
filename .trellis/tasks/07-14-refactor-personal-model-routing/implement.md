@@ -77,12 +77,13 @@
 - [x] scoped 迁移：独占规则全迁子（stage-list/stage-group/stage-row/@media 960/768）+ 5 处混合选择器拆分删 stage 部分 + empty/empty-state 共用规则复制子留父；父独占 class rg 零残留验证
 - [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error + 8 同类 @/api warning，RoutingStagesPanel 新增 1，无 vue/no-mutating-props warn）+ wc（1651→1578）；uiAuditRegression L78 指针跟随；手测 routes 分区待用户跑
 
-## Slice 10 — ProviderFormPanel.vue 子组件（合并 create/edit）
+## Slice 10 — ProviderFormPanel.vue 子组件（合并 create/edit） ✅
 
-- [ ] 建子组件：合并 template L111-174（create）+ L210-275（edit），mode prop 区分
-- [ ] props：providerForm(v-model)/mode/isSavingProvider；emit save/cancel
-- [ ] scoped 迁移
-- [ ] 验证：三件套 + wc + 手测 create/edit 表单
+- [x] 建子组件：合并 template create L70-133 + edit L169-234，mode prop 区分（5 字段共用，mode 驱动 wrapper/标题 h3-h4/placeholder/footer）
+- [x] props：providerForm(reactive,仅展示)/mode/isSavingProvider；emit update-field/save/cancel（**不用 v-model on prop**——providerForm reactive，子组件 v-model 会触发 vue/no-mutating-props warn，改 emit update-field 同 S9）
+- [x] scoped 迁移：独占规则全迁子（form-head/form/check/inline-form-head/h4/inline-cancel+hover/inline-form/inline-form-footer + @media 768 inline-form 规则）+ 3 处混合选择器拆分删 form 部分[topbar flex/model-list grid/provider-head h3] + 2 处删 form-head[@media 640] + .check 块与 .check input 行删 + 共享 .panel/.link 复制子留父；父独占 class rg 零残留验证
+- [x] 单根 `<section>`[create=panel+provider-form / edit=新类 provider-form-edit+grid-gap 复刻原 card 间距]；标题 `<component :is="h3/h4">`；父侧 updateProviderField 适配器 cast Record 规避 TS union-write never
+- [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error + 8 同类 @/api warning，ProviderFormPanel 未 import @/api 故 +0 新增，无 vue/no-mutating-props warn）+ wc（1578→1395）；手测 create/edit 表单保存待用户跑
 
 ## Slice 11 — SelectedModelChips.vue + PrimaryModelPanel.vue
 
