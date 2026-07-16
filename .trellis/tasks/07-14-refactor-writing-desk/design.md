@@ -50,7 +50,8 @@ parent `07-12-engineering-baseline` acceptance 第 4 项「5 大前端组件 <50
 | **10** ✅ | WDSealStamp 子组件（闲章按钮 template 11 行 + seal-stamp scoped style ~118 行迁子；workspace-shell/m3-fade 留父） | 子组件 | ~128 | 802 |
 | **11** ✅ | useWritingDeskNavigation composable（getQueryChapterNumber + 3 watch + resolvedProjectEntryId 内化；项目加载/路由 query/项目切换章节定位状态机） | composable | ~57 | 745 |
 | **12** ✅ | WDProjectStatus 子组件（加载/错误状态 template ~37 行迁子，无 scoped 依赖） | 子组件 | ~31 | 714 |
-| 13+ | template/style 继续收敛 + dead code 清理（progress 群/utils dead imports/line-clamp dead style ~39 行）+ script 收尾，至 <500 | 子组件+style | ~214 | 当前 714 需再砍 ~214 |
+| **13** ✅ | useWritingDeskConfirm composable（**翻案 Slice 5 的 3c 不抽决定**，章节定稿 confirmVersionSelection 52 行方法抽 composable） | composable | ~41 | 674 |
+| 14+ | template/style 继续收敛（mobile-actions/backdrop）+ dead code 清理（progress/line-clamp/utils ~39）+ script 收尾，至 <500 | 子组件+style | ~174 | 当前 674 需再砍 ~174 |
 
 > roadmap 行数为粗估，每 slice 实施时以 rg/Read 真实磁盘为准。仿 NovelDetailShell 实际收益常优于预估。
 
@@ -790,3 +791,74 @@ script 侧 composable 抽取已达极限（Slice 1-11），继续 template/style
 - 745 → 714（-31；template 加载/错误 38 行 → WDProjectStatus 标签 6 行 + import +1，净 -31）。
 - vue-tsc 0 / vitest 141 绿 / eslint 0 新增（1 warning 预存 @/api/novel type import 行号位移 L178→L146 因 template -31 行上移；WDProjectStatus 0 warning）。
 - 独立复核 git diff：2 hunk（template 加载/错误 38 行→WDProjectStatus 标签 6 行 / +import WDProjectStatus），7 insertions / 38 deletions，留父 computed/loadProject/主内容零触及。
+
+---
+
+## Slice 13 设计：useWritingDeskConfirm composable（2026-07-16）✅ 714→674
+
+### 翻案说明（Slice 5 的 3c 决定重新评估）
+
+Slice 5 决定 3c「不抽 confirmVersionSelection」，理由：单方法 + 入参 8 含 composable 链传递 = 过度抽象，命中「No abstractions for single-use code」。
+
+现重新评估**翻案**，理由：
+1. **前提变化**：Slice 5 判断时 Slice 6-12 尚未做（还有其他可抽对象），现 Slice 6-12 已抽完，confirm 成 script 侧最后大块（52 行）。
+2. **复杂方法非过度**：confirm 是 52 行复杂定稿业务方法（版本校验 + 推荐回退 + 乐观状态更新 finalizing + mutation + refetch + 清空生成结果 + 失败回滚），非简单 single-use。CLAUDE.md「No abstractions for single-use code」针对不必要抽象（单次包装/配置），非复杂业务方法的关注点分离。
+3. **收益最大 + 风险最低**：template/style 路径已接近极限（mobile-actions -30/backdrop -14 小块 + @media 拆分风险），confirm -42 收益最大且纯 script 搬迁无 @media/template 拆分风险。
+4. **入参多但必要**：9 入参每个都是 confirm 必要依赖（版本选择/推荐/mutation/refetch/project/chapter 状态），无法减少，同 useWritingDeskOptimize 透传 composable 返回值范式。
+
+### 边界（迁入 composable）
+
+- 方法：confirmVersionSelection（L366-417，52 行）
+- 内化 import：globalAlert（confirm 用 showSuccess/showError）
+
+### 入参（9，透传父侧响应式源 + composable 返回值）
+
+- selectedChapterNumber: Ref<number | null>（读写，confirm 目标章节）
+- availableVersions: ReturnType<typeof useWritingDeskVersionDetail>['availableVersions']（检查版本内容）
+- selectedVersionIndex: Ref<number>（读写，定稿版本）
+- resolveRecommendedVersionIndex: ReturnType<typeof useWritingDeskVersionDetail>['resolveRecommendedVersionIndex']（缺失时回退推荐）
+- selectedChapter: ComputedRef<Chapter | null>（chapterState 返回）
+- project: ComputedRef<NovelProject | null>（更新 chapters 状态）
+- confirmFinalizeChapterMutation: ReturnType<typeof useConfirmFinalizeChapterMutation>（**留父**，chapterState 也用，透传入参）
+- refetchChapterIntoProject: ReturnType<typeof useWritingDeskProject>['refetchChapterIntoProject']
+- chapterGenerationResult: Ref<ChapterGenerationResponse | null>（清空）
+
+### 返回
+
+confirmVersionSelection（template @confirm-version-selection 绑定）。
+
+### 留父（零改动）
+
+- confirmFinalizeChapterMutation（chapterState L301 也用，留父透传）
+- 其余 composable 解构 + template 不变
+
+### 等价性
+
+- 方法体逐字搬迁，各 .value 访问不变（入参为 Ref/ComputedRef）
+- confirmFinalizeChapterMutation.mutateAsync / refetchChapterIntoProject / resolveRecommendedVersionIndex 调用不变
+- globalAlert 随迁入 composable
+- template 绑定不变（解构暴露同名）
+
+### 调用点
+
+useWritingDeskConfirm 解构插在 useWritingDeskChapterGeneration 后、useWritingDeskChapterOps 前（原 confirm 位）。9 入参全在前定义 ✅。
+
+### const TDZ
+
+composable 内仅 confirmVersionSelection 一个方法，无内部依赖。无 forward reference。
+
+### orphan import 清理（本次产生，删 1）
+
+- globalAlert（confirm 迁走 → 父无其他消费，rg 确认仅 import 行残留）
+
+### spec
+
+零指针跟随：
+- wdWorkspaceLockedChapter L228 `toContain('确认定稿')` 是 DOM 文本断言（UI 渲染文本来自子组件，非 WritingDesk 源码）
+- chapterDraftFinalizeStatic L32 读 VersionSelector.vue 源码（非 WritingDesk），L40 断言 VersionSelector emit
+
+### 完成（2026-07-16）
+
+- 714 → 674（-40；confirm 52 行 → composable 解构 11 行 + 删 globalAlert import -1 + 加 useWritingDeskConfirm import +1，净 -41）。
+- vue-tsc 0 / vitest 141 绿 / eslint 0 新增（1 warning 预存 @/api/novel type import L146；useWritingDeskConfirm 0 warning，ReturnType<typeof> import 范式同 Slice 8 被接受）。
+- 独立复核 git diff：3 hunk（删 globalAlert import / +useWritingDeskConfirm import / confirm 方法 52 行→解构 11 行），12 insertions / 53 deletions，留父 confirmFinalizeChapterMutation/composable 解构零触及。

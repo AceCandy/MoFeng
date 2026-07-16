@@ -155,11 +155,11 @@ import {
   useNovelMutationRefresh,
   useNovelProjectQuery,
 } from '@/queries/novel'
-import { globalAlert } from '@/composables/useAlert'
 import { useWritingDeskDrawers } from '@/composables/useWritingDeskDrawers'
 import { useWritingDeskChapterGeneration } from '@/composables/useWritingDeskChapterGeneration'
 import { useWritingDeskChapterOps } from '@/composables/useWritingDeskChapterOps'
 import { useWritingDeskChapterState } from '@/composables/useWritingDeskChapterState'
+import { useWritingDeskConfirm } from '@/composables/useWritingDeskConfirm'
 import { useWritingDeskModals } from '@/composables/useWritingDeskModals'
 import { useWritingDeskNavigation } from '@/composables/useWritingDeskNavigation'
 import { useWritingDeskOptimize } from '@/composables/useWritingDeskOptimize'
@@ -363,58 +363,17 @@ const { generateChapter, retryFromNode, regenerateChapter } = useWritingDeskChap
   refetchChapterIntoProject,
 })
 
-const confirmVersionSelection = async (payload?: { editedContent?: string | null }) => {
-  const targetChapterNumber = selectedChapterNumber.value
-  if (targetChapterNumber === null) {
-    return
-  }
-
-  if (!availableVersions.value?.[selectedVersionIndex.value]?.content) {
-    const recommendedIndex = resolveRecommendedVersionIndex(
-      selectedChapter.value,
-      availableVersions.value,
-    )
-    if (recommendedIndex !== null) {
-      selectedVersionIndex.value = recommendedIndex
-    }
-  }
-
-  if (!availableVersions.value?.[selectedVersionIndex.value]?.content) {
-    return
-  }
-
-  try {
-    if (project.value?.chapters) {
-      const chapter = project.value.chapters.find((ch) => ch.chapter_number === targetChapterNumber)
-      if (chapter) {
-        chapter.generation_status = 'finalizing'
-        chapter.generation_step = 'confirm_finalize'
-        chapter.generation_progress = 90
-      }
-    }
-
-    await confirmFinalizeChapterMutation.mutateAsync({
-      chapterNumber: targetChapterNumber,
-      selectedVersionIndex: selectedVersionIndex.value,
-      editedContent: payload?.editedContent ?? null,
-    })
-    await refetchChapterIntoProject(targetChapterNumber)
-    chapterGenerationResult.value = null
-    globalAlert.showSuccess('章节已定稿，后处理已完成', '定稿完成')
-  } catch (error) {
-    console.error('确认定稿失败:', error)
-    if (project.value?.chapters) {
-      const chapter = project.value.chapters.find((ch) => ch.chapter_number === targetChapterNumber)
-      if (chapter) {
-        chapter.generation_status = 'waiting_for_confirm'
-      }
-    }
-    globalAlert.showError(
-      `确认定稿失败: ${error instanceof Error ? error.message : '未知错误'}`,
-      '定稿失败',
-    )
-  }
-}
+const { confirmVersionSelection } = useWritingDeskConfirm({
+  selectedChapterNumber,
+  availableVersions,
+  selectedVersionIndex,
+  resolveRecommendedVersionIndex,
+  selectedChapter,
+  project,
+  confirmFinalizeChapterMutation,
+  refetchChapterIntoProject,
+  chapterGenerationResult,
+})
 
 const { evaluateChapter, deleteChapter } = useWritingDeskChapterOps({
   projectId: () => props.id,
