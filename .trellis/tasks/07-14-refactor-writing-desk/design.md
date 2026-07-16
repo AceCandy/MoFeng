@@ -45,7 +45,7 @@ parent `07-12-engineering-baseline` acceptance 第 4 项「5 大前端组件 <50
 | ~~3c~~ | confirmVersionSelection **决定不抽**（单方法+入参 8 含 composable 链传递 availableVersions/resolveRecommendedVersionIndex=过度抽象，留父消费已解构返回值更简） | — | 0 | 1206 |
 | **6** ✅ | useWritingDeskProject composable（loadProject/refetchChapterIntoProject/viewProjectDetail/goBack/selectChapter/fetchChapterStatus/stopChapterStatusStream + 内化 4 statusStream refs + onUnmounted，**含 spec L341 source 拼接 + L342 regex 锚点简化 + L346 currentProjectId 指针跟随**） | composable | ~95 | 1111 |
 | **7** ✅ | useWritingDeskModals composable（WDEditChapterModal/WDGenerateOutlineModal/WDEvaluationDetailModal state + open/save 方法 + editChapterContent 内联快编 + 内化 3 mutation） | composable | ~56 | 1055 |
-| 8 | 章节状态判断 canGenerateChapter/isChapterFailed/hasChapterInProgress + progress/totalChapters/completedChapters/latestCompletedChapterNumber 并入 composable | composable | ~80 | 916 |
+| **8** ✅ | useWritingDeskChapterState composable（**边界调整**：原 progress 群中 canGenerate/isFailed/hasInProgress 已 3a 迁、progress/totalChapters/completedChapters=dead code 留父，实抽 selectedChapter/showVersionSelector/evaluatingChapter/activeEvaluatingChapter/isSelectingVersion/selectedChapterOutline/latestCompletedChapterNumber 7 符号） | composable | ~41 | 1014 |
 | 9+ | template/style 收敛（剩余 layout style 拆分、H 块章节 computed、O 大纲编辑等），至 <500 | 子组件+style | ~330 | 586（**预估后仍 >500，后续 slice 据实扩展**） |
 
 > roadmap 行数为粗估，每 slice 实施时以 rg/Read 真实磁盘为准。仿 NovelDetailShell 实际收益常优于预估。
@@ -474,3 +474,73 @@ modal 符号零 spec 断言（codegraph blast radius 全 no covering tests；rg 
 - 1111 → 1055（-56；估 ~80 偏高，6 方法较短 + 5 ref + 3 mutation 净删 ~80，加 insert 解构 24 行抵消）。
 - vue-tsc 0 / vitest 141 绿 / eslint 0 新增（1 warning 预存 @/api/novel WritingDesk L189 type import；composable 0 warning）。
 - 独立复核 git diff：7 hunk（queries import 删 3 mutation / +composable import / 删 5 refs / 删 3 mutations / useWritingDeskModals 解构插入 22 行 / 删块A 3 方法 26 行 / 删块B 3 方法 47 行），留父 applyRecommendedOptimization/confirmVersionSelection/loader+defineAsyncComponent 零触及。
+
+---
+
+## Slice 8 设计：useWritingDeskChapterState composable（2026-07-16）✅ 1055→1014
+
+### 边界调整说明（原 roadmap 失效）
+
+原 Slice 8 roadmap 列「章节状态判断 canGenerateChapter/isChapterFailed/hasChapterInProgress + progress/totalChapters/completedChapters/latestCompletedChapterNumber 并 composable」。实施前 rg/codegraph 依赖分析发现：
+
+- canGenerateChapter/isChapterFailed/hasChapterInProgress：Slice 3a 已内化到 useWritingDeskChapterGeneration，**不在父**
+- progress/totalChapters/completedChapters：**无任何消费点 = pre-existing dead code**（rg `\bprogress\b` 等仅命中定义行 + progress 内部局部变量；WDAssistantPanel 有自己同名 computed 不接收父传值）
+- latestCompletedChapterNumber：单 computed（仅 3b 入参消费），单抽 = 过度抽象
+
+故原 roadmap 失效（3 dead code + 1 过度抽象）。调整为抽 H 块的「章节派生状态群」——selectedChapter 等 7 符号同属「选中章节 + 项目数据」派生、共享 project/selectedChapterNumber/chapterQuery 响应式源、内聚度高。
+
+### 边界（迁入 composable）
+
+- computed：selectedChapter / showVersionSelector / activeEvaluatingChapter / isSelectingVersion / selectedChapterOutline / latestCompletedChapterNumber
+- ref：evaluatingChapter（仅 activeEvaluatingChapter 消费，故同入）
+
+### 入参（4）
+
+- project: ComputedRef<NovelProject | null>（selectedChapter/selectedChapterOutline/latestCompletedChapterNumber 用）
+- selectedChapterNumber: Ref<number | null>（selectedChapter/selectedChapterOutline 用）
+- chapterQuery: ReturnType<typeof useNovelChapterQuery>（selectedChapter 优先取 chapterQuery.data）
+- confirmFinalizeChapterMutation: ReturnType<typeof useConfirmFinalizeChapterMutation>（isSelectingVersion 用 .isPending，留父因 confirmVersionSelection 3c 也用）
+
+### 返回（7 符号，全被消费）
+
+- selectedChapter（template WDAssistantPanel :selected-chapter + WDEvaluationDetailModal :evaluation + useWritingDeskVersionDetail 入参 + 6 处留父方法 optimize/apply/confirm）
+- showVersionSelector/activeEvaluatingChapter/isSelectingVersion/selectedChapterOutline（template props）
+- evaluatingChapter/latestCompletedChapterNumber（useWritingDeskChapterOps 入参）
+
+### 留父（零改动）
+
+- confirmFinalizeChapterMutation（confirmVersionSelection 3c 用 + 透传 composable）
+- progress/totalChapters/completedChapters：**dead code 留父不动**（无消费，CLAUDE.md「notice dead code, don't delete」，建议用户单独决定是否清理）
+- 6 处留父方法（optimizeRecommendedVersionFromEvaluation/applyRecommendedOptimization/confirmVersionSelection 等）消费解构回父的 selectedChapter
+
+### 等价性
+
+- computed/ref 逐字搬迁，project.value/selectedChapterNumber.value/chapterQuery.data.value/confirmFinalizeChapterMutation.isPending.value 访问不变（入参为 ComputedRef/Ref/mutation 实例）
+- selectedChapter 解构回父，version detail/chapterOps composable 入参 + 留父方法访问同名 ComputedRef，行为等价
+- 内部 computed 链（showVersionSelector/activeEvaluatingChapter/isSelectingVersion 消费 selectedChapter）迁入 composable 内，引用 composable 内 selectedChapter，等价
+
+### 调用点
+
+useWritingDeskChapterState 解构插在 3 watch 之后、原 selectedChapter 定义位（替换 inline computed 为解构）：
+
+- 入参 project(L295)/selectedChapterNumber(L251)/chapterQuery(L290)/confirmFinalizeChapterMutation(L289) 均在其前定义
+- 返回 selectedChapter 被 useWritingDeskVersionDetail(L470 区) 入参消费、evaluatingChapter/latestCompletedChapterNumber 被 useWritingDeskChapterOps(L645 区) 入参消费——均在解构之后 ✅
+- 留父方法（L493+）访问 selectedChapter——在解构之后 ✅
+
+### const TDZ
+
+composable 内：selectedChapter → showVersionSelector（调 selectedChapter）→ evaluatingChapter ref → activeEvaluatingChapter（调 evaluatingChapter + selectedChapter）→ isSelectingVersion（调 selectedChapter + confirmFinalizeChapterMutation）→ selectedChapterOutline → latestCompletedChapterNumber。无 forward reference。
+
+### spec
+
+章节派生符号零 spec 断言（codegraph blast radius 这些符号 no covering tests；wdWorkspaceLockedChapter 守护版本逻辑不触及 selectedChapter 群）。零指针跟随。
+
+### 注：progress/totalChapters/completedChapters dead code
+
+rg 确认 `\bprogress\b`/`\btotalChapters\b`/`\bcompletedChapters\b` 在 WritingDesk.vue 仅命中定义行（progress 内部用局部 totalChapters/completedChapters，shadow 外层 computed 但不引用）+ 无 template/composable 消费。WDAssistantPanel 有自己的 totalChapters/completedChapters computed（独立）。故这 3 个是 pre-existing dead code。本次**留父不动**（不删不抽），建议用户单独决定是否清理（可 -14 行）。
+
+### 完成（2026-07-16）
+
+- 1055 → 1014（-41；7 符号 ~56 行替换为解构 14 行）。
+- vue-tsc 0 / vitest 141 绿 / eslint 0 新增（1 warning 预存 @/api/novel WritingDesk L189 type import；composable 0 warning）。
+- 独立复核 git diff：2 hunk（+composable import / 7 符号定义 56 行替换为解构 14 行），progress/totalChapters/completedChapters dead code 留父未触及。

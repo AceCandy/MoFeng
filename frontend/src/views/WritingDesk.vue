@@ -204,6 +204,7 @@ import { globalAlert } from '@/composables/useAlert'
 import { useWritingDeskDrawers } from '@/composables/useWritingDeskDrawers'
 import { useWritingDeskChapterGeneration } from '@/composables/useWritingDeskChapterGeneration'
 import { useWritingDeskChapterOps } from '@/composables/useWritingDeskChapterOps'
+import { useWritingDeskChapterState } from '@/composables/useWritingDeskChapterState'
 import { useWritingDeskModals } from '@/composables/useWritingDeskModals'
 import { useWritingDeskProject } from '@/composables/useWritingDeskProject'
 import { useWritingDeskVersionDetail } from '@/composables/useWritingDeskVersionDetail'
@@ -395,61 +396,19 @@ watch(
   },
 )
 
-const selectedChapter = computed(() => {
-  if (!project.value || selectedChapterNumber.value === null) return null
-  if (chapterQuery.data.value?.chapter_number === selectedChapterNumber.value) {
-    return chapterQuery.data.value
-  }
-  return (
-    project.value.chapters.find((ch) => ch.chapter_number === selectedChapterNumber.value) || null
-  )
-})
-
-const showVersionSelector = computed(() => {
-  if (!selectedChapter.value) return false
-  const status = selectedChapter.value.generation_status
-  return (
-    status === 'waiting_for_confirm' ||
-    status === 'evaluating' ||
-    status === 'evaluation_failed' ||
-    status === 'selecting'
-  )
-})
-
-const evaluatingChapter = ref<number | null>(null)
-
-const activeEvaluatingChapter = computed(() => {
-  return (
-    evaluatingChapter.value ??
-    (selectedChapter.value?.generation_status === 'evaluating'
-      ? selectedChapter.value.chapter_number
-      : null)
-  )
-})
-
-const isSelectingVersion = computed(() => {
-  return (
-    selectedChapter.value?.generation_status === 'finalizing' ||
-    confirmFinalizeChapterMutation.isPending.value
-  )
-})
-
-const selectedChapterOutline = computed(() => {
-  if (!project.value?.blueprint?.chapter_outline || selectedChapterNumber.value === null)
-    return null
-  return (
-    project.value.blueprint.chapter_outline.find(
-      (ch) => ch.chapter_number === selectedChapterNumber.value,
-    ) || null
-  )
-})
-
-const latestCompletedChapterNumber = computed(() => {
-  const completedNumbers =
-    project.value?.chapters
-      ?.filter((chapter) => chapter.generation_status === 'successful')
-      .map((chapter) => chapter.chapter_number) ?? []
-  return completedNumbers.length ? Math.max(...completedNumbers) : null
+const {
+  selectedChapter,
+  showVersionSelector,
+  evaluatingChapter,
+  activeEvaluatingChapter,
+  isSelectingVersion,
+  selectedChapterOutline,
+  latestCompletedChapterNumber,
+} = useWritingDeskChapterState({
+  project,
+  selectedChapterNumber,
+  chapterQuery,
+  confirmFinalizeChapterMutation,
 })
 
 const progress = computed(() => {
