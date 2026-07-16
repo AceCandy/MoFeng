@@ -49,7 +49,8 @@ parent `07-12-engineering-baseline` acceptance 第 4 项「5 大前端组件 <50
 | **9** ✅ | useWritingDeskOptimize composable（推荐优化 3 方法 close/optimize/apply + 内化 3 refs/2 computed/2 mutations；query/utils orphan 删 5） | composable | ~84 | 930 |
 | **10** ✅ | WDSealStamp 子组件（闲章按钮 template 11 行 + seal-stamp scoped style ~118 行迁子；workspace-shell/m3-fade 留父） | 子组件 | ~128 | 802 |
 | **11** ✅ | useWritingDeskNavigation composable（getQueryChapterNumber + 3 watch + resolvedProjectEntryId 内化；项目加载/路由 query/项目切换章节定位状态机） | composable | ~57 | 745 |
-| 12+ | template/style 收敛（loading/error 状态、layout style 拆分）+ dead code 清理（progress 群/utils dead imports）+ script 收尾，至 <500 | 子组件+style | ~245 | 当前 745 需再砍 ~245 |
+| **12** ✅ | WDProjectStatus 子组件（加载/错误状态 template ~37 行迁子，无 scoped 依赖） | 子组件 | ~31 | 714 |
+| 13+ | template/style 继续收敛 + dead code 清理（progress 群/utils dead imports/line-clamp dead style ~39 行）+ script 收尾，至 <500 | 子组件+style | ~214 | 当前 714 需再砍 ~214 |
 
 > roadmap 行数为粗估，每 slice 实施时以 rg/Read 真实磁盘为准。仿 NovelDetailShell 实际收益常优于预估。
 
@@ -736,4 +737,56 @@ composable 内：route → resolvedProjectEntryId → getQueryChapterNumber（�
 
 - 802 → 745（-57；getQueryChapterNumber 7 + 3 watch ~55 + resolvedProjectEntryId 1 + route 1 - composable 调用 9 + import 调整 净 -57）。
 - vue-tsc 0 / vitest 141 绿（wdWorkspaceLockedChapter 10/10）/ eslint 0 新增（1 warning 预存 @/api/novel type import 行号位移 L179→L178 因删 useRoute；composable 0 warning）。
-- 独立复核 git diff：4 hunk（vue/vue-router import 删 watch+useRoute / +composable import / @/utils chapter 删 resolve 2 / route 定义删 + resolvedProjectEntryId 删 + watch 块 62 行替换为 composable 调用 9 行），11 insertions / 68 deletions，留父 confirm/dead code 零触及。
+- 独立复核 git diff：4 hunk（vue/vue-router import 删 watch+useRoute / +composable import / @utils chapter 删 resolve 2 / route 定义删 + resolvedProjectEntryId 删 + watch 块 62 行替换为 composable 调用 9 行），11 insertions / 68 deletions，留父 confirm/dead code 零触及。
+
+---
+
+## Slice 12 设计：WDProjectStatus 子组件（2026-07-16）✅ 745→714
+
+### 背景
+
+script 侧 composable 抽取已达极限（Slice 1-11），继续 template/style 拆分。加载状态（projectLoading）+ 错误状态（projectError）是 template 内最大可独立块（~37 行，v-if/v-else-if 互斥分支），且**无 scoped style 依赖**（全全局 class md-spinner/md-card/md-btn + inline style）→ 最干净的 template 拆分（零 scoped 跨组件问题，区别 NovelDetailShell S3/S9 需迁 scoped）。
+
+### 边界（迁入子组件）
+
+- template：加载状态 div（v-if projectLoading，md-spinner）+ 错误状态 div（v-else-if projectError，md-card + svg 图标 + 加载失败 + 错误文案 + 重新加载 button）
+- 无 scoped style（纯全局 class + inline style，子组件无 `<style>` 块）
+
+### props/emit
+
+- props: loading（父 projectLoading）/ error（父 projectError，string|null）
+- emit: retry（父 loadProject）
+
+### v-if/v-else-if 链改造
+
+原父 template 三分支：`v-if="projectLoading"` / `v-else-if="projectError"` / `v-else-if="project"`（主内容）。
+
+抽子组件后父：`<WDProjectStatus v-if="projectLoading || projectError" .../>` + 主内容 `<div v-else-if="project">`。子组件内：`v-if="loading"`（加载）/ `v-else`（错误）。
+
+等价性：
+- projectLoading=true → 父 v-if 命中，子 v-if=loading 加载状态 ✅
+- projectLoading=false, projectError≠null → 父 v-if 命中（error truthy），子 v-else 错误状态 ✅
+- projectLoading=false, projectError=null → 父 v-if 不命中，v-else-if=project 主内容 ✅
+
+### 留父（零改动）
+
+- projectLoading/projectError computed（projectQuery 消费，透传 props）
+- loadProject（useWritingDeskProject 返回值，@retry 绑定）
+- 主内容区 + 5 modal + 其余 template/style 全不动
+
+### 等价性
+
+- projectError → error prop（{{ error }} 显示，类型 string|null，运行时父条件保证非 null 时显示）
+- @click=loadProject → @click="$emit('retry')" + 父 @retry="loadProject"
+- 全局 class + inline style 逐字搬迁，DOM 结构不变（子组件多根 v-if/v-else 两 div，Vue 3 允许）
+- 非 lazy（首屏核心状态，直接 import 同 WDSidebar/WDWorkspace/WDSealStamp）
+
+### spec
+
+加载/错误符号零 spec 断言（wdWorkspaceLockedChapter 守护版本逻辑 fetchChapterStatus/selectChapter，不触及 projectLoading/projectError/加载失败文案）。零指针跟随。
+
+### 完成（2026-07-16）
+
+- 745 → 714（-31；template 加载/错误 38 行 → WDProjectStatus 标签 6 行 + import +1，净 -31）。
+- vue-tsc 0 / vitest 141 绿 / eslint 0 新增（1 warning 预存 @/api/novel type import 行号位移 L178→L146 因 template -31 行上移；WDProjectStatus 0 warning）。
+- 独立复核 git diff：2 hunk（template 加载/错误 38 行→WDProjectStatus 标签 6 行 / +import WDProjectStatus），7 insertions / 38 deletions，留父 computed/loadProject/主内容零触及。
