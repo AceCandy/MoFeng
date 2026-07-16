@@ -554,6 +554,7 @@ import { useDialogA11y } from '@/composables/useDialogA11y'
 import { useProviderModelsQuery } from '@/queries/llm'
 import { useModelBundle } from '@/composables/useModelBundle'
 import { useSectionMeta } from './useSectionMeta'
+import { useStageRoutes } from './useStageRoutes'
 import type {
   Capability,
   ProviderFetchState,
@@ -561,7 +562,6 @@ import type {
   ProviderFormMode,
   RoutingSection,
 } from './modelRoutingTypes'
-import { stageGroups } from './stageDefinitions'
 import {
   capabilityForSection,
   createModelPayload,
@@ -608,8 +608,6 @@ const {
 } = useModelBundle({
   onLoaded: () => syncRouteSelectionsFromBundle(),
 })
-const routeSelections = reactive<Record<string, string>>({})
-const initialRouteSelections = ref<Record<string, string>>({})
 const providerFetchStates = reactive<Record<number, ProviderFetchState>>({})
 const editingProviderId = ref<number | null>(null)
 const providerFormMode = ref<ProviderFormMode>(null)
@@ -642,10 +640,20 @@ const emptyProviderForm = (): ProviderForm => ({
 
 const providerForm = reactive<ProviderForm>(emptyProviderForm())
 
-const chatStageGroups = computed(() => stageGroups)
-const allStageKeys = computed(() =>
-  chatStageGroups.value.flatMap((group) => group.stages.map((stage) => stage.key)),
-)
+const {
+  routeSelections,
+  chatStageGroups,
+  allStageKeys,
+  syncRouteSelectionsFromBundle,
+  saveRoutes,
+  isDirty,
+} = useStageRoutes({
+  bundleQuery,
+  saveStageRoutesMutation,
+  providerFormMode,
+  setFeedback,
+  onSaved: () => emit('saved'),
+})
 const {
   enabledChatModels,
   primaryChatModel,
@@ -837,20 +845,6 @@ useDialogA11y({
   trapFocus: false,
   lockBodyScroll: false,
 })
-
-const syncRouteSelectionsFromBundle = () => {
-  const bundle = bundleQuery.data.value
-  for (const key of allStageKeys.value) {
-    routeSelections[key] = ''
-  }
-  for (const route of bundle?.stage_routes ?? []) {
-    if (allStageKeys.value.includes(route.stage)) {
-      routeSelections[route.stage] = String(route.model_id)
-    }
-  }
-  // 备份一份初始状态，以便判断脏数据
-  initialRouteSelections.value = { ...routeSelections }
-}
 
 const beginCreateProvider = () => {
   editingProviderId.value = null
@@ -1301,41 +1295,8 @@ const deleteModelForActiveSection = async (provider: UserModelProvider, modelNam
   }
 }
 
-const saveRoutes = async () => {
-  const routes = Object.entries(routeSelections)
-    .filter(([, modelId]) => modelId)
-    .map(([stage, modelId]) => ({ stage, model_id: Number(modelId) }))
-
-  try {
-    const savedRoutes = await saveStageRoutesMutation.mutateAsync({ routes })
-    for (const key of allStageKeys.value) {
-      routeSelections[key] = ''
-    }
-    for (const route of savedRoutes) {
-      if (allStageKeys.value.includes(route.stage)) {
-        routeSelections[route.stage] = String(route.model_id)
-      }
-    }
-    // 保存成功，重置脏数据状态
-    initialRouteSelections.value = { ...routeSelections }
-    setFeedback('success', '阶段路由已保存。')
-    emit('saved')
-  } catch (error) {
-    const message = error instanceof Error ? error.message : '未知错误'
-    setFeedback('error', `阶段路由保存失败：${message}`)
-  }
-}
-
 const providerName = (providerId: number): string =>
   providers.value.find((provider) => provider.id === providerId)?.name || `供应商 ${providerId}`
-
-watch(
-  () => bundleQuery.data.value,
-  () => {
-    syncRouteSelectionsFromBundle()
-  },
-  { immediate: true },
-)
 
 watch(
   () => activeSection.value,
@@ -1362,24 +1323,6 @@ onMounted(() => {
   window.addEventListener('scroll', onPickerViewportChange, true)
   window.addEventListener('resize', onPickerViewportChange)
   void loadBundle()
-})
-
-const isDirty = computed(() => {
-  // 1. 如果正在编辑或创建供应商表单，则有未保存修改
-  if (providerFormMode.value !== null) {
-    return true
-  }
-
-  // 2. 检查阶段路由是否有未保存修改
-  for (const key of allStageKeys.value) {
-    const currentVal = routeSelections[key] || ''
-    const initialVal = initialRouteSelections.value[key] || ''
-    if (currentVal !== initialVal) {
-      return true
-    }
-  }
-
-  return false
 })
 
 defineExpose({

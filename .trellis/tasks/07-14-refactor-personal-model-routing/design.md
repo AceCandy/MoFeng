@@ -63,8 +63,8 @@
 | 1 ✅ | `stageDefinitions.ts`（stageGroups）+ `modelRoutingTypes.ts` + ttsSettings.spec 指针跟随 | data | 极低 | 2684 → **2513** |
 | 2 ✅ | `modelRoutingHelpers.ts`（8 纯函数/常量参数化）+ createModelPayload 单测（10 tests） | data+test | 低 | 2513 → **2416** |
 | 3 ✅ | `useModelBundle` composable（bundleQuery+7mutation+5computed+feedback+loadBundle+watch error；onLoaded 回调透传 sync 规避 const TDZ） | composable | 低 | 2416 → **2382** |
-| 4 | `useSectionMeta` composable | composable | 低 | ~2310 → ~2150 |
-| 5 | `useStageRoutes` composable（含 isDirty routes 分支） | composable | 中 | ~2150 → ~2050 |
+| 4 ✅ | `useSectionMeta` composable（15 computed 群；activeProviders 用 capabilityForSection 局部 capability 等价 wrapper，红线#1 单一过滤不变；ttsSettings.spec 指针跟随） | composable | 低 | 2382 → **2309** |
+| 5 ✅ | `useStageRoutes` composable（routeSelections/initialRouteSelections state+chatStageGroups/allStageKeys+sync/saveRoutes+isDirty 含 providerFormMode+routes 两分支+watch(data→sync,immediate)；emit('saved')→onSaved 回调交父） | composable | 中 | 2309 → **2252** |
 | 6 | `useProviderForm` composable | composable | 中 | ~2050 → ~1880 |
 | 7 | `useModelPicker` composable（弹窗状态机 + a11y + lifecycle） | composable | 高 | ~1880 → ~1650 |
 | 8 | `useModelSelection` composable（含派生函数群） | composable | 中高 | ~1650 → ~1320 |

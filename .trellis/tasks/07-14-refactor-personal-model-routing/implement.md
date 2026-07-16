@@ -34,18 +34,18 @@
 - [x] 主组件解构替换（16 符号）；watch(bundleQuery.data→sync) 留父（Slice 5 抽，依赖 sync）；onMounted 内 loadBundle 调用留父
 - [x] 验证：三件套（vue-tsc 0 const TDZ 通过 / vitest 151 绿 / eslint 0 error，3 同类 type-only warning）+ wc（2416→2382，composable 解构块抵消部分收益属正常）
 
-## Slice 4 — useSectionMeta composable
+## Slice 4 — useSectionMeta composable ✅
 
-- [ ] 建 `useSectionMeta.ts`：sectionEyebrow/heading/description/readinessSummary + enabled/default computed 群 + activeProviders + chatModelsByProvider 等
-- [ ] 入参透传 bundle(providers/models) + activeSection + routeSelections/allStageKeys
-- [ ] 验证：三件套 + wc
+- [x] 建 `useSectionMeta.ts`：sectionEyebrow/heading/description/readinessSummary + enabled/default computed 群 + activeProviders + chatModelsByProvider 等
+- [x] 入参透传 bundle(providers/models) + activeSection + routeSelections/allStageKeys
+- [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error，4 同类 type-only warning）+ wc（2382→2309）
 
-## Slice 5 — useStageRoutes composable
+## Slice 5 — useStageRoutes composable ✅
 
-- [ ] 建 `useStageRoutes.ts`：routeSelections/initialRouteSelections + chatStageGroups/allStageKeys + syncRouteSelectionsFromBundle + saveRoutes + isDirty(routes 分支) + watch(bundleQuery.data→sync)
-- [ ] 入参透传 bundle + saveStageRoutesMutation + providerFormMode（isDirty 用）
-- [ ] defineExpose isDirty 改读 composable 返回
-- [ ] 验证：三件套 + wc + 手测 routes 保存/isDirty
+- [x] 建 `useStageRoutes.ts`：routeSelections/initialRouteSelections + chatStageGroups/allStageKeys + syncRouteSelectionsFromBundle + saveRoutes + isDirty（providerFormMode + routes 两分支）+ watch(bundleQuery.data→sync, immediate)
+- [x] 入参透传 bundleQuery + saveStageRoutesMutation + providerFormMode（isDirty 用）+ setFeedback + onSaved（替代 emit('saved')，延迟绑定规避 const TDZ）
+- [x] defineExpose isDirty 改读 composable 返回（变量名同零适配）；useModelBundle onLoaded 透传 syncRouteSelectionsFromBundle 箭头延迟绑定
+- [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error，4 同类 type-only warning）+ wc（2309→2252）
 
 ## Slice 6 — useProviderForm composable
 
