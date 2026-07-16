@@ -306,3 +306,40 @@ NovelDetailShell Slice 10：抽 novel-detail/ShellContent.vue 子组件（conten
 ### Next Steps
 
 - None - task complete
+
+
+## Session 10: WritingDesk 拆分收口（Slice 11-15，2009→619）
+
+**Date**: 2026-07-16
+**Task**: WritingDesk 拆分收口（Slice 11-15，2009→619）
+**Branch**: `main`
+
+### Summary
+
+WritingDesk.vue 拆分 Slice 11-15：useWritingDeskNavigation(章节定位状态机)/WDProjectStatus(加载错误展示子组件)/useWritingDeskConfirm(翻案 Slice5 3c 不抽决定，定稿流程 composable)/dead code 清理(progress群+line-clamp+utils dead imports)/ink-backdrop-fade 死 keyframes 收口清理。2009→619(-69%)。未达 <500 硬指标，用户 A 决策按「已尽力+不过度抽象」收口：layout grid 拆分=17props+17emits 纯透传过度抽象否决，mobile-actions/backdrop 边际不拆，script 已极限。每 slice 三件套绿(vue-tsc 0/vitest 141/eslint 0 新增)。子任务归档，parent #22 仍 in_progress(3/5 达标，PersonalModelRouting 未开始)。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `fa9a3ba` | (see git log) |
+| `3ebd274` | (see git log) |
+| `2acc53a` | (see git log) |
+| `0d9c201` | (see git log) |
+| `2f55914` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
