@@ -56,11 +56,11 @@
 
 ## Slice 7 — useModelPicker composable（最高风险）
 
-- [ ] 建 `useModelPicker.ts`：弹窗状态机（activeModelPickerProviderId/position/refs/query/pending sets/isSavingPicker）+ openProviderModelPicker/closeModelPicker/updateModelPickerPosition/loadProviderModels/enabledChatModelNamesFor + isModelPickerActive/isModelPickerOpen/modelPickerStyle/isChatPickerDirty + setModelPickerDialogRef/setModelPickerSearchInputRef + onPickerClickOutside/onPickerViewportChange + useDialogA11y + onMounted/onBeforeUnmount 监听注册 + watch(activeSection/activeProviders→close)
-- [ ] **保留 id 选择器 hack + 函数 ref**
-- [ ] 入参透传 bundle + activeSection + sectionMeta(defaultTTSModel/ttsModelsByProvider) + selection(save 方法透传)
-- [ ] 验证：三件套 + wc + 手测弹窗定位/外部点击/视口关闭
-- [ ] review gate：循环依赖（save 透传）解构顺序
+- [x] 建 `useModelPicker.ts`：弹窗状态机（activeModelPickerProviderId/position/refs/query/pending sets/isSavingPicker）+ openProviderModelPicker/closeModelPicker/updateModelPickerPosition/loadProviderModels/enabledChatModelNamesFor + isModelPickerActive/isModelPickerOpen/modelPickerStyle/isChatPickerDirty + setModelPickerDialogRef/setModelPickerSearchInputRef + onPickerClickOutside/onPickerViewportChange + useDialogA11y + onMounted/onBeforeUnmount 监听注册 + watch(activeSection/activeProviders→close)
+- [x] **保留 id 选择器 hack + 函数 ref**（onPickerClickOutside/onPickerViewportChange 内 `#model-picker-${id}` + 函数 ref setter 返回供 template :ref）
+- [x] 入参透传 models(bundle) + activeSection + providerFetchState(providerForm) + sectionMeta(defaultTTSModel/ttsModelsByProvider/activeProviders)；调用点 useSectionMeta 后、selection 派生前规避 const TDZ（selection 派生是函数延迟调用 picker 返回值）
+- [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error，6 同类 @/api warning，useModelPicker 新增 1）+ wc（2138→1936）；手测弹窗定位/外部点击/视口关闭待用户跑
+- [x] review gate：循环依赖未触发——picker 不需 selection save（单向 selection→picker，selection 调 picker 的 closeModelPicker/pending），故无 save 透传；onMounted 监听注册迁 composable 内 onMounted，父 onMounted 仅剩 loadBundle
 
 ## Slice 8 — useModelSelection composable
 

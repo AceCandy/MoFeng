@@ -43,6 +43,8 @@ describe('TTS settings integration', () => {
 
   it('saves existing TTS settings explicitly without racing model changes', () => {
     const routing = source('src/components/llm-settings/PersonalModelRouting.vue')
+    // picker 弹窗状态机（含 useDialogA11y 的 onClose 关闭逻辑）已抽离到 useModelPicker.ts（Slice 7）
+    const picker = source('src/components/llm-settings/useModelPicker.ts')
 
     expect(routing).toContain('@click="savePickerSelections(provider)"')
     expect(routing).toContain('@change="selectPendingTTSModel(provider, modelName)"')
@@ -53,9 +55,9 @@ describe('TTS settings integration', () => {
     expect(routing).toMatch(
       /v-if="activeSection === 'tts' \|\| !isChatPickerDirty"[\s\S]{0,180}:disabled="isSavingPicker"/,
     )
-    expect(routing).toContain('onClose: () => {')
-    expect(routing).toContain('if (!isSavingPicker.value) {')
-    expect(routing).not.toContain('onClose: closeModelPicker')
+    expect(picker).toContain('onClose: () => {')
+    expect(picker).toContain('if (!isSavingPicker.value) {')
+    expect(picker).not.toContain('onClose: closeModelPicker')
   })
 
   it('isolates TTS providers by capability like chat and embedding', () => {
