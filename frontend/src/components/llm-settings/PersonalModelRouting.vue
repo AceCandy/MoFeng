@@ -546,9 +546,7 @@ import {
 } from 'vue'
 import type {
   ProviderCreate,
-  ProviderType,
   UserAIModel,
-  UserAIModelCreate,
   UserModelProvider,
 } from '@/api/llm'
 import { globalAlert } from '@/composables/useAlert'
@@ -573,6 +571,15 @@ import type {
   RoutingSection,
 } from './modelRoutingTypes'
 import { stageGroups } from './stageDefinitions'
+import {
+  capabilityForSection,
+  createModelPayload,
+  createProviderCapabilities,
+  groupModelsByProvider,
+  modelDisplayName,
+  providerCapabilities,
+  providerTypeLabel,
+} from './modelRoutingHelpers'
 
 const emit = defineEmits<{
   (event: 'saved'): void
@@ -647,12 +654,6 @@ const emptyProviderForm = (): ProviderForm => ({
 })
 
 const providerForm = reactive<ProviderForm>(emptyProviderForm())
-const providerTypeLabels: Record<ProviderType, string> = {
-  openai_compatible: 'OpenAI 兼容',
-  anthropic: 'Anthropic',
-  ollama: 'Ollama',
-  custom: '自定义',
-}
 
 const chatStageGroups = computed(() => stageGroups)
 const allStageKeys = computed(() =>
@@ -679,9 +680,9 @@ const defaultTTSModel = computed(() =>
 const configuredRouteCount = computed(
   () => Object.values(routeSelections).filter((modelId) => Boolean(modelId)).length,
 )
-const chatModelsByProvider = computed(() => groupModelsByProvider('chat'))
-const embeddingModelsByProvider = computed(() => groupModelsByProvider('embedding'))
-const ttsModelsByProvider = computed(() => groupModelsByProvider('tts'))
+const chatModelsByProvider = computed(() => groupModelsByProvider(models.value, 'chat'))
+const embeddingModelsByProvider = computed(() => groupModelsByProvider(models.value, 'embedding'))
+const ttsModelsByProvider = computed(() => groupModelsByProvider(models.value, 'tts'))
 const activeProviders = computed(() =>
   providers.value.filter((provider) => providerCapabilities(provider)[activeModelCapability()]),
 )
@@ -764,28 +765,8 @@ const providerFetchState = (providerId: number): ProviderFetchState => {
   return providerFetchStates[providerId]
 }
 
-const modelDisplayName = (model?: UserAIModel): string => {
-  if (!model) {
-    return '未设置'
-  }
-  return model.display_name || model.model_name
-}
-
-const providerTypeLabel = (providerType: ProviderType): string => providerTypeLabels[providerType]
-
 const providerKeyLabel = (provider: UserModelProvider): string =>
   provider.api_key_preview ? `Key ${provider.api_key_preview}` : '未保存 Key'
-
-const groupModelsByProvider = (capability: Capability): Record<number, UserAIModel[]> => {
-  return models.value.reduce<Record<number, UserAIModel[]>>((result, model) => {
-    if (!model.capabilities[capability]) {
-      return result
-    }
-    result[model.provider_id] = result[model.provider_id] || []
-    result[model.provider_id].push(model)
-    return result
-  }, {})
-}
 
 const modelNamesForProvider = (providerId: number): string[] => {
   const capability = activeModelCapability()
@@ -884,33 +865,13 @@ const assignProviderForm = (next: ProviderForm) => {
   Object.assign(providerForm, next)
 }
 
-const activeModelCapability = (): Capability =>
-  activeSection.value === 'embedding'
-    ? 'embedding'
-    : activeSection.value === 'tts'
-      ? 'tts'
-      : 'chat'
+const activeModelCapability = (): Capability => capabilityForSection(activeSection.value)
 
 const providerModelsQuery = useProviderModelsQuery(
   () => activeModelPickerProviderId.value,
   () => activeModelCapability(),
   false,
 )
-
-const createProviderCapabilities = (): Record<Capability, boolean> => {
-  const capability = activeModelCapability()
-  return {
-    chat: capability === 'chat',
-    embedding: capability === 'embedding',
-    tts: capability === 'tts',
-  }
-}
-
-const providerCapabilities = (provider: UserModelProvider): Record<Capability, boolean> => ({
-  chat: Boolean(provider.capabilities?.chat),
-  embedding: Boolean(provider.capabilities?.embedding),
-  tts: Boolean(provider.capabilities?.tts),
-})
 
 const isModelPickerOpen = (providerId: number): boolean =>
   activeModelPickerProviderId.value === providerId
@@ -1019,7 +980,7 @@ const saveProviderForm = async () => {
     provider_type: providerForm.provider_type,
     base_url: providerForm.base_url.trim(),
     api_key: providerForm.api_key.trim() || null,
-    capabilities: createProviderCapabilities(),
+    capabilities: createProviderCapabilities(activeModelCapability()),
     is_enabled: providerForm.is_enabled,
   }
   if (!payload.name || !payload.base_url) {
@@ -1164,66 +1125,6 @@ const openProviderModelPicker = async (provider: UserModelProvider, event?: Mous
   await loadProviderModels(provider)
 }
 
-const createModelPayload = (
-  provider: UserModelProvider,
-  modelName: string,
-  capability: Capability,
-): UserAIModelCreate => {
-  const isChat = capability === 'chat'
-  if (isChat) {
-    return {
-      provider_id: provider.id,
-      display_name: modelName,
-      model_name: modelName,
-      capabilities: { chat: true, embedding: false },
-      context_window: null,
-      is_default_chat: !primaryChatModel.value,
-      is_default_embedding: false,
-      is_default_tts: false,
-      tts_protocol: null,
-      tts_voice: null,
-      tts_speed: 1.0,
-      is_enabled: true,
-      sort_order: 0,
-    }
-  }
-
-  if (capability === 'tts') {
-    return {
-      provider_id: provider.id,
-      display_name: modelName,
-      model_name: modelName,
-      capabilities: { chat: false, embedding: false, tts: true },
-      context_window: null,
-      is_default_chat: false,
-      is_default_embedding: false,
-      is_default_tts: true,
-      // 协议跟模型（默认 MiMo）；音色/倍速改在朗读控件配置，模型不预置
-      tts_protocol: 'mimo_chat_audio',
-      tts_voice: null,
-      tts_speed: 1.0,
-      is_enabled: true,
-      sort_order: 0,
-    }
-  }
-
-  return {
-    provider_id: provider.id,
-    display_name: modelName,
-    model_name: modelName,
-    capabilities: { chat: false, embedding: true, tts: false },
-    context_window: null,
-    is_default_chat: false,
-    is_default_embedding: true,
-    is_default_tts: false,
-    tts_protocol: null,
-    tts_voice: null,
-    tts_speed: 1.0,
-    is_enabled: true,
-    sort_order: 0,
-  }
-}
-
 const upsertModelForCapability = async (
   provider: UserModelProvider,
   modelName: string,
@@ -1236,7 +1137,9 @@ const upsertModelForCapability = async (
         ? embeddingModelForName(provider.id, modelName)
         : ttsModelForName(provider.id, modelName)
   if (!existing) {
-    return saveUserModelMutation.mutateAsync(createModelPayload(provider, modelName, capability))
+    return saveUserModelMutation.mutateAsync(
+      createModelPayload(provider, modelName, capability, Boolean(primaryChatModel.value)),
+    )
   }
   if (!existing.is_enabled) {
     return updateUserModelMutation.mutateAsync({

@@ -20,13 +20,13 @@
 - [ ] 验证：三件套 + `wc -l`（2684 → ~2540）
 - [ ] 回滚点：单 commit，`git revert` 即回
 
-## Slice 2 — modelRoutingHelpers.ts + createModelPayload 单测
+## Slice 2 — modelRoutingHelpers.ts + createModelPayload 单测 ✅
 
-- [ ] 建 `modelRoutingHelpers.ts`：迁纯函数 `createModelPayload`/`modelDisplayName`/`activeModelCapability`/`providerCapabilities`/`createProviderCapabilities`/`providerTypeLabels`（参数化）
-- [ ] 主组件 import 替换；`groupModelsByProvider` 参数化 models 入参
-- [ ] 建 `modelRoutingHelpers.spec.ts`：createModelPayload 三分支 + activeModelCapability + modelDisplayName
-- [ ] 验证：三件套（vitest 含新 spec）+ wc
-- [ ] review gate：helpers 纯函数化后调用点签名兼容
+- [x] 建 `modelRoutingHelpers.ts`：迁纯函数 `createModelPayload`（参数化 hasPrimaryChatModel）/`modelDisplayName`/`providerCapabilities`/`createProviderCapabilities`（参数化 capability）/`groupModelsByProvider`（参数化 models）/`providerTypeLabels`/`providerTypeLabel` + 新增 `capabilityForSection`（activeModelCapability 底层纯映射，主组件留薄 wrapper）
+- [x] 主组件 import 替换；5 处调用点适配（groupModelsByProvider ×3 / createProviderCapabilities ×1 / createModelPayload ×1）
+- [x] 建 `modelRoutingHelpers.spec.ts`：createModelPayload 三分支 + capabilityForSection + modelDisplayName + createProviderCapabilities + groupModelsByProvider（10 tests）
+- [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error，4 同类 type-only warning）+ wc（2513→2416）
+- [x] review gate：helpers 纯函数化后调用点签名兼容（activeModelCapability wrapper 规避 7 处调用点改动）
 
 ## Slice 3 — useModelBundle composable
 
