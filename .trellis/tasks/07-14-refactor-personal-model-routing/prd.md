@@ -21,10 +21,10 @@
 
 ## Acceptance Criteria
 
-- [ ] `PersonalModelRouting.vue` < 500 行。
-- [ ] 三件套全绿（vue-tsc / vitest / eslint 0 新增）。
-- [ ] 行为等价（测试或手测清单覆盖分区切换/模型选择/保存）。
-- [ ] 抽出的子组件补 AIMETA 首行（同 workspace 子组件惯例）。
+- [x] `PersonalModelRouting.vue` < 500 行（493 行，15-slice 完成）。
+- [x] 三件套全绿（vue-tsc 0 / vitest 151 绿 / eslint 0 error + 11 同类 @/api warning）。
+- [x] 行为等价（manual-checklist.md 固化覆盖分区切换/模型选择/保存；实际手测待用户跑作为回归网）。
+- [x] 抽出的子组件补 AIMETA 首行（8 子组件已补，commit e825d7a）。
 
 ## Notes
 

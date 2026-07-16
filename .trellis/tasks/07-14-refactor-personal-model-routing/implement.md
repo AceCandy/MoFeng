@@ -108,14 +108,17 @@
 - [x] scoped 跨组件：卡片内部独占规则全迁子 + 卡片根 provider-card/::after/is-editing 留父靠子根继承；4 处共享 selector 拆分[S1/S2/S5/S7] + 2 处整块迁子[toggle:disabled/provider-delete:disabled + focus-visible]；pre-existing dead[model-list/model-row/model-controls]保守留父
 - [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error + 11 同类 @/api warning，无 no-mutating-props）+ wc（996->616）；CSS 父 41=41 子 35=35；父卡片内部独占 class rg 零残留；零 spec 断言零指针跟随
 
-## Slice 14-15 - 余下纯展示小块 + dead CSS 清理 + <500 验收
+## Slice 14 - ReadinessPanel 子组件 + dead CSS 清理 ✅
 
-- [ ] 余下纯展示小块（readiness/empty-state/feedback/topbar）评估抽子组件
-- [ ] dead CSS 清理（model-list/model-row/model-controls，pre-existing，需用户批准）
-- [ ] `wc -l` 跟踪至 <500
-- [ ] 若 >500：评估是否过度抽象（template 真实大块已拆完则按收口原则说明）
-- [ ] 全量手测清单跑一遍
-- [ ] 更新 prd.md AC 勾选 + memory
+- [x] dead CSS 清理（model-list/model-row/model-controls，pre-existing，用户已批准删除）+ 2 处共享 selector 拆分留 topbar[L360 topbar,model-row->topbar + L578 @media 同]；rg 零残留
+- [x] ReadinessPanel.vue 抽子组件：props summary: ReadinessSummary；template L48-56 readiness 块迁子[label/value/description/tone]；style 6 块全迁子[readiness 根 + is-success/is-warning 后代 + label/value/detail]；scoped 子组件内部后代选择器命中（非跨组件）；父 template `<ReadinessPanel :summary="sectionReadinessSummary" />` + import L157
+- [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error + 11 同类 @/api warning，ReadinessPanel 零新增）+ wc（616->514）；CSS 父 27=27；父 readiness/dead class rg 零残留；零 spec 断言零指针跟随
+
+## Slice 15 - FeedbackPanel 子组件收口 <500 ✅
+
+- [x] FeedbackPanel.vue 抽子组件：props feedback: FeedbackMessage（内联同型 interface，不扩大 useModelBundle 范围）；template L39-46 feedback 块迁子（v-if="feedback.message" 守卫留父，子内直接渲染）；style 3 块全迁[feedback + is-success + is-error 单元素选择器，子根带 data-v-child 命中]
+- [x] 选 feedback 不选 empty-state：feedback 纯展示无交互无 emit（WDProjectStatus 范式），empty-state 有 button @click=beginCreateProvider 需 emit create + 透传 activeSection 偏离纯展示
+- [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error + 11 同类 @/api warning，FeedbackPanel 零新增）+ wc（514->**493 ✅<500**）；CSS 父 24=24；父 feedback 规则 rg 零残留；零 spec 断言零指针跟随
 ## 收尾（每会话）
 
 - 三件套绿 → 提交（commit message：`refactor(frontend): ...（#22 PersonalModelRouting Slice N）`）→ push
