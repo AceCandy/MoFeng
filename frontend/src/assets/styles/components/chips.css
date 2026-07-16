@@ -1,0 +1,134 @@
+/* AIMETA P=标签印章_墨风古典中式标签与朱砂印章|R=Chips/朱砂印章/触控热区|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* ============================================
+   墨风古典中式标签 (Chips) 与特色朱砂印章
+   ============================================ */
+.md-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 2px 12px;
+  border-radius: var(--md-radius-xs); /* 2px */
+  font-family: var(--md-font-family);
+  font-size: var(--md-label-medium);
+  font-weight: 500;
+  cursor: pointer;
+  background-color: var(--md-surface-dim);
+  border: 1px solid var(--md-outline-variant);
+  color: var(--md-on-surface-variant);
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard);
+  user-select: none;
+}
+
+button.md-chip,
+[role='button'].md-chip {
+  min-height: 36px;
+}
+
+.md-chip:hover {
+  border-color: var(--md-outline);
+  color: var(--md-primary);
+  background-color: var(--md-surface-container);
+}
+
+.md-chip-assist {
+  background-color: transparent;
+  border: 1px solid var(--md-outline);
+  color: var(--md-on-surface);
+}
+
+.md-chip-filter {
+  background-color: transparent;
+  border: 1px solid var(--md-outline);
+  color: var(--md-on-surface-variant);
+}
+
+.md-chip-filter.selected {
+  background-color: var(--md-primary-container); /* 石青 AI 容器 */
+  border-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  box-shadow: 1px 1px 0px rgba(46, 92, 138, 0.15);
+}
+
+.md-chip-input {
+  background-color: var(--md-surface-container);
+  border: none;
+  color: var(--md-on-surface-variant);
+}
+
+.md-chip-suggestion {
+  background-color: var(--md-surface-container-low);
+  border: 1px solid var(--md-outline-variant);
+  color: var(--md-on-surface-variant);
+}
+
+/*
+   朱砂金石方印 (Vermilion Seal Stamp Tag)
+   为章节审核状态（如已发布、已保存、已完成）打上高古的落款。
+*/
+.ds-seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--md-font-kai); /* 古典批注楷体 */
+  font-size: var(--md-label-medium);
+  font-weight: 600;
+  color: var(--md-secondary); /* 朱砂红 */
+  background-color: var(--md-secondary-container); /* 极淡朱砂粉底 */
+  padding: 3px 8px;
+  /* 斑驳印章边框：1.5px 仿古崩缺实线 */
+  border: 1.5px solid var(--md-secondary);
+  border-radius: var(--md-radius-xs); /* 2px */
+  letter-spacing: 0.08em;
+  text-shadow: 0.5px 0.5px 0px rgba(184, 60, 50, 0.1);
+  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15);
+  position: relative;
+}
+
+/* 阴刻朱砂印（满朱红底，素白/老宣字） */
+.ds-seal-yin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--md-font-kai);
+  font-size: var(--md-label-medium);
+  font-weight: 600;
+  color: var(--md-on-primary); /* 熟宣白 */
+  background-color: var(--md-secondary); /* 朱砂红满底 */
+  padding: 3px 8px;
+  border: 1.5px solid var(--md-secondary);
+  border-radius: var(--md-radius-xs);
+  letter-spacing: 0.08em;
+  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.2);
+}
+
+/* 触控防范热区 (Touch Target Expansion)
+   为精致的古典小标签提供 44px * 44px 的隐式触控响应热区，
+   在完全不影响其中式精致小巧物理外观的同时，极大地提升移动端或触屏的点击友好性与 WCAG 无障碍合规性。
+*/
+.md-chip,
+.ds-seal,
+.ds-seal-yin {
+  position: relative;
+}
+
+.md-chip::after,
+.ds-seal::after,
+.ds-seal-yin::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 44px;
+  min-height: 44px;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 1;
+}
