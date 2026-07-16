@@ -100,14 +100,22 @@
 - [x] **顺手清 Slice 8 回归**：embedding radio :checked 的 embeddingModelForName（移进 composable 内部未同步 template）→savedModelForActiveSection（embedding 分支恒等价，零 composable 改动）
 - [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error + 11 同类 @/api warning，无 no-mutating-props）+ wc（1197→996）；spec 指针跟随 2 处；手测弹窗完整流程待用户跑
 
-## Slice 13-15 — style 余量收口 + <500 验收
+## Slice 13 - ProviderCard.vue 子组件 ✅
 
-- [ ] 剩余 scoped style 按区块迁子组件 / 页面级留父
+- [x] template L88-213 provider-card 整块 article 迁子（行内 edit 表单 ProviderFormPanel mode=edit + 常态展示 header[state/type/key/url + toggle/delete] + provider-actions[编辑/拉取] + hints + SelectedModelChips）
+- [x] **方案 B**：ModelPickerDialog 留父 v-for 兄弟节点（picker composable 单例必须父实例化，避方案 A 的 20 props 双层透传；picker 接线 24 行留父，spec 断言字符串原样命中）
+- [x] 8 props + 8 emit；providerTypeLabel 子直 import modelRoutingHelpers + providerKeyLabel 子内定义；删父 3 orphan[providerKeyLabel 函数 + UserModelProvider import + providerTypeLabel import]
+- [x] scoped 跨组件：卡片内部独占规则全迁子 + 卡片根 provider-card/::after/is-editing 留父靠子根继承；4 处共享 selector 拆分[S1/S2/S5/S7] + 2 处整块迁子[toggle:disabled/provider-delete:disabled + focus-visible]；pre-existing dead[model-list/model-row/model-controls]保守留父
+- [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error + 11 同类 @/api warning，无 no-mutating-props）+ wc（996->616）；CSS 父 41=41 子 35=35；父卡片内部独占 class rg 零残留；零 spec 断言零指针跟随
+
+## Slice 14-15 - 余下纯展示小块 + dead CSS 清理 + <500 验收
+
+- [ ] 余下纯展示小块（readiness/empty-state/feedback/topbar）评估抽子组件
+- [ ] dead CSS 清理（model-list/model-row/model-controls，pre-existing，需用户批准）
 - [ ] `wc -l` 跟踪至 <500
 - [ ] 若 >500：评估是否过度抽象（template 真实大块已拆完则按收口原则说明）
 - [ ] 全量手测清单跑一遍
 - [ ] 更新 prd.md AC 勾选 + memory
-
 ## 收尾（每会话）
 
 - 三件套绿 → 提交（commit message：`refactor(frontend): ...（#22 PersonalModelRouting Slice N）`）→ push
