@@ -17,6 +17,7 @@
 @import './styles/components/chapter-binding.css';
 @import './styles/components/paper-fold.css';
 @import './styles/components/assistant-shell.css';
+@import './styles/components/motion-brand.css';
 
 @plugin "@tailwindcss/typography";
 
@@ -175,88 +176,6 @@ h6 {
 
 
 
-
-/* ==========================================================================
-   墨风第三阶段「新中式写意书院」超级沉浸式大刀阔斧视觉重塑
-   ========================================================================== */
-
-/* ============================================
-   6. 交互过渡与特色水墨气旋动画 (Blowing Ink & Tai-chi)
-   ============================================ */
-
-/* 中式按钮、章节行过渡动效的墨滴晕开效果 */
-.md-btn,
-.writing-sidebar__chapter-row {
-  position: relative !important;
-  overflow: hidden !important;
-}
-
-.md-btn::after,
-.writing-sidebar__chapter-row::after {
-  content: '' !important;
-  position: absolute !important;
-  inset: 0 !important;
-  background: radial-gradient(circle, rgba(28, 32, 34, 0.12) 0%, transparent 70%) !important;
-  transform: scale(0) !important;
-  opacity: 0 !important;
-  transition: transform 0s, opacity 0s !important;
-  pointer-events: none !important;
-  z-index: 0 !important;
-}
-
-.md-btn:active::after,
-.writing-sidebar__chapter-row:active::after {
-  transform: scale(3.5) !important;
-  opacity: 1 !important;
-  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease-out !important;
-}
-
-/* 暗色模式墨晕适配 */
-:root[data-theme='dark'] .md-btn::after,
-:root[data-theme='dark'] .writing-sidebar__chapter-row::after {
-  background: radial-gradient(circle, rgba(229, 222, 201, 0.15) 0%, transparent 70%) !important;
-}
-
-/* 加载态“墨风太极”气流飞旋环绕覆写 */
-body .md-spinner {
-  position: relative !important;
-}
-
-/* 已移除太极外圈气旋，统一使用水墨扩散动画 */
-
-/* ============================================
-   7. 顶部 Header 注入「墨風」专属金石篆印 LOGO
-   ============================================ */
-
-/* 核心Header：在标题组左侧强力生成金石朱砂名章 LOGO，让墨风项目名完美与视觉融合 */
-.writing-header__project::before {
-  content: '墨風' !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  font-family: var(--md-font-display) !important;
-  font-size: 15.5px !important;
-  font-weight: 700 !important; /* 印章使用 700 Bold，字痕浑厚饱满 */
-  letter-spacing: 0.15em !important;
-  color: var(--md-on-secondary) !important;
-  background-color: var(--md-secondary) !important;
-  border: 2px solid var(--md-secondary) !important;
-  box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.3) !important;
-  padding: 5px 6px 3px 8px !important;
-  line-height: 1 !important;
-  border-radius: 2px !important;
-  margin-right: 14px !important;
-  transform: rotate(-3deg) !important; /* 钤印微倾斜手作感 */
-  flex-shrink: 0 !important;
-}
-
-/* 暗色模式 LOGO 印章自适应变暗 */
-:root[data-theme='dark'] .writing-header__project::before {
-  background-color: #9c332b !important;
-  border-color: #9c332b !important;
-  color: #e5dec9 !important;
-  box-shadow: 3px 3px 0px rgba(156, 51, 43, 0.4) !important;
-}
 
 /* ==========================================================================
    墨风第四阶段「墨落惊风雨，泼墨成风」——「墨风」品牌与极致中国风大刀阔斧重构
