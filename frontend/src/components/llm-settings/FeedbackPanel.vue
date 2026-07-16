@@ -1,3 +1,4 @@
+<!-- AIMETA P=反馈条_操作反馈展示|R=成功/错误反馈展示|NR=不含反馈状态|E=component:FeedbackPanel|X=internal|A=反馈条|D=vue|S=dom|RD=./README.ai -->
 <template>
   <div
     :class="['model-routing__feedback', `is-${feedback.type}`]"

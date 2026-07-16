@@ -1,3 +1,4 @@
+<!-- AIMETA P=主模型面板_文本生成主模型选择|R=主模型 select 切换|NR=不含主模型状态与切换副作用|E=component:PrimaryModelPanel|X=internal|A=主模型面板|D=vue|S=dom|RD=./README.ai -->
 <template>
   <!-- 主模型选择面板（仅 llm 分区）：未设置阶段路由时的默认文本生成模型 -->
   <section class="model-routing__panel model-routing__primary-panel">

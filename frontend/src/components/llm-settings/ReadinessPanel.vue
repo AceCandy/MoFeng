@@ -1,3 +1,4 @@
+<!-- AIMETA P=就绪摘要_分区配置就绪展示|R=就绪状态展示|NR=不含就绪状态计算|E=component:ReadinessPanel|X=internal|A=就绪摘要|D=vue|S=dom|RD=./README.ai -->
 <template>
   <div
     :class="['model-routing__readiness', `is-${summary.tone}`]"

@@ -1,3 +1,4 @@
+<!-- AIMETA P=供应商表单_新增编辑供应商|R=供应商字段表单|NR=不含表单状态与提交副作用|E=component:ProviderFormPanel|X=internal|A=供应商表单|D=vue|S=dom|RD=./README.ai -->
 <template>
   <!-- 供应商新建/编辑表单：create 为独立面板，edit 为卡片内行内表单，字段共用 -->
   <section :class="isCreate ? 'model-routing__panel model-routing__provider-form' : 'model-routing__provider-form-edit'">

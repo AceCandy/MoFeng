@@ -1,3 +1,4 @@
+<!-- AIMETA P=供应商卡片_单个供应商展示与操作|R=卡片展示+编辑/拉取/启停/删除|NR=不含供应商状态与操作副作用|E=component:ProviderCard|X=internal|A=供应商卡片|D=vue|S=dom|RD=./README.ai -->
 <template>
   <!-- 单个供应商卡片：常态展示（标题/状态/类型/Key/URL + 启用·删除 + 编辑·拉取 + 已选模型）与行内编辑表单两态切换 -->
   <article

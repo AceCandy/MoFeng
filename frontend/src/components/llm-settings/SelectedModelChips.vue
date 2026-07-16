@@ -1,3 +1,4 @@
+<!-- AIMETA P=已选模型列表_供应商已选模型展示|R=chip 展示与删除|NR=不含模型状态与删除副作用|E=component:SelectedModelChips|X=internal|A=已选模型列表|D=vue|S=dom|RD=./README.ai -->
 <template>
   <!-- 已选模型 chip 列表：按能力分区显示已启用模型，含 主/用/读 印记与删除按钮 -->
   <div class="model-routing__selected-models">

@@ -1,3 +1,4 @@
+<!-- AIMETA P=模型拉取弹窗_供应商模型拉取选择|R=模型搜索与勾选|NR=不含picker状态与保存副作用|E=component:ModelPickerDialog|X=internal|A=模型拉取弹窗|D=vue|S=dom|RD=./README.ai -->
 <template>
   <!-- 模型拉取弹窗（Teleport to body）：按能力勾选/单选模型，含搜索过滤；外部点击与视口关闭由父级 useModelPicker 的 document/window 监听处理 -->
   <Teleport to="body">

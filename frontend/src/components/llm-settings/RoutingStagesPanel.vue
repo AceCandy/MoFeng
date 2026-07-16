@@ -1,3 +1,4 @@
+<!-- AIMETA P=模型路由阶段覆盖面板_阶段路由配置|R=stage select 路由选择|NR=不含路由状态归属与保存|E=component:RoutingStagesPanel|X=internal|A=模型路由阶段面板|D=vue|S=dom|RD=./README.ai -->
 <template>
   <!-- 阶段路由分区（routes）：为各创作阶段指定使用的文本生成模型 -->
   <section class="model-routing__stages">
