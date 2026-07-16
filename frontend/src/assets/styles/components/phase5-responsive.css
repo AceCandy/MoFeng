@@ -1,0 +1,70 @@
+/* AIMETA P=Phase5窄屏_移动端响应式自适应|R=phase5-responsive 窄屏移动端响应式重绘|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* ==========================================================================
+   Phase 5 窄屏/移动端超精细化响应式自适应重绘（砚海阁案头中枢）
+   ========================================================================== */
+
+/* 全视口统一顶栏 flex 间距与高度弹性缩减 */
+body .app-shell__topbar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  min-height: 56px !important; /* 窄屏高度控制在56px */
+  padding: 0 clamp(var(--md-spacing-3), 2.5vw, var(--md-spacing-6)) !important;
+}
+
+
+
+/* 窄屏下隐藏左侧 Logo 旁的文字，仅保留精致的“墨”字朱泥大方章 */
+@media (max-width: 768px) {
+  .app-shell__brand-top .app-shell__brand-copy {
+    display: none !important;
+  }
+  .app-shell__brand-top {
+    margin-right: 0 !important;
+  }
+}
+
+/* 窄屏下隐藏状态胶囊及寄语，只保留核心书名选择胶囊，实现零拥挤 */
+@media (max-width: 960px) {
+  .app-shell__project-capsule.is-status,
+  .app-shell__project-welcome-message {
+    display: none !important;
+  }
+  .app-shell__project-capsule-container {
+    margin-left: var(--md-spacing-2) !important;
+    gap: 0 !important;
+    min-width: 0 !important;
+    flex: 1 !important;
+  }
+  /* 胶囊自适应宽度释放与文字溢出省略，防止撑宽视口 */
+  .app-shell__project-capsule.is-select {
+    max-width: clamp(130px, 42vw, 170px) !important;
+    padding: 0 10px !important; /* 缩减内边距以让出更多字符空间 */
+    overflow: hidden !important;
+  }
+  /* 窄屏下隐藏胶囊内非核心图标和箭头，释放水平黄金空间 */
+  .app-shell__project-capsule.is-select .app-shell__project-icon,
+  .app-shell__project-capsule.is-select .app-shell__project-arrow {
+    display: none !important;
+  }
+  .app-shell__project-title {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    flex: 1 !important;
+    min-width: 0 !important; /* flex收缩基础 */
+    display: inline-block !important;
+    text-align: center !important;
+  }
+}
+
+/* 窄屏下右侧操作区极简化，隐藏文字说明和阁主名签，仅保留三枚精美金石小印章 */
+@media (max-width: 768px) {
+  .app-shell__user-tag,
+  .app-shell__action-text {
+    display: none !important;
+  }
+  .app-shell__actions-right {
+    gap: var(--md-spacing-2) !important;
+  }
+}

@@ -20,6 +20,8 @@
 @import './styles/components/motion-brand.css';
 @import './styles/components/brand-visuals.css';
 @import './styles/components/phase5-navigation.css';
+@import './styles/components/phase5-responsive.css';
+@import './styles/components/topbar.css';
 
 @plugin "@tailwindcss/typography";
 
@@ -178,137 +180,6 @@ h6 {
 
 
 
-
-/* ==========================================================================
-   Phase 5 窄屏/移动端超精细化响应式自适应重绘（砚海阁案头中枢）
-   ========================================================================== */
-
-/* 全视口统一顶栏 flex 间距与高度弹性缩减 */
-body .app-shell__topbar {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  min-height: 56px !important; /* 窄屏高度控制在56px */
-  padding: 0 clamp(var(--md-spacing-3), 2.5vw, var(--md-spacing-6)) !important;
-}
-
-
-
-/* 窄屏下隐藏左侧 Logo 旁的文字，仅保留精致的“墨”字朱泥大方章 */
-@media (max-width: 768px) {
-  .app-shell__brand-top .app-shell__brand-copy {
-    display: none !important;
-  }
-  .app-shell__brand-top {
-    margin-right: 0 !important;
-  }
-}
-
-/* 窄屏下隐藏状态胶囊及寄语，只保留核心书名选择胶囊，实现零拥挤 */
-@media (max-width: 960px) {
-  .app-shell__project-capsule.is-status,
-  .app-shell__project-welcome-message {
-    display: none !important;
-  }
-  .app-shell__project-capsule-container {
-    margin-left: var(--md-spacing-2) !important;
-    gap: 0 !important;
-    min-width: 0 !important;
-    flex: 1 !important;
-  }
-  /* 胶囊自适应宽度释放与文字溢出省略，防止撑宽视口 */
-  .app-shell__project-capsule.is-select {
-    max-width: clamp(130px, 42vw, 170px) !important;
-    padding: 0 10px !important; /* 缩减内边距以让出更多字符空间 */
-    overflow: hidden !important;
-  }
-  /* 窄屏下隐藏胶囊内非核心图标和箭头，释放水平黄金空间 */
-  .app-shell__project-capsule.is-select .app-shell__project-icon,
-  .app-shell__project-capsule.is-select .app-shell__project-arrow {
-    display: none !important;
-  }
-  .app-shell__project-title {
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    flex: 1 !important;
-    min-width: 0 !important; /* flex收缩基础 */
-    display: inline-block !important;
-    text-align: center !important;
-  }
-}
-
-/* 窄屏下右侧操作区极简化，隐藏文字说明和阁主名签，仅保留三枚精美金石小印章 */
-@media (max-width: 768px) {
-  .app-shell__user-tag,
-  .app-shell__action-text {
-    display: none !important;
-  }
-  .app-shell__actions-right {
-    gap: var(--md-spacing-2) !important;
-  }
-}
-
-/* ==========================================================================
-   Phase 8: 砚海阁案头全局顶栏去重与「輔」字方印深度融合
-   ========================================================================== */
-
-/* 1. 全局写作进度条 (松烟朱砂水墨渐变) */
-.app-shell__global-progress {
-  position: absolute !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  height: 3.5px !important;
-  background-color: rgba(28, 32, 34, 0.05) !important;
-  z-index: 40 !important;
-  overflow: hidden !important;
-}
-
-.app-shell__global-progress span {
-  display: block !important;
-  width: 100% !important;
-  height: 100% !important;
-  background: linear-gradient(to right, #e2dcc8, var(--md-secondary), var(--md-primary)) !important;
-  transform-origin: left center !important;
-  will-change: transform !important;
-  transition: transform var(--md-duration-medium) var(--md-easing-standard) !important;
-  box-shadow: 0 0 4px var(--md-secondary-light) !important;
-}
-
-/* 2. 琥珀蜜蜡印：写作辅助 */
-.app-shell__action-badge.is-assistant {
-  background-color: #c58c2c !important;
-  color: #faf6ed !important;
-  border: 1px solid #966418 !important;
-  box-shadow: 1.5px 1.5px 0px rgba(197, 140, 44, 0.25) !important;
-  transform: rotate(1.5deg) !important;
-}
-
-/* 暗色模式下金石方印微调 */
-:root[data-theme='dark'] .app-shell__action-badge.is-assistant {
-  background-color: #a8721c !important;
-  border-color: #7b5110 !important;
-  box-shadow: 1.5px 1.5px 0px rgba(168, 114, 28, 0.4) !important;
-}
-
-/* 3. 双胶囊之二：小说状态多维数据（文人熟宣虚线风格覆盖） */
-.app-shell__project-capsule.is-status {
-  cursor: default !important;
-  background-color: rgba(229, 222, 201, 0.15) !important; /* 熟宣微黄半透 */
-  border: 1px dashed rgba(184, 60, 50, 0.2) !important; /* 朱砂红细虚线边框，显金石拓印底蕴 */
-  color: var(--md-on-surface) !important;
-  box-shadow: inset 1px 1px 3px rgba(28, 32, 34, 0.01) !important;
-  gap: var(--md-spacing-3) !important;
-  padding: 0 var(--md-spacing-4) !important;
-  font-family: var(--md-font-display) !important;
-  font-size: 0.85rem !important;
-}
-
-:root[data-theme='dark'] .app-shell__project-capsule.is-status {
-  background-color: rgba(229, 222, 201, 0.03) !important;
-  border-color: rgba(156, 51, 43, 0.3) !important;
-}
 
 /* ==========================================================================
    Phase 9: 阁主案头用户标签与水墨信笺下拉折叠交互重塑样式
