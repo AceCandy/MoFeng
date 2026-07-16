@@ -56,55 +56,14 @@
     </div>
 
     <template v-if="activeSection === 'routes'">
-      <section class="model-routing__stages">
-        <div v-if="enabledChatModels.length === 0" class="model-routing__empty-state">
-          <p class="md-title-small">还不能配置阶段路由</p>
-          <p class="model-routing__empty">请先在文本生成里启用至少一个模型，并指定主模型。</p>
-          <button
-            type="button"
-            class="md-btn md-btn-tonal md-ripple"
-            @click="emit('navigate', 'llm')"
-          >
-            去配置文本生成
-          </button>
-        </div>
-
-        <div v-else class="model-routing__stage-groups">
-          <div
-            v-for="group in chatStageGroups"
-            :key="group.title"
-            class="model-routing__stage-group"
-          >
-            <h4 class="md-title-small">{{ group.title }}</h4>
-            <div class="model-routing__stage-list">
-              <label
-                v-for="stage in group.stages"
-                :key="stage.key"
-                class="model-routing__stage-row"
-              >
-                <span>
-                  <strong>{{ stage.label }}</strong>
-                  <small>{{ stage.description }}</small>
-                </span>
-                <select
-                  v-model="routeSelections[stage.key]"
-                  class="md-text-field-input"
-                  :aria-label="`${stage.label} 模型路由`"
-                >
-                  <option value="">使用主模型</option>
-                  <option
-                    v-for="model in enabledChatModels"
-                    :key="model.id"
-                    :value="String(model.id)"
-                  >
-                    {{ model.display_name }} · {{ providerName(model.provider_id) }}
-                  </option>
-                </select>
-              </label>
-            </div>
-          </div>
-        </div>
-      </section>
+      <RoutingStagesPanel
+        :route-selections="routeSelections"
+        :chat-stage-groups="chatStageGroups"
+        :enabled-chat-models="enabledChatModels"
+        :provider-name="providerName"
+        @navigate="emit('navigate', $event)"
+        @update-selection="(stageKey, value) => (routeSelections[stageKey] = value)"
+      />
     </template>
 
     <template v-else>
@@ -548,6 +507,7 @@ import { useStageRoutes } from './useStageRoutes'
 import { useProviderForm } from './useProviderForm'
 import { useModelPicker } from './useModelPicker'
 import { useModelSelection } from './useModelSelection'
+import { RoutingStagesPanel } from './RoutingStagesPanel'
 import type {
   RoutingSection,
 } from './modelRoutingTypes'
@@ -863,8 +823,7 @@ defineExpose({
 
 .model-routing__form,
 .model-routing__model-list,
-.model-routing__selected-models,
-.model-routing__stage-groups {
+.model-routing__selected-models {
   display: grid;
   gap: var(--md-spacing-3);
 }
@@ -872,12 +831,6 @@ defineExpose({
 .model-routing__provider-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
-  gap: var(--md-spacing-3);
-}
-
-.model-routing__stage-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: var(--md-spacing-3);
 }
 
@@ -899,8 +852,7 @@ defineExpose({
 }
 
 .model-routing__provider-head h3,
-.model-routing__form-head h3,
-.model-routing__stage-group h4 {
+.model-routing__form-head h3 {
   margin: 0;
   color: var(--md-on-surface);
 }
@@ -1152,14 +1104,12 @@ defineExpose({
   opacity: 0.7;
 }
 
-.model-routing__model-row strong,
-.model-routing__stage-row strong {
+.model-routing__model-row strong {
   display: block;
   font-size: var(--md-body-medium);
 }
 
-.model-routing__model-row small,
-.model-routing__stage-row small {
+.model-routing__model-row small {
   display: block;
   margin-top: 2px;
   color: var(--md-on-surface-variant);
@@ -1393,28 +1343,6 @@ defineExpose({
   margin: 0;
 }
 
-.model-routing__stage-group {
-  display: grid;
-  gap: var(--md-spacing-3);
-}
-
-.model-routing__stage-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--md-spacing-2);
-  align-items: center;
-  padding: var(--md-spacing-3);
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-md);
-  background: var(--md-surface);
-}
-
-@media (min-width: 960px) {
-  .model-routing__stage-row {
-    grid-template-columns: minmax(220px, 0.8fr) minmax(240px, 1fr);
-  }
-}
-
 @media (max-width: 860px) {
   .model-routing__primary-panel {
     grid-template-columns: minmax(0, 1fr);
@@ -1422,7 +1350,6 @@ defineExpose({
 }
 
 @media (min-width: 768px) {
-  .model-routing__stage-list,
   .model-routing__provider-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }

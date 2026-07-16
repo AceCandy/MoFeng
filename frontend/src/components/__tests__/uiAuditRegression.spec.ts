@@ -74,8 +74,10 @@ const contrastRatio = (foreground: string, background: string) => {
 describe('UI audit regressions', () => {
   it('gives model routing controls unique accessible names', () => {
     const source = readSource('src/components/llm-settings/PersonalModelRouting.vue')
+    // 阶段路由分区（含 stage.label aria-label）已抽离到 RoutingStagesPanel.vue（Slice 9）
+    const stagesPanel = readSource('src/components/llm-settings/RoutingStagesPanel.vue')
 
-    expect(source).toContain(':aria-label="`${stage.label} 模型路由`"')
+    expect(stagesPanel).toContain(':aria-label="`${stage.label} 模型路由`"')
     expect(source).toContain(':aria-label="`启用文本生成模型 ${modelName}`"')
     expect(source).toContain(':aria-label="`选择向量模型 ${modelName}`"')
     expect(source).not.toContain('aria-label="启用文本生成模型"')

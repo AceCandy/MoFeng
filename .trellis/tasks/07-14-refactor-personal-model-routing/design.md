@@ -68,7 +68,7 @@
 | 6 ✅ | `useProviderForm` composable（providerForm/Mode/editingId+providerFetchStates/providerFetchState+emptyProviderForm/assignProviderForm+begin/create/edit/cancel/saveProviderForm+toggle/delete；capability 经 capabilityForSection(activeSection) 等价 wrapper；emit('saved')→onSaved 回调） | composable | 中 | 2252 → **2138** |
 | 7 ✅ | `useModelPicker` composable（弹窗状态机+useDialogA11y+onMounted/onBeforeUnmount 监听+watch×2；id 选择器 hack+函数 ref 保留；调用点 useSectionMeta 后规避 const TDZ；ttsSettings.spec 指针跟随） | composable | 高 | 2138 → **1936** |
 | 8 ✅ | `useModelSelection` composable（16 符号：6 派生+10 方法；入参 picker 6 返回值单向透传无循环依赖；emit('saved')→onSaved 回调 5 处全替换；saveTTSSelection 提前到 savePickerSelections 前消除前向引用；删 5 orphan import [UserAIModel/globalAlert/Capability/capabilityForSection/createModelPayload]；ttsSettings.spec 指针跟随 2 处 [is_default_tts/saveTTSSelection]） | composable | 中高 | 1936 → **1651** |
-| 9 | `RoutingStagesPanel.vue` 子组件 + scoped 迁移 | 子组件 | 中 | ~1320 → ~1180 |
+| 9 ✅ | `RoutingStagesPanel.vue` 子组件 + scoped 迁移（template routes 分区 L58-108 迁子 + 独占 style 全迁[stage-list/stage-group/stage-row/@media 960] + 5 处混合选择器拆分删 stage 部分[stage-groups grid/stage-group h4/stage-row strong/small/@media 768 stage-list] + empty/empty-state 共用规则复制子留父；select v-model→emit update-selection 规避 vue/no-mutating-props warn；topbar 三按钮[刷新/保存阶段路由/新增供应商]留父故 isSavingRoutes/save 不迁；uiAuditRegression L78 指针跟随） | 子组件 | 中 | 1651 → **1578** |
 | 10 | `ProviderFormPanel.vue` 子组件（合并 create/edit） | 子组件 | 中 | ~1180 → ~1010 |
 | 11 | `SelectedModelChips.vue` + `PrimaryModelPanel.vue` 子组件 | 子组件 | 低 | ~1010 → ~880 |
 | 12 | `ModelPickerDialog.vue` 子组件 + Teleport/scoped/a11y 迁移 | 子组件 | 高 | ~880 → ~620 |

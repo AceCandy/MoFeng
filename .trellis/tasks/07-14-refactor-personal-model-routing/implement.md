@@ -69,12 +69,13 @@
 - [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error，7 同类 @/api warning，useModelSelection 新增 1）+ wc（1936→1651）；手测三种能力选择/保存/删除待用户跑
 - [x] review gate：循环依赖未触发——picker 不需 selection（单向 selection→picker 反向，selection 调 picker 的 closeModelPicker/pending，picker 不调 selection），与 Slice 7 review 结论一致；saveTTSSelection 提前到 savePickerSelections 前消除原前向引用（const 箭头函数声明顺序调整，运行时行为等价）；删 5 orphan import 零残留 rg 验证
 
-## Slice 9 — RoutingStagesPanel.vue 子组件
+## Slice 9 — RoutingStagesPanel.vue 子组件 ✅
 
-- [ ] 建子组件（含 AIMETA 首行）：迁 template L58-108 + 对应 scoped style
-- [ ] props：routeSelections(v-model)/chatStageGroups/enabledChatModels/providerName/isSavingRoutes；emit update/save/navigate
-- [ ] 父组件替换引用；scoped 迁移（父零残留 rg 验证）
-- [ ] 验证：三件套 + wc + 手测 routes 分区
+- [x] 建子组件（含描述注释首行）：迁 template L58-108 routes 分区（section.model-routing__stages 内部）+ scoped style
+- [x] props：routeSelections（reactive 对象）/chatStageGroups/enabledChatModels/providerName（函数）；emit navigate/update-selection
+- [x] **select v-model→emit update-selection**（子组件 `:value`+`@change`→emit，父 inline arrow mutate routeSelections），规避 vue/no-mutating-props warn；isSavingRoutes/saveRoutes 留父（topbar 三按钮不拆）
+- [x] scoped 迁移：独占规则全迁子（stage-list/stage-group/stage-row/@media 960/768）+ 5 处混合选择器拆分删 stage 部分 + empty/empty-state 共用规则复制子留父；父独占 class rg 零残留验证
+- [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error + 8 同类 @/api warning，RoutingStagesPanel 新增 1，无 vue/no-mutating-props warn）+ wc（1651→1578）；uiAuditRegression L78 指针跟随；手测 routes 分区待用户跑
 
 ## Slice 10 — ProviderFormPanel.vue 子组件（合并 create/edit）
 
