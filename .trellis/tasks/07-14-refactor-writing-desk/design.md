@@ -46,7 +46,8 @@ parent `07-12-engineering-baseline` acceptance 第 4 项「5 大前端组件 <50
 | **6** ✅ | useWritingDeskProject composable（loadProject/refetchChapterIntoProject/viewProjectDetail/goBack/selectChapter/fetchChapterStatus/stopChapterStatusStream + 内化 4 statusStream refs + onUnmounted，**含 spec L341 source 拼接 + L342 regex 锚点简化 + L346 currentProjectId 指针跟随**） | composable | ~95 | 1111 |
 | **7** ✅ | useWritingDeskModals composable（WDEditChapterModal/WDGenerateOutlineModal/WDEvaluationDetailModal state + open/save 方法 + editChapterContent 内联快编 + 内化 3 mutation） | composable | ~56 | 1055 |
 | **8** ✅ | useWritingDeskChapterState composable（**边界调整**：原 progress 群中 canGenerate/isFailed/hasInProgress 已 3a 迁、progress/totalChapters/completedChapters=dead code 留父，实抽 selectedChapter/showVersionSelector/evaluatingChapter/activeEvaluatingChapter/isSelectingVersion/selectedChapterOutline/latestCompletedChapterNumber 7 符号） | composable | ~41 | 1014 |
-| 9+ | template/style 收敛（剩余 layout style 拆分、H 块章节 computed、O 大纲编辑等），至 <500 | 子组件+style | ~330 | 586（**预估后仍 >500，后续 slice 据实扩展**） |
+| **9** ✅ | useWritingDeskOptimize composable（推荐优化 3 方法 close/optimize/apply + 内化 3 refs/2 computed/2 mutations；query/utils orphan 删 5） | composable | ~84 | 930 |
+| 10+ | template/style 收敛（剩余 layout style 拆分）+ dead code 清理（progress 群/utils dead imports）+ script 收尾，至 <500 | 子组件+style | ~430 | 当前 930 需再砍 ~431（**预估后仍 >500，template/style 是最大可挖区块，后续据实扩展**） |
 
 > roadmap 行数为粗估，每 slice 实施时以 rg/Read 真实磁盘为准。仿 NovelDetailShell 实际收益常优于预估。
 
@@ -544,3 +545,74 @@ rg 确认 `\bprogress\b`/`\btotalChapters\b`/`\bcompletedChapters\b` 在 Writing
 - 1055 → 1014（-41；7 符号 ~56 行替换为解构 14 行）。
 - vue-tsc 0 / vitest 141 绿 / eslint 0 新增（1 warning 预存 @/api/novel WritingDesk L189 type import；composable 0 warning）。
 - 独立复核 git diff：2 hunk（+composable import / 7 符号定义 56 行替换为解构 14 行），progress/totalChapters/completedChapters dead code 留父未触及。
+
+---
+
+## Slice 9 设计：useWritingDeskOptimize composable（2026-07-16）✅ 1014→930
+
+### 边界（迁入 composable）
+
+- 方法（3）：closeRecommendedOptimizeResult / optimizeRecommendedVersionFromEvaluation / applyRecommendedOptimization
+- 内化 refs（3）：showRecommendedOptimizeResultModal / recommendedOptimizedContent / recommendedOptimizeResultNotes
+- 内化 computed（2）：isOptimizingRecommendedVersion / isApplyingRecommendedOptimization
+- 内化 mutations（2）：optimizeRecommendedVersionMutation（无 projectId）/ applyOptimizationMutation（useApplyOptimizationMutation(projectId)）
+
+### 入参（6）
+
+- projectId: () => string（applyOptimizationMutation 实例化等价 () => props.id）
+- project: ComputedRef<NovelProject | null>
+- selectedChapter: ComputedRef<Chapter | null>（来自 useWritingDeskChapterState）
+- availableVersions: ReturnType<typeof useWritingDeskVersionDetail>['availableVersions']（来自 useWritingDeskVersionDetail）
+- refetchChapterIntoProject: ReturnType<typeof useWritingDeskProject>['refetchChapterIntoProject']（来自 useWritingDeskProject，apply 后刷新）
+- showEvaluationDetailModal: Ref<boolean>（来自 useWritingDeskModals，apply 后一并关闭评审详情）
+
+### 返回（8，全 template 消费）
+
+- showRecommendedOptimizeResultModal/recommendedOptimizedContent/recommendedOptimizeResultNotes（WDRecommendedOptimizeResultModal :show/:optimized-content/:notes）
+- isOptimizingRecommendedVersion（WDEvaluationDetailModal :is-optimizing-recommended-version）
+- isApplyingRecommendedOptimization（WDRecommendedOptimizeResultModal :is-applying）
+- closeRecommendedOptimizeResult/optimizeRecommendedVersionFromEvaluation/applyRecommendedOptimization（@close/@optimize-recommended-version/@apply）
+
+### 留父（零改动）
+
+- confirmVersionSelection（3c 不抽，消费 confirmFinalizeChapterMutation）
+- progress/totalChapters/completedChapters dead code（Slice 8 留父）
+- 所有 composable 解构 + template modal 绑定不变
+
+### 等价性
+
+- applyOptimizationMutation 内化 useApplyOptimizationMutation(projectId)，等价原 () => props.id
+- optimizeRecommendedVersionMutation 内化 useOptimizeRecommendedVersionMutation()（无 projectId，原 L255 无参）
+- 方法体逐字搬迁，project.value/selectedChapter.value/availableVersions.value/refetchChapterIntoProject(...)/showEvaluationDetailModal.value 访问不变
+- showEvaluationDetailModal 透传（applyRecommendedOptimization set false，跨 composable 写入 modals 的 ref）
+- utils import（cleanVersionContent/normalizeOptimizeResult/parseEvaluationPayload）随迁入 composable
+
+### 调用点
+
+useWritingDeskOptimize 解构插在 useWritingDeskVersionDetail 解构之后（原 3 方法位）：
+
+- 入参 availableVersions（version detail L430 区）/selectedChapter（chapterState）/refetchChapterIntoProject（project）/showEvaluationDetailModal（modals）/project 均在解构前就绪
+- 返回值被 template（L160-170）消费——setup 作用域可访问 ✅
+
+### const TDZ
+
+composable 内：mutations（2）→ refs（3）→ computed（2，调 mutations.isPending）→ closeRecommendedOptimizeResult（调 isApplying + showRef）→ optimizeRecommendedVersionFromEvaluation（调 mutation + refs + availableVersions + project + selectedChapter）→ applyRecommendedOptimization（调 mutation + refs + refetch + showEvaluationDetailModal）。无 forward reference。
+
+### orphan import 清理（本次产生，删 5）
+
+- queries：useApplyOptimizationMutation / useOptimizeRecommendedVersionMutation（state 迁 → orphan）
+- utils：cleanVersionContent / normalizeOptimizeResult / parseEvaluationPayload（3 方法迁 → orphan）
+
+### 注：pre-existing dead imports（本次不动，mention）
+
+rg 发现 utils import 中 decodeJsonStringFragment / extractJsonField / formatChapterGenerationError / tryParseOptimizerPayload 仅 import 行无消费（Slice 1 多 import + Slice 3a generateChapter 迁走 formatChapterGenerationError 遗留 import）。按 CLAUDE.md「不删 unrelated dead code」**本次留父不动**，建议用户单独决定是否清理（可 -4 行 import）。
+
+### spec
+
+推荐优化符号零 spec 断言（codegraph blast radius 这些符号 no covering tests；wdSidebarDeleteChapter/wdWorkspaceLockedChapter 守护删除/版本逻辑不触及推荐优化）。零指针跟随。
+
+### 完成（2026-07-16）
+
+- 1014 → 930（-84；state 9 行 + 3 方法 88 行替换为解构 16 行 + import 调整 -4）。
+- vue-tsc 0 / vitest 141 绿 / eslint 0 新增（1 warning 预存 @/api/novel WritingDesk L189 type import；composable 0 warning）。
+- 独立复核 git diff：5 hunk（queries import 删 2 mutation / utils import 删 3 / +composable import / state 删 9 行 / 3 方法 88 行替换为解构 16 行），confirmVersionSelection + progress dead code 留父未触及。

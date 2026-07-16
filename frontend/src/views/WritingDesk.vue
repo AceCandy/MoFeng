@@ -193,12 +193,10 @@ import type {
   ChapterVersion,
 } from '@/api/novel'
 import {
-  useApplyOptimizationMutation,
   useConfirmFinalizeChapterMutation,
   useNovelChapterQuery,
   useNovelMutationRefresh,
   useNovelProjectQuery,
-  useOptimizeRecommendedVersionMutation,
 } from '@/queries/novel'
 import { globalAlert } from '@/composables/useAlert'
 import { useWritingDeskDrawers } from '@/composables/useWritingDeskDrawers'
@@ -206,16 +204,14 @@ import { useWritingDeskChapterGeneration } from '@/composables/useWritingDeskCha
 import { useWritingDeskChapterOps } from '@/composables/useWritingDeskChapterOps'
 import { useWritingDeskChapterState } from '@/composables/useWritingDeskChapterState'
 import { useWritingDeskModals } from '@/composables/useWritingDeskModals'
+import { useWritingDeskOptimize } from '@/composables/useWritingDeskOptimize'
 import { useWritingDeskProject } from '@/composables/useWritingDeskProject'
 import { useWritingDeskVersionDetail } from '@/composables/useWritingDeskVersionDetail'
 import { countNonWhitespaceChars } from '@/utils/text'
 import {
-  cleanVersionContent,
   decodeJsonStringFragment,
   extractJsonField,
   formatChapterGenerationError,
-  normalizeOptimizeResult,
-  parseEvaluationPayload,
   resolveChapterNumberForEntry,
   resolveChapterNumberForProjectEntry,
   tryParseOptimizerPayload,
@@ -252,15 +248,6 @@ const resolvedProjectEntryId = ref<string | null>(null)
 const chapterGenerationResult = ref<ChapterGenerationResponse | null>(null)
 const selectedVersionIndex = ref<number>(0)
 const generatingChapter = ref<number | null>(null)
-const optimizeRecommendedVersionMutation = useOptimizeRecommendedVersionMutation()
-const showRecommendedOptimizeResultModal = ref(false)
-const applyOptimizationMutation = useApplyOptimizationMutation(() => props.id)
-const isOptimizingRecommendedVersion = computed(
-  () => optimizeRecommendedVersionMutation.isPending.value,
-)
-const isApplyingRecommendedOptimization = computed(() => applyOptimizationMutation.isPending.value)
-const recommendedOptimizedContent = ref('')
-const recommendedOptimizeResultNotes = ref('')
 const {
   isSidebarDrawerOpen,
   isAssistantDrawerOpen,
@@ -443,94 +430,23 @@ const {
   loadWDVersionDetailModal,
 })
 
-const closeRecommendedOptimizeResult = () => {
-  if (isApplyingRecommendedOptimization.value) return
-  showRecommendedOptimizeResultModal.value = false
-}
-
-const optimizeRecommendedVersionFromEvaluation = async () => {
-  if (!project.value || !selectedChapter.value) {
-    globalAlert.showError('缺少章节信息，无法执行优化')
-    return
-  }
-
-  const evaluationPayload = parseEvaluationPayload(selectedChapter.value.evaluation || null)
-  if (!evaluationPayload) {
-    globalAlert.showError('当前评审结果无法解析，暂时不能执行评审优化')
-    return
-  }
-
-  const bestChoice = Number(evaluationPayload.best_choice)
-  if (!Number.isInteger(bestChoice) || bestChoice < 1) {
-    globalAlert.showError('当前评审结果缺少推荐版本，无法执行优化')
-    return
-  }
-
-  const versionIndex = bestChoice - 1
-  const sourceVersion = availableVersions.value[versionIndex]
-  if (!sourceVersion?.content?.trim()) {
-    globalAlert.showError('推荐版本正文不存在，无法执行优化')
-    return
-  }
-
-  const versionReview = evaluationPayload.evaluation?.[`version${bestChoice}`] || {}
-  try {
-    const result = await optimizeRecommendedVersionMutation.mutateAsync({
-      project_id: project.value.id,
-      chapter_number: selectedChapter.value.chapter_number,
-      source_content: cleanVersionContent(sourceVersion.content),
-      review_summary: String(evaluationPayload.reason_for_choice || '').trim(),
-      version_number: bestChoice,
-      version_review: versionReview,
-    })
-
-    const normalized = normalizeOptimizeResult(result.optimized_content, result.optimization_notes)
-    if (!normalized.content.trim()) {
-      globalAlert.showError('优化结果为空，请稍后重试')
-      return
-    }
-
-    recommendedOptimizedContent.value = normalized.content
-    recommendedOptimizeResultNotes.value = normalized.notes
-    showRecommendedOptimizeResultModal.value = true
-  } catch (error: any) {
-    console.error('评审优化失败:', error)
-    globalAlert.showError(error.message || '评审优化失败，请稍后重试')
-  }
-}
-
-const applyRecommendedOptimization = async () => {
-  if (!project.value || !selectedChapter.value || !recommendedOptimizedContent.value.trim()) {
-    return
-  }
-
-  try {
-    const applyResult = await applyOptimizationMutation.mutateAsync({
-      projectId: project.value.id,
-      chapterNumber: selectedChapter.value.chapter_number,
-      optimizedContent: recommendedOptimizedContent.value,
-    })
-
-    const syncStats = applyResult.foreshadowing_sync
-    if (syncStats) {
-      globalAlert.showToast(
-        `优化内容已应用，伏笔同步：新增 ${syncStats.created}，推进 ${syncStats.developing}，回收 ${syncStats.revealed}`,
-        'success',
-      )
-    } else {
-      globalAlert.showToast('优化内容已应用', 'success')
-    }
-
-    showRecommendedOptimizeResultModal.value = false
-    showEvaluationDetailModal.value = false
-    recommendedOptimizedContent.value = ''
-    recommendedOptimizeResultNotes.value = ''
-    await refetchChapterIntoProject(selectedChapter.value.chapter_number)
-  } catch (error: any) {
-    console.error('应用评审优化失败:', error)
-    globalAlert.showError(error.message || '应用优化失败，请稍后重试')
-  }
-}
+const {
+  showRecommendedOptimizeResultModal,
+  recommendedOptimizedContent,
+  recommendedOptimizeResultNotes,
+  isOptimizingRecommendedVersion,
+  isApplyingRecommendedOptimization,
+  closeRecommendedOptimizeResult,
+  optimizeRecommendedVersionFromEvaluation,
+  applyRecommendedOptimization,
+} = useWritingDeskOptimize({
+  projectId: () => props.id,
+  project,
+  selectedChapter,
+  availableVersions,
+  refetchChapterIntoProject,
+  showEvaluationDetailModal,
+})
 
 const { generateChapter, retryFromNode, regenerateChapter } = useWritingDeskChapterGeneration({
   projectId: () => props.id,
