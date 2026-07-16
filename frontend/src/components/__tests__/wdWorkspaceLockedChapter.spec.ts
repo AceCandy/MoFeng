@@ -338,12 +338,12 @@ describe('WDWorkspace locked chapter state', () => {
   })
 
   it('streams generation status instead of polling the selected chapter', () => {
-    const source = readSource('src/views/WritingDesk.vue')
-    const pollingBlock = source.match(/const fetchChapterStatus[\s\S]*?\n}\n\nconst selectChapter/)?.[0] ?? ''
+    const source = `${readSource('src/views/WritingDesk.vue')}\n${readSource('src/composables/useWritingDeskProject.ts')}`
+    const pollingBlock = source.match(/const fetchChapterStatus[\s\S]*?const selectChapter/)?.[0] ?? ''
     const workspaceSource = readSource('src/components/writing-desk/WDWorkspace.vue')
 
     expect(pollingBlock).toContain('NovelAPI.subscribeChapterStatus')
-    expect(pollingBlock).toContain('upsertChapterInProjectCache(projectId, chapter)')
+    expect(pollingBlock).toContain('upsertChapterInProjectCache(currentProjectId, chapter)')
     expect(workspaceSource).not.toContain('setInterval(() =>')
     expect(workspaceSource).not.toContain('POLLING_INTERVAL_MS')
   })

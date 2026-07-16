@@ -184,9 +184,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineAsyncComponent, nextTick, onUnmounted, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { NovelAPI } from '@/api/novel'
+import { ref, computed, defineAsyncComponent, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import type {
   Chapter,
   ChapterOutline,
@@ -208,6 +207,7 @@ import { globalAlert } from '@/composables/useAlert'
 import { useWritingDeskDrawers } from '@/composables/useWritingDeskDrawers'
 import { useWritingDeskChapterGeneration } from '@/composables/useWritingDeskChapterGeneration'
 import { useWritingDeskChapterOps } from '@/composables/useWritingDeskChapterOps'
+import { useWritingDeskProject } from '@/composables/useWritingDeskProject'
 import { useWritingDeskVersionDetail } from '@/composables/useWritingDeskVersionDetail'
 import { countNonWhitespaceChars } from '@/utils/text'
 import {
@@ -244,7 +244,6 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const router = useRouter()
 const route = useRoute()
 const projectQuery = useNovelProjectQuery(() => props.id)
 
@@ -259,10 +258,6 @@ const showEditChapterModal = ref(false)
 const editingChapter = ref<ChapterOutline | null>(null)
 const isGeneratingOutline = ref(false)
 const showGenerateOutlineModal = ref(false)
-const isFetchingChapterStatus = ref(false)
-const statusStreamController = ref<AbortController | null>(null)
-const statusStreamKey = ref<string | null>(null)
-const statusStreamReconnectTimer = ref<number | null>(null)
 const optimizeRecommendedVersionMutation = useOptimizeRecommendedVersionMutation()
 const showRecommendedOptimizeResultModal = ref(false)
 const applyOptimizationMutation = useApplyOptimizationMutation(() => props.id)
@@ -305,6 +300,27 @@ const projectError = computed(() => {
 })
 
 const shouldRenderAssistantShell = computed(() => !!project.value)
+
+const {
+  goBack,
+  viewProjectDetail,
+  loadProject,
+  refetchChapterIntoProject,
+  stopChapterStatusStream,
+  fetchChapterStatus,
+  selectChapter,
+} = useWritingDeskProject({
+  projectId: () => props.id,
+  project,
+  projectQuery,
+  chapterQuery,
+  selectedChapterNumber,
+  chapterGenerationResult,
+  selectedVersionIndex,
+  closeAllDrawers,
+  upsertChapterInProjectCache,
+  refreshProjectQueries,
+})
 
 const getQueryChapterNumber = () => {
   const rawChapterNumber = Array.isArray(route.query.chapter_number)
@@ -545,117 +561,6 @@ const applyRecommendedOptimization = async () => {
     console.error('应用评审优化失败:', error)
     globalAlert.showError(error.message || '应用优化失败，请稍后重试')
   }
-}
-
-onUnmounted(() => {
-  stopChapterStatusStream()
-})
-
-// 方法
-const goBack = () => {
-  router.push('/workspace')
-}
-
-const viewProjectDetail = () => {
-  if (project.value) {
-    router.push(`/projects/${project.value.id}`)
-  }
-}
-
-const loadProject = async () => {
-  try {
-    await projectQuery.refetch()
-  } catch (error) {
-    console.error('加载项目失败:', error)
-  }
-}
-
-const refetchChapterIntoProject = async (
-  chapterNumber: number,
-  options: { refreshProject?: boolean } = { refreshProject: true },
-) => {
-  if (selectedChapterNumber.value !== chapterNumber) {
-    selectedChapterNumber.value = chapterNumber
-    await nextTick()
-  }
-
-  const result = await chapterQuery.refetch()
-  if (result.data) {
-    upsertChapterInProjectCache(props.id, result.data)
-  }
-  if (options.refreshProject) {
-    await refreshProjectQueries()
-  }
-}
-
-const stopChapterStatusStream = () => {
-  if (statusStreamReconnectTimer.value !== null) {
-    window.clearTimeout(statusStreamReconnectTimer.value)
-    statusStreamReconnectTimer.value = null
-  }
-  statusStreamController.value?.abort()
-  statusStreamController.value = null
-  statusStreamKey.value = null
-  isFetchingChapterStatus.value = false
-}
-
-const fetchChapterStatus = () => {
-  if (selectedChapterNumber.value === null) {
-    return
-  }
-  const projectId = props.id
-  const chapterNumber = selectedChapterNumber.value
-  const streamKey = `${projectId}:${chapterNumber}`
-  if (statusStreamKey.value === streamKey) {
-    return
-  }
-
-  stopChapterStatusStream()
-  if (statusStreamReconnectTimer.value !== null) {
-    window.clearTimeout(statusStreamReconnectTimer.value)
-    statusStreamReconnectTimer.value = null
-  }
-  const controller = new AbortController()
-  statusStreamController.value = controller
-  statusStreamKey.value = streamKey
-  isFetchingChapterStatus.value = true
-
-  void NovelAPI.subscribeChapterStatus(projectId, chapterNumber, {
-    signal: controller.signal,
-    onChapter: (chapter) => {
-      if (chapter.chapter_number !== chapterNumber) return
-      upsertChapterInProjectCache(projectId, chapter)
-    },
-    onError: (error) => {
-      if (controller.signal.aborted) return
-      console.error('章节状态 SSE 同步失败:', error)
-    },
-  }).catch((error) => {
-    if (controller.signal.aborted) return
-    console.error('章节状态 SSE 连接失败:', error)
-    if (props.id === projectId && selectedChapterNumber.value === chapterNumber) {
-      void refetchChapterIntoProject(chapterNumber, { refreshProject: false })
-    }
-    statusStreamReconnectTimer.value = window.setTimeout(() => {
-      if (props.id === projectId && selectedChapterNumber.value === chapterNumber) {
-        statusStreamKey.value = null
-        fetchChapterStatus()
-      }
-    }, 3000)
-  }).finally(() => {
-    if (statusStreamKey.value === streamKey) {
-      statusStreamController.value = null
-      statusStreamKey.value = null
-      isFetchingChapterStatus.value = false
-    }
-  })
-}
-
-const selectChapter = (chapterNumber: number) => {
-  selectedChapterNumber.value = chapterNumber
-  chapterGenerationResult.value = null
-  selectedVersionIndex.value = 0
-  closeAllDrawers()
 }
 
 const { generateChapter, retryFromNode, regenerateChapter } = useWritingDeskChapterGeneration({

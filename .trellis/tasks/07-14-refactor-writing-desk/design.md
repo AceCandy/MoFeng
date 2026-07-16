@@ -43,7 +43,7 @@ parent `07-12-engineering-baseline` acceptance 第 4 项「5 大前端组件 <50
 | 3c | confirmVersionSelection（Slice 4 已收敛 availableVersions/resolveRecommendedVersionIndex，可直接消费 composable 返回值单抽） | composable | ~52 | 1268 |
 | **5** ✅ | WDRecommendedOptimizeResultModal 子组件（modal template L164-259 + 内化 useDialogA11y+2refs+titleId+2computed+.m3-result-dialog style，4 props+emit close/apply；optimize/apply/close 方法+state 留父） | 子组件 | ~114 | 1206 |
 | ~~3c~~ | confirmVersionSelection **决定不抽**（单方法+入参 8 含 composable 链传递 availableVersions/resolveRecommendedVersionIndex=过度抽象，留父消费已解构返回值更简） | — | 0 | 1206 |
-| 6 | useWritingDeskProject composable（loadProject/refetchChapterIntoProject/viewProjectDetail/goBack/selectChapter/fetchChapterStatus/stopChapterStatusStream） | composable | ~130 | 1076 |
+| **6** ✅ | useWritingDeskProject composable（loadProject/refetchChapterIntoProject/viewProjectDetail/goBack/selectChapter/fetchChapterStatus/stopChapterStatusStream + 内化 4 statusStream refs + onUnmounted，**含 spec L341 source 拼接 + L342 regex 锚点简化 + L346 currentProjectId 指针跟随**） | composable | ~95 | 1111 |
 | 7 | useWritingDeskModals composable（WDEditChapterModal/WDGenerateOutlineModal/WDEvaluationDetailModal state + open/save 方法） | composable | ~80 | 996 |
 | 8 | 章节状态判断 canGenerateChapter/isChapterFailed/hasChapterInProgress + progress/totalChapters/completedChapters/latestCompletedChapterNumber 并入 composable | composable | ~80 | 916 |
 | 9+ | template/style 收敛（剩余 layout style 拆分、H 块章节 computed、O 大纲编辑等），至 <500 | 子组件+style | ~330 | 586（**预估后仍 >500，后续 slice 据实扩展**） |
@@ -343,3 +343,76 @@ confirmVersionSelection 原列 3c。Slice 4 收敛后 confirm 依赖 availableVe
 - 1320 → 1206（-114；design.md 估 ~216 偏高，实际 modal style 仅 5 行 + template 96 行 + computed/refs ~20）。
 - vue-tsc 0 / vitest 141 绿 / eslint 0 新增（2 warning 预存 @/api/novel 因 template -88 上移 L189/190，子组件 0 warning）。
 - 独立复核 git diff：8 hunk（template 96→8 标签 / useDialogA11y import 删 / loader+defineAsyncComponent 新增 / refs+titleId 删 / computed 删 / useDialogA11y 调用删 / style 删），留父方法零触及。
+
+---
+
+## Slice 6 设计：useWritingDeskProject composable（2026-07-16）✅ 1206→1111
+
+### 边界（迁入 composable）
+
+- 方法：goBack / viewProjectDetail / loadProject / refetchChapterIntoProject / stopChapterStatusStream / fetchChapterStatus / selectChapter
+- 内化 refs（仅 SSE 流用）：isFetchingChapterStatus / statusStreamController / statusStreamKey / statusStreamReconnectTimer
+- 内化 lifecycle：onUnmounted（→ stopChapterStatusStream）
+- 内化 import：useRouter / NovelAPI / nextTick / onUnmounted
+
+### 入参（10，透传父侧响应式源 + query/mutation 实例）
+
+- projectId: () => string（getter，替代 props.id）
+- project: ComputedRef<NovelProject | null>（viewProjectDetail 用）
+- projectQuery: ReturnType<typeof useNovelProjectQuery>（loadProject 用）
+- chapterQuery: ReturnType<typeof useNovelChapterQuery>（refetchChapterIntoProject 用）
+- selectedChapterNumber / chapterGenerationResult / selectedVersionIndex（selectChapter 用，3a/3b/4 已透传）
+- closeAllDrawers（selectChapter 用，useWritingDeskDrawers 返回值）
+- upsertChapterInProjectCache / refreshProjectQueries（ReturnType<typeof useNovelMutationRefresh> indexed access；upsertChapterInProjectCache 跨 3a 复用故留父透传）
+
+### 返回（template + watch + 3a 消费）
+
+- goBack / viewProjectDetail / loadProject（template 绑定）
+- refetchChapterIntoProject / fetchChapterStatus（**供 3a 入参** + fetch 自递归）
+- stopChapterStatusStream（watch props.id + onUnmounted 内部）
+- selectChapter（template @select-chapter + watch route.query）
+
+### 留父（零改动）
+
+- project / projectLoading / projectError computed（projectQuery 消费，透传 composable）
+- selectedChapter computed（chapterQuery 消费）
+- 3 watch（project.value/route.query/props.id）：watch route.query 调 selectChapter、watch props.id 调 stopChapterStatusStream——均消费 composable 返回值
+- applyRecommendedOptimization（消费 refetchChapterIntoProject）
+- 3a useWritingDeskChapterGeneration（入参传 fetchChapterStatus/refetchChapterIntoProject/upsertChapterInProjectCache）
+
+### 等价性
+
+- props.id → projectId()（getter 求值等价；refetchChapterIntoProject L584 + fetchChapterStatus 多处）
+- fetchChapterStatus 内部局部 `const projectId = props.id`（L606）改名 `const currentProjectId = projectId()`——**必要**：避与入参 `projectId: () => string` getter 同名 shadow（否则局部 string 遮蔽 getter，后续 `projectId()` 重新求值会调用 string 报错）。`props.id === projectId`（L636/640 重新读取检测项目切换）→ `projectId() === currentProjectId`，等价
+- router 内化 useRouter()，与原父 const router 等价
+- onUnmounted 迁入 composable（setup 阶段同步注册，合法，同 Slice 2 onMounted 范式）
+- 方法体逐字搬迁，project.value/refs.value 访问不变（入参为 ComputedRef/Ref）
+- fetchChapterStatus 递归自调 + refetchChapterIntoProject 自调（composable 内先定义，无 TDZ）
+
+### 调用点
+
+useWritingDeskProject 解构插在 project computed（L300）之后、3 watch 之前：
+
+- 入参 project(L300)/projectQuery/chapterQuery/closeAllDrawers 等均在其前定义
+- 返回 selectChapter 被 watch route.query(L360) 引用、stopChapterStatusStream 被 watch props.id(L368) 引用——均在 watch 之前定义（const 解构）✅
+- 返回 fetchChapterStatus/refetchChapterIntoProject 被 3a(L563) 入参消费——在其前定义 ✅
+
+### spec 指针跟随（3 处，wdWorkspaceLockedChapter L340-349）
+
+1. L341 source 拼接：fetchChapterStatus/selectChapter 迁 composable → source 改为 `` `${readSource WritingDesk}\n${readSource useWritingDeskProject}` ``（同 Slice 4 范式）
+2. L342 regex 锚点：`/const fetchChapterStatus[\s\S]*?\n}\n\nconst selectChapter/` → `/const fetchChapterStatus[\s\S]*?const selectChapter/`——迁入 composable 后两符号缩进 2 空格，原 `\n}\n\nconst`（假设行首 0 缩进）失配，简化为 `const selectChapter`（fetchChapterStatus 与 selectChapter 在 composable 内相邻，非贪婪提取整个 fetchChapterStatus 块，断言意图不变）
+3. L346 参数名：`upsertChapterInProjectCache(projectId, chapter)` → `(currentProjectId, chapter)`——跟随 fetchChapterStatus 局部变量改名
+
+### const TDZ
+
+composable 内：refs（4 statusStream）→ goBack → viewProjectDetail → loadProject → refetchChapterIntoProject（调 nextTick/chapterQuery/upsert/refresh）→ stopChapterStatusStream → fetchChapterStatus（调 stopChapterStatusStream + refetchChapterIntoProject + NovelAPI + upsert）→ selectChapter（调 closeAllDrawers）→ onUnmounted（调 stopChapterStatusStream）。无 forward reference。
+
+### 注：goBack 为 pre-existing dead code
+
+goBack 全文件仅定义无消费点（template/script 均无引用）。忠实搬迁（composable return + 父解构），不删（「notice dead code, don't delete」）。vue-tsc/eslint 对 setup 解构变量宽容，未报 unused。
+
+### 完成（2026-07-16）
+
+- 1206 → 1111（-95；估 ~130 偏高，fetchChapterStatus 内联 SSE 重连逻辑长但 4 refs 迁出抵消部分）。
+- vue-tsc 0 / vitest 141 绿（wdWorkspaceLockedChapter 10/10 spec 3 处指针跟随后绿）/ eslint 0 新增（2 warning 全预存 @/api/novel：WritingDesk L189 type import + spec L8；Slice 5 的 NovelAPI value import warning 随迁出消失）。
+- 独立复核 git diff：7 hunk（import×4 调整 / router 删 / 4 refs 删 / useWritingDeskProject 解构插入 22 行 / onUnmounted+7 方法删 ~110 行），+27/-122，留父 3 watch/3a/applyRecommendedOptimization 零触及。
