@@ -38,12 +38,13 @@ parent `07-12-engineering-baseline` acceptance 第 4 项「5 大前端组件 <50
 | **1** ✅ | 5 payload 纯函数去重（tryParseOptimizerPayload/decodeJsonStringFragment/extractJsonField/normalizeOptimizeResult/parseEvaluationPayload 删本地副本 import @/utils/chapter） | 去重 | ~99 | 1910 |
 | **2** ✅ | useWritingDeskDrawers composable（drawer refs+computed+方法+watch+onMounted，viewport/novelStore 内化，loadAssistantPanel 入参） | composable | ~93 | 1817 |
 | **3a** ✅ | useWritingDeskChapterGeneration composable（generateChapter/retryFromNode/regenerateChapter + 内化 canGenerateChapter/isChapterFailed/hasChapterInProgress/generateChapterMutation，生成子系统内聚） | composable | ~154 | 1663 |
-| 3b | useWritingDeskChapterOps composable（evaluateChapter/deleteChapter/confirmVersionSelection，依赖收敛后单抽） | composable | ~150 | 1513 |
-| 4 | useWritingDeskVersionDetail composable（版本提取群 extractVersionContent/extractVersionMetadata/toBoundedVersionIndex/resolveRecommendedVersionIndex/availableVersions/syncRecommendedVersionSelection/showVersionDetail/closeVersionDetail/selectVersionFromDetail/isCurrentVersion 内聚，**含 spec L333 指针跟随**） | composable | ~200 | 1333 |
-| 5 | WDRecommendedOptimizeResultModal 子组件（template L164-259 + 推荐优化 state/close/optimize/apply 方法 + style） | 子组件 | ~216 | 1117 |
-| 6 | useWritingDeskProject composable（loadProject/refetchChapterIntoProject/viewProjectDetail/goBack/selectChapter/fetchChapterStatus/stopChapterStatusStream） | composable | ~130 | 987 |
-| 7 | useWritingDeskModals composable（WDEditChapterModal/WDGenerateOutlineModal/WDEvaluationDetailModal state + open/save 方法） | composable | ~80 | 907 |
-| 8 | 章节状态判断 canGenerateChapter/isChapterFailed/hasChapterInProgress + progress/totalChapters/completedChapters/latestCompletedChapterNumber 并入 composable | composable | ~80 | 827 |
+| **3b** ✅ | useWritingDeskChapterOps composable（evaluateChapter/deleteChapter + 内化 evaluateChapterMutation/deleteChapterMutation；confirmVersionSelection 因依赖 Slice 4 版本提取群拆 3c。**含 wdSidebarDeleteChapter spec 指针跟随**） | composable | ~117 | 1546 |
+| 4 | useWritingDeskVersionDetail composable（版本提取群 extractVersionContent/extractVersionMetadata/toBoundedVersionIndex/resolveRecommendedVersionIndex/availableVersions/syncRecommendedVersionSelection/showVersionDetail/closeVersionDetail/selectVersionFromDetail/isCurrentVersion 内聚，**含 spec L333 指针跟随**） | composable | ~200 | 1346 |
+| 3c | confirmVersionSelection（Slice 4 收敛 availableVersions/resolveRecommendedVersionIndex/selectedChapter 后单抽） | composable | ~52 | 1294 |
+| 5 | WDRecommendedOptimizeResultModal 子组件（template L164-259 + 推荐优化 state/close/optimize/apply 方法 + style） | 子组件 | ~216 | 1078 |
+| 6 | useWritingDeskProject composable（loadProject/refetchChapterIntoProject/viewProjectDetail/goBack/selectChapter/fetchChapterStatus/stopChapterStatusStream） | composable | ~130 | 948 |
+| 7 | useWritingDeskModals composable（WDEditChapterModal/WDGenerateOutlineModal/WDEvaluationDetailModal state + open/save 方法） | composable | ~80 | 868 |
+| 8 | 章节状态判断 canGenerateChapter/isChapterFailed/hasChapterInProgress + progress/totalChapters/completedChapters/latestCompletedChapterNumber 并入 composable | composable | ~80 | 788 |
 | 9+ | template/style 收敛（modal 子组件 style 迁移、layout style 拆分到子组件），至 <500 | 子组件+style | ~330 | <500 |
 
 > roadmap 行数为粗估，每 slice 实施时以 rg/Read 真实磁盘为准。仿 NovelDetailShell 实际收益常优于预估。
@@ -196,3 +197,51 @@ drawer 符号无 spec 断言（wdWorkspaceLockedChapter 只守护版本逻辑 L3
 - 1817 → 1663（-154，优于预估）。
 - vue-tsc 0 / vitest 141 绿 / eslint 0 新增（L277/278 @/api 预存 warning 非本次，composable 文件 0 输出）。
 - 独立复核 git diff：5 处精确（import -useGenerateChapterMutation+composable / 删 generateChapterMutation 实例化 / 删 3 状态判断 / 删 3 方法+原位加 composable 解构 9 入参），+12/-166，留父方法零触及。
+
+---
+
+## Slice 3b 设计：useWritingDeskChapterOps composable（2026-07-16）✅ 1663→1546
+
+### 边界调整说明（原 3b 拆为 3b + 3c）
+
+原 design.md 3b 把 evaluateChapter/deleteChapter/confirmVersionSelection 三方法归一个 composable。实施前依赖分析发现：confirmVersionSelection（L1004-1055）依赖 availableVersions(L1010/1020)/resolveRecommendedVersionIndex(L1011)/selectedChapter(L1012)，全属 Slice 4 版本提取群。若现在抽 confirm，需透传这 3 个 Slice 4 符号，等 Slice 4 抽出后还要 composable 间重传——正中注记"依赖收敛后单抽"。故把 confirm 拆 3c（待 Slice 4 收敛后单抽），本轮 3b 只抽 evaluate/delete（各依赖独立 mutation、互不耦合、且都不依赖版本提取群）。
+
+### 边界（迁入 composable）
+
+- 方法：evaluateChapter / deleteChapter
+- 内化 mutation（各独立，无交叉）：evaluateChapterMutation = useEvaluateChapterMutation(projectId) / deleteChapterMutation = useDeleteChapterMutation(projectId)
+
+### 入参（5，透传父侧响应式源）
+
+- projectId: () => string（getter，替代 props.id 直接访问）
+- project: ComputedRef<NovelProject | null>
+- selectedChapterNumber: Ref<number | null>（evaluate 写 + delete 读）
+- evaluatingChapter: Ref<number | null>（留父，activeEvaluatingChapter computed 消费；evaluate 写）
+- latestCompletedChapterNumber: ComputedRef<number | null>（留父，delete 读；不内化避免扩到 Slice 8）
+
+### 留父（零改动）
+
+- confirmVersionSelection（3c，依赖 Slice 4 版本提取群）
+- selectVersionFromDetail / openEditChapterModal / openEvaluationDetailModal / saveChapterChanges（后续 slice）
+- confirmFinalizeChapterMutation / updateChapterOutlineMutation / generateChapterOutlineMutation / editChapterContentMutation（其他 slice 各自消费）
+- evaluatingChapter / latestCompletedChapterNumber（留父透传）
+
+### 等价性
+
+- props.id → projectId()（mutation 实例化 useEvaluateChapterMutation(projectId) / useDeleteChapterMutation(projectId)，等价于原 () => props.id）
+- 方法体逐字搬迁，project.value/refs.value/computed.value 访问不变
+- template @evaluate-chapter/@delete-chapter 绑定不变（解构暴露同名）
+
+### spec 指针跟随
+
+`wdSidebarDeleteChapter.spec.ts:118` `keeps destructive confirmation copy explicit for completed chapter artifacts` 断言删除文案（`正文、版本、评审、生成 trace 和向量数据等全部产物` / `删除章节及产物` / `删除章节大纲`）+ `showConfirmInput` 在 `src/views/WritingDesk.vue` 源码里。这些随 deleteChapter 迁入 composable → source 改为 `` `${readSource('src/views/WritingDesk.vue')}\n${readSource('src/composables/useWritingDeskChapterOps.ts')}` ``（与 apiSource 同范式）。apiSource 断言不动（delete_artifacts_confirmed/confirmation_text 在 @/api + @/queries，未迁）。
+
+### const TDZ
+
+composable 内：evaluateChapterMutation → deleteChapterMutation → evaluateChapter → deleteChapter。evaluate/delete 互不调用，无 forward reference。
+
+### 完成（2026-07-16）
+
+- 1663 → 1546（-117；预估 ~150 因拆出 confirm 至 3c）。
+- vue-tsc 0 / vitest 141 绿（wdSidebarDeleteChapter 2/2 spec 重定向后绿）/ eslint 0 新增（composable 0 输出，3 warning 全预存 @/api/novel：WritingDesk.vue L277/278 + spec L7）。
+- 独立复核 git diff：5 处精确（import -2 mutation+composable / 删 2 mutation 实例化 / 删 evaluate+delete 整块+原位 composable 解构 5 入参）+ spec 1 处 source 拼接，留父方法零触及。

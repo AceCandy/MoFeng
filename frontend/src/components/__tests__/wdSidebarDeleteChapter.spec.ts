@@ -116,7 +116,7 @@ describe('WDSidebar chapter deletion affordance', () => {
   })
 
   it('keeps destructive confirmation copy explicit for completed chapter artifacts', () => {
-    const source = readSource('src/views/WritingDesk.vue')
+    const source = `${readSource('src/views/WritingDesk.vue')}\n${readSource('src/composables/useWritingDeskChapterOps.ts')}`
     const apiSource = `${readSource('src/api/novel.ts')}\n${readSource('src/queries/novel.ts')}`
 
     expect(source).toContain('正文、版本、评审、生成 trace 和向量数据等全部产物')
