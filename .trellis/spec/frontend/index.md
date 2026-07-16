@@ -39,7 +39,7 @@
 2. `src/api/auth.ts` reimplements a fetch wrapper instead of reusing `src/api/http.ts`.
 3. ~49 `any` occurrences concentrated in `src/api/novel.ts` and a few components.
 4. Two form-validation strategies coexist (manual vs Naive `:rules`); new forms use manual validation.
-5. `src/assets/base.css` is a dead compat shim; real tokens live in `main.css`.
+5. `src/assets/base.css` is a dead compat shim; real tokens live in `src/assets/styles/tokens.css` (imported by `main.css`).
 
 ---
 

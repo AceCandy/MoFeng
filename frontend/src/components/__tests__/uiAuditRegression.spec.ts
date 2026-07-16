@@ -6,6 +6,8 @@ import { createApp, nextTick } from 'vue'
 
 import TypewriterEffect from '@/components/TypewriterEffect.vue'
 
+import { readGlobalCss } from './readGlobalCss'
+
 const readSource = (relativePath: string) =>
   readFileSync(resolve(process.cwd(), relativePath), 'utf8')
 
@@ -112,7 +114,6 @@ describe('UI audit regressions', () => {
       'src/assets/blueprint.css',
       'src/components/writing-desk/WDGenerateOutlineModal.vue',
       'src/components/writing-desk/workspace/ChapterGenerating.vue',
-      'src/assets/main.css',
       'src/components/shared/MofengTable.vue',
       'src/components/shared/NovelDetailShell.vue',
       'src/components/admin/UserManagement.vue',
@@ -128,11 +129,14 @@ describe('UI audit regressions', () => {
       expect(source, path).not.toContain('transition-all')
       expect(source, path).not.toMatch(/transition:\s*all\b/)
     }
+    // main.css 已按域拆分，审计断言改读入口 + partial 并集，避免读残壳假绿
+    const globalCss = readGlobalCss()
+    expect(globalCss).not.toContain('transition-all')
+    expect(globalCss).not.toMatch(/transition:\s*all\b/)
   })
 
   it('keeps blueprint archive surfaces free of banned visual anti-patterns', () => {
     const auditedPaths = [
-      'src/assets/main.css',
       'src/assets/blueprint.css',
       'src/components/shared/NovelDetailShell.vue',
       'src/components/novel-detail/OverviewSection.vue',
@@ -152,6 +156,10 @@ describe('UI audit regressions', () => {
       expect(source, path).not.toContain('backdrop-filter')
       expect(source, path).not.toMatch(/border-(left|right):\s*(?:[2-9]|[1-9][0-9])px/)
     }
+    const globalCss = readGlobalCss()
+    expect(globalCss).not.toContain('background-clip: text')
+    expect(globalCss).not.toContain('backdrop-filter')
+    expect(globalCss).not.toMatch(/border-(left|right):\s*(?:[2-9]|[1-9][0-9])px/)
   })
 
   it('keeps shared pagination controls touch-safe', () => {
@@ -166,7 +174,7 @@ describe('UI audit regressions', () => {
 
   it('keeps shared modal styling centralized and tokenized', () => {
     const modalSource = readSource('src/components/shared/GlobalModalContainer.vue')
-    const globalCss = readSource('src/assets/main.css')
+    const globalCss = readGlobalCss()
 
     expect(modalSource).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
     expect(modalSource).not.toMatch(/rgba?\(/)
@@ -203,7 +211,7 @@ describe('UI audit regressions', () => {
 
   it('keeps app shell project dropdown controls semantic and touch-safe', () => {
     const source = readSource('src/components/shared/AppShell.vue')
-    const css = readSource('src/assets/main.css')
+    const css = readGlobalCss()
     const capsuleBlock = readCssBlock(css, '.app-shell__project-capsule')
     const dropdownItemBlock = readCssBlock(css, '.app-shell__dropdown-item')
     const dropdownActionBlock = readCssBlock(css, '.app-shell__dropdown-action')
@@ -220,7 +228,7 @@ describe('UI audit regressions', () => {
   })
 
   it('keeps app shell decorative data urls out of the main css budget path', () => {
-    const css = readSource('src/assets/main.css')
+    const css = readGlobalCss()
 
     expect(css).not.toMatch(/\.app-shell__dropdown-item:hover\s*\{[^}]*?data:image/)
     expect(css).not.toMatch(/\.app-shell__project-welcome-message\s*\{[^}]*?data:image/)
@@ -338,7 +346,7 @@ describe('UI audit regressions', () => {
   })
 
   it('keeps dark primary text token contrast at WCAG AA level', () => {
-    const source = readSource('src/assets/main.css')
+    const source = readGlobalCss()
     const darkPrimaryText = readCssCustomProperty(source, ":root[data-theme='dark']", '--md-primary')
     const darkBackground = readCssCustomProperty(source, ":root[data-theme='dark']", '--md-background')
 
@@ -346,7 +354,7 @@ describe('UI audit regressions', () => {
   })
 
   it('keeps dark vermilion text token contrast at WCAG AA level', () => {
-    const source = readSource('src/assets/main.css')
+    const source = readGlobalCss()
     const darkSecondaryText = readCssCustomProperty(source, ":root[data-theme='dark']", '--md-secondary-readable')
     const darkSurface = readCssCustomProperty(source, ":root[data-theme='dark']", '--md-surface')
     const darkBackground = readCssCustomProperty(source, ":root[data-theme='dark']", '--md-background')
@@ -358,7 +366,7 @@ describe('UI audit regressions', () => {
   })
 
   it('keeps typography roles centralized in design tokens', () => {
-    const css = readSource('src/assets/main.css')
+    const css = readGlobalCss()
     const mainSource = readSource('src/main.ts')
     const bodyBlock = readCssBlock(css, 'body')
 
@@ -382,7 +390,7 @@ describe('UI audit regressions', () => {
   })
 
   it('uses accessible semantic text tokens for light theme status copy', () => {
-    const css = readSource('src/assets/main.css')
+    const css = readGlobalCss()
     const lightSurface = readLightThemeCustomProperty(css, '--md-surface')
     const errorContainer = readLightThemeCustomProperty(css, '--md-error-container')
     const warningContainer = readLightThemeCustomProperty(css, '--md-warning-container')

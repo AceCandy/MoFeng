@@ -108,4 +108,4 @@ Rule: for transient user feedback, use `useAlert()` (the project convention); re
 - `any` in emit or prop types (see [type-safety](./type-safety.md)).
 - Top-level `from 'naive-ui'` barrel imports in feature components.
 - Hard-coded color literals; use the `--md-*` / `--ink-*` tokens.
-- Adding global styles outside `main.css` (or `App.vue`'s scoped toast block).
+- Adding global styles outside the `main.css` entry chain (or `App.vue`'s scoped toast block). Global styles live in `src/assets/styles/` partials (`tokens.css` / `elements/*` / `components/*`), aggregated by `main.css` via `@import`; new global styles go into the matching partial, never into a standalone file bypassing the entry.

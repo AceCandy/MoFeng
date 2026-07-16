@@ -33,14 +33,15 @@ All routes live in `src/router/index.ts` (single file). Conventions:
 
 ## Styling
 
-Tailwind v4, CSS-first. `src/assets/main.css`:
+Tailwind v4, CSS-first. `src/assets/main.css` is the entry: it pulls in Tailwind, then aggregates domain-split partials via `@import` (`./styles/tokens.css`, `./styles/elements/*`, `./styles/components/*`). `main.ts` imports only `main.css`.
 
 ```css
 @import 'tailwindcss';
+@import './styles/tokens.css';
 @plugin "@tailwindcss/typography";
 ```
 
-- Theme tokens are CSS custom properties under `--md-*` (design system) and `--ink-*` (ink style), with light/dark keyed on `:root[data-theme]`. `src/main.ts` resolves theme preference from `localStorage['mofeng-theme-preference']` and sets `document.documentElement.dataset.theme`.
+- Theme tokens are CSS custom properties under `--md-*` (design system) and `--ink-*` (ink style), with light/dark keyed on `:root[data-theme]`, defined in `src/assets/styles/tokens.css`. `src/main.ts` resolves theme preference from `localStorage['mofeng-theme-preference']` and sets `document.documentElement.dataset.theme`.
 - Use `<style scoped>` per component; `:deep(...)` for Naive UI overrides (reference: `src/components/shared/MofengTable.vue`).
 - Do not add a `tailwind.config.js`; v4 is config-less.
 

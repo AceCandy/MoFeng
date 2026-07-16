@@ -11,6 +11,8 @@ import {
   tabletMin,
 } from '@/constants/responsive'
 
+import { readGlobalCss } from '../../components/__tests__/readGlobalCss'
+
 describe('responsive constants', () => {
   it('exposes the expected breakpoint values', () => {
     expect(desktopMin).toBe(1200)
@@ -53,7 +55,7 @@ describe('responsive auth screens', () => {
 
 describe('responsive shell layout', () => {
   it('keeps app shell bottom tabs guarded by the mobile breakpoint', () => {
-    const shellStyles = readFileSync(resolve(process.cwd(), 'src/assets/main.css'), 'utf-8')
+    const shellStyles = readGlobalCss()
 
     expect(shellStyles.includes('.app-shell__bottom-tabs')).toBe(true)
     expect(shellStyles.includes('@media (max-width: 833px)')).toBe(true)
