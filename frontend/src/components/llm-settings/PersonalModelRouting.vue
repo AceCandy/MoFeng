@@ -106,7 +106,7 @@
             @delete-model="(modelName) => deleteModelForActiveSection(provider, modelName)"
           />
           <ModelPickerDialog
-            v-if="isModelPickerOpen(provider.id)"
+            v-if="isModelPickerOpen(provider.id) && !(providerFormMode === 'edit' && editingProviderId === provider.id)"
             :provider="provider"
             :active-section="activeSection"
             :model-picker-style="modelPickerStyle"
