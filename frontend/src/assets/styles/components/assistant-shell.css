@@ -1,0 +1,74 @@
+/* AIMETA P=助手面板_砚台批注屏风隔条|R=assistant-shell AI评审助手面板+砚台批注+屏风隔条+黄铜角扣+dark覆写|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* ============================================
+   4. AI 评审助手面板“砚台批注册”与“古典双行朱批”
+   ============================================ */
+
+/* 助手面板壳古籍化 */
+.writing-desk-assistant-shell {
+  background-color: var(--md-surface-dim) !important;
+  border-left: 1px solid var(--md-outline-variant) !important;
+  box-shadow: var(--md-elevation-drawer-left) !important;
+}
+
+/* 夹注化排版覆写 */
+.writing-desk-assistant-shell .chat-bubble-ai {
+  background-color: transparent !important;
+  border-radius: 0 !important;
+  border: none !important;
+  padding: var(--md-spacing-4) var(--md-spacing-2) !important;
+  position: relative !important;
+  /* 左右两道极其精细古雅的朱砂细竖虚线 */
+  border-left: 1.5px dashed rgba(184, 60, 50, 0.2) !important;
+  border-right: 1.5px dashed rgba(184, 60, 50, 0.2) !important;
+}
+
+/* 暗色模式助手面板朱线适配 */
+:root[data-theme='dark'] .writing-desk-assistant-shell .chat-bubble-ai {
+  border-left-color: rgba(140, 36, 28, 0.3) !important;
+  border-right-color: rgba(140, 36, 28, 0.3) !important;
+}
+
+/* 评审红字夹注楷书化 */
+.writing-desk-assistant-shell .chat-bubble-ai,
+.writing-desk-assistant-shell .chat-bubble-ai p {
+  color: var(--md-secondary) !important; /* 批红 */
+  font-family: var(--md-font-kai) !important;
+  font-size: var(--md-body-medium) !important;
+  line-height: 1.75 !important;
+  letter-spacing: 0.04em !important;
+}
+
+:root[data-theme='dark'] .writing-desk-assistant-shell .chat-bubble-ai,
+:root[data-theme='dark'] .writing-desk-assistant-shell .chat-bubble-ai p {
+  color: #b8433a !important; /* 柔和暗红 */
+}
+
+/* ============================================
+   5. 老檀木屏风隔条与四角黄铜古角扣
+   ============================================ */
+
+/* 多宝阁檀木框架隔断 */
+.writing-desk-layout {
+  gap: var(--md-spacing-3) !important;
+  background-color: transparent !important;
+}
+
+/* 工作台侧边栏、主工作区、助手面板的隔栏木质化 */
+.writing-desk-sidebar-shell,
+.writing-desk-assistant-shell {
+  border-color: #2b211a !important; /* 檀木棕黑 */
+}
+
+/* 整个工作台大边框装饰 */
+.writing-desk-layout-wrap {
+  border: none !important; /* 彻底去除大边框黑线 */
+  position: relative !important;
+  background-color: transparent !important;
+}
+
+/* 纯 CSS 伪元素雕刻的古典“直角黄铜书角扣” - 纠偏去除 */
+.writing-desk-layout-wrap::before,
+.writing-desk-layout-wrap::after {
+  content: none !important;
+  display: none !important;
+}
