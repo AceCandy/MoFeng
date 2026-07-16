@@ -6,6 +6,7 @@
 @import './styles/elements/navigation.css';
 @import './styles/components/chips.css';
 @import './styles/components/material3-components.css';
+@import './styles/components/utility.css';
 
 @plugin "@tailwindcss/typography";
 
@@ -164,63 +165,6 @@ h6 {
 
 
 
-
-/* ============================================
-   Utility Classes
-   ============================================ */
-.md-surface {
-  background-color: var(--md-surface);
-}
-.md-surface-dim {
-  background-color: var(--md-surface-dim);
-}
-.md-surface-container {
-  background-color: var(--md-surface-container);
-}
-.md-surface-container-high {
-  background-color: var(--md-surface-container-high);
-}
-.md-surface-container-highest {
-  background-color: var(--md-surface-container-highest);
-}
-
-.md-on-surface {
-  color: var(--md-on-surface);
-}
-.md-on-surface-variant {
-  color: var(--md-on-surface-variant);
-}
-.md-primary-text {
-  color: var(--md-primary);
-}
-.md-error-text {
-  color: var(--md-error-text);
-}
-.md-warning-text {
-  color: var(--md-warning-text);
-}
-.md-success-text {
-  color: var(--md-success-text);
-}
-
-.md-elevation-0 {
-  box-shadow: var(--md-elevation-0);
-}
-.md-elevation-1 {
-  box-shadow: var(--md-elevation-1);
-}
-.md-elevation-2 {
-  box-shadow: var(--md-elevation-2);
-}
-.md-elevation-3 {
-  box-shadow: var(--md-elevation-3);
-}
-.md-elevation-4 {
-  box-shadow: var(--md-elevation-4);
-}
-.md-elevation-5 {
-  box-shadow: var(--md-elevation-5);
-}
 
 /* ============================================
    Authenticated App Shell
