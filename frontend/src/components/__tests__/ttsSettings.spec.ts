@@ -59,10 +59,11 @@ describe('TTS settings integration', () => {
   })
 
   it('isolates TTS providers by capability like chat and embedding', () => {
-    const routing = source('src/components/llm-settings/PersonalModelRouting.vue')
+    // activeProviders 派生已抽离到 useSectionMeta.ts（Slice 4），按能力过滤的逻辑随之迁移
+    const sectionMeta = source('src/components/llm-settings/useSectionMeta.ts')
 
     // 语音朗读不再走“显示所有供应商”特例，与文本生成/记忆检索一致按能力过滤
-    expect(routing).not.toContain("activeSection.value === 'tts' ? providers.value")
-    expect(routing).toContain('providerCapabilities(provider)[activeModelCapability()]')
+    expect(sectionMeta).not.toContain("activeSection.value === 'tts' ? providers.value")
+    expect(sectionMeta).toContain('providerCapabilities(provider)[capability]')
   })
 })
