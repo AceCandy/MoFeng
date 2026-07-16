@@ -193,20 +193,18 @@ import type {
   ChapterVersion,
 } from '@/api/novel'
 import {
-  useEditChapterContentMutation,
   useApplyOptimizationMutation,
   useConfirmFinalizeChapterMutation,
-  useGenerateChapterOutlineMutation,
   useNovelChapterQuery,
   useNovelMutationRefresh,
   useNovelProjectQuery,
   useOptimizeRecommendedVersionMutation,
-  useUpdateChapterOutlineMutation,
 } from '@/queries/novel'
 import { globalAlert } from '@/composables/useAlert'
 import { useWritingDeskDrawers } from '@/composables/useWritingDeskDrawers'
 import { useWritingDeskChapterGeneration } from '@/composables/useWritingDeskChapterGeneration'
 import { useWritingDeskChapterOps } from '@/composables/useWritingDeskChapterOps'
+import { useWritingDeskModals } from '@/composables/useWritingDeskModals'
 import { useWritingDeskProject } from '@/composables/useWritingDeskProject'
 import { useWritingDeskVersionDetail } from '@/composables/useWritingDeskVersionDetail'
 import { countNonWhitespaceChars } from '@/utils/text'
@@ -253,11 +251,6 @@ const resolvedProjectEntryId = ref<string | null>(null)
 const chapterGenerationResult = ref<ChapterGenerationResponse | null>(null)
 const selectedVersionIndex = ref<number>(0)
 const generatingChapter = ref<number | null>(null)
-const showEvaluationDetailModal = ref(false)
-const showEditChapterModal = ref(false)
-const editingChapter = ref<ChapterOutline | null>(null)
-const isGeneratingOutline = ref(false)
-const showGenerateOutlineModal = ref(false)
 const optimizeRecommendedVersionMutation = useOptimizeRecommendedVersionMutation()
 const showRecommendedOptimizeResultModal = ref(false)
 const applyOptimizationMutation = useApplyOptimizationMutation(() => props.id)
@@ -287,9 +280,6 @@ const { refreshProjectQueries, upsertChapterInProjectCache } = useNovelMutationR
   () => props.id,
 )
 const confirmFinalizeChapterMutation = useConfirmFinalizeChapterMutation(() => props.id)
-const updateChapterOutlineMutation = useUpdateChapterOutlineMutation(() => props.id)
-const generateChapterOutlineMutation = useGenerateChapterOutlineMutation(() => props.id)
-const editChapterContentMutation = useEditChapterContentMutation(() => props.id)
 
 // 计算属性
 const project = computed(() => projectQuery.data.value ?? null)
@@ -320,6 +310,26 @@ const {
   closeAllDrawers,
   upsertChapterInProjectCache,
   refreshProjectQueries,
+})
+
+const {
+  showEvaluationDetailModal,
+  showEditChapterModal,
+  editingChapter,
+  isGeneratingOutline,
+  showGenerateOutlineModal,
+  openEditChapterModal,
+  openEvaluationDetailModal,
+  saveChapterChanges,
+  generateOutline,
+  editChapterContent,
+  handleGenerateOutline,
+} = useWritingDeskModals({
+  projectId: () => props.id,
+  project,
+  loadWDEditChapterModal,
+  loadWDEvaluationDetailModal,
+  loadWDGenerateOutlineModal,
 })
 
 const getQueryChapterNumber = () => {
@@ -628,32 +638,6 @@ const confirmVersionSelection = async (payload?: { editedContent?: string | null
   }
 }
 
-const openEditChapterModal = (chapter: ChapterOutline) => {
-  void loadWDEditChapterModal()
-  editingChapter.value = chapter
-  showEditChapterModal.value = true
-}
-
-const openEvaluationDetailModal = () => {
-  void loadWDEvaluationDetailModal()
-  showEvaluationDetailModal.value = true
-}
-
-const saveChapterChanges = async (updatedChapter: ChapterOutline) => {
-  try {
-    await updateChapterOutlineMutation.mutateAsync(updatedChapter)
-    globalAlert.showToast('章节大纲已更新', 'success')
-  } catch (error) {
-    console.error('更新章节大纲失败:', error)
-    globalAlert.showError(
-      `更新章节大纲失败: ${error instanceof Error ? error.message : '未知错误'}`,
-      '保存失败',
-    )
-  } finally {
-    showEditChapterModal.value = false
-  }
-}
-
 const { evaluateChapter, deleteChapter } = useWritingDeskChapterOps({
   projectId: () => props.id,
   project,
@@ -662,46 +646,6 @@ const { evaluateChapter, deleteChapter } = useWritingDeskChapterOps({
   latestCompletedChapterNumber,
 })
 
-const generateOutline = async () => {
-  void loadWDGenerateOutlineModal()
-  showGenerateOutlineModal.value = true
-}
-
-const editChapterContent = async (data: { chapterNumber: number; content: string }) => {
-  if (!project.value) return
-
-  try {
-    await editChapterContentMutation.mutateAsync({
-      chapterNumber: data.chapterNumber,
-      content: data.content,
-    })
-    globalAlert.showToast('章节内容已更新', 'success')
-  } catch (error) {
-    console.error('编辑章节内容失败:', error)
-    globalAlert.showError(
-      `编辑章节内容失败: ${error instanceof Error ? error.message : '未知错误'}`,
-      '保存失败',
-    )
-  }
-}
-
-const handleGenerateOutline = async (numChapters: number) => {
-  if (!project.value) return
-  isGeneratingOutline.value = true
-  try {
-    const startChapter = (project.value.blueprint?.chapter_outline?.length || 0) + 1
-    await generateChapterOutlineMutation.mutateAsync({ startChapter, numChapters })
-    globalAlert.showToast('大纲生成任务已加入后台，可在右上角任务日志查看进度', 'success')
-  } catch (error) {
-    console.error('生成大纲失败:', error)
-    globalAlert.showError(
-      `生成大纲失败: ${error instanceof Error ? error.message : '未知错误'}`,
-      '生成失败',
-    )
-  } finally {
-    isGeneratingOutline.value = false
-  }
-}
 </script>
 
 <style scoped>

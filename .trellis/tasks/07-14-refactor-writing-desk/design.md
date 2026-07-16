@@ -44,7 +44,7 @@ parent `07-12-engineering-baseline` acceptance 第 4 项「5 大前端组件 <50
 | **5** ✅ | WDRecommendedOptimizeResultModal 子组件（modal template L164-259 + 内化 useDialogA11y+2refs+titleId+2computed+.m3-result-dialog style，4 props+emit close/apply；optimize/apply/close 方法+state 留父） | 子组件 | ~114 | 1206 |
 | ~~3c~~ | confirmVersionSelection **决定不抽**（单方法+入参 8 含 composable 链传递 availableVersions/resolveRecommendedVersionIndex=过度抽象，留父消费已解构返回值更简） | — | 0 | 1206 |
 | **6** ✅ | useWritingDeskProject composable（loadProject/refetchChapterIntoProject/viewProjectDetail/goBack/selectChapter/fetchChapterStatus/stopChapterStatusStream + 内化 4 statusStream refs + onUnmounted，**含 spec L341 source 拼接 + L342 regex 锚点简化 + L346 currentProjectId 指针跟随**） | composable | ~95 | 1111 |
-| 7 | useWritingDeskModals composable（WDEditChapterModal/WDGenerateOutlineModal/WDEvaluationDetailModal state + open/save 方法） | composable | ~80 | 996 |
+| **7** ✅ | useWritingDeskModals composable（WDEditChapterModal/WDGenerateOutlineModal/WDEvaluationDetailModal state + open/save 方法 + editChapterContent 内联快编 + 内化 3 mutation） | composable | ~56 | 1055 |
 | 8 | 章节状态判断 canGenerateChapter/isChapterFailed/hasChapterInProgress + progress/totalChapters/completedChapters/latestCompletedChapterNumber 并入 composable | composable | ~80 | 916 |
 | 9+ | template/style 收敛（剩余 layout style 拆分、H 块章节 computed、O 大纲编辑等），至 <500 | 子组件+style | ~330 | 586（**预估后仍 >500，后续 slice 据实扩展**） |
 
@@ -416,3 +416,61 @@ goBack 全文件仅定义无消费点（template/script 均无引用）。忠实
 - 1206 → 1111（-95；估 ~130 偏高，fetchChapterStatus 内联 SSE 重连逻辑长但 4 refs 迁出抵消部分）。
 - vue-tsc 0 / vitest 141 绿（wdWorkspaceLockedChapter 10/10 spec 3 处指针跟随后绿）/ eslint 0 新增（2 warning 全预存 @/api/novel：WritingDesk L189 type import + spec L8；Slice 5 的 NovelAPI value import warning 随迁出消失）。
 - 独立复核 git diff：7 hunk（import×4 调整 / router 删 / 4 refs 删 / useWritingDeskProject 解构插入 22 行 / onUnmounted+7 方法删 ~110 行），+27/-122，留父 3 watch/3a/applyRecommendedOptimization 零触及。
+
+---
+
+## Slice 7 设计：useWritingDeskModals composable（2026-07-16）✅ 1111→1055
+
+### 边界（迁入 composable）
+
+- 方法（6）：openEditChapterModal / openEvaluationDetailModal / saveChapterChanges / generateOutline / editChapterContent / handleGenerateOutline
+- 内化 refs（仅弹窗用）：showEvaluationDetailModal / showEditChapterModal / editingChapter / isGeneratingOutline / showGenerateOutlineModal
+- 内化 mutation（各独立）：updateChapterOutlineMutation（saveChapterChanges）/ generateChapterOutlineMutation（handleGenerateOutline）/ editChapterContentMutation（editChapterContent）
+
+### 入参（5）
+
+- projectId: () => string（getter，3 mutation 实例化 useXxxMutation(projectId) 等价原 () => props.id）
+- project: ComputedRef<NovelProject | null>（editChapterContent/handleGenerateOutline 守卫用）
+- loadWDEditChapterModal / loadWDEvaluationDetailModal / loadWDGenerateOutlineModal（3 loader，父侧 defineAsyncComponent 用故透传，open 方法内 void 预加载）
+
+### 返回（5 ref + 6 方法）
+
+- refs：showEvaluationDetailModal（template :show + applyRecommendedOptimization 留父 set false + @close inline）/ showEditChapterModal（template :show + @close inline）/ editingChapter（template :chapter）/ isGeneratingOutline（template WDSidebar :is-generating-outline）/ showGenerateOutlineModal（template :show + @close inline）——全被 template inline 或留父方法消费，故全返回父解构
+- 方法：openEditChapterModal（WDSidebar @edit-chapter）/ openEvaluationDetailModal（WDWorkspace @show-evaluation-detail）/ saveChapterChanges（WDEditChapterModal @save）/ generateOutline（WDSidebar @generate-outline）/ editChapterContent（WDWorkspace @edit-chapter）/ handleGenerateOutline（WDGenerateOutlineModal @generate）
+
+### 留父（零改动）
+
+- 3 loader 定义 + 5 defineAsyncComponent（WDVersionDetailModal/WDEvaluationDetailModal/WDEditChapterModal/WDGenerateOutlineModal/WDAssistantPanel/WDRecommendedOptimizeResultModal）
+- applyRecommendedOptimization（消费解构回父的 showEvaluationDetailModal.value=false）
+- confirmVersionSelection（消费 confirmFinalizeChapterMutation，3c 不抽留父）
+- confirmFinalizeChapterMutation / applyOptimizationMutation / optimizeRecommendedVersionMutation（其他 slice/逻辑各自消费）
+
+### 等价性
+
+- 3 mutation 内化 useXxxMutation(projectId)，与原 useXxxMutation(() => props.id) 等价（projectId getter = () => props.id）
+- 方法体逐字搬迁，project.value/refs.value 访问不变（入参为 ComputedRef/Ref）
+- showEvaluationDetailModal 等解构回父，template inline `@close="showXxxModal = false"` 与留父方法 applyRecommendedOptimization 访问同名 ref，行为等价
+- 3 loader 透传，open 方法内 void loadWDXxx() 预加载不变
+- editChapterContent 收入本块：虽非 modal 开关（WDWorkspace 内联正文快编），但依赖独立 editChapterContentMutation 且属「章节保存」语义，与编辑大纲同内聚
+
+### 调用点
+
+useWritingDeskModals 解构插在 useWritingDeskProject 解构之后、getQueryChapterNumber 之前：
+
+- 入参 project(L295)/loaders(L227-233) 均在其前定义
+- 返回 showEvaluationDetailModal 被 applyRecommendedOptimization(L517 区) 消费——在其前定义 ✅
+- 返回方法/refs 被 template 引用——setup 作用域可访问 ✅
+
+### const TDZ
+
+composable 内：refs（5）→ mutations（3）→ openEditChapterModal → openEvaluationDetailModal → saveChapterChanges（调 updateChapterOutlineMutation + showEditChapterModal）→ generateOutline → editChapterContent（调 editChapterContentMutation + project）→ handleGenerateOutline（调 generateChapterOutlineMutation + isGeneratingOutline + project）。各方法互不调用，无 forward reference。
+
+### spec
+
+modal 符号零 spec 断言（codegraph blast radius 全 no covering tests；rg 确认 wdSidebarDeleteChapter L68 `isGeneratingOutline: false` 是 WDWorkspace mount props 非源码断言）。零指针跟随。
+
+### 完成（2026-07-16）
+
+- 1111 → 1055（-56；估 ~80 偏高，6 方法较短 + 5 ref + 3 mutation 净删 ~80，加 insert 解构 24 行抵消）。
+- vue-tsc 0 / vitest 141 绿 / eslint 0 新增（1 warning 预存 @/api/novel WritingDesk L189 type import；composable 0 warning）。
+- 独立复核 git diff：7 hunk（queries import 删 3 mutation / +composable import / 删 5 refs / 删 3 mutations / useWritingDeskModals 解构插入 22 行 / 删块A 3 方法 26 行 / 删块B 3 方法 47 行），留父 applyRecommendedOptimization/confirmVersionSelection/loader+defineAsyncComponent 零触及。
