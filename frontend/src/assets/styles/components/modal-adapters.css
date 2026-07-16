@@ -1,0 +1,97 @@
+/* AIMETA P=弹窗适配_水墨大弹窗子视图自适应覆写|R=modal-adapters 全局水墨大弹窗内部子视图自适应覆写|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* ============================================
+   全局水墨大弹窗内部子视图样式自适应覆写 (Modal Adapters)
+   ============================================ */
+
+/* 1. 弹窗内的模型设置页自适应 */
+.m3-ink-modal-box .settings-page {
+  min-height: auto !important;
+  gap: var(--md-spacing-4) !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.m3-ink-modal-box .settings-hero {
+  padding: var(--md-spacing-4) var(--md-spacing-5) !important;
+  border-radius: var(--md-radius-lg) !important;
+  background: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--md-surface-bright) 95%, transparent),
+    color-mix(in srgb, var(--md-primary-container) 15%, var(--md-surface-container-low))
+  ) !important;
+  border-color: var(--md-outline-variant) !important;
+}
+
+.m3-ink-modal-box .settings-hero h2 {
+  font-size: 1.45rem !important;
+  margin-top: 6px !important;
+}
+
+.m3-ink-modal-box .settings-summary {
+  gap: var(--md-spacing-3) !important;
+}
+
+.m3-ink-modal-box .settings-center {
+  gap: var(--md-spacing-3) !important;
+}
+
+.m3-ink-modal-box .settings-center__nav,
+.m3-ink-modal-box .settings-center__panel {
+  border-radius: var(--md-radius-lg) !important;
+  background-color: color-mix(in srgb, var(--md-surface) 98%, transparent) !important;
+}
+
+.m3-ink-modal-box .settings-center__panel {
+  padding: var(--md-spacing-4) !important;
+}
+
+/* 2. 弹窗内的管理员运营控制台页自适应 */
+.m3-ink-modal-box .admin-console {
+  min-height: auto !important;
+  background-color: transparent !important;
+  gap: var(--md-spacing-4) !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+.m3-ink-modal-box .admin-ops {
+  padding: var(--md-spacing-4) var(--md-spacing-5) !important;
+  background: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--md-surface-bright) 95%, transparent),
+    color-mix(in srgb, var(--md-secondary-container) 15%, var(--md-surface-container-low))
+  ) !important;
+  border-color: var(--md-outline-variant) !important;
+  border-radius: var(--md-radius-lg) !important;
+  gap: var(--md-spacing-4) !important;
+}
+
+.m3-ink-modal-box .admin-ops h2 {
+  font-size: 1.45rem !important;
+  margin-top: 6px !important;
+}
+
+.m3-ink-modal-box .admin-ops__metrics {
+  gap: var(--md-spacing-3) !important;
+}
+
+.m3-ink-modal-box .admin-ops__grid {
+  gap: var(--md-spacing-3) !important;
+}
+
+.m3-ink-modal-box .admin-console__nav {
+  background-color: color-mix(in srgb, var(--md-surface-container-low) 96%, transparent) !important;
+  border-color: var(--md-outline-variant) !important;
+  border-radius: var(--md-radius-full) !important;
+}
+
+.m3-ink-modal-box .admin-console__nav-item {
+  min-height: 38px !important;
+  padding: 0 var(--md-spacing-3) !important;
+}
+
+.m3-ink-modal-box .admin-console__content {
+  padding: var(--md-spacing-1) 0 !important;
+}

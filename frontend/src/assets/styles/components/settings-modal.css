@@ -1,0 +1,151 @@
+/* AIMETA P=模型设置弹窗_朱印落宣折扇开合|R=settings-modal 模型设置弹窗中国风重绘+折扇开合|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* ============================================
+   模型设置弹窗「朱印落宣，折扇开合」高画质中国风重绘
+   ============================================ */
+
+/* 1. 根容器自适应极简案头 */
+.settings-page.is-in-modal {
+  min-height: auto !important;
+  gap: var(--md-spacing-4) !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* 2. 核心布局降级为 Flex 纵向流，上 Tab 下内容 */
+.settings-page.is-in-modal .settings-center {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important; /* 强制拉伸，填满外部大弹窗 */
+  gap: var(--md-spacing-4) !important;
+  width: 100% !important;
+}
+
+/* 3. 宣纸折扇上方横向选项卡 */
+.settings-page.is-in-modal .settings-center__nav {
+  width: 100% !important;
+  max-width: 640px !important;
+  margin: 0 auto !important;
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: stretch !important;
+  padding: 2px !important;
+  gap: 0 !important;
+  background-color: var(--md-surface-container-low) !important;
+  border: 1px solid var(--md-outline-variant) !important;
+  border-radius: var(--md-radius-sm) !important; /* 严整方折直角风格 */
+  box-shadow:
+    var(--md-elevation-1),
+    inset 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  overflow: hidden !important;
+}
+
+/* 4. 折扇单页选项卡 */
+.settings-page.is-in-modal .settings-center__nav-item {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 46px !important;
+  padding: var(--md-spacing-2) var(--md-spacing-3) !important;
+  border: none !important;
+  border-right: 1px dashed var(--md-outline-variant) !important;
+  border-radius: 0 !important; /* 方正直角，绝不圆滑 */
+  background: transparent !important;
+  color: var(--md-on-surface) !important;
+  font-family: var(--md-font-label) !important;
+  font-size: var(--md-title-small) !important;
+  transition:
+    background-color 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1) !important;
+  position: relative !important;
+  cursor: pointer !important;
+}
+
+/* 最后一个折扇去除右边线 */
+.settings-page.is-in-modal .settings-center__nav-item:last-child {
+  border-right: none !important;
+}
+
+/* 隐藏描述小字，达成极简案头 */
+.settings-page.is-in-modal .settings-center__nav-item small {
+  display: none !important;
+}
+
+/* 5. 朱砂落泥金石藏书章（Active 态） */
+.settings-page.is-in-modal .settings-center__nav-item.is-active,
+.settings-page.is-in-modal .settings-center__nav-item[aria-selected='true'] {
+  background-color: var(--md-secondary) !important; /* 新中式朱砂红印泥色 */
+  color: var(--md-on-secondary) !important;
+  font-weight: 700 !important;
+  box-shadow:
+    inset 0 0 10px rgba(0, 0, 0, 0.2),
+    0 1px 3px rgba(184, 60, 50, 0.3) !important;
+  border-right-color: transparent !important;
+  z-index: 2 !important;
+}
+
+/* 6. 朱泥物理盖印按压及 Hover 触觉交互 */
+.settings-page.is-in-modal .settings-center__nav-item:not(.is-active):hover {
+  background-color: color-mix(in srgb, var(--md-secondary) 8%, var(--md-surface-container-high)) !important;
+  color: var(--md-secondary) !important;
+  transform: translateY(-0.5px) !important;
+}
+
+.settings-page.is-in-modal .settings-center__nav-item:active {
+  transform: translateY(1.5px) scale(0.985) !important;
+  transition-duration: 0.05s !important; /* 瞬时按压回馈 */
+}
+
+/* 7. 深夜书房（暗色模式）精细配色自适应 */
+.dark-theme .settings-page.is-in-modal .settings-center__nav,
+[data-theme="dark"] .settings-page.is-in-modal .settings-center__nav {
+  background-color: var(--md-surface-container-lowest) !important;
+  border-color: var(--md-outline-variant) !important;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark-theme .settings-page.is-in-modal .settings-center__nav-item,
+[data-theme="dark"] .settings-page.is-in-modal .settings-center__nav-item {
+  color: var(--md-on-surface-variant) !important;
+  border-right-color: var(--md-outline-variant) !important;
+}
+
+.dark-theme .settings-page.is-in-modal .settings-center__nav-item.is-active,
+[data-theme="dark"] .settings-page.is-in-modal .settings-center__nav-item.is-active {
+  background-color: #9c332b !important; /* 熟化暗朱砂印泥 */
+  color: #f2ebd9 !important; /* 汉白玉熟宣白 */
+  box-shadow:
+    inset 0 0 6px rgba(0, 0, 0, 0.32),
+    1px 1px 0px rgba(0, 0, 0, 0.35) !important;
+}
+
+.dark-theme .settings-page.is-in-modal .settings-center__nav-item:not(.is-active):hover,
+[data-theme="dark"] .settings-page.is-in-modal .settings-center__nav-item:not(.is-active):hover {
+  background-color: color-mix(in srgb, #9c332b 12%, var(--md-surface-container-low)) !important;
+  color: #e57267 !important;
+}
+
+/* 8. 配置面板容器水墨感融合 */
+.settings-page.is-in-modal .settings-center__panel {
+  width: 100% !important; /* 确保横向彻底铺满 */
+  border: 1px solid var(--md-outline-variant) !important;
+  border-radius: var(--md-radius-lg) !important;
+  background-color: color-mix(in srgb, var(--md-surface) 98%, transparent) !important;
+  padding: var(--md-spacing-5) !important;
+}
+
+@media (max-width: 768px) {
+  .settings-page.is-in-modal .settings-center__nav {
+    max-width: 100% !important;
+  }
+  .settings-page.is-in-modal .settings-center__nav-item {
+    font-size: var(--md-body-medium) !important;
+    min-height: 42px !important;
+  }
+}
