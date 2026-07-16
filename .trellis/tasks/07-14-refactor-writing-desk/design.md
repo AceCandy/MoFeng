@@ -39,12 +39,12 @@ parent `07-12-engineering-baseline` acceptance 第 4 项「5 大前端组件 <50
 | **2** ✅ | useWritingDeskDrawers composable（drawer refs+computed+方法+watch+onMounted，viewport/novelStore 内化，loadAssistantPanel 入参） | composable | ~93 | 1817 |
 | **3a** ✅ | useWritingDeskChapterGeneration composable（generateChapter/retryFromNode/regenerateChapter + 内化 canGenerateChapter/isChapterFailed/hasChapterInProgress/generateChapterMutation，生成子系统内聚） | composable | ~154 | 1663 |
 | **3b** ✅ | useWritingDeskChapterOps composable（evaluateChapter/deleteChapter + 内化 evaluateChapterMutation/deleteChapterMutation；confirmVersionSelection 因依赖 Slice 4 版本提取群拆 3c。**含 wdSidebarDeleteChapter spec 指针跟随**） | composable | ~117 | 1546 |
-| 4 | useWritingDeskVersionDetail composable（版本提取群 extractVersionContent/extractVersionMetadata/toBoundedVersionIndex/resolveRecommendedVersionIndex/availableVersions/syncRecommendedVersionSelection/showVersionDetail/closeVersionDetail/selectVersionFromDetail/isCurrentVersion 内聚，**含 spec L333 指针跟随**） | composable | ~200 | 1346 |
-| 3c | confirmVersionSelection（Slice 4 收敛 availableVersions/resolveRecommendedVersionIndex/selectedChapter 后单抽） | composable | ~52 | 1294 |
-| 5 | WDRecommendedOptimizeResultModal 子组件（template L164-259 + 推荐优化 state/close/optimize/apply 方法 + style） | 子组件 | ~216 | 1078 |
-| 6 | useWritingDeskProject composable（loadProject/refetchChapterIntoProject/viewProjectDetail/goBack/selectChapter/fetchChapterStatus/stopChapterStatusStream） | composable | ~130 | 948 |
-| 7 | useWritingDeskModals composable（WDEditChapterModal/WDGenerateOutlineModal/WDEvaluationDetailModal state + open/save 方法） | composable | ~80 | 868 |
-| 8 | 章节状态判断 canGenerateChapter/isChapterFailed/hasChapterInProgress + progress/totalChapters/completedChapters/latestCompletedChapterNumber 并入 composable | composable | ~80 | 788 |
+| **4** ✅ | useWritingDeskVersionDetail composable（版本提取群 extractVersionContent/extractVersionMetadata/toBoundedVersionIndex/resolveRecommendedVersionIndex/availableVersions/syncRecommendedVersionSelection/showVersionDetail/closeVersionDetail/selectVersionFromDetail/isCurrentVersion + 内化 showVersionDetailModal/detailVersionIndex/lastAutoRecommendedSelectionKey refs + watch，**含 spec L333 指针跟随 + L345 fetchChapterStatus 锚点跟随**） | composable | ~226 | 1320 |
+| 3c | confirmVersionSelection（Slice 4 已收敛 availableVersions/resolveRecommendedVersionIndex，可直接消费 composable 返回值单抽） | composable | ~52 | 1268 |
+| 5 | WDRecommendedOptimizeResultModal 子组件（template L164-259 + 推荐优化 state/close/optimize/apply 方法 + style） | 子组件 | ~216 | 1052 |
+| 6 | useWritingDeskProject composable（loadProject/refetchChapterIntoProject/viewProjectDetail/goBack/selectChapter/fetchChapterStatus/stopChapterStatusStream） | composable | ~130 | 922 |
+| 7 | useWritingDeskModals composable（WDEditChapterModal/WDGenerateOutlineModal/WDEvaluationDetailModal state + open/save 方法） | composable | ~80 | 842 |
+| 8 | 章节状态判断 canGenerateChapter/isChapterFailed/hasChapterInProgress + progress/totalChapters/completedChapters/latestCompletedChapterNumber 并入 composable | composable | ~80 | 762 |
 | 9+ | template/style 收敛（modal 子组件 style 迁移、layout style 拆分到子组件），至 <500 | 子组件+style | ~330 | <500 |
 
 > roadmap 行数为粗估，每 slice 实施时以 rg/Read 真实磁盘为准。仿 NovelDetailShell 实际收益常优于预估。
@@ -245,3 +245,57 @@ composable 内：evaluateChapterMutation → deleteChapterMutation → evaluateC
 - 1663 → 1546（-117；预估 ~150 因拆出 confirm 至 3c）。
 - vue-tsc 0 / vitest 141 绿（wdSidebarDeleteChapter 2/2 spec 重定向后绿）/ eslint 0 新增（composable 0 输出，3 warning 全预存 @/api/novel：WritingDesk.vue L277/278 + spec L7）。
 - 独立复核 git diff：5 处精确（import -2 mutation+composable / 删 2 mutation 实例化 / 删 evaluate+delete 整块+原位 composable 解构 5 入参）+ spec 1 处 source 拼接，留父方法零触及。
+
+---
+
+## Slice 4 设计：useWritingDeskVersionDetail composable（2026-07-16）✅ 1546→1320
+
+### 边界（迁入 composable）
+
+- 纯函数（无响应式依赖）：extractVersionContent / extractVersionMetadata / toBoundedVersionIndex / resolveRecommendedVersionIndex（依赖 toBoundedVersionIndex + parseEvaluationPayload import）
+- computed：availableVersions（依赖 chapterGenerationResult + selectedChapter + 2 纯函数）/ isCurrentVersion（依赖 selectedChapter + availableVersions + cleanVersionContent）
+- 方法：syncRecommendedVersionSelection（+ watch 内化，selectedChapter/availableVersions 触发）/ showVersionDetail / closeVersionDetail / hideVersionSelector / selectVersionFromDetail
+- 内化 refs（仅版本详情用）：showVersionDetailModal / detailVersionIndex / lastAutoRecommendedSelectionKey（仅 sync 用）
+
+### 入参（4，透传父侧响应式源 + loader）
+
+- selectedChapter: ComputedRef<Chapter | null>（留父，多处消费）
+- chapterGenerationResult: Ref<ChapterGenerationResponse | null>（留父，3a 已透传）
+- selectedVersionIndex: Ref<number>（留父，3a/3b 已透传 + template）
+- loadWDVersionDetailModal: () => Promise<unknown>（loader 留父 defineAsyncComponent 用 + 透传 showVersionDetail 预加载）
+
+### 返回（template + confirm 3c + optimize 消费）
+
+- availableVersions（template :available-versions + WDVersionDetailModal :version + confirm/optimize）
+- isCurrentVersion（template :is-current）
+- resolveRecommendedVersionIndex（**暴露给 confirm 3c**，依赖已收敛）
+- showVersionDetail / closeVersionDetail / hideVersionSelector / selectVersionFromDetail（template 绑定）
+- showVersionDetailModal / detailVersionIndex（template WDVersionDetailModal :show/:detail-version-index）
+
+### 留父（零改动）
+
+- confirmVersionSelection（3c，现已可消费 composable 返回的 availableVersions/resolveRecommendedVersionIndex，依赖收敛完成）
+- recommendOptimized*（Slice 5 推荐优化 modal，消费 availableVersions）
+- selectChapter / fetchChapterStatus（Slice 6）
+
+### 等价性
+
+- 纯函数逐字搬迁；computed/方法体逐字搬迁，selectedChapter.value/chapterGenerationResult.value/selectedVersionIndex.value 访问不变
+- watch 内化（selectedChapter/availableVersions 触发 syncRecommendedVersionSelection，deep+immediate 保留）
+- loadWDVersionDetailModal 透传，showVersionDetail 内 void loadWDVersionDetailModal() 不变
+- template 绑定不变（解构暴露同名）
+
+### spec 指针跟随（2 处）
+
+1. wdWorkspaceLockedChapter L331 `defaults waiting confirmation selection`：source 改为 `` `${readSource WritingDesk.vue}\n${readSource useWritingDeskVersionDetail.ts}` ``（resolveRecommendedVersionIndex/syncRecommendedVersionSelection 迁入 composable，5 项断言 `const resolveRecommendedVersionIndex`/`recommended_version_index`/`metadata?.ai_review?.is_best`/`selectedVersionIndex.value = recommendedIndex`/not `availableVersions.value.length - 1` 全在 composable 源码命中）
+2. wdWorkspaceLockedChapter L342 `streams generation status`：fetchChapterStatus 后续锚点 `// 显示版本详情`（showVersionDetail 注释）随迁入消失 → 改 `const selectChapter`（fetchChapterStatus `}` 后现直接 selectChapter）
+
+### const TDZ
+
+composable 内：refs → extractVersionContent → extractVersionMetadata → availableVersions → isCurrentVersion（调 availableVersions，放其后）→ toBoundedVersionIndex → resolveRecommendedVersionIndex（调 toBounded + parseEvaluationPayload）→ syncRecommendedVersionSelection（调 availableVersions + resolveRecommended）→ show/close/hide/select → watch。无 forward reference。
+
+### 完成（2026-07-16）
+
+- 1546 → 1320（-226，优于预估 ~200）。
+- vue-tsc 0 / vitest 141 绿（wdWorkspaceLockedChapter spec 2 处指针跟随后绿）/ eslint 0 新增（composable 0 输出，3 warning 全预存 @/api/novel：WritingDesk L277/278 + spec L8）。
+- 独立复核 git diff：8 hunk 对应 6 处逻辑改动（import +1 / refs 删 3 / 版本提取群删 ~199 替换 composable 解构 15 / watch 删 12 / show-close-hide 删 22 / selectVersionFromDetail 删 6），留父方法零触及。

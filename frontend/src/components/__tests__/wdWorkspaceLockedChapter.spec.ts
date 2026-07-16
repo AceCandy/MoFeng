@@ -328,7 +328,7 @@ describe('WDWorkspace locked chapter state', () => {
   })
 
   it('defaults waiting confirmation selection from the structured recommended version index', () => {
-    const source = readSource('src/views/WritingDesk.vue')
+    const source = `${readSource('src/views/WritingDesk.vue')}\n${readSource('src/composables/useWritingDeskVersionDetail.ts')}`
 
     expect(source).toContain('const resolveRecommendedVersionIndex')
     expect(source).toContain('recommended_version_index')
@@ -339,7 +339,7 @@ describe('WDWorkspace locked chapter state', () => {
 
   it('streams generation status instead of polling the selected chapter', () => {
     const source = readSource('src/views/WritingDesk.vue')
-    const pollingBlock = source.match(/const fetchChapterStatus[\s\S]*?\n}\n\n\/\/ 显示版本详情/)?.[0] ?? ''
+    const pollingBlock = source.match(/const fetchChapterStatus[\s\S]*?\n}\n\nconst selectChapter/)?.[0] ?? ''
     const workspaceSource = readSource('src/components/writing-desk/WDWorkspace.vue')
 
     expect(pollingBlock).toContain('NovelAPI.subscribeChapterStatus')
