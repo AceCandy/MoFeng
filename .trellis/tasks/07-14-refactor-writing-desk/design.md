@@ -47,7 +47,8 @@ parent `07-12-engineering-baseline` acceptance 第 4 项「5 大前端组件 <50
 | **7** ✅ | useWritingDeskModals composable（WDEditChapterModal/WDGenerateOutlineModal/WDEvaluationDetailModal state + open/save 方法 + editChapterContent 内联快编 + 内化 3 mutation） | composable | ~56 | 1055 |
 | **8** ✅ | useWritingDeskChapterState composable（**边界调整**：原 progress 群中 canGenerate/isFailed/hasInProgress 已 3a 迁、progress/totalChapters/completedChapters=dead code 留父，实抽 selectedChapter/showVersionSelector/evaluatingChapter/activeEvaluatingChapter/isSelectingVersion/selectedChapterOutline/latestCompletedChapterNumber 7 符号） | composable | ~41 | 1014 |
 | **9** ✅ | useWritingDeskOptimize composable（推荐优化 3 方法 close/optimize/apply + 内化 3 refs/2 computed/2 mutations；query/utils orphan 删 5） | composable | ~84 | 930 |
-| 10+ | template/style 收敛（剩余 layout style 拆分）+ dead code 清理（progress 群/utils dead imports）+ script 收尾，至 <500 | 子组件+style | ~430 | 当前 930 需再砍 ~431（**预估后仍 >500，template/style 是最大可挖区块，后续据实扩展**） |
+| **10** ✅ | WDSealStamp 子组件（闲章按钮 template 11 行 + seal-stamp scoped style ~118 行迁子；workspace-shell/m3-fade 留父） | 子组件 | ~128 | 802 |
+| 11+ | template/style 继续收敛（loading/error 状态、layout style 拆分）+ dead code 清理（progress 群/utils dead imports）+ script 收尾，至 <500 | 子组件+style | ~302 | 当前 802 需再砍 ~302（**预估后仍 >500，后续据实扩展**） |
 
 > roadmap 行数为粗估，每 slice 实施时以 rg/Read 真实磁盘为准。仿 NovelDetailShell 实际收益常优于预估。
 
@@ -616,3 +617,45 @@ rg 发现 utils import 中 decodeJsonStringFragment / extractJsonField / formatC
 - 1014 → 930（-84；state 9 行 + 3 方法 88 行替换为解构 16 行 + import 调整 -4）。
 - vue-tsc 0 / vitest 141 绿 / eslint 0 新增（1 warning 预存 @/api/novel WritingDesk L189 type import；composable 0 warning）。
 - 独立复核 git diff：5 hunk（queries import 删 2 mutation / utils import 删 3 / +composable import / state 删 9 行 / 3 方法 88 行替换为解构 16 行），confirmVersionSelection + progress dead code 留父未触及。
+
+---
+
+## Slice 10 设计：WDSealStamp 子组件（2026-07-16）✅ 930→802
+
+### 背景
+
+script 侧 composable 抽取已接近极限（Slice 1-9），转向 template/style 拆分。style 405 行是当前最大块，其中 writing-desk-seal-stamp（案头宣纸盖印·引首闲章，助手面板 toggle 按钮）~118 行是最大独立单块（朱砂印章视觉效果 + ::before 水墨晕染 + :hover + .stamp-seal-char 篆字 + @media 响应式），全独占无共享选择器，且对应 template 是独立 button（纯展示 + emit toggle），是首个 template/style 拆分 slice。
+
+### 边界（迁入子组件）
+
+- template：闲章 button（L109-119，含 .stamp-seal-char span）
+- scoped style：.writing-desk-seal-stamp 本体 / ::before / :hover / :hover::before / .stamp-seal-char / :hover .stamp-seal-char / @media 1199px（L801-918 全块）
+
+### props/emit
+
+- props: isActive（父 assistantToggleActive）
+- emit: toggle（父 toggleAssistantVisibility）
+
+### 留父（零改动）
+
+- .writing-desk-workspace-shell（L797 position: relative，闲章 absolute 定位锚——父 template 的 div，含 WDWorkspace + WDSealStamp）
+- @keyframes m3-fade（writing-desk-page animation 用）
+- assistantToggleActive/toggleAssistantVisibility（useWritingDeskDrawers 返回值，父解构透传 props/emit）
+
+### 等价性
+
+- button class 不变（writing-desk-seal-stamp md-ripple），md-ripple 全局 class 保留
+- :class is-active / :title 三元 / @click / stamp-seal-char 内容 → props isActive + emit toggle，等价
+- scoped 跨组件（同 NovelDetailShell S9 范式）：seal-stamp 是子组件根 button，所有规则（::before/:hover/.stamp-seal-char/@media）子组件 scoped 命中；父 scoped 不再命中（闲章迁走，父无 seal-stamp 元素）
+- 定位：WDSealStamp 渲染为 button（子根），absolute 相对父 .writing-desk-workspace-shell（position: relative 留父），DOM 层级不变，定位等价
+- 非 lazy（常驻 UI，直接 import，同 WDSidebar/WDWorkspace）
+
+### spec
+
+闲章符号零 spec 断言。零指针跟随。
+
+### 完成（2026-07-16）
+
+- 930 → 802（-128；template -10 + style -118）。
+- vue-tsc 0 / vitest 141 绿 / eslint 0 新增（1 warning 预存 @/api/novel type import 行号位移 L189→L179；WDSealStamp 0 warning）。
+- 独立复核 git diff：3 hunk（template 闲章 11 行→WDSealStamp 标签 1 行 / +import WDSealStamp / style seal-stamp 块 -118 行），workspace-shell + m3-fade 留父未触及，+2/-130。
