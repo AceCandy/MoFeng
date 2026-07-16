@@ -13,6 +13,8 @@
 @import './styles/components/chapter-paper.css';
 @import './styles/components/naive-ui-ink.css';
 @import './styles/components/annotation.css';
+@import './styles/components/background-art.css';
+@import './styles/components/chapter-binding.css';
 
 @plugin "@tailwindcss/typography";
 
@@ -175,103 +177,6 @@ h6 {
 /* ==========================================================================
    墨风第三阶段「新中式写意书院」超级沉浸式大刀阔斧视觉重塑
    ========================================================================== */
-
-/* ============================================
-   1. 大背景云雾与“泼墨成风”极致水墨风流重塑 (Windblown Splattered Ink)
-   ============================================ */
-body,
-.writing-desk-page {
-  /* 空灵山水重雾与飞洒墨迹风竹矢量 (内联轻量 SVG 1.4% 白天超轻柔透明度，极具风骨) */
-  background-image:
-    /* 左上角与右下角：水墨远山云雾的径向渐变模糊 */
-    radial-gradient(circle at 5% 10%, rgba(28, 32, 34, 0.05), transparent 45%),
-    radial-gradient(circle at 95% 85%, rgba(46, 92, 138, 0.035), transparent 50%),
-    /* 狂飙飞洒的风竹叶影与墨迹矢量 */
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><g fill='%231c2022' fill-opacity='0.014'><path d='M10,25 Q30,10 50,8 C35,20 22,25 15,30 Z M25,45 Q50,22 65,30 C45,35 35,42 30,50 Z M90,75 C75,55 95,35 105,40 C85,55 92,68 95,80 Z'/><path d='M5,95 C40,75 80,85 110,65 C75,70 35,62 10,85 Z' fill-opacity='0.01'/></g></svg>"),
-    /* 熟宣大底 */
-    linear-gradient(var(--md-surface) 0%, var(--md-background) 60%, var(--md-surface-dim) 100%) !important;
-  background-size: 100% 100%, 100% 100%, 280px 280px, 100% 100% !important;
-  background-attachment: fixed !important;
-}
-
-/* 深夜书房暗色模式自适应变暗为黛青焦墨竹影风痕 */
-:root[data-theme='dark'] body,
-:root[data-theme='dark'] .writing-desk-page {
-  background-image:
-    radial-gradient(circle at 5% 10%, rgba(13, 16, 17, 0.6), transparent 50%),
-    radial-gradient(circle at 95% 85%, rgba(46, 92, 138, 0.08), transparent 55%),
-    /* 暗色模式下焦墨金石风痕 */
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><g fill='%23e5dec9' fill-opacity='0.009'><path d='M10,25 Q30,10 50,8 C35,20 22,25 15,30 Z M25,45 Q50,22 65,30 C45,35 35,42 30,50 Z M90,75 C75,55 95,35 105,40 C85,55 92,68 95,80 Z'/></g></svg>"),
-    linear-gradient(var(--md-surface) 0%, var(--md-background) 70%, var(--md-surface-dim) 100%) !important;
-}
-
-/* ============================================
-   2. 章节大纲目录“朱丝线装穿线”与“激活墨拓印章”
-   ============================================ */
-
-/* 章节目录穿线：利用 pseudo 伪元素绘制带有阴影、毛糙感的红丝线装装订线 */
-.writing-sidebar__tree-item::before {
-  content: '' !important;
-  width: 2px !important;
-  /* 宣纸落色：高雅半透朱砂红线 */
-  background-color: rgba(184, 60, 50, 0.28) !important;
-  border-left: 1px solid rgba(184, 60, 50, 0.15) !important;
-  box-shadow: 1px 0px 1px rgba(28, 32, 34, 0.05) !important;
-}
-
-.writing-sidebar__tree-item::after {
-  content: '' !important;
-  height: 2px !important;
-  background-color: rgba(184, 60, 50, 0.22) !important;
-}
-
-/* 选中章节行重绘：松烟墨拓 */
-.writing-sidebar__chapter-row--compact-selected {
-  border: 1px solid rgba(184, 60, 50, 0.35) !important;
-  /* 宣纸纤维墨拓渐变底纹 */
-  background:
-    linear-gradient(135deg, rgba(28, 32, 34, 0.065) 0%, rgba(28, 32, 34, 0.015) 100%),
-    repeating-linear-gradient(45deg, rgba(28, 32, 34, 0.01) 0px, rgba(28, 32, 34, 0.01) 1px, transparent 1px, transparent 4px),
-    var(--md-surface) !important;
-  box-shadow: var(--md-elevation-1) !important;
-  position: relative !important;
-  transform: translateX(2px) !important;
-}
-
-/* 暗色模式下选中项自适应 */
-:root[data-theme='dark'] .writing-sidebar__chapter-row--compact-selected {
-  border: 1px solid rgba(140, 36, 28, 0.45) !important;
-  background:
-    linear-gradient(135deg, rgba(229, 222, 201, 0.07) 0%, rgba(229, 222, 201, 0.01) 100%),
-    var(--md-surface) !important;
-}
-
-/* 行尾浮现朱红闲章「著」 */
-.writing-sidebar__chapter-row--compact-selected::after {
-  content: '著' !important;
-  position: absolute !important;
-  right: 6px !important;
-  top: 50% !important;
-  transform: translateY(-50%) rotate(4deg) !important;
-  font-family: var(--md-font-display) !important;
-  font-size: 10px !important;
-  line-height: 10px !important;
-  font-weight: bold !important;
-  padding: 3px 2px 2px 3px !important;
-  background-color: var(--md-secondary) !important;
-  color: var(--md-on-secondary) !important;
-  border: 1px solid var(--md-secondary) !important;
-  border-radius: 1px !important;
-  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.15) !important;
-  letter-spacing: 0 !important;
-}
-
-/* 暗色模式闲章适配 */
-:root[data-theme='dark'] .writing-sidebar__chapter-row--compact-selected::after {
-  background-color: #9c332b !important;
-  border-color: #9c332b !important;
-  color: #e5dec9 !important;
-}
 
 /* ============================================
    3. 稿纸三折物理折页、“墨底风徽”水印与“紫檀纸镇”

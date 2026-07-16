@@ -1,0 +1,69 @@
+/* AIMETA P=目录穿线_朱丝线装穿线墨拓印章|R=chapter-binding 章节大纲目录穿线+墨拓印章+dark覆写|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* ============================================
+   2. 章节大纲目录“朱丝线装穿线”与“激活墨拓印章”
+   ============================================ */
+
+/* 章节目录穿线：利用 pseudo 伪元素绘制带有阴影、毛糙感的红丝线装装订线 */
+.writing-sidebar__tree-item::before {
+  content: '' !important;
+  width: 2px !important;
+  /* 宣纸落色：高雅半透朱砂红线 */
+  background-color: rgba(184, 60, 50, 0.28) !important;
+  border-left: 1px solid rgba(184, 60, 50, 0.15) !important;
+  box-shadow: 1px 0px 1px rgba(28, 32, 34, 0.05) !important;
+}
+
+.writing-sidebar__tree-item::after {
+  content: '' !important;
+  height: 2px !important;
+  background-color: rgba(184, 60, 50, 0.22) !important;
+}
+
+/* 选中章节行重绘：松烟墨拓 */
+.writing-sidebar__chapter-row--compact-selected {
+  border: 1px solid rgba(184, 60, 50, 0.35) !important;
+  /* 宣纸纤维墨拓渐变底纹 */
+  background:
+    linear-gradient(135deg, rgba(28, 32, 34, 0.065) 0%, rgba(28, 32, 34, 0.015) 100%),
+    repeating-linear-gradient(45deg, rgba(28, 32, 34, 0.01) 0px, rgba(28, 32, 34, 0.01) 1px, transparent 1px, transparent 4px),
+    var(--md-surface) !important;
+  box-shadow: var(--md-elevation-1) !important;
+  position: relative !important;
+  transform: translateX(2px) !important;
+}
+
+/* 暗色模式下选中项自适应 */
+:root[data-theme='dark'] .writing-sidebar__chapter-row--compact-selected {
+  border: 1px solid rgba(140, 36, 28, 0.45) !important;
+  background:
+    linear-gradient(135deg, rgba(229, 222, 201, 0.07) 0%, rgba(229, 222, 201, 0.01) 100%),
+    var(--md-surface) !important;
+}
+
+/* 行尾浮现朱红闲章「著」 */
+.writing-sidebar__chapter-row--compact-selected::after {
+  content: '著' !important;
+  position: absolute !important;
+  right: 6px !important;
+  top: 50% !important;
+  transform: translateY(-50%) rotate(4deg) !important;
+  font-family: var(--md-font-display) !important;
+  font-size: 10px !important;
+  line-height: 10px !important;
+  font-weight: bold !important;
+  padding: 3px 2px 2px 3px !important;
+  background-color: var(--md-secondary) !important;
+  color: var(--md-on-secondary) !important;
+  border: 1px solid var(--md-secondary) !important;
+  border-radius: 1px !important;
+  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.15) !important;
+  letter-spacing: 0 !important;
+}
+
+/* 暗色模式闲章适配 */
+:root[data-theme='dark'] .writing-sidebar__chapter-row--compact-selected::after {
+  background-color: #9c332b !important;
+  border-color: #9c332b !important;
+  color: #e5dec9 !important;
+}
+
