@@ -36,14 +36,7 @@
       </div>
     </div>
 
-    <div
-      v-if="feedback.message"
-      :class="['model-routing__feedback', `is-${feedback.type}`]"
-      :role="feedback.type === 'error' ? 'alert' : 'status'"
-      aria-live="polite"
-    >
-      {{ feedback.message }}
-    </div>
+    <FeedbackPanel v-if="feedback.message" :feedback="feedback" />
 
     <ReadinessPanel :summary="sectionReadinessSummary" />
 
@@ -154,6 +147,7 @@ import { useStageRoutes } from './useStageRoutes'
 import { useProviderForm } from './useProviderForm'
 import { useModelPicker } from './useModelPicker'
 import { useModelSelection } from './useModelSelection'
+import { FeedbackPanel } from './FeedbackPanel'
 import { ReadinessPanel } from './ReadinessPanel'
 import { RoutingStagesPanel } from './RoutingStagesPanel'
 import { ProviderFormPanel } from './ProviderFormPanel'
@@ -434,21 +428,6 @@ defineExpose({
   margin: 4px 0 0;
   color: var(--md-on-surface-variant);
   font-size: var(--md-body-small);
-}
-.model-routing__feedback {
-  border-radius: var(--md-radius-md);
-  padding: var(--md-spacing-3);
-  font-size: var(--md-body-medium);
-}
-
-.model-routing__feedback.is-success {
-  background-color: var(--md-success-container);
-  color: var(--md-on-success-container);
-}
-
-.model-routing__feedback.is-error {
-  background-color: var(--md-error-container);
-  color: var(--md-on-error-container);
 }
 
 .model-routing__empty-state {
