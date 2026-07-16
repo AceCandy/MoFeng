@@ -1,0 +1,123 @@
+/* AIMETA P=朱批太极_手抄书法朱批与水墨太极加载|R=annotation 古典朱批对白+水墨太极加载|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* ============================================
+   3. 特色手抄书法朱批与水墨太极加载
+   ============================================ */
+
+/* 古典手抄朱批：AI 对白与辅助说明的楷体化 */
+.chat-bubble-ai,
+.m3-option-marker,
+.md-text-field-label,
+.m3-preview-metric,
+.writing-desk-assistant-shell .md-body-medium,
+.writing-desk-assistant-shell .md-body-small {
+  font-family: var(--md-font-kai) !important;
+}
+
+/* 批注卡片点缀 */
+.m3-option-marker {
+  font-weight: 600 !important;
+  letter-spacing: 0.06em !important;
+}
+
+/* 水墨扩散加载动画（水墨洇染，三层交替渐隐扩散） */
+body .md-spinner {
+  position: relative !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+}
+
+body .md-spinner,
+.n-spin-body {
+  width: 160px !important;
+  height: 160px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* 隐藏独立的 n-spin 默认 SVG，但允许 .n-spin-body 内部的 SVG 显示并作为第一波水墨扩散层 */
+.n-spin svg {
+  display: none !important;
+}
+
+.n-spin-body svg {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* 隐藏 Naive UI 默认 SVG 内部的所有具体子线条元素，保持其为干净的容器 */
+.n-spin-body svg * {
+  display: none !important;
+}
+
+/* 三层水墨扩散波的公共样式与径向渐变 */
+body .md-spinner span,
+.n-spin-body svg,
+body .md-spinner::before,
+.n-spin-body::before,
+body .md-spinner::after,
+.n-spin-body::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  border-radius: 50% !important;
+  background: radial-gradient(
+    circle,
+    var(--ink-core) 0%,
+    var(--ink-mid) 36%,
+    var(--ink-soft) 62%,
+    transparent 76%
+  ) !important;
+  filter: drop-shadow(0 0 16px var(--ink-shadow)) !important;
+  animation: inkSpread 1.8s ease-in-out infinite !important;
+  transform-origin: center !important;
+}
+
+/* 第一层扩散波（无延迟） */
+body .md-spinner span,
+.n-spin-body svg {
+  animation-delay: 0s !important;
+}
+
+/* 第二层扩散波（延迟 0.38s，并带有初始状态的 scale） */
+body .md-spinner::before,
+.n-spin-body::before {
+  animation-delay: 0.38s !important;
+  opacity: 0.68;
+  transform: scale(0.72);
+}
+
+/* 第三层扩散波（延迟 0.76s，并带有初始状态的 scale） */
+body .md-spinner::after,
+.n-spin-body::after {
+  animation-delay: 0.76s !important;
+  opacity: 0.44;
+  transform: scale(0.48);
+}
+
+@keyframes inkSpread {
+  0% {
+    transform: scale(0.16) rotate(0deg);
+    opacity: 0.96;
+  }
+  45% {
+    transform: scale(0.92) rotate(16deg);
+    opacity: 0.48;
+  }
+  100% {
+    transform: scale(1.35) rotate(28deg);
+    opacity: 0;
+  }
+}
+
+/* 优化正在生成中的过渡水墨呼吸动画 */
+.m3-optimizing-panel {
+  border: 1px solid var(--md-outline-variant) !important;
+  border-radius: var(--md-radius-xs) !important;
+  background: linear-gradient(135deg, var(--md-surface-container) 0%, var(--md-surface-dim) 100%) !important;
+}
