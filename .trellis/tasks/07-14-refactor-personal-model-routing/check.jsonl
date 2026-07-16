@@ -1,1 +1,4 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/frontend/llm-settings.md", "reason": "校验 5 条 capability/TTS 红线未被拆分破坏（design §9）"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "三件套验证 + review checklist + AIMETA 核对"}
+{"file": ".trellis/spec/frontend/type-safety.md", "reason": "strict、colocated interfaces、any 政策核对"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "scoped 迁移零残留 + generic props/emits 核对"}
