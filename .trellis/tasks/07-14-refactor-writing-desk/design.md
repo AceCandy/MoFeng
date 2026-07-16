@@ -37,7 +37,8 @@ parent `07-12-engineering-baseline` acceptance 第 4 项「5 大前端组件 <50
 |---|---|---|---|---|
 | **1** ✅ | 5 payload 纯函数去重（tryParseOptimizerPayload/decodeJsonStringFragment/extractJsonField/normalizeOptimizeResult/parseEvaluationPayload 删本地副本 import @/utils/chapter） | 去重 | ~99 | 1910 |
 | **2** ✅ | useWritingDeskDrawers composable（drawer refs+computed+方法+watch+onMounted，viewport/novelStore 内化，loadAssistantPanel 入参） | composable | ~93 | 1817 |
-| 3 | useWritingDeskChapterOps composable（generateChapter/retryFromNode/regenerateChapter/evaluateChapter/deleteChapter/confirmVersionSelection N 块） | composable | ~300 | 1533 |
+| **3a** ✅ | useWritingDeskChapterGeneration composable（generateChapter/retryFromNode/regenerateChapter + 内化 canGenerateChapter/isChapterFailed/hasChapterInProgress/generateChapterMutation，生成子系统内聚） | composable | ~154 | 1663 |
+| 3b | useWritingDeskChapterOps composable（evaluateChapter/deleteChapter/confirmVersionSelection，依赖收敛后单抽） | composable | ~150 | 1513 |
 | 4 | useWritingDeskVersionDetail composable（版本提取群 extractVersionContent/extractVersionMetadata/toBoundedVersionIndex/resolveRecommendedVersionIndex/availableVersions/syncRecommendedVersionSelection/showVersionDetail/closeVersionDetail/selectVersionFromDetail/isCurrentVersion 内聚，**含 spec L333 指针跟随**） | composable | ~200 | 1333 |
 | 5 | WDRecommendedOptimizeResultModal 子组件（template L164-259 + 推荐优化 state/close/optimize/apply 方法 + style） | 子组件 | ~216 | 1117 |
 | 6 | useWritingDeskProject composable（loadProject/refetchChapterIntoProject/viewProjectDetail/goBack/selectChapter/fetchChapterStatus/stopChapterStatusStream） | composable | ~130 | 987 |
@@ -149,3 +150,49 @@ drawer 符号无 spec 断言（wdWorkspaceLockedChapter 只守护版本逻辑 L3
 - 1910 → 1817（-93，优于预估 ~77）。
 - vue-tsc 0 / vitest 141 绿 / eslint 0 新增（WritingDesk + composable 均 0 warning，L277/278 @/api 预存）。
 - 独立复核 git diff：6 处精确删除（import×2 + refs + computed/watch + 方法 + onMounted），保留 shouldRenderAssistantShell/getQueryChapterNumber/selectedChapter/onUnmounted。
+
+---
+
+## Slice 3a 设计：useWritingDeskChapterGeneration composable（2026-07-16）✅ 1817→1663
+
+### 边界调整说明（原 Slice 3 拆为 3a/3b）
+
+原 design.md Slice 3 把 generateChapter/retryFromNode/regenerateChapter/evaluateChapter/deleteChapter/confirmVersionSelection 6 方法归一个 composable。实施前依赖分析发现：6 方法横跨 refs(5)/computed(4)/mutations(4)/methods(4) 共 ~15 个透参，远超 NovelDetailShell 范式的 5-6 入参，构成过度抽象。其中生成三方法（generate/retry/regenerate）依赖高度重叠、且独占 canGenerateChapter/isChapterFailed/hasChapterInProgress 三状态判断 + generateChapterMutation，内聚度最高 → 单独成块（3a）。evaluate/delete/confirm 各依赖独立 mutation、confirm 还依赖 Slice 4 版本提取群，留 3b（待版本提取收敛后单抽，入参更少）。
+
+### 边界（迁入 composable）
+
+- 方法：generateChapter / retryFromNode / regenerateChapter
+- 内化状态判断（仅生成流程用，rg 确认无其他消费）：canGenerateChapter / isChapterFailed / hasChapterInProgress
+- 内化 mutation（仅生成用）：generateChapterMutation = useGenerateChapterMutation(projectId)
+
+### 入参（9，透传父侧响应式源）
+
+- projectId: () => string（getter，替代 props.id 直接访问）
+- project: ComputedRef<NovelProject | null>
+- refs(4): generatingChapter / selectedChapterNumber / chapterGenerationResult / selectedVersionIndex
+- methods(3): upsertChapterInProjectCache（跨 Slice 6 复用）/ fetchChapterStatus（template + Slice 6）/ refetchChapterIntoProject（Slice 6）
+
+### 留父（零改动顺延 3b / 后续 slice）
+
+- evaluateChapter / deleteChapter / confirmVersionSelection（3b）
+- selectVersionFromDetail / openEditChapterModal / openEvaluationDetailModal / saveChapterChanges（后续 slice）
+- evaluateChapterMutation / deleteChapterMutation / confirmFinalizeChapterMutation（3b 各自消费）
+- upsertChapterInProjectCache / refreshProjectQueries / fetchChapterStatus / refetchChapterIntoProject（Slice 6）
+
+### 等价性
+
+- props.id → projectId()（getter 调用求值等价）
+- generateChapterMutation 内化 useGenerateChapterMutation(projectId)，与原 useGenerateChapterMutation(() => props.id) 等价
+- 方法体逐字搬迁，project.value/refs.value 访问不变（入参为 ComputedRef/Ref）
+- regenerateChapter 调 generateChapter（composable 内先定义，无 TDZ）
+- template @generate-chapter/@retry-from-node/@regenerate-chapter 绑定不变（解构暴露同名）
+
+### spec
+
+- 生成符号零 spec 断言：uiAuditRegression L231 断言的是 ChapterFailed.vue 的 emit（非 WritingDesk 方法），wdWorkspaceLockedChapter 只守护版本逻辑。零指针重定向。
+
+### 完成（2026-07-16）
+
+- 1817 → 1663（-154，优于预估）。
+- vue-tsc 0 / vitest 141 绿 / eslint 0 新增（L277/278 @/api 预存 warning 非本次，composable 文件 0 输出）。
+- 独立复核 git diff：5 处精确（import -useGenerateChapterMutation+composable / 删 generateChapterMutation 实例化 / 删 3 状态判断 / 删 3 方法+原位加 composable 解构 9 入参），+12/-166，留父方法零触及。
