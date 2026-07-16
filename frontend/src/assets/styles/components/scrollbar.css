@@ -1,0 +1,97 @@
+/* AIMETA P=水墨滚动条_中国风极简滚动条|R=scrollbar 统一中国风水墨滚动条+dark覆写|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* ============================================
+   统一中国风极简水墨滚动条样式 (滚动时显示，平时不显示)
+   ============================================ */
+
+/* 1. 定义滚动条相关的全局 CSS 变量 */
+:root,
+:root[data-theme='light'] {
+  --scrollbar-thumb-color: rgba(58, 70, 72, 0.25); /* 松烟灰半透明，淡墨感 */
+  --scrollbar-thumb-hover-color: rgba(28, 32, 34, 0.6); /* 焦墨半透明，浓墨感 */
+}
+
+:root[data-theme='dark'] {
+  --scrollbar-thumb-color: rgba(229, 222, 201, 0.2); /* 素骨黄半透明 */
+  --scrollbar-thumb-hover-color: rgba(245, 238, 217, 0.55); /* 浅素骨黄半透明 */
+}
+
+/* 2. Webkit 浏览器 (Chrome, Safari, Edge) 全局滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: transparent !important;
+  border: 2px solid transparent !important;
+  border-radius: var(--md-radius-sm);
+  background-clip: padding-box !important;
+  transition: background-color 0.2s var(--md-easing-standard) !important;
+}
+
+.overflow-y-auto:hover::-webkit-scrollbar-thumb,
+.overflow-x-auto:hover::-webkit-scrollbar-thumb,
+.overflow-auto:hover::-webkit-scrollbar-thumb,
+.blueprint-scroll:hover::-webkit-scrollbar-thumb,
+.is-scrolling::-webkit-scrollbar-thumb,
+html:hover::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb-color) !important;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--scrollbar-thumb-hover-color) !important;
+}
+
+/* 3. Firefox 兼容方案 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.overflow-y-auto:hover,
+.overflow-x-auto:hover,
+.overflow-auto:hover,
+.blueprint-scroll:hover,
+.is-scrolling,
+html:hover {
+  scrollbar-color: var(--scrollbar-thumb-color) transparent;
+}
+
+/* 4. Naive UI 全局滚动条统一魔改（防止其直角冲突） */
+.n-scrollbar-rail__handle {
+  background-color: var(--scrollbar-thumb-color) !important;
+  border-radius: 4px !important;
+  opacity: 0 !important;
+  width: 4px !important;
+  height: 4px !important;
+  transition:
+    opacity 0.3s var(--md-easing-standard),
+    background-color 0.3s var(--md-easing-standard) !important;
+}
+
+/* Naive UI 容器被悬停，或者正在滚动时，显示滑块 */
+.n-scrollbar:hover .n-scrollbar-rail__handle,
+.n-scrollbar.is-scrolling .n-scrollbar-rail__handle {
+  opacity: 1 !important;
+}
+
+.n-scrollbar-rail__handle:hover,
+.n-scrollbar-rail__handle:active {
+  background-color: var(--scrollbar-thumb-hover-color) !important;
+}
+
+/* 5. 覆盖之前可能存在的个别滚动条（以确保全局完美统一） */
+.app-shell__dropdown-list::-webkit-scrollbar {
+  width: 8px !important;
+}
+.app-shell__dropdown-list::-webkit-scrollbar-thumb {
+  background-color: transparent !important;
+}
+.app-shell__dropdown-list:hover::-webkit-scrollbar-thumb,
+.app-shell__dropdown-list.is-scrolling::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-thumb-color) !important;
+}

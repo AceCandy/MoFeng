@@ -1,0 +1,41 @@
+/* AIMETA P=存字方章_弹窗右上角存字金石朱红方章|R=phase12-save-stamp 弹窗保存按钮存字方章|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* ============================================
+   Phase 12: 弹窗右上角「存」字金石朱红方章保存样式
+   ============================================ */
+.m3-ink-modal-save-badge-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 var(--md-spacing-3);
+  border-radius: var(--md-radius-xs); /* 2px */
+  background-color: var(--md-secondary) !important; /* 朱砂红 */
+  color: var(--md-on-secondary) !important; /* 宣纸白 */
+  border: 1px solid color-mix(in srgb, var(--md-secondary) 35%, var(--md-outline)) !important;
+  font-family: "STXinwei", "华文新魏", "STLiti", "华文隶书", "LiSu", "隶书", var(--md-font-serif), serif !important;
+  font-weight: 800; /* 魏碑粗体 */
+  font-size: 15px; /* 更饱满的炸裂字形 */
+  box-shadow: var(--md-shadow-primary-2) !important;
+  cursor: pointer;
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    transform var(--md-duration-short) var(--md-easing-standard);
+  margin-right: 6px;
+}
+
+.m3-ink-modal-save-badge-btn:hover:not(:disabled) {
+  background-color: var(--md-secondary-light) !important;
+  transform: rotate(-10deg) scale(1.08) !important;
+  box-shadow: var(--md-shadow-primary-2) !important;
+}
+
+.m3-ink-modal-save-badge-btn:active:not(:disabled) {
+  transform: translateY(1.5px) !important;
+}
+
+.m3-ink-modal-save-badge-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
