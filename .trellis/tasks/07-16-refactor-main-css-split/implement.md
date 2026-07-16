@@ -81,3 +81,51 @@ Phase 1 改动完成并 commit：
 **暂停原因**：vite build 失败（pre-existing，`Could not resolve "./FeedbackPanel"`，git stash 验证非 #28 引起）+ vue-tsc 34 pre-existing error（PMR/ProviderCard/NovelDetailShell/WDWorkspace/ChapterPipeline/useChapterReader）+ main.css `:global()` warning（L4707-4708）。基线破损阻塞 #28 AC「三件套绿」「行为等价（构建产物等价）」，并暴露历史 PMR/NovelDetailShell/WDWorkspace 收口「三件套绿」假绿（vue-tsc 漏 cd 跑全局 tsc help exit 0 误判 + 三件套从未含 build）。
 
 **后续**：基线修复任务（P0）完成后 `task.py start` 续 #28 Phase 2。
+
+
+## Phase 2 完成（2026-07-17）
+
+Slice 2-4 抽基础元素，每 slice 四件套绿 + commit + push：
+- Slice 2 `32ac0e9`：buttons（L418-609，195 行）-> elements/buttons.css
+- Slice 3 `0766a8f`：forms（L610-764，155 行）-> elements/forms.css
+- Slice 4 `1193e58`：navigation（L765-970，206 行）-> elements/navigation.css
+
+main.css 4711 -> 4159。
+
+
+## Phase 3 完成（2026-07-17）
+
+Slice 5-23 抽组件域，每 slice 四件套绿 + commit + push。main.css 4159 -> 34（仅入口 + 31 @import + @plugin）。
+
+| Slice | commit | 域 | partial | 行数 |
+|---|---|---|---|---|
+| 5 | ac12e0e | Chips+朱砂印章 | components/chips.css | 135 |
+| 6 | 466c17a | Material3 组件×9（Dialog/List/.../Ripple） | components/material3-components.css | 381 |
+| 7 | 2dfa37b | Utility Classes | components/utility.css | 57 |
+| 8 | 1a1f136 | App Shell（主域+响应式覆写段补抽） | components/app-shell.css | 516 |
+| 9 | f6165e5 | Admin Domain Panels | components/admin-panels.css | 261 |
+| 10 | b174845 | 散小域×6（Animations/Prose/Loading/Chat/Legacy/LayerBase） | components/misc-base.css | 174 |
+| 11 | b1489ca | 章节纸张 chapter-paper（+2 dark） | components/chapter-paper.css | 99 |
+| 12 | 070490b | Naive UI 水墨魔改 | components/naive-ui-ink.css | 304 |
+| 13 | fe21efb | 朱批+水墨太极（删第二阶段总注释） | components/annotation.css | 124 |
+| 14 | 5ce84cf | 第三阶段子1+2（大背景+目录穿线，+dark） | background-art.css + chapter-binding.css | 30+70 |
+| 15 | 461df24 | 第三阶段子3+4+5（折页+助手面板+屏风，+dark） | paper-fold.css + assistant-shell.css | 83+75 |
+| 16 | 6d3a803 | 第三阶段子6+7（气旋动画+Header LOGO，+dark，删总注释） | components/motion-brand.css | 79 |
+| 17 | 1b28862 | 第四阶段品牌重构（+14 dark） | components/brand-visuals.css | 278 |
+| 18 | 86260e6 | Phase 5 导航重构（+13 dark，最大域 568 行） | components/phase5-navigation.css | 568 |
+| 19 | fa0f2d7 | Phase 5 窄屏 + Phase 8 顶栏（+2 dark） | phase5-responsive.css + topbar.css | 71+62 |
+| 20 | 33e9882 | Phase 9 用户标签（+7 dark） | components/user-tag.css | 213 |
+| 21 | ef3c88c | Modal Adapters + 模型设置弹窗 | modal-adapters.css + settings-modal.css | 98+152 |
+| 22 | ab49760 | 尾部4域（Phase12存字/滚动条/弹窗金石/Select，+dark） | phase12-save-stamp/scrollbar/modal-decor/select-styling | 41+97+18+21 |
+| 23 | 285ba7d | Base+Typography（@import 最后保持 unlayered cascade）+ readCssBlock lookbehind 修复 | styles/base.css | 153 |
+
+**关键决策**：
+- dark 覆写随域迁移（设计契约表 §4 策略），每 slice rg 核对 dark 在域内。
+- App Shell 响应式覆写段（L430-549）补抽到 app-shell.css（原夹在 Admin 域中间，纯 app-shell 选择器）。
+- 阶段总注释（第二/三阶段）在最后子域抽走时删除（不进 partial）。
+- base.css @import 放最后（partials 后，@plugin 前），unlayered cascade 等价原 main.css（Base+Typography 在 partials 后）。
+- readCssBlock 正则加 `(?<![\w-])` lookbehind，修复 selector='body' 误匹配 '.n-spin-body' 子串（因 base.css @import 在 annotation 后，.n-spin-body 在内联文本先于 body）。
+
+**最终状态**：main.css 34 行（AIMETA + 31 @import + @plugin）+ 30 个 partial（1 base + 3 elements + 26 components + 1 tokens，共 4954 行）。main.css 4966 -> 34（减 99.3%）。
+
+**AC 达成**：1/2/3/4/6 ✓；5 manual-checklist 固化 + 手测待跑。

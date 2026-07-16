@@ -27,12 +27,12 @@
 
 ## Acceptance Criteria
 
-- [ ] main.css 按域拆分至入口 + partial 结构，main.css 本体仅保留入口 + @import 聚合（Phase 1-3 完成）。
-- [ ] `readGlobalCss()` helper 落地，9 处 `readSource('src/assets/main.css')` 全部替换；「不含」禁令断言覆盖所有 partial（无假绿）。
-- [ ] frontend spec 3 处修订（component-guidelines:111 / index:42 / quality-guidelines:36-43）。
-- [ ] 三件套全绿（vue-tsc 0 / vitest 全绿 / eslint 0 新增 error）。
+- [x] main.css 按域拆分至入口 + partial 结构，main.css 本体仅保留入口 + @import 聚合（Phase 1-3 完成）。
+- [x] `readGlobalCss()` helper 落地，9 处 `readSource('src/assets/main.css')` 全部替换；「不含」禁令断言覆盖所有 partial（无假绿）。
+- [x] frontend spec 3 处修订（component-guidelines:111 / index:42 / quality-guidelines:36-43）。
+- [x] 三件套全绿（vue-tsc 0 / vitest 全绿 / eslint 0 新增 error）。
 - [ ] 行为等价（manual-checklist 固化 + 实际手测待跑：light/dark 主题切换 + 关键页面视觉）。
-- [ ] `main.ts` 入口不变，`base.css` shim 状态不变。
+- [x] `main.ts` 入口不变，`base.css` shim 状态不变。
 
 ## Notes
 
