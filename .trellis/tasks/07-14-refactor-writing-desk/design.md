@@ -52,9 +52,18 @@ parent `07-12-engineering-baseline` acceptance 第 4 项「5 大前端组件 <50
 | **12** ✅ | WDProjectStatus 子组件（加载/错误状态 template ~37 行迁子，无 scoped 依赖） | 子组件 | ~31 | 714 |
 | **13** ✅ | useWritingDeskConfirm composable（**翻案 Slice 5 的 3c 不抽决定**，章节定稿 confirmVersionSelection 52 行方法抽 composable） | composable | ~41 | 674 |
 | **14** ✅ | dead code 清理（用户批准：progress/totalChapters/completedChapters + line-clamp-1/2/3 style + utils dead imports decode/extract/format/tryParse + 额外 countNonWhitespaceChars；ink-backdrop-fade 同 dead 保守未删） | 清理 | ~45 | 629 |
-| 15+ | template/style 继续收敛（mobile-actions/backdrop）+ script 收尾，至 <500 | 子组件+style | ~129 | 当前 629 需再砍 ~129 |
+| **15** ✅ | **收口清理**：删 ink-backdrop-fade 死 @keyframes（Slice 14 保守未删的尾巴，10 行） | 清理 | 10 | 619 |
 
 > roadmap 行数为粗估，每 slice 实施时以 rg/Read 真实磁盘为准。仿 NovelDetailShell 实际收益常优于预估。
+
+## 收口（2026-07-16，最终 619，未达 <500）
+
+**2009 → 619（-69%）。按"已尽力 + 不过度抽象"收口，未达硬指标 <500。用户 A 决策。**
+
+- **layout grid 不拆（唯一破 500 大路，过度抽象）**：template 壳 + shells style ~110 行，但拆 wrapper = 17 props + 17 emits 纯透传给 WDSidebar/WDWorkspace/WDAssistantPanel 三个**固定具名**子组件，wrapper 无自身职责只搬运。NovelDetailShell 能拆 ShellContent 是因动态 `<component :is>` 把 props 聚成 `componentProps` 单对象；WritingDesk 具名子组件聚不拢。
+- **mobile-actions(-30)/backdrop(-14) 不拆**：1 prop/1 emit 纯展示块（WDSealStamp 范式，rg 确认零 spec 断言零外部消费，技术零风险），属边际收益 + 增加文件数，用户接受不拆。
+- **script 已极限**：~221 行全是 11 个 composable 解构 + 异步组件胶水，每行连 template 消费或下一 composable 入参，无可再减。
+- parent #22 第 4 项 WritingDesk：**未达硬指标 <500，但已穷尽非过度抽象的拆分空间**。
 
 ---
 

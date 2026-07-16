@@ -599,16 +599,6 @@ const { evaluateChapter, deleteChapter } = useWritingDeskChapterOps({
   }
 }
 
-/* 动画效果 */
-@keyframes ink-backdrop-fade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
 /* ==========================================================================
    写作台辅助控制悬浮按钮 (案头宣纸盖印·引首闲章)
    ========================================================================== */
