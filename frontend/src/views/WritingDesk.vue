@@ -165,13 +165,6 @@ import { useWritingDeskNavigation } from '@/composables/useWritingDeskNavigation
 import { useWritingDeskOptimize } from '@/composables/useWritingDeskOptimize'
 import { useWritingDeskProject } from '@/composables/useWritingDeskProject'
 import { useWritingDeskVersionDetail } from '@/composables/useWritingDeskVersionDetail'
-import { countNonWhitespaceChars } from '@/utils/text'
-import {
-  decodeJsonStringFragment,
-  extractJsonField,
-  formatChapterGenerationError,
-  tryParseOptimizerPayload,
-} from '@/utils/chapter'
 import WDProjectStatus from '@/components/writing-desk/WDProjectStatus.vue'
 import WDSealStamp from '@/components/writing-desk/WDSealStamp.vue'
 import WDSidebar from '@/components/writing-desk/WDSidebar.vue'
@@ -299,21 +292,6 @@ const {
   selectedChapterNumber,
   chapterQuery,
   confirmFinalizeChapterMutation,
-})
-
-const progress = computed(() => {
-  if (!project.value?.blueprint?.chapter_outline) return 0
-  const totalChapters = project.value.blueprint.chapter_outline.length
-  const completedChapters = project.value.chapters.filter((ch) => ch.content).length
-  return Math.round((completedChapters / totalChapters) * 100)
-})
-
-const totalChapters = computed(() => {
-  return project.value?.blueprint?.chapter_outline?.length || 0
-})
-
-const completedChapters = computed(() => {
-  return project.value?.chapters?.filter((ch) => ch.content)?.length || 0
 })
 
 const {
@@ -619,28 +597,6 @@ const { evaluateChapter, deleteChapter } = useWritingDeskChapterOps({
   .writing-desk-assistant-shell.is-drawer.is-open {
     box-shadow: var(--md-elevation-drawer-right);
   }
-}
-
-/* 自定义样式 */
-.line-clamp-1 {
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.line-clamp-3 {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 /* 动画效果 */

@@ -51,7 +51,8 @@ parent `07-12-engineering-baseline` acceptance 第 4 项「5 大前端组件 <50
 | **11** ✅ | useWritingDeskNavigation composable（getQueryChapterNumber + 3 watch + resolvedProjectEntryId 内化；项目加载/路由 query/项目切换章节定位状态机） | composable | ~57 | 745 |
 | **12** ✅ | WDProjectStatus 子组件（加载/错误状态 template ~37 行迁子，无 scoped 依赖） | 子组件 | ~31 | 714 |
 | **13** ✅ | useWritingDeskConfirm composable（**翻案 Slice 5 的 3c 不抽决定**，章节定稿 confirmVersionSelection 52 行方法抽 composable） | composable | ~41 | 674 |
-| 14+ | template/style 继续收敛（mobile-actions/backdrop）+ dead code 清理（progress/line-clamp/utils ~39）+ script 收尾，至 <500 | 子组件+style | ~174 | 当前 674 需再砍 ~174 |
+| **14** ✅ | dead code 清理（用户批准：progress/totalChapters/completedChapters + line-clamp-1/2/3 style + utils dead imports decode/extract/format/tryParse + 额外 countNonWhitespaceChars；ink-backdrop-fade 同 dead 保守未删） | 清理 | ~45 | 629 |
+| 15+ | template/style 继续收敛（mobile-actions/backdrop）+ script 收尾，至 <500 | 子组件+style | ~129 | 当前 629 需再砍 ~129 |
 
 > roadmap 行数为粗估，每 slice 实施时以 rg/Read 真实磁盘为准。仿 NovelDetailShell 实际收益常优于预估。
 
@@ -862,3 +863,32 @@ composable 内仅 confirmVersionSelection 一个方法，无内部依赖。无 f
 - 714 → 674（-40；confirm 52 行 → composable 解构 11 行 + 删 globalAlert import -1 + 加 useWritingDeskConfirm import +1，净 -41）。
 - vue-tsc 0 / vitest 141 绿 / eslint 0 新增（1 warning 预存 @/api/novel type import L146；useWritingDeskConfirm 0 warning，ReturnType<typeof> import 范式同 Slice 8 被接受）。
 - 独立复核 git diff：3 hunk（删 globalAlert import / +useWritingDeskConfirm import / confirm 方法 52 行→解构 11 行），12 insertions / 53 deletions，留父 confirmFinalizeChapterMutation/composable 解构零触及。
+
+---
+
+## Slice 14 设计：dead code 清理（2026-07-16）✅ 674→629
+
+### 背景
+
+用户批准清理 pre-existing dead code（Slice 8/9/11/12/13 反复 mention，本 slice 获批执行）。非拆分 slice，纯删除无消费代码，风险极低。
+
+### 清理内容（rg 确认零消费）
+
+1. **progress/totalChapters/completedChapters**（script，15 行）：3 个 computed 无任何消费点（Slice 8 发现，WDAssistantPanel 有自己同名 computed 不接收父传值）。progress 内部局部 totalChapters/completedChapters shadow 外层但不引用。
+2. **line-clamp-1/2/3**（style，22 行 含 `/* 自定义样式 */` 注释）：scoped style 定义但 template 零使用。
+3. **utils dead imports**（script，7 行）：decodeJsonStringFragment/extractJsonField/formatChapterGenerationError/tryParseOptimizerPayload（@/utils/chapter，Slice 1/3a 遗留）+ countNonWhitespaceChars（@/utils/text，**本次 rg 额外发现的历史 orphan**，原 mention 4 个，同性质删除）。
+
+### 未删（mention）
+
+- **ink-backdrop-fade** @keyframes（style，8 行）：rg 确认仅定义无 `animation:` 消费，同属 dead。但不属本次批准范围，保守未删，留待后续。
+
+### 验证
+
+- 删除后 `computed` import 仍被 4 个 computed（project/projectLoading/projectError/shouldRenderAssistantShell）消费，不 orphan。
+- 三件套绿。
+
+### 完成（2026-07-16）
+
+- 674 → 629（-45；progress 15 + line-clamp 22 + utils imports 7 + countNonWhitespaceChars 1，diff --stat 44 deletions 纯删无加）。
+- vue-tsc 0 / vitest 141 绿 / eslint 0 新增（1 warning 预存 @/api/novel type import L146）。
+- 独立复核 git diff：3 hunk 纯删除（imports / progress 群 / line-clamp style），0 insertions / 44 deletions，无意外改动。
