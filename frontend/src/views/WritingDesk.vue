@@ -174,8 +174,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineAsyncComponent, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, defineAsyncComponent } from 'vue'
 import type {
   Chapter,
   ChapterOutline,
@@ -194,6 +193,7 @@ import { useWritingDeskChapterGeneration } from '@/composables/useWritingDeskCha
 import { useWritingDeskChapterOps } from '@/composables/useWritingDeskChapterOps'
 import { useWritingDeskChapterState } from '@/composables/useWritingDeskChapterState'
 import { useWritingDeskModals } from '@/composables/useWritingDeskModals'
+import { useWritingDeskNavigation } from '@/composables/useWritingDeskNavigation'
 import { useWritingDeskOptimize } from '@/composables/useWritingDeskOptimize'
 import { useWritingDeskProject } from '@/composables/useWritingDeskProject'
 import { useWritingDeskVersionDetail } from '@/composables/useWritingDeskVersionDetail'
@@ -202,8 +202,6 @@ import {
   decodeJsonStringFragment,
   extractJsonField,
   formatChapterGenerationError,
-  resolveChapterNumberForEntry,
-  resolveChapterNumberForProjectEntry,
   tryParseOptimizerPayload,
 } from '@/utils/chapter'
 import WDSealStamp from '@/components/writing-desk/WDSealStamp.vue'
@@ -230,12 +228,10 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-const route = useRoute()
 const projectQuery = useNovelProjectQuery(() => props.id)
 
 // 状态管理
 const selectedChapterNumber = ref<number | null>(null)
-const resolvedProjectEntryId = ref<string | null>(null)
 const chapterGenerationResult = ref<ChapterGenerationResponse | null>(null)
 const selectedVersionIndex = ref<number>(0)
 const generatingChapter = ref<number | null>(null)
@@ -311,68 +307,15 @@ const {
   loadWDGenerateOutlineModal,
 })
 
-const getQueryChapterNumber = () => {
-  const rawChapterNumber = Array.isArray(route.query.chapter_number)
-    ? route.query.chapter_number[0]
-    : route.query.chapter_number
-  const chapterNumber = Number(rawChapterNumber)
-  return Number.isFinite(chapterNumber) && chapterNumber > 0 ? chapterNumber : null
-}
-
-// 写作台会在不同项目间复用组件，进入新项目时必须按当前项目重新定位章节。
-watch(
-  () => project.value,
-  (newProject) => {
-    if (!newProject) {
-      selectedChapterNumber.value = null
-      resolvedProjectEntryId.value = null
-      return
-    }
-
-    const resolvedChapterNumber = resolveChapterNumberForProjectEntry({
-      projectId: newProject.id,
-      previousProjectId: resolvedProjectEntryId.value,
-      currentChapterNumber: selectedChapterNumber.value,
-      outlines: newProject.blueprint?.chapter_outline ?? [],
-      chapters: newProject.chapters ?? [],
-      preferredChapterNumber: getQueryChapterNumber(),
-    })
-
-    selectedChapterNumber.value = resolvedChapterNumber
-    selectedVersionIndex.value = 0
-    chapterGenerationResult.value = null
-    resolvedProjectEntryId.value = newProject.id
-  },
-  { immediate: true },
-)
-
-watch(
-  () => route.query.chapter_number,
-  () => {
-    if (!project.value) {
-      return
-    }
-    const chapterNumber = getQueryChapterNumber()
-    if (!chapterNumber) {
-      return
-    }
-    const resolvedChapterNumber = resolveChapterNumberForEntry({
-      outlines: project.value.blueprint?.chapter_outline ?? [],
-      chapters: project.value.chapters ?? [],
-      preferredChapterNumber: chapterNumber,
-    })
-    if (resolvedChapterNumber !== null) {
-      selectChapter(resolvedChapterNumber)
-    }
-  },
-)
-
-watch(
-  () => props.id,
-  () => {
-    stopChapterStatusStream()
-  },
-)
+useWritingDeskNavigation({
+  projectId: () => props.id,
+  project,
+  selectedChapterNumber,
+  chapterGenerationResult,
+  selectedVersionIndex,
+  selectChapter,
+  stopChapterStatusStream,
+})
 
 const {
   selectedChapter,

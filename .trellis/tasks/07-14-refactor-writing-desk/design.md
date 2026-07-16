@@ -48,7 +48,8 @@ parent `07-12-engineering-baseline` acceptance 第 4 项「5 大前端组件 <50
 | **8** ✅ | useWritingDeskChapterState composable（**边界调整**：原 progress 群中 canGenerate/isFailed/hasInProgress 已 3a 迁、progress/totalChapters/completedChapters=dead code 留父，实抽 selectedChapter/showVersionSelector/evaluatingChapter/activeEvaluatingChapter/isSelectingVersion/selectedChapterOutline/latestCompletedChapterNumber 7 符号） | composable | ~41 | 1014 |
 | **9** ✅ | useWritingDeskOptimize composable（推荐优化 3 方法 close/optimize/apply + 内化 3 refs/2 computed/2 mutations；query/utils orphan 删 5） | composable | ~84 | 930 |
 | **10** ✅ | WDSealStamp 子组件（闲章按钮 template 11 行 + seal-stamp scoped style ~118 行迁子；workspace-shell/m3-fade 留父） | 子组件 | ~128 | 802 |
-| 11+ | template/style 继续收敛（loading/error 状态、layout style 拆分）+ dead code 清理（progress 群/utils dead imports）+ script 收尾，至 <500 | 子组件+style | ~302 | 当前 802 需再砍 ~302（**预估后仍 >500，后续据实扩展**） |
+| **11** ✅ | useWritingDeskNavigation composable（getQueryChapterNumber + 3 watch + resolvedProjectEntryId 内化；项目加载/路由 query/项目切换章节定位状态机） | composable | ~57 | 745 |
+| 12+ | template/style 收敛（loading/error 状态、layout style 拆分）+ dead code 清理（progress 群/utils dead imports）+ script 收尾，至 <500 | 子组件+style | ~245 | 当前 745 需再砍 ~245 |
 
 > roadmap 行数为粗估，每 slice 实施时以 rg/Read 真实磁盘为准。仿 NovelDetailShell 实际收益常优于预估。
 
@@ -659,3 +660,80 @@ script 侧 composable 抽取已接近极限（Slice 1-9），转向 template/sty
 - 930 → 802（-128；template -10 + style -118）。
 - vue-tsc 0 / vitest 141 绿 / eslint 0 新增（1 warning 预存 @/api/novel type import 行号位移 L189→L179；WDSealStamp 0 warning）。
 - 独立复核 git diff：3 hunk（template 闲章 11 行→WDSealStamp 标签 1 行 / +import WDSealStamp / style seal-stamp 块 -118 行），workspace-shell + m3-fade 留父未触及，+2/-130。
+
+---
+
+## Slice 11 设计：useWritingDeskNavigation composable（2026-07-16）✅ 802→745
+
+### 边界（迁入 composable）
+
+- helper：getQueryChapterNumber（route.query.chapter_number 解析为正整数或 null）
+- 内化 ref：resolvedProjectEntryId（仅 watch project.value 检测项目切换用，rg 确认无父消费）
+- 内化 import：route = useRoute()
+- 3 watch：
+  - project.value（immediate）——项目就绪时按 blueprint+chapters+query 首次定位章节；项目切换时重置 selectedChapterNumber/selectedVersionIndex/chapterGenerationResult
+  - route.query.chapter_number——query 变化时跳转章节（调 selectChapter）
+  - projectId——项目切换时停止上一项目的章节生成 SSE 流（调 stopChapterStatusStream）
+
+### 入参（7，全必要响应式源透传，非过度抽象：3 watch 状态机群非单方法）
+
+- projectId: () => string（watch(projectId,...) 替代原 watch(() => props.id,...)，getter 求值等价）
+- project: ComputedRef<NovelProject | null>
+- selectedChapterNumber: Ref<number | null>（watch project.value 读写）
+- chapterGenerationResult: Ref<ChapterGenerationResponse | null>（watch project.value 重置）
+- selectedVersionIndex: Ref<number>（watch project.value 重置）
+- selectChapter（watch route.query 调，useWritingDeskProject 返回值）
+- stopChapterStatusStream（watch projectId 调，useWritingDeskProject 返回值）
+
+### 返回
+
+无（纯 watch 副作用状态机，父调用即注册 watch）。
+
+### 留父（零改动）
+
+- selectedChapterNumber/chapterGenerationResult/selectedVersionIndex refs（多 composable + template 消费，透传入参不内化）
+- selectChapter/stopChapterStatusStream（useWritingDeskProject 返回值，透传入参）
+- confirmVersionSelection（3c 不抽）+ progress/totalChapters/completedChapters dead code（Slice 8 留父）
+
+### 等价性
+
+- props.id → projectId() getter（watch(projectId,...) 等价原 watch(() => props.id,...)）
+- route 内化 useRoute()，与原父 const route 等价
+- resolvedProjectEntryId 内化（rg 确认仅 watch project.value L328/334/344 用，无父消费）
+- getQueryChapterNumber 内化（rg 确认仅 watch project.value L338 + watch route.query L355 用）
+- watch project.value immediate 行为保留（composable 内 `watch(() => project.value, ..., { immediate: true })`）
+- watch 体逐字搬迁，project.value/refs.value 访问不变（入参为 ComputedRef/Ref）
+
+### 调用点（时序等价）
+
+useWritingDeskNavigation 调用插在 useWritingDeskModals 解构之后、useWritingDeskChapterState 之前（原 getQueryChapterNumber + 3 watch 位）：
+
+- 入参 project(L264 区)/selectedChapterNumber(L237)/chapterGenerationResult/selectedVersionIndex/selectChapter/stopChapterStatusStream(L273-292 useWritingDeskProject 解构) 均在调用前就绪 ✅
+- watch project.value immediate 在 useWritingDeskChapterState（消费 selectedChapterNumber）之前注册执行，首次定位章节时序等价 ✅
+
+### const TDZ
+
+composable 内：route → resolvedProjectEntryId → getQueryChapterNumber（调 route）→ watch project（调 getQueryChapterNumber + resolvedProjectEntryId + refs）→ watch route.query（调 getQueryChapterNumber + project + selectChapter）→ watch projectId（调 stopChapterStatusStream）。无 forward reference。
+
+### orphan import 清理（本次产生，删 3 类）
+
+- vue：watch（3 watch 迁走 → orphan）
+- vue-router：useRoute（route 内化 → orphan，整行删）
+- @/utils/chapter：resolveChapterNumberForEntry / resolveChapterNumberForProjectEntry（2 watch 迁走 → orphan）
+
+### 注：pre-existing dead code（本次不动，mention）
+
+- @/utils/chapter import 中 decodeJsonStringFragment / extractJsonField / formatChapterGenerationError / tryParseOptimizerPayload 仍为 pre-existing dead（Slice 1/3a 遗留，无消费）。按 CLAUDE.md「不删 unrelated dead code」留父不动，建议用户单独决定（可 -4 行 import）。
+- line-clamp-1/2/3（style L754-773）template 零使用 = pre-existing dead style，同留父不动（可 -21 行）。
+- progress/totalChapters/completedChapters（Slice 8 发现 dead computed，可 -14 行）。
+- 合计 ~39 行 dead code 待用户批准清理。
+
+### spec
+
+导航符号零 spec 断言（wdWorkspaceLockedChapter 守护版本逻辑 fetchChapterStatus/selectChapter 区，不触及 getQueryChapterNumber/watch/resolvedProjectEntryId；wdSidebarDeleteChapter 守护删除逻辑）。零指针跟随。
+
+### 完成（2026-07-16）
+
+- 802 → 745（-57；getQueryChapterNumber 7 + 3 watch ~55 + resolvedProjectEntryId 1 + route 1 - composable 调用 9 + import 调整 净 -57）。
+- vue-tsc 0 / vitest 141 绿（wdWorkspaceLockedChapter 10/10）/ eslint 0 新增（1 warning 预存 @/api/novel type import 行号位移 L179→L178 因删 useRoute；composable 0 warning）。
+- 独立复核 git diff：4 hunk（vue/vue-router import 删 watch+useRoute / +composable import / @/utils chapter 删 resolve 2 / route 定义删 + resolvedProjectEntryId 删 + watch 块 62 行替换为 composable 调用 9 行），11 insertions / 68 deletions，留父 confirm/dead code 零触及。
