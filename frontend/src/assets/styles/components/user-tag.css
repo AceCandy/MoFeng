@@ -1,0 +1,212 @@
+/* AIMETA P=用户标签_阁主案头用户标签水墨信笺下拉|R=user-tag 用户标签+水墨信笺下拉折叠+user-dropdown+dark覆写|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* ==========================================================================
+   Phase 9: 阁主案头用户标签与水墨信笺下拉折叠交互重塑样式
+   ========================================================================== */
+
+/* 1. 用户名标签触发器 */
+.app-shell__user-tag.is-trigger {
+  position: relative !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--md-spacing-2) !important;
+  min-height: 44px !important;
+  padding: 6px 12px !important;
+  border-radius: var(--md-radius-sm) !important;
+  border: 1px solid transparent !important;
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard) !important;
+}
+
+.app-shell__user-tag.is-trigger:hover,
+.app-shell__user-tag.is-trigger.is-active {
+  background-color: var(--md-surface-variant) !important;
+  border-color: var(--md-outline-variant) !important;
+}
+
+:root[data-theme='dark'] .app-shell__user-tag.is-trigger:hover,
+:root[data-theme='dark'] .app-shell__user-tag.is-trigger.is-active {
+  background-color: rgba(229, 222, 201, 0.06) !important;
+  border-color: rgba(229, 222, 201, 0.12) !important;
+}
+
+/* 2. 用户下拉箭头 SVG 样式 */
+.app-shell__user-arrow {
+  display: inline-flex !important;
+  align-items: center !important;
+  color: var(--md-on-surface-variant) !important;
+  transition: transform var(--md-duration-short) !important;
+}
+
+.app-shell__user-arrow svg {
+  width: 10px !important;
+  height: 10px !important;
+}
+
+.app-shell__user-arrow.is-open {
+  transform: rotate(180deg) !important;
+  color: var(--md-primary) !important;
+}
+
+/* 3. 水墨信笺下拉菜单面板 */
+.app-shell__user-dropdown {
+  position: absolute !important;
+  top: calc(100% + 8px) !important;
+  right: 0 !important;
+  width: 230px !important;
+  z-index: 50 !important;
+  background-color: var(--md-surface-bright) !important;
+  /* 文人熟宣噪点背景 */
+  background-image: radial-gradient(rgba(28, 32, 34, 0.03) 1px, transparent 0) !important;
+  background-size: 6px 6px !important;
+  /* 宣纸古籍粗细双边线 */
+  border: 2px solid var(--md-primary-dark) !important;
+  outline: 1px solid rgba(28, 32, 34, 0.1) !important;
+  border-radius: var(--md-radius-xs) !important;
+  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15) !important;
+  padding: var(--md-spacing-3) 0 !important;
+  text-align: left !important;
+  animation: inkLetterFadeIn var(--md-duration-short) var(--md-easing-standard) !important;
+}
+
+@keyframes inkLetterFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 4. 下拉菜单标题 */
+.app-shell__user-dropdown-header {
+  padding: 2px 16px 8px 16px !important;
+  font-family: var(--md-font-display) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: var(--md-primary) !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  border-bottom: 1px dashed var(--md-outline-variant) !important;
+  margin-bottom: var(--md-spacing-2) !important;
+  opacity: 0.8 !important;
+}
+
+/* 5. 下拉条目样式 */
+.app-shell__user-dropdown-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+.app-shell__user-dropdown-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: var(--md-spacing-2) 16px !important;
+  color: var(--md-on-surface) !important;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  background: transparent !important;
+  border: none !important;
+  width: 100% !important;
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    color var(--md-duration-short) var(--md-easing-standard) !important;
+}
+
+/* Hover 时的松烟朱砂墨晕 */
+.app-shell__user-dropdown-item:hover {
+  background-color: rgba(184, 60, 50, 0.04) !important;
+}
+
+.app-shell__user-dropdown-item .app-shell__action-badge {
+  width: 28px !important;
+  height: 28px !important;
+  font-size: 13px !important;
+  line-height: 26px !important;
+  margin: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+.app-shell__user-dropdown-item .item-text {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+}
+
+.app-shell__user-dropdown-item .item-title {
+  font-family: var(--md-font-display) !important;
+  font-size: var(--md-label-medium) !important;
+  font-weight: 600 !important;
+  color: var(--md-on-surface) !important;
+  line-height: 1.3 !important;
+}
+
+.app-shell__user-dropdown-item .item-desc {
+  font-size: 10px !important;
+  color: var(--md-on-surface-variant) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  margin-top: 1px !important;
+}
+
+/* 分割线 */
+.app-shell__user-dropdown-divider {
+  height: 1px !important;
+  background-image: linear-gradient(to right, transparent, var(--md-outline-variant) 20%, var(--md-outline-variant) 80%, transparent) !important;
+  margin: var(--md-spacing-2) 0 !important;
+}
+
+/* 退出项 hover 时为极柔焦墨底色 */
+.app-shell__user-dropdown-item.is-logout-action:hover {
+  background-color: rgba(28, 32, 34, 0.04) !important;
+}
+
+/* 金石印章的盖章物理下压 Hover 联动 */
+.app-shell__user-dropdown-item:hover .app-shell__action-badge {
+  transform: translateY(1px) scale(0.97) !important;
+  box-shadow: 0.5px 0.5px 0px rgba(28, 32, 34, 0.1) !important;
+}
+
+/* 6. 暗色模式 (深夜书房) 超精细化适配 */
+:root[data-theme='dark'] .app-shell__user-dropdown {
+  background-color: var(--md-surface-bright) !important;
+  /* 黛青宣纸噪点 */
+  background-image: radial-gradient(rgba(229, 222, 201, 0.015) 1px, transparent 0) !important;
+  border-color: #9c332b !important; /* 朱泥色围框 */
+  outline-color: rgba(229, 222, 201, 0.08) !important;
+  box-shadow: 4px 4px 0px rgba(13, 16, 17, 0.5) !important;
+}
+
+:root[data-theme='dark'] .app-shell__user-dropdown-header {
+  color: #e5dec9 !important;
+  border-bottom-color: rgba(229, 222, 201, 0.12) !important;
+}
+
+:root[data-theme='dark'] .app-shell__user-dropdown-item:hover {
+  background-color: rgba(156, 51, 43, 0.08) !important; /* 暗色朱砂墨晕 */
+}
+
+:root[data-theme='dark'] .app-shell__user-dropdown-item.is-logout-action:hover {
+  background-color: rgba(229, 222, 201, 0.04) !important;
+}
+
+:root[data-theme='dark'] .app-shell__user-dropdown-divider {
+  background-image: linear-gradient(to right, transparent, rgba(229, 222, 201, 0.15) 20%, rgba(229, 222, 201, 0.15) 80%, transparent) !important;
+}
+
+/* 移动端窄屏下，右上角动作区只需展示用户标签，如果开启下拉自适应适配 */
+@media (max-width: 768px) {
+  /* 窄屏恢复展示 user-tag 及其下拉功能 */
+  body .app-shell__user-tag {
+    display: flex !important;
+  }
+}
