@@ -45,15 +45,7 @@
       {{ feedback.message }}
     </div>
 
-    <div
-      :class="['model-routing__readiness', `is-${sectionReadinessSummary.tone}`]"
-      :title="sectionReadinessSummary.description"
-      aria-label="模型配置状态"
-    >
-      <span class="model-routing__readiness-label">{{ sectionReadinessSummary.label }}</span>
-      <strong class="model-routing__readiness-value">{{ sectionReadinessSummary.value }}</strong>
-      <span class="model-routing__readiness-detail">{{ sectionReadinessSummary.description }}</span>
-    </div>
+    <ReadinessPanel :summary="sectionReadinessSummary" />
 
     <template v-if="activeSection === 'routes'">
       <RoutingStagesPanel
@@ -162,6 +154,7 @@ import { useStageRoutes } from './useStageRoutes'
 import { useProviderForm } from './useProviderForm'
 import { useModelPicker } from './useModelPicker'
 import { useModelSelection } from './useModelSelection'
+import { ReadinessPanel } from './ReadinessPanel'
 import { RoutingStagesPanel } from './RoutingStagesPanel'
 import { ProviderFormPanel } from './ProviderFormPanel'
 import { PrimaryModelPanel } from './PrimaryModelPanel'
@@ -364,8 +357,7 @@ defineExpose({
   gap: var(--md-spacing-5);
 }
 
-.model-routing__topbar,
-.model-routing__model-row {
+.model-routing__topbar {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -402,46 +394,6 @@ defineExpose({
   flex: 0 0 auto;
 }
 
-.model-routing__readiness {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--md-spacing-2) var(--md-spacing-4);
-  padding: var(--md-spacing-3) var(--md-spacing-4) var(--md-spacing-4);
-  border-bottom: 1px solid var(--md-outline-variant);
-  color: var(--md-on-surface-variant);
-}
-
-.model-routing__readiness.is-success .model-routing__readiness-value {
-  color: var(--md-success);
-}
-
-.model-routing__readiness.is-warning .model-routing__readiness-value {
-  color: var(--md-on-warning-container);
-}
-
-.model-routing__readiness-label {
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-label-small);
-  font-weight: 600;
-}
-
-.model-routing__readiness-value {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--md-on-surface);
-  font-size: var(--md-title-medium);
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.model-routing__readiness-detail {
-  min-width: min(100%, 240px);
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
-}
 
 .model-routing__provider-card {
   border: 3px double var(--md-outline);
@@ -471,12 +423,6 @@ defineExpose({
   background-position: right bottom;
 }
 
-
-.model-routing__model-list {
-  display: grid;
-  gap: var(--md-spacing-3);
-}
-
 .model-routing__provider-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
@@ -489,53 +435,6 @@ defineExpose({
   color: var(--md-on-surface-variant);
   font-size: var(--md-body-small);
 }
-
-.model-routing__model-row {
-  width: 100%;
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-sm);
-  background: var(--md-surface);
-  color: var(--md-on-surface);
-  padding: var(--md-spacing-3);
-  text-align: left;
-  cursor: pointer;
-}
-
-.model-routing__model-row:hover:not(.is-disabled) {
-  border-color: var(--md-primary);
-  background: var(--md-primary-container);
-  color: var(--md-on-primary-container);
-}
-
-.model-routing__model-row.is-disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-.model-routing__model-row strong {
-  display: block;
-  font-size: var(--md-body-medium);
-}
-
-.model-routing__model-row small {
-  display: block;
-  margin-top: 2px;
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
-}
-
-.model-routing__model-controls {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--md-spacing-2);
-}
-
-.model-routing__model-controls input {
-  width: 20px;
-  height: 20px;
-  flex: 0 0 auto;
-}
-
 .model-routing__feedback {
   border-radius: var(--md-radius-md);
   padding: var(--md-spacing-3);
@@ -582,8 +481,7 @@ defineExpose({
 }
 
 @media (max-width: 640px) {
-  .model-routing__topbar,
-  .model-routing__model-row {
+  .model-routing__topbar {
     flex-direction: column;
     align-items: stretch;
   }
