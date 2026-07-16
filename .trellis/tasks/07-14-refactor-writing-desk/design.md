@@ -41,11 +41,12 @@ parent `07-12-engineering-baseline` acceptance 第 4 项「5 大前端组件 <50
 | **3b** ✅ | useWritingDeskChapterOps composable（evaluateChapter/deleteChapter + 内化 evaluateChapterMutation/deleteChapterMutation；confirmVersionSelection 因依赖 Slice 4 版本提取群拆 3c。**含 wdSidebarDeleteChapter spec 指针跟随**） | composable | ~117 | 1546 |
 | **4** ✅ | useWritingDeskVersionDetail composable（版本提取群 extractVersionContent/extractVersionMetadata/toBoundedVersionIndex/resolveRecommendedVersionIndex/availableVersions/syncRecommendedVersionSelection/showVersionDetail/closeVersionDetail/selectVersionFromDetail/isCurrentVersion + 内化 showVersionDetailModal/detailVersionIndex/lastAutoRecommendedSelectionKey refs + watch，**含 spec L333 指针跟随 + L345 fetchChapterStatus 锚点跟随**） | composable | ~226 | 1320 |
 | 3c | confirmVersionSelection（Slice 4 已收敛 availableVersions/resolveRecommendedVersionIndex，可直接消费 composable 返回值单抽） | composable | ~52 | 1268 |
-| 5 | WDRecommendedOptimizeResultModal 子组件（template L164-259 + 推荐优化 state/close/optimize/apply 方法 + style） | 子组件 | ~216 | 1052 |
-| 6 | useWritingDeskProject composable（loadProject/refetchChapterIntoProject/viewProjectDetail/goBack/selectChapter/fetchChapterStatus/stopChapterStatusStream） | composable | ~130 | 922 |
-| 7 | useWritingDeskModals composable（WDEditChapterModal/WDGenerateOutlineModal/WDEvaluationDetailModal state + open/save 方法） | composable | ~80 | 842 |
-| 8 | 章节状态判断 canGenerateChapter/isChapterFailed/hasChapterInProgress + progress/totalChapters/completedChapters/latestCompletedChapterNumber 并入 composable | composable | ~80 | 762 |
-| 9+ | template/style 收敛（modal 子组件 style 迁移、layout style 拆分到子组件），至 <500 | 子组件+style | ~330 | <500 |
+| **5** ✅ | WDRecommendedOptimizeResultModal 子组件（modal template L164-259 + 内化 useDialogA11y+2refs+titleId+2computed+.m3-result-dialog style，4 props+emit close/apply；optimize/apply/close 方法+state 留父） | 子组件 | ~114 | 1206 |
+| ~~3c~~ | confirmVersionSelection **决定不抽**（单方法+入参 8 含 composable 链传递 availableVersions/resolveRecommendedVersionIndex=过度抽象，留父消费已解构返回值更简） | — | 0 | 1206 |
+| 6 | useWritingDeskProject composable（loadProject/refetchChapterIntoProject/viewProjectDetail/goBack/selectChapter/fetchChapterStatus/stopChapterStatusStream） | composable | ~130 | 1076 |
+| 7 | useWritingDeskModals composable（WDEditChapterModal/WDGenerateOutlineModal/WDEvaluationDetailModal state + open/save 方法） | composable | ~80 | 996 |
+| 8 | 章节状态判断 canGenerateChapter/isChapterFailed/hasChapterInProgress + progress/totalChapters/completedChapters/latestCompletedChapterNumber 并入 composable | composable | ~80 | 916 |
+| 9+ | template/style 收敛（剩余 layout style 拆分、H 块章节 computed、O 大纲编辑等），至 <500 | 子组件+style | ~330 | 586（**预估后仍 >500，后续 slice 据实扩展**） |
 
 > roadmap 行数为粗估，每 slice 实施时以 rg/Read 真实磁盘为准。仿 NovelDetailShell 实际收益常优于预估。
 
@@ -299,3 +300,46 @@ composable 内：refs → extractVersionContent → extractVersionMetadata → a
 - 1546 → 1320（-226，优于预估 ~200）。
 - vue-tsc 0 / vitest 141 绿（wdWorkspaceLockedChapter spec 2 处指针跟随后绿）/ eslint 0 新增（composable 0 输出，3 warning 全预存 @/api/novel：WritingDesk L277/278 + spec L8）。
 - 独立复核 git diff：8 hunk 对应 6 处逻辑改动（import +1 / refs 删 3 / 版本提取群删 ~199 替换 composable 解构 15 / watch 删 12 / show-close-hide 删 22 / selectVersionFromDetail 删 6），留父方法零触及。
+
+---
+
+## Slice 5 设计：WDRecommendedOptimizeResultModal 子组件（2026-07-16）✅ 1320→1206
+
+### 3c 决定不抽（同期决策）
+
+confirmVersionSelection 原列 3c。Slice 4 收敛后 confirm 依赖 availableVersions/resolveRecommendedVersionIndex（composable 返回值）。但 confirm 是单方法，抽 composable 需透传这 2 个 + selectedChapterNumber/selectedVersionIndex/chapterGenerationResult/selectedChapter/project/confirmFinalizeChapterMutation/refetchChapterIntoProject 共 **入参 8**，且含 composable 链传递——命中「No abstractions for single-use code」。confirm 留父消费已解构的 composable 返回值更简，故 **3c 取消**。
+
+### 边界（迁入子组件）
+
+- template：Teleport+overlay+dialog（评审优化结果预览 modal，逐字迁入，props 化）
+- 内化 refs：dialogRef / closeButtonRef
+- 内化常量：dialogTitleId
+- 内化 computed：optimizedParagraphs / optimizedWordCount（从 props.optimizedContent 派生）
+- 内化 useDialogA11y（active: toRef(props,'show')，onClose: emit close）
+- 内化 scoped style：.m3-result-dialog
+
+### props/emit
+
+- props: show / optimizedContent / isApplying / notes
+- emit: close / apply（template $emit + script useDialogA11y onClose emit close）
+
+### 留父（零改动）
+
+- state: showRecommendedOptimizeResultModal / recommendedOptimizedContent / recommendedOptimizeResultNotes / isApplyingRecommendedOptimization / isOptimizingRecommendedVersion
+- 方法: closeRecommendedOptimizeResult（含 isApplying 拦截，@close 处理）/ optimizeRecommendedVersionFromEvaluation（触发+数据准备，WDEvaluationDetailModal @optimize-recommended-version）/ applyRecommendedOptimization（applyOptimizationMutation+refetchChapterIntoProject）
+- mutations: optimizeRecommendedVersionMutation / applyOptimizationMutation
+
+### 等价性
+
+- close（button/overlay/取消/ESC）：子 emit close → 父 closeRecommendedOptimizeResult（isApplying 拦截保留）等价
+- apply：子 emit apply → 父 applyRecommendedOptimization 等价
+- 内容/notes/isApplying：props 透传；paragraphs/wordCount 子内 computed（从 optimizedContent）等价
+- a11y 焦点：useDialogA11y 迁子（dialogRef/closeButtonRef）等价
+- lazy：defineAsyncComponent + loader（同其他 modal 范式）
+- scoped：.m3-result-dialog 迁子（子内部元素 scoped 命中）等价
+
+### 完成（2026-07-16）
+
+- 1320 → 1206（-114；design.md 估 ~216 偏高，实际 modal style 仅 5 行 + template 96 行 + computed/refs ~20）。
+- vue-tsc 0 / vitest 141 绿 / eslint 0 新增（2 warning 预存 @/api/novel 因 template -88 上移 L189/190，子组件 0 warning）。
+- 独立复核 git diff：8 hunk（template 96→8 标签 / useDialogA11y import 删 / loader+defineAsyncComponent 新增 / refs+titleId 删 / computed 删 / useDialogA11y 调用删 / style 删），留父方法零触及。
