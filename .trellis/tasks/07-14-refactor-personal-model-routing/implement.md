@@ -47,12 +47,12 @@
 - [x] defineExpose isDirty 改读 composable 返回（变量名同零适配）；useModelBundle onLoaded 透传 syncRouteSelectionsFromBundle 箭头延迟绑定
 - [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error，4 同类 type-only warning）+ wc（2309→2252）
 
-## Slice 6 — useProviderForm composable
+## Slice 6 — useProviderForm composable ✅
 
-- [ ] 建 `useProviderForm.ts`：providerForm/providerFormMode/editingProviderId + emptyProviderForm/assignProviderForm + begin/create/edit/cancel/saveProviderForm + toggleProviderEnabled/deleteProviderFromCard + providerFetchStates/providerFetchState
-- [ ] 入参透传 bundle + activeModelCapability + mutations + loadBundle
-- [ ] defineExpose save 的 providerFormMode 分支改读 composable 返回
-- [ ] 验证：三件套 + wc + 手测供应商 CRUD
+- [x] 建 `useProviderForm.ts`：providerForm/providerFormMode/editingProviderId + providerFetchStates/providerFetchState + emptyProviderForm/assignProviderForm + beginCreate/beginEdit/cancel/saveProviderForm + toggleProviderEnabled/deleteProviderFromCard
+- [x] 入参透传 providers + activeSection（capability 经 capabilityForSection 等价 wrapper）+ 3 mutations + loadBundle + setFeedback + onSaved（替代 emit('saved')）；解构顺序 useModelBundle→useProviderForm→useStageRoutes→useSectionMeta（providerFormMode 供 useStageRoutes）
+- [x] defineExpose save 的 providerFormMode/saveProviderForm 改读 composable 返回（变量名同零适配）；删 5 orphan import（ProviderCreate/ProviderForm/ProviderFetchState/ProviderFormMode + createProviderCapabilities/providerCapabilities）
+- [x] 验证：三件套（vue-tsc 0 / vitest 151 绿 / eslint 0 error，5 同类 type-only warning）+ wc（2252→2138）
 
 ## Slice 7 — useModelPicker composable（最高风险）
 

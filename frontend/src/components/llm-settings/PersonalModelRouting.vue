@@ -545,7 +545,6 @@ import {
   type ComponentPublicInstance,
 } from 'vue'
 import type {
-  ProviderCreate,
   UserAIModel,
   UserModelProvider,
 } from '@/api/llm'
@@ -555,18 +554,14 @@ import { useProviderModelsQuery } from '@/queries/llm'
 import { useModelBundle } from '@/composables/useModelBundle'
 import { useSectionMeta } from './useSectionMeta'
 import { useStageRoutes } from './useStageRoutes'
+import { useProviderForm } from './useProviderForm'
 import type {
   Capability,
-  ProviderFetchState,
-  ProviderForm,
-  ProviderFormMode,
   RoutingSection,
 } from './modelRoutingTypes'
 import {
   capabilityForSection,
   createModelPayload,
-  createProviderCapabilities,
-  providerCapabilities,
   providerTypeLabel,
 } from './modelRoutingHelpers'
 
@@ -608,9 +603,28 @@ const {
 } = useModelBundle({
   onLoaded: () => syncRouteSelectionsFromBundle(),
 })
-const providerFetchStates = reactive<Record<number, ProviderFetchState>>({})
-const editingProviderId = ref<number | null>(null)
-const providerFormMode = ref<ProviderFormMode>(null)
+const {
+  providerForm,
+  providerFormMode,
+  editingProviderId,
+  providerFetchStates,
+  providerFetchState,
+  beginCreateProvider,
+  beginEditProvider,
+  cancelProviderForm,
+  saveProviderForm,
+  toggleProviderEnabled,
+  deleteProviderFromCard,
+} = useProviderForm({
+  providers,
+  activeSection,
+  saveProviderMutation,
+  toggleProviderMutation,
+  deleteProviderMutation,
+  loadBundle,
+  setFeedback,
+  onSaved: () => emit('saved'),
+})
 const activeModelPickerProviderId = ref<number | null>(null)
 const isModelPickerActive = computed(() => activeModelPickerProviderId.value !== null)
 const modelPickerDialogRef = ref<HTMLElement | null>(null)
@@ -630,15 +644,6 @@ const setModelPickerSearchInputRef = (el: Element | ComponentPublicInstance | nu
 const pendingChatModelNames = ref<Set<string>>(new Set())
 const pendingTTSModelName = ref('')
 const isSavingPicker = ref(false)
-const emptyProviderForm = (): ProviderForm => ({
-  name: '',
-  provider_type: 'openai_compatible',
-  base_url: '',
-  api_key: '',
-  is_enabled: true,
-})
-
-const providerForm = reactive<ProviderForm>(emptyProviderForm())
 
 const {
   routeSelections,
@@ -677,17 +682,6 @@ const {
   routeSelections,
   allStageKeys,
 })
-
-const providerFetchState = (providerId: number): ProviderFetchState => {
-  if (!providerFetchStates[providerId]) {
-    providerFetchStates[providerId] = {
-      isLoading: false,
-      modelsByCapability: { chat: [], embedding: [], tts: [] },
-      error: '',
-    }
-  }
-  return providerFetchStates[providerId]
-}
 
 const providerKeyLabel = (provider: UserModelProvider): string =>
   provider.api_key_preview ? `Key ${provider.api_key_preview}` : '未保存 Key'
@@ -781,10 +775,6 @@ const activeModelStateLabel = (providerId: number, modelName: string): string =>
   return model.is_default_chat ? '主模型' : '已启用'
 }
 
-const assignProviderForm = (next: ProviderForm) => {
-  Object.assign(providerForm, next)
-}
-
 const activeModelCapability = (): Capability => capabilityForSection(activeSection.value)
 
 const providerModelsQuery = useProviderModelsQuery(
@@ -846,110 +836,6 @@ useDialogA11y({
   lockBodyScroll: false,
 })
 
-const beginCreateProvider = () => {
-  editingProviderId.value = null
-  providerFormMode.value = 'create'
-  assignProviderForm(emptyProviderForm())
-}
-
-const beginEditProvider = (provider: UserModelProvider) => {
-  editingProviderId.value = provider.id
-  providerFormMode.value = 'edit'
-  assignProviderForm({
-    name: provider.name,
-    provider_type: provider.provider_type,
-    base_url: provider.base_url,
-    api_key: '',
-    is_enabled: provider.is_enabled,
-  })
-}
-
-const cancelProviderForm = () => {
-  editingProviderId.value = null
-  providerFormMode.value = null
-  assignProviderForm(emptyProviderForm())
-}
-
-const saveProviderForm = async () => {
-  const payload: ProviderCreate = {
-    name: providerForm.name.trim(),
-    provider_type: providerForm.provider_type,
-    base_url: providerForm.base_url.trim(),
-    api_key: providerForm.api_key.trim() || null,
-    capabilities: createProviderCapabilities(activeModelCapability()),
-    is_enabled: providerForm.is_enabled,
-  }
-  if (!payload.name || !payload.base_url) {
-    setFeedback('error', '请填写供应商名称和 API URL。')
-    return
-  }
-
-  try {
-    const editingProvider = providers.value.find((provider) => provider.id === editingProviderId.value)
-    await saveProviderMutation.mutateAsync({
-      id: editingProviderId.value,
-      data: editingProviderId.value
-        ? {
-          name: payload.name,
-          provider_type: payload.provider_type,
-          base_url: payload.base_url,
-          ...(providerForm.api_key.trim() ? { api_key: payload.api_key } : {}),
-          capabilities: {
-            ...(editingProvider ? providerCapabilities(editingProvider) : {}),
-            [activeModelCapability()]: true,
-          },
-          is_enabled: payload.is_enabled,
-        }
-        : payload,
-    })
-    await loadBundle()
-    cancelProviderForm()
-    setFeedback('success', '供应商已保存。')
-    emit('saved')
-  } catch (error) {
-    const message = error instanceof Error ? error.message : '未知错误'
-    setFeedback('error', `供应商保存失败：${message}`)
-  }
-}
-
-const toggleProviderEnabled = async (provider: UserModelProvider) => {
-  try {
-    await toggleProviderMutation.mutateAsync({
-      id: provider.id,
-      is_enabled: !provider.is_enabled,
-    })
-    await loadBundle()
-    setFeedback('success', provider.is_enabled ? '供应商已停用。' : '供应商已启用。')
-    emit('saved')
-  } catch (error) {
-    const message = error instanceof Error ? error.message : '未知错误'
-    setFeedback('error', `供应商状态更新失败：${message}`)
-  }
-}
-
-const deleteProviderFromCard = async (provider: UserModelProvider) => {
-  const confirmed = await globalAlert.showConfirm(
-    `确定删除供应商"${provider.name}"吗？关联模型和阶段路由也会一起删除。`,
-    '删除供应商',
-  )
-  if (!confirmed) {
-    return
-  }
-
-  try {
-    await deleteProviderMutation.mutateAsync(provider.id)
-    if (editingProviderId.value === provider.id) {
-      cancelProviderForm()
-    }
-    delete providerFetchStates[provider.id]
-    await loadBundle()
-    setFeedback('success', '供应商已删除。')
-    emit('saved')
-  } catch (error) {
-    const message = error instanceof Error ? error.message : '未知错误'
-    setFeedback('error', `删除供应商失败：${message}`)
-  }
-}
 
 const loadProviderModels = async (provider: UserModelProvider) => {
   const state = providerFetchState(provider.id)
