@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.background_task import BackgroundTask
+from .event_bus import publish_background_task
 
 
 ACTIVE_TASK_STATUSES = {"queued", "running"}
@@ -61,6 +62,7 @@ class BackgroundTaskService:
         self.session.add(task)
         await self.session.commit()
         await self.session.refresh(task)
+        await publish_background_task(task.user_id)
         return task
 
     async def get_user_task(self, task_id: str, *, user_id: int) -> Optional[BackgroundTask]:
@@ -101,6 +103,7 @@ class BackgroundTaskService:
 
         await self.session.commit()
         await self.session.refresh(task)
+        await publish_background_task(task.user_id)
         return task
 
     async def mark_running(self, task_id: str, message: str = "任务开始执行") -> Optional[BackgroundTask]:
@@ -114,6 +117,7 @@ class BackgroundTaskService:
         task.log_entries = [*(task.log_entries or []), _log_entry(message)]
         await self.session.commit()
         await self.session.refresh(task)
+        await publish_background_task(task.user_id)
         return task
 
     async def mark_succeeded(
@@ -133,6 +137,7 @@ class BackgroundTaskService:
         task.log_entries = [*(task.log_entries or []), _log_entry("任务执行完成")]
         await self.session.commit()
         await self.session.refresh(task)
+        await publish_background_task(task.user_id)
         return task
 
     async def mark_failed(self, task_id: str, error: str) -> Optional[BackgroundTask]:
@@ -146,4 +151,5 @@ class BackgroundTaskService:
         task.log_entries = [*(task.log_entries or []), _log_entry(f"任务失败：{error}", level="error")]
         await self.session.commit()
         await self.session.refresh(task)
+        await publish_background_task(task.user_id)
         return task
