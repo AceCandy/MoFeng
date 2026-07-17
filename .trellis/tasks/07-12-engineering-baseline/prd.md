@@ -22,10 +22,10 @@
 
 ## Acceptance Criteria
 
-- [ ] `alembic upgrade head` 可从空库建到当前 schema；`_ensure_schema_updates` 可废弃。
-- [ ] CI 拦截 components/views 直连 `@/api`；全局 `status === 401` 仅 `http.ts` 一处。
-- [ ] 并发生成同一章不产生重复行；验证码多 worker 一致；SSE 不再每秒查 DB。
-- [ ] 5 个最大前端组件拆至 <500 行；`cleanVersionContent` 仅 `utils` 一处定义。
+- [ ] `alembic upgrade head` 可从空库建到当前 schema；`_ensure_schema_updates` 可废弃。  ⚠️ 实际：alembic baseline a53385d06521 已建(34表)✅；`_ensure_schema_updates`(init_db.py:124)过渡态未废弃(手动ALTER补goals/highlights/character_states等列)，待alembic覆盖后删
+- [ ] CI 拦截 components/views 直连 `@/api`；全局 `status === 401` 仅 `http.ts` 一处。  ⚠️ 实际：status===401 已收敛仅 client.ts:8✅；components/views @/api value import 未完全拦截(AppShell.vue:19 TaskAPI value import，type import 预存warning放行)
+- [ ] 并发生成同一章不产生重复行；验证码多 worker 一致；SSE 不再每秒查 DB。  ⚠️ 实际：并发 UniqueConstraint+get_or_create✅ / 验证码 Redis 下沉✅；SSE stream_chapter_status(novels.py:307) 仍 sleep(1.0) 轮询查DB，未改事件驱动(待Celery启用)
+- [ ] 5 个最大前端组件拆至 <500 行；`cleanVersionContent` 仅 `utils` 一处定义。  ⚠️ 实际：4/5达成(PMR493/CG394/NDS432/WDW498)✅ + cleanVersionContent 去重✅；WritingDesk 619 收口不再抽象(用户决策,非过度抽象空间已穷尽)
 
 ## Notes
 
