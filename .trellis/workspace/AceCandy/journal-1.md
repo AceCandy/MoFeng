@@ -410,3 +410,56 @@ PMR 2684->493 <500 达标（15-slice 完成）。Slice 14 抽 ReadinessPanel 子
 ### Next Steps
 
 - None - task complete
+
+
+## Session 13: #28 main.css 按域拆分（Phase 3 + 真机验证）
+
+**Date**: 2026-07-17
+**Task**: #28 main.css 按域拆分（Phase 3 + 真机验证）
+**Branch**: `main`
+
+### Summary
+
+main.css 4966->34 行（减 99.3%），拆为入口 + 30 partial（1 base + 3 elements + 26 components + 1 tokens，共 4954 行）。Phase 3 Slice 5-23 共 19 slice，每 slice 四件套绿 + commit + push。关键决策：dark 覆写随域迁移 / App Shell 响应式段补抽 / base.css @import 最后保持 cascade / readCssBlock lookbehind 修复。AC 5 真机验证通过：登录页/workspace/写作台 light/dark 视觉等价 + 375px 窄屏响应式 + dark token cascade 等价，无视觉回归。6 项 AC 全部达成。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ac12e0e` | (see git log) |
+| `466c17a` | (see git log) |
+| `2dfa37b` | (see git log) |
+| `1a1f136` | (see git log) |
+| `f6165e5` | (see git log) |
+| `b174845` | (see git log) |
+| `b1489ca` | (see git log) |
+| `070490b` | (see git log) |
+| `fe21efb` | (see git log) |
+| `5ce84cf` | (see git log) |
+| `461df24` | (see git log) |
+| `6d3a803` | (see git log) |
+| `1b28862` | (see git log) |
+| `86260e6` | (see git log) |
+| `fa0f2d7` | (see git log) |
+| `33e9882` | (see git log) |
+| `ef3c88c` | (see git log) |
+| `ab49760` | (see git log) |
+| `285ba7d` | (see git log) |
+| `539fd7e` | (see git log) |
+| `a7e0902` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
