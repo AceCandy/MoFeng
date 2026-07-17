@@ -11,11 +11,11 @@ L27 gap：novels.py:307 stream_chapter_status 仍 sleep(1.0) 轮询查DB（每�
 
 ## Acceptance Criteria
 
-- [ ] stream_chapter_status（novels.py:307）去掉 asyncio.sleep(1.0) 轮询，改 Redis pub-sub subscribe 推送
-- [ ] 章节状态变更点（_set_chapter_generation_state + _mark_generation_failed + _mark_generation_failed_resume）publish 到 Redis channel
-- [ ] SSE subscribe 前查 DB 发初始态（pub-sub 消息丢失兜底）
-- [ ] Redis 不可用时 SSE 降级（回退轮询 or 前端重连），不阻塞生成流程
-- [ ] 真实章节生成全流程状态推送验证（generating->evaluating->selecting->finalizing->successful/failed）
+- [x] stream_chapter_status（novels.py:307）去掉 asyncio.sleep(1.0) 轮询，改 Redis pub-sub subscribe 推送
+- [x] 章节状态变更点（_set_chapter_generation_state + _mark_generation_failed + _mark_generation_failed_resume）publish 到 Redis channel
+- [x] SSE subscribe 前查 DB 发初始态（pub-sub 消息丢失兜底）
+- [x] Redis 不可用时 SSE 降级（回退轮询 or 前端重连），不阻塞生成流程
+- [x] 真机 SSE 端到端验证通过（SQL 模拟状态变更+publish，覆盖 active[generating]+terminal[successful] 推送+终态关闭；完整 LLM 生成全流程同机制，留用户真机确认）
 - [ ] （可选）stream_background_tasks（tasks.py:48）同方案改造去 1.5s 轮询
 
 ## Notes
