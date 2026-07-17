@@ -1,29 +1,8 @@
 // AIMETA P=HTTP请求工具_超时与错误归一化|R=统一fetch错误处理与JSON解析|NR=不含业务API路径|E=api:http|X=internal|A=requestJson_requestRaw|D=fetch|S=net|RD=./README.ai
-export type HttpErrorCode = 'http' | 'timeout' | 'network' | 'abort'
+import { HttpRequestError, type HttpErrorCode } from '@/utils/errors'
 
-export class HttpRequestError extends Error {
-  status: number | null
-  code: HttpErrorCode
-  url: string
-  payload: unknown
-
-  constructor(
-    message: string,
-    options: {
-      status?: number | null
-      code: HttpErrorCode
-      url: string
-      payload?: unknown
-    },
-  ) {
-    super(message)
-    this.name = 'HttpRequestError'
-    this.status = options.status ?? null
-    this.code = options.code
-    this.url = options.url
-    this.payload = options.payload
-  }
-}
+// HttpRequestError 错误类型下沉到 @/utils/errors，@/api/http re-export 保持向后兼容
+export { HttpRequestError, type HttpErrorCode }
 
 export interface HttpRequestOptions extends RequestInit {
   timeoutMs?: number

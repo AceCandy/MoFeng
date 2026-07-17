@@ -422,7 +422,7 @@ import type {
   SystemConfigUpdatePayload,
   SystemConfigUpsertPayload,
 } from '@/api/admin'
-import { normalizeComparableVersion } from '@/api/version'
+import { normalizeComparableVersion } from '@/utils/version'
 import { useAlert } from '@/composables/useAlert'
 import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
 import { mobileMax } from '@/constants/responsive'

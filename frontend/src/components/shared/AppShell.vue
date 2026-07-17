@@ -12,11 +12,10 @@ import {
   useNovelProjectQuery,
   useImportNovelMutation,
 } from '@/queries/novel'
-import { useTasksQuery } from '@/queries/tasks'
+import { useTasksQuery, useTaskStream } from '@/queries/tasks'
 import { useNovelStore } from '@/stores/novel'
 import GlobalModalContainer from '@/components/shared/GlobalModalContainer.vue'
 import { globalAlert } from '@/composables/useAlert'
-import { TaskAPI, type BackgroundTask } from '@/api/tasks'
 
 const SettingsView = defineAsyncComponent(() => import('@/views/SettingsView.vue'))
 const AdminView = defineAsyncComponent(() => import('@/views/AdminView.vue'))
@@ -59,10 +58,7 @@ const toggleDropdown = () => {
   isDropdownOpen.value = !isDropdownOpen.value
 }
 const { data: rawBackgroundTasks, isFetching: isFetchingTasks } = useTasksQuery()
-const sseBackgroundTasks = ref<BackgroundTask[] | null>(null)
-const isTaskStreamActive = ref(false)
-const taskStreamController = ref<AbortController | null>(null)
-const taskStreamReconnectTimer = ref<number | null>(null)
+const { sseBackgroundTasks, isTaskStreamActive, startTaskStream } = useTaskStream()
 const completedOutlineTaskIds = new Set<string>()
 
 const backgroundTasks = computed(() => sseBackgroundTasks.value ?? rawBackgroundTasks.value ?? [])
@@ -111,35 +107,6 @@ watch(backgroundTasks, (tasks) => {
     }
   }
 })
-
-const startTaskStream = () => {
-  if (taskStreamReconnectTimer.value !== null) {
-    window.clearTimeout(taskStreamReconnectTimer.value)
-    taskStreamReconnectTimer.value = null
-  }
-  taskStreamController.value?.abort()
-  const controller = new AbortController()
-  taskStreamController.value = controller
-  isTaskStreamActive.value = true
-
-  void TaskAPI.subscribeTasks({
-    signal: controller.signal,
-    onTasks: (tasks) => {
-      sseBackgroundTasks.value = tasks
-      isTaskStreamActive.value = false
-    },
-    onError: (error) => {
-      if (controller.signal.aborted) return
-      console.error('任务日志 SSE 同步失败:', error)
-      isTaskStreamActive.value = false
-    },
-  }).catch((error) => {
-    if (controller.signal.aborted) return
-    console.error('任务日志 SSE 连接失败:', error)
-    isTaskStreamActive.value = false
-    taskStreamReconnectTimer.value = window.setTimeout(startTaskStream, 3000)
-  })
-}
 
 const projectTags = computed(() => {
   if (!currentProject.value) return ''
@@ -321,10 +288,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
-  if (taskStreamReconnectTimer.value !== null) {
-    window.clearTimeout(taskStreamReconnectTimer.value)
-  }
-  taskStreamController.value?.abort()
 })
 </script>
 

@@ -140,11 +140,13 @@ def test_inspiration_stream_unblocks_input_before_background_cache_refresh():
 
 
 def test_http_errors_keep_payload_for_inspiration_conflict_redirect():
-    source = _source("api/http.ts")
+    # HttpRequestError 下沉到 @/utils/errors，确认 payload 字段保留 + http.ts 仍传递 payload
+    errors_source = _source("utils/errors.ts")
+    http_source = _source("api/http.ts")
 
-    assert "payload: unknown" in source
-    assert "this.payload = options.payload" in source
-    assert "payload," in source
+    assert "payload: unknown" in errors_source
+    assert "this.payload = options.payload" in errors_source
+    assert "payload," in http_source
 
 
 def test_detail_shell_uses_query_project_cache_for_editing_paths():

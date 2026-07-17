@@ -40,14 +40,16 @@ export default tseslint.config(
   {
     // 分层门禁：components/views 不得直接 import @/api，应通过 queries/composables 层
     files: ['**/src/components/**/*.{ts,vue,mts,tsx}', '**/src/views/**/*.{ts,vue,mts,tsx}'],
+    plugins: { '@typescript-eslint': tseslint.plugin },
     rules: {
-      'no-restricted-imports': [
-        'warn',
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
         {
           patterns: [
             {
               group: ['@/api', '@/api/*'],
               message: '组件/视图不应直接 import @/api，请通过 @/queries 或 @/composables 访问数据层',
+              allowTypeImports: true,
             },
           ],
         },

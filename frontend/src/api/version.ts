@@ -1,5 +1,6 @@
 import { API_BASE_URL } from './admin';
 import { HttpRequestError, requestRaw } from './http';
+import { normalizeVersion } from '@/utils/version';
 
 const configuredVersionCheckUrl = String(import.meta.env.VITE_VERSION_CHECK_URL || '').trim();
 const defaultVersionCheckUrl = `${API_BASE_URL}/api/updates/remote-version`;
@@ -14,8 +15,6 @@ export interface RemoteVersionDebugEvent {
   errors?: string[];
   note?: string;
 }
-
-const normalizeVersion = (rawVersion: string): string => rawVersion.trim().replace(/^v(?=\d)/i, '');
 
 const isLikelyVersion = (rawValue: string): boolean => (
   rawValue.length > 0
@@ -135,6 +134,3 @@ export const getRemoteVersion = async (
 
   return parsedVersion;
 };
-
-export const normalizeComparableVersion = (rawVersion: string): string =>
-  normalizeVersion(rawVersion);

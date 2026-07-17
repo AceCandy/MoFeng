@@ -185,7 +185,7 @@
 import { computed, ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import type { UIControl, Blueprint, NovelProject } from '@/api/novel'
-import { HttpRequestError } from '@/api/http'
+import { HttpRequestError } from '@/utils/errors'
 import {
   useConverseConceptStreamMutation,
   useCreateNovelMutation,
