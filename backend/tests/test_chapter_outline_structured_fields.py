@@ -86,9 +86,9 @@ def test_outline_generation_prompt_and_task_require_structured_story_fields() ->
         assert field_name in task_runner
 
 
-def test_startup_schema_sync_includes_chapter_outline_structured_fields() -> None:
-    init_db = (BACKEND_ROOT / "app" / "db" / "init_db.py").read_text(encoding="utf-8")
+def test_alembic_baseline_includes_chapter_outline_structured_fields() -> None:
+    # schema 改由 alembic baseline 管理（替代 _ensure_schema_updates 过渡态），确认 baseline 含结构化字段列
+    baseline = (BACKEND_ROOT / "alembic" / "versions" / "a53385d06521_baseline.py").read_text(encoding="utf-8")
 
     for field_name in ("goals", "highlights", "character_states"):
-        assert f'"{field_name}" not in columns' in init_db
-        assert f"ALTER TABLE chapter_outlines ADD COLUMN {field_name}" in init_db
+        assert f"sa.Column('{field_name}'" in baseline

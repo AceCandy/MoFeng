@@ -1,4 +1,5 @@
 # AIMETA P=数据库初始化_创建表和默认数据|R=创建表_初始化管理员|NR=不含业务逻辑|E=init_db|X=internal|A=初始化函数|D=sqlalchemy|S=db|RD=./README.ai
+import asyncio
 import logging
 
 from pathlib import Path
@@ -7,11 +8,12 @@ from sqlalchemy import inspect, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from alembic import command
+from alembic.config import Config as AlembicConfig
 
 from ..core.config import settings
 from ..core.security import hash_password
 from ..models import Prompt, SystemConfig, User
-from .base import Base
 from .system_config_defaults import SYSTEM_CONFIG_DEFAULTS
 from .session import AsyncSessionLocal, engine
 
@@ -26,11 +28,9 @@ async def init_db() -> None:
 
     await _ensure_database_exists()
 
-    # ---- 第一步：创建所有表结构 ----
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # ---- 第一步：用 alembic 管理表结构（新库 upgrade head 建表，旧库 stamp head 标记基线）----
+    await _run_alembic_upgrade()
     logger.info("数据库表结构已初始化")
-    await _ensure_schema_updates()
 
     # ---- 第二步：确保管理员账号至少存在一个 ----
     async with AsyncSessionLocal() as session:
@@ -121,116 +121,41 @@ async def _ensure_database_exists() -> None:
     await admin_engine.dispose()
 
 
-async def _ensure_schema_updates() -> None:
-    """补齐历史版本缺失的列，避免旧库在新版本报错。"""
+ALEMBIC_INI = Path(__file__).resolve().parents[2] / "alembic.ini"
+
+
+def _build_alembic_config() -> AlembicConfig:
+    """构建 alembic 配置，用应用数据库连接串 + 绝对 script_location（避免运行目录差异）。"""
+    cfg = AlembicConfig(str(ALEMBIC_INI))
+    cfg.set_main_option("script_location", str(ALEMBIC_INI.parent / "alembic"))
+    cfg.set_main_option("sqlalchemy.url", settings.sqlalchemy_database_uri)
+    return cfg
+
+
+def _needs_alembic_stamp(sync_conn) -> bool:
+    """旧库（有业务表但无 alembic_version）需 stamp head 标记基线，避免 upgrade 重复建表报错。"""
+    inspector = inspect(sync_conn)
+    table_names = set(inspector.get_table_names())
+    has_alembic_version = "alembic_version" in table_names
+    has_any_table = bool(table_names - {"alembic_version"})
+    return has_any_table and not has_alembic_version
+
+
+def _run_alembic_sync(stamp_first: bool) -> None:
+    """同步执行 alembic（在线程池中调用，避免与 async event loop 冲突）。"""
+    cfg = _build_alembic_config()
+    if stamp_first:
+        command.stamp(cfg, "head")
+    command.upgrade(cfg, "head")
+
+
+async def _run_alembic_upgrade() -> None:
+    """用 alembic 管理表结构：新库 upgrade head 建全表，旧库先 stamp head 再 upgrade。"""
     async with engine.begin() as conn:
-        def _upgrade(sync_conn):
-            inspector = inspect(sync_conn)
-            table_names = set(inspector.get_table_names())
-
-            if "chapter_outlines" in table_names:
-                columns = {col["name"] for col in inspector.get_columns("chapter_outlines")}
-                dialect = sync_conn.dialect.name
-                if "goals" not in columns:
-                    if dialect == "sqlite":
-                        sync_conn.execute(
-                            text("ALTER TABLE chapter_outlines ADD COLUMN goals TEXT NOT NULL DEFAULT ''")
-                        )
-                    else:
-                        sync_conn.execute(text("ALTER TABLE chapter_outlines ADD COLUMN goals TEXT NULL"))
-                        sync_conn.execute(text("UPDATE chapter_outlines SET goals = '' WHERE goals IS NULL"))
-                        sync_conn.execute(text("ALTER TABLE chapter_outlines MODIFY COLUMN goals TEXT NOT NULL"))
-                if "highlights" not in columns:
-                    if dialect == "sqlite":
-                        sync_conn.execute(
-                            text("ALTER TABLE chapter_outlines ADD COLUMN highlights JSON NOT NULL DEFAULT '[]'")
-                        )
-                    else:
-                        sync_conn.execute(text("ALTER TABLE chapter_outlines ADD COLUMN highlights JSON NULL"))
-                        sync_conn.execute(text("UPDATE chapter_outlines SET highlights = '[]' WHERE highlights IS NULL"))
-                        sync_conn.execute(
-                            text("ALTER TABLE chapter_outlines MODIFY COLUMN highlights JSON NOT NULL")
-                        )
-                if "character_states" not in columns:
-                    if dialect == "sqlite":
-                        sync_conn.execute(
-                            text(
-                                "ALTER TABLE chapter_outlines "
-                                "ADD COLUMN character_states JSON NOT NULL DEFAULT '{}'"
-                            )
-                        )
-                    else:
-                        sync_conn.execute(text("ALTER TABLE chapter_outlines ADD COLUMN character_states JSON NULL"))
-                        sync_conn.execute(
-                            text(
-                                "UPDATE chapter_outlines "
-                                "SET character_states = '{}' WHERE character_states IS NULL"
-                            )
-                        )
-                        sync_conn.execute(
-                            text("ALTER TABLE chapter_outlines MODIFY COLUMN character_states JSON NOT NULL")
-                        )
-                if "metadata" not in columns:
-                    sync_conn.execute(text("ALTER TABLE chapter_outlines ADD COLUMN metadata JSON"))
-
-            if "chapters" in table_names:
-                chapter_columns = {col["name"] for col in inspector.get_columns("chapters")}
-                if "generation_progress" not in chapter_columns:
-                    sync_conn.execute(text("ALTER TABLE chapters ADD COLUMN generation_progress INTEGER DEFAULT 0"))
-                if "generation_step" not in chapter_columns:
-                    sync_conn.execute(text("ALTER TABLE chapters ADD COLUMN generation_step VARCHAR(64)"))
-                if "generation_step_index" not in chapter_columns:
-                    sync_conn.execute(text("ALTER TABLE chapters ADD COLUMN generation_step_index INTEGER DEFAULT 0"))
-                if "generation_step_total" not in chapter_columns:
-                    sync_conn.execute(text("ALTER TABLE chapters ADD COLUMN generation_step_total INTEGER DEFAULT 0"))
-                if "generation_started_at" not in chapter_columns:
-                    sync_conn.execute(text("ALTER TABLE chapters ADD COLUMN generation_started_at DATETIME"))
-
-            if "llm_configs" in table_names:
-                llm_columns = {col["name"] for col in inspector.get_columns("llm_configs")}
-                if "embedding_provider_url" not in llm_columns:
-                    sync_conn.execute(text("ALTER TABLE llm_configs ADD COLUMN embedding_provider_url TEXT"))
-                if "embedding_provider_api_key" not in llm_columns:
-                    sync_conn.execute(text("ALTER TABLE llm_configs ADD COLUMN embedding_provider_api_key TEXT"))
-                if "embedding_provider_model" not in llm_columns:
-                    sync_conn.execute(text("ALTER TABLE llm_configs ADD COLUMN embedding_provider_model TEXT"))
-                if "embedding_provider_format" not in llm_columns:
-                    sync_conn.execute(text("ALTER TABLE llm_configs ADD COLUMN embedding_provider_format TEXT"))
-                sync_conn.execute(
-                    text(
-                        "UPDATE llm_configs "
-                        "SET embedding_provider_format = 'openai' "
-                        "WHERE embedding_provider_format IS NULL OR TRIM(embedding_provider_format) = ''"
-                    )
-                )
-
-            if "user_model_providers" in table_names:
-                provider_columns = {col["name"] for col in inspector.get_columns("user_model_providers")}
-                if "capabilities_json" not in provider_columns:
-                    sync_conn.execute(text("ALTER TABLE user_model_providers ADD COLUMN capabilities_json JSON"))
-                sync_conn.execute(
-                    text(
-                        "UPDATE user_model_providers "
-                        "SET capabilities_json = '{\"chat\": true, \"embedding\": false}' "
-                        "WHERE capabilities_json IS NULL"
-                    )
-                )
-
-            if "user_ai_models" in table_names:
-                model_columns = {col["name"] for col in inspector.get_columns("user_ai_models")}
-                if "is_default_tts" not in model_columns:
-                    sync_conn.execute(
-                        text("ALTER TABLE user_ai_models ADD COLUMN is_default_tts BOOLEAN NOT NULL DEFAULT 0")
-                    )
-                if "tts_protocol" not in model_columns:
-                    sync_conn.execute(text("ALTER TABLE user_ai_models ADD COLUMN tts_protocol VARCHAR(32)"))
-                if "tts_voice" not in model_columns:
-                    sync_conn.execute(text("ALTER TABLE user_ai_models ADD COLUMN tts_voice VARCHAR(120)"))
-                if "tts_speed" not in model_columns:
-                    sync_conn.execute(
-                        text("ALTER TABLE user_ai_models ADD COLUMN tts_speed FLOAT NOT NULL DEFAULT 1.0")
-                    )
-        await conn.run_sync(_upgrade)
+        stamp_first = await conn.run_sync(_needs_alembic_stamp)
+    if stamp_first:
+        logger.info("检测到旧库无 alembic 版本表，先 stamp head 标记基线")
+    await asyncio.to_thread(_run_alembic_sync, stamp_first)
 
 
 async def _ensure_default_prompts(session: AsyncSession) -> None:

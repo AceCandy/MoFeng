@@ -215,10 +215,11 @@ async def test_update_model_rejects_incomplete_tts_configuration():
         )
 
 
-def test_schema_upgrade_and_schema_sql_include_tts_columns():
-    init_db = (ROOT / "app/db/init_db.py").read_text(encoding="utf-8")
+def test_alembic_baseline_and_schema_sql_include_tts_columns():
+    # schema 改由 alembic baseline 管理（替代 _ensure_schema_updates 过渡态），确认 baseline + schema.sql 含 tts 列
+    baseline = (ROOT / "alembic" / "versions" / "a53385d06521_baseline.py").read_text(encoding="utf-8")
     schema_sql = (ROOT / "db/schema.sql").read_text(encoding="utf-8")
 
     for column in ["is_default_tts", "tts_protocol", "tts_voice", "tts_speed"]:
-        assert column in init_db
+        assert column in baseline
         assert column in schema_sql

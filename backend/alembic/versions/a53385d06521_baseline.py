@@ -33,28 +33,7 @@ def upgrade() -> None:
     sa.Column('content', sa.Text().with_variant(mysql.LONGTEXT(), 'mysql'), nullable=False),
     sa.Column('metadata', sa.JSON(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.ForeignKeyConstraint(['chapter_id'], ['chapters.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
-    )
-    op.create_table('chapters',
-    sa.Column('id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), autoincrement=True, nullable=False),
-    sa.Column('project_id', sa.String(length=36), nullable=False),
-    sa.Column('chapter_number', sa.Integer(), nullable=False),
-    sa.Column('real_summary', sa.Text(), nullable=True),
-    sa.Column('status', sa.String(length=32), nullable=False),
-    sa.Column('generation_progress', sa.Integer(), nullable=False),
-    sa.Column('generation_step', sa.String(length=64), nullable=True),
-    sa.Column('generation_step_index', sa.Integer(), nullable=False),
-    sa.Column('generation_step_total', sa.Integer(), nullable=False),
-    sa.Column('generation_started_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('word_count', sa.Integer(), nullable=False),
-    sa.Column('selected_version_id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.ForeignKeyConstraint(['project_id'], ['novel_projects.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['selected_version_id'], ['chapter_versions.id'], ondelete='SET NULL'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('project_id', 'chapter_number', name='uq_chapters_project_number')
     )
     op.create_table('prompts',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
@@ -115,41 +94,6 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('chapter_evaluations',
-    sa.Column('id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), autoincrement=True, nullable=False),
-    sa.Column('chapter_id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), nullable=False),
-    sa.Column('version_id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), nullable=True),
-    sa.Column('decision', sa.String(length=32), nullable=True),
-    sa.Column('feedback', sa.Text(), nullable=True),
-    sa.Column('score', sa.Float(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.ForeignKeyConstraint(['chapter_id'], ['chapters.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['version_id'], ['chapter_versions.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_table('chapter_generation_traces',
-    sa.Column('id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), autoincrement=True, nullable=False),
-    sa.Column('chapter_id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), nullable=False),
-    sa.Column('project_id', sa.String(length=36), nullable=False),
-    sa.Column('chapter_number', sa.Integer(), nullable=False),
-    sa.Column('node_key', sa.String(length=64), nullable=False),
-    sa.Column('node_label', sa.String(length=128), nullable=False),
-    sa.Column('stage', sa.String(length=64), nullable=True),
-    sa.Column('status', sa.String(length=32), nullable=False),
-    sa.Column('system_prompt', sa.Text().with_variant(mysql.LONGTEXT(), 'mysql'), nullable=True),
-    sa.Column('user_prompt', sa.Text().with_variant(mysql.LONGTEXT(), 'mysql'), nullable=True),
-    sa.Column('raw_response', sa.Text().with_variant(mysql.LONGTEXT(), 'mysql'), nullable=True),
-    sa.Column('cleaned_output', sa.Text().with_variant(mysql.LONGTEXT(), 'mysql'), nullable=True),
-    sa.Column('error', sa.Text(), nullable=True),
-    sa.Column('metadata', sa.JSON(), nullable=True),
-    sa.Column('started_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('ended_at', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.ForeignKeyConstraint(['chapter_id'], ['chapters.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_chapter_generation_traces_chapter', 'chapter_generation_traces', ['chapter_id', 'node_key'], unique=False)
-    op.create_index('idx_chapter_generation_traces_project_chapter', 'chapter_generation_traces', ['project_id', 'chapter_number'], unique=False)
     op.create_table('llm_configs',
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('llm_provider_url', sa.Text(), nullable=True),
@@ -294,6 +238,26 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_chapter_snapshots_chapter_number'), 'chapter_snapshots', ['chapter_number'], unique=False)
     op.create_index(op.f('ix_chapter_snapshots_project_id'), 'chapter_snapshots', ['project_id'], unique=False)
+    op.create_table('chapters',
+    sa.Column('id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), autoincrement=True, nullable=False),
+    sa.Column('project_id', sa.String(length=36), nullable=False),
+    sa.Column('chapter_number', sa.Integer(), nullable=False),
+    sa.Column('real_summary', sa.Text(), nullable=True),
+    sa.Column('status', sa.String(length=32), nullable=False),
+    sa.Column('generation_progress', sa.Integer(), nullable=False),
+    sa.Column('generation_step', sa.String(length=64), nullable=True),
+    sa.Column('generation_step_index', sa.Integer(), nullable=False),
+    sa.Column('generation_step_total', sa.Integer(), nullable=False),
+    sa.Column('generation_started_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('word_count', sa.Integer(), nullable=False),
+    sa.Column('selected_version_id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.ForeignKeyConstraint(['project_id'], ['novel_projects.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['selected_version_id'], ['chapter_versions.id'], ondelete='SET NULL'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('project_id', 'chapter_number', name='uq_chapters_project_number')
+    )
     op.create_table('foreshadowing_analysis',
     sa.Column('id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), autoincrement=True, nullable=False),
     sa.Column('project_id', sa.String(length=36), nullable=False),
@@ -312,38 +276,6 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('project_id')
     )
-    op.create_table('foreshadowings',
-    sa.Column('id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), autoincrement=True, nullable=False),
-    sa.Column('project_id', sa.String(length=36), nullable=False),
-    sa.Column('chapter_id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), nullable=False),
-    sa.Column('chapter_number', sa.Integer(), nullable=False),
-    sa.Column('content', sa.Text().with_variant(mysql.LONGTEXT(), 'mysql'), nullable=False),
-    sa.Column('type', sa.String(length=32), nullable=False),
-    sa.Column('keywords', sa.JSON(), nullable=True),
-    sa.Column('status', sa.String(length=32), nullable=False),
-    sa.Column('resolved_chapter_id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), nullable=True),
-    sa.Column('resolved_chapter_number', sa.Integer(), nullable=True),
-    sa.Column('name', sa.String(length=255), nullable=True),
-    sa.Column('target_reveal_chapter', sa.Integer(), nullable=True),
-    sa.Column('reveal_method', sa.Text(), nullable=True),
-    sa.Column('reveal_impact', sa.Text(), nullable=True),
-    sa.Column('related_characters', sa.JSON(), nullable=True),
-    sa.Column('related_plots', sa.JSON(), nullable=True),
-    sa.Column('related_foreshadowings', sa.JSON(), nullable=True),
-    sa.Column('importance', sa.String(length=32), nullable=True),
-    sa.Column('urgency', sa.Integer(), nullable=True),
-    sa.Column('is_manual', sa.Boolean(), nullable=False),
-    sa.Column('ai_confidence', sa.Float(), nullable=True),
-    sa.Column('author_note', sa.Text(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.ForeignKeyConstraint(['chapter_id'], ['chapters.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['project_id'], ['novel_projects.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['resolved_chapter_id'], ['chapters.id'], ondelete='SET NULL'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_foreshadowings_project_id'), 'foreshadowings', ['project_id'], unique=False)
-    op.create_index(op.f('ix_foreshadowings_status'), 'foreshadowings', ['status'], unique=False)
     op.create_table('novel_blueprints',
     sa.Column('project_id', sa.String(length=36), nullable=False),
     sa.Column('title', sa.String(length=255), nullable=True),
@@ -473,6 +405,41 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_causal_chains_project_id'), 'causal_chains', ['project_id'], unique=False)
+    op.create_table('chapter_evaluations',
+    sa.Column('id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), autoincrement=True, nullable=False),
+    sa.Column('chapter_id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), nullable=False),
+    sa.Column('version_id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), nullable=True),
+    sa.Column('decision', sa.String(length=32), nullable=True),
+    sa.Column('feedback', sa.Text(), nullable=True),
+    sa.Column('score', sa.Float(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.ForeignKeyConstraint(['chapter_id'], ['chapters.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['version_id'], ['chapter_versions.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('chapter_generation_traces',
+    sa.Column('id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), autoincrement=True, nullable=False),
+    sa.Column('chapter_id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), nullable=False),
+    sa.Column('project_id', sa.String(length=36), nullable=False),
+    sa.Column('chapter_number', sa.Integer(), nullable=False),
+    sa.Column('node_key', sa.String(length=64), nullable=False),
+    sa.Column('node_label', sa.String(length=128), nullable=False),
+    sa.Column('stage', sa.String(length=64), nullable=True),
+    sa.Column('status', sa.String(length=32), nullable=False),
+    sa.Column('system_prompt', sa.Text().with_variant(mysql.LONGTEXT(), 'mysql'), nullable=True),
+    sa.Column('user_prompt', sa.Text().with_variant(mysql.LONGTEXT(), 'mysql'), nullable=True),
+    sa.Column('raw_response', sa.Text().with_variant(mysql.LONGTEXT(), 'mysql'), nullable=True),
+    sa.Column('cleaned_output', sa.Text().with_variant(mysql.LONGTEXT(), 'mysql'), nullable=True),
+    sa.Column('error', sa.Text(), nullable=True),
+    sa.Column('metadata', sa.JSON(), nullable=True),
+    sa.Column('started_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('ended_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.ForeignKeyConstraint(['chapter_id'], ['chapters.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_chapter_generation_traces_chapter', 'chapter_generation_traces', ['chapter_id', 'node_key'], unique=False)
+    op.create_index('idx_chapter_generation_traces_project_chapter', 'chapter_generation_traces', ['project_id', 'chapter_number'], unique=False)
     op.create_table('character_states',
     sa.Column('id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), autoincrement=True, nullable=False),
     sa.Column('project_id', sa.String(length=255), nullable=False),
@@ -505,6 +472,49 @@ def upgrade() -> None:
     op.create_index(op.f('ix_character_states_chapter_number'), 'character_states', ['chapter_number'], unique=False)
     op.create_index(op.f('ix_character_states_character_id'), 'character_states', ['character_id'], unique=False)
     op.create_index(op.f('ix_character_states_project_id'), 'character_states', ['project_id'], unique=False)
+    op.create_table('foreshadowings',
+    sa.Column('id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), autoincrement=True, nullable=False),
+    sa.Column('project_id', sa.String(length=36), nullable=False),
+    sa.Column('chapter_id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), nullable=False),
+    sa.Column('chapter_number', sa.Integer(), nullable=False),
+    sa.Column('content', sa.Text().with_variant(mysql.LONGTEXT(), 'mysql'), nullable=False),
+    sa.Column('type', sa.String(length=32), nullable=False),
+    sa.Column('keywords', sa.JSON(), nullable=True),
+    sa.Column('status', sa.String(length=32), nullable=False),
+    sa.Column('resolved_chapter_id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), nullable=True),
+    sa.Column('resolved_chapter_number', sa.Integer(), nullable=True),
+    sa.Column('name', sa.String(length=255), nullable=True),
+    sa.Column('target_reveal_chapter', sa.Integer(), nullable=True),
+    sa.Column('reveal_method', sa.Text(), nullable=True),
+    sa.Column('reveal_impact', sa.Text(), nullable=True),
+    sa.Column('related_characters', sa.JSON(), nullable=True),
+    sa.Column('related_plots', sa.JSON(), nullable=True),
+    sa.Column('related_foreshadowings', sa.JSON(), nullable=True),
+    sa.Column('importance', sa.String(length=32), nullable=True),
+    sa.Column('urgency', sa.Integer(), nullable=True),
+    sa.Column('is_manual', sa.Boolean(), nullable=False),
+    sa.Column('ai_confidence', sa.Float(), nullable=True),
+    sa.Column('author_note', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.ForeignKeyConstraint(['chapter_id'], ['chapters.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['project_id'], ['novel_projects.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['resolved_chapter_id'], ['chapters.id'], ondelete='SET NULL'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_foreshadowings_project_id'), 'foreshadowings', ['project_id'], unique=False)
+    op.create_index(op.f('ix_foreshadowings_status'), 'foreshadowings', ['status'], unique=False)
+    op.create_table('user_ai_stage_routes',
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('stage', sa.String(length=64), nullable=False),
+    sa.Column('model_id', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
+    sa.ForeignKeyConstraint(['model_id'], ['user_ai_models.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('user_id', 'stage')
+    )
+    op.create_index(op.f('ix_user_ai_stage_routes_model_id'), 'user_ai_stage_routes', ['model_id'], unique=False)
     op.create_table('foreshadowing_reminders',
     sa.Column('id', sa.BigInteger().with_variant(sa.Integer(), 'sqlite'), autoincrement=True, nullable=False),
     sa.Column('project_id', sa.String(length=36), nullable=False),
@@ -550,33 +560,33 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['foreshadowing_id'], ['foreshadowings.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('user_ai_stage_routes',
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('stage', sa.String(length=64), nullable=False),
-    sa.Column('model_id', sa.Integer(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('(CURRENT_TIMESTAMP)'), nullable=False),
-    sa.ForeignKeyConstraint(['model_id'], ['user_ai_models.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('user_id', 'stage')
-    )
-    op.create_index(op.f('ix_user_ai_stage_routes_model_id'), 'user_ai_stage_routes', ['model_id'], unique=False)
+    # 循环 FK（chapter_versions.chapter_id -> chapters）用 use_alter 延后创建，避免建表顺序依赖
+    op.create_foreign_key('fk_chapter_versions_chapter_id', 'chapter_versions', 'chapters', ['chapter_id'], ['id'], ondelete='CASCADE', use_alter=True)
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_index(op.f('ix_user_ai_stage_routes_model_id'), table_name='user_ai_stage_routes')
-    op.drop_table('user_ai_stage_routes')
+    # 循环 FK 用 use_alter 创建，downgrade 最先 drop
+    op.drop_constraint('fk_chapter_versions_chapter_id', 'chapter_versions', type_='foreignkey')
     op.drop_table('foreshadowing_status_history')
     op.drop_table('foreshadowing_resolutions')
     op.drop_index(op.f('ix_foreshadowing_reminders_status'), table_name='foreshadowing_reminders')
     op.drop_index(op.f('ix_foreshadowing_reminders_project_id'), table_name='foreshadowing_reminders')
     op.drop_table('foreshadowing_reminders')
+    op.drop_index(op.f('ix_user_ai_stage_routes_model_id'), table_name='user_ai_stage_routes')
+    op.drop_table('user_ai_stage_routes')
+    op.drop_index(op.f('ix_foreshadowings_status'), table_name='foreshadowings')
+    op.drop_index(op.f('ix_foreshadowings_project_id'), table_name='foreshadowings')
+    op.drop_table('foreshadowings')
     op.drop_index(op.f('ix_character_states_project_id'), table_name='character_states')
     op.drop_index(op.f('ix_character_states_character_id'), table_name='character_states')
     op.drop_index(op.f('ix_character_states_chapter_number'), table_name='character_states')
     op.drop_table('character_states')
+    op.drop_index('idx_chapter_generation_traces_project_chapter', table_name='chapter_generation_traces')
+    op.drop_index('idx_chapter_generation_traces_chapter', table_name='chapter_generation_traces')
+    op.drop_table('chapter_generation_traces')
+    op.drop_table('chapter_evaluations')
     op.drop_index(op.f('ix_causal_chains_project_id'), table_name='causal_chains')
     op.drop_table('causal_chains')
     op.drop_index(op.f('ix_user_ai_models_user_id'), table_name='user_ai_models')
@@ -590,10 +600,8 @@ def downgrade() -> None:
     op.drop_table('project_memories')
     op.drop_table('novel_conversations')
     op.drop_table('novel_blueprints')
-    op.drop_index(op.f('ix_foreshadowings_status'), table_name='foreshadowings')
-    op.drop_index(op.f('ix_foreshadowings_project_id'), table_name='foreshadowings')
-    op.drop_table('foreshadowings')
     op.drop_table('foreshadowing_analysis')
+    op.drop_table('chapters')
     op.drop_index(op.f('ix_chapter_snapshots_project_id'), table_name='chapter_snapshots')
     op.drop_index(op.f('ix_chapter_snapshots_chapter_number'), table_name='chapter_snapshots')
     op.drop_table('chapter_snapshots')
@@ -613,10 +621,6 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_novel_projects_user_id'), table_name='novel_projects')
     op.drop_table('novel_projects')
     op.drop_table('llm_configs')
-    op.drop_index('idx_chapter_generation_traces_project_chapter', table_name='chapter_generation_traces')
-    op.drop_index('idx_chapter_generation_traces_chapter', table_name='chapter_generation_traces')
-    op.drop_table('chapter_generation_traces')
-    op.drop_table('chapter_evaluations')
     op.drop_table('blueprint_templates')
     op.drop_index(op.f('ix_users_username'), table_name='users')
     op.drop_index(op.f('ix_users_id'), table_name='users')
@@ -626,7 +630,6 @@ def downgrade() -> None:
     op.drop_table('system_configs')
     op.drop_index(op.f('ix_prompts_name'), table_name='prompts')
     op.drop_table('prompts')
-    op.drop_table('chapters')
     op.drop_table('chapter_versions')
     op.drop_table('admin_settings')
     # ### end Alembic commands ###

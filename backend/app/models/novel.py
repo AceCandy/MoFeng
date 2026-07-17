@@ -212,7 +212,8 @@ class ChapterVersion(Base):
     __tablename__ = "chapter_versions"
 
     id: Mapped[int] = mapped_column(BIGINT_PK_TYPE, primary_key=True, autoincrement=True)
-    chapter_id: Mapped[int] = mapped_column(ForeignKey("chapters.id", ondelete="CASCADE"), nullable=False)
+    # use_alter: 与 chapters.selected_version_id 构成循环 FK，建表时延后创建避免顺序依赖
+    chapter_id: Mapped[int] = mapped_column(ForeignKey("chapters.id", ondelete="CASCADE", use_alter=True), nullable=False)
     version_label: Mapped[Optional[str]] = mapped_column(String(64))
     provider: Mapped[Optional[str]] = mapped_column(String(64))
     content: Mapped[str] = mapped_column(LONG_TEXT_TYPE, nullable=False)
