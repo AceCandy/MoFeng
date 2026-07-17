@@ -6,11 +6,14 @@ L26a gap：components/views 仍有 @/api value import（AppShell.vue:19 TaskAPI�
 
 ## Requirements
 
-- TBD
+- components/views 的 @/api value import 全部下沉到 @/queries/@/utils 层，ESLint 规则升级为 error 拦截。
 
 ## Acceptance Criteria
 
-- [ ] TBD
+- [x] eslint 规则升级 @typescript-eslint/no-restricted-imports + allowTypeImports:true + severity error
+- [x] components/views 的 @/api value import 全部下沉（AppShell TaskAPI->useTaskStream / SettingsManagement normalizeComparableVersion->@/utils/version / InspirationMode HttpRequestError->@/utils/errors）
+- [x] type import 放行不误报（probe 验证）
+- [x] 三件套绿：eslint 0 error + vue-tsc 0 + vitest 152 passed
 
 ## Notes
 

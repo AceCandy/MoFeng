@@ -6,11 +6,14 @@ L25 gap：alembic baseline a53385d06521 已建(34表)，但 init_db.py:124 _ensu
 
 ## Requirements
 
-- TBD
+- init_db 用 alembic upgrade head 替代 create_all + _ensure_schema_updates 过渡态；baseline migration 修复循环 FK + 建表顺序。
 
 ## Acceptance Criteria
 
-- [ ] TBD
+- [x] init_db 删 create_all + _ensure_schema_updates，改 _run_alembic_upgrade（alembic upgrade head + 旧库 stamp 检测）
+- [x] baseline 循环 FK 修复（chapter_versions<->chapters 用 use_alter 分离 + 34 表拓扑序重排 + models use_alter）
+- [x] 三场景验证：新库 upgrade head 建全表 + 已管理库 no-op + 旧库 stamp head
+- [x] schema 测试改测 alembic baseline（test_chapter_outline_structured_fields + test_tts_model_configuration）
 
 ## Notes
 
