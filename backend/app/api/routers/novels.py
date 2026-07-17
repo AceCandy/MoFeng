@@ -2,7 +2,7 @@
 import asyncio
 import json
 import logging
-from typing import Any, AsyncGenerator, Dict, List
+from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
@@ -24,6 +24,7 @@ from ...schemas.novel import (
     NovelSectionType,
 )
 from ...schemas.user import UserInDB
+from ...services.event_bus import subscribe_chapter_status
 from ...services.import_service import ImportService
 from ...services.llm_service import LLMService
 from ...services.novel_service import NovelService
@@ -311,52 +312,121 @@ async def stream_chapter_status(
     wait_for_active: bool = Query(default=False),
     current_user: UserInDB = Depends(get_current_user),
 ) -> StreamingResponse:
-    """推送单章生成状态，替代写作台前端定时轮询章节接口。"""
+    """推送单章生成状态，事件驱动（Redis pub-sub），替代前端定时轮询章节接口。"""
+
+    active_statuses = {"generating", "evaluating", "selecting", "finalizing"}
+    terminal_statuses = {"waiting_for_confirm", "successful", "failed", "evaluation_failed"}
+
+    async def fetch_payload() -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        """查 DB 取章节快照，返回 (payload, error_event)；成功时 error_event 为 None。"""
+        try:
+            async with AsyncSessionLocal() as session:
+                service = NovelService(session)
+                chapter = await service.get_chapter_schema(project_id, current_user.id, chapter_number)
+            return chapter.model_dump(mode="json"), None
+        except HTTPException as exc:
+            return None, _sse_event("error", {"detail": str(exc.detail)})
+        except Exception as exc:
+            logger.exception(
+                "章节状态 SSE 读取失败: project_id=%s chapter=%s user_id=%s",
+                project_id,
+                chapter_number,
+                current_user.id,
+            )
+            return None, _sse_event("error", {"detail": f"章节状态同步失败: {str(exc)}"})
 
     async def event_stream() -> AsyncGenerator[str, None]:
         last_payload: str | None = None
         has_seen_active_status = False
-        active_statuses = {"generating", "evaluating", "selecting", "finalizing"}
-        terminal_statuses = {"waiting_for_confirm", "successful", "failed", "evaluation_failed"}
 
-        while True:
-            if await request.is_disconnected():
-                break
-
-            try:
-                async with AsyncSessionLocal() as session:
-                    service = NovelService(session)
-                    chapter = await service.get_chapter_schema(project_id, current_user.id, chapter_number)
-            except HTTPException as exc:
-                yield _sse_event("error", {"detail": str(exc.detail)})
-                break
-            except Exception as exc:
-                logger.exception(
-                    "章节状态 SSE 读取失败: project_id=%s chapter=%s user_id=%s",
-                    project_id,
-                    chapter_number,
-                    current_user.id,
-                )
-                yield _sse_event("error", {"detail": f"章节状态同步失败: {str(exc)}"})
-                break
-
-            # 用 JSON 快照去重，避免每秒把完全相同的章节对象重复推给前端。
-            payload = chapter.model_dump(mode="json")
+        def build_event(payload: Dict[str, Any]) -> Tuple[Optional[str], bool]:
+            """JSON 快照去重后构造 SSE 事件，返回 (事件文本, 是否终态)；无变化返回 (None, False)。"""
+            nonlocal last_payload, has_seen_active_status
             payload_text = json.dumps(payload, ensure_ascii=False, sort_keys=True)
             status_value = payload.get("generation_status")
             if status_value in active_statuses:
                 has_seen_active_status = True
-            if payload_text != last_payload:
-                can_close_as_final = status_value in terminal_statuses and (
-                    not wait_for_active or has_seen_active_status
-                )
-                event_name = "final" if can_close_as_final else "chapter"
-                yield _sse_event(event_name, payload)
-                last_payload = payload_text
-                if event_name == "final":
-                    break
+            if payload_text == last_payload:
+                return None, False
+            can_close_as_final = status_value in terminal_statuses and (
+                not wait_for_active or has_seen_active_status
+            )
+            event_name = "final" if can_close_as_final else "chapter"
+            last_payload = payload_text
+            return _sse_event(event_name, payload), can_close_as_final
 
-            await asyncio.sleep(1.0)
+        async def poll_loop() -> AsyncGenerator[str, None]:
+            """降级轮询：Redis 不可用时每 5s 查 DB 推送，终态或错误时停止。"""
+            while True:
+                if await request.is_disconnected():
+                    return
+                await asyncio.sleep(5.0)
+                payload, error_event = await fetch_payload()
+                if error_event is not None:
+                    yield error_event
+                    return
+                event, is_final = build_event(payload)
+                if event is not None:
+                    yield event
+                    if is_final:
+                        return
+
+        # 1. 初始态：subscribe 前先查 DB 发一次快照，覆盖订阅前已发生的状态变更。
+        payload, error_event = await fetch_payload()
+        if error_event is not None:
+            yield error_event
+            return
+        event, is_final = build_event(payload)
+        if event is not None:
+            yield event
+            if is_final:
+                return
+
+        # 2. 订阅 Redis pub-sub channel；不可用回退轮询。
+        pubsub = await subscribe_chapter_status(project_id, chapter_number)
+        if pubsub is None:
+            async for evt in poll_loop():
+                yield evt
+            return
+
+        # 3. 事件驱动：收到状态变更通知即查 DB 推送，终态后关闭。
+        #    运行中 Redis 断连时 get_message 抛异常，回退轮询避免连接抖动。
+        redis_disconnected = False
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                except Exception:
+                    logger.warning(
+                        "章节状态 SSE pubsub 读取异常，回退轮询: project_id=%s chapter=%s",
+                        project_id,
+                        chapter_number,
+                    )
+                    redis_disconnected = True
+                    break
+                if message is None:
+                    continue
+                payload, error_event = await fetch_payload()
+                if error_event is not None:
+                    yield error_event
+                    break
+                event, is_final = build_event(payload)
+                if event is not None:
+                    yield event
+                    if is_final:
+                        break
+        finally:
+            try:
+                await pubsub.aclose()
+            except Exception:
+                pass
+
+        # 4. 事件驱动因 Redis 断连退出且未到终态：回退轮询。
+        if redis_disconnected:
+            async for evt in poll_loop():
+                yield evt
 
     return _sse_response(event_stream())
 

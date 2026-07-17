@@ -32,6 +32,7 @@ from ..services.chapter_word_count_settings import (
 from ..services.consistency_service import ConsistencyService, ViolationSeverity
 from ..services.enhanced_writing_flow import EnhancedWritingFlow
 from ..services.enrichment_service import EnrichmentService
+from ..services.event_bus import publish_chapter_status
 from ..services.llm_service import LLMService
 from ..services.knowledge_retrieval_service import KnowledgeRetrievalService, FilteredContext
 from ..services.memory_layer_service import MemoryLayerService
@@ -354,6 +355,7 @@ class PipelineOrchestrator:
             chapter.generation_step_index = 0
             chapter.generation_step_total = 7
             await self.session.commit()
+            await publish_chapter_status(project_id, chapter_number)
 
             await self.trace_service.delete_failed_traces(
                 project_id=project_id, chapter_number=chapter_number,
@@ -706,6 +708,7 @@ class PipelineOrchestrator:
             chapter.generation_step_index = 0
             chapter.generation_step_total = 7
             await self.session.commit()
+            await publish_chapter_status(project_id, chapter_number)
             await self._record_terminal_failure_trace(
                 project_id=project_id,
                 chapter_number=chapter_number,
@@ -838,6 +841,7 @@ class PipelineOrchestrator:
         if step_total is not None:
             chapter.generation_step_total = step_total
         await self.session.commit()
+        await publish_chapter_status(project_id, chapter_number)
         return chapter
 
     async def _graph_initialize_chapter(self, state: PipelineGraphState) -> PipelineGraphState:
