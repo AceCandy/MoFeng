@@ -463,3 +463,37 @@ main.css 4966->34 行（减 99.3%），拆为入口 + 30 partial（1 base + 3 el
 ### Next Steps
 
 - None - task complete
+
+
+## Session 14: L27 SSE 章节状态事件驱动实施 + 真机验证
+
+**Date**: 2026-07-17
+**Task**: L27 SSE 章节状态事件驱动实施 + 真机验证
+**Branch**: `main`
+
+### Summary
+
+L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 event_bus（publish fire-and-forget 不阻塞生成 + subscribe 失败返回 None 供降级）；pipeline 三处状态变更 commit 后 publish 轻量通知；stream_chapter_status 去 sleep(1.0) 轮询改 subscribe+get_message+DB 初始态兜底+降级 poll_loop（启动不可用/运行中断连均回退 5s）；前端零适配。真实 Redis 端到端验证 publish<->subscribe 管道 + HTTP SSE 真机验证通过（not_generated->generating->successful 推送序列 + 终态 final 关闭），后端 208 passed（+13 test_event_bus）。修复 novels.py 行尾 CRLF 被 Edit 误转 LF 问题。stream_background_tasks 可选未做。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9dc6054` | (see git log) |
+| `5851647` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
