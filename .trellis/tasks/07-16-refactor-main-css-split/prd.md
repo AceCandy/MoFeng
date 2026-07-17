@@ -31,7 +31,7 @@
 - [x] `readGlobalCss()` helper 落地，9 处 `readSource('src/assets/main.css')` 全部替换；「不含」禁令断言覆盖所有 partial（无假绿）。
 - [x] frontend spec 3 处修订（component-guidelines:111 / index:42 / quality-guidelines:36-43）。
 - [x] 三件套全绿（vue-tsc 0 / vitest 全绿 / eslint 0 新增 error）。
-- [ ] 行为等价（manual-checklist 固化 + 实际手测待跑：light/dark 主题切换 + 关键页面视觉）。
+- [x] 行为等价（manual-checklist 固化 + agent-browser 真机验证通过：登录页/workspace/写作台 light/dark 视觉等价 + 375px 窄屏响应式 + dark token cascade 等价，无视觉回归）。
 - [x] `main.ts` 入口不变，`base.css` shim 状态不变。
 
 ## Notes

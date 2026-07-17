@@ -129,3 +129,17 @@ Slice 5-23 抽组件域，每 slice 四件套绿 + commit + push。main.css 4159
 **最终状态**：main.css 34 行（AIMETA + 31 @import + @plugin）+ 30 个 partial（1 base + 3 elements + 26 components + 1 tokens，共 4954 行）。main.css 4966 -> 34（减 99.3%）。
 
 **AC 达成**：1/2/3/4/6 ✓；5 manual-checklist 固化 + 手测待跑。
+
+
+## Phase 3 真机验证（AC 5）
+
+2026-07-17 用 agent-browser@0.32.0 对 6100 dev server 做真机视觉等价验证：
+
+- 登录页 light：宣纸米黄底 + 水墨山水 + 书法标题 + 衬线字体，无破损。
+- workspace light/dark：app-shell/card 域等价，`--md-background` #f2ece0↔#15191b 正确切换。
+- 写作台 light/dark：chapter-paper / naive-ui-ink / annotation 域等价，朱砂印章 dark 下正常。
+- 375px 窄屏响应式：顶栏折叠 + 卡片单列堆叠，无溢出（App Shell 响应式覆写段补抽正确迁移）。
+- typography token：`--md-font-family` 正确解析（spec 红线 "keeps typography roles centralized in design tokens"）。
+- dark token cascade：`--md-on-background` #1c2224↔#e5dec9、body color 正确切换，证明 dark 覆写随域迁移后 cascade 等价。
+
+结论：6 项 AC 全部达成，无视觉回归。截图为临时调试产物（/tmp/mofeng-shots/，不入仓）。
