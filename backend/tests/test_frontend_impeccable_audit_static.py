@@ -12,6 +12,14 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _global_css() -> str:
+    """main.css 入口 + 所有 partial 拼接（#28 拆分后全局 CSS 分散在 styles/ partial）。"""
+    parts = [_read(SRC / "assets" / "main.css")]
+    for css_file in sorted((SRC / "assets" / "styles").rglob("*.css")):
+        parts.append(_read(css_file))
+    return "\n".join(parts)
+
+
 def test_project_card_does_not_use_article_as_button():
     source = _read(SRC / "components" / "ProjectCard.vue")
     workspace = _read(SRC / "views" / "NovelWorkspace.vue")
@@ -31,7 +39,7 @@ def test_llm_settings_feedback_is_announced_to_assistive_tech():
 
 
 def test_global_input_focus_does_not_animate_layout_properties():
-    css = _read(SRC / "assets" / "main.css")
+    css = _global_css()
 
     assert "padding var(--md-duration-short)" not in css
     assert "padding: 15px" not in css
@@ -87,7 +95,7 @@ def test_motion_does_not_transition_layout_properties():
 def test_impeccable_design_sidecar_matches_current_warm_paper_tokens():
     sidecar = json.loads(_read(ROOT / ".impeccable" / "design.json"))
     color_meta = sidecar["extensions"]["colorMeta"]
-    main_css = _read(SRC / "assets" / "main.css")
+    main_css = _global_css()
 
     assert "clear-blue" not in color_meta
     assert "paper-white" not in color_meta

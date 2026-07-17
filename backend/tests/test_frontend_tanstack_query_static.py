@@ -10,6 +10,14 @@ def _source(path: str) -> str:
     return (FRONTEND_SRC / path).read_text(encoding="utf-8")
 
 
+def _composables_source(pattern: str) -> str:
+    """读取匹配的 composable 源码拼接（#22 重构后 query/mutation 下沉到 composable）。"""
+    parts = []
+    for path in sorted(FRONTEND_SRC.glob(pattern)):
+        parts.append(path.read_text(encoding="utf-8"))
+    return "\n".join(parts)
+
+
 def _package_source() -> str:
     return (FRONTEND_ROOT / "package.json").read_text(encoding="utf-8")
 
@@ -79,7 +87,7 @@ def test_workspace_reads_query_loading_error_and_refetch_state():
 
 
 def test_writing_desk_reads_project_and_chapter_through_query_cache():
-    source = _source("views/WritingDesk.vue")
+    source = _source("views/WritingDesk.vue") + "\n" + _composables_source("composables/useWritingDesk*.ts")
 
     for text in [
         "useNovelProjectQuery",
@@ -150,7 +158,7 @@ def test_http_errors_keep_payload_for_inspiration_conflict_redirect():
 
 
 def test_detail_shell_uses_query_project_cache_for_editing_paths():
-    source = _source("components/shared/NovelDetailShell.vue")
+    source = _source("components/shared/NovelDetailShell.vue") + "\n" + _composables_source("composables/useShell*.ts")
 
     for text in [
         "useNovelProjectQuery",
@@ -330,7 +338,7 @@ def test_llm_queries_own_model_routing_server_state_and_mutations():
 
 
 def test_personal_model_routing_uses_query_cache_for_bundle_and_mutations():
-    source = _source("components/llm-settings/PersonalModelRouting.vue")
+    source = _source("components/llm-settings/PersonalModelRouting.vue") + "\n" + _composables_source("composables/useModelBundle.ts") + "\n" + _composables_source("components/llm-settings/use*.ts")
 
     for text in [
         "@/queries/llm",
@@ -400,7 +408,7 @@ def test_inspiration_model_readiness_uses_llm_query_cache():
 
 def test_optimizer_requests_are_mutations_not_direct_api_calls():
     query_source = _source("queries/novel.ts")
-    writing_desk = _source("views/WritingDesk.vue")
+    writing_desk = _source("views/WritingDesk.vue") + "\n" + _composables_source("composables/useWritingDeskOptimize.ts")
     chapter_content = _source("components/writing-desk/workspace/ChapterContent.vue")
 
     for text in [
