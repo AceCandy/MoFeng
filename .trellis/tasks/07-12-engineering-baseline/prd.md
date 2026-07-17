@@ -22,10 +22,10 @@
 
 ## Acceptance Criteria
 
-- [ ] `alembic upgrade head` 可从空库建到当前 schema；`_ensure_schema_updates` 可废弃。  ⚠️ 实际：alembic baseline a53385d06521 已建(34表)✅；`_ensure_schema_updates`(init_db.py:124)过渡态未废弃(手动ALTER补goals/highlights/character_states等列)，待alembic覆盖后删
-- [ ] CI 拦截 components/views 直连 `@/api`；全局 `status === 401` 仅 `http.ts` 一处。  ⚠️ 实际：status===401 已收敛仅 client.ts:8✅；components/views @/api value import 未完全拦截(AppShell.vue:19 TaskAPI value import，type import 预存warning放行)
-- [ ] 并发生成同一章不产生重复行；验证码多 worker 一致；SSE 不再每秒查 DB。  ⚠️ 实际：并发 UniqueConstraint+get_or_create✅ / 验证码 Redis 下沉✅；SSE stream_chapter_status(novels.py:307) 仍 sleep(1.0) 轮询查DB，未改事件驱动(待Celery启用)
-- [ ] 5 个最大前端组件拆至 <500 行；`cleanVersionContent` 仅 `utils` 一处定义。  ⚠️ 实际：4/5达成(PMR493/CG394/NDS432/WDW498)✅ + cleanVersionContent 去重✅；WritingDesk 619 收口不再抽象(用户决策,非过度抽象空间已穷尽)
+- [x] `alembic upgrade head` 可从空库建到当前 schema；`_ensure_schema_updates` 可废弃。  ✅ alembic baseline a53385d06521(34表) + init_db.py 已纯 alembic upgrade head，`_ensure_schema_updates`/create_all/ALTER 全废弃
+- [x] CI 拦截 components/views 直连 `@/api`；全局 `status === 401` 仅 `http.ts` 一处。  ✅ status===401 收敛 client.ts 单点 + AppShell @/api value import 已清
+- [x] 并发生成同一章不产生重复行；验证码多 worker 一致；SSE 不再每秒查 DB。  ✅ 并发 UniqueConstraint+get_or_create / 验证码 Redis 下沉 / SSE 全事件驱动：stream_chapter_status(L27 `9dc6054`) + stream_background_tasks(L27B `f5b83a3`) 均 subscribe+get_message+降级 poll_loop
+- [x] 5 个最大前端组件拆至 <500 行；`cleanVersionContent` 仅 `utils` 一处定义。  ✅ 4/5 达成(PMR493/CG394/NDS432/WDW498) + cleanVersionContent 去重；WritingDesk 619 用户决策收口(非过度抽象空间已穷尽)
 
 ## Notes
 
@@ -36,6 +36,8 @@
 ## Progress
 
 已完成并落盘：#15 Alembic（`dd7c65e`）/ #16 章节并发唯一约束 / #17 验证码下沉 Redis / #18 Celery engine 复用 / #19 .gitignore / #20 ESLint 分层门禁+CI（`500741d`）/ #21 鉴权收敛 http.ts / #23 OpenAPI codegen / #24 client.spec。验证依据：后端 pytest 191 + 前端 vitest 120。
+
+**L27B 后台任务 SSE 事件驱动（`f5b83a3`）**：stream_background_tasks 去固定 1.5s 轮询，改 subscribe+初始态快照+get_message 事件驱动+Redis 断连降级 poll_loop。BackgroundTaskService 5 个写方法 commit 后 publish 通知。复用 L27 event_bus 范式，前端零适配。后端 220 passed（+12 test_event_bus）+ 真机 SSE 验证通过（queued->running->succeeded）。**AC3「SSE 不再每秒查 DB」完全达成。**
 
 **#22 按风险切三 slice 推进（见 `design.md` / `implement.md`），任务已 `task.py start`（in_progress）**：
 - ✅ **Slice A `cleanVersionContent` 去重**（已完成 + 验证绿）：删 5 处逐字副本（WritingDesk/WDWorkspace/WDVersionDetailModal/VersionSelector/ChapterContent），统一 `import { cleanVersionContent } from '@/utils/chapter'`。5 副本与权威版逐行等价（已比对）。验证：`vue-tsc --noEmit` exit 0 + `vitest run` 120/120 绿（含 uiAuditRegression 34 / wdWorkspaceLockedChapter 10 / chapterDraftFinalizeStatic 8）+ ESLint 0 error（7 warning 均为 pre-existing 分层越界，非本次引入）。diff +5/−204。**Acceptance 第 4 项后半句「cleanVersionContent 仅 utils 一处定义」已达成。**
