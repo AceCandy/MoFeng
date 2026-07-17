@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 14
+- **Total Sessions**: 15
 - **Last Active**: 2026-07-17
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~499 | Active |
+| `journal-1.md` | ~533 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 15 | 2026-07-17 | L27B 后台任务 SSE 事件驱动 + 工程基线父 task 归档 | `f5b83a3`, `5afaa20` | `main` |
 | 14 | 2026-07-17 | L27 SSE 章节状态事件驱动实施 + 真机验证 | `9dc6054`, `5851647` | `main` |
 | 13 | 2026-07-17 | #28 main.css 按域拆分（Phase 3 + 真机验证） | `ac12e0e`, `466c17a`, `2dfa37b`, `1a1f136`, `f6165e5`, `b174845`, `b1489ca`, `070490b`, `fe21efb`, `5ce84cf`, `461df24`, `6d3a803`, `1b28862`, `86260e6`, `fa0f2d7`, `33e9882`, `ef3c88c`, `ab49760`, `285ba7d`, `539fd7e`, `a7e0902` | `main` |
 | 12 | 2026-07-17 | 前端基线修复 | - | `main` |

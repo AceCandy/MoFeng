@@ -497,3 +497,37 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Next Steps
 
 - None - task complete
+
+
+## Session 15: L27B 后台任务 SSE 事件驱动 + 工程基线父 task 归档
+
+**Date**: 2026-07-17
+**Task**: L27B 后台任务 SSE 事件驱动 + 工程基线父 task 归档
+**Branch**: `main`
+
+### Summary
+
+后台任务 SSE 改事件驱动：stream_background_tasks 去固定 1.5s 轮询，改 subscribe+初始态快照+get_message 事件驱动+Redis 断连降级 poll_loop；BackgroundTaskService 5 个写方法 commit 后 publish 通知；复用 L27 event_bus 范式，前端零适配。后端 220 passed（+12 test_event_bus）+ 真机 SSE 验证通过（queued->running->succeeded 推送序列）。AC3「SSE 不再每秒查 DB」完全达成。工程基线父 task 8 子任务全归档，AC 全达成。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f5b83a3` | (see git log) |
+| `5afaa20` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
