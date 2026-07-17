@@ -6,11 +6,17 @@ L27 gap：novels.py:307 stream_chapter_status 仍 sleep(1.0) 轮询查DB（每�
 
 ## Requirements
 
-- TBD
+- SSE 章节状态推送改事件驱动（Redis pub-sub），去每秒查 DB 轮询。详见 design.md。
+- 前提修正：Celery 已集成（emotion/foreshadowing tasks），但章节生成是 async（LangGraph）非 Celery，故用 Redis pub-sub 解耦，不依赖 Celery 启用。
 
 ## Acceptance Criteria
 
-- [ ] TBD
+- [ ] stream_chapter_status（novels.py:307）去掉 asyncio.sleep(1.0) 轮询，改 Redis pub-sub subscribe 推送
+- [ ] 章节状态变更点（_set_chapter_generation_state + _mark_generation_failed + _mark_generation_failed_resume）publish 到 Redis channel
+- [ ] SSE subscribe 前查 DB 发初始态（pub-sub 消息丢失兜底）
+- [ ] Redis 不可用时 SSE 降级（回退轮询 or 前端重连），不阻塞生成流程
+- [ ] 真实章节生成全流程状态推送验证（generating->evaluating->selecting->finalizing->successful/failed）
+- [ ] （可选）stream_background_tasks（tasks.py:48）同方案改造去 1.5s 轮询
 
 ## Notes
 
