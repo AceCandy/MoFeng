@@ -155,9 +155,10 @@ Notes:
 ## Technology Stack
 
 - Frontend: Vue 3 + Vite + TypeScript + TanStack Query for Vue + Pinia + Vue Router + Naive UI
-- Backend: FastAPI + SQLAlchemy + Pydantic Settings
-- Storage: SQLite / MySQL + libsql vector retrieval
+- Backend: FastAPI + SQLAlchemy + Pydantic Settings + LangGraph (chapter-generation pipeline state machine)
+- Storage: SQLite / MySQL + libsql vector retrieval + Redis (cache & background-task SSE pub/sub)
 - AI: OpenAI-compatible LLM APIs, OpenAI/Ollama embeddings
+- Deploy: Docker Compose single container, supervisord runs uvicorn + nginx; optional MySQL / Redis profiles
 
 ### Frontend State Model
 

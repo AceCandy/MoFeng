@@ -154,9 +154,10 @@ flowchart TD
 ## 技术架构
 
 - 前端：Vue 3 + Vite + TypeScript + TanStack Query for Vue + Pinia + Vue Router + Naive UI
-- 后端：FastAPI + SQLAlchemy + Pydantic Settings
-- 存储：SQLite / MySQL + libsql 向量检索
+- 后端：FastAPI + SQLAlchemy + Pydantic Settings + LangGraph（章节生成流水线状态机编排）
+- 存储：SQLite / MySQL + libsql 向量检索 + Redis（缓存与后台任务 SSE 推送）
 - AI：OpenAI 兼容接口 + OpenAI / Ollama Embedding
+- 部署：Docker Compose 单容器，supervisord 托管 uvicorn + nginx 多进程；可选 MySQL / Redis profile
 
 ### 前端状态模型
 
