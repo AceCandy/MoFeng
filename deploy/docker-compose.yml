@@ -22,6 +22,12 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:?请设置数据库密码}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-mofeng}
 
+      POSTGRES_HOST: ${POSTGRES_HOST:-pg}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_USER: ${POSTGRES_USER:-mofeng}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请设置数据库密码}
+      POSTGRES_DATABASE: ${POSTGRES_DATABASE:-mofeng}
+
       ADMIN_DEFAULT_USERNAME: ${ADMIN_DEFAULT_USERNAME:-admin}
       ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:-ChangeMe123!}
       ADMIN_DEFAULT_EMAIL: ${ADMIN_DEFAULT_EMAIL:-admin@example.com}
@@ -104,6 +110,29 @@ services:
       - --collation-server=utf8mb4_unicode_ci
       - --max_connections=1000
 
+  # PostgreSQL 数据库服务（通过 profile postgres 启用）
+  pg:
+    image: postgres:16-alpine
+    container_name: mofeng-pg
+    profiles:
+      - postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mofeng}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请设置数据库密码}
+      POSTGRES_DB: ${POSTGRES_DATABASE:-mofeng}
+      TZ: Asia/Shanghai
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-mofeng}", "-d", "${POSTGRES_DATABASE:-mofeng}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   # Redis 缓存服务（可选，通过 profile redis 启用：docker compose --profile redis up -d）
   redis:
     image: redis:7-alpine
@@ -123,6 +152,8 @@ volumes:
   mysql-data:
     driver: local
   sqlite-data:
+    driver: local
+  pg-data:
     driver: local
 
 networks:
