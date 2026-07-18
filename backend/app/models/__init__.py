@@ -53,6 +53,16 @@ from .foreshadowing import (
     ForeshadowingAnalysis,
 )
 
+# 新增：势力/宪法/Writer人格模型
+from .faction import (
+    Faction,
+    FactionRelationship,
+    FactionMember,
+    FactionRelationshipHistory,
+)
+from .constitution import NovelConstitution
+from .writer_persona import WriterPersona
+
 __all__ = [
     # 基础模型
     "AdminSetting",
@@ -97,4 +107,11 @@ __all__ = [
     "ForeshadowingReminder",
     "ForeshadowingStatusHistory",
     "ForeshadowingAnalysis",
+    # 势力/宪法/Writer人格模型
+    "Faction",
+    "FactionRelationship",
+    "FactionMember",
+    "FactionRelationshipHistory",
+    "NovelConstitution",
+    "WriterPersona",
 ]
