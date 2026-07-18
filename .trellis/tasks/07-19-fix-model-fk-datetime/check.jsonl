@@ -1,0 +1,3 @@
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "backend 质量检查规范，check 复核依据"}
+{"file": ".trellis/spec/backend/index.md", "reason": "backend Quality Check 入口"}
+{"file": ".trellis/tasks/07-19-migrate-to-postgres/research/migration-core-review.md", "reason": "H6/M1 验证对照，check 时确认改动范围精确（4 FK + 7 DateTime，无遗漏无扩大）"}

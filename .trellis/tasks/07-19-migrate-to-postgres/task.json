@@ -1,0 +1,31 @@
+{
+  "id": "migrate-to-postgres",
+  "name": "migrate-to-postgres",
+  "title": "迁移主库到 PostgreSQL",
+  "description": "",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "AceCandy",
+  "assignee": "AceCandy",
+  "createdAt": "2026-07-19",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "07-19-pg-code-connect",
+    "07-19-fix-model-fk-datetime",
+    "07-19-pg-deploy-config",
+    "07-19-pg-data-migration-verify"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}

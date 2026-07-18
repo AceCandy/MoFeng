@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "model 列规范（String(36)/DateTime(timezone=True)/PK 约定）+ alembic migration 规范；注意 L118-131 过时段落已在 design §8 标注"}
+{"file": ".trellis/spec/backend/index.md", "reason": "backend Pre-Development Checklist + Quality Check 入口"}
+{"file": ".trellis/tasks/07-19-migrate-to-postgres/research/migration-core-review.md", "reason": "H6/M1 亲自验证结论（FK String(255) 残留 + DateTime 无时区 + baseline 对照）"}
+{"file": ".trellis/tasks/07-19-migrate-to-postgres/research/models-vector-test-deploy.md", "reason": "models/vector/test/deploy 扫描，第 1.6/1.4 节含 memory_layer FK 与 DateTime 细节"}
+{"file": ".trellis/tasks/07-19-migrate-to-postgres/design.md", "reason": "parent design H6/M1 改动清单 + 三后端 alter 策略 + 风险分级"}
