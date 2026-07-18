@@ -1,1 +1,6 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Engine/session 段需同步 else 分支含 PG；schema init 段确认 alembic 纯路径"}
+{"file": ".trellis/spec/backend/index.md", "reason": "确认 01 不新增债务项；backend spec 入口"}
+{"file": ".trellis/tasks/07-19-migrate-to-postgres/research/dialect-scan.md", "reason": "H1-H5+M6 真实行号与改法依据"}
+{"file": ".trellis/tasks/07-19-migrate-to-postgres/research/migration-core-review.md", "reason": "database_url 透传切入点 + 核心文件复核结论"}
+{"file": ".trellis/tasks/07-19-migrate-to-postgres/design.md", "reason": "H 分级 + H2 方案选项 + 三方言分析"}
+{"file": ".trellis/tasks/07-19-migrate-to-postgres/implement.md", "reason": "阶段顺序，01 对应阶段 1 代码连通"}
