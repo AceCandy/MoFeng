@@ -565,3 +565,37 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Next Steps
 
 - None - task complete
+
+
+## Session 17: PG 入口层连通 PostgreSQL（DB_PROVIDER=postgresql + asyncpg + alembic upgrade head 建全表）
+
+**Date**: 2026-07-19
+**Task**: PG 入口层连通 PostgreSQL（DB_PROVIDER=postgresql + asyncpg + alembic upgrade head 建全表）
+**Branch**: `main`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `540d980` | (see git log) |
+| `c644ee5` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

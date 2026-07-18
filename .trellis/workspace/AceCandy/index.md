@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 16
+- **Total Sessions**: 17
 - **Last Active**: 2026-07-19
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~567 | Active |
+| `journal-1.md` | ~601 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 17 | 2026-07-19 | PG 入口层连通 PostgreSQL（DB_PROVIDER=postgresql + asyncpg + alembic upgrade head 建全表） | `540d980`, `c644ee5` | `main` |
 | 16 | 2026-07-19 | 修复 memory_layer FK 类型与 DateTime 时区 + PG 迁移立项 | `71df072`, `38f817a` | `main` |
 | 15 | 2026-07-17 | L27B 后台任务 SSE 事件驱动 + 工程基线父 task 归档 | `f5b83a3`, `5afaa20` | `main` |
 | 14 | 2026-07-17 | L27 SSE 章节状态事件驱动实施 + 真机验证 | `9dc6054`, `5851647` | `main` |
