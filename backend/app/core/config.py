@@ -64,13 +64,18 @@ class Settings(BaseSettings):
     db_provider: str = Field(
         default="mysql",
         env="DB_PROVIDER",
-        description="数据库类型，仅支持 mysql 或 sqlite"
+        description="数据库类型，支持 mysql、sqlite 或 postgresql"
     )
     mysql_host: str = Field(default="localhost", env="MYSQL_HOST", description="MySQL 主机名")
     mysql_port: int = Field(default=3306, env="MYSQL_PORT", description="MySQL 端口")
     mysql_user: str = Field(default="root", env="MYSQL_USER", description="MySQL 用户名")
     mysql_password: str = Field(default="", env="MYSQL_PASSWORD", description="MySQL 密码")
     mysql_database: str = Field(default="mofeng", env="MYSQL_DATABASE", description="MySQL 数据库名称")
+    postgres_host: str = Field(default="localhost", env="POSTGRES_HOST", description="PostgreSQL 主机名")
+    postgres_port: int = Field(default=5432, env="POSTGRES_PORT", description="PostgreSQL 端口")
+    postgres_user: str = Field(default="postgres", env="POSTGRES_USER", description="PostgreSQL 用户名")
+    postgres_password: str = Field(default="", env="POSTGRES_PASSWORD", description="PostgreSQL 密码")
+    postgres_database: str = Field(default="mofeng", env="POSTGRES_DATABASE", description="PostgreSQL 数据库名称")
     sqlite_db_path: Optional[str] = Field(
         default=None,
         env="SQLITE_DB_PATH",
@@ -220,8 +225,8 @@ class Settings(BaseSettings):
     def _normalize_db_provider(cls, value: Optional[str]) -> str:
         """统一数据库类型大小写，并限制为受支持的驱动。"""
         candidate = (value or "mysql").strip().lower()
-        if candidate not in {"mysql", "sqlite"}:
-            raise ValueError("DB_PROVIDER 仅支持 mysql 或 sqlite")
+        if candidate not in {"mysql", "sqlite", "postgresql"}:
+            raise ValueError("DB_PROVIDER 仅支持 mysql、sqlite 或 postgresql")
         return candidate
     @validator("embedding_provider", pre=True)
     def _normalize_embedding_provider(cls, value: Optional[str]) -> str:
@@ -268,6 +273,17 @@ class Settings(BaseSettings):
                 # SQLite 默认使用 storage/mofeng.db，并转换为绝对路径以避免运行目录差异
                 db_path = (project_root / "storage" / "mofeng.db").resolve()
             return f"sqlite+aiosqlite:///{db_path}"
+
+        if self.db_provider == "postgresql":
+            # PostgreSQL 分支：统一对密码进行 URL 编码，避免特殊字符破坏连接串
+            from urllib.parse import quote_plus
+
+            encoded_password = quote_plus(self.postgres_password)
+            database = (self.postgres_database or "").strip("/")
+            return (
+                f"postgresql+asyncpg://{self.postgres_user}:{encoded_password}"
+                f"@{self.postgres_host}:{self.postgres_port}/{database}"
+            )
 
         # MySQL 分支：统一对密码进行 URL 编码，避免特殊字符破坏连接串
         from urllib.parse import quote_plus

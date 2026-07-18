@@ -118,12 +118,16 @@ async def _ensure_database_exists() -> None:
     )
     async with admin_engine.begin() as conn:
         # 先查库是否存在，已存在则跳过 CREATE，避免 MySQL Note 1007 被 asyncmy 记为 WARNING 噪音。
-        exists = await conn.execute(
-            text("SELECT 1 FROM information_schema.schemata WHERE schema_name = :db"),
-            {"db": database},
-        )
+        backend = url.get_backend_name()
+        if backend == "postgresql":
+            exists_sql = "SELECT 1 FROM pg_database WHERE datname = :db"
+            create_sql = f'CREATE DATABASE "{database}"'
+        else:
+            exists_sql = "SELECT 1 FROM information_schema.schemata WHERE schema_name = :db"
+            create_sql = f"CREATE DATABASE `{database}`"
+        exists = await conn.execute(text(exists_sql), {"db": database})
         if exists.first() is None:
-            await conn.execute(text(f"CREATE DATABASE `{database}`"))
+            await conn.execute(text(create_sql))
     await admin_engine.dispose()
 
 

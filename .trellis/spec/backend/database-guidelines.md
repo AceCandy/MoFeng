@@ -6,7 +6,7 @@
 
 ## Engine and session
 
-Single async engine + session factory in `app/db/session.py`. SQLite uses `NullPool` and relaxes `check_same_thread`; MySQL enables `pool_pre_ping` and `pool_recycle=3600`. `expire_on_commit=False` so returned ORM objects stay usable after commit.
+Single async engine + session factory in `app/db/session.py`. SQLite uses `NullPool` and relaxes `check_same_thread`; MySQL and PostgreSQL enable `pool_pre_ping` and `pool_recycle=3600`. `expire_on_commit=False` so returned ORM objects stay usable after commit.
 
 ```python
 engine = create_async_engine(settings.sqlalchemy_database_uri, **engine_kwargs)
