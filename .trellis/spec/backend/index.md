@@ -37,8 +37,7 @@ These are documented so new code does not repeat them. They are intentionally **
 
 1. Error signaling is split between `ValueError` (good) and `HTTPException` raised from services (legacy). New code uses `ValueError`.
 2. No shared timestamp mixin / uniform PK type across models. New models match sibling models in their aggregate.
-3. Alembic is in use (baseline `a53385d06521`), but `init_db._ensure_schema_updates` still runs at boot as a fallback. Retire it once all deployments run `alembic upgrade head`.
-4. Some routers open `AsyncSessionLocal()` directly. New routers use `Depends(get_session)`.
+3. Some routers open `AsyncSessionLocal()` directly. New routers use `Depends(get_session)`.
 
 ---
 

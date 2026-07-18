@@ -115,19 +115,15 @@ Primary key types are **not uniform** across the codebase: `User.id` is `Integer
 
 ---
 
-## Schema initialization (Alembic + startup fallback)
+## Schema initialization (Alembic)
 
 Alembic is in use: `backend/alembic.ini`, `backend/alembic/env.py` (async), and `backend/alembic/versions/a53385d06521_baseline.py` (the current schema frozen as baseline). `alembic upgrade head` builds the schema from an empty database.
 
-Startup still runs a fallback path in `app/db/init_db.py`:
+Production startup (`app/db/init_db.py::_run_alembic_upgrade`) is pure Alembic: a fresh database runs `alembic upgrade head` to build all tables; a legacy database without an `alembic_version` table is first stamped at `head` (`_needs_alembic_stamp`) then upgraded. There is no `Base.metadata.create_all` or `_ensure_schema_updates` fallback at boot - those were retired when the Alembic baseline was adopted.
 
-1. `Base.metadata.create_all` creates any tables declared as models.
-2. `_ensure_schema_updates` runs dialect-specific raw `ALTER TABLE` SQL to patch existing tables.
-3. Raw `.sql` files under `backend/db/migrations/` remain the human-readable change log.
+`Base.metadata.create_all` is now **test-only**: DB-connected tests under `backend/tests/` build an in-memory SQLite schema from the models directly, bypassing Alembic. Raw `.sql` files under `backend/db/migrations/` are legacy (pre-Alembic) and read only by static tests; they are not executed at boot.
 
-This is a **transitional state**: Alembic owns the migration history, but `create_all` + `_ensure_schema_updates` still run at boot as a safety net so deployments that have not run `alembic upgrade head` keep working.
-
-**When adding a column/table**: write an Alembic migration under `backend/alembic/versions/` (autogenerate, then `alembic upgrade head` locally). Keep `_ensure_schema_updates` in sync only if a deployment may still boot without running migrations; once all deployments run `alembic upgrade head`, `_ensure_schema_updates` can be retired (tracked as an engineering-baseline follow-up).
+**When adding a column/table**: write an Alembic migration under `backend/alembic/versions/` (autogenerate, then `alembic upgrade head` locally). Do not rely on `create_all` to patch existing tables - it only creates new tables and does not alter existing ones.
 
 ---
 
@@ -136,4 +132,4 @@ This is a **transitional state**: Alembic owns the migration history, but `creat
 - **Committing inside a repository.** Breaks the "service owns the transaction" rule.
 - **Constructing `AsyncSessionLocal()` in a router** instead of `Depends(get_session)`. Known in `novels.py`, `tasks.py`, `writer.py`.
 - **Celery tasks building their own engine + `sessionmaker`.** `app/tasks/emotion_tasks.py` imports the sync `sessionmaker` from `sqlalchemy.orm` and reads `settings.database_url` (the raw, possibly non-async-driver URL) instead of reusing `AsyncSessionLocal` and `settings.sqlalchemy_database_uri`. New background tasks must reuse `app.db.session.AsyncSessionLocal`.
-- **Adding a model without an Alembic migration.** The migration history is the source of truth; `create_all` only creates new tables, it does not alter existing ones. Add a migration under `backend/alembic/versions/` and keep `_ensure_schema_updates` in sync only until all deployments run `alembic upgrade head`.
+- **Adding a model without an Alembic migration.** The migration history is the source of truth; `create_all` only creates new tables, it does not alter existing ones. Add a migration under `backend/alembic/versions/` for any column/table change.

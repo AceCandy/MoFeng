@@ -40,7 +40,7 @@ class CharacterState(Base):
     __tablename__ = "character_states"
 
     id = Column(BIGINT_PK_TYPE, primary_key=True, autoincrement=True)
-    project_id = Column(String(255), ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id = Column(String(36), ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False, index=True)
     character_id = Column(BigInteger, ForeignKey("blueprint_characters.id", ondelete="CASCADE"), nullable=False, index=True)
     character_name = Column(String(255), nullable=False)  # 冗余存储，方便查询
     
@@ -81,8 +81,8 @@ class CharacterState(Base):
     
     # 元数据
     extra = Column(JSON)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class TimelineEvent(Base):
@@ -94,7 +94,7 @@ class TimelineEvent(Base):
     __tablename__ = "timeline_events"
 
     id = Column(BIGINT_PK_TYPE, primary_key=True, autoincrement=True)
-    project_id = Column(String(255), ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id = Column(String(36), ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False, index=True)
     
     # 时间信息
     chapter_number = Column(Integer, nullable=False, index=True)
@@ -119,7 +119,7 @@ class TimelineEvent(Base):
     importance = Column(Integer, default=5)  # 重要性 1-10
     is_turning_point = Column(Boolean, default=False)  # 是否为转折点
     extra = Column(JSON)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
 
 
 class CausalChain(Base):
@@ -131,7 +131,7 @@ class CausalChain(Base):
     __tablename__ = "causal_chains"
 
     id = Column(BIGINT_PK_TYPE, primary_key=True, autoincrement=True)
-    project_id = Column(String(255), ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id = Column(String(36), ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False, index=True)
     
     # 因果关系
     cause_type = Column(String(64))  # event/action/decision/external
@@ -154,8 +154,8 @@ class CausalChain(Base):
     # 元数据
     importance = Column(Integer, default=5)  # 重要性 1-10
     extra = Column(JSON)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class StoryTimeTracker(Base):
@@ -167,7 +167,7 @@ class StoryTimeTracker(Base):
     __tablename__ = "story_time_trackers"
 
     id = Column(BIGINT_PK_TYPE, primary_key=True, autoincrement=True)
-    project_id = Column(String(255), ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False, unique=True)
+    project_id = Column(String(36), ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False, unique=True)
     
     # 时间设定
     time_system = Column(String(64), default="modern")  # modern/ancient/fantasy/scifi
@@ -183,5 +183,5 @@ class StoryTimeTracker(Base):
     
     # 元数据
     extra = Column(JSON)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
