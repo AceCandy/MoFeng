@@ -117,7 +117,13 @@ async def _ensure_database_exists() -> None:
         isolation_level="AUTOCOMMIT",
     )
     async with admin_engine.begin() as conn:
-        await conn.execute(text(f"CREATE DATABASE IF NOT EXISTS `{database}`"))
+        # 先查库是否存在，已存在则跳过 CREATE，避免 MySQL Note 1007 被 asyncmy 记为 WARNING 噪音。
+        exists = await conn.execute(
+            text("SELECT 1 FROM information_schema.schemata WHERE schema_name = :db"),
+            {"db": database},
+        )
+        if exists.first() is None:
+            await conn.execute(text(f"CREATE DATABASE `{database}`"))
     await admin_engine.dispose()
 
 
