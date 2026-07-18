@@ -531,3 +531,37 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Next Steps
 
 - None - task complete
+
+
+## Session 16: 修复 memory_layer FK 类型与 DateTime 时区 + PG 迁移立项
+
+**Date**: 2026-07-19
+**Task**: 修复 memory_layer FK 类型与 DateTime 时区 + PG 迁移立项
+**Branch**: `main`
+
+### Summary
+
+修复 memory_layer 4 表 project_id FK String(255)->String(36)（H6，与 novel_projects.id 对齐）+ 7 处 DateTime 加 timezone=True（M1）。新增跨方言 alembic migration 03bb4c218e9e（batch_alter_table + FK drop/recreate reflect 名称 + postgresql_using）。mysql 往返 + sqlite migration 往返 + pytest 220 passed 验证绿（trellis-check 独立复跑）。同步修正 database-guidelines L118-131 过时的 schema 初始化描述（生产纯 alembic，create_all test-only）。完成 PG 迁移 parent task 树立项（07-19-migrate-to-postgres: prd/design/implement + research×3 + 4 child prd）。pg 实测留 child 01；baseline sqlite use_alter 预存问题 + L134 Celery 失效引用留 follow-up。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `71df072` | (see git log) |
+| `38f817a` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
