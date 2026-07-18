@@ -599,3 +599,37 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Next Steps
 
 - None - task complete
+
+
+## Session 18: PG 部署配置（compose postgres profile + app POSTGRES_* env + pg-data volume + 两处 env.example）
+
+**Date**: 2026-07-19
+**Task**: PG 部署配置（compose postgres profile + app POSTGRES_* env + pg-data volume + 两处 env.example）
+**Branch**: `main`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `31e62e7` | (see git log) |
+| `4e792f5` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
