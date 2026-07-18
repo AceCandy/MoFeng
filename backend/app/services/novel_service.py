@@ -728,11 +728,10 @@ class NovelService:
 
         if completed_to_delete:
             completed_number = completed_to_delete[0]
-            expected_confirmation_text = f"删除第{completed_number}章及全部产物"
-            if not delete_artifacts_confirmed or (confirmation_text or "").strip() != expected_confirmation_text:
+            if not delete_artifacts_confirmed:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"删除最近已完成章节必须二次确认删除章节及全部产物：请输入“{expected_confirmation_text}”",
+                    detail="删除最近已完成章节必须二次确认删除章节及全部产物",
                 )
 
             later_outline_numbers = sorted(number for number in outline_numbers if number > completed_number)

@@ -4,6 +4,7 @@ import { createApp, nextTick } from 'vue'
 import ChapterGenerating from '@/components/writing-desk/workspace/ChapterGenerating.vue'
 import type { ChapterGenerationTrace } from '@/api/novel'
 import { globalAlert } from '@/composables/useAlert'
+import { formatAiReviewOutputs } from '@/utils/generationTrace'
 
 const flushPromises = async () => {
   await Promise.resolve()
@@ -52,6 +53,38 @@ const clickPipelineStep = async (host: HTMLElement, label: string) => {
 }
 
 describe('ChapterGenerating timing inspector', () => {
+  it('keeps the displayed recommendation aligned with the structured winner', () => {
+    const output = formatAiReviewOutputs({
+      id: 0,
+      node_key: 'quality_review',
+      node_label: 'AI评审',
+      status: 'success',
+      uses_llm: true,
+      metadata: {
+        output_payload: {
+          best_version_index: 1,
+          review_summaries: {
+            ai_review: {
+              mode: 'compare',
+              evaluation: '版本1在四个维度上全面优于版本2。',
+              final_recommendation: '建议采用版本1。',
+              version_reviews: [
+                { version_number: 1, overall_review: '版本1仍有明显短板。' },
+                { version_number: 2, overall_review: '版本2综合最佳。' },
+              ],
+            },
+          },
+        },
+      },
+    })
+
+    expect(output).toContain('推荐版本：版本 2')
+    expect(output).toContain('评审结论：版本2综合最佳。')
+    expect(output).toContain('最终建议：采用版本 2')
+    expect(output).not.toContain('评审结论：版本1在四个维度上全面优于版本2。')
+    expect(output).not.toContain('最终建议：建议采用版本1。')
+  })
+
   it('shows recorded system duration from the active generation trace', async () => {
     const rendered = await mountChapterGenerating({
       id: 1,

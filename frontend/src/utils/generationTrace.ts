@@ -341,7 +341,14 @@ export const formatAiReviewOutputs = (trace: ChapterGenerationTrace) => {
   }
 
   if (aiReview) {
+    const versionReviews = Array.isArray(aiReview.version_reviews) ? aiReview.version_reviews : []
+    const bestVersionReview = bestVersionNumber === null
+      ? null
+      : versionReviews.find((item) =>
+          isPlainTraceObject(item) && Number(item.version_number) === bestVersionNumber,
+        )
     const evaluation = firstTextValue(
+      isPlainTraceObject(bestVersionReview) ? bestVersionReview.overall_review : null,
       aiReview.evaluation,
       aiReview.overall_evaluation,
       aiReview.reason_for_choice,
@@ -350,7 +357,9 @@ export const formatAiReviewOutputs = (trace: ChapterGenerationTrace) => {
       aiReview.suggestions,
       aiReview.refinement_suggestions,
     )
-    const recommendation = firstTextValue(aiReview.final_recommendation)
+    const recommendation = aiReview.mode === 'compare' && bestVersionNumber !== null
+      ? `采用版本 ${bestVersionNumber}`
+      : firstTextValue(aiReview.final_recommendation)
     if (evaluation) lines.push(`评审结论：${evaluation}`)
     if (suggestions) lines.push(`修改建议：${suggestions}`)
     if (recommendation) lines.push(`最终建议：${recommendation}`)
@@ -360,7 +369,6 @@ export const formatAiReviewOutputs = (trace: ChapterGenerationTrace) => {
       lines.push(`需修复问题：\n${flaws.map((item) => `- ${formatTraceValue(item)}`).join('\n')}`)
     }
 
-    const versionReviews = Array.isArray(aiReview.version_reviews) ? aiReview.version_reviews : []
     if (versionReviews.length) {
       const reviews = versionReviews
         .map((item) => {

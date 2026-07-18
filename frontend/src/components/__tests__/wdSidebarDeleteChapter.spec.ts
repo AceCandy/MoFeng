@@ -120,7 +120,8 @@ describe('WDSidebar chapter deletion affordance', () => {
     const apiSource = `${readSource('src/api/novel.ts')}\n${readSource('src/queries/novel.ts')}`
 
     expect(source).toContain('正文、版本、评审、生成 trace 和向量数据等全部产物')
-    expect(source).toContain('showConfirmInput')
+    expect(source).not.toContain('showConfirmInput')
+    expect(source).not.toContain('确认文本不匹配')
     expect(apiSource).toContain('delete_artifacts_confirmed')
     expect(apiSource).toContain('confirmation_text')
     expect(source).toContain('删除章节及产物')

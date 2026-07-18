@@ -150,7 +150,7 @@ async def test_delete_chapters_rejects_middle_outline_deletion_that_leaves_gap()
 
 
 @pytest.mark.asyncio
-async def test_delete_latest_completed_chapter_requires_artifact_confirmation() -> None:
+async def test_delete_latest_completed_chapter_requires_confirmation_flag_not_confirmation_text() -> None:
     engine, session_factory = await _create_session_factory()
 
     async with session_factory() as session:
@@ -186,7 +186,7 @@ async def test_delete_latest_completed_chapter_requires_artifact_confirmation() 
             project_id,
             [2],
             delete_artifacts_confirmed=True,
-            confirmation_text="删除第2章及全部产物",
+            confirmation_text="旧版确认文本",
         )
         assert not (
             await session.execute(select(Chapter).where(Chapter.project_id == project_id, Chapter.chapter_number == 2))

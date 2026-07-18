@@ -110,20 +110,12 @@ export const useWritingDeskChapterOps = ({
       return
     }
 
-    let artifactConfirmationText: string | null = null
     if (isDeletingCompletedChapter) {
-      artifactConfirmationText = `删除第${completedChapterNumber}章及全部产物`
-      const typedConfirmation = await globalAlert.showConfirmInput(
-        `请再次确认。输入“${artifactConfirmationText}”后，系统才会删除该已完成章节对应产物。`,
+      const artifactsConfirmed = await globalAlert.showConfirm(
+        `请再次确认删除第 ${completedChapterNumber} 章对应的正文、版本、评审、生成 trace 和向量数据等全部产物。此操作无法撤销。`,
         '二次确认',
-        {
-          inputLabel: '确认文本',
-          inputPlaceholder: artifactConfirmationText,
-          confirmText: '确认删除',
-        },
       )
-      if (typedConfirmation !== artifactConfirmationText) {
-        globalAlert.showError('确认文本不匹配，已取消删除。', '删除已取消')
+      if (!artifactsConfirmed) {
         return
       }
     }
@@ -132,7 +124,6 @@ export const useWritingDeskChapterOps = ({
       await deleteChapterMutation.mutateAsync({
         chapterNumbers: numbersToDelete,
         deleteArtifactsConfirmed: isDeletingCompletedChapter,
-        confirmationText: artifactConfirmationText,
       })
       globalAlert.showToast(
         isDeletingCompletedChapter ? '章节及产物已删除' : '章节大纲已删除',
