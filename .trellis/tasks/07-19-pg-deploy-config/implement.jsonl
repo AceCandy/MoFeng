@@ -1,1 +1,5 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "确认 Engine/session 段已含 PG（01 改过），03 无需再改 spec"}
+{"file": ".trellis/spec/backend/index.md", "reason": "backend spec 入口，确认 03 不新增债务项"}
+{"file": ".trellis/tasks/07-19-migrate-to-postgres/research/models-vector-test-deploy.md", "reason": "第4节部署技术细节，PG service image/healthcheck/volume 依据"}
+{"file": ".trellis/tasks/07-19-migrate-to-postgres/design.md", "reason": "PG service 约定 postgres:16-alpine + pg_isready + pg-data + POSTGRES_*"}
+{"file": ".trellis/tasks/07-19-migrate-to-postgres/implement.md", "reason": "阶段3 部署配置 AC + 验证命令 + 回滚"}
