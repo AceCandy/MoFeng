@@ -63,6 +63,9 @@ from .faction import (
 from .constitution import NovelConstitution
 from .writer_persona import WriterPersona
 
+# RAG 向量检索模型（pgvector）
+from .rag import RagChunk, RagSummary
+
 __all__ = [
     # 基础模型
     "AdminSetting",
@@ -114,4 +117,7 @@ __all__ = [
     "FactionRelationshipHistory",
     "NovelConstitution",
     "WriterPersona",
+    # RAG 向量检索模型
+    "RagChunk",
+    "RagSummary",
 ]

@@ -114,12 +114,12 @@
 ### 3.2 向量存储
 
 - **后端服务**：`VectorStoreService`
-- **存储实现**：libsql（可本地 `file:`，亦可云端），需手动配置 `VECTOR_DB_URL`
+- **存储实现**：pgvector（PostgreSQL 向量扩展，与主库共用同一数据库），通过 `VECTOR_STORE_ENABLED` 控制开关
 - **表结构**：
   - `rag_chunks`（正文分块）：`id`、`project_id`、`chapter_number`、`chunk_index`、`chapter_title`、`content`、`embedding`、`metadata`
   - `rag_summaries`（章节摘要）：`id`、`project_id`、`chapter_number`、`title`、`summary`、`embedding`
 - **检索策略**：
-  - 优先使用 libsql 的 `vector_distance_cosine`；若未启用，回退到 Python 端计算余弦距离（排序后截取 Top-K）。
+  - 使用 pgvector 的余弦距离算子（`<=>`）排序后截取 Top-K。
   - 查询向量由 `LLMService.get_embedding` 生成，支持 OpenAI 与 Ollama（通过 `EMBEDDING_PROVIDER` 切换）。
 
 ### 3.3 向量生命周期
@@ -137,7 +137,7 @@
 | `OPENAI_*` | 默认生成模型配置 | `.env` 或系统配置表 |
 | `EMBEDDING_PROVIDER` | 嵌入提供方（`openai` / `ollama`） | `.env` |
 | `EMBEDDING_MODEL` / `OLLAMA_EMBEDDING_MODEL` | 具体嵌入模型名 | `.env` |
-| `VECTOR_DB_URL` | libsql 数据库地址（支持 `file:`） | `.env` |
+| `VECTOR_STORE_ENABLED` | 是否启用向量检索（默认开启） | `.env` |
 | `VECTOR_TOP_K_CHUNKS` / `VECTOR_TOP_K_SUMMARIES` | 检索数量 | `.env` / 系统配置 |
 | `WRITER_CHAPTER_VERSION_COUNT` | 章节候选版本数 | 系统配置 / 环境变量 |
 

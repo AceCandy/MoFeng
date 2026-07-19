@@ -36,8 +36,7 @@ services:
       OLLAMA_EMBEDDING_BASE_URL: ${OLLAMA_EMBEDDING_BASE_URL:-http://localhost:11434}
       OLLAMA_EMBEDDING_MODEL: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text:latest}
 
-      VECTOR_DB_URL: ${VECTOR_DB_URL:-file:./storage/rag_vectors.db}
-      VECTOR_DB_AUTH_TOKEN: ${VECTOR_DB_AUTH_TOKEN:-}
+      VECTOR_STORE_ENABLED: ${VECTOR_STORE_ENABLED:-true}
       VECTOR_TOP_K_CHUNKS: ${VECTOR_TOP_K_CHUNKS:-5}
       VECTOR_TOP_K_SUMMARIES: ${VECTOR_TOP_K_SUMMARIES:-3}
       VECTOR_CHUNK_SIZE: ${VECTOR_CHUNK_SIZE:-480}
@@ -75,7 +74,7 @@ services:
 
   # PostgreSQL 数据库服务（通过 profile postgres 启用）
   pg:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: mofeng-pg
     profiles:
       - postgres

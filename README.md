@@ -155,7 +155,7 @@ flowchart TD
 
 - 前端：Vue 3 + Vite + TypeScript + TanStack Query for Vue + Pinia + Vue Router + Naive UI
 - 后端：FastAPI + SQLAlchemy + Pydantic Settings + LangGraph（章节生成流水线状态机编排）
-- 存储：PostgreSQL + libsql 向量检索 + Redis（缓存与后台任务 SSE 推送）
+- 存储：PostgreSQL + pgvector 向量检索 + Redis（缓存与后台任务 SSE 推送）
 - AI：OpenAI 兼容接口 + OpenAI / Ollama Embedding
 - 部署：Docker Compose 单容器，supervisord 托管 uvicorn + nginx 多进程；可选 PostgreSQL / Redis profile
 
@@ -261,7 +261,6 @@ Docker 部署：使用 `deploy/.env.example` 作为 `deploy/.env` 模板。
 - `OPENAI_MODEL_NAME`
 - `EMBEDDING_PROVIDER`
 - `EMBEDDING_MODEL`
-- `VECTOR_DB_URL`
 - `ADMIN_DEFAULT_USERNAME`
 - `ADMIN_DEFAULT_PASSWORD`
 

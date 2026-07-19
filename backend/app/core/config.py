@@ -129,16 +129,6 @@ class Settings(BaseSettings):
         env="OLLAMA_EMBEDDING_MODEL",
         description="Ollama 嵌入模型名称",
     )
-    vector_db_url: Optional[str] = Field(
-        default=None,
-        env="VECTOR_DB_URL",
-        description="libsql 向量库连接地址",
-    )
-    vector_db_auth_token: Optional[str] = Field(
-        default=None,
-        env="VECTOR_DB_AUTH_TOKEN",
-        description="libsql 访问令牌",
-    )
     vector_top_k_chunks: int = Field(
         default=5,
         ge=0,
@@ -162,6 +152,11 @@ class Settings(BaseSettings):
         ge=0,
         env="VECTOR_CHUNK_OVERLAP",
         description="章节分块重叠字数",
+    )
+    vector_store_enabled: bool = Field(
+        default=True,
+        env="VECTOR_STORE_ENABLED",
+        description="是否启用向量检索（pgvector），关闭后 RAG 检索将跳过",
     )
     redis_url: Optional[str] = Field(
         default=None,
@@ -248,11 +243,6 @@ class Settings(BaseSettings):
             f"postgresql+asyncpg://{self.postgres_user}:{encoded_password}"
             f"@{self.postgres_host}:{self.postgres_port}/{database}"
         )
-
-    @property
-    def vector_store_enabled(self) -> bool:
-        """是否已经配置向量库，用于在业务逻辑中快速判断。"""
-        return bool(self.vector_db_url)
 
     @property
     def cors_origins_list(self) -> list[str]:

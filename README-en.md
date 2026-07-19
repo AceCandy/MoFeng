@@ -156,7 +156,7 @@ Notes:
 
 - Frontend: Vue 3 + Vite + TypeScript + TanStack Query for Vue + Pinia + Vue Router + Naive UI
 - Backend: FastAPI + SQLAlchemy + Pydantic Settings + LangGraph (chapter-generation pipeline state machine)
-- Storage: PostgreSQL + libsql vector retrieval + Redis (cache & background-task SSE pub/sub)
+- Storage: PostgreSQL + pgvector vector retrieval + Redis (cache & background-task SSE pub/sub)
 - AI: OpenAI-compatible LLM APIs, OpenAI/Ollama embeddings
 - Deploy: Docker Compose single container, supervisord runs uvicorn + nginx; optional PostgreSQL / Redis profiles
 
@@ -262,7 +262,6 @@ Recommended settings for full writing capabilities:
 - `OPENAI_MODEL_NAME`
 - `EMBEDDING_PROVIDER`
 - `EMBEDDING_MODEL`
-- `VECTOR_DB_URL`
 - `ADMIN_DEFAULT_USERNAME`
 - `ADMIN_DEFAULT_PASSWORD`
 

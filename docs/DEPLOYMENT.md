@@ -177,7 +177,7 @@ Recommended for writing features:
 | `OPENAI_MODEL_NAME` | Yes | Default generation model |
 | `EMBEDDING_PROVIDER` | Yes | `openai` or `ollama` |
 | `EMBEDDING_MODEL` | Yes | Default embedding model |
-| `VECTOR_DB_URL` | Yes | Vector database URL |
+| `VECTOR_STORE_ENABLED` | No | Enable pgvector RAG retrieval (default true) |
 | `ADMIN_DEFAULT_USERNAME` | Yes | Default admin username |
 | `ADMIN_DEFAULT_PASSWORD` | Strongly recommended | Default admin password |
 | `ALLOW_USER_REGISTRATION` | As needed | Whether users can sign up |
