@@ -4,7 +4,7 @@ from app.utils import llm_tool
 from app.utils.llm_tool import ChatMessage, LLMClient
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_anthropic_stream_chat_uses_custom_messages_url(monkeypatch):
     class FakeStreamResponse:
         def raise_for_status(self):

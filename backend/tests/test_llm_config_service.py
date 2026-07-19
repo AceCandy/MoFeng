@@ -8,7 +8,7 @@ from app.schemas.llm_config import ProviderCreate
 from app.services.llm_config_service import LLMConfigService
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_mask_api_key_keeps_only_suffix():
     service = LLMConfigService(AsyncMock())
 
@@ -17,7 +17,7 @@ async def test_mask_api_key_keeps_only_suffix():
     assert service._mask_api_key(None) is None
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_pick_default_model_requires_capability():
     service = LLMConfigService(AsyncMock())
     models = [
@@ -63,7 +63,7 @@ def test_provider_create_accepts_anthropic_with_custom_url():
     assert payload.base_url == "https://anthropic-proxy.example/v1"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_get_provider_models_uses_saved_provider_type_for_custom_anthropic_url():
     service = LLMConfigService(AsyncMock())
     provider = SimpleNamespace(
@@ -85,7 +85,7 @@ async def test_get_provider_models_uses_saved_provider_type_for_custom_anthropic
     )
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_get_anthropic_models_uses_custom_models_url(monkeypatch):
     class FakeResponse:
         def raise_for_status(self):
@@ -145,7 +145,7 @@ def test_provider_to_read_exposes_provider_scope():
     assert read.capabilities == {"chat": False, "embedding": True, "tts": False}
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_upsert_stage_routes_rejects_disabled_model():
     service = LLMConfigService(AsyncMock())
     service.model_repo = SimpleNamespace(
@@ -170,7 +170,7 @@ async def test_upsert_stage_routes_rejects_disabled_model():
     assert "disabled" in str(exc_info.value)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_upsert_stage_routes_rejects_disabled_provider():
     service = LLMConfigService(AsyncMock())
     service.model_repo = SimpleNamespace(
@@ -195,7 +195,7 @@ async def test_upsert_stage_routes_rejects_disabled_provider():
     assert "provider disabled" in str(exc_info.value)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_delete_model_rejects_default_chat_model():
     service = LLMConfigService(AsyncMock())
     service.model_repo = SimpleNamespace(
@@ -215,7 +215,7 @@ async def test_delete_model_rejects_default_chat_model():
     assert "主模型不能直接删除" in str(exc_info.value)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_delete_model_rejects_default_embedding_model():
     service = LLMConfigService(AsyncMock())
     service.model_repo = SimpleNamespace(
@@ -235,7 +235,7 @@ async def test_delete_model_rejects_default_embedding_model():
     assert "当前向量模型不能直接删除" in str(exc_info.value)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_delete_model_removes_related_stage_routes_before_model():
     service = LLMConfigService(AsyncMock())
     model = SimpleNamespace(
@@ -263,7 +263,7 @@ async def test_delete_model_removes_related_stage_routes_before_model():
     service.session.commit.assert_awaited_once()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_delete_provider_removes_models_and_related_stage_routes():
     service = LLMConfigService(AsyncMock())
     provider = SimpleNamespace(id=3, name="sub2api")
@@ -293,7 +293,7 @@ async def test_delete_provider_removes_models_and_related_stage_routes():
     service.session.commit.assert_awaited_once()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_default_embedding_model_disables_other_embedding_models():
     service = LLMConfigService(AsyncMock())
     selected = SimpleNamespace(

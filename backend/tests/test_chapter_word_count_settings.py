@@ -23,7 +23,7 @@ class DummyRepo:
         return DummyConfig(value) if value is not None else None
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_resolve_word_count_requirements_uses_system_config_value():
     target, minimum = await resolve_word_count_requirements(
         DummyRepo({"writer.chapter_word_limit": "4500"})
@@ -33,7 +33,7 @@ async def test_resolve_word_count_requirements_uses_system_config_value():
     assert minimum == 3600
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_resolve_word_count_requirements_ignores_invalid_low_value():
     target, minimum = await resolve_word_count_requirements(
         DummyRepo({"writer.chapter_word_limit": "1200"})

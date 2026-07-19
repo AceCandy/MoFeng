@@ -3,11 +3,8 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
 
 from app.api.routers.novels import create_novel
-from app.db.base import Base
 from app.models.user import User
 from app.services.novel_service import NovelService
 
@@ -16,19 +13,9 @@ ROOT = Path(__file__).resolve().parents[2]
 NOVELS_ROUTER = ROOT / "backend/app/api/routers/novels.py"
 
 
-@pytest.mark.asyncio
-async def test_inspiration_project_blocks_new_start_until_blueprint_saved():
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
+@pytest.mark.asyncio(loop_scope="session")
+async def test_inspiration_project_blocks_new_start_until_blueprint_saved(db_session_factory):
+    async with db_session_factory() as session:
         session.add(User(id=1, username="writer", hashed_password="secret"))
         await session.commit()
 
@@ -54,22 +41,10 @@ async def test_inspiration_project_blocks_new_start_until_blueprint_saved():
         await session.commit()
         assert await service.find_unfinished_inspiration_project(1) is None
 
-    await engine.dispose()
 
-
-@pytest.mark.asyncio
-async def test_legacy_unnamed_inspiration_draft_is_treated_as_unfinished():
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
+@pytest.mark.asyncio(loop_scope="session")
+async def test_legacy_unnamed_inspiration_draft_is_treated_as_unfinished(db_session_factory):
+    async with db_session_factory() as session:
         session.add(User(id=1, username="writer", hashed_password="secret"))
         await session.commit()
 
@@ -80,22 +55,10 @@ async def test_legacy_unnamed_inspiration_draft_is_treated_as_unfinished():
         assert unfinished is not None
         assert unfinished.id == project.id
 
-    await engine.dispose()
 
-
-@pytest.mark.asyncio
-async def test_create_novel_returns_conflict_with_existing_unfinished_inspiration():
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
+@pytest.mark.asyncio(loop_scope="session")
+async def test_create_novel_returns_conflict_with_existing_unfinished_inspiration(db_session_factory):
+    async with db_session_factory() as session:
         session.add(User(id=1, username="writer", hashed_password="secret"))
         await session.commit()
 
@@ -118,8 +81,6 @@ async def test_create_novel_returns_conflict_with_existing_unfinished_inspiratio
         assert exc_info.value.status_code == 409
         assert exc_info.value.detail["code"] == "unfinished_inspiration"
         assert exc_info.value.detail["project_id"] == project.id
-
-    await engine.dispose()
 
 
 def test_generate_blueprint_does_not_rename_unfinished_inspiration_before_save():

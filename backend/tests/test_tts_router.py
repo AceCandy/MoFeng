@@ -8,7 +8,7 @@ from app.schemas.tts import SpeechRequest
 from app.services.tts_service import SpeechAudio, TTSConfigurationError, TTSUpstreamError
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_tts_router_returns_raw_audio_response():
     service = SimpleNamespace(
         synthesize=AsyncMock(return_value=SpeechAudio(content=b"wave", media_type="audio/wav"))
@@ -25,7 +25,7 @@ async def test_tts_router_returns_raw_audio_response():
     service.synthesize.assert_awaited_once_with(7, "正文", None, None)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 @pytest.mark.parametrize(
     ("error", "status_code"),
     [

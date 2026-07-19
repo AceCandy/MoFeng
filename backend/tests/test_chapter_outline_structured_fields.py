@@ -2,11 +2,8 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import selectinload
-from sqlalchemy.pool import StaticPool
 
-from app.db.base import Base
 from app.models import ChapterOutline, NovelBlueprint, NovelProject
 from app.models.user import User
 from app.services.novel_service import NovelService
@@ -23,19 +20,9 @@ def test_chapter_outline_model_declares_structured_story_fields() -> None:
     assert "character_states" in columns
 
 
-@pytest.mark.asyncio
-async def test_update_or_create_outline_persists_structured_story_fields() -> None:
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
+@pytest.mark.asyncio(loop_scope="session")
+async def test_update_or_create_outline_persists_structured_story_fields(db_session_factory) -> None:
+    async with db_session_factory() as session:
         session.add(User(id=1, username="writer", hashed_password="secret"))
         session.add(NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试"))
         session.add(NovelBlueprint(project_id="project-1", title="测试项目"))
@@ -71,8 +58,6 @@ async def test_update_or_create_outline_persists_structured_story_fields() -> No
         assert outline.goals == "让主角意识到平静生活被打破。"
         assert outline.highlights == ["猪圈异象", "神秘老者登场"]
         assert outline.character_states == {"李大壮": "困惑但开始相信异象有含义"}
-
-    await engine.dispose()
 
 
 def test_outline_generation_prompt_and_task_require_structured_story_fields() -> None:

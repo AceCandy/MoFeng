@@ -11,7 +11,7 @@ class DummyPromptService:
         return "修复 JSON，且只输出合法 JSON 对象。"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_parse_blueprint_json_uses_raw_json_without_repair():
     llm_service = AsyncMock()
 
@@ -27,7 +27,7 @@ async def test_parse_blueprint_json_uses_raw_json_without_repair():
     llm_service.get_llm_response.assert_not_awaited()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_parse_blueprint_json_repairs_malformed_json_once():
     llm_service = AsyncMock()
     llm_service.get_llm_response.return_value = """

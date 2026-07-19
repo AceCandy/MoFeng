@@ -61,7 +61,7 @@ def test_capability_normalization_preserves_tts():
     }
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_create_default_tts_locks_before_reading_provider():
     events = []
     session = AsyncMock()
@@ -90,7 +90,7 @@ async def test_create_default_tts_locks_before_reading_provider():
     assert events[:2] == [("lock", 7), ("provider", 7, 3)]
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_update_model_locks_before_reading_existing_model():
     events = []
     session = AsyncMock()
@@ -131,7 +131,7 @@ async def test_update_model_locks_before_reading_existing_model():
     assert events[:2] == [("lock", 7), ("model", 7, 10)]
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_default_tts_model_clears_sibling_default():
     service = LLMConfigService(AsyncMock())
     selected = SimpleNamespace(
@@ -164,7 +164,7 @@ async def test_default_tts_model_clears_sibling_default():
     locked_models.assert_awaited_once_with(7)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_delete_model_rejects_default_tts_model():
     service = LLMConfigService(AsyncMock())
     service.model_repo = SimpleNamespace(
@@ -183,7 +183,7 @@ async def test_delete_model_rejects_default_tts_model():
         await service.delete_model(7, 10)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_update_model_rejects_incomplete_tts_configuration():
     service = LLMConfigService(AsyncMock())
     model = SimpleNamespace(
@@ -215,11 +215,9 @@ async def test_update_model_rejects_incomplete_tts_configuration():
         )
 
 
-def test_alembic_baseline_and_schema_sql_include_tts_columns():
-    # schema 改由 alembic baseline 管理（替代 _ensure_schema_updates 过渡态），确认 baseline + schema.sql 含 tts 列
+def test_alembic_baseline_includes_tts_columns():
+    # schema 改由 alembic baseline 管理（替代 _ensure_schema_updates 过渡态，schema.sql 已随 PG 迁移删除），确认 baseline 含 tts 列
     baseline = (ROOT / "alembic" / "versions" / "a53385d06521_baseline.py").read_text(encoding="utf-8")
-    schema_sql = (ROOT / "db/schema.sql").read_text(encoding="utf-8")
 
     for column in ["is_default_tts", "tts_protocol", "tts_voice", "tts_speed"]:
         assert column in baseline
-        assert column in schema_sql

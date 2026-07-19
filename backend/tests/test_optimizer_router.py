@@ -8,7 +8,7 @@ from app.api.routers import optimizer, writer
 from app.services.chapter_word_count_settings import count_chapter_words
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_apply_optimization_passes_current_user_id_to_foreshadowing_sync(monkeypatch):
     session = AsyncMock()
     current_user = SimpleNamespace(id=42)

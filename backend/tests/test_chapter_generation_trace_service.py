@@ -1,32 +1,19 @@
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import selectinload
-from sqlalchemy.pool import StaticPool
 
 import pytest
 
-from app.db.base import Base
 from app.models import Chapter, ChapterOutline, NovelProject
 from app.models.user import User
 from app.services.chapter_generation_trace_service import ChapterGenerationTraceService
 from app.services.novel_service import NovelService
 
 
-@pytest.mark.asyncio
-async def test_chapter_generation_trace_service_records_real_prompt_and_response():
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
+@pytest.mark.asyncio(loop_scope="session")
+async def test_chapter_generation_trace_service_records_real_prompt_and_response(db_session_factory):
+    async with db_session_factory() as session:
         project_id = "project-trace"
         session.add(User(id=1, username="writer", hashed_password="secret"))
         session.add(NovelProject(id=project_id, user_id=1, title="测试小说", initial_prompt="测试"))
@@ -59,22 +46,10 @@ async def test_chapter_generation_trace_service_records_real_prompt_and_response
         assert traces[0].cleaned_output == "清洗后的章节正文"
         assert traces[0].metadata == {"version_index": 1, "uses_llm": True}
 
-    await engine.dispose()
 
-
-@pytest.mark.asyncio
-async def test_chapter_generation_trace_service_records_node_duration_ms():
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
+@pytest.mark.asyncio(loop_scope="session")
+async def test_chapter_generation_trace_service_records_node_duration_ms(db_session_factory):
+    async with db_session_factory() as session:
         project_id = "project-trace-duration"
         session.add(User(id=1, username="writer", hashed_password="secret"))
         session.add(NovelProject(id=project_id, user_id=1, title="测试小说", initial_prompt="测试"))
@@ -99,22 +74,10 @@ async def test_chapter_generation_trace_service_records_node_duration_ms():
 
         assert traces[0].metadata["duration_ms"] == 2500
 
-    await engine.dispose()
 
-
-@pytest.mark.asyncio
-async def test_chapter_generation_trace_service_marks_whether_node_used_llm():
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
+@pytest.mark.asyncio(loop_scope="session")
+async def test_chapter_generation_trace_service_marks_whether_node_used_llm(db_session_factory):
+    async with db_session_factory() as session:
         project_id = "project-trace-llm-flag"
         session.add(User(id=1, username="writer", hashed_password="secret"))
         session.add(NovelProject(id=project_id, user_id=1, title="测试小说", initial_prompt="测试"))
@@ -153,22 +116,10 @@ async def test_chapter_generation_trace_service_marks_whether_node_used_llm():
         assert traces[0].metadata["uses_llm"] is False
         assert traces[1].metadata["uses_llm"] is True
 
-    await engine.dispose()
 
-
-@pytest.mark.asyncio
-async def test_novel_service_serializes_chapter_generation_traces():
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
+@pytest.mark.asyncio(loop_scope="session")
+async def test_novel_service_serializes_chapter_generation_traces(db_session_factory):
+    async with db_session_factory() as session:
         project_id = "project-trace-schema"
         session.add(User(id=1, username="writer", hashed_password="secret"))
         project = NovelProject(id=project_id, user_id=1, title="测试小说", initial_prompt="测试")
@@ -214,22 +165,10 @@ async def test_novel_service_serializes_chapter_generation_traces():
         assert schema.generation_traces[0].user_prompt == "真实用户 prompt"
         assert schema.generation_traces[0].raw_response == "模型原始响应"
 
-    await engine.dispose()
 
-
-@pytest.mark.asyncio
-async def test_novel_service_get_chapter_schema_loads_generation_traces():
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
+@pytest.mark.asyncio(loop_scope="session")
+async def test_novel_service_get_chapter_schema_loads_generation_traces(db_session_factory):
+    async with db_session_factory() as session:
         project_id = "project-trace-single-chapter"
         session.add(User(id=1, username="writer", hashed_password="secret"))
         session.add(NovelProject(id=project_id, user_id=1, title="测试小说", initial_prompt="测试"))
@@ -253,5 +192,3 @@ async def test_novel_service_get_chapter_schema_loads_generation_traces():
         assert [trace.node_key for trace in schema.generation_traces] == ["draft_generation"]
         assert schema.generation_traces[0].user_prompt == "单章接口真实 prompt"
         assert schema.generation_traces[0].raw_response == "单章接口真实 response"
-
-    await engine.dispose()

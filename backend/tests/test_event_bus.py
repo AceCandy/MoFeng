@@ -43,7 +43,7 @@ def test_chapter_status_channel_naming() -> None:
     assert event_bus.chapter_status_channel("abc-9", 12) == "chapter:status:abc-9:12"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_publish_silently_skips_when_redis_unavailable() -> None:
     """未配置 Redis（客户端为 None）时 publish 静默跳过，不抛异常、不创建 task。"""
     _install_client(None)
@@ -51,7 +51,7 @@ async def test_publish_silently_skips_when_redis_unavailable() -> None:
     assert event_bus._publish_tasks == set()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_publish_creates_fire_and_forget_task() -> None:
     """有 Redis 客户端时 publish 创建 fire-and-forget task，不阻塞调用方。"""
     client = MagicMock()
@@ -64,7 +64,7 @@ async def test_publish_creates_fire_and_forget_task() -> None:
     client.publish.assert_awaited_once_with("chapter:status:p1:1", "1")
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_publish_task_swallows_redis_error() -> None:
     """Redis publish 抛异常时被 _safe_publish 静默捕获，不外抛、不阻塞调用方。"""
     client = MagicMock()
@@ -76,7 +76,7 @@ async def test_publish_task_swallows_redis_error() -> None:
     # 到这里未抛异常即通过
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_subscribe_returns_none_when_redis_unavailable() -> None:
     """未配置 Redis 时 subscribe 返回 None，供 SSE 回退轮询。"""
     _install_client(None)
@@ -84,7 +84,7 @@ async def test_subscribe_returns_none_when_redis_unavailable() -> None:
     assert result is None
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_subscribe_returns_pubsub_on_success() -> None:
     """有 Redis 时 subscribe 返回 PubSub 并完成 channel 订阅。"""
     pubsub = MagicMock()
@@ -101,7 +101,7 @@ async def test_subscribe_returns_pubsub_on_success() -> None:
     pubsub.aclose.assert_not_awaited()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_subscribe_returns_none_and_closes_pubsub_on_connection_error() -> None:
     """subscribe 建连失败时返回 None 并 aclose pubsub，避免连接泄漏。"""
     pubsub = MagicMock()
@@ -191,7 +191,7 @@ def test_background_task_channel_naming() -> None:
     assert event_bus.background_task_channel(42) == "task:status:42"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_publish_background_task_silently_skips_when_redis_unavailable() -> None:
     """未配置 Redis 时 publish 静默跳过，不抛异常、不创建 task。"""
     _install_client(None)
@@ -199,7 +199,7 @@ async def test_publish_background_task_silently_skips_when_redis_unavailable() -
     assert event_bus._publish_tasks == set()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_publish_background_task_creates_fire_and_forget_task() -> None:
     """有 Redis 客户端时 publish 创建 fire-and-forget task，不阻塞调用方。"""
     client = MagicMock()
@@ -212,7 +212,7 @@ async def test_publish_background_task_creates_fire_and_forget_task() -> None:
     client.publish.assert_awaited_once_with("task:status:7", "1")
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_subscribe_background_task_returns_none_when_redis_unavailable() -> None:
     """未配置 Redis 时 subscribe 返回 None，供 SSE 回退轮询。"""
     _install_client(None)
@@ -220,7 +220,7 @@ async def test_subscribe_background_task_returns_none_when_redis_unavailable() -
     assert result is None
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_subscribe_background_task_returns_pubsub_on_success() -> None:
     """有 Redis 时 subscribe 返回 PubSub 并完成 channel 订阅。"""
     pubsub = MagicMock()
@@ -237,7 +237,7 @@ async def test_subscribe_background_task_returns_pubsub_on_success() -> None:
     pubsub.aclose.assert_not_awaited()
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_subscribe_background_task_returns_none_and_closes_pubsub_on_connection_error() -> None:
     """subscribe 建连失败时返回 None 并 aclose pubsub，避免连接泄漏。"""
     pubsub = MagicMock()

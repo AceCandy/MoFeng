@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from backend.app.schemas.novel import (
+from app.schemas.novel import (
     Chapter,
     ChapterGenerationStatus,
     ConfirmFinalizeChapterRequest,

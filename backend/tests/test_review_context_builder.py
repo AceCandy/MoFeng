@@ -10,7 +10,7 @@ from app.services.vector_store_service import VectorStoreService
 from app.models.foreshadowing import Foreshadowing
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_build_review_context_with_pending_foreshadows():
     """测试构建包含待回收伏笔的评审上下文"""
     # Mock session
@@ -60,7 +60,7 @@ async def test_build_review_context_with_pending_foreshadows():
     assert result["novel_blueprint"] == {}  # Base context preserved
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_build_review_context_with_plot_threads():
     """测试提取活跃情节线索"""
     session = AsyncMock(spec=AsyncSession)
@@ -105,7 +105,7 @@ async def test_build_review_context_with_plot_threads():
     assert truth_thread["foreshadow_count"] == 2
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_build_review_context_graceful_degradation():
     """测试异常时优雅降级"""
     session = AsyncMock(spec=AsyncSession)
@@ -129,7 +129,7 @@ async def test_build_review_context_graceful_degradation():
     assert result.get("pending_foreshadows", []) == []
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_get_pending_foreshadows_filters_correctly():
     """测试伏笔查询正确过滤"""
     session = AsyncMock(spec=AsyncSession)
@@ -162,7 +162,7 @@ async def test_get_pending_foreshadows_filters_correctly():
     assert all(f["chapter_number"] < 5 for f in result)
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_get_related_chapters_merges_chunks_and_summaries():
     """测试相关章节检索会合并 chunk 和 summary 结果"""
     session = AsyncMock(spec=AsyncSession)

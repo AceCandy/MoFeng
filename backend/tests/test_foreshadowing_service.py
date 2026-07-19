@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 from app.services.foreshadowing_service import ForeshadowingService
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_get_unresolved_foreshadowings_uses_active_statuses_and_previous_chapters():
     session = AsyncMock()
     service = ForeshadowingService(session)
@@ -25,7 +25,7 @@ async def test_get_unresolved_foreshadowings_uses_active_statuses_and_previous_c
     assert "status IN" in compiled
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_analyze_foreshadowings_counts_revealed_and_reuses_existing_analysis():
     session = AsyncMock()
     service = ForeshadowingService(session)

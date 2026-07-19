@@ -1,11 +1,9 @@
 import pytest
 from fastapi import HTTPException
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
 
-from app.db.base import Base
 from app.models import (
+    BlueprintCharacter,
     Chapter,
     ChapterEvaluation,
     ChapterGenerationTrace,
@@ -23,30 +21,15 @@ from app.services.novel_service import NovelService
 from app.services.vector_store_service import VectorStoreService
 
 
-async def _create_session_factory():
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    return engine, session_factory
-
-
-@pytest.mark.asyncio
-async def test_delete_chapters_allows_draft_outlines_and_latest_completed_chapter_only() -> None:
-    engine, session_factory = await _create_session_factory()
+@pytest.mark.asyncio(loop_scope="session")
+async def test_delete_chapters_allows_draft_outlines_and_latest_completed_chapter_only(db_session_factory) -> None:
 
     deleted_vector_batches: list[list[int]] = []
 
     async def delete_vectors(chapter_numbers: list[int]) -> None:
         deleted_vector_batches.append(chapter_numbers)
 
-    async with session_factory() as session:
+    async with db_session_factory() as session:
         project_id = "project-delete-policy"
         session.add(User(id=1, username="writer", hashed_password="secret"))
         session.add(NovelProject(id=project_id, user_id=1, title="测试小说", initial_prompt="测试"))
@@ -116,14 +99,11 @@ async def test_delete_chapters_allows_draft_outlines_and_latest_completed_chapte
         remaining_outlines = (await session.execute(select(ChapterOutline))).scalars().all()
         assert [outline.chapter_number for outline in remaining_outlines] == [1]
 
-    await engine.dispose()
 
+@pytest.mark.asyncio(loop_scope="session")
+async def test_delete_chapters_rejects_middle_outline_deletion_that_leaves_gap(db_session_factory) -> None:
 
-@pytest.mark.asyncio
-async def test_delete_chapters_rejects_middle_outline_deletion_that_leaves_gap() -> None:
-    engine, session_factory = await _create_session_factory()
-
-    async with session_factory() as session:
+    async with db_session_factory() as session:
         project_id = "project-delete-middle-outline"
         session.add(User(id=1, username="writer", hashed_password="secret"))
         session.add(NovelProject(id=project_id, user_id=1, title="测试小说", initial_prompt="测试"))
@@ -146,14 +126,11 @@ async def test_delete_chapters_rejects_middle_outline_deletion_that_leaves_gap()
         assert blocked.value.status_code == 400
         assert "只能删除尾部连续未生成章节大纲" in str(blocked.value.detail)
 
-    await engine.dispose()
 
+@pytest.mark.asyncio(loop_scope="session")
+async def test_delete_latest_completed_chapter_requires_confirmation_flag_not_confirmation_text(db_session_factory) -> None:
 
-@pytest.mark.asyncio
-async def test_delete_latest_completed_chapter_requires_confirmation_flag_not_confirmation_text() -> None:
-    engine, session_factory = await _create_session_factory()
-
-    async with session_factory() as session:
+    async with db_session_factory() as session:
         project_id = "project-delete-confirmation"
         session.add(User(id=1, username="writer", hashed_password="secret"))
         session.add(NovelProject(id=project_id, user_id=1, title="测试小说", initial_prompt="测试"))
@@ -192,18 +169,15 @@ async def test_delete_latest_completed_chapter_requires_confirmation_flag_not_co
             await session.execute(select(Chapter).where(Chapter.project_id == project_id, Chapter.chapter_number == 2))
         ).scalars().first()
 
-    await engine.dispose()
 
-
-@pytest.mark.asyncio
-async def test_delete_latest_completed_chapter_removes_finalization_artifacts_and_restores_memory() -> None:
-    engine, session_factory = await _create_session_factory()
+@pytest.mark.asyncio(loop_scope="session")
+async def test_delete_latest_completed_chapter_removes_finalization_artifacts_and_restores_memory(db_session_factory) -> None:
     deleted_vector_batches: list[list[int]] = []
 
     async def delete_vectors(chapter_numbers: list[int]) -> None:
         deleted_vector_batches.append(chapter_numbers)
 
-    async with session_factory() as session:
+    async with db_session_factory() as session:
         project_id = "project-delete-artifacts"
         session.add(User(id=1, username="writer", hashed_password="secret"))
         session.add(NovelProject(id=project_id, user_id=1, title="测试小说", initial_prompt="测试"))
@@ -247,12 +221,19 @@ async def test_delete_latest_completed_chapter_removes_finalization_artifacts_an
                 chapter_summary="第二章梳理",
             )
         )
+        session.add(BlueprintCharacter(project_id=project_id, name="主角", position=1))
+        await session.flush()
+        bp_character = (
+            await session.execute(
+                select(BlueprintCharacter).where(BlueprintCharacter.project_id == project_id)
+            )
+        ).scalars().one()
         session.add(
             CharacterState(
                 id=1,
                 project_id=project_id,
-                character_id=0,
-                character_name="__all__",
+                character_id=bp_character.id,
+                character_name="主角",
                 chapter_number=2,
                 extra={"raw_state_text": "第二章角色状态"},
             )
@@ -298,18 +279,31 @@ async def test_delete_latest_completed_chapter_removes_finalization_artifacts_an
         assert memory.last_updated_chapter == 1
         assert memory.global_summary == "第一章后的全局记忆"
 
-    await engine.dispose()
 
+@pytest.mark.asyncio(loop_scope="session")
+async def test_vector_store_delete_by_chapters_propagates_delete_failures(monkeypatch) -> None:
+    """delete_by_chapters 底层删除失败时必须把异常向上抛出，供上层事务回滚。"""
 
-@pytest.mark.asyncio
-async def test_vector_store_delete_by_chapters_propagates_delete_failures() -> None:
-    class FailingClient:
+    class FailingSession:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return False
+
         async def execute(self, *_args, **_kwargs):
             raise RuntimeError("vector delete failed")
 
-    service = object.__new__(VectorStoreService)
-    service._client = FailingClient()
-    service._schema_ready = True
+        async def commit(self):
+            ...
+
+        async def rollback(self):
+            ...
+
+    monkeypatch.setattr(
+        "app.services.vector_store_service.AsyncSessionLocal",
+        lambda: FailingSession(),
+    )
 
     with pytest.raises(RuntimeError, match="vector delete failed"):
-        await service.delete_by_chapters("project-vector-failure", [2])
+        await VectorStoreService().delete_by_chapters("project-vector-failure", [2])

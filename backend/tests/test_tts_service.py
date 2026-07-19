@@ -113,7 +113,7 @@ class FakeResponseStream:
         return False
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_mimo_synthesis_uses_chat_audio_contract(monkeypatch):
     wav = _make_wav()
     encoded = base64.b64encode(wav).decode("ascii")
@@ -139,7 +139,7 @@ async def test_mimo_synthesis_uses_chat_audio_contract(monkeypatch):
     assert FakeAsyncClient.request["headers"]["Authorization"] == "Bearer secret-key"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_openai_speech_synthesis_returns_binary_audio(monkeypatch):
     FakeAsyncClient.response = httpx.Response(
         200,
@@ -167,7 +167,7 @@ async def test_openai_speech_synthesis_returns_binary_audio(monkeypatch):
     }
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_synthesis_rejects_missing_default_configuration():
     service = TTSService(AsyncMock())
     service.model_repo = SimpleNamespace(get_default_tts=AsyncMock(return_value=None))
@@ -176,7 +176,7 @@ async def test_synthesis_rejects_missing_default_configuration():
         await service.synthesize(7, "正文")
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_synthesis_rejects_invalid_model_or_provider():
     service = TTSService(AsyncMock())
     invalid = _model()
@@ -187,7 +187,7 @@ async def test_synthesis_rejects_invalid_model_or_provider():
         await service.synthesize(7, "正文")
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_synthesis_maps_timeout_without_exposing_upstream(monkeypatch):
     FakeAsyncClient.response = httpx.ReadTimeout("upstream secret timeout")
     monkeypatch.setattr(httpx, "AsyncClient", FakeAsyncClient)
@@ -198,7 +198,7 @@ async def test_synthesis_maps_timeout_without_exposing_upstream(monkeypatch):
         await service.synthesize(7, "不能写入日志的正文")
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_mimo_synthesis_retries_after_timeout_then_succeeds(monkeypatch):
     # 首次上游超时、第二次成功：验证超时已纳入重试范围（原逻辑超时直接抛出不重试）
     wav = _make_wav()
@@ -219,7 +219,7 @@ async def test_mimo_synthesis_retries_after_timeout_then_succeeds(monkeypatch):
     assert result.media_type == "audio/wav"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_openai_synthesis_retries_after_timeout_then_succeeds(monkeypatch):
     success = httpx.Response(
         200,
@@ -240,7 +240,7 @@ async def test_openai_synthesis_retries_after_timeout_then_succeeds(monkeypatch)
     assert result.media_type == "audio/mpeg"
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_synthesis_rejects_empty_or_invalid_audio(monkeypatch):
     FakeAsyncClient.response = httpx.Response(
         200,
@@ -255,7 +255,7 @@ async def test_synthesis_rejects_empty_or_invalid_audio(monkeypatch):
         await service.synthesize(7, "正文")
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 @pytest.mark.parametrize(
     ("protocol", "content", "headers"),
     [
@@ -284,7 +284,7 @@ async def test_synthesis_rejects_invalid_audio_format(monkeypatch, protocol, con
         await service.synthesize(7, "正文")
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_synthesis_rejects_oversized_upstream_response(monkeypatch):
     encoded = base64.b64encode(b"RIFF\x00\x00\x00\x00WAVEdata").decode("ascii")
     FakeAsyncClient.response = httpx.Response(
@@ -311,7 +311,7 @@ def test_wav_validation_rejects_silent_and_truncated():
     assert TTSService._is_valid_wav(big[:-200]) is False
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_synthesis_rejects_silent_wav_after_retry(monkeypatch):
     # 上游偶发返回"完整但静音"的 wav：校验失败 → 重试一次 → 仍静音 → 报错（前端走浏览器兜底）
     silent = _make_wav(pcm=b"\x00" * 1000)

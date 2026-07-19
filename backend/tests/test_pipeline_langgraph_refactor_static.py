@@ -3,12 +3,9 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import selectinload
-from sqlalchemy.pool import StaticPool
 
 from app.api.routers.writer import _build_evaluation_failure_detail, _build_generation_failure_detail
-from app.db.base import Base
 from app.models import Chapter, ChapterOutline, ChapterVersion, NovelBlueprint, NovelProject
 from app.models.user import User
 from app.services.novel_service import NovelService
@@ -318,8 +315,8 @@ def test_pipeline_review_and_refinement_failures_are_not_silently_ignored() -> N
     assert "沿用默认版本选择" not in source
 
 
-@pytest.mark.asyncio
-async def test_pipeline_director_mission_failure_terminates_generation() -> None:
+@pytest.mark.asyncio(loop_scope="session")
+async def test_pipeline_director_mission_failure_terminates_generation(db_session_factory) -> None:
     class FakePromptService:
         async def get_prompt(self, name: str) -> str:
             assert name == "chapter_plan"
@@ -482,19 +479,9 @@ def test_pipeline_state_does_not_reuse_orm_entities_across_commits() -> None:
     assert "selectinload(Chapter.selected_version)" in source
 
 
-@pytest.mark.asyncio
-async def test_collect_history_context_loads_selected_version_with_async_session() -> None:
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
+@pytest.mark.asyncio(loop_scope="session")
+async def test_collect_history_context_loads_selected_version_with_async_session(db_session_factory) -> None:
+    async with db_session_factory() as session:
         project_id = "project-history-context"
         session.add(User(id=1, username="writer", hashed_password="secret"))
         session.add(
@@ -549,22 +536,10 @@ async def test_collect_history_context_loads_selected_version_with_async_session
         assert history["previous_summary"] == "旧章摘要"
         assert history["previous_tail"] == "前序正文开头。\n前序正文结尾。"
 
-    await engine.dispose()
 
-
-@pytest.mark.asyncio
-async def test_mark_generation_failed_records_full_runtime_error_trace() -> None:
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
+@pytest.mark.asyncio(loop_scope="session")
+async def test_mark_generation_failed_records_full_runtime_error_trace(db_session_factory) -> None:
+    async with db_session_factory() as session:
         project_id = "project-failed-trace"
         full_error = "修复润色失败：模型返回 JSON 解析错误，真实错误需要完整保留给前端查看"
         session.add(User(id=1, username="writer", hashed_password="secret"))
@@ -606,22 +581,10 @@ async def test_mark_generation_failed_records_full_runtime_error_trace() -> None
         assert traces[-1].status == "failed"
         assert traces[-1].error == full_error
 
-    await engine.dispose()
 
-
-@pytest.mark.asyncio
-async def test_replace_chapter_versions_stores_review_feedback_while_waiting_for_confirm() -> None:
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
+@pytest.mark.asyncio(loop_scope="session")
+async def test_replace_chapter_versions_stores_review_feedback_while_waiting_for_confirm(db_session_factory) -> None:
+    async with db_session_factory() as session:
         project_id = "project-auto-review-feedback"
         session.add(User(id=1, username="writer", hashed_password="secret"))
         session.add(
@@ -674,5 +637,3 @@ async def test_replace_chapter_versions_stores_review_feedback_while_waiting_for
         assert saved_chapter.real_summary is None
         assert saved_chapter.evaluations[-1].feedback == evaluation_feedback
         assert saved_chapter.evaluations[-1].version_id == saved_chapter.versions[0].id
-
-    await engine.dispose()

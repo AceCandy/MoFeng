@@ -1,9 +1,6 @@
 import pytest
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
 
-from app.db.base import Base
 from app.models import (
     BlueprintCharacter,
     ChapterBlueprint,
@@ -27,21 +24,12 @@ class FakeLLMService:
         return "更新后的全局摘要"
 
 
-@pytest.mark.asyncio
-async def test_finalize_chapter_uses_async_session_without_missing_greenlet() -> None:
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
+@pytest.mark.asyncio(loop_scope="session")
+async def test_finalize_chapter_uses_async_session_without_missing_greenlet(db_session_factory) -> None:
+    async with db_session_factory() as session:
         session.add(User(id=1, username="writer", hashed_password="secret"))
         session.add(NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试"))
+        await session.commit()
         session.add(BlueprintCharacter(project_id="project-1", name="主角", position=1))
         session.add(ChapterBlueprint(project_id="project-1", chapter_number=1))
         await session.commit()
@@ -92,24 +80,13 @@ async def test_finalize_chapter_uses_async_session_without_missing_greenlet() ->
         assert states[0].character_name == "主角"
         assert states[0].extra == {"raw_state_text": "主角：状态稳定"}
 
-    await engine.dispose()
 
-
-@pytest.mark.asyncio
-async def test_finalize_chapter_skips_character_state_without_blueprint_character() -> None:
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
+@pytest.mark.asyncio(loop_scope="session")
+async def test_finalize_chapter_skips_character_state_without_blueprint_character(db_session_factory) -> None:
+    async with db_session_factory() as session:
         session.add(User(id=1, username="writer", hashed_password="secret"))
         session.add(NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试"))
+        await session.commit()
         session.add(ChapterBlueprint(project_id="project-1", chapter_number=1))
         await session.commit()
 
@@ -135,5 +112,3 @@ async def test_finalize_chapter_skips_character_state_without_blueprint_characte
         # 没有蓝图角色时不能写 character_id=0，否则 MySQL 外键会在定稿时回滚整笔事务。
         assert states == []
         assert snapshots[0].character_states_snapshot == {"raw_text": "主角：状态稳定"}
-
-    await engine.dispose()

@@ -15,7 +15,7 @@ def _disable_model_routes(service: LLMService) -> None:
     )
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_resolve_llm_config_rejects_missing_user_context():
     service = LLMService(AsyncMock())
     _disable_model_routes(service)
@@ -27,7 +27,7 @@ async def test_resolve_llm_config_rejects_missing_user_context():
     assert "默认 LLM 配置已禁用" in exc_info.value.detail
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_resolve_llm_config_requires_enabled_chat_model():
     service = LLMService(AsyncMock())
     _disable_model_routes(service)
@@ -40,7 +40,7 @@ async def test_resolve_llm_config_requires_enabled_chat_model():
     assert "基础 LLM" not in exc_info.value.detail
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_resolve_llm_config_does_not_fallback_to_legacy_user_level_values():
     service = LLMService(AsyncMock())
     _disable_model_routes(service)
@@ -61,7 +61,7 @@ async def test_resolve_llm_config_does_not_fallback_to_legacy_user_level_values(
     assert "LLM 模型" in exc_info.value.detail
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_resolve_llm_config_requires_primary_chat_model_even_when_enabled_model_exists():
     service = LLMService(AsyncMock())
     provider = SimpleNamespace(
@@ -96,7 +96,7 @@ async def test_resolve_llm_config_requires_primary_chat_model_even_when_enabled_
     assert "主模型" in exc_info.value.detail
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_resolve_llm_config_uses_stage_route_model():
     service = LLMService(AsyncMock())
     provider = SimpleNamespace(
@@ -135,7 +135,7 @@ async def test_resolve_llm_config_uses_stage_route_model():
     assert config["model_id"] == 42
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_resolve_embedding_config_rejects_chat_only_route():
     service = LLMService(AsyncMock())
     provider = SimpleNamespace(
@@ -167,7 +167,7 @@ async def test_resolve_embedding_config_rejects_chat_only_route():
     assert "embedding" in exc_info.value.detail
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_stream_and_collect_passes_provider_type_to_llm_client(monkeypatch):
     class FakeLLMClient:
         init_kwargs = {}
@@ -210,7 +210,7 @@ async def test_stream_and_collect_passes_provider_type_to_llm_client(monkeypatch
     }
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_stream_and_collect_retries_transient_concurrency_limit(monkeypatch):
     class FakeLLMClient:
         attempts = 0
@@ -254,7 +254,7 @@ async def test_stream_and_collect_retries_transient_concurrency_limit(monkeypatc
     assert len(sleep_calls) == 1
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_stream_and_collect_does_not_retry_non_retryable_errors(monkeypatch):
     class FakeLLMClient:
         attempts = 0
@@ -296,7 +296,7 @@ async def test_stream_and_collect_does_not_retry_non_retryable_errors(monkeypatc
     assert sleep_calls == []
 
 
-@pytest.mark.asyncio
+@pytest.mark.asyncio(loop_scope="session")
 async def test_get_embedding_does_not_fallback_to_legacy_user_level_values():
     service = LLMService(AsyncMock())
     _disable_model_routes(service)

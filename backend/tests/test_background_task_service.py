@@ -1,27 +1,15 @@
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
-
 import pytest
 
-from app.db.base import Base
+from app.models import NovelProject
 from app.models.user import User
 from app.services.background_task_service import BackgroundTaskService
 
 
-@pytest.mark.asyncio
-async def test_background_task_service_records_status_progress_and_logs():
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
+@pytest.mark.asyncio(loop_scope="session")
+async def test_background_task_service_records_status_progress_and_logs(db_session_factory):
+    async with db_session_factory() as session:
         session.add(User(id=1, username="writer", hashed_password="secret"))
+        session.add(NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试"))
         await session.commit()
 
         service = BackgroundTaskService(session)
@@ -53,5 +41,3 @@ async def test_background_task_service_records_status_progress_and_logs():
             "AI 已返回大纲结果",
             "任务执行完成",
         ]
-
-    await engine.dispose()
