@@ -252,10 +252,10 @@ class LLMConfigService:
         instance = await self.repo.get_by_user(user_id)
         data = payload.model_dump(exclude_unset=True)
         if "llm_provider_url" in data and data["llm_provider_url"] is not None:
-            # HttpUrl 类型在 sqlite 中无法直接写入，需要提前转为字符串
+            # HttpUrl 类型统一转为字符串写入
             data["llm_provider_url"] = str(data["llm_provider_url"])
         if "embedding_provider_url" in data and data["embedding_provider_url"] is not None:
-            # HttpUrl 类型在 sqlite 中无法直接写入，需要提前转为字符串
+            # HttpUrl 类型统一转为字符串写入
             data["embedding_provider_url"] = str(data["embedding_provider_url"])
 
         # 默认模式固定为 openai：仅在用户显式选择 ollama 时写入 ollama。

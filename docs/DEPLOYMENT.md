@@ -131,10 +131,10 @@ Recommended for forks:
 - `EMAIL_FROM`
 - `ENABLE_LINUXDO_LOGIN` and related OAuth settings
 
-### 3.2 Start with SQLite
+### 3.2 Start with bundled PostgreSQL
 
 ```bash
-docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml --profile postgres up -d --build
 ```
 
 Default access URL:
@@ -143,27 +143,13 @@ Default access URL:
 
 The actual external port comes from `APP_PORT` in `deploy/.env`.
 
-### 3.3 Start with bundled MySQL
-
-Set in `deploy/.env`:
-
-```env
-DB_PROVIDER=mysql
-```
-
-Then run:
-
-```bash
-docker compose --env-file deploy/.env -f deploy/docker-compose.yml --profile mysql up -d --build
-```
-
-### 3.4 View logs
+### 3.3 View logs
 
 ```bash
 docker compose --env-file deploy/.env -f deploy/docker-compose.yml logs -f
 ```
 
-### 3.5 Stop services
+### 3.4 Stop services
 
 ```bash
 docker compose --env-file deploy/.env -f deploy/docker-compose.yml down
@@ -180,8 +166,7 @@ Minimum startup configuration:
 | Variable | Required | Description |
 |---|---|---|
 | `SECRET_KEY` | Yes | JWT signing secret |
-| `DB_PROVIDER` | No | `sqlite` or `mysql` |
-| `SQLITE_DB_PATH` | No | SQLite file path when using SQLite |
+| `POSTGRES_HOST` / `POSTGRES_PORT` / `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DATABASE` | Yes | PostgreSQL connection |
 
 Recommended for writing features:
 
@@ -205,8 +190,7 @@ Template: `deploy/.env.example`
 Additional common variables:
 
 - `APP_PORT`: exposed application port
-- `SQLITE_STORAGE_SOURCE`: host path for SQLite persistence
-- `MYSQL_*`: MySQL connection or bundled MySQL configuration
+- `POSTGRES_*`: PostgreSQL connection or bundled PostgreSQL configuration
 - `IMAGE_REPO`: image repository name
 
 ## 5. First-start initialization

@@ -155,9 +155,9 @@ flowchart TD
 
 - 前端：Vue 3 + Vite + TypeScript + TanStack Query for Vue + Pinia + Vue Router + Naive UI
 - 后端：FastAPI + SQLAlchemy + Pydantic Settings + LangGraph（章节生成流水线状态机编排）
-- 存储：SQLite / MySQL + libsql 向量检索 + Redis（缓存与后台任务 SSE 推送）
+- 存储：PostgreSQL + libsql 向量检索 + Redis（缓存与后台任务 SSE 推送）
 - AI：OpenAI 兼容接口 + OpenAI / Ollama Embedding
-- 部署：Docker Compose 单容器，supervisord 托管 uvicorn + nginx 多进程；可选 MySQL / Redis profile
+- 部署：Docker Compose 单容器，supervisord 托管 uvicorn + nginx 多进程；可选 PostgreSQL / Redis profile
 
 ### 前端状态模型
 
@@ -236,10 +236,10 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build
 
 默认访问地址：`http://127.0.0.1:6100`
 
-如需启用内置 MySQL：
+如需启用内置 PostgreSQL：
 
 ```bash
-docker compose --env-file deploy/.env -f deploy/docker-compose.yml --profile mysql up -d --build
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml --profile postgres up -d --build
 ```
 
 ---
@@ -252,8 +252,7 @@ Docker 部署：使用 `deploy/.env.example` 作为 `deploy/.env` 模板。
 最低可启动配置：
 
 - `SECRET_KEY`
-- `DB_PROVIDER`
-- `SQLITE_DB_PATH`（当 `DB_PROVIDER=sqlite`）
+- `POSTGRES_HOST` / `POSTGRES_PORT` / `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DATABASE`
 
 建议补齐（确保创作能力完整可用）：
 

@@ -1,4 +1,4 @@
-"""Alembic 迁移环境（async 适配 aiosqlite/asyncmy/asyncpg）。"""
+"""Alembic 迁移环境（async 适配 asyncpg）。"""
 import asyncio
 from logging.config import fileConfig
 

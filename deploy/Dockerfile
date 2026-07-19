@@ -39,7 +39,6 @@ WORKDIR /build
 # 仅在构建阶段安装编译依赖，避免进入最终运行镜像
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
-    default-libmysqlclient-dev \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
@@ -76,7 +75,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx-light \
     supervisor \
     curl \
-    libmariadb3 \
     && rm -rf /var/lib/apt/lists/* /usr/share/doc/* /usr/share/man/* /usr/share/info/*
 
 # 从构建阶段复制 Python 依赖环境
@@ -84,10 +82,9 @@ COPY --from=python-builder /opt/venv /opt/venv
 
 # 仅复制运行时必需的后端代码与内置提示词，避免无关文件进入镜像
 COPY backend/app ./app
-COPY backend/db ./db
 COPY backend/prompts ./prompts
 
-# 清理可能被带入的 SQLite 数据文件，确保首次启动时根据环境变量初始化管理员密码
+# 清理可能残留的本地数据文件，确保首次启动时根据环境变量初始化管理员密码
 RUN rm -rf /app/storage && mkdir -p /app/storage
 
 # 从前端构建阶段复制静态资源到 nginx 默认目录

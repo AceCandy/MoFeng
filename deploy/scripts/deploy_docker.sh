@@ -45,7 +45,7 @@ source .env
 # 检查必需的环境变量
 REQUIRED_VARS=(
     "SECRET_KEY"
-    "MYSQL_PASSWORD"
+    "POSTGRES_PASSWORD"
     "OPENAI_API_KEY"
 )
 
@@ -77,33 +77,13 @@ if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/
 fi
 echo -e "${GREEN}✓ Docker Compose 已安装${NC}"
 
-# 确定使用的数据库
-DB_PROVIDER="${DB_PROVIDER:-sqlite}"
+# 数据库配置（PostgreSQL）
+COMPOSE_PROFILES="--profile postgres"
 echo ""
 echo "数据库配置："
-echo "  提供商: $DB_PROVIDER"
-
-if [ "$DB_PROVIDER" = "mysql" ]; then
-    COMPOSE_PROFILES="--profile mysql"
-    echo "  MySQL 主机: ${MYSQL_HOST:-db}"
-    echo "  MySQL 端口: ${MYSQL_PORT:-3306}"
-    echo "  MySQL 数据库: ${MYSQL_DATABASE:-mofeng}"
-else
-    COMPOSE_PROFILES=""
-    echo "  使用 SQLite（开发模式）"
-fi
-
-# 询问是否执行数据库迁移
-if [ "$DB_PROVIDER" = "mysql" ]; then
-    echo ""
-    echo -e "${YELLOW}是否执行数据库迁移？(y/n)${NC}"
-    read -r response
-    if [ "$response" = "y" ]; then
-        echo "执行数据库迁移..."
-        bash deploy/scripts/run_migrations.sh
-        echo -e "${GREEN}✓ 数据库迁移完成${NC}"
-    fi
-fi
+echo "  PostgreSQL 主机: ${POSTGRES_HOST:-pg}"
+echo "  PostgreSQL 端口: ${POSTGRES_PORT:-5432}"
+echo "  PostgreSQL 数据库: ${POSTGRES_DATABASE:-mofeng}"
 
 # 停止旧容器
 echo ""

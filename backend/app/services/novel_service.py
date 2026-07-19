@@ -967,7 +967,7 @@ class NovelService:
         if value is None:
             return None
         if value.tzinfo is None:
-            # SQLite 常见为 naive 时间；updated_at 默认按 UTC 写入。
+            # 兼容 naive 时间（默认按 UTC 写入），补 UTC 时区。
             return value.replace(tzinfo=timezone.utc)
         return value.astimezone(timezone.utc)
 

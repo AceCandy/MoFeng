@@ -1,4 +1,3 @@
-from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
@@ -13,20 +12,6 @@ from app.models import Chapter, ChapterOutline, NovelProject
 from app.models.user import User
 from app.services.chapter_generation_trace_service import ChapterGenerationTraceService
 from app.services.novel_service import NovelService
-
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
-
-def test_chapter_generation_trace_migration_is_wired_into_deploy_scripts():
-    migration = PROJECT_ROOT / "backend/db/migrations/add_chapter_generation_traces.sql"
-    run_script = PROJECT_ROOT / "deploy/scripts/run_migrations.sh"
-    verify_script = PROJECT_ROOT / "deploy/scripts/verify_migration.sh"
-
-    assert migration.is_file()
-    assert "CREATE TABLE IF NOT EXISTS chapter_generation_traces" in migration.read_text(encoding="utf-8")
-    assert "add_chapter_generation_traces.sql" in run_script.read_text(encoding="utf-8")
-    assert "chapter_generation_traces" in verify_script.read_text(encoding="utf-8")
 
 
 @pytest.mark.asyncio

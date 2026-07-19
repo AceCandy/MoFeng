@@ -14,8 +14,7 @@ import enum
 
 from ..db.base import Base
 
-# SQLite 只有 INTEGER PRIMARY KEY 会自动生成主键；BigInteger 在本地测试库中不会自增。
-BIGINT_PK_TYPE = BigInteger().with_variant(Integer, "sqlite")
+BIGINT_PK_TYPE = BigInteger
 
 
 class CharacterStateType(str, enum.Enum):

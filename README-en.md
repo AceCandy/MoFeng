@@ -156,9 +156,9 @@ Notes:
 
 - Frontend: Vue 3 + Vite + TypeScript + TanStack Query for Vue + Pinia + Vue Router + Naive UI
 - Backend: FastAPI + SQLAlchemy + Pydantic Settings + LangGraph (chapter-generation pipeline state machine)
-- Storage: SQLite / MySQL + libsql vector retrieval + Redis (cache & background-task SSE pub/sub)
+- Storage: PostgreSQL + libsql vector retrieval + Redis (cache & background-task SSE pub/sub)
 - AI: OpenAI-compatible LLM APIs, OpenAI/Ollama embeddings
-- Deploy: Docker Compose single container, supervisord runs uvicorn + nginx; optional MySQL / Redis profiles
+- Deploy: Docker Compose single container, supervisord runs uvicorn + nginx; optional PostgreSQL / Redis profiles
 
 ### Frontend State Model
 
@@ -237,10 +237,10 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build
 
 Default URL: `http://127.0.0.1:6100`
 
-To enable bundled MySQL profile:
+To enable bundled PostgreSQL profile:
 
 ```bash
-docker compose --env-file deploy/.env -f deploy/docker-compose.yml --profile mysql up -d --build
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml --profile postgres up -d --build
 ```
 
 ---
@@ -253,8 +253,7 @@ For Docker deployment: use `deploy/.env.example` as the template for `deploy/.en
 Minimum required settings:
 
 - `SECRET_KEY`
-- `DB_PROVIDER`
-- `SQLITE_DB_PATH` (when `DB_PROVIDER=sqlite`)
+- `POSTGRES_HOST` / `POSTGRES_PORT` / `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DATABASE`
 
 Recommended settings for full writing capabilities:
 

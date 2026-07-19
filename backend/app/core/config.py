@@ -1,6 +1,5 @@
 # AIMETA P=应用配置_环境变量加载和设置类|R=配置加载_环境变量|NR=不含业务逻辑|E=settings|X=internal|A=Settings类|D=pydantic|S=fs|RD=./README.ai
 from functools import lru_cache
-from pathlib import Path
 from typing import Optional
 
 from pydantic import AliasChoices, AnyUrl, Field, HttpUrl, validator
@@ -61,26 +60,11 @@ class Settings(BaseSettings):
         env="DATABASE_URL",
         description="完整的数据库连接串，填入后覆盖下方数据库配置"
     )
-    db_provider: str = Field(
-        default="mysql",
-        env="DB_PROVIDER",
-        description="数据库类型，支持 mysql、sqlite 或 postgresql"
-    )
-    mysql_host: str = Field(default="localhost", env="MYSQL_HOST", description="MySQL 主机名")
-    mysql_port: int = Field(default=3306, env="MYSQL_PORT", description="MySQL 端口")
-    mysql_user: str = Field(default="root", env="MYSQL_USER", description="MySQL 用户名")
-    mysql_password: str = Field(default="", env="MYSQL_PASSWORD", description="MySQL 密码")
-    mysql_database: str = Field(default="mofeng", env="MYSQL_DATABASE", description="MySQL 数据库名称")
     postgres_host: str = Field(default="localhost", env="POSTGRES_HOST", description="PostgreSQL 主机名")
     postgres_port: int = Field(default=5432, env="POSTGRES_PORT", description="PostgreSQL 端口")
     postgres_user: str = Field(default="postgres", env="POSTGRES_USER", description="PostgreSQL 用户名")
     postgres_password: str = Field(default="", env="POSTGRES_PASSWORD", description="PostgreSQL 密码")
     postgres_database: str = Field(default="mofeng", env="POSTGRES_DATABASE", description="PostgreSQL 数据库名称")
-    sqlite_db_path: Optional[str] = Field(
-        default=None,
-        env="SQLITE_DB_PATH",
-        description="SQLite 数据库文件路径（支持绝对或相对路径）",
-    )
 
     # -------------------- 管理员初始化配置 --------------------
     admin_default_username: str = Field(default="admin", env="ADMIN_DEFAULT_USERNAME", description="默认管理员用户名")
@@ -221,13 +205,6 @@ class Settings(BaseSettings):
         """当环境变量中提供 DATABASE_URL 时，原样返回，便于自定义。"""
         return value.strip() if isinstance(value, str) and value.strip() else value
 
-    @validator("db_provider", pre=True)
-    def _normalize_db_provider(cls, value: Optional[str]) -> str:
-        """统一数据库类型大小写，并限制为受支持的驱动。"""
-        candidate = (value or "mysql").strip().lower()
-        if candidate not in {"mysql", "sqlite", "postgresql"}:
-            raise ValueError("DB_PROVIDER 仅支持 mysql、sqlite 或 postgresql")
-        return candidate
     @validator("embedding_provider", pre=True)
     def _normalize_embedding_provider(cls, value: Optional[str]) -> str:
         """限制嵌入模型提供方的取值范围。"""
@@ -247,7 +224,7 @@ class Settings(BaseSettings):
 
     @property
     def sqlalchemy_database_uri(self) -> str:
-        """生成 SQLAlchemy 兼容的异步连接串，数据库类型由 DB_PROVIDER 控制。"""
+        """生成 SQLAlchemy 兼容的异步连接串（PostgreSQL）。"""
         if self.database_url:
             url = make_url(self.database_url)
             database = (url.database or "").strip("/")
@@ -262,43 +239,15 @@ class Settings(BaseSettings):
             )
             return normalized.render_as_string(hide_password=False)
 
-        if self.db_provider == "sqlite":
-            project_root = Path(__file__).resolve().parents[2]
-            sqlite_path = (self.sqlite_db_path or "").strip()
-            if sqlite_path:
-                db_path = Path(sqlite_path).expanduser()
-                if not db_path.is_absolute():
-                    db_path = (project_root / db_path).resolve()
-            else:
-                # SQLite 默认使用 storage/mofeng.db，并转换为绝对路径以避免运行目录差异
-                db_path = (project_root / "storage" / "mofeng.db").resolve()
-            return f"sqlite+aiosqlite:///{db_path}"
-
-        if self.db_provider == "postgresql":
-            # PostgreSQL 分支：统一对密码进行 URL 编码，避免特殊字符破坏连接串
-            from urllib.parse import quote_plus
-
-            encoded_password = quote_plus(self.postgres_password)
-            database = (self.postgres_database or "").strip("/")
-            return (
-                f"postgresql+asyncpg://{self.postgres_user}:{encoded_password}"
-                f"@{self.postgres_host}:{self.postgres_port}/{database}"
-            )
-
-        # MySQL 分支：统一对密码进行 URL 编码，避免特殊字符破坏连接串
+        # PostgreSQL：统一对密码进行 URL 编码，避免特殊字符破坏连接串
         from urllib.parse import quote_plus
 
-        encoded_password = quote_plus(self.mysql_password)
-        database = (self.mysql_database or "").strip("/")
+        encoded_password = quote_plus(self.postgres_password)
+        database = (self.postgres_database or "").strip("/")
         return (
-            f"mysql+asyncmy://{self.mysql_user}:{encoded_password}"
-            f"@{self.mysql_host}:{self.mysql_port}/{database}"
+            f"postgresql+asyncpg://{self.postgres_user}:{encoded_password}"
+            f"@{self.postgres_host}:{self.postgres_port}/{database}"
         )
-
-    @property
-    def is_sqlite_backend(self) -> bool:
-        """辅助属性：判断当前连接串是否指向 SQLite，用于差异化初始化流程。"""
-        return make_url(self.sqlalchemy_database_uri).get_backend_name() == "sqlite"
 
     @property
     def vector_store_enabled(self) -> bool:

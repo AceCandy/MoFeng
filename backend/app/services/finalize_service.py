@@ -15,7 +15,7 @@ import logging
 import re
 from typing import Optional, Dict, Any
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.project_memory import ProjectMemory, ChapterSnapshot
@@ -397,19 +397,8 @@ class FinalizeService:
             logger.warning("项目 %s 角色状态未匹配到蓝图角色，跳过角色状态外键表写入", project_id)
             return
 
-        next_state_id = None
-        if self.db.get_bind().dialect.name == "sqlite":
-            # 兼容已创建过的 SQLite 旧表：BigInteger 主键不会自动递增，显式分配 id 避免定稿写入失败。
-            max_id = (
-                await self.db.execute(select(func.max(CharacterState.id)))
-            ).scalar()
-            next_state_id = (max_id or 0) + 1
-
         for character, block in matched_states:
             state_kwargs = {}
-            if next_state_id is not None:
-                state_kwargs["id"] = next_state_id
-                next_state_id += 1
 
             # character_states.character_id 有外键约束，只能写入真实蓝图角色，原始文本仍保留在 extra 中。
             state = CharacterState(

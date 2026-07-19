@@ -14,12 +14,11 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, Boolean, func
-from sqlalchemy.dialects.mysql import LONGTEXT
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db.base import Base
 
-LONG_TEXT_TYPE = Text().with_variant(LONGTEXT, "mysql")
+LONG_TEXT_TYPE = Text
 
 
 class WriterPersona(Base):

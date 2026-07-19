@@ -103,17 +103,12 @@ DEBUG=false
 LOGGING_LEVEL=INFO
 APP_PORT=6100
 
-# 数据库配置（使用 SQLite，无需额外配置）
-DB_PROVIDER=sqlite
-SQLITE_STORAGE_SOURCE=sqlite-data
-
-# MySQL 配置（如果需要切换到 MySQL，修改 DB_PROVIDER=mysql 并启用 profile）
-MYSQL_HOST=db
-MYSQL_PORT=3306
-MYSQL_USER=mofeng
-MYSQL_PASSWORD=MoFeng-MySQL-$(openssl rand -hex 16)
-MYSQL_DATABASE=mofeng
-MYSQL_ROOT_PASSWORD=MoFeng-Root-$(openssl rand -hex 16)
+# 数据库配置（PostgreSQL，启用 profile postgres）
+POSTGRES_HOST=pg
+POSTGRES_PORT=5432
+POSTGRES_USER=mofeng
+POSTGRES_PASSWORD=MoFeng-PG-$(openssl rand -hex 16)
+POSTGRES_DATABASE=mofeng
 
 # 管理员账号
 ADMIN_DEFAULT_USERNAME=admin

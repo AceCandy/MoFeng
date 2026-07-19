@@ -86,17 +86,8 @@ async def init_db() -> None:
 
 
 async def _ensure_database_exists() -> None:
-    """在首次连接前确认数据库存在，针对不同驱动做最小化准备工作。"""
+    """在首次连接前确认数据库存在，PostgreSQL 场景按需建库。"""
     url = make_url(settings.sqlalchemy_database_uri)
-
-    if url.get_backend_name() == "sqlite":
-        # SQLite 采用文件数据库，确保父目录存在即可，无需额外建库语句
-        db_path = Path(url.database or "").expanduser()
-        if not db_path.is_absolute():
-            project_root = Path(__file__).resolve().parents[2]
-            db_path = (project_root / db_path).resolve()
-        db_path.parent.mkdir(parents=True, exist_ok=True)
-        return
 
     database = (url.database or "").strip("/")
     if not database:
@@ -108,7 +99,7 @@ async def _ensure_database_exists() -> None:
         password=url.password,
         host=url.host,
         port=url.port,
-        database=None,
+        database="postgres",  # 连默认库以执行 CREATE DATABASE（PG 不允许无 database 连接）
         query=url.query,
     )
 
@@ -117,17 +108,11 @@ async def _ensure_database_exists() -> None:
         isolation_level="AUTOCOMMIT",
     )
     async with admin_engine.begin() as conn:
-        # 先查库是否存在，已存在则跳过 CREATE，避免 MySQL Note 1007 被 asyncmy 记为 WARNING 噪音。
-        backend = url.get_backend_name()
-        if backend == "postgresql":
-            exists_sql = "SELECT 1 FROM pg_database WHERE datname = :db"
-            create_sql = f'CREATE DATABASE "{database}"'
-        else:
-            exists_sql = "SELECT 1 FROM information_schema.schemata WHERE schema_name = :db"
-            create_sql = f"CREATE DATABASE `{database}`"
+        # 先查库是否存在，已存在则跳过 CREATE，避免重复建库报错。
+        exists_sql = "SELECT 1 FROM pg_database WHERE datname = :db"
         exists = await conn.execute(text(exists_sql), {"db": database})
         if exists.first() is None:
-            await conn.execute(text(create_sql))
+            await conn.execute(text(f'CREATE DATABASE "{database}"'))
     await admin_engine.dispose()
 
 
