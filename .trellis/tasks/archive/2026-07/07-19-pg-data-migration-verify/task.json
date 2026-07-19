@@ -3,7 +3,7 @@
   "name": "pg-data-migration-verify",
   "title": "PG 数据迁移与验证",
   "description": "",
-  "status": "planning",
+  "status": "completed",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -11,7 +11,7 @@
   "creator": "AceCandy",
   "assignee": "AceCandy",
   "createdAt": "2026-07-19",
-  "completedAt": null,
+  "completedAt": "2026-07-19",
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
@@ -21,6 +21,6 @@
   "children": [],
   "parent": "07-19-migrate-to-postgres",
   "relatedFiles": [],
-  "notes": "",
+  "notes": "实际完成路径与原 PRD 不同：项目已 PG-only（删除 MySQL 驱动 asyncmy、config 的 db_provider 多选、init_db 的 MySQL 反引号建库分支），MySQL->PG 数据迁移前提不再成立；PG 集成测试 profile + 4 个静态测试 dialect 修复由 07-19-pg-only-pgvector 完成。",
   "meta": {}
 }
