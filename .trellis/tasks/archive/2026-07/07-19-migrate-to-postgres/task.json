@@ -3,7 +3,7 @@
   "name": "migrate-to-postgres",
   "title": "迁移主库到 PostgreSQL",
   "description": "",
-  "status": "planning",
+  "status": "completed",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -11,7 +11,7 @@
   "creator": "AceCandy",
   "assignee": "AceCandy",
   "createdAt": "2026-07-19",
-  "completedAt": null,
+  "completedAt": "2026-07-19",
   "branch": null,
   "base_branch": "main",
   "worktree_path": null,
@@ -26,6 +26,6 @@
   ],
   "parent": null,
   "relatedFiles": [],
-  "notes": "",
+  "notes": "PG 迁移整体完成。children：07-19-pg-code-connect / 07-19-fix-model-fk-datetime / 07-19-pg-deploy-config 已归档；07-19-pg-data-migration-verify 的 MySQL 数据迁移因 PG-only 化不再需要，测试部分由 07-19-pg-only-pgvector 覆盖。代码层 config/init_db/requirements 已无 MySQL 残留。",
   "meta": {}
 }
