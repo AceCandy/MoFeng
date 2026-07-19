@@ -175,8 +175,6 @@ Recommended for writing features:
 | `OPENAI_API_KEY` | Yes | Default LLM API key |
 | `OPENAI_API_BASE_URL` | As needed | OpenAI-compatible API base URL |
 | `OPENAI_MODEL_NAME` | Yes | Default generation model |
-| `EMBEDDING_PROVIDER` | Yes | `openai` or `ollama` |
-| `EMBEDDING_MODEL` | Yes | Default embedding model |
 | `VECTOR_STORE_ENABLED` | No | Enable pgvector RAG retrieval (default true) |
 | `ADMIN_DEFAULT_USERNAME` | Yes | Default admin username |
 | `ADMIN_DEFAULT_PASSWORD` | Strongly recommended | Default admin password |

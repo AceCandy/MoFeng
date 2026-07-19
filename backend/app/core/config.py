@@ -93,42 +93,6 @@ class Settings(BaseSettings):
         env="WRITER_CHAPTER_WORD_LIMIT",
         description="章节正文生成目标字数下限配置，低于 2200 会回退默认值",
     )
-    embedding_provider: str = Field(
-        default="openai",
-        env="EMBEDDING_PROVIDER",
-        description="嵌入模型提供方，支持 openai 或 ollama",
-    )
-    embedding_base_url: Optional[AnyUrl] = Field(
-        default=None,
-        env="EMBEDDING_BASE_URL",
-        description="嵌入模型使用的 Base URL",
-    )
-    embedding_api_key: Optional[str] = Field(
-        default=None,
-        env="EMBEDDING_API_KEY",
-        description="嵌入模型专用 API Key",
-    )
-    embedding_model: str = Field(
-        default="text-embedding-3-large",
-        env="EMBEDDING_MODEL",
-        validation_alias=AliasChoices("EMBEDDING_MODEL", "VECTOR_EMBEDDING_MODEL"),
-        description="默认的嵌入模型名称",
-    )
-    embedding_model_vector_size: Optional[int] = Field(
-        default=None,
-        env="EMBEDDING_MODEL_VECTOR_SIZE",
-        description="嵌入向量维度，未配置时将自动检测",
-    )
-    ollama_embedding_base_url: Optional[AnyUrl] = Field(
-        default=None,
-        env="OLLAMA_EMBEDDING_BASE_URL",
-        description="Ollama 嵌入模型服务地址",
-    )
-    ollama_embedding_model: str = Field(
-        default="nomic-embed-text:latest",
-        env="OLLAMA_EMBEDDING_MODEL",
-        description="Ollama 嵌入模型名称",
-    )
     vector_top_k_chunks: int = Field(
         default=5,
         ge=0,
@@ -199,14 +163,6 @@ class Settings(BaseSettings):
     def _normalize_database_url(cls, value: Optional[str]) -> Optional[str]:
         """当环境变量中提供 DATABASE_URL 时，原样返回，便于自定义。"""
         return value.strip() if isinstance(value, str) and value.strip() else value
-
-    @validator("embedding_provider", pre=True)
-    def _normalize_embedding_provider(cls, value: Optional[str]) -> str:
-        """限制嵌入模型提供方的取值范围。"""
-        candidate = (value or "openai").strip().lower()
-        if candidate not in {"openai", "ollama"}:
-            raise ValueError("EMBEDDING_PROVIDER 仅支持 openai 或 ollama")
-        return candidate
 
     @validator("logging_level", pre=True)
     def _normalize_logging_level(cls, value: Optional[str]) -> str:

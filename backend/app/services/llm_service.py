@@ -65,7 +65,6 @@ class LLMService:
         self.ai_model_repo = UserAIModelRepository(session)
         self.stage_route_repo = UserAIStageRouteRepository(session)
         self.usage_service = UsageService(session)
-        self._embedding_dimensions: Dict[str, int] = {}
 
     @staticmethod
     def _get_llm_error_status_code(exc: Exception) -> Optional[int]:
@@ -913,28 +912,7 @@ class LLMService:
         if not isinstance(embedding, list):
             embedding = list(embedding)
 
-        dimension = len(embedding)
-        if not dimension:
-            vector_size_str = await self._get_config_value("embedding.model_vector_size")
-            if vector_size_str:
-                dimension = int(vector_size_str)
-        if dimension:
-            self._embedding_dimensions[target_model] = dimension
         return embedding
-
-    async def get_embedding_dimension(self, model: Optional[str] = None) -> Optional[int]:
-        """获取嵌入向量维度，优先返回缓存结果，其次读取配置。"""
-        provider = await self._get_config_value("embedding.provider") or "openai"
-        default_model = (
-            await self._get_config_value("ollama.embedding_model") or "nomic-embed-text:latest"
-            if provider == "ollama"
-            else await self._get_config_value("embedding.model") or "text-embedding-3-large"
-        )
-        target_model = model or default_model
-        if target_model in self._embedding_dimensions:
-            return self._embedding_dimensions[target_model]
-        vector_size_str = await self._get_config_value("embedding.model_vector_size")
-        return int(vector_size_str) if vector_size_str else None
 
     async def _get_config_value(self, key: str) -> Optional[str]:
         record = await self.system_config_repo.get_by_key(key)

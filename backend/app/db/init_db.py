@@ -20,6 +20,14 @@ from .session import AsyncSessionLocal, engine
 logger = logging.getLogger(__name__)
 LEGACY_SYSTEM_CONFIG_KEYS_TO_DELETE = (
     "updates.version_check_url",
+    # embedding 配置已统一到用户级 UserAIModel（后台模型设置），系统级配置键废弃清理
+    "embedding.provider",
+    "embedding.api_key",
+    "embedding.base_url",
+    "embedding.model",
+    "embedding.model_vector_size",
+    "ollama.embedding_base_url",
+    "ollama.embedding_model",
 )
 
 
@@ -66,8 +74,6 @@ async def init_db() -> None:
                 continue
             existing = await session.get(SystemConfig, entry.key)
             if existing:
-                if entry.key == "embedding.provider" and not (existing.value or "").strip():
-                    existing.value = value
                 if entry.description and existing.description != entry.description:
                     existing.description = entry.description
                 continue

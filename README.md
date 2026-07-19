@@ -259,8 +259,6 @@ Docker 部署：使用 `deploy/.env.example` 作为 `deploy/.env` 模板。
 - `OPENAI_API_KEY`
 - `OPENAI_API_BASE_URL`
 - `OPENAI_MODEL_NAME`
-- `EMBEDDING_PROVIDER`
-- `EMBEDDING_MODEL`
 - `ADMIN_DEFAULT_USERNAME`
 - `ADMIN_DEFAULT_PASSWORD`
 

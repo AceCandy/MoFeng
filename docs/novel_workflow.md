@@ -120,7 +120,7 @@
   - `rag_summaries`（章节摘要）：`id`、`project_id`、`chapter_number`、`title`、`summary`、`embedding`
 - **检索策略**：
   - 使用 pgvector 的余弦距离算子（`<=>`）排序后截取 Top-K。
-  - 查询向量由 `LLMService.get_embedding` 生成，支持 OpenAI 与 Ollama（通过 `EMBEDDING_PROVIDER` 切换）。
+  - 查询向量由 `LLMService.get_embedding` 生成，嵌入模型通过后台「模型设置」配置（用户级 UserAIModel）。
 
 ### 3.3 向量生命周期
 
@@ -135,8 +135,7 @@
 | 配置项 | 说明 | 默认/来源 |
 |--------|------|-----------|
 | `OPENAI_*` | 默认生成模型配置 | `.env` 或系统配置表 |
-| `EMBEDDING_PROVIDER` | 嵌入提供方（`openai` / `ollama`） | `.env` |
-| `EMBEDDING_MODEL` / `OLLAMA_EMBEDDING_MODEL` | 具体嵌入模型名 | `.env` |
+| （向量模型） | 嵌入模型 + 提供方 + 维度 | 后台「模型设置」（用户级 UserAIModel） |
 | `VECTOR_STORE_ENABLED` | 是否启用向量检索（默认开启） | `.env` |
 | `VECTOR_TOP_K_CHUNKS` / `VECTOR_TOP_K_SUMMARIES` | 检索数量 | `.env` / 系统配置 |
 | `WRITER_CHAPTER_VERSION_COUNT` | 章节候选版本数 | 系统配置 / 环境变量 |
