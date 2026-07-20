@@ -46,7 +46,6 @@ const naiveUiCoreModuleNames = new Set([
 const vendorChunks: Array<[string, string[]]> = [
   ['vue-core', ['vue', 'vue-router', 'pinia', '@vue']],
   ['naive-ui-support', ['@css-render', 'css-render', 'vueuc', 'vdirs', 'vooks', 'evtd', 'seemly', 'treemate', 'date-fns', 'async-validator']],
-  ['chart-tools', ['chart.js']],
   ['markdown-tools', ['marked', 'dompurify']],
 ]
 

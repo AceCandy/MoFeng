@@ -2,23 +2,16 @@
 import { computed, toValue, type MaybeRefOrGetter } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import {
-  createOrUpdateLLMConfig,
   createProvider,
   createUserModel,
-  deleteLLMConfig,
   deleteProvider,
   deleteUserModel,
-  getAvailableModels,
-  getLLMConfig,
   getLLMConfigBundle,
   getProviderModels,
   saveStageRoutes,
   updateProvider,
   updateUserModel,
-  type LLMConfig,
   type LLMConfigBundle,
-  type LLMConfigCreate,
-  type ModelListRequest,
   type ProviderCreate,
   type ProviderUpdate,
   type StageRoutesPayload,
@@ -33,7 +26,6 @@ type CapabilitySource = MaybeRefOrGetter<string | undefined>
 export const llmQueryKeys = {
   all: ['llm-config'] as const,
   bundle: () => [...llmQueryKeys.all, 'bundle'] as const,
-  legacyConfig: () => [...llmQueryKeys.all, 'legacy-config'] as const,
   providerModels: (providerId: number, capability = 'all') =>
     [...llmQueryKeys.all, 'provider-models', providerId, capability] as const,
 }
@@ -45,43 +37,6 @@ export function useLLMConfigBundleQuery() {
   return useQuery<LLMConfigBundle>({
     queryKey: llmQueryKeys.bundle(),
     queryFn: getLLMConfigBundle,
-  })
-}
-
-export function useLegacyLLMConfigQuery() {
-  return useQuery<LLMConfig | null>({
-    queryKey: llmQueryKeys.legacyConfig(),
-    queryFn: getLLMConfig,
-  })
-}
-
-export function useSaveLegacyLLMConfigMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (payload: LLMConfigCreate) => createOrUpdateLLMConfig(payload),
-    onSuccess: () =>
-      Promise.all([
-        queryClient.invalidateQueries({ queryKey: llmQueryKeys.legacyConfig() }),
-        invalidateBundle(queryClient),
-      ]),
-  })
-}
-
-export function useDeleteLegacyLLMConfigMutation() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: deleteLLMConfig,
-    onSuccess: () =>
-      Promise.all([
-        queryClient.invalidateQueries({ queryKey: llmQueryKeys.legacyConfig() }),
-        invalidateBundle(queryClient),
-      ]),
-  })
-}
-
-export function useAvailableModelsMutation() {
-  return useMutation({
-    mutationFn: (payload: ModelListRequest) => getAvailableModels(payload),
   })
 }
 

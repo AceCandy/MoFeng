@@ -2,9 +2,6 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
-import { createApp, nextTick } from 'vue'
-
-import TypewriterEffect from '@/components/TypewriterEffect.vue'
 
 import { readGlobalCss } from './readGlobalCss'
 
@@ -493,34 +490,6 @@ describe('UI audit regressions', () => {
     expect(source).toContain('aria-live="polite"')
     expect(source).toContain('role="progressbar"')
     expect(source).toContain(':aria-valuenow="Math.round(progress)"')
-  })
-
-  it('renders complete typewriter text immediately when reduced motion is preferred', async () => {
-    window.matchMedia = ((query: string) =>
-      ({
-        matches: query.includes('prefers-reduced-motion'),
-        media: query,
-        onchange: null,
-        addEventListener: () => {},
-        removeEventListener: () => {},
-        addListener: () => {},
-        removeListener: () => {},
-        dispatchEvent: () => false,
-      }) as MediaQueryList) as typeof window.matchMedia
-
-    const host = document.createElement('div')
-    document.body.appendChild(host)
-    const app = createApp(TypewriterEffect, { text: '墨风' })
-
-    try {
-      app.mount(host)
-      await nextTick()
-
-      expect(host.textContent?.trim()).toBe('墨风')
-    } finally {
-      app.unmount()
-      host.remove()
-    }
   })
 
   it('connects auth form errors to their fields', () => {
