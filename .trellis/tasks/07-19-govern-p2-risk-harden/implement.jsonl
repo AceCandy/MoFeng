@@ -1,1 +1,6 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/backend/security-guidelines.md", "reason": "SSRF 加固、归属校验、生产 debug 门禁的规范依据"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "async session 使用、索引/FK/级联迁移、原子计数的规范依据"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "质量门不放行、资源释放、re-raise 一致性的规范依据"}
+{"file": "docs/audit-governance-2026-07-19.md", "reason": "P2 medium 25 条逐项清单与修法来源"}
+{"file": ".trellis/tasks/07-19-govern-p2-risk-harden/design.md", "reason": "P2 修复模式 A-K 与决策项"}
+{"file": ".trellis/tasks/07-19-govern-p2-risk-harden/implement.md", "reason": "P2 逐项实施清单与验证点"}

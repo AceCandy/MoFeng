@@ -1,1 +1,6 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/backend/security-guidelines.md", "reason": "复核 SSRF/auth/归属/debug 门禁是否符合规范"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "复核 async 迁移/索引/FK/级联/原子计数是否符合规范"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "复核质量门/资源释放/re-raise 是否符合规范"}
+{"file": "docs/audit-governance-2026-07-19.md", "reason": "逐条核对 medium 25 项修复或决策状态"}
+{"file": ".trellis/tasks/07-19-govern-p2-risk-harden/design.md", "reason": "核对修复模式落地与决策项理由"}
+{"file": ".trellis/tasks/07-19-govern-p2-risk-harden/implement.md", "reason": "核对实施清单完成度与验证点"}
