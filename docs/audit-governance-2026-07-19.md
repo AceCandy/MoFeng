@@ -24,6 +24,32 @@ H1-H5 全部实施完成，独立复核通过（基于真实磁盘代码 + codeg
 
 **新发现（P2 候选，H5 范围外）**：`knowledge_retrieval_service.py` 与 H5 同类 MissingGreenlet 风险--async 方法（`retrieve_and_filter`/`get_chapter_context`/`_get_recent_chapter_summaries` 等）内部 6 处 `self.db.query`（同步，:221/:271/:382/:565/:587/:611），经 `pipeline_orchestrator.py:1888` 传 `sync_session` 调用。`/api/review/consistency` 已修（H5），但两层 RAG 链路的 KnowledgeRetrievalService 未修；retrieve_and_filter 在 pipeline_orchestrator:1882 的 try/except 外（该 try 只包 VectorStoreService 初始化），MissingGreenlet 会传播，可能导致两层 RAG 静默降级或生成流程异常。P2 risk-harden 时按 H5 同模式修复（self.db.query -> await self.session.execute(select)）。
 
+## P2 实施状态（2026-07-20）
+
+medium 25 项 + KRService async（新发现）全部处置完成（16 项真做 + 2 项决策不删 + 1 项 CSP 决策不加 + 8 项 P1 已处理）。独立复核通过，后端 pytest 226 passed + alembic upgrade/downgrade 往返 + 前端四件套全绿。
+
+| 项 | 状态 | commit | 说明 |
+|---|---|---|---|
+| M2 writer generate_chapter 归校 | ✅ | 28cfebd | ensure_project_owner OUTSIDE try |
+| M3/M10 SSRF DNS rebinding | ✅ | 1172e0c | 解析失败 fail-closed raise |
+| M4 6 索引 | ✅ | 45b6cfc | alembic 迁移 17a89f18291c |
+| M5 RAG FK/长度 | ✅ | 45b6cfc | String(36) + FK ondelete CASCADE |
+| M6 LLMConfig legacy 字段 | ⏸ 决策不删 | - | schemas/routers/llm_service 在用，非死字段 |
+| M7 伏笔级联统一 | ✅ | 45b6cfc | resolved_at_chapter_id CASCADE->SET NULL |
+| M9 alembic compare_type | ✅ | 45b6cfc | env.py compare_type/compare_server_default |
+| M11 openai 死配置 | ⏸ 决策不删 | - | system_config_defaults 种子链路在用 |
+| M17 nginx 安全头 | ✅ | f64db88 | X-Frame-Options/X-Content-Type-Options/Referrer-Policy/HSTS |
+| M18 nginx 缓存 | ✅ | f64db88 | JS/CSS no-store -> immutable long-cache |
+| M19 AsyncOpenAI close | ✅ | 58ca7cd | LLMClient.aclose + 4 处 finally close |
+| M20 import 大小限制 | ✅ | 28cfebd | 10MB 限制抛 413 |
+| M21 usage 原子 | ✅ | c948e87 | increment_atomic + 独立 session |
+| M22 consistency 质量门 | ✅ | c948e87 | is_consistent=False 不放行 |
+| M23 vector re-raise | ✅ | c948e87 | upsert 失败 re-raise |
+| M24 auth linuxdo SSRF | ✅ | 1172e0c | token_url/user_info_url 校验 + data.get |
+| KRService async（新发现） | ✅ | 263c761 | 6 处 query + _get_chapter_blueprint async |
+| CSP | ⏸ 决策不加 | - | 需前端浏览器测试评估，P3 或单独 task |
+| M1/M8/M12/M13/M14/M15/M16/M25 | ✅ P1 已处理 | - | dead-code 类，P1 删除/确认误报 |
+
 ## 治理分批建议
 
 ### P0 — 安全与数据完整性（立即修，hotfix 级）
