@@ -15,16 +15,6 @@ export interface LLMConfig {
   embedding_provider_format: 'openai' | 'ollama' | null;
 }
 
-export interface LLMConfigCreate {
-  llm_provider_url?: string | null;
-  llm_provider_api_key?: string | null;
-  llm_provider_model?: string | null;
-  embedding_provider_url?: string | null;
-  embedding_provider_api_key?: string | null;
-  embedding_provider_model?: string | null;
-  embedding_provider_format?: 'openai' | 'ollama' | null;
-}
-
 export type ProviderType = 'openai_compatible' | 'anthropic' | 'ollama' | 'custom';
 export type TTSProtocol = 'mimo_chat_audio' | 'openai_speech';
 
@@ -115,41 +105,6 @@ const llmRequest = <T>(
 
 export const getLLMConfigBundle = async (): Promise<LLMConfigBundle> => {
   return llmRequest<LLMConfigBundle>('', { method: 'GET' }, '获取 LLM 配置失败');
-};
-
-export const getLLMConfig = async (): Promise<LLMConfig | null> => {
-  const bundle = await getLLMConfigBundle();
-  return bundle.legacy;
-};
-
-export const createOrUpdateLLMConfig = async (config: LLMConfigCreate): Promise<LLMConfig> => {
-  return llmRequest<LLMConfig>('', {
-    method: 'PUT',
-    body: JSON.stringify(config),
-  }, '保存 LLM 配置失败');
-};
-
-export const deleteLLMConfig = async (): Promise<void> => {
-  await llmRequest<void>('', {
-    method: 'DELETE',
-  }, '删除 LLM 配置失败');
-};
-
-export interface ModelListRequest {
-  llm_provider_url?: string;
-  llm_provider_api_key?: string;
-}
-
-export const getAvailableModels = async (request: ModelListRequest): Promise<string[]> => {
-  try {
-    return await llmRequest<string[]>('/models', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    }, '获取可用模型失败');
-  } catch {
-    // 获取模型列表失败时返回空数组，不影响主流程
-    return [];
-  }
 };
 
 export const getProviderModels = async (providerId: number): Promise<string[]> => {
