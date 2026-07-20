@@ -1275,6 +1275,7 @@ async def generate_chapter(
     具体的上下文、RAG、写作、评审、版本落盘都在 PipelineOrchestrator 节点内完成。
     """
     novel_service = NovelService(session)
+    await novel_service.ensure_project_owner(project_id, current_user.id)
     orchestrator = PipelineOrchestrator(session)
     try:
         await orchestrator.generate_chapter(

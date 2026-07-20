@@ -155,6 +155,8 @@ class ImportService:
 
     async def _read_file_content(self, file: UploadFile) -> str:
         content_bytes = await file.read()
+        if len(content_bytes) > 10 * 1024 * 1024:
+            raise HTTPException(status_code=413, detail="文件过大，请上传 10MB 以内的文件")
         try:
             return content_bytes.decode('utf-8')
         except UnicodeDecodeError:

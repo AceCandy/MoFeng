@@ -238,6 +238,8 @@ def assert_production_security() -> None:
     """生产环境启动前校验关键安全配置，弱配置直接拒绝启动。"""
     if settings.environment != "production":
         return
+    if settings.debug:
+        raise RuntimeError("生产环境不得开启 debug（debug 模式暴露错误栈与 SQL 参数）")
     key = settings.secret_key or ""
     if len(key) < 32 or key.strip() in _WEAK_SECRET_KEYS:
         raise RuntimeError(
