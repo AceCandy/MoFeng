@@ -449,9 +449,9 @@ class ConsistencyService:
         except json.JSONDecodeError as e:
             logger.error(f"解析一致性检查响应失败: {e}")
             return ConsistencyCheckResult(
-                is_consistent=True,
+                is_consistent=False,  # 解析失败默认拦截，质量门不放行
                 violations=[],
-                summary="响应解析失败，默认通过"
+                summary="响应解析失败，默认拦截"
             )
     
     async def get_violation_statistics(
