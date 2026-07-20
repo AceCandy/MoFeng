@@ -331,6 +331,8 @@ class LLMService:
                 exc_info=exc,
             )
             raise HTTPException(status_code=503, detail=detail) from exc
+        finally:
+            await client.aclose()
 
         if finish_reason == "length":
             logger.warning(
@@ -474,41 +476,44 @@ class LLMService:
         )
 
         # 单次模型调用层轻量重试：只处理上游临时故障，不重跑外层业务流程。
-        for attempt in range(1, LLM_RETRY_MAX_ATTEMPTS + 1):
-            full_response = ""
-            finish_reason = None
-            try:
-                async for part in client.stream_chat(
-                    messages=chat_messages,
-                    model=config.get("model"),
-                    temperature=temperature,
-                    timeout=int(timeout),
-                    response_format=response_format,
-                    max_tokens=max_tokens,
-                    top_p=top_p,
-                ):
-                    if part.get("content"):
-                        full_response += part["content"]
-                    if part.get("finish_reason"):
-                        finish_reason = part["finish_reason"]
-                break
-            except Exception as exc:
-                if attempt < LLM_RETRY_MAX_ATTEMPTS and self._is_retryable_llm_error(exc):
-                    delay = self._llm_retry_delay_seconds(exc, attempt)
-                    detail = self._extract_llm_error_detail(exc, exc.__class__.__name__)
-                    logger.warning(
-                        "LLM stream retry: model=%s user_id=%s stage=%s attempt=%s/%s delay=%.2fs detail=%s",
-                        config.get("model"),
-                        user_id,
-                        stage,
-                        attempt,
-                        LLM_RETRY_MAX_ATTEMPTS,
-                        delay,
-                        detail,
-                    )
-                    await asyncio.sleep(delay)
-                    continue
-                self._raise_llm_stream_error(exc, config, user_id)
+        try:
+            for attempt in range(1, LLM_RETRY_MAX_ATTEMPTS + 1):
+                full_response = ""
+                finish_reason = None
+                try:
+                    async for part in client.stream_chat(
+                        messages=chat_messages,
+                        model=config.get("model"),
+                        temperature=temperature,
+                        timeout=int(timeout),
+                        response_format=response_format,
+                        max_tokens=max_tokens,
+                        top_p=top_p,
+                    ):
+                        if part.get("content"):
+                            full_response += part["content"]
+                        if part.get("finish_reason"):
+                            finish_reason = part["finish_reason"]
+                    break
+                except Exception as exc:
+                    if attempt < LLM_RETRY_MAX_ATTEMPTS and self._is_retryable_llm_error(exc):
+                        delay = self._llm_retry_delay_seconds(exc, attempt)
+                        detail = self._extract_llm_error_detail(exc, exc.__class__.__name__)
+                        logger.warning(
+                            "LLM stream retry: model=%s user_id=%s stage=%s attempt=%s/%s delay=%.2fs detail=%s",
+                            config.get("model"),
+                            user_id,
+                            stage,
+                            attempt,
+                            LLM_RETRY_MAX_ATTEMPTS,
+                            delay,
+                            detail,
+                        )
+                        await asyncio.sleep(delay)
+                        continue
+                    self._raise_llm_stream_error(exc, config, user_id)
+        finally:
+            await client.aclose()
 
         logger.debug(
             "LLM response collected: model=%s user_id=%s finish_reason=%s preview=%s",
@@ -870,6 +875,8 @@ class LLMService:
                         exc_info=True,
                     )
                     return []
+                finally:
+                    await client.close()
                 if not response.data:
                     logger.warning("OpenAI 嵌入请求返回空数据: model=%s user_id=%s", target_model, user_id)
                     return []

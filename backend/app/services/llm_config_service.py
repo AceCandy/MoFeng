@@ -596,8 +596,8 @@ class LLMConfigService:
             # 无 Key 场景下直接走 HTTP（不带 Authorization）
             return await self._get_models_via_http(api_key=None, base_url=base_url)
 
+        client = None
         try:
-            # 创建带有超时和重试配置的客户端
             client = AsyncOpenAI(
                 api_key=api_key,
                 base_url=base_url,
@@ -623,6 +623,9 @@ class LLMConfigService:
         except Exception as e:
             logger.error("获取 OpenAI-like 模型列表失败: %s", str(e), exc_info=True)
             return await self._get_models_via_http(api_key, base_url)
+        finally:
+            if client is not None:
+                await client.close()
 
     async def _get_models_via_http(self, api_key: Optional[str], base_url: Optional[str]) -> List[str]:
         """使用 httpx 直接请求模型列表（备选方案）"""

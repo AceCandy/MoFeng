@@ -187,3 +187,9 @@ class LLMClient:
                 "content": choice.delta.content,
                 "finish_reason": choice.finish_reason,
             }
+
+    async def aclose(self) -> None:
+        """关闭底层 AsyncOpenAI 客户端，释放连接池。"""
+        if self._client is not None:
+            await self._client.close()
+            self._client = None

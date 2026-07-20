@@ -180,6 +180,9 @@ async def test_stream_and_collect_passes_provider_type_to_llm_client(monkeypatch
             }
             FakeLLMClient.init_kwargs = self.init_kwargs
 
+        async def aclose(self) -> None:
+            pass
+
         async def stream_chat(self, **kwargs):
             yield {"content": "ok", "finish_reason": "stop"}
 
@@ -216,6 +219,9 @@ async def test_stream_and_collect_retries_transient_concurrency_limit(monkeypatc
         attempts = 0
 
         def __init__(self, *, api_key, base_url, provider_type):
+            pass
+
+        async def aclose(self) -> None:
             pass
 
         async def stream_chat(self, **kwargs):
@@ -260,6 +266,9 @@ async def test_stream_and_collect_does_not_retry_non_retryable_errors(monkeypatc
         attempts = 0
 
         def __init__(self, *, api_key, base_url, provider_type):
+            pass
+
+        async def aclose(self) -> None:
             pass
 
         async def stream_chat(self, **kwargs):
