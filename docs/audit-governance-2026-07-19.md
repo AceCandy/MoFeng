@@ -50,6 +50,26 @@ medium 25 项 + KRService async（新发现）全部处置完成（16 项真做 
 | CSP | ⏸ 决策不加 | - | 需前端浏览器测试评估，P3 或单独 task |
 | M1/M8/M12/M13/M14/M15/M16/M25 | ✅ P1 已处理 | - | dead-code 类，P1 删除/确认误报 |
 
+## P3 实施状态（2026-07-20）
+
+low 19 项全部处置完成（6 项真做 + 4 项决策不修 + 1 项留下次 + 8 项 P1/P2 已处理）。后端 pytest 226 passed + 前端四件套全绿。
+
+| 项 | 状态 | commit | 说明 |
+|---|---|---|---|
+| #1 /remote-version 鉴权+SSRF | ✅ | 89bc191 | get_current_admin + _fetch_payload assert_safe_base_url |
+| #4 optimizer 去重 | ✅ | 89bc191 | 删 optimized_content query 参数（大文本只从 body）|
+| #5 memory_layer utcnow | ✅ | 89bc191 | datetime.utcnow -> datetime.now(timezone.utc)（4 表 6 处）|
+| #14 novel store 死代码 | ✅ | da9548d | 删 currentConversationState/resetConversationState |
+| #15 AppShell 监听泄漏 | ✅ | da9548d | matchMedia onUnmounted 移除（themeMedia 提外层）|
+| #18 append_conversation seq | ✅ | 89bc191 | 原子 INSERT SELECT MAX(seq)+1 |
+| #6 ProjectMemory 乐观锁 | ⏸ 决策留下次 | - | 需梳理所有 update 点+WHERE version=? 守卫，风险中，留单独 task |
+| #7 debug 默认 True | ⏸ 决策保留 | - | 开发友好，P2 K 已强制生产关闭 |
+| #8 analytics 情感分析分叉 | ⏸ 决策不修 | - | emotion_analyzer.py 已 P1 删，analytics 本地函数唯一来源，无分叉 |
+| #9 character_dna_guide | ⏸ 决策不修 | - | 全仓 rg 无引用，已不存在 |
+| #19 foreshadowing utcnow | ⏸ 决策不修 | - | P1 删 5 方法时已无 utcnow |
+| #2/#10/#11/#12/#13/#16/#17 | ✅ P1 已处理 | - | dead-code 类 |
+| #3 debug 校验 | ✅ P2 已处理 | - | P2 K assert_production_security debug=False |
+
 ## 治理分批建议
 
 ### P0 — 安全与数据完整性（立即修，hotfix 级）
