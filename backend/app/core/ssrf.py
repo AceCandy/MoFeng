@@ -36,11 +36,12 @@ def assert_safe_base_url(
         raise ValueError("API URL 缺少主机名")
     try:
         infos = socket.getaddrinfo(host, None)
-    except socket.gaierror:
-        # 主机不可解析时上游请求同样会失败，不构成 SSRF 风险，放行
-        return
+    except socket.gaierror as exc:
+        # 解析失败必须 fail-closed：攻击者可控制 DNS 使校验时返回 NXDOMAIN、
+        # 实际请求时解析到内网 IP（DNS rebinding 变种），放行即绕过 SSRF 防护。
+        raise ValueError(f"API URL 主机无法解析：{host}") from exc
     if not infos:
-        return
+        raise ValueError(f"API URL 主机无可用地址：{host}")
     for info in infos:
         ip = ipaddress.ip_address(info[4][0])
         if str(ip) in _CLOUD_METADATA_HOSTS:

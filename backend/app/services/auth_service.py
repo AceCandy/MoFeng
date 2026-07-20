@@ -18,6 +18,7 @@ import smtplib
 
 from ..core.config import settings
 from ..core.security import create_access_token, hash_password, verify_password
+from ..core.ssrf import assert_safe_base_url
 from ..models import User
 from ..repositories.system_config_repository import SystemConfigRepository
 from ..repositories.user_repository import UserRepository
@@ -346,6 +347,13 @@ class AuthService:
         if not all([client_id, client_secret, redirect_uri, token_url, user_info_url]):
             raise HTTPException(status_code=500, detail="未正确配置 Linux.do OAuth 参数")
 
+        # SSRF 防护：token_url/user_info_url 由管理员配置，服务端发请求前必须校验
+        for url in (token_url, user_info_url):
+            try:
+                assert_safe_base_url(url, allow_private=settings.allow_private_llm_endpoints)
+            except ValueError as exc:
+                raise HTTPException(status_code=500, detail=f"Linux.do OAuth URL 不安全：{exc}") from exc
+
         async with httpx.AsyncClient() as client:
             token_response = await client.post(
                 token_url,
@@ -369,12 +377,17 @@ class AuthService:
             user_info_response.raise_for_status()
             data = user_info_response.json()
 
-        external_id = f"linuxdo:{data['id']}"
+        external_id_raw = data.get("id")
+        if external_id_raw is None:
+            raise HTTPException(status_code=400, detail="Linux.do 返回数据缺少 id 字段")
+        external_id = f"linuxdo:{external_id_raw}"
         user = await self.user_repo.get_by_external_id(external_id)
         if user is None:
             if not await self.is_registration_enabled():
                 raise HTTPException(status_code=403, detail="当前暂未开放注册，无法通过 OAuth 创建账号")
-            username = data["username"]
+            username = data.get("username")
+            if not username:
+                raise HTTPException(status_code=400, detail="Linux.do 返回数据缺少 username 字段")
             if await self.user_repo.get_by_username(username):
                 username = f"{username}_{secrets.token_hex(3)}"
             placeholder_password = secrets.token_urlsafe(16)
