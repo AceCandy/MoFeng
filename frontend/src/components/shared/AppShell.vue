@@ -269,25 +269,35 @@ const triggerPasswordSave = () => {
   passwordManagementRef.value?.submit()
 }
 
+let themeMedia: MediaQueryList | null = null
+
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
   syncThemeState()
   startTaskStream()
 
   // 监听系统的偏好改变
-  const media = window.matchMedia('(prefers-color-scheme: dark)')
+  themeMedia = window.matchMedia('(prefers-color-scheme: dark)')
   const preference = window.localStorage.getItem('mofeng-theme-preference')
   if (preference === 'system' || !preference) {
-    if (typeof media.addEventListener === 'function') {
-      media.addEventListener('change', syncThemeState)
+    if (typeof themeMedia.addEventListener === 'function') {
+      themeMedia.addEventListener('change', syncThemeState)
     } else {
-      media.addListener(syncThemeState)
+      themeMedia.addListener(syncThemeState)
     }
   }
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  if (themeMedia) {
+    if (typeof themeMedia.removeEventListener === 'function') {
+      themeMedia.removeEventListener('change', syncThemeState)
+    } else {
+      themeMedia.removeListener(syncThemeState)
+    }
+    themeMedia = null
+  }
 })
 </script>
 

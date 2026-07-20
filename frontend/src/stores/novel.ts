@@ -3,16 +3,9 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export const useNovelStore = defineStore('novel', () => {
-  const currentConversationState = ref<Record<string, unknown>>({})
   const isAssistantPanelVisible = ref(true)
 
-  function resetConversationState() {
-    currentConversationState.value = {}
-  }
-
   return {
-    currentConversationState,
     isAssistantPanelVisible,
-    resetConversationState,
   }
 })
