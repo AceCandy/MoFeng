@@ -4,7 +4,7 @@ import logging
 
 from pathlib import Path
 
-from sqlalchemy import inspect, select, text
+from sqlalchemy import delete, inspect, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -28,6 +28,11 @@ LEGACY_SYSTEM_CONFIG_KEYS_TO_DELETE = (
     "embedding.model_vector_size",
     "ollama.embedding_base_url",
     "ollama.embedding_model",
+)
+
+LEGACY_PROMPT_NAMES_TO_DELETE = (
+    # 死文件已从 prompts/ 删除，清理历史 init_db 灌入的 DB 残留
+    "character_dna_guide",
 )
 
 
@@ -160,6 +165,12 @@ async def _run_alembic_upgrade() -> None:
 
 
 async def _ensure_default_prompts(session: AsyncSession) -> None:
+    # 清理已废弃的提示词：源文件已删但历史 init_db 灌入的 DB 记录仍残留。
+    for legacy_name in LEGACY_PROMPT_NAMES_TO_DELETE:
+        result = await session.execute(delete(Prompt).where(Prompt.name == legacy_name))
+        if result.rowcount:
+            logger.info("已清理废弃提示词：%s", legacy_name)
+
     prompts_dir = Path(__file__).resolve().parents[2] / "prompts"
     if not prompts_dir.is_dir():
         return
