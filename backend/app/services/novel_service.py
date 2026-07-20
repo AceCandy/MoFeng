@@ -81,7 +81,7 @@ def _clean_string(text: str, parse_json: bool = True) -> str:
     )
 
 from fastapi import HTTPException, status
-from sqlalchemy import and_, delete, func, or_, select, update
+from sqlalchemy import and_, delete, func, insert, or_, select, update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -340,19 +340,19 @@ class NovelService:
         return list(result.scalars())
 
     async def append_conversation(self, project_id: str, role: str, content: str, metadata: Optional[Dict] = None) -> None:
-        result = await self.session.execute(
-            select(func.max(NovelConversation.seq)).where(NovelConversation.project_id == project_id)
+        # 原子 INSERT SELECT MAX(seq)+1，避免读改写并发竞态产生重复 seq
+        next_seq = select(func.coalesce(func.max(NovelConversation.seq), 0) + 1).where(
+            NovelConversation.project_id == project_id
+        ).scalar_subquery()
+        await self.session.execute(
+            insert(NovelConversation).values(
+                project_id=project_id,
+                seq=next_seq,
+                role=role,
+                content=content,
+                metadata=metadata,
+            )
         )
-        current_max = result.scalar()
-        next_seq = (current_max or 0) + 1
-        convo = NovelConversation(
-            project_id=project_id,
-            seq=next_seq,
-            role=role,
-            content=content,
-            metadata=metadata,
-        )
-        self.session.add(convo)
         await self.session.commit()
         await self._touch_project(project_id)
 

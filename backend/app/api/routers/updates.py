@@ -10,9 +10,12 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.config import settings
+from ...core.dependencies import get_current_admin
+from ...core.ssrf import assert_safe_base_url
 from ...db.session import get_session
 from ...repositories.system_config_repository import SystemConfigRepository
 from ...schemas.admin import UpdateLogRead
+from ...schemas.user import UserInDB
 from ...services.update_log_service import UpdateLogService
 
 router = APIRouter(prefix="/api/updates", tags=["Updates"])
@@ -54,6 +57,7 @@ def _pick_version_from_payload(payload: Any) -> Optional[str]:
 
 
 async def _fetch_payload(url: str) -> Any:
+    assert_safe_base_url(url, allow_private=settings.allow_private_llm_endpoints)
     async with httpx.AsyncClient(timeout=10.0) as client:
         response = await client.get(url, headers={"Accept": "application/json"})
         response.raise_for_status()
@@ -119,7 +123,7 @@ async def read_latest_updates(
 
 
 @router.get("/remote-version")
-async def read_remote_version(session: AsyncSession = Depends(get_session)) -> dict[str, Any]:
+async def read_remote_version(session: AsyncSession = Depends(get_session), current_admin: UserInDB = Depends(get_current_admin)) -> dict[str, Any]:
     """从 GitHub 版本 JSON 获取远程版本（服务端代理，避免浏览器跨域问题）。"""
     sources: list[tuple[str, str, Any]] = []
     deduplicated_urls: set[str] = set()

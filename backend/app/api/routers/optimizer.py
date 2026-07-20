@@ -399,7 +399,6 @@ async def apply_optimization(
     request: Optional[ApplyOptimizationRequest] = None,
     project_id: Optional[str] = None,
     chapter_number: Optional[int] = None,
-    optimized_content: Optional[str] = None,
     session: AsyncSession = Depends(get_session),
     current_user: UserInDB = Depends(get_current_user),
 ):
@@ -410,7 +409,7 @@ async def apply_optimization(
 
     resolved_project_id = request.project_id if request else project_id
     resolved_chapter_number = request.chapter_number if request else chapter_number
-    resolved_optimized_content = request.optimized_content if request else optimized_content
+    resolved_optimized_content = request.optimized_content if request else None
 
     if not resolved_project_id or resolved_chapter_number is None or resolved_optimized_content is None:
         raise HTTPException(status_code=422, detail="缺少必填参数: project_id/chapter_number/optimized_content")

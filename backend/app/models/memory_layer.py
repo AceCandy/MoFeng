@@ -3,7 +3,7 @@
 
 提供角色状态表、时间线、因果链的数据结构定义。
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 from sqlalchemy import (
     Column, Integer, BigInteger, String, Text, JSON, 
@@ -80,8 +80,8 @@ class CharacterState(Base):
     
     # 元数据
     extra = Column(JSON)
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class TimelineEvent(Base):
@@ -118,7 +118,7 @@ class TimelineEvent(Base):
     importance = Column(Integer, default=5)  # 重要性 1-10
     is_turning_point = Column(Boolean, default=False)  # 是否为转折点
     extra = Column(JSON)
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
 
 class CausalChain(Base):
@@ -153,8 +153,8 @@ class CausalChain(Base):
     # 元数据
     importance = Column(Integer, default=5)  # 重要性 1-10
     extra = Column(JSON)
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class StoryTimeTracker(Base):
@@ -182,5 +182,5 @@ class StoryTimeTracker(Base):
     
     # 元数据
     extra = Column(JSON)
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
