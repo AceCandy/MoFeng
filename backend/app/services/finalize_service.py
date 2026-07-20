@@ -15,7 +15,7 @@ import logging
 import re
 from typing import Optional, Dict, Any
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.project_memory import ProjectMemory, ChapterSnapshot
@@ -192,6 +192,9 @@ class FinalizeService:
             project_memory = await self._get_or_create_project_memory(project_id)
             old_summary = project_memory.global_summary or ""
             old_plot_arcs = project_memory.plot_arcs or {}
+            # 记下读时的 id 与 version，供写回时乐观锁守卫（commit 后对象 expire）
+            memory_id = project_memory.id
+            memory_version = project_memory.version
             old_state = await self._get_character_state_text(project_id)
             await self.db.commit()
 
@@ -247,12 +250,6 @@ class FinalizeService:
                 return result
 
             # 5-8. 写快照（新短事务）：仅写入有效结果。
-            if new_summary:
-                project_memory.global_summary = new_summary
-                result["updates"]["global_summary"] = "updated"
-            if new_plot_arcs:
-                project_memory.plot_arcs = new_plot_arcs
-                result["updates"]["plot_arcs"] = "updated"
             if new_state:
                 await self._save_character_state(project_id, chapter_number, new_state)
                 result["updates"]["character_state"] = "updated"
@@ -266,15 +263,36 @@ class FinalizeService:
             await self._create_chapter_snapshot(
                 project_id=project_id,
                 chapter_number=chapter_number,
-                global_summary=new_summary or project_memory.global_summary,
+                global_summary=new_summary or old_summary,
                 character_states=new_state,
-                plot_arcs=new_plot_arcs or project_memory.plot_arcs,
+                plot_arcs=new_plot_arcs or old_plot_arcs,
                 chapter_summary=chapter_summary,
                 word_count=count_chapter_words(chapter_text),
             )
             result["updates"]["snapshot"] = "created"
-            project_memory.last_updated_chapter = chapter_number
-            project_memory.version += 1
+            # 乐观锁写回：守卫读时 version，冲突则不覆盖 memory（保留并发修改），LLM 结果已在 snapshot。
+            memory_update_values: Dict[str, Any] = {
+                "last_updated_chapter": chapter_number,
+                "version": ProjectMemory.version + 1,
+            }
+            if new_summary:
+                memory_update_values["global_summary"] = new_summary
+            if new_plot_arcs:
+                memory_update_values["plot_arcs"] = new_plot_arcs
+            memory_stmt = (
+                update(ProjectMemory)
+                .where(ProjectMemory.id == memory_id, ProjectMemory.version == memory_version)
+                .values(**memory_update_values)
+            )
+            memory_update_result = await self.db.execute(memory_stmt)
+            if memory_update_result.rowcount > 0:
+                if new_summary:
+                    result["updates"]["global_summary"] = "updated"
+                if new_plot_arcs:
+                    result["updates"]["plot_arcs"] = "updated"
+            else:
+                # 并发修改冲突：保留对方修改不覆盖 memory，LLM 结果已在 snapshot 供参考。
+                result["conflict"] = True
             await self._update_blueprint_status(project_id, chapter_number)
             await self.db.commit()
 

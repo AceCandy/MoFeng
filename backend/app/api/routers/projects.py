@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.dependencies import get_current_user
@@ -47,6 +47,8 @@ class ProjectMemoryPayload(BaseModel):
     global_summary: Optional[str] = None
     plot_arcs: Optional[Dict[str, Any]] = None
     story_timeline_summary: Optional[str] = None
+    # 乐观锁：传则守卫 version，不传跳过（向后兼容，该接口当前无前端调用）
+    expected_version: Optional[int] = None
 
 
 class FactionPayload(BaseModel):
@@ -176,14 +178,29 @@ async def put_project_memory(
         select(ProjectMemory).where(ProjectMemory.project_id == project_id)
     )
     memory = result.scalars().first()
-    if not memory:
-        memory = ProjectMemory(project_id=project_id)
-        session.add(memory)
 
     data = payload.model_dump(exclude_unset=True)
-    for key, value in data.items():
-        if hasattr(memory, key):
-            setattr(memory, key, value)
+    data.pop("expected_version", None)
+    update_values = {key: value for key, value in data.items() if hasattr(ProjectMemory, key)}
+
+    if memory:
+        if payload.expected_version is not None:
+            # 乐观锁守卫：version 不匹配说明期间被并发改过，拒绝覆盖。
+            stmt = (
+                update(ProjectMemory)
+                .where(ProjectMemory.id == memory.id, ProjectMemory.version == payload.expected_version)
+                .values(**update_values, version=ProjectMemory.version + 1)
+            )
+            update_result = await session.execute(stmt)
+            if update_result.rowcount == 0:
+                raise HTTPException(status_code=409, detail="记忆已被修改，请刷新后重试")
+        else:
+            for key, value in update_values.items():
+                setattr(memory, key, value)
+            memory.version += 1
+    else:
+        memory = ProjectMemory(project_id=project_id, **update_values)
+        session.add(memory)
 
     await session.commit()
     await session.refresh(memory)

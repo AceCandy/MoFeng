@@ -894,11 +894,13 @@ class NovelService:
             memory.global_summary = previous_snapshot.global_summary_snapshot
             if previous_snapshot.plot_arcs_snapshot is not None:
                 memory.plot_arcs = previous_snapshot.plot_arcs_snapshot
+            memory.version += 1
             return
 
         memory.last_updated_chapter = 0
         memory.global_summary = ""
         memory.plot_arcs = {}
+        memory.version += 1
 
     # ------------------------------------------------------------------
     # 序列化辅助

@@ -307,3 +307,78 @@ async def test_vector_store_delete_by_chapters_propagates_delete_failures(monkey
 
     with pytest.raises(RuntimeError, match="vector delete failed"):
         await VectorStoreService().delete_by_chapters("project-vector-failure", [2])
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_delete_completed_chapter_increments_memory_version(db_session_factory) -> None:
+    """删已完成章节回滚 memory 后 version 单调增（乐观锁前提，bug fix）。"""
+    deleted: list[list[int]] = []
+
+    async def delete_vectors(chapter_numbers: list[int]) -> None:
+        deleted.append(chapter_numbers)
+
+    async with db_session_factory() as session:
+        project_id = "project-memory-version"
+        session.add(User(id=1, username="writer", hashed_password="secret"))
+        session.add(NovelProject(id=project_id, user_id=1, title="t", initial_prompt="x"))
+        await session.flush()
+        session.add(
+            ProjectMemory(
+                project_id=project_id,
+                global_summary="第二章摘要",
+                plot_arcs={"unresolved_hooks": []},
+                last_updated_chapter=2,
+                version=5,
+            )
+        )
+        session.add(ChapterOutline(project_id=project_id, chapter_number=1, title="第1章", summary=""))
+        session.add(ChapterOutline(project_id=project_id, chapter_number=2, title="第2章", summary=""))
+        session.add(Chapter(project_id=project_id, chapter_number=1, status="successful"))
+        ch2 = Chapter(project_id=project_id, chapter_number=2, status="successful")
+        session.add(ch2)
+        await session.flush()
+        v2 = ChapterVersion(chapter_id=ch2.id, content="第二章正文")
+        session.add(v2)
+        await session.flush()
+        ch2.selected_version_id = v2.id
+        session.add(ChapterEvaluation(chapter_id=ch2.id, version_id=v2.id, feedback="ok"))
+        session.add(
+            ChapterGenerationTrace(
+                chapter_id=ch2.id,
+                project_id=project_id,
+                chapter_number=2,
+                node_key="draft_generation",
+                node_label="生成正文",
+                status="success",
+            )
+        )
+        # chapter 1 snapshot：回滚恢复源
+        session.add(
+            ChapterSnapshot(
+                project_id=project_id,
+                chapter_number=1,
+                global_summary_snapshot="第一章摘要",
+                plot_arcs_snapshot={"unresolved_hooks": ["hook1"]},
+            )
+        )
+        await session.commit()
+
+        service = NovelService(session)
+        await service.delete_chapters(
+            project_id,
+            [2],
+            delete_vector_data=delete_vectors,
+            delete_artifacts_confirmed=True,
+            confirmation_text="删除第2章及全部产物",
+        )
+
+        memory = (
+            await session.execute(
+                select(ProjectMemory).where(ProjectMemory.project_id == project_id)
+            )
+        ).scalars().one()
+        assert memory.version == 6  # 5 + 1
+        assert memory.global_summary == "第一章摘要"
+        assert memory.last_updated_chapter == 1
+        assert memory.plot_arcs == {"unresolved_hooks": ["hook1"]}
+        assert deleted == [[2]]
