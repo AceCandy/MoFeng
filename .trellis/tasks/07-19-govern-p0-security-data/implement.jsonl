@@ -1,0 +1,5 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/backend/security-guidelines.md", "reason": "安全加固规范，H1越权/H3默认密码依据"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "异常处理规范，H4不静默吞异常"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "DB事务规范，H4事务边界/H5 async session"}
+{"file": "docs/audit-governance-2026-07-19.md", "reason": "审计发现详情与验证依据"}
