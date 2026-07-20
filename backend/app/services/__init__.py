@@ -16,7 +16,6 @@ from .finalize_service import FinalizeService
 from .consistency_service import ConsistencyService, ConsistencyCheckResult, ConsistencyViolation, ViolationSeverity
 from .knowledge_retrieval_service import KnowledgeRetrievalService, FilteredContext, RetrievedKnowledge
 from .enrichment_service import EnrichmentService, EnrichmentResult
-from .blueprint_service import BlueprintService
 
 __all__ = [
     # 基础服务
@@ -35,5 +34,4 @@ __all__ = [
     "RetrievedKnowledge",
     "EnrichmentService",
     "EnrichmentResult",
-    "BlueprintService",
 ]
