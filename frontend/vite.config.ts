@@ -144,6 +144,7 @@ export default defineConfig(async (): Promise<UserConfig> => {
     },
     build: {
       manifest: true,
+      modulePreload: { polyfill: false },
       rollupOptions: {
         output: {
           manualChunks: resolveVendorChunk,
