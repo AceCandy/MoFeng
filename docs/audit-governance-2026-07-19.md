@@ -10,6 +10,20 @@
 - **按模块**：{'backend-api': 8, 'backend-core-config-utils': 7, 'config-files': 5, 'backend-services': 11, 'backend-data': 8, 'frontend': 10}
 - **按类别**：{'security': 7, 'unused-file': 3, 'risk': 22, 'dead-code': 12, 'deprecated-config': 5}
 
+## P0 实施状态（2026-07-20）
+
+H1-H5 全部实施完成，独立复核通过（基于真实磁盘代码 + codegraph/rg 交叉验证），后端全量 pytest 229 passed + 前端四件套（vue-tsc/vitest 154 tests/eslint/build）全绿。
+
+| H | 状态 | commit | 验证 |
+|---|---|---|---|
+| H1 foreshadowing IDOR 越权 | ✅ | 48a3fd3 | test_foreshadowing_router 越权 404 + owner 正常 |
+| H2 analytics_enhanced 删除 | ✅ | 1963d61 | import 验证 + rg 无残留 |
+| H3 默认管理员密码 | ✅ | 68e8eff | test_config_security 5 测试（默认/弱/短/强/非生产）|
+| H4 finalize 静默损坏 | ✅ | cbbb76f | test_finalize 4 测试（含全失败不写快照/部分 partial_success）|
+| H5 consistency async 500 | ✅ | 68b8d58 | test_consistency 2 测试（_get_check_context + 端到端）|
+
+**新发现（P2 候选，H5 范围外）**：`knowledge_retrieval_service.py` 与 H5 同类 MissingGreenlet 风险--async 方法（`retrieve_and_filter`/`get_chapter_context`/`_get_recent_chapter_summaries` 等）内部 6 处 `self.db.query`（同步，:221/:271/:382/:565/:587/:611），经 `pipeline_orchestrator.py:1888` 传 `sync_session` 调用。`/api/review/consistency` 已修（H5），但两层 RAG 链路的 KnowledgeRetrievalService 未修；retrieve_and_filter 在 pipeline_orchestrator:1882 的 try/except 外（该 try 只包 VectorStoreService 初始化），MissingGreenlet 会传播，可能导致两层 RAG 静默降级或生成流程异常。P2 risk-harden 时按 H5 同模式修复（self.db.query -> await self.session.execute(select)）。
+
 ## 治理分批建议
 
 ### P0 — 安全与数据完整性（立即修，hotfix 级）

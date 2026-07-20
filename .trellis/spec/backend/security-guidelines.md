@@ -85,6 +85,8 @@ def assert_production_security() -> None:
 
 Non-production environments skip the check so local dev keeps working with placeholder keys.
 
+The same gate also covers `ADMIN_DEFAULT_PASSWORD`: in production it rejects passwords shorter than 8 chars or matching a known weak/default value (`ChangeMe123!`, `your-admin-password-change-me`, etc.). `deploy/docker-compose.yml` enforces `${ADMIN_DEFAULT_PASSWORD:?...}` (required, no fallback) so the app never boots with the placeholder. Default-credential risk (CWE-798) is closed at both the config layer (no usable default) and the startup gate (rejects weak values).
+
 ### Default admin password rotation
 
 `AuthService.requires_password_reset` flags any `is_admin` user whose hash still verifies against `settings.admin_default_password`. The flag flows into the token as `must_change_password`; the frontend forces a change. This covers **all** admins (matched by `is_admin`, not by username). `change_password` additionally rejects setting an admin's password back to the default.

@@ -93,6 +93,7 @@ except Exception as exc:
 - **Raising `RuntimeError` that nothing catches.** Becomes an opaque 500. Either translate at the router or add a global handler.
 - **`except Exception: pass`** anywhere outside a deliberate, commented fallback.
 - **Returning `None` to mean "error" for non-lookup operations** (ambiguous with "not found").
+- **Wrapping N independent LLM/external calls in one `try/except` that forces all-or-nothing, or silently swallowing each call's failure.** A single call failing must not discard the others' results nor report `success=True` when nothing was produced. Use a per-call wrapper (e.g. `FinalizeService._safe_llm_call`) that catches, records the failure into a result list, and returns `None`; the orchestrator then sets `success` strictly from how many calls produced a valid value, with `partial_success` when some failed. See `app/services/finalize_service.py`.
 
 ---
 
