@@ -1885,8 +1885,7 @@ class PipelineOrchestrator:
             logger.warning("向量库初始化失败，跳过两层 RAG: %s", exc)
             return None, {"mode": "two_stage", "enabled": False, "error": str(exc)}
 
-        sync_session = getattr(self.session, "sync_session", self.session)
-        retrieval_service = KnowledgeRetrievalService(sync_session, self.llm_service, vector_store)
+        retrieval_service = KnowledgeRetrievalService(self.session, self.llm_service, vector_store)
         filtered = await retrieval_service.retrieve_and_filter(
             project_id=project_id,
             chapter_number=chapter_number,

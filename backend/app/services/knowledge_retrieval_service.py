@@ -14,7 +14,8 @@ import logging
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.project_memory import ProjectMemory
 from ..models.chapter_blueprint import ChapterBlueprint
@@ -168,11 +169,11 @@ class KnowledgeRetrievalService:
 
     def __init__(
         self,
-        db: Session,
+        db: AsyncSession,
         llm_service: LLMService,
         vector_store_service: Optional[VectorStoreService] = None
     ):
-        self.db = db
+        self.session = db
         self.llm_service = llm_service
         self.vector_store_service = vector_store_service
 
@@ -200,7 +201,7 @@ class KnowledgeRetrievalService:
             FilteredContext
         """
         # 1. 获取章节蓝图信息
-        blueprint = self._get_chapter_blueprint(project_id, chapter_number)
+        blueprint = await self._get_chapter_blueprint(project_id, chapter_number)
 
         # 2. 生成检索关键词
         queries = await self._generate_search_queries(
@@ -218,9 +219,9 @@ class KnowledgeRetrievalService:
         )
 
         # 4. 获取前文摘要
-        memory = self.db.query(ProjectMemory).filter(
-            ProjectMemory.project_id == project_id
-        ).first()
+        memory = (await self.session.execute(
+            select(ProjectMemory).where(ProjectMemory.project_id == project_id)
+        )).scalars().first()
         global_summary = memory.global_summary if memory else ""
 
         # 5. 过滤和结构化
@@ -268,16 +269,16 @@ class KnowledgeRetrievalService:
         context = {}
 
         # 1. 获取项目记忆
-        memory = self.db.query(ProjectMemory).filter(
-            ProjectMemory.project_id == project_id
-        ).first()
+        memory = (await self.session.execute(
+            select(ProjectMemory).where(ProjectMemory.project_id == project_id)
+        )).scalars().first()
 
         if memory:
             context["global_summary"] = memory.global_summary
             context["plot_arcs"] = memory.plot_arcs
 
         # 2. 获取章节蓝图
-        blueprint = self._get_chapter_blueprint(project_id, chapter_number)
+        blueprint = await self._get_chapter_blueprint(project_id, chapter_number)
         if blueprint:
             context["blueprint"] = {
                 "chapter_focus": blueprint.chapter_focus,
@@ -333,7 +334,7 @@ class KnowledgeRetrievalService:
         基于前文内容和章节蓝图，生成针对性的写作摘要。
         """
         # 获取章节蓝图
-        blueprint = self._get_chapter_blueprint(project_id, chapter_number)
+        blueprint = await self._get_chapter_blueprint(project_id, chapter_number)
         if not blueprint:
             return None
 
@@ -373,16 +374,18 @@ class KnowledgeRetrievalService:
             logger.error(f"生成章节摘要失败: {e}")
             return None
 
-    def _get_chapter_blueprint(
+    async def _get_chapter_blueprint(
         self,
         project_id: str,
         chapter_number: int
     ) -> Optional[ChapterBlueprint]:
         """获取章节蓝图"""
-        return self.db.query(ChapterBlueprint).filter(
-            ChapterBlueprint.project_id == project_id,
-            ChapterBlueprint.chapter_number == chapter_number
-        ).first()
+        return (await self.session.execute(
+            select(ChapterBlueprint).where(
+                ChapterBlueprint.project_id == project_id,
+                ChapterBlueprint.chapter_number == chapter_number,
+            )
+        )).scalars().first()
 
     async def _generate_search_queries(
         self,
@@ -562,10 +565,12 @@ class KnowledgeRetrievalService:
         """获取前几章摘要"""
         from ..models.project_memory import ChapterSnapshot
 
-        snapshots = self.db.query(ChapterSnapshot).filter(
-            ChapterSnapshot.project_id == project_id,
-            ChapterSnapshot.chapter_number < current_chapter
-        ).order_by(ChapterSnapshot.chapter_number.desc()).limit(count).all()
+        snapshots = (await self.session.execute(
+            select(ChapterSnapshot).where(
+                ChapterSnapshot.project_id == project_id,
+                ChapterSnapshot.chapter_number < current_chapter,
+            ).order_by(ChapterSnapshot.chapter_number.desc()).limit(count)
+        )).scalars().all()
 
         return [
             {
@@ -584,10 +589,12 @@ class KnowledgeRetrievalService:
         """获取前几章内容"""
         from ..models.novel import Chapter, ChapterVersion
 
-        chapters = self.db.query(Chapter).filter(
-            Chapter.project_id == project_id,
-            Chapter.chapter_number < current_chapter
-        ).order_by(Chapter.chapter_number.desc()).limit(count).all()
+        chapters = (await self.session.execute(
+            select(Chapter).where(
+                Chapter.project_id == project_id,
+                Chapter.chapter_number < current_chapter,
+            ).order_by(Chapter.chapter_number.desc()).limit(count)
+        )).scalars().all()
 
         result = []
         for ch in reversed(chapters):
@@ -608,12 +615,14 @@ class KnowledgeRetrievalService:
         """获取角色状态"""
         from ..models.memory_layer import CharacterState
 
-        states = self.db.query(CharacterState).filter(
-            CharacterState.project_id == project_id,
-        ).order_by(
-            CharacterState.chapter_number.desc(),
-            CharacterState.id.desc(),
-        ).limit(50).all()
+        states = (await self.session.execute(
+            select(CharacterState).where(
+                CharacterState.project_id == project_id,
+            ).order_by(
+                CharacterState.chapter_number.desc(),
+                CharacterState.id.desc(),
+            ).limit(50)
+        )).scalars().all()
 
         if not states:
             return None
