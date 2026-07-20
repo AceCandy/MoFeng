@@ -112,7 +112,7 @@ POSTGRES_DATABASE=mofeng
 
 # 管理员账号
 ADMIN_DEFAULT_USERNAME=admin
-ADMIN_DEFAULT_PASSWORD=Admin123456!
+ADMIN_DEFAULT_PASSWORD=MoFeng-$(openssl rand -hex 12)
 ADMIN_DEFAULT_EMAIL=admin@mofeng.com
 
 # OpenAI API（请手动配置）
@@ -220,7 +220,7 @@ echo "  API 文档: http://localhost:6100/api/docs"
 echo ""
 echo "管理员账号："
 echo "  用户名: admin"
-echo "  密码: Admin123456!"
+echo "  密码: 已随机生成（见 .env 中 ADMIN_DEFAULT_PASSWORD），请立即修改"
 echo ""
 echo -e "${YELLOW}重要提示：${NC}"
 echo "1. 请立即修改管理员密码"

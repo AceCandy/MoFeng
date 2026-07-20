@@ -216,14 +216,7 @@ The default admin comes from environment variables:
 - `ADMIN_DEFAULT_PASSWORD`
 - `ADMIN_DEFAULT_EMAIL`
 
-If you keep the example values, the usual credentials are:
-
-```text
-username: admin
-password: ChangeMe123!
-```
-
-Change the password immediately after the first startup.
+Set `ADMIN_DEFAULT_PASSWORD` to a strong password before first startup (the `.env.example` placeholder is rejected in production). The default admin username is `admin`. Change the password immediately after the first login.
 
 ## 7. Secondary development checklist
 

@@ -68,7 +68,7 @@ class Settings(BaseSettings):
 
     # -------------------- 管理员初始化配置 --------------------
     admin_default_username: str = Field(default="admin", env="ADMIN_DEFAULT_USERNAME", description="默认管理员用户名")
-    admin_default_password: str = Field(default="ChangeMe123!", env="ADMIN_DEFAULT_PASSWORD", description="默认管理员密码")
+    admin_default_password: str = Field(default="your-admin-password-change-me", env="ADMIN_DEFAULT_PASSWORD", description="默认管理员密码；生产环境必须改为强密码")
     admin_default_email: Optional[str] = Field(default=None, env="ADMIN_DEFAULT_EMAIL", description="默认管理员邮箱")
 
     # -------------------- LLM 相关配置 --------------------
@@ -225,7 +225,9 @@ _WEAK_SECRET_KEYS = {
     "",
     "请替换为随机且复杂的字符串",
     "your-secret-key-change-me-to-random-string",
+    "your-admin-password-change-me",
     "ChangeMe123!",
+    "Admin123456!",
     "secret",
     "change-me",
     "changeme",
@@ -241,4 +243,10 @@ def assert_production_security() -> None:
         raise RuntimeError(
             "生产环境 SECRET_KEY 不安全：长度需 >=32 且不得使用默认/弱值；"
             "请用 `openssl rand -hex 32` 生成后写入 SECRET_KEY。"
+        )
+    admin_pwd = settings.admin_default_password or ""
+    if len(admin_pwd) < 8 or admin_pwd.strip() in _WEAK_SECRET_KEYS:
+        raise RuntimeError(
+            "生产环境 ADMIN_DEFAULT_PASSWORD 不安全：长度需 >=8 且不得使用默认/弱值"
+            "（如 ChangeMe123!、your-admin-password-change-me）；请设置强密码后写入 ADMIN_DEFAULT_PASSWORD。"
         )
