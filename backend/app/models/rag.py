@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Optional
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import DateTime, Index, Integer, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -26,7 +26,7 @@ class RagChunk(Base):
     )
 
     id: Mapped[str] = mapped_column(String(128), primary_key=True)
-    project_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False)
     chapter_number: Mapped[int] = mapped_column(Integer, nullable=False)
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     chapter_title: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -48,7 +48,7 @@ class RagSummary(Base):
     )
 
     id: Mapped[str] = mapped_column(String(128), primary_key=True)
-    project_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False)
     chapter_number: Mapped[int] = mapped_column(Integer, nullable=False)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False)

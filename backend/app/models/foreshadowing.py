@@ -78,7 +78,7 @@ class ForeshadowingResolution(Base):
     foreshadowing_id: Mapped[int] = mapped_column(ForeignKey("foreshadowings.id", ondelete="CASCADE"), nullable=False)
     
     # 回收信息
-    resolved_at_chapter_id: Mapped[int] = mapped_column(ForeignKey("chapters.id", ondelete="CASCADE"), nullable=False)
+    resolved_at_chapter_id: Mapped[Optional[int]] = mapped_column(ForeignKey("chapters.id", ondelete="SET NULL"), nullable=True)
     resolved_at_chapter_number: Mapped[int] = mapped_column(Integer, nullable=False)
     resolution_text: Mapped[str] = mapped_column(LONG_TEXT_TYPE, nullable=False)
     resolution_type: Mapped[Optional[str]] = mapped_column(String(32))  # direct, twist, delayed, etc.
