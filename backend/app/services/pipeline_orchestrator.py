@@ -3159,8 +3159,7 @@ class PipelineOrchestrator:
         chapter_text: str,
         user_id: int,
     ) -> Tuple[str, Dict[str, Any]]:
-        sync_session = getattr(self.session, "sync_session", self.session)
-        service = ConsistencyService(sync_session, self.llm_service)
+        service = ConsistencyService(self.session, self.llm_service)
         result = await service.check_consistency(project_id, chapter_text, user_id, include_foreshadowing=True)
         report = {
             "is_consistent": result.is_consistent,
