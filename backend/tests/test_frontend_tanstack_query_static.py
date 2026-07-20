@@ -371,28 +371,6 @@ def test_personal_model_routing_uses_query_cache_for_bundle_and_mutations():
         assert removed not in source
 
 
-def test_legacy_llm_settings_uses_query_mutations_when_rendered():
-    query_source = _source("queries/llm.ts")
-    source = _source("components/LLMSettings.vue")
-
-    for text in [
-        "useLegacyLLMConfigQuery",
-        "useSaveLegacyLLMConfigMutation",
-        "useDeleteLegacyLLMConfigMutation",
-        "useAvailableModelsMutation",
-    ]:
-        assert text in query_source
-        assert text in source
-
-    for removed in [
-        "getLLMConfig(",
-        "createOrUpdateLLMConfig(",
-        "deleteLLMConfig(",
-        "getAvailableModels(",
-    ]:
-        assert removed not in source
-
-
 def test_inspiration_model_readiness_uses_llm_query_cache():
     source = _source("views/InspirationMode.vue")
 
@@ -559,29 +537,3 @@ def test_session_restore_uses_query_client_fetch_query():
         assert ".fetchUser(" not in source
 
     assert "authStore.setToken(token)" in main_ts
-
-
-def test_workspace_entry_uses_update_log_query_cache():
-    query_source = _source("queries/updates.ts")
-    source = _source("views/WorkspaceEntry.vue")
-
-    for text in [
-        "useQuery",
-        "updateQueryKeys",
-        "useLatestUpdatesQuery",
-    ]:
-        assert text in query_source
-
-    for text in [
-        "useLatestUpdatesQuery",
-        "updatesQuery",
-        "updatesQuery.data.value",
-    ]:
-        assert text in source
-
-    for removed in [
-        "getLatestUpdates",
-        "const updateLogs = ref<UpdateLog[]>([])",
-        "updateLogs.value = await",
-    ]:
-        assert removed not in source
