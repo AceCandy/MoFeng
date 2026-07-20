@@ -26,7 +26,7 @@ H1-H5 全部实施完成，独立复核通过（基于真实磁盘代码 + codeg
 
 ## P2 实施状态（2026-07-20）
 
-medium 25 项 + KRService async（新发现）全部处置完成（16 项真做 + 2 项决策不删 + 1 项 CSP 决策不加 + 8 项 P1 已处理）。独立复核通过，后端 pytest 226 passed + alembic upgrade/downgrade 往返 + 前端四件套全绿。
+medium 25 项 + KRService async（新发现）全部处置完成（16 项真做 + 2 项决策不删 + 1 项 CSP 延后单独 task 已完成 + 8 项 P1 已处理）。独立复核通过，后端 pytest 226 passed + alembic upgrade/downgrade 往返 + 前端四件套全绿。
 
 | 项 | 状态 | commit | 说明 |
 |---|---|---|---|
@@ -47,12 +47,12 @@ medium 25 项 + KRService async（新发现）全部处置完成（16 项真做 
 | M23 vector re-raise | ✅ | c948e87 | upsert 失败 re-raise |
 | M24 auth linuxdo SSRF | ✅ | 1172e0c | token_url/user_info_url 校验 + data.get |
 | KRService async（新发现） | ✅ | 263c761 | 6 处 query + _get_chapter_blueprint async |
-| CSP | ⏸ 决策不加 | - | 需前端浏览器测试评估，P3 或单独 task |
+| CSP | ✅ | 118bbb2 | vite 关 modulePreload.polyfill 避免内联 script + nginx 3 处加 CSP（default 'self'; script 'self'; style 'unsafe-inline'; img data: blob:; font data:; connect 'self'; frame-ancestors 'none'; object 'none'; base-uri 'self'; form-action 'self'）|
 | M1/M8/M12/M13/M14/M15/M16/M25 | ✅ P1 已处理 | - | dead-code 类，P1 删除/确认误报 |
 
 ## P3 实施状态（2026-07-20）
 
-low 19 项全部处置完成（6 项真做 + 4 项决策不修 + 1 项留下次 + 8 项 P1/P2 已处理）。后端 pytest 226 passed + 前端四件套全绿。
+low 19 项全部处置完成（8 项真做含 #6/#9 收尾 + 3 项决策不修 + 8 项 P1/P2 已处理）。后端 pytest 230 passed + 前端四件套全绿。
 
 | 项 | 状态 | commit | 说明 |
 |---|---|---|---|
@@ -62,13 +62,26 @@ low 19 项全部处置完成（6 项真做 + 4 项决策不修 + 1 项留下次 
 | #14 novel store 死代码 | ✅ | da9548d | 删 currentConversationState/resetConversationState |
 | #15 AppShell 监听泄漏 | ✅ | da9548d | matchMedia onUnmounted 移除（themeMedia 提外层）|
 | #18 append_conversation seq | ✅ | 89bc191 | 原子 INSERT SELECT MAX(seq)+1 |
-| #6 ProjectMemory 乐观锁 | ⏸ 决策留下次 | - | 需梳理所有 update 点+WHERE version=? 守卫，风险中，留单独 task |
+| #6 ProjectMemory 乐观锁 | ✅ | 37b4950 | finalize 跨事务 WHERE version=old 守卫+冲突不覆盖（LLM 结果入 snapshot）/ put expected_version 409 / 回滚 version+1 bug fix |
 | #7 debug 默认 True | ⏸ 决策保留 | - | 开发友好，P2 K 已强制生产关闭 |
 | #8 analytics 情感分析分叉 | ⏸ 决策不修 | - | emotion_analyzer.py 已 P1 删，analytics 本地函数唯一来源，无分叉 |
-| #9 character_dna_guide | ⏸ 决策不修 | - | 全仓 rg 无引用，已不存在 |
+| #9 character_dna_guide | ✅ | 7d48227 | init_db LEGACY_PROMPT_NAMES_TO_DELETE 启动幂等清理 DB 残留（覆盖所有部署）|
 | #19 foreshadowing utcnow | ⏸ 决策不修 | - | P1 删 5 方法时已无 utcnow |
 | #2/#10/#11/#12/#13/#16/#17 | ✅ P1 已处理 | - | dead-code 类 |
 | #3 debug 校验 | ✅ P2 已处理 | - | P2 K assert_production_security debug=False |
+
+## 残留风险清零（2026-07-20）
+
+P0-P3 主线完成后，4 项残留风险全部处置：
+
+| 项 | 处置 | commit | 说明 |
+|---|---|---|---|
+| #6 ProjectMemory 乐观锁 | ✅ 真做 | 37b4950 | finalize 跨事务守卫+冲突不覆盖 / put expected_version 409 / 回滚 version+1 bug fix，3 写点+4 测试 |
+| CSP | ✅ 真做 | 118bbb2 | vite 关 modulePreload.polyfill + nginx 3 处 CSP（10 指令），dist 确认无内联 script |
+| #9 DB 残留清理 | ✅ 真做 | 7d48227 | init_db LEGACY_PROMPT_NAMES_TO_DELETE 启动幂等清理，覆盖所有部署不止当前库 |
+| SSRF rebinding | ✅ 接受现状 | - | remote-version URL 管理员配置+接口 admin-only，无攻击面 |
+
+两个 task 走 Trellis 立项（07-20-govern-optimistic-lock / 07-20-govern-csp-header）已归档。后端 230 pytest + 前端四件套绿，独立复核通过。**残留风险全部清零，无遗留。**
 
 ## 治理分批建议
 
