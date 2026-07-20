@@ -183,16 +183,16 @@ class VectorStoreService:
             try:
                 await session.execute(stmt)
                 await session.commit()
-            except Exception as exc:  # pragma: no cover - 写入失败时记录日志
-                logger.error("写入 rag_chunks 失败: %s", exc)
+            except Exception:
+                logger.error("写入 rag_chunks 失败", exc_info=True)
                 await session.rollback()
-            else:
-                logger.debug(
-                    "已写入章节片段: project=%s chapter=%s count=%d",
-                    payload[0].get("project_id"),
-                    payload[0].get("chapter_number"),
-                    len(payload),
-                )
+                raise
+            logger.debug(
+                "已写入章节片段: project=%s chapter=%s count=%d",
+                payload[0].get("project_id"),
+                payload[0].get("chapter_number"),
+                len(payload),
+            )
 
     async def upsert_summaries(
         self,
@@ -235,16 +235,16 @@ class VectorStoreService:
             try:
                 await session.execute(stmt)
                 await session.commit()
-            except Exception as exc:  # pragma: no cover - 写入失败时记录日志
-                logger.error("写入 rag_summaries 失败: %s", exc)
+            except Exception:
+                logger.error("写入 rag_summaries 失败", exc_info=True)
                 await session.rollback()
-            else:
-                logger.debug(
-                    "已写入章节摘要: project=%s chapter=%s count=%d",
-                    payload[0].get("project_id"),
-                    payload[0].get("chapter_number"),
-                    len(payload),
-                )
+                raise
+            logger.debug(
+                "已写入章节摘要: project=%s chapter=%s count=%d",
+                payload[0].get("project_id"),
+                payload[0].get("chapter_number"),
+                len(payload),
+            )
 
     async def delete_by_chapters(self, project_id: str, chapter_numbers: Sequence[int]) -> None:
         """根据章节编号批量删除对应的上下文数据。"""

@@ -214,7 +214,7 @@ class ConsistencyService:
         except Exception as e:
             logger.error(f"一致性检查失败: {e}")
             return ConsistencyCheckResult(
-                is_consistent=True,  # 检查失败时默认通过
+                is_consistent=False,  # 检查失败时默认拦截，质量门不放行
                 violations=[],
                 summary=f"检查过程出错: {str(e)}",
                 check_time_ms=int((time.time() - start_time) * 1000)
