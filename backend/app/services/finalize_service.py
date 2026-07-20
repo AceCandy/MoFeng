@@ -174,67 +174,95 @@ class FinalizeService:
             skip_vector_update: 是否跳过向量库更新
 
         Returns:
-            包含更新结果的字典
+            包含更新结果的字典。success 严格反映核心记忆字段是否至少有一个有效写入；
+            部分失败时 success=True 且 partial_success=True；全部失败 success=False（H4）。
         """
         logger.info(f"开始定稿处理: project={project_id}, chapter={chapter_number}")
 
-        result = {
-            "success": True,
+        result: Dict[str, Any] = {
+            "success": False,
             "chapter_number": chapter_number,
-            "updates": {}
+            "updates": {},
+            "errors": [],
         }
 
         try:
-            # 1. 获取或创建项目记忆
+            # 1. 短事务读取项目记忆与当前状态后立即 commit，释放 DB 连接；
+            #    后续 LLM 调用不独占连接池（H4：解耦 LLM 与 DB 事务）。
             project_memory = await self._get_or_create_project_memory(project_id)
+            old_summary = project_memory.global_summary or ""
+            old_plot_arcs = project_memory.plot_arcs or {}
+            old_state = await self._get_character_state_text(project_id)
+            await self.db.commit()
 
-            # 2. 更新全局摘要
-            new_summary = await self._update_global_summary(
-                chapter_text=chapter_text,
-                old_summary=project_memory.global_summary or "",
-                user_id=user_id
+            # 2-4. LLM 调用（事务外）：每个独立捕获，失败记录到 errors 但不静默吞没（H4）。
+            new_summary = await self._safe_llm_call(
+                self._update_global_summary(
+                    chapter_text=chapter_text,
+                    old_summary=old_summary,
+                    user_id=user_id,
+                ),
+                "global_summary",
+                result,
             )
+            new_state = await self._safe_llm_call(
+                self._update_character_state(
+                    chapter_text=chapter_text,
+                    old_state=old_state,
+                    user_id=user_id,
+                ),
+                "character_state",
+                result,
+            )
+            new_plot_arcs = await self._safe_llm_call(
+                self._update_plot_arcs(
+                    chapter_text=chapter_text,
+                    chapter_number=chapter_number,
+                    old_plot_arcs=old_plot_arcs,
+                    user_id=user_id,
+                ),
+                "plot_arcs",
+                result,
+            )
+            chapter_summary = await self._safe_llm_call(
+                self._generate_chapter_summary(
+                    chapter_text=chapter_text,
+                    chapter_number=chapter_number,
+                    user_id=user_id,
+                ),
+                "chapter_summary",
+                result,
+            )
+
+            # success 严格语义：核心字段至少一个有效值才写快照 + success=True；
+            # 全失败跳过快照写入，避免与上层回滚后章节状态不一致（H4）。
+            core_fields = [new_summary, new_state, new_plot_arcs, chapter_summary]
+            valid_count = sum(1 for field in core_fields if field)
+            if valid_count == 0:
+                result["success"] = False
+                result["error"] = "所有记忆更新 LLM 调用均失败"
+                logger.warning(
+                    f"定稿全部 LLM 调用失败，跳过快照写入: project={project_id}, chapter={chapter_number}"
+                )
+                return result
+
+            # 5-8. 写快照（新短事务）：仅写入有效结果。
             if new_summary:
                 project_memory.global_summary = new_summary
                 result["updates"]["global_summary"] = "updated"
-
-            # 3. 更新角色状态
-            old_state = await self._get_character_state_text(project_id)
-            new_state = await self._update_character_state(
-                chapter_text=chapter_text,
-                old_state=old_state,
-                user_id=user_id
-            )
-            if new_state:
-                await self._save_character_state(project_id, chapter_number, new_state)
-                result["updates"]["character_state"] = "updated"
-
-            # 4. 更新剧情线追踪
-            new_plot_arcs = await self._update_plot_arcs(
-                chapter_text=chapter_text,
-                chapter_number=chapter_number,
-                old_plot_arcs=project_memory.plot_arcs or {},
-                user_id=user_id
-            )
             if new_plot_arcs:
                 project_memory.plot_arcs = new_plot_arcs
                 result["updates"]["plot_arcs"] = "updated"
-
-            # 5. 更新向量库
+            if new_state:
+                await self._save_character_state(project_id, chapter_number, new_state)
+                result["updates"]["character_state"] = "updated"
             if not skip_vector_update and self.vector_store_service:
                 await self._update_vector_store(
                     project_id=project_id,
                     chapter_number=chapter_number,
-                    chapter_text=chapter_text
+                    chapter_text=chapter_text,
                 )
                 result["updates"]["vector_store"] = "updated"
-
-            # 6. 创建章节快照
-            chapter_summary = await self._generate_chapter_summary(
-                chapter_text=chapter_text,
-                chapter_number=chapter_number,
-                user_id=user_id
-            )
             await self._create_chapter_snapshot(
                 project_id=project_id,
                 chapter_number=chapter_number,
@@ -242,19 +270,22 @@ class FinalizeService:
                 character_states=new_state,
                 plot_arcs=new_plot_arcs or project_memory.plot_arcs,
                 chapter_summary=chapter_summary,
-                word_count=count_chapter_words(chapter_text)
+                word_count=count_chapter_words(chapter_text),
             )
             result["updates"]["snapshot"] = "created"
-
-            # 7. 更新项目记忆的最后更新章节
             project_memory.last_updated_chapter = chapter_number
             project_memory.version += 1
-
-            # 8. 更新章节蓝图状态
             await self._update_blueprint_status(project_id, chapter_number)
-
             await self.db.commit()
-            logger.info(f"定稿处理完成: project={project_id}, chapter={chapter_number}")
+
+            result["success"] = True
+            if valid_count < len(core_fields):
+                result["partial_success"] = True
+
+            logger.info(
+                f"定稿处理完成: project={project_id}, chapter={chapter_number}, "
+                f"success={result['success']}, partial={result.get('partial_success', False)}"
+            )
 
         except Exception as e:
             logger.error(f"定稿处理失败: {e}")
@@ -263,6 +294,20 @@ class FinalizeService:
             result["error"] = str(e)
 
         return result
+
+    async def _safe_llm_call(
+        self,
+        coro: Any,
+        field_name: str,
+        result: Dict[str, Any],
+    ) -> Any:
+        """包装 LLM 调用：捕获异常并记录到 result['errors']，不静默吞没（H4）。"""
+        try:
+            return await coro
+        except Exception as e:
+            logger.error(f"{field_name} LLM 调用失败: {e}")
+            result.setdefault("errors", []).append({"field": field_name, "error": str(e)})
+            return None
 
     async def _get_or_create_project_memory(self, project_id: str) -> ProjectMemory:
         """获取或创建项目记忆"""
@@ -293,23 +338,19 @@ class FinalizeService:
         old_summary: str,
         user_id: int
     ) -> Optional[str]:
-        """更新全局摘要"""
+        """更新全局摘要（异常向上传播，由 _safe_llm_call 统一记录，H4）"""
         prompt = UPDATE_GLOBAL_SUMMARY_PROMPT.format(
             chapter_text=chapter_text,
             global_summary=old_summary
         )
 
-        try:
-            response = await self.llm_service.generate(
-                prompt=prompt,
-                user_id=user_id,
-                max_tokens=3000,
-                temperature=0.3
-            )
-            return response.strip() if response else None
-        except Exception as e:
-            logger.error(f"更新全局摘要失败: {e}")
-            return None
+        response = await self.llm_service.generate(
+            prompt=prompt,
+            user_id=user_id,
+            max_tokens=3000,
+            temperature=0.3
+        )
+        return response.strip() if response else None
 
     async def _get_character_state_text(self, project_id: str) -> str:
         """获取角色状态文本"""
@@ -356,23 +397,19 @@ class FinalizeService:
         old_state: str,
         user_id: int
     ) -> Optional[str]:
-        """更新角色状态"""
+        """更新角色状态（异常向上传播，由 _safe_llm_call 统一记录，H4）"""
         prompt = UPDATE_CHARACTER_STATE_PROMPT.format(
             chapter_text=chapter_text,
             old_state=old_state or "（暂无角色状态记录）"
         )
 
-        try:
-            response = await self.llm_service.generate(
-                prompt=prompt,
-                user_id=user_id,
-                max_tokens=4000,
-                temperature=0.3
-            )
-            return response.strip() if response else None
-        except Exception as e:
-            logger.error(f"更新角色状态失败: {e}")
-            return None
+        response = await self.llm_service.generate(
+            prompt=prompt,
+            user_id=user_id,
+            max_tokens=4000,
+            temperature=0.3
+        )
+        return response.strip() if response else None
 
     async def _save_character_state(
         self,
@@ -469,7 +506,7 @@ class FinalizeService:
         old_plot_arcs: Dict,
         user_id: int
     ) -> Optional[Dict]:
-        """更新剧情线追踪"""
+        """更新剧情线追踪（异常向上传播，由 _safe_llm_call 统一记录，H4）"""
         import json
 
         prompt = UPDATE_PLOT_ARCS_PROMPT.format(
@@ -478,27 +515,21 @@ class FinalizeService:
             plot_arcs=json.dumps(old_plot_arcs, ensure_ascii=False, indent=2)
         )
 
-        try:
-            response = await self.llm_service.generate(
-                prompt=prompt,
-                user_id=user_id,
-                max_tokens=2000,
-                temperature=0.3
-            )
-            if response:
-                # 尝试解析JSON
-                response = response.strip()
-                if response.startswith("```"):
-                    response = response.split("```")[1]
-                    if response.startswith("json"):
-                        response = response[4:]
-                return json.loads(response)
-        except json.JSONDecodeError as e:
-            logger.error(f"解析剧情线JSON失败: {e}")
-        except Exception as e:
-            logger.error(f"更新剧情线失败: {e}")
-
-        return None
+        response = await self.llm_service.generate(
+            prompt=prompt,
+            user_id=user_id,
+            max_tokens=2000,
+            temperature=0.3
+        )
+        if not response:
+            return None
+        # 尝试解析JSON
+        response = response.strip()
+        if response.startswith("```"):
+            response = response.split("```")[1]
+            if response.startswith("json"):
+                response = response[4:]
+        return json.loads(response)
 
     async def _update_vector_store(
         self,
@@ -526,23 +557,19 @@ class FinalizeService:
         chapter_number: int,
         user_id: int
     ) -> Optional[str]:
-        """生成章节摘要"""
+        """生成章节摘要（异常向上传播，由 _safe_llm_call 统一记录，H4）"""
         prompt = GENERATE_CHAPTER_SUMMARY_PROMPT.format(
             chapter_text=chapter_text[:5000],  # 限制长度
             chapter_number=chapter_number
         )
 
-        try:
-            response = await self.llm_service.generate(
-                prompt=prompt,
-                user_id=user_id,
-                max_tokens=500,
-                temperature=0.3
-            )
-            return response.strip() if response else None
-        except Exception as e:
-            logger.error(f"生成章节摘要失败: {e}")
-            return None
+        response = await self.llm_service.generate(
+            prompt=prompt,
+            user_id=user_id,
+            max_tokens=500,
+            temperature=0.3
+        )
+        return response.strip() if response else None
 
     async def _create_chapter_snapshot(
         self,
