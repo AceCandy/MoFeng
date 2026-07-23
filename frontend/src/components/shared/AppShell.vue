@@ -60,19 +60,86 @@ const toggleDropdown = () => {
 const { data: rawBackgroundTasks, isFetching: isFetchingTasks } = useTasksQuery()
 const { sseBackgroundTasks, isTaskStreamActive, startTaskStream } = useTaskStream()
 const completedOutlineTaskIds = new Set<string>()
+const taskReadStoragePrefix = 'mofeng-task-read:'
+const viewedCompletedTaskIds = ref<Set<string>>(new Set())
+
+const taskReadStorageKey = computed(() => {
+  const userId = authStore.user?.id
+  return userId == null ? null : `${taskReadStoragePrefix}${userId}`
+})
+
+const loadViewedCompletedTaskIds = () => {
+  const storageKey = taskReadStorageKey.value
+  if (!storageKey) {
+    viewedCompletedTaskIds.value = new Set()
+    return
+  }
+
+  try {
+    const stored = window.localStorage.getItem(storageKey)
+    const ids = stored ? JSON.parse(stored) : []
+    viewedCompletedTaskIds.value = new Set(
+      Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : [],
+    )
+  } catch {
+    viewedCompletedTaskIds.value = new Set()
+  }
+}
+
+const markCompletedTasksViewed = () => {
+  const storageKey = taskReadStorageKey.value
+  if (!storageKey) return
+
+  const completedTaskIds = backgroundTasks.value
+    .filter((task) => task.status === 'succeeded' || task.status === 'failed')
+    .map((task) => task.id)
+  if (completedTaskIds.length === 0) return
+
+  const nextViewedIds = new Set(viewedCompletedTaskIds.value)
+  completedTaskIds.forEach((id) => nextViewedIds.add(id))
+  viewedCompletedTaskIds.value = nextViewedIds
+  try {
+    window.localStorage.setItem(storageKey, JSON.stringify([...nextViewedIds]))
+  } catch {
+    // 本地存储不可用时仍允许查看日志，并保留当前会话内的已读状态。
+  }
+}
+
+const handleTaskButtonClick = () => {
+  markCompletedTasksViewed()
+  showTaskLogModal.value = true
+}
+
+watch(taskReadStorageKey, loadViewedCompletedTaskIds, { immediate: true })
 
 const backgroundTasks = computed(() => sseBackgroundTasks.value ?? rawBackgroundTasks.value ?? [])
 const isTaskSyncing = computed(() => isFetchingTasks.value || isTaskStreamActive.value)
-const activeBackgroundTasks = computed(() =>
-  backgroundTasks.value.filter((task) => task.status === 'queued' || task.status === 'running'),
+const runningBackgroundTasks = computed(() =>
+  backgroundTasks.value.filter((task) => task.status === 'running'),
 )
-const failedBackgroundTasks = computed(() =>
-  backgroundTasks.value.filter((task) => task.status === 'failed'),
+const unviewedSucceededTasks = computed(() =>
+  backgroundTasks.value.filter(
+    (task) => task.status === 'succeeded' && !viewedCompletedTaskIds.value.has(task.id),
+  ),
 )
-const taskIndicatorText = computed(() => {
-  if (activeBackgroundTasks.value.length > 0) return String(activeBackgroundTasks.value.length)
-  if (failedBackgroundTasks.value.length > 0) return '!'
-  return '志'
+const unviewedFailedTasks = computed(() =>
+  backgroundTasks.value.filter(
+    (task) => task.status === 'failed' && !viewedCompletedTaskIds.value.has(task.id),
+  ),
+)
+const completedTaskReminder = computed<'success' | 'failed' | null>(() => {
+  if (!taskReadStorageKey.value) return null
+  if (unviewedFailedTasks.value.length > 0) return 'failed'
+  if (unviewedSucceededTasks.value.length > 0) return 'success'
+  return null
+})
+const taskButtonLabel = computed(() => {
+  if (runningBackgroundTasks.value.length > 0) {
+    return `查看任务日志，${runningBackgroundTasks.value.length} 个任务执行中`
+  }
+  if (completedTaskReminder.value === 'failed') return '查看任务日志，有任务执行失败'
+  if (completedTaskReminder.value === 'success') return '查看任务日志，有任务执行完成'
+  return '查看任务日志'
 })
 
 const novelStore = useNovelStore()
@@ -478,16 +545,30 @@ onUnmounted(() => {
           <button
             type="button"
             class="app-shell__task-button"
-            :class="{
-              'has-active-task': activeBackgroundTasks.length > 0,
-              'has-failed-task': activeBackgroundTasks.length === 0 && failedBackgroundTasks.length > 0,
-            }"
-            title="查看当前正在执行的任务日志"
-            aria-label="查看当前正在执行的任务日志"
-            @click="showTaskLogModal = true"
+            :title="taskButtonLabel"
+            :aria-label="taskButtonLabel"
+            @click="handleTaskButtonClick"
           >
-            <span class="app-shell__task-badge">{{ taskIndicatorText }}</span>
-            <span class="app-shell__task-label">任务</span>
+            <svg
+              class="app-shell__task-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <rect x="5" y="3" width="14" height="18" rx="2" />
+              <path stroke-linecap="round" d="M9 8h6M9 12h6M9 16h4" />
+            </svg>
+            <span v-if="runningBackgroundTasks.length > 0" class="app-shell__task-count">
+              {{ runningBackgroundTasks.length > 9 ? '9+' : runningBackgroundTasks.length }}
+            </span>
+            <span
+              v-else-if="completedTaskReminder"
+              class="app-shell__task-status-dot"
+              :class="{ 'is-success': completedTaskReminder === 'success' }"
+              aria-hidden="true"
+            ></span>
           </button>
 
           <!-- 昼夜切换中式印章 -->
@@ -711,26 +792,27 @@ onUnmounted(() => {
 }
 
 .app-shell__task-button {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
   min-height: 40px;
-  padding: 0 10px;
-  border: 1px solid var(--md-outline);
-  border-radius: var(--md-radius-xs);
-  background: var(--md-surface-container-low);
-  color: var(--md-on-surface);
+  padding: 0;
+  border: 0;
+  border-radius: var(--md-radius-full);
+  background: transparent;
+  color: var(--md-on-surface-variant);
   cursor: pointer;
   transition:
-    background-color 160ms cubic-bezier(0.2, 0, 0, 1),
-    box-shadow 160ms cubic-bezier(0.2, 0, 0, 1),
+    color 160ms cubic-bezier(0.2, 0, 0, 1),
     transform 160ms cubic-bezier(0.2, 0, 0, 1);
 }
 
 .app-shell__task-button:hover {
-  background: var(--md-surface-container);
-  box-shadow: 1.5px 1.5px 0 rgba(28, 32, 34, 0.14);
-  transform: translate(-1px, -1px);
+  color: var(--md-primary);
+  transform: translateY(-1px);
 }
 
 .app-shell__task-button:focus-visible {
@@ -738,36 +820,44 @@ onUnmounted(() => {
   outline-offset: 2px;
 }
 
-.app-shell__task-badge {
+.app-shell__task-icon {
+  width: 20px;
+  height: 20px;
+  color: currentColor;
+}
+
+.app-shell__task-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 3px;
   border: 1px solid var(--md-outline);
-  border-radius: var(--md-radius-xs);
-  background: var(--md-surface);
-  color: var(--md-on-surface-variant);
-  font-family: var(--md-font-serif);
-  font-size: 12px;
+  border-radius: var(--md-radius-full);
+  background: var(--md-warning-container);
+  color: var(--md-on-surface);
+  font-size: 10px;
   font-weight: 700;
   line-height: 1;
 }
 
-.app-shell__task-button.has-active-task .app-shell__task-badge {
-  background: var(--md-warning-container);
-  color: var(--md-on-surface);
+.app-shell__task-status-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 7px;
+  height: 7px;
+  border: 1px solid var(--md-surface-container-low);
+  border-radius: var(--md-radius-full);
+  background: var(--md-error);
 }
 
-.app-shell__task-button.has-failed-task .app-shell__task-badge {
-  background: var(--md-error-container);
-  color: var(--md-error);
-}
-
-.app-shell__task-label {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+.app-shell__task-status-dot.is-success {
+  background: var(--md-success);
 }
 
 /* 昼模式印章：翠玉竹青色，彰显清新白昼 */

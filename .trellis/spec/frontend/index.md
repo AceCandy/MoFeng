@@ -30,6 +30,7 @@
 | [Quality Guidelines](./quality-guidelines.md) | HTTP, routing, Tailwind tokens, forms, testing, review checklist |
 | [LLM Settings](./llm-settings.md) | PersonalModelRouting supplier/model capability isolation, TTS provider separation |
 | [Chapter Reader](./chapter-reader.md) | useChapterReader TTS-model-vs-browser playback routing, model voice label, preview split |
+| [Task Reminder Indicator](./task-reminders.md) | App-shell task status aggregation, terminal acknowledgement, and per-user browser persistence |
 
 ---
 
