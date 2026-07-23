@@ -24,40 +24,6 @@ body,
     linear-gradient(var(--md-surface) 0%, var(--md-background) 65%, var(--md-surface-dim) 100%) !important;
 }
 
-/* 2. 侧边栏品牌 Logo 升级：将 .app-shell__brand-mark 深度覆写为“手作朱泥磨砂大方印” */
-body .app-shell__brand-mark {
-  background: var(--md-secondary) !important;
-  color: var(--md-on-secondary) !important;
-  border: 2px solid var(--md-secondary-dark) !important;
-  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.25) !important;
-  font-family: var(--md-font-display) !important;
-  font-weight: 700 !important; /* 印章使用 700 Bold 凸显阳刻饱满感 */
-  font-size: 18px !important;
-  transform: rotate(-3.5deg) !important; /* 钤印微斜 */
-  border-radius: 4px !important;
-  position: relative !important;
-  width: 40px !important;
-  height: 40px !important;
-}
-
-body .app-shell__brand-mark::after {
-  content: '' !important;
-  position: absolute !important;
-  inset: 0 !important;
-  /* 泥印斑驳颗粒感 */
-  background-image: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.12) 1px, transparent 1px) !important;
-  background-size: 3px 3px !important;
-  pointer-events: none !important;
-  opacity: 0.65 !important;
-}
-
-:root[data-theme='dark'] body .app-shell__brand-mark {
-  background-color: #9c332b !important;
-  border-color: #73221c !important;
-  color: #e5dec9 !important;
-  box-shadow: 2px 2px 0px rgba(156, 51, 43, 0.3) !important;
-}
-
 /* 3. 大厅项目卡片 .project-card 大改：重绘为古雅的“线装古籍书卷” */
 body .project-card {
   background:

@@ -44,13 +44,6 @@ body .app-shell__topbar {
   letter-spacing: 0.05em !important;
 }
 
-.app-shell__brand-top .app-shell__account-role {
-  margin: 2px 0 0 0 !important;
-  font-size: 11px !important;
-  color: var(--md-on-surface-variant) !important;
-  letter-spacing: 0.02em !important;
-}
-
 /* 3. 中间核心导航：升级版「砚海阁案头中枢」双胶囊与水墨下拉菜单 */
 .app-shell__project-capsule-container {
   display: flex !important;

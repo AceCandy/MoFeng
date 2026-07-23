@@ -225,6 +225,38 @@ describe('UI audit regressions', () => {
     expect(dropdownActionBlock).toContain('min-height: 44px')
   })
 
+  it('keeps app shell navigation branding and copy concise', () => {
+    const source = readSource('src/components/shared/AppShell.vue')
+
+    expect(source).toContain('<p class="app-shell__brand-title">墨風</p>')
+    expect(source).not.toContain('app-shell__brand-mark')
+    expect(source).not.toContain('AI 小说创作中控台')
+    expect(source).toContain(": '选择书卷' }}")
+    expect(source).toContain('笔底生墨，风动砚海。阁主，吾静待汝执笔。')
+    expect(source).not.toContain('app-shell__task-label')
+    expect(source).toContain('class="app-shell__task-icon"')
+    expect(source).toContain('class="app-shell__task-count"')
+    expect(source).toContain('class="app-shell__task-status-dot"')
+    expect(source).not.toContain("return '!'")
+    expect(source).toContain(':aria-label="taskButtonLabel"')
+  })
+
+  it('keeps task reminders scoped to running and unread terminal states', () => {
+    const source = readSource('src/components/shared/AppShell.vue')
+
+    expect(source).toContain("const taskReadStoragePrefix = 'mofeng-task-read:'")
+    expect(source).toContain('authStore.user?.id')
+    expect(source).toContain("task.status === 'running'")
+    expect(source).toContain("task.status === 'succeeded' && !viewedCompletedTaskIds.value.has(task.id)")
+    expect(source).toContain("task.status === 'failed' && !viewedCompletedTaskIds.value.has(task.id)")
+    expect(source).toContain("if (unviewedFailedTasks.value.length > 0) return 'failed'")
+    expect(source).toContain("if (!taskReadStorageKey.value) return null")
+    expect(source).toContain("return '查看任务日志，有任务执行失败'")
+    expect(source).toContain("return '查看任务日志，有任务执行完成'")
+    expect(source).toContain('markCompletedTasksViewed()')
+    expect(source).toContain('@click="handleTaskButtonClick"')
+  })
+
   it('keeps app shell decorative data urls out of the main css budget path', () => {
     const css = readGlobalCss()
 

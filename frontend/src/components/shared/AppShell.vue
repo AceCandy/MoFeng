@@ -374,13 +374,9 @@ onUnmounted(() => {
 
     <div class="app-shell__main">
       <header class="app-shell__topbar">
-        <!-- 左侧墨风金石Logo -->
+        <!-- 左侧项目名 -->
         <RouterLink to="/" class="app-shell__brand-top" style="text-decoration: none;">
-          <div class="app-shell__brand-mark" aria-hidden="true">墨</div>
-          <div class="app-shell__brand-copy">
-            <p class="app-shell__brand-title">墨風</p>
-            <p class="app-shell__account-role">AI 小说创作中控台</p>
-          </div>
+          <p class="app-shell__brand-title">墨風</p>
         </RouterLink>
 
         <!-- 作品空间双胶囊选择器 (砚海阁案头中枢) -->
@@ -405,7 +401,7 @@ onUnmounted(() => {
                 </svg>
               </span>
               <span class="app-shell__project-title">
-                {{ currentProject ? (currentProject.title || '未命名书卷') : '选择案头画卷...' }}
+                {{ currentProject ? (currentProject.title || '未命名书卷') : '选择书卷' }}
               </span>
               <span class="app-shell__project-arrow" :class="{ 'is-open': isDropdownOpen }">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -527,7 +523,7 @@ onUnmounted(() => {
           <!-- 空白状态：山水泼墨励志寄语 (仅在未选定工作空间前渲染) -->
           <div v-if="!currentProjectId" class="app-shell__project-welcome-message">
             <span class="welcome-spark">✍️</span>
-            <span class="welcome-text">笔底生墨，风动砚海。阁主，今天又是新的元气的一天，快来尽情创作吧！</span>
+            <span class="welcome-text">笔底生墨，风动砚海。阁主，吾静待汝执笔。</span>
           </div>
 
           <!-- 隐藏的导入文件 Input -->

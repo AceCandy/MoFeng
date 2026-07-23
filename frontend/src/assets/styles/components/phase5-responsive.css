@@ -14,11 +14,8 @@ body .app-shell__topbar {
 
 
 
-/* 窄屏下隐藏左侧 Logo 旁的文字，仅保留精致的“墨”字朱泥大方章 */
+/* 窄屏下收紧项目名右侧间距 */
 @media (max-width: 768px) {
-  .app-shell__brand-top .app-shell__brand-copy {
-    display: none !important;
-  }
   .app-shell__brand-top {
     margin-right: 0 !important;
   }

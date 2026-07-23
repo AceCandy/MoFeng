@@ -59,23 +59,6 @@
   gap: var(--md-spacing-3);
 }
 
-.app-shell__brand-mark {
-  width: 38px;
-  height: 38px;
-  display: grid;
-  place-items: center;
-  border-radius: var(--md-radius-md);
-  background: linear-gradient(
-    150deg,
-    color-mix(in oklch, var(--md-primary-container) 82%, var(--md-tint-cool)),
-    color-mix(in oklch, var(--md-secondary-container) 72%, var(--md-tint-success))
-  );
-  color: var(--md-primary-dark);
-  font-size: var(--md-title-medium);
-  font-weight: 700;
-  border: 1px solid color-mix(in srgb, var(--md-primary) 22%, var(--md-outline-variant));
-}
-
 .app-shell__brand-title,
 .app-shell__account-name {
   margin: 0;
@@ -83,12 +66,6 @@
   font-size: var(--md-label-large);
   font-weight: 700;
   letter-spacing: 0.02em;
-}
-
-.app-shell__account-role {
-  margin: 0;
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-label-medium);
 }
 
 .app-shell__close,
@@ -424,7 +401,6 @@
     display: inline-flex;
   }
 
-  .app-shell--project-context .app-shell__brand-copy,
   .app-shell--project-context .app-shell__nav-text,
   .app-shell--project-context .app-shell__account-copy {
     display: block;
