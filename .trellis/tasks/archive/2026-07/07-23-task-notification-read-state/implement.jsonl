@@ -1,0 +1,3 @@
+{"file":".trellis/spec/frontend/index.md","reason":"前端技术栈与目录规范索引"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Vue 单文件组件与样式约定"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"前端测试、AIMETA 与质量要求"}
