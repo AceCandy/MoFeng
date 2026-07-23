@@ -666,3 +666,36 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Next Steps
 
 - None - task complete
+
+
+## Session 20: 任务状态提醒
+
+**Date**: 2026-07-23
+**Task**: 任务状态提醒
+**Branch**: `main`
+
+### Summary
+
+实现导航栏后台任务状态聚合与按用户持久化的终态已读提醒，补充行为测试和前端可执行规范。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `017823f` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
