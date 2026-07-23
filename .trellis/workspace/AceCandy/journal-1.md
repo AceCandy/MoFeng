@@ -633,3 +633,36 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Next Steps
 
 - None - task complete
+
+
+## Session 19: 升级 Trellis 至 0.6.8
+
+**Date**: 2026-07-23
+**Task**: 升级 Trellis 至 0.6.8
+**Branch**: `main`
+
+### Summary
+
+升级 Trellis 项目模板与 Claude/Codex 集成至 0.6.8，采用官方最新版 skill，并完成版本、模板状态及配置解析验证。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7137108` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

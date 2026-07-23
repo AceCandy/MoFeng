@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 18
-- **Last Active**: 2026-07-19
+- **Total Sessions**: 19
+- **Last Active**: 2026-07-23
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~635 | Active |
+| `journal-1.md` | ~668 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 19 | 2026-07-23 | 升级 Trellis 至 0.6.8 | `7137108` | `main` |
 | 18 | 2026-07-19 | PG 部署配置（compose postgres profile + app POSTGRES_* env + pg-data volume + 两处 env.example） | `31e62e7`, `4e792f5` | `main` |
 | 17 | 2026-07-19 | PG 入口层连通 PostgreSQL（DB_PROVIDER=postgresql + asyncpg + alembic upgrade head 建全表） | `540d980`, `c644ee5` | `main` |
 | 16 | 2026-07-19 | 修复 memory_layer FK 类型与 DateTime 时区 + PG 迁移立项 | `71df072`, `38f817a` | `main` |
