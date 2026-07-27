@@ -699,3 +699,37 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Next Steps
 
 - None - task complete
+
+
+## Session 21: 统一章节上下文契约
+
+**Date**: 2026-07-28
+**Task**: 统一章节上下文契约
+**Branch**: `main`
+
+### Summary
+
+规划章节生命周期架构收敛，并完成生成、评审与一致性检查的 canonical Chapter Context 统一、恢复契约和测试覆盖。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2516ada` | (see git log) |
+| `edebafb` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
