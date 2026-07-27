@@ -79,9 +79,9 @@ class VectorStoreService:
         try:
             async with AsyncSessionLocal() as session:
                 result = await session.execute(stmt)
-        except Exception as exc:  # pragma: no cover - 查询异常时仅记录
+        except Exception as exc:
             logger.warning("向量检索剧情片段失败: %s", exc)
-            return []
+            raise
 
         items: List[RetrievedChunk] = []
         for row in result.all():
@@ -122,9 +122,9 @@ class VectorStoreService:
         try:
             async with AsyncSessionLocal() as session:
                 result = await session.execute(stmt)
-        except Exception as exc:  # pragma: no cover - 查询异常时仅记录
+        except Exception as exc:
             logger.warning("向量检索章节摘要失败: %s", exc)
-            return []
+            raise
 
         items: List[RetrievedSummary] = []
         for row in result.all():

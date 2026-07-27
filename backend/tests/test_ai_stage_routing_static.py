@@ -23,7 +23,6 @@ def test_core_user_facing_ai_calls_pass_stage_keys():
             'stage="chapter_rewrite"',
             'stage="chapter_compression"',
             'stage="chapter_enrichment"',
-            'stage="summary_memory"',
         ],
         "app/api/routers/optimizer.py": [
             'stage="chapter_optimization"',
@@ -51,7 +50,7 @@ def test_core_user_facing_ai_calls_pass_stage_keys():
 def test_embedding_calls_pass_rag_embedding_stage():
     checks = [
         "app/services/chapter_ingest_service.py",
-        "app/services/chapter_context_service.py",
+        "app/services/chapter_context_resolver.py",
         "app/services/knowledge_retrieval_service.py",
     ]
 

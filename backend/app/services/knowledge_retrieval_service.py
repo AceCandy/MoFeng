@@ -11,7 +11,7 @@
 这解决了"上下文太长塞不进 prompt"的问题，只注入最相关的过滤后内容。
 """
 import logging
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 from dataclasses import dataclass
 
 from sqlalchemy import select
@@ -184,7 +184,10 @@ class KnowledgeRetrievalService:
         user_id: int,
         pov_character: Optional[str] = None,
         user_guidance: Optional[str] = None,
-        top_k: int = 5
+        top_k: int = 5,
+        *,
+        chapter_blueprint: Optional[Dict[str, Any]] = None,
+        global_summary: Optional[str] = None,
     ) -> FilteredContext:
         """
         检索并过滤知识
@@ -200,8 +203,10 @@ class KnowledgeRetrievalService:
         Returns:
             FilteredContext
         """
-        # 1. 获取章节蓝图信息
-        blueprint = await self._get_chapter_blueprint(project_id, chapter_number)
+        # canonical resolver 显式传入冻结值；未传时仅为旧调用保留兼容查询。
+        blueprint: Optional[Union[ChapterBlueprint, Dict[str, Any]]] = chapter_blueprint
+        if blueprint is None:
+            blueprint = await self._get_chapter_blueprint(project_id, chapter_number)
 
         # 2. 生成检索关键词
         queries = await self._generate_search_queries(
@@ -218,11 +223,11 @@ class KnowledgeRetrievalService:
             user_id=user_id,
         )
 
-        # 4. 获取前文摘要
-        memory = (await self.session.execute(
-            select(ProjectMemory).where(ProjectMemory.project_id == project_id)
-        )).scalars().first()
-        global_summary = memory.global_summary if memory else ""
+        if global_summary is None:
+            memory = (await self.session.execute(
+                select(ProjectMemory).where(ProjectMemory.project_id == project_id)
+            )).scalars().first()
+            global_summary = memory.global_summary if memory else ""
 
         # 5. 过滤和结构化
         filtered = await self._filter_knowledge(
@@ -389,7 +394,7 @@ class KnowledgeRetrievalService:
 
     async def _generate_search_queries(
         self,
-        blueprint: Optional[ChapterBlueprint],
+        blueprint: Optional[Union[ChapterBlueprint, Dict[str, Any]]],
         user_guidance: Optional[str],
         user_id: int
     ) -> List[str]:
@@ -398,14 +403,14 @@ class KnowledgeRetrievalService:
             return []
 
         prompt = KNOWLEDGE_QUERY_PROMPT.format(
-            chapter_number=blueprint.chapter_number,
-            chapter_title=blueprint.brief_summary or "",
-            chapter_focus=blueprint.chapter_focus or "",
-            chapter_function=blueprint.chapter_function or "",
-            suspense_density=blueprint.suspense_density or "",
-            foreshadowing_ops=blueprint.foreshadowing_ops or "",
-            twist_level=blueprint.cognitive_twist_level or 1,
-            brief_summary=blueprint.brief_summary or "",
+            chapter_number=self._blueprint_value(blueprint, "chapter_number", 0),
+            chapter_title=self._blueprint_value(blueprint, "brief_summary", ""),
+            chapter_focus=self._blueprint_value(blueprint, "chapter_focus", ""),
+            chapter_function=self._blueprint_value(blueprint, "chapter_function", ""),
+            suspense_density=self._blueprint_value(blueprint, "suspense_density", ""),
+            foreshadowing_ops=self._blueprint_value(blueprint, "foreshadowing_ops", ""),
+            twist_level=self._blueprint_value(blueprint, "cognitive_twist_level", 1),
+            brief_summary=self._blueprint_value(blueprint, "brief_summary", ""),
             user_guidance=user_guidance or ""
         )
 
@@ -425,8 +430,9 @@ class KnowledgeRetrievalService:
                     if line.strip()
                 ]
                 return queries[:5]
-        except Exception as e:
-            logger.error(f"生成检索关键词失败: {e}")
+        except Exception as exc:
+            logger.warning("生成检索关键词失败: %s", exc)
+            raise RuntimeError("生成两阶段 RAG 检索词失败") from exc
 
         return []
 
@@ -442,6 +448,7 @@ class KnowledgeRetrievalService:
             return []
 
         retrieved = []
+        first_error: Optional[Exception] = None
         for query in queries:
             try:
                 if hasattr(self.vector_store_service, "search"):
@@ -453,7 +460,7 @@ class KnowledgeRetrievalService:
                 else:
                     embedding = await self.llm_service.get_embedding(query, user_id=user_id, stage="rag_embedding")
                     if not embedding:
-                        continue
+                        raise RuntimeError("RAG embedding 为空")
                     chunks = await self.vector_store_service.query_chunks(
                         project_id=project_id,
                         embedding=embedding,
@@ -475,8 +482,12 @@ class KnowledgeRetrievalService:
                         relevance_score=r.get("score", 0.0),
                         chapter_number=r.get("chapter_number")
                     ))
-            except Exception as e:
-                logger.error(f"向量检索失败: {e}")
+            except Exception as exc:
+                first_error = first_error or exc
+                logger.warning("向量检索失败: %s", exc)
+
+        if first_error is not None and not retrieved:
+            raise RuntimeError("两阶段 RAG 的向量检索全部失败") from first_error
 
         # 去重
         seen = set()
@@ -491,7 +502,7 @@ class KnowledgeRetrievalService:
     async def _filter_knowledge(
         self,
         retrieved: List[RetrievedKnowledge],
-        blueprint: Optional[ChapterBlueprint],
+        blueprint: Optional[Union[ChapterBlueprint, Dict[str, Any]]],
         global_summary: str,
         pov_character: Optional[str],
         user_id: int
@@ -514,9 +525,9 @@ class KnowledgeRetrievalService:
 
         prompt = KNOWLEDGE_FILTER_PROMPT.format(
             retrieved_texts=retrieved_texts,
-            chapter_number=blueprint.chapter_number if blueprint else 0,
-            chapter_function=blueprint.chapter_function if blueprint else "",
-            suspense_density=blueprint.suspense_density if blueprint else "",
+            chapter_number=self._blueprint_value(blueprint, "chapter_number", 0),
+            chapter_function=self._blueprint_value(blueprint, "chapter_function", ""),
+            suspense_density=self._blueprint_value(blueprint, "suspense_density", ""),
             pov_character=pov_character or "主角",
             global_summary=global_summary[:2000] if global_summary else ""
         )
@@ -545,16 +556,23 @@ class KnowledgeRetrievalService:
                     narrative_techniques=data.get("narrative_techniques", []),
                     warnings=data.get("warnings", [])
                 )
-        except Exception as e:
-            logger.error(f"过滤知识失败: {e}")
+        except Exception as exc:
+            logger.warning("过滤知识失败: %s", exc)
+            raise RuntimeError("两阶段 RAG 知识过滤失败") from exc
 
-        return FilteredContext(
-            plot_fuel=[],
-            character_info=[],
-            world_fragments=[],
-            narrative_techniques=[],
-            warnings=[]
-        )
+        raise RuntimeError("两阶段 RAG 知识过滤未返回有效结果")
+
+    @staticmethod
+    def _blueprint_value(
+        blueprint: Optional[Union[ChapterBlueprint, Dict[str, Any]]],
+        field: str,
+        default: Any,
+    ) -> Any:
+        if blueprint is None:
+            return default
+        if isinstance(blueprint, dict):
+            return blueprint.get(field, default) or default
+        return getattr(blueprint, field, default) or default
 
     async def _get_recent_chapter_summaries(
         self,

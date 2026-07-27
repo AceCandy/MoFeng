@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from ..models.writer_persona import WriterPersona
+from ..schemas.chapter_context import WriterPersonaContext
 from .llm_service import LLMService
 from .prompt_service import PromptService
 
@@ -137,32 +138,49 @@ class WriterPersonaService:
 
     async def check_style_compliance(
         self,
-        project_id: str,
-        chapter_content: str
+        project_id: Optional[str],
+        chapter_content: str,
+        *,
+        persona_context: Optional[WriterPersonaContext] = None,
     ) -> dict:
         """检查章节是否符合 Writer 风格"""
-        persona = await self.get_active_persona(project_id)
-        
-        if persona is None:
-            return {
-                "compliance": True,
-                "score": 100,
-                "issues": [],
-                "summary": "未设置 Writer 人格，跳过风格检查"
-            }
-        
+        if persona_context is None:
+            if project_id is None:
+                raise ValueError("project_id 与 persona_context 不能同时为空")
+            persona = await self.get_active_persona(project_id)
+            if persona is None:
+                return {
+                    "compliance": True,
+                    "score": 100,
+                    "issues": [],
+                    "summary": "未设置 Writer 人格，跳过风格检查",
+                }
+            catchphrases = persona.catchphrases or []
+            ai_patterns = persona.avoid_patterns or []
+        else:
+            persona_context = WriterPersonaContext.model_validate(persona_context)
+            if not persona_context.prompt_context and not persona_context.name:
+                return {
+                    "compliance": True,
+                    "score": 100,
+                    "issues": [],
+                    "summary": "未设置 Writer 人格，跳过风格检查",
+                }
+            catchphrases = persona_context.catchphrases
+            ai_patterns = persona_context.avoid_patterns
+
+        if not ai_patterns:
+            ai_patterns = [
+                "总的来说",
+                "综上所述",
+                "由此可见",
+                "首先.*其次.*最后",
+                "然而.*但是.*不过",
+            ]
+
         # 检查反 AI 检测规则
         issues = []
-        
-        # 检查是否有 AI 典型模式
-        ai_patterns = persona.avoid_patterns or [
-            "总的来说",
-            "综上所述",
-            "由此可见",
-            "首先.*其次.*最后",
-            "然而.*但是.*不过"
-        ]
-        
+
         import re
         for pattern in ai_patterns:
             if re.search(pattern, chapter_content):
@@ -174,14 +192,14 @@ class WriterPersonaService:
                 })
         
         # 检查口头禅使用
-        if persona.catchphrases:
-            catchphrase_used = any(cp in chapter_content for cp in persona.catchphrases)
+        if catchphrases:
+            catchphrase_used = any(cp in chapter_content for cp in catchphrases)
             if not catchphrase_used:
                 issues.append({
                     "type": "missing_catchphrase",
                     "severity": "info",
                     "description": "未使用任何口头禅",
-                    "suggestion": f"建议适当使用：{', '.join(persona.catchphrases[:3])}"
+                    "suggestion": f"建议适当使用：{', '.join(catchphrases[:3])}"
                 })
         
         score = 100 - len([i for i in issues if i["severity"] == "warning"]) * 10 - len([i for i in issues if i["severity"] == "info"]) * 2

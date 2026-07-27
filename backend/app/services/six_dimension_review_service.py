@@ -39,20 +39,18 @@ class SixDimensionReviewService:
 
     async def review_chapter(
         self,
-        project_id: str,
         chapter_number: int,
         chapter_title: str,
         chapter_content: str,
+        *,
+        constitution_context: str,
+        writer_persona_context: str,
         chapter_plan: Optional[str] = None,
         previous_summary: Optional[str] = None,
         character_profiles: Optional[str] = None,
         world_setting: Optional[str] = None
     ) -> Dict[str, Any]:
         """执行六维度审查"""
-        
-        # 获取宪法和人格
-        constitution = await self.constitution_service.get_constitution(project_id)
-        persona = await self.writer_persona_service.get_active_persona(project_id)
         
         # 获取审查提示词
         prompt_template = await self.prompt_service.get_prompt("six_dimension_review")
@@ -65,12 +63,12 @@ class SixDimensionReviewService:
         prompt = prompt.replace("{{chapter_title}}", chapter_title or "")
         prompt = prompt.replace("{{chapter_content}}", chapter_content)
         prompt = prompt.replace(
-            "{{constitution}}", 
-            self.constitution_service.get_constitution_context(constitution)
+            "{{constitution}}",
+            constitution_context or "（未设置小说宪法）",
         )
         prompt = prompt.replace(
-            "{{writer_persona}}", 
-            self.writer_persona_service.get_persona_context(persona)
+            "{{writer_persona}}",
+            writer_persona_context or "（使用默认写作风格）",
         )
         prompt = prompt.replace("{{chapter_plan}}", chapter_plan or "（无章节计划）")
         prompt = prompt.replace("{{previous_summary}}", previous_summary or "（无前文摘要）")

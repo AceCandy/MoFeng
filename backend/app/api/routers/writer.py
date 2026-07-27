@@ -26,12 +26,8 @@ from sqlalchemy.orm import selectinload
 from ...core.config import settings
 from ...core.dependencies import get_current_user
 from ...db.session import AsyncSessionLocal, get_session
-from ...models.chapter_blueprint import ChapterBlueprint
-from ...models.constitution import NovelConstitution
 from ...models.foreshadowing import Foreshadowing, ForeshadowingStatusHistory
 from ...models.novel import Chapter, ChapterOutline, ChapterVersion
-from ...models.project_memory import ProjectMemory
-from ...models.writer_persona import WriterPersona
 from ...schemas.novel import (
     AdvancedGenerateRequest,
     AdvancedGenerateResponse,
@@ -64,8 +60,13 @@ from ...services.novel_service import NovelService
 from ...services.prompt_service import PromptService
 from ...services.vector_store_service import VectorStoreService
 from ...services.ai_review_service import AIReviewService
+from ...services.chapter_context_adapters import (
+    ChapterContextShadowComparator,
+    ReviewContextAdapter,
+    WRITER_VISIBILITY_SHADOW_PREFIXES,
+)
+from ...services.chapter_context_resolver import ChapterContextResolver
 from ...services.finalize_service import FinalizeService
-from ...services.review_context_builder import ReviewContextBuilder
 from ...utils.json_utils import remove_think_tags, unwrap_markdown_json
 from ...services.pipeline_orchestrator import PipelineOrchestrator
 
@@ -196,140 +197,6 @@ async def _record_finalize_workflow_success(
         started_at=started_at or ended_at,
         ended_at=ended_at,
     )
-
-
-def _extract_tail_excerpt(text: Optional[str], limit: int = 500) -> str:
-    """截取章节结尾文本，默认保留 500 字。"""
-    if not text:
-        return ""
-    stripped = text.strip()
-    if len(stripped) <= limit:
-        return stripped
-    return stripped[-limit:]
-
-async def _build_review_context(
-    *,
-    session: AsyncSession,
-    novel_service: NovelService,
-    project,
-    project_id: str,
-    chapter_number: int,
-    user_id: int,
-    chapter_mission: Optional[dict] = None,
-    chapter_content: Optional[str] = None,
-) -> Dict[str, object]:
-    blueprint_schema = novel_service._build_blueprint_schema(project)
-    outline = await novel_service.get_outline(project_id, chapter_number)
-
-    chapters = sorted(project.chapters or [], key=lambda item: item.chapter_number)
-    completed_chapters = []
-    previous_summary = "暂无（这是第一章）"
-    previous_tail = "暂无（这是第一章）"
-    latest_previous_number = -1
-
-    outline_map = {item.chapter_number: item for item in (project.outlines or [])}
-    for existing in chapters:
-        if existing.chapter_number >= chapter_number:
-            continue
-        selected_version = existing.selected_version
-        if not selected_version or not selected_version.content:
-            continue
-
-        summary = existing.real_summary or ""
-        existing_outline = outline_map.get(existing.chapter_number)
-        completed_chapters.append(
-            {
-                "chapter_number": existing.chapter_number,
-                "title": existing_outline.title if existing_outline and existing_outline.title else f"第{existing.chapter_number}章",
-                "summary": summary,
-            }
-        )
-
-        if existing.chapter_number > latest_previous_number:
-            latest_previous_number = existing.chapter_number
-            previous_summary = summary or "暂无（这是第一章）"
-            previous_tail = _extract_tail_excerpt(selected_version.content) or "暂无（这是第一章）"
-
-    chapter_blueprint_stmt = select(ChapterBlueprint).where(
-        ChapterBlueprint.project_id == project_id,
-        ChapterBlueprint.chapter_number == chapter_number,
-    )
-    constitution_stmt = select(NovelConstitution).where(NovelConstitution.project_id == project_id)
-    project_memory_stmt = select(ProjectMemory).where(ProjectMemory.project_id == project_id)
-    writer_persona_stmt = (
-        select(WriterPersona)
-        .where(WriterPersona.project_id == project_id, WriterPersona.is_active.is_(True))
-        .limit(1)
-    )
-
-    chapter_blueprint = (await session.execute(chapter_blueprint_stmt)).scalars().first()
-    constitution = (await session.execute(constitution_stmt)).scalars().first()
-    project_memory = (await session.execute(project_memory_stmt)).scalars().first()
-    writer_persona = (await session.execute(writer_persona_stmt)).scalars().first()
-
-    chapter_blueprint_payload = {}
-    if chapter_blueprint:
-        chapter_blueprint_payload = {
-            "chapter_function": chapter_blueprint.chapter_function,
-            "chapter_focus": chapter_blueprint.chapter_focus,
-            "suspense_type": chapter_blueprint.suspense_type,
-            "emotional_arc": chapter_blueprint.emotional_arc,
-            "mission_constraints": chapter_blueprint.mission_constraints or {},
-            "brief_summary": chapter_blueprint.brief_summary or "",
-            "director_script": chapter_blueprint.director_script or "",
-            "beat_sheet": chapter_blueprint.beat_sheet or {},
-        }
-
-    project_memory_payload = {}
-    if project_memory:
-        project_memory_payload = {
-            "global_summary": project_memory.global_summary or "",
-            "plot_arcs": project_memory.plot_arcs or {},
-            "story_timeline_summary": project_memory.story_timeline_summary or "",
-            "last_updated_chapter": project_memory.last_updated_chapter,
-        }
-
-    chapter_outline_payload = {
-        "chapter_number": chapter_number,
-        "title": outline.title if outline else f"第{chapter_number}章",
-        "summary": outline.summary if outline else "",
-        "goals": outline.goals if outline else "",
-        "highlights": outline.highlights if outline else [],
-        "character_states": outline.character_states if outline else {},
-        "metadata": outline.metadata if outline and outline.metadata else {},
-    }
-
-    base_context = {
-        "novel_blueprint": blueprint_schema.model_dump(),
-        "chapter_outline": chapter_outline_payload,
-        "chapter_blueprint": chapter_blueprint_payload,
-        "chapter_mission": chapter_mission or {},
-        "project_memory": project_memory_payload,
-        "constitution": constitution.to_prompt_context() if constitution else "",
-        "writer_persona": writer_persona.to_prompt_context() if writer_persona else "",
-        "previous_chapter": {
-            "summary": previous_summary,
-            "tail_excerpt": previous_tail,
-        },
-        "completed_chapters": completed_chapters,
-    }
-
-    # 使用 ReviewContextBuilder 增强上下文
-    try:
-        vector_store = VectorStoreService()
-        llm_service = LLMService(session)
-        context_builder = ReviewContextBuilder(session, vector_store, llm_service)
-        enhanced_context = await context_builder.build_review_context(
-            project_id=project_id,
-            chapter_number=chapter_number,
-            user_id=user_id,
-            chapter_content=chapter_content,
-            base_context=base_context,
-        )
-        return enhanced_context
-    except Exception:
-        logger.exception("构建增强评审上下文失败，使用基础上下文")
-        return base_context
 
 
 def _normalize_snippet(text: str) -> str:
@@ -1353,7 +1220,7 @@ async def evaluate_chapter(
     prompt_service = PromptService(session)
     llm_service = LLMService(session)
 
-    project = await novel_service.ensure_project_owner(project_id, current_user.id)
+    await novel_service.ensure_project_owner(project_id, current_user.id)
     # 确保预加载 selected_version 与 versions 关系
     from sqlalchemy.orm import selectinload
     stmt = (
@@ -1404,15 +1271,31 @@ async def evaluate_chapter(
         elif version_to_evaluate and version_to_evaluate.content:
             chapter_content = version_to_evaluate.content
 
-        review_context = await _build_review_context(
-            session=session,
-            novel_service=novel_service,
-            project=project,
+        chapter_context = await ChapterContextResolver(
+            session,
+            llm_service=llm_service,
+        ).resolve(
             project_id=project_id,
             chapter_number=request.chapter_number,
             user_id=current_user.id,
-            chapter_content=chapter_content,
+            rag_enabled=settings.vector_store_enabled,
+            rag_query=chapter_content,
+            rag_mode="review",
         )
+        review_context = ReviewContextAdapter.to_prompt_context(chapter_context)
+        if settings.chapter_context_shadow_compare:
+            shadow_report = ChapterContextShadowComparator.compare(
+                ReviewContextAdapter.to_legacy_writer_context(chapter_context),
+                review_context,
+                allowed_prefixes=WRITER_VISIBILITY_SHADOW_PREFIXES,
+            )
+            logger.log(
+                logging.WARNING if shadow_report["unexplained_count"] else logging.INFO,
+                "canonical context shadow compare: entry=writer total=%s unexplained=%s diffs=%s",
+                shadow_report["difference_count"],
+                shadow_report["unexplained_count"],
+                shadow_report["differences"],
+            )
 
         if len(ordered_versions) > 1:
             ai_review_service = AIReviewService(llm_service, prompt_service)

@@ -122,6 +122,11 @@ class Settings(BaseSettings):
         env="VECTOR_STORE_ENABLED",
         description="是否启用向量检索（pgvector），关闭后 RAG 检索将跳过",
     )
+    chapter_context_shadow_compare: bool = Field(
+        default=False,
+        env="CHAPTER_CONTEXT_SHADOW_COMPARE",
+        description="是否记录 canonical Chapter context 与旧 prompt contract 的脱敏结构差异",
+    )
     redis_url: Optional[str] = Field(
         default=None,
         env="REDIS_URL",

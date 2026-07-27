@@ -1,4 +1,5 @@
 # AIMETA P=审查API_六维审查与一致性|R=审查接口|NR=不含生成逻辑|E=route:POST_/api/review/*|X=http|A=审查|D=fastapi,sqlalchemy|S=db|RD=./README.ai
+import json
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends
@@ -8,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...core.dependencies import get_current_user
 from ...db.session import get_session
 from ...schemas.user import UserInDB
+from ...services.chapter_context_adapters import ReviewContextAdapter
+from ...services.chapter_context_resolver import ChapterContextResolver
 from ...services.constitution_service import ConstitutionService
 from ...services.consistency_service import ConsistencyService
 from ...services.llm_service import LLMService
@@ -32,6 +35,7 @@ class SixDimensionReviewRequest(BaseModel):
 
 class ConsistencyReviewRequest(BaseModel):
     project_id: str
+    chapter_number: Optional[int] = None
     chapter_text: str
     include_foreshadowing: bool = True
 
@@ -47,21 +51,40 @@ async def review_six_dimension(
 
     llm_service = LLMService(session)
     prompt_service = PromptService(session)
-    constitution_service = ConstitutionService(session, llm_service, prompt_service)
-    persona_service = WriterPersonaService(session, llm_service, prompt_service)
+    chapter_context = await ChapterContextResolver(
+        session,
+        llm_service=llm_service,
+    ).resolve(
+        project_id=request.project_id,
+        chapter_number=request.chapter_number,
+        user_id=current_user.id,
+        rag_enabled=False,
+        require_outline=False,
+    )
+    review_context = ReviewContextAdapter.to_prompt_context(chapter_context)
+    blueprint = review_context["novel_blueprint"]
     review_service = SixDimensionReviewService(
-        session, llm_service, prompt_service, constitution_service, persona_service
+        session,
+        llm_service,
+        prompt_service,
+        ConstitutionService(session, llm_service, prompt_service),
+        WriterPersonaService(session, llm_service, prompt_service),
     )
 
     result = await review_service.review_chapter(
-        project_id=request.project_id,
         chapter_number=request.chapter_number,
-        chapter_title=request.chapter_title or "",
+        chapter_title=request.chapter_title or review_context["chapter_outline"].get("title", ""),
         chapter_content=request.chapter_content,
-        chapter_plan=request.chapter_plan,
-        previous_summary=request.previous_summary,
-        character_profiles=request.character_profiles,
-        world_setting=request.world_setting,
+        chapter_plan=request.chapter_plan
+        or json.dumps(review_context["chapter_blueprint"], ensure_ascii=False, sort_keys=True),
+        previous_summary=request.previous_summary
+        or review_context["previous_chapter"].get("summary", ""),
+        character_profiles=request.character_profiles
+        or json.dumps(blueprint.get("characters", []), ensure_ascii=False, sort_keys=True),
+        world_setting=request.world_setting
+        or json.dumps(blueprint.get("world_setting", {}), ensure_ascii=False, sort_keys=True),
+        constitution_context=review_context["constitution"],
+        writer_persona_context=review_context["writer_persona"],
     )
     return {"project_id": request.project_id, "review": result}
 
@@ -81,6 +104,7 @@ async def review_consistency(
         chapter_text=request.chapter_text,
         user_id=current_user.id,
         include_foreshadowing=request.include_foreshadowing,
+        chapter_number=request.chapter_number,
     )
 
     report = {

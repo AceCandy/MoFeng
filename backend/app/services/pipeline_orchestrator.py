@@ -13,14 +13,18 @@ from fastapi import HTTPException
 from langgraph.graph import END, START, StateGraph
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from ..core.config import settings
 from ..models.novel import Chapter
-from ..models.project_memory import ProjectMemory
 from ..repositories.system_config_repository import SystemConfigRepository
+from ..schemas.chapter_context import ChapterContext, ContextFallback
 from ..services.ai_review_service import AIReviewService
-from ..services.chapter_context_service import ChapterContextService
+from ..services.chapter_context_adapters import (
+    ChapterContextShadowComparator,
+    GenerationContextAdapter,
+    ReviewContextAdapter,
+)
+from ..services.chapter_context_resolver import ChapterContextResolver
 from ..services.chapter_generation_trace_service import ChapterGenerationTraceService
 from ..services.chapter_guardrails import ChapterGuardrails
 from ..services.chapter_word_count_settings import (
@@ -34,15 +38,12 @@ from ..services.enhanced_writing_flow import EnhancedWritingFlow
 from ..services.enrichment_service import EnrichmentService
 from ..services.event_bus import publish_chapter_status
 from ..services.llm_service import LLMService
-from ..services.knowledge_retrieval_service import KnowledgeRetrievalService, FilteredContext
 from ..services.memory_layer_service import MemoryLayerService
 from ..services.novel_service import NovelService
 from ..services.preview_generation_service import PreviewGenerationService
 from ..services.prompt_service import PromptService
 from ..services.reader_simulator_service import ReaderSimulatorService, ReaderType
 from ..services.self_critique_service import CritiqueDimension, SelfCritiqueService
-from ..services.vector_store_service import VectorStoreService
-from ..services.writer_context_builder import WriterContextBuilder
 from ..schemas.novel import ChapterGenerationStatus
 from ..utils.json_utils import remove_think_tags, unwrap_markdown_json
 
@@ -114,8 +115,8 @@ class PipelineGraphState(TypedDict, total=False):
     writing_notes: Optional[str]
     flow_config: Optional[Dict[str, Any]]
     config: "PipelineConfig"
+    chapter_context: Dict[str, Any]
     history_context: Dict[str, Any]
-    project_schema: Any
     blueprint_dict: Dict[str, Any]
     all_characters: List[str]
     outline_title: str
@@ -193,7 +194,10 @@ class PipelineOrchestrator:
         self.llm_service = LLMService(session)
         self.prompt_service = PromptService(session)
         self.novel_service = NovelService(session)
-        self.context_builder = WriterContextBuilder()
+        self.chapter_context_resolver = ChapterContextResolver(
+            session,
+            llm_service=self.llm_service,
+        )
         self.guardrails = ChapterGuardrails()
         self.trace_service = ChapterGenerationTraceService(session)
 
@@ -470,6 +474,95 @@ class PipelineOrchestrator:
             return -1
         return self.GRAPH_SEQUENCE.index(graph_node)
 
+    async def _restore_chapter_context_snapshot(
+        self,
+        snapshot: Any,
+        *,
+        trace_node: str,
+        project_id: str,
+        chapter_number: int,
+        user_id: int,
+        writing_notes: str,
+        chapter_mission: Optional[Dict[str, Any]] = None,
+        rag_enabled: bool = False,
+        rag_query: str = "",
+        rag_mode: str = "simple",
+        pov_character: Optional[str] = None,
+    ) -> ChapterContext:
+        if snapshot is not None:
+            try:
+                restored = ChapterContext.model_validate(snapshot)
+            except (TypeError, ValueError):
+                logger.warning(
+                    "恢复 trace 时 canonical context snapshot 无效，按当前数据显式重建: "
+                    "node=%s project=%s chapter=%s",
+                    trace_node,
+                    project_id,
+                    chapter_number,
+                )
+            else:
+                if (
+                    restored.project_id == project_id
+                    and restored.chapter_number == chapter_number
+                ):
+                    updated = self.chapter_context_resolver.with_runtime_inputs(
+                        restored,
+                        writing_notes=writing_notes,
+                        chapter_mission=chapter_mission,
+                    )
+                    retrieval_inputs_changed = updated.input_hash != restored.input_hash
+                    if not retrieval_inputs_changed:
+                        requested_query = self.chapter_context_resolver.normalize_rag_query(
+                            rag_query
+                        )
+                        restored_rag_enabled = (
+                            restored.rag.fallback != ContextFallback.DISABLED
+                        )
+                        retrieval_inputs_changed = (
+                            restored_rag_enabled != rag_enabled
+                            or restored.rag.value.query != requested_query
+                            or restored.rag.value.mode != rag_mode
+                        )
+                    if retrieval_inputs_changed:
+                        updated = await self.chapter_context_resolver.with_retrieval(
+                            updated,
+                            user_id=user_id,
+                            enabled=rag_enabled,
+                            query_text=rag_query,
+                            mode=rag_mode,
+                            pov_character=pov_character,
+                        )
+                    return updated
+                logger.warning(
+                    "恢复 trace 时 canonical context snapshot 身份不匹配，按当前数据显式重建: "
+                    "node=%s expected_project=%s actual_project=%s "
+                    "expected_chapter=%s actual_chapter=%s",
+                    trace_node,
+                    project_id,
+                    restored.project_id,
+                    chapter_number,
+                    restored.chapter_number,
+                )
+        else:
+            logger.warning(
+                "恢复旧 trace 时缺少 canonical context snapshot，按当前数据显式重建: "
+                "node=%s project=%s chapter=%s",
+                trace_node,
+                project_id,
+                chapter_number,
+            )
+        return await self.chapter_context_resolver.resolve(
+            project_id=project_id,
+            chapter_number=chapter_number,
+            user_id=user_id,
+            writing_notes=writing_notes,
+            chapter_mission=chapter_mission,
+            rag_enabled=rag_enabled,
+            rag_query=rag_query,
+            rag_mode=rag_mode,
+            pov_character=pov_character,
+        )
+
     async def _rebuild_state_from_traces(
         self,
         *,
@@ -543,6 +636,15 @@ class PipelineOrchestrator:
             state["outline_summary"] = ip.get("outline_summary") or ""
             state["writing_notes"] = state.get("writing_notes") or ip.get("writing_notes") or "无额外写作指令"
             state["config"] = await self._resolve_config_from_trace_or_flow(op, flow_config)
+            chapter_context = await self._restore_chapter_context_snapshot(
+                op.get("chapter_context"),
+                trace_node="context_prep",
+                project_id=project_id,
+                chapter_number=chapter_number,
+                user_id=user_id,
+                writing_notes=state["writing_notes"],
+            )
+            state["chapter_context"] = chapter_context.snapshot_payload()
 
         if from_seq > self._trace_node_seq("director_mission"):
             dm = latest_success("director_mission")
@@ -558,11 +660,31 @@ class PipelineOrchestrator:
 
         if from_seq > self._trace_node_seq("rag_retrieval"):
             rag = latest_success("rag_retrieval")
-            if rag is not None:
-                op = output_of(rag)
-                state["rag_context"] = op.get("rag_context")
-                state["knowledge_context"] = op.get("knowledge_context")
-                state["rag_stats"] = op.get("rag_stats")
+            op = output_of(rag)
+            config = state["config"]
+            chapter_context = await self._restore_chapter_context_snapshot(
+                op.get("chapter_context"),
+                trace_node="rag_retrieval",
+                project_id=project_id,
+                chapter_number=chapter_number,
+                user_id=user_id,
+                writing_notes=state["writing_notes"],
+                chapter_mission=state.get("chapter_mission"),
+                rag_enabled=config.enable_rag,
+                rag_query=self._build_rag_query(state),
+                rag_mode=config.rag_mode,
+                pov_character=self._resolve_pov_character(state.get("chapter_mission")),
+            )
+            generation_context = GenerationContextAdapter.to_context(chapter_context)
+            raw_rag_context = generation_context["rag_context"]
+            state["chapter_context"] = chapter_context.snapshot_payload()
+            state["rag_context"] = (
+                raw_rag_context
+                if raw_rag_context.get("chunks") or raw_rag_context.get("summaries")
+                else None
+            )
+            state["knowledge_context"] = generation_context["knowledge_context"]
+            state["rag_stats"] = generation_context["rag_stats"]
 
         if from_seq > self._trace_node_seq("draft_generation"):
             versions = self._rebuild_versions(traces)
@@ -794,10 +916,6 @@ class PipelineOrchestrator:
                 chapter_number,
             )
 
-    async def _load_generation_project_schema(self, project_id: str, user_id: int):
-        """显式重新加载项目快照，避免复用跨 commit 的 ORM 关系对象。"""
-        return await self.novel_service.get_project_schema(project_id, user_id)
-
     async def _get_chapter_for_update(self, *, project_id: str, chapter_number: int) -> Chapter:
         stmt = select(Chapter).where(
             Chapter.project_id == project_id,
@@ -850,10 +968,6 @@ class PipelineOrchestrator:
         chapter_number = state["chapter_number"]
         await self.novel_service.ensure_project_owner(project_id, state["user_id"])
 
-        outline = await self.novel_service.get_outline(project_id, chapter_number)
-        if not outline:
-            raise HTTPException(status_code=404, detail="蓝图中未找到对应章节纲要")
-
         await self._set_chapter_generation_state(
             project_id=project_id,
             chapter_number=chapter_number,
@@ -872,27 +986,22 @@ class PipelineOrchestrator:
 
         return {
             "config": config,
-            "outline_title": outline.title or f"第{outline.chapter_number}章",
-            "outline_summary": outline.summary or "暂无摘要",
             "writing_notes": state.get("writing_notes") or "无额外写作指令",
         }
 
     async def _graph_collect_context(self, state: PipelineGraphState) -> PipelineGraphState:
         started_at = datetime.now(CN_TIMEZONE)
-        project_schema = await self._load_generation_project_schema(
-            state["project_id"],
-            state["user_id"],
-        )
-        outlines = project_schema.blueprint.chapter_outline if project_schema.blueprint else []
-        outlines_map = {item.chapter_number: item for item in outlines}
-        history_context = await self._collect_history_context(
+        chapter_context = await self.chapter_context_resolver.resolve(
             project_id=state["project_id"],
             chapter_number=state["chapter_number"],
-            outlines_map=outlines_map,
             user_id=state["user_id"],
+            writing_notes=state["writing_notes"],
+            rag_enabled=False,
         )
-        blueprint_dict = self._normalize_blueprint(project_schema.blueprint.model_dump())
-        all_characters = [c.get("name") for c in blueprint_dict.get("characters", []) if c.get("name")]
+        generation_context = GenerationContextAdapter.to_context(chapter_context)
+        history_context = generation_context["history_context"]
+        blueprint_dict = generation_context["blueprint_dict"]
+        all_characters = generation_context["all_characters"]
         await self.trace_service.record_success(
             project_id=state["project_id"],
             chapter_number=state["chapter_number"],
@@ -900,8 +1009,8 @@ class PipelineOrchestrator:
             node_label="整理前文",
             stage="context_prep",
             input_payload={
-                "outline_title": state["outline_title"],
-                "outline_summary": state["outline_summary"],
+                "outline_title": generation_context["outline_title"],
+                "outline_summary": generation_context["outline_summary"],
                 "writing_notes": state["writing_notes"],
             },
             output_payload={
@@ -912,6 +1021,8 @@ class PipelineOrchestrator:
                 "blueprint_dict": blueprint_dict,
                 "all_characters": all_characters,
                 "config": asdict(state["config"]),
+                "chapter_context": chapter_context.snapshot_payload(),
+                "chapter_context_hash": chapter_context.input_hash,
             },
             metadata={
                 "trace_kind": "workflow",
@@ -921,17 +1032,15 @@ class PipelineOrchestrator:
                     "读取项目蓝图与章节大纲",
                     "查询当前章节之前已选中正文的章节",
                     "提取上一章结尾片段",
-                    "是否调用摘要模型由前文章节是否缺少 real_summary 决定",
+                    "缺失 real_summary 时使用确定性正文摘录，不调用摘要模型",
                 ],
                 "data_reads": [
                     "NovelProject / NovelBlueprint",
                     "Chapter.selected_version",
                     "Chapter.real_summary",
                 ],
-                "model_calls": history_context.get("model_calls", []),
-                "skip_reason": None
-                if history_context.get("model_calls")
-                else "前文章节均已有摘要，或这是第一章，无需补摘要模型调用",
+                "model_calls": [],
+                "skip_reason": "canonical context 读取不触发摘要模型，缺摘要使用显式降级摘录",
                 "metrics": history_context.get("trace_metrics", {}),
             },
             started_at=started_at,
@@ -939,10 +1048,12 @@ class PipelineOrchestrator:
         )
 
         return {
+            "chapter_context": chapter_context.snapshot_payload(),
             "history_context": history_context,
-            "project_schema": project_schema,
             "blueprint_dict": blueprint_dict,
             "all_characters": all_characters,
+            "outline_title": generation_context["outline_title"],
+            "outline_summary": generation_context["outline_summary"],
         }
 
     async def _graph_generate_chapter_mission(self, state: PipelineGraphState) -> PipelineGraphState:
@@ -980,18 +1091,16 @@ class PipelineOrchestrator:
         }
 
     async def _graph_build_visibility_context(self, state: PipelineGraphState) -> PipelineGraphState:
-        visibility_context = self.context_builder.build_visibility_context(
-            blueprint=state["blueprint_dict"],
-            completed_summaries=state["history_context"]["completed_summaries"],
-            previous_tail=state["history_context"]["previous_tail"],
-            outline_title=state["outline_title"],
-            outline_summary=state["outline_summary"],
+        chapter_context = self.chapter_context_resolver.with_runtime_inputs(
+            ChapterContext.model_validate(state["chapter_context"]),
+            chapter_mission=state.get("chapter_mission"),
             writing_notes=state["writing_notes"],
-            allowed_new_characters=state["allowed_new_characters"],
         )
-        writer_blueprint = visibility_context["writer_blueprint"]
-        forbidden_characters = visibility_context["forbidden_characters"]
-        introduced_characters = visibility_context["introduced_characters"]
+        generation_context = GenerationContextAdapter.to_context(chapter_context)
+        visibility_context = generation_context["visibility_context"]
+        writer_blueprint = generation_context["writer_blueprint"]
+        forbidden_characters = generation_context["forbidden_characters"]
+        introduced_characters = generation_context["introduced_characters"]
 
         logger.info(
             "Pipeline context: project=%s chapter=%s introduced=%d allowed_new=%d forbidden=%d",
@@ -1003,6 +1112,7 @@ class PipelineOrchestrator:
         )
 
         return {
+            "chapter_context": chapter_context.snapshot_payload(),
             "visibility_context": visibility_context,
             "writer_blueprint": writer_blueprint,
             "forbidden_characters": forbidden_characters,
@@ -1018,7 +1128,7 @@ class PipelineOrchestrator:
             enhanced_context = await enhanced_flow.prepare_writing_context(
                 project_id=state["project_id"],
                 chapter_number=state["chapter_number"],
-                chapter_outline=state["outline_summary"],
+                chapter_context=state["chapter_context"],
             )
 
         return {"enhanced_flow": enhanced_flow, "enhanced_context": enhanced_context}
@@ -1032,9 +1142,10 @@ class PipelineOrchestrator:
                 involved_characters=state["introduced_characters"],
             )
 
+        generation_context = GenerationContextAdapter.to_context(state["chapter_context"])
         return {
             "memory_context": memory_context,
-            "project_memory_text": await self._get_project_memory_text(state["project_id"]),
+            "project_memory_text": generation_context["project_memory_text"],
         }
 
     async def _graph_prepare_retrieval_context(self, state: PipelineGraphState) -> PipelineGraphState:
@@ -1047,31 +1158,24 @@ class PipelineOrchestrator:
             step_index=3,
         )
         config = state["config"]
-        rag_context = None
-        knowledge_context = None
-        rag_stats = None
-        if config.enable_rag:
-            if config.rag_mode == "two_stage":
-                knowledge_context, rag_stats = await self._get_two_stage_rag_context(
-                    project_id=state["project_id"],
-                    chapter_number=state["chapter_number"],
-                    writing_notes=state["writing_notes"],
-                    pov_character=self._resolve_pov_character(state.get("chapter_mission")),
-                    user_id=state["user_id"],
-                )
-            else:
-                rag_context = await self._get_rag_context(
-                    project_id=state["project_id"],
-                    outline_title=state["outline_title"],
-                    outline_summary=state["outline_summary"],
-                    writing_notes=state["writing_notes"],
-                    user_id=state["user_id"],
-                )
-                rag_stats = {
-                    "mode": "simple",
-                    "chunks": len(rag_context.get("chunks", [])) if rag_context else 0,
-                    "summaries": len(rag_context.get("summaries", [])) if rag_context else 0,
-                }
+        rag_query = self._build_rag_query(state)
+        chapter_context = await self.chapter_context_resolver.with_retrieval(
+            ChapterContext.model_validate(state["chapter_context"]),
+            user_id=state["user_id"],
+            enabled=config.enable_rag,
+            query_text=rag_query,
+            mode=config.rag_mode,
+            pov_character=self._resolve_pov_character(state.get("chapter_mission")),
+        )
+        generation_context = GenerationContextAdapter.to_context(chapter_context)
+        raw_rag_context = generation_context["rag_context"]
+        rag_context = (
+            raw_rag_context
+            if raw_rag_context.get("chunks") or raw_rag_context.get("summaries")
+            else None
+        )
+        knowledge_context = generation_context["knowledge_context"]
+        rag_stats = generation_context["rag_stats"]
         await self.trace_service.record_success(
             project_id=state["project_id"],
             chapter_number=state["chapter_number"],
@@ -1089,6 +1193,8 @@ class PipelineOrchestrator:
                 "rag_stats": rag_stats,
                 "rag_context": rag_context,
                 "knowledge_context": knowledge_context,
+                "chapter_context": chapter_context.snapshot_payload(),
+                "chapter_context_hash": chapter_context.input_hash,
             },
             metadata={
                 "trace_kind": "workflow",
@@ -1114,6 +1220,7 @@ class PipelineOrchestrator:
         )
 
         return {
+            "chapter_context": chapter_context.snapshot_payload(),
             "rag_context": rag_context,
             "knowledge_context": knowledge_context,
             "rag_stats": rag_stats,
@@ -1221,15 +1328,42 @@ class PipelineOrchestrator:
             step_index=5,
         )
 
-        review_context = self._build_review_context(
-            writer_blueprint=state["writer_blueprint"],
-            blueprint_dict=state["blueprint_dict"],
-            chapter_number=state["chapter_number"],
-            outline_title=state["outline_title"],
-            outline_summary=state["outline_summary"],
-            chapter_mission=state.get("chapter_mission"),
-            history_context=state["history_context"],
-        )
+        review_context = ReviewContextAdapter.to_prompt_context(state["chapter_context"])
+        if settings.chapter_context_shadow_compare:
+            legacy_context = ReviewContextAdapter.to_legacy_pipeline_context(
+                writer_blueprint=state["writer_blueprint"],
+                blueprint=state["blueprint_dict"],
+                chapter_number=state["chapter_number"],
+                outline_title=state["outline_title"],
+                outline_summary=state["outline_summary"],
+                chapter_mission=state.get("chapter_mission") or {},
+                history_context=state["history_context"],
+            )
+            shadow_report = ChapterContextShadowComparator.compare(
+                legacy_context,
+                review_context,
+                allowed_prefixes=(
+                    "chapter_outline.goals",
+                    "chapter_outline.highlights",
+                    "chapter_outline.character_states",
+                    "chapter_outline.metadata",
+                    "previous_chapter.chapter_number",
+                    "chapter_blueprint",
+                    "project_memory",
+                    "constitution",
+                    "writer_persona",
+                    "pending_foreshadows",
+                    "related_chapters",
+                    "active_plot_threads",
+                ),
+            )
+            logger.log(
+                logging.WARNING if shadow_report["unexplained_count"] else logging.INFO,
+                "canonical context shadow compare: entry=pipeline total=%s unexplained=%s diffs=%s",
+                shadow_report["difference_count"],
+                shadow_report["unexplained_count"],
+                shadow_report["differences"],
+            )
         try:
             best_version_index, ai_review_result = await self._run_ai_review(
                 versions=state["versions"],
@@ -1377,6 +1511,7 @@ class PipelineOrchestrator:
                 chapter_number=state["chapter_number"],
                 chapter_title=state["outline_title"],
                 chapter_content=best_content,
+                chapter_context=state["chapter_context"],
                 chapter_plan=json.dumps(state.get("chapter_mission"), ensure_ascii=False)
                 if state.get("chapter_mission")
                 else None,
@@ -1410,8 +1545,10 @@ class PipelineOrchestrator:
         if config.enable_consistency:
             best_content, consistency_report = await self._run_consistency_check(
                 project_id=state["project_id"],
+                chapter_number=state["chapter_number"],
                 chapter_text=best_content,
                 user_id=state["user_id"],
+                chapter_context=state["chapter_context"],
             )
             review_summaries["consistency"] = consistency_report
 
@@ -1606,106 +1743,6 @@ class PipelineOrchestrator:
 
         return _clamp_version_count(int(settings.writer_chapter_versions))
 
-    async def _collect_history_context(
-        self,
-        *,
-        project_id: str,
-        chapter_number: int,
-        outlines_map: Dict[int, Any],
-        user_id: int,
-    ) -> Dict[str, Any]:
-        completed_summaries = []
-        completed_chapters = []
-        latest_prev_number = -1
-        previous_summary_text = ""
-        previous_tail_excerpt = ""
-        summary_model_calls = []
-        skipped_chapters = 0
-        stmt = (
-            select(Chapter)
-            .options(selectinload(Chapter.selected_version))
-            .where(
-                Chapter.project_id == project_id,
-                Chapter.chapter_number < chapter_number,
-            )
-            .order_by(Chapter.chapter_number)
-        )
-        result = await self.session.execute(stmt)
-        chapters = result.scalars().all()
-
-        for existing in chapters:
-            if existing.selected_version is None or not existing.selected_version.content:
-                skipped_chapters += 1
-                continue
-            if not existing.real_summary:
-                summary = await self.llm_service.get_summary(
-                    existing.selected_version.content,
-                    temperature=0.15,
-                    user_id=user_id,
-                    timeout=180.0,
-                    stage="summary_memory",
-                )
-                existing.real_summary = remove_think_tags(summary)
-                summary_model_calls.append(
-                    {
-                        "stage": "summary_memory",
-                        "call_type": "chat_llm",
-                        "reason": f"第 {existing.chapter_number} 章缺少 real_summary，补生成前文摘要",
-                        "input": "该章选中版本正文",
-                        "output": "写回 Chapter.real_summary",
-                    }
-                )
-                await self.session.commit()
-
-            completed_chapters.append(
-                {
-                    "chapter_number": existing.chapter_number,
-                    "title": outlines_map.get(existing.chapter_number).title
-                    if outlines_map.get(existing.chapter_number)
-                    else f"第{existing.chapter_number}章",
-                    "summary": existing.real_summary,
-                }
-            )
-            completed_summaries.append(existing.real_summary or "")
-
-            if existing.chapter_number > latest_prev_number:
-                latest_prev_number = existing.chapter_number
-                previous_summary_text = existing.real_summary or ""
-                previous_tail_excerpt = self._extract_tail_excerpt(existing.selected_version.content)
-
-        return {
-            "completed_chapters": completed_chapters,
-            "completed_summaries": completed_summaries,
-            "previous_summary": previous_summary_text or "暂无（这是第一章）",
-            "previous_tail": previous_tail_excerpt or "暂无（这是第一章）",
-            "model_calls": summary_model_calls,
-            "trace_metrics": {
-                "loaded_previous_chapters": len(chapters),
-                "usable_previous_chapters": len(completed_chapters),
-                "skipped_previous_chapters": skipped_chapters,
-                "summary_model_call_count": len(summary_model_calls),
-            },
-        }
-
-    @staticmethod
-    def _extract_tail_excerpt(text: Optional[str], limit: int = 500) -> str:
-        if not text:
-            return ""
-        stripped = text.strip()
-        if len(stripped) <= limit:
-            return stripped
-        return stripped[-limit:]
-
-    @staticmethod
-    def _normalize_blueprint(blueprint_dict: Dict[str, Any]) -> Dict[str, Any]:
-        if "relationships" in blueprint_dict and blueprint_dict["relationships"]:
-            for relation in blueprint_dict["relationships"]:
-                if "character_from" in relation:
-                    relation["from"] = relation.pop("character_from")
-                if "character_to" in relation:
-                    relation["to"] = relation.pop("character_to")
-        return blueprint_dict
-
     async def _generate_chapter_mission(
         self,
         *,
@@ -1833,89 +1870,6 @@ class PipelineOrchestrator:
                 raise
             raise RuntimeError(f"规划剧情失败：{message}") from exc
 
-    async def _get_rag_context(
-        self,
-        *,
-        project_id: str,
-        outline_title: str,
-        outline_summary: str,
-        writing_notes: str,
-        user_id: int,
-    ) -> Dict[str, Any]:
-        if not settings.vector_store_enabled:
-            return {"chunks": [], "summaries": []}
-
-        try:
-            vector_store = VectorStoreService()
-        except RuntimeError as exc:
-            logger.warning("向量库初始化失败，跳过 RAG: %s", exc)
-            return {"chunks": [], "summaries": []}
-
-        query_parts = [outline_title, outline_summary]
-        if writing_notes:
-            query_parts.append(writing_notes)
-        rag_query = "\n".join(part for part in query_parts if part)
-
-        context_service = ChapterContextService(llm_service=self.llm_service, vector_store=vector_store)
-        rag_context = await context_service.retrieve_for_generation(
-            project_id=project_id,
-            query_text=rag_query or outline_title or outline_summary,
-            user_id=user_id,
-        )
-        return {
-            "chunks": rag_context.chunk_texts() if rag_context.chunks else [],
-            "summaries": rag_context.summary_lines() if rag_context.summaries else [],
-        }
-
-    async def _get_two_stage_rag_context(
-        self,
-        *,
-        project_id: str,
-        chapter_number: int,
-        writing_notes: str,
-        pov_character: Optional[str],
-        user_id: int,
-    ) -> Tuple[Optional[str], Dict[str, Any]]:
-        if not settings.vector_store_enabled:
-            return None, {"mode": "two_stage", "enabled": False}
-
-        try:
-            vector_store = VectorStoreService()
-        except RuntimeError as exc:
-            logger.warning("向量库初始化失败，跳过两层 RAG: %s", exc)
-            return None, {"mode": "two_stage", "enabled": False, "error": str(exc)}
-
-        retrieval_service = KnowledgeRetrievalService(self.session, self.llm_service, vector_store)
-        filtered = await retrieval_service.retrieve_and_filter(
-            project_id=project_id,
-            chapter_number=chapter_number,
-            user_id=user_id,
-            pov_character=pov_character,
-            user_guidance=writing_notes,
-            top_k=settings.vector_top_k_chunks,
-        )
-        context_text = self._format_filtered_context(filtered)
-        stats = filtered.stats or {}
-        stats["mode"] = "two_stage"
-        return context_text, stats
-
-    async def _get_project_memory_text(self, project_id: str) -> Optional[str]:
-        result = await self.session.execute(
-            select(ProjectMemory).where(ProjectMemory.project_id == project_id)
-        )
-        memory = result.scalars().first()
-        if not memory:
-            return None
-
-        parts = []
-        if memory.global_summary:
-            parts.append(f"### 全局摘要\n{memory.global_summary}")
-        if memory.plot_arcs:
-            parts.append("### 剧情线追踪\n" + json.dumps(memory.plot_arcs, ensure_ascii=False, indent=2))
-        if not parts:
-            return None
-        return "\n\n".join(parts)
-
     async def _get_memory_context(
         self,
         *,
@@ -2012,11 +1966,27 @@ class PipelineOrchestrator:
         return chapter_mission.get("pov") or chapter_mission.get("pov_character")
 
     @staticmethod
+    def _build_rag_query(state: PipelineGraphState) -> str:
+        return "\n".join(
+            part
+            for part in (
+                state.get("outline_title"),
+                state.get("outline_summary"),
+                state.get("writing_notes"),
+            )
+            if part
+        )
+
+    @staticmethod
     def _describe_rag_model_calls(
         config: PipelineConfig,
         rag_stats: Optional[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
         if not config.enable_rag:
+            return []
+
+        fallback = (rag_stats or {}).get("fallback")
+        if fallback in {"disabled", "unavailable", "query_empty"}:
             return []
 
         if config.rag_mode == "two_stage":
@@ -2056,38 +2026,17 @@ class PipelineOrchestrator:
     ) -> Optional[str]:
         if not config.enable_rag:
             return "本轮配置关闭 RAG，因此未检索设定"
-        if not settings.vector_store_enabled:
-            return "向量库未启用，因此跳过设定检索"
-        if config.rag_mode == "two_stage" and rag_stats and rag_stats.get("enabled") is False:
-            return str(rag_stats.get("error") or "两层 RAG 未启用或向量库不可用")
-        return None
-
-    @staticmethod
-    def _build_review_context(
-        *,
-        writer_blueprint: Dict[str, Any],
-        blueprint_dict: Dict[str, Any],
-        chapter_number: int,
-        outline_title: str,
-        outline_summary: str,
-        chapter_mission: Optional[dict],
-        history_context: Dict[str, Any],
-    ) -> Dict[str, Any]:
-        """构建 AI 评审上下文，优先使用写作可见性裁剪后的蓝图。"""
-        return {
-            "novel_blueprint": writer_blueprint or blueprint_dict,
-            "chapter_outline": {
-                "chapter_number": chapter_number,
-                "title": outline_title,
-                "summary": outline_summary,
-            },
-            "chapter_mission": chapter_mission or {},
-            "previous_chapter": {
-                "summary": history_context.get("previous_summary", ""),
-                "tail_excerpt": history_context.get("previous_tail", ""),
-            },
-            "completed_chapters": history_context.get("completed_chapters", []),
+        fallback = (rag_stats or {}).get("fallback")
+        reasons = {
+            "unavailable": "向量库不可用，因此跳过设定检索",
+            "query_empty": "检索依据为空，因此跳过设定检索",
+            "embedding_failed": "检索向量生成失败，因此未获得设定上下文",
+            "retrieval_empty": "检索已完成，但没有命中可见的历史设定",
+            "retrieval_failed": "设定检索失败，canonical context 已显式降级",
         }
+        if fallback in reasons:
+            return reasons[fallback]
+        return None
 
     async def _generate_single_version(
         self,
@@ -3155,11 +3104,20 @@ class PipelineOrchestrator:
         self,
         *,
         project_id: str,
+        chapter_number: int,
         chapter_text: str,
         user_id: int,
+        chapter_context: Dict[str, Any],
     ) -> Tuple[str, Dict[str, Any]]:
         service = ConsistencyService(self.session, self.llm_service)
-        result = await service.check_consistency(project_id, chapter_text, user_id, include_foreshadowing=True)
+        result = await service.check_consistency(
+            project_id,
+            chapter_text,
+            user_id,
+            include_foreshadowing=True,
+            chapter_number=chapter_number,
+            chapter_context=chapter_context,
+        )
         report = {
             "is_consistent": result.is_consistent,
             "summary": result.summary,
@@ -3182,7 +3140,14 @@ class PipelineOrchestrator:
             for v in result.violations
         )
         if needs_fix:
-            fixed = await service.auto_fix(project_id, chapter_text, result.violations, user_id)
+            fixed = await service.auto_fix(
+                project_id,
+                chapter_text,
+                result.violations,
+                user_id,
+                chapter_number=chapter_number,
+                chapter_context=chapter_context,
+            )
             if fixed:
                 report["auto_fix_applied"] = True
                 return fixed, report
@@ -3277,28 +3242,5 @@ class PipelineOrchestrator:
             "rag": config.enable_rag,
             "rag_mode": config.rag_mode == "two_stage",
         }
-
-    @staticmethod
-    def _format_filtered_context(filtered: FilteredContext) -> Optional[str]:
-        if not filtered:
-            return None
-
-        sections = []
-        if filtered.plot_fuel:
-            sections.append("## 情节燃料\n" + "\n".join(f"- {item}" for item in filtered.plot_fuel))
-        if filtered.character_info:
-            sections.append("## 人物维度\n" + "\n".join(f"- {item}" for item in filtered.character_info))
-        if filtered.world_fragments:
-            sections.append("## 世界碎片\n" + "\n".join(f"- {item}" for item in filtered.world_fragments))
-        if filtered.narrative_techniques:
-            sections.append("## 叙事技法\n" + "\n".join(f"- {item}" for item in filtered.narrative_techniques))
-        if filtered.warnings:
-            sections.append("## 冲突警告\n" + "\n".join(f"- {item}" for item in filtered.warnings))
-
-        if not sections:
-            return "（未检索到有效上下文）"
-
-        return "\n\n".join(sections)
-
 
 __all__ = ["PipelineOrchestrator", "PipelineConfig"]

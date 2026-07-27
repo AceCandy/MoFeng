@@ -53,11 +53,11 @@
 ### 2.3 章节生成（Writer.GenerateChapter）
 
 - **入口**：`POST /api/writer/novels/{project_id}/chapters/generate`，请求体 `GenerateChapterRequest`
-- **上下文组装**：
-  1. **蓝图**：剔除章节细节字段（章节摘要、对话、角色动态等），仅保留世界观框架。
-  2. ~~**已完成章节摘要**：逐章真实摘要；若缺失则调用 `get_summary` 以 `extraction` 提示词生成。~~
-  3. **上一章桥接**：上一章真实摘要 + 正文末尾 500 字。
-  4. **RAG 检索结果**（由 `ChapterContextService` 提供）：
+- **上下文组装**：由 `ChapterContextResolver` 一次解析为版本化 `ChapterContext` snapshot，各 section 记录 source revision、truncation 与 fallback。
+  1. **蓝图**：snapshot 保留完整蓝图；生成和评审 adapter 只能读取经过 writer visibility 裁剪的蓝图。
+  2. **已完成章节摘要**：优先使用 `real_summary`；缺失时使用确定性正文摘录并标记 fallback，不在上下文读取阶段调用 LLM。
+  3. **上一章桥接**：上一章真实摘要或降级摘录 + 正文末尾 500 字。
+  4. **RAG 检索结果**（由 `ChapterContextResolver` 提供）：
      - 查询向量来源：章节标题 + 纲要摘要 + 可选写作指令 → `LLMService.get_embedding`
      - 文本来源：`VectorStoreService.query_chunks/query_summaries`（若数据库不支持向量函数，则回退到应用层余弦距离排序）
      - 默认 Top-K：正文片段 5 条、章节摘要 3 条（可通过环境变量调整）
@@ -65,7 +65,7 @@
 - **LLM 参数**：温度 0.9，超时 600 秒，候选版本数默认为 3（可通过系统配置或环境变量覆盖）
 - **输出**：章节候选版本数组（JSON），写入 `ChapterVersion`；`Chapter` 状态设置为 `generating`。
 
-> **注意**：章节上下文生成失败（如无向量库）时，流程会降级为“蓝图 + 历史摘要”模式继续执行。
+> **注意**：RAG 关闭、向量库不可用、embedding 失败、检索为空和检索失败分别使用显式 fallback；生成流程会复用同一个 snapshot 继续执行。
 
 ### 2.4 章节版本选择 / 手动编辑
 
@@ -81,7 +81,7 @@
 
 - **入口**：`POST /api/writer/novels/{project_id}/chapters/evaluate`
 - **上下文**：
-  - 蓝图（完整结构）
+  - canonical snapshot 中经过 writer visibility 裁剪的蓝图、历史、memory、constitution、persona、伏笔和相关章节
   - 当前章节全部版本内容（按创建时间排序）
 - **提示词**：`evaluation`
 - **LLM 参数**：温度 0.3，超时 360 秒
@@ -90,7 +90,6 @@
 ### 2.6 摘要提取（Summary Extraction）
 
 - **触发点**：
-  - 章节自动生成阶段（“前情摘要缺失”场景）
   - 章节版本确认
   - 手动编辑保存
 - **调用**：`LLMService.get_summary`

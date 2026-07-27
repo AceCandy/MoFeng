@@ -2,7 +2,7 @@
 
 本文整理 MoFeng（墨风）当前项目里的 AI Agent 核心执行链路。这里的 “Agent” 不是单独的 `Agent` 类，也不是 LangChain Agent；章节生成主路径由 LangGraph 状态图承载阶段编排，业务能力仍由 API 入口、提示词、上下文构建、模型阶段路由、生成/评审/定稿服务共同组成。
 
-整理日期：2026-05-11
+整理日期：2026-07-27
 
 ---
 
@@ -13,9 +13,9 @@
 ```text
 用户输入
   -> FastAPI 路由
-  -> NovelService 读取项目/蓝图/章节状态
+  -> ChapterContextResolver 读取并冻结项目/蓝图/章节事实
   -> PromptService 读取提示词
-  -> 上下文构建：历史摘要 + 上章结尾 + 可见性裁剪 + RAG/记忆
+  -> canonical ChapterContext：历史 + 可见性 + RAG/记忆 + provenance/hash
   -> LLMService 按 stage 解析用户模型路由
   -> 生成/评审/修复/优化
   -> 写入 ChapterVersion / ChapterEvaluation / ProjectMemory / 向量库
@@ -29,8 +29,10 @@
 - `backend/app/services/pipeline_orchestrator.py`：章节生成 LangGraph 状态图编排器。
 - `backend/app/services/llm_service.py`：模型调用、流式输出、向量生成、阶段路由解析。
 - `backend/app/services/prompt_service.py`：提示词缓存和读取。
-- `backend/app/services/writer_context_builder.py`：写作可见性过滤。
-- `backend/app/services/chapter_context_service.py`：简单 RAG 上下文检索。
+- `backend/app/schemas/chapter_context.py`：版本化章节上下文、section provenance 与稳定快照/hash。
+- `backend/app/services/chapter_context_resolver.py`：章节上下文唯一 DB/RAG 读取、预算和降级入口。
+- `backend/app/services/chapter_context_adapters.py`：生成、评审和一致性检查的纯数据视图。
+- `backend/app/services/writer_context_builder.py`：由 resolver 调用的写作可见性过滤策略。
 - `backend/app/services/knowledge_retrieval_service.py`：两层 RAG 检索与过滤。
 - `backend/app/services/ai_review_service.py`：多版本/单版本 AI 评审。
 - `backend/app/services/finalize_service.py`：定稿后的摘要、角色状态、剧情线、快照、向量库闭环。
@@ -132,7 +134,7 @@ rag_embedding
 ### 3.3 向量生成路径
 
 ```text
-ChapterContextService / ChapterIngestionService
+ChapterContextResolver / ChapterIngestionService
   -> LLMService.get_embedding(...)
   -> _resolve_model_route(stage="rag_embedding", capability="embedding")
   -> OpenAI 兼容 embeddings 或 Ollama embed
@@ -184,10 +186,10 @@ ChapterContextService / ChapterIngestionService
 
 ```text
 1. 初始化章节状态
-2. 收集历史上下文
+2. 解析并冻结 canonical ChapterContext
 3. L2 Director 生成 ChapterMission
-4. WriterContextBuilder 做可见性过滤
-5. RAG 检索相关章节片段/摘要
+4. resolver 通过 WriterContextBuilder 更新可见性 section
+5. resolver 在同一快照上补充 RAG section
 6. 拼接写作 Prompt
 7. L3 Writer 生成 1-2 个候选版本
 8. Guardrails 检查并尝试重写
@@ -199,11 +201,12 @@ ChapterContextService / ChapterIngestionService
 
 ### 5.1 历史上下文
 
-生成前会遍历当前章节之前的已选中章节：
+生成前由 `ChapterContextResolver` 遍历当前章节之前的 successful 且有选中正文的章节：
 
-- 没有 `real_summary` 时，调用 `LLMService.get_summary(stage="summary_memory")` 生成真实摘要。
+- 没有 `real_summary` 时使用确定性正文摘录，并在 history section 标记 `summary_missing`；上下文读取不触发 LLM 副作用。
 - 收集 `completed_chapters`、`completed_summaries`。
 - 记录最近前一章摘要和正文结尾 500 字，用于章节衔接。
+- 按 policy 稳定排序和裁剪，并把 source revision、truncation、fallback 写入 section。
 
 ### 5.2 L2 Director：章节导演脚本
 
@@ -226,7 +229,7 @@ ChapterContextService / ChapterIngestionService
 
 ### 5.3 信息可见性过滤
 
-`WriterContextBuilder.build_visibility_context` 是防剧透的关键层：
+`ChapterContextResolver` 调用 `WriterContextBuilder.build_visibility_context` 生成 writer visibility section，这是防剧透的关键层：
 
 - 从已完成摘要和上一章结尾检测已登场角色。
 - 从当前章节标题、摘要、写作指令检测计划登场角色。
@@ -239,7 +242,7 @@ ChapterContextService / ChapterIngestionService
 
 ### 5.4 RAG 检索
 
-普通生成使用 `ChapterContextService.retrieve_for_generation`：
+普通生成使用 `ChapterContextResolver.with_retrieval`：
 
 ```text
 章节标题 + 章节摘要 + 写作指令
@@ -249,7 +252,7 @@ ChapterContextService / ChapterIngestionService
   -> Markdown 片段 + 摘要列表
 ```
 
-如果未启用向量库或初始化失败，会降级为空检索结果，不阻止章节生成。
+如果 RAG 关闭、向量库不可用、embedding 失败、检索为空或检索失败，section 会分别记录显式 fallback，不阻止章节生成。查询和结果会按 policy 裁剪，snapshot id 与内容共同参与 `input_hash`。
 
 ### 5.5 写作 Prompt 拼接
 
@@ -343,12 +346,12 @@ class FlowConfig(BaseModel):
 PipelineOrchestrator.generate_chapter
   -> LangGraph ainvoke(initial_state)
   -> initialize_chapter：解析配置，校验项目和章节纲要，初始化章节生成状态
-  -> collect_context：收集历史摘要、上一章结尾、蓝图和角色列表
+  -> collect_context：解析 canonical ChapterContext 并保存 snapshot/hash
   -> generate_chapter_mission：生成章节导演脚本
-  -> build_visibility_context：裁剪写作可见蓝图和禁止角色
-  -> prepare_enhanced_context：按配置准备 constitution / persona / foreshadowing / faction
-  -> prepare_memory_context：按配置读取记忆层和项目长期记忆
-  -> prepare_retrieval_context：执行 simple RAG 或 two_stage RAG
+  -> build_visibility_context：在同一 snapshot 上写入导演脚本并重算可见性
+  -> prepare_enhanced_context：从 snapshot 派生 constitution / persona / foreshadowing；faction 独立读取
+  -> prepare_memory_context：从 snapshot 派生项目长期记忆，按配置读取其他记忆层
+  -> prepare_retrieval_context：在同一 snapshot 上执行 simple RAG 或 two_stage RAG
   -> build_writer_prompt：读取写作提示词并拼装 prompt_sections
   -> generate_versions：生成版本，并执行护栏、JSON 提取、字数补写/压缩
   -> review_versions：多版本 AI 评审
@@ -362,7 +365,7 @@ PipelineOrchestrator.generate_chapter
 简单 RAG：
 
 ```text
-ChapterContextService
+ChapterContextResolver
   -> query_chunks
   -> query_summaries
   -> 直接拼入 Prompt
@@ -472,11 +475,11 @@ KnowledgeRetrievalService.retrieve_and_filter
 
 ## 10. 当前实现注意点
 
-1. `PipelineOrchestrator.generate_chapter` 当前通过 LangGraph 状态图执行章节生成主路径；AI 评审上下文由 `_build_review_context` 构建，优先使用可见性裁剪后的 `writer_blueprint`。
+1. `PipelineOrchestrator.generate_chapter` 当前通过 LangGraph 状态图执行章节生成主路径；生成、AI 评审和一致性检查都从同一个 `ChapterContext` snapshot 经纯 adapter 派生，不再维护 `_build_review_context`。
 
 2. 前端当前章节生成入口仍是普通路径 `POST /api/writer/novels/{project_id}/chapters/generate`，但该接口已经委托到 `PipelineOrchestrator`。
 
-3. Director、可见性过滤、RAG、护栏、字数补写/压缩、多版本评审已经收敛到 `PipelineOrchestrator`；后续改章节生成 Agent 行为时，应优先修改该编排器或其依赖服务。
+3. DB/RAG 上下文读取、可见性、预算和降级集中在 `ChapterContextResolver`；`PipelineOrchestrator` 只编排 snapshot 演进与下游 adapter。恢复优先复用合法快照，旧或损坏快照会显式重建。
 
 4. `LLMService` 已禁止系统默认模型回退。任何 Agent 能力在用户未配置可用 LLM 模型或向量模型时，都会返回 400 配置错误。
 
@@ -486,8 +489,10 @@ KnowledgeRetrievalService.retrieve_and_filter
 
 - 改模型选择/阶段路由：优先看 `llm_config_service.py` 和 `llm_service.py`。
 - 改章节生成 Prompt 输入结构：优先看 `pipeline_orchestrator.py#_build_prompt_sections`。
-- 改防剧透/角色可见性：看 `writer_context_builder.py`。
-- 改 RAG：简单模式看 `chapter_context_service.py`，两层模式看 `knowledge_retrieval_service.py`。
+- 改章节上下文 contract/快照：看 `chapter_context.py`。
+- 改上下文读取、预算、降级或防剧透接入：看 `chapter_context_resolver.py`；具体可见性规则看 `writer_context_builder.py`。
+- 改 RAG：统一入口看 `chapter_context_resolver.py`，两层检索内部看 `knowledge_retrieval_service.py`。
+- 改生成/评审/一致性输入映射：看 `chapter_context_adapters.py`。
 - 改评审和选优：看 `ai_review_service.py`。
 - 改定稿后的长期记忆：看 `finalize_service.py`。
 - 改伏笔抽取/推进：看 `writer.py` 中 `_sync_foreshadowings_for_chapter` 相关函数。

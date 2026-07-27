@@ -50,15 +50,14 @@ class ConstitutionService:
 
     async def check_compliance(
         self,
-        project_id: str,
         chapter_number: int,
         chapter_title: str,
-        chapter_content: str
+        chapter_content: str,
+        *,
+        constitution_context: str,
     ) -> dict:
         """检查章节是否符合小说宪法"""
-        constitution = await self.get_constitution(project_id)
-        
-        if constitution is None:
+        if not constitution_context:
             return {
                 "overall_compliance": True,
                 "overall_score": 100,
@@ -77,7 +76,7 @@ class ConstitutionService:
             }
         
         # 构建提示词
-        prompt = prompt_template.replace("{{constitution}}", constitution.to_prompt_context())
+        prompt = prompt_template.replace("{{constitution}}", constitution_context)
         prompt = prompt.replace("{{chapter_number}}", str(chapter_number))
         prompt = prompt.replace("{{chapter_title}}", chapter_title)
         prompt = prompt.replace("{{chapter_content}}", chapter_content)

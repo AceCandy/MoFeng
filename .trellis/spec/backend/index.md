@@ -15,6 +15,7 @@
 | Logging | stdlib `logging`, `getLogger(__name__)`, lazy `%s` args | [logging-guidelines](./logging-guidelines.md) |
 | Quality | `httpx.AsyncClient`, `response_model=` on routes, AIMETA header on every file | [quality-guidelines](./quality-guidelines.md) |
 | Security | CORS whitelist, Fernet secret encryption, SSRF guard, auth hardening | [security-guidelines](./security-guidelines.md) |
+| Chapter context | One versioned snapshot for generation, review, consistency, and recovery | [chapter-context-contract](./chapter-context-contract.md) |
 
 ---
 
@@ -28,6 +29,7 @@
 | [Logging Guidelines](./logging-guidelines.md) | `dictConfig` setup, level conventions, lazy formatting |
 | [Quality Guidelines](./quality-guidelines.md) | Async discipline, Pydantic schemas, config, Celery, review checklist |
 | [Security Guidelines](./security-guidelines.md) | CORS, Fernet secret encryption, SSRF, auth hardening |
+| [Canonical Chapter Context](./chapter-context-contract.md) | Resolver/adapters, revision layers, snapshot recovery, and tests |
 
 ---
 

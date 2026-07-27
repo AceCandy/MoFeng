@@ -14,6 +14,8 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..schemas.chapter_context import ChapterContext
+from .chapter_context_adapters import ReviewContextAdapter
 from .constitution_service import ConstitutionService
 from .writer_persona_service import WriterPersonaService
 from .six_dimension_review_service import SixDimensionReviewService
@@ -49,7 +51,7 @@ class EnhancedWritingFlow:
         self,
         project_id: str,
         chapter_number: int,
-        chapter_outline: Optional[str] = None
+        chapter_context: ChapterContext | Dict[str, Any],
     ) -> Dict[str, Any]:
         """
         准备写作上下文，包含所有增强功能的上下文信息
@@ -62,35 +64,17 @@ class EnhancedWritingFlow:
             "version_style_hints": []
         }
         
-        # 1. 获取小说宪法上下文
-        try:
-            constitution = await self.constitution_service.get_constitution(project_id)
-            context["constitution"] = self.constitution_service.get_constitution_context(constitution)
-            context["constitution_obj"] = constitution
-        except Exception as e:
-            logger.warning(f"获取小说宪法失败: {e}")
-        
-        # 2. 获取 Writer 人格上下文
-        try:
-            persona = await self.writer_persona_service.ensure_default_persona(project_id)
-            context["writer_persona"] = self.writer_persona_service.get_persona_context(persona)
-            context["writer_persona_obj"] = persona
-            
-            # 生成版本差异化风格提示
-            for i in range(3):
-                hint = self.writer_persona_service.get_version_style_hint(persona, i)
-                context["version_style_hints"].append(hint)
-        except Exception as e:
-            logger.warning(f"获取 Writer 人格失败: {e}")
-        
-        # 3. 获取伏笔提醒
-        try:
-            reminders = await self.foreshadowing_service.get_foreshadowing_reminders(
-                project_id, chapter_number, chapter_outline
-            )
-            context["foreshadowing_reminders"] = reminders
-        except Exception as e:
-            logger.warning(f"获取伏笔提醒失败: {e}")
+        canonical = ChapterContext.model_validate(chapter_context)
+        context["constitution"] = canonical.constitution.value or None
+        persona = canonical.writer_persona.value
+        context["writer_persona"] = persona.prompt_context or None
+        context["version_style_hints"] = self._build_persona_style_hints(
+            catchphrases=persona.catchphrases,
+            imperfection_patterns=persona.imperfection_patterns,
+        )
+        context["foreshadowing_reminders"] = self._build_canonical_foreshadowing_reminders(
+            canonical,
+        )
         
         # 4. 获取势力关系上下文
         try:
@@ -100,6 +84,51 @@ class EnhancedWritingFlow:
             logger.warning(f"获取势力关系失败: {e}")
         
         return context
+
+    @staticmethod
+    def _build_persona_style_hints(
+        *,
+        catchphrases: List[str],
+        imperfection_patterns: List[str],
+    ) -> List[str]:
+        hints = [
+            "情绪更细腻，节奏更慢，多写内心戏和感官描写",
+            "冲突更强，节奏更快，多写动作和对话",
+            "悬念更重，多埋伏笔，结尾钩子更强",
+        ]
+        for index, hint in enumerate(hints):
+            if catchphrases:
+                hint += f"，适当使用口头禅「{catchphrases[index % len(catchphrases)]}」"
+            if imperfection_patterns:
+                hint += f"，体现「{imperfection_patterns[index % len(imperfection_patterns)]}」"
+            hints[index] = hint
+        return hints
+
+    @staticmethod
+    def _build_canonical_foreshadowing_reminders(
+        context: ChapterContext,
+    ) -> Dict[str, Any]:
+        reminders = []
+        for item in context.foreshadows.value:
+            target = item.get("target_reveal_chapter")
+            urgency = item.get("urgency")
+            if not urgency:
+                if isinstance(target, int) and target <= context.chapter_number:
+                    urgency = "high"
+                elif isinstance(target, int) and target <= context.chapter_number + 2:
+                    urgency = "medium"
+                else:
+                    urgency = "low"
+            content = item.get("content", "")
+            reminders.append(
+                {
+                    "name": item.get("name") or content[:40] or "未命名",
+                    "urgency": urgency,
+                    "reason": f"canonical context 中状态为 {item.get('status', 'unknown')}",
+                    "suggested_development": content,
+                }
+            )
+        return {"foreshadowings_to_develop": reminders}
 
     def build_enhanced_prompt_sections(
         self,
@@ -150,12 +179,16 @@ class EnhancedWritingFlow:
         chapter_number: int,
         chapter_title: str,
         chapter_content: str,
+        chapter_context: ChapterContext | Dict[str, Any],
         chapter_plan: Optional[str] = None,
         previous_summary: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         生成后的审查流程
         """
+        canonical = ChapterContext.model_validate(chapter_context)
+        review_context = ReviewContextAdapter.to_prompt_context(canonical)
+        blueprint = review_context["novel_blueprint"]
         results = {
             "six_dimension_review": None,
             "constitution_compliance": None,
@@ -167,12 +200,23 @@ class EnhancedWritingFlow:
         # 1. 六维度审查
         try:
             review_result = await self.review_service.review_chapter(
-                project_id=project_id,
                 chapter_number=chapter_number,
                 chapter_title=chapter_title,
                 chapter_content=chapter_content,
                 chapter_plan=chapter_plan,
-                previous_summary=previous_summary
+                previous_summary=previous_summary,
+                character_profiles=json.dumps(
+                    blueprint.get("characters", []),
+                    ensure_ascii=False,
+                    sort_keys=True,
+                ),
+                world_setting=json.dumps(
+                    blueprint.get("world_setting", {}),
+                    ensure_ascii=False,
+                    sort_keys=True,
+                ),
+                constitution_context=review_context["constitution"],
+                writer_persona_context=review_context["writer_persona"],
             )
             results["six_dimension_review"] = review_result
             
@@ -180,16 +224,16 @@ class EnhancedWritingFlow:
             if review_result.get("critical_issues_count", 0) > 0:
                 results["overall_passed"] = False
                 results["critical_issues"].extend(review_result.get("priority_fixes", []))
-        except Exception as e:
-            logger.warning(f"六维度审查失败: {e}")
+        except Exception as exc:
+            logger.warning("六维度审查失败: %s", exc)
         
         # 2. 宪法合规检查
         try:
             compliance_result = await self.constitution_service.check_compliance(
-                project_id=project_id,
                 chapter_number=chapter_number,
                 chapter_title=chapter_title,
-                chapter_content=chapter_content
+                chapter_content=chapter_content,
+                constitution_context=review_context["constitution"],
             )
             results["constitution_compliance"] = compliance_result
             
@@ -198,18 +242,19 @@ class EnhancedWritingFlow:
                 for violation in compliance_result.get("violations", []):
                     if violation.get("severity") == "critical":
                         results["critical_issues"].append(violation.get("description"))
-        except Exception as e:
-            logger.warning(f"宪法合规检查失败: {e}")
+        except Exception as exc:
+            logger.warning("宪法合规检查失败: %s", exc)
         
         # 3. 风格合规检查
         try:
             style_result = await self.writer_persona_service.check_style_compliance(
-                project_id=project_id,
-                chapter_content=chapter_content
+                project_id=None,
+                chapter_content=chapter_content,
+                persona_context=canonical.writer_persona.value,
             )
             results["style_compliance"] = style_result
-        except Exception as e:
-            logger.warning(f"风格合规检查失败: {e}")
+        except Exception as exc:
+            logger.warning("风格合规检查失败: %s", exc)
         
         return results
 

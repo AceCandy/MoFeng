@@ -71,25 +71,12 @@ def test_pipeline_graph_sequence_covers_every_generation_stage() -> None:
     )
 
 
-def test_pipeline_review_context_uses_visible_blueprint() -> None:
-    context = PipelineOrchestrator._build_review_context(
-        writer_blueprint={"characters": [{"name": "林墨"}]},
-        blueprint_dict={"characters": [{"name": "不应使用"}]},
-        chapter_number=3,
-        outline_title="入山",
-        outline_summary="主角进入旧山道",
-        chapter_mission={"pov": "林墨"},
-        history_context={
-            "previous_summary": "上一章摘要",
-            "previous_tail": "上一章结尾",
-            "completed_chapters": [{"chapter_number": 1, "summary": "开端"}],
-        },
-    )
+def test_pipeline_review_context_uses_canonical_adapter() -> None:
+    source = _source()
 
-    assert context["novel_blueprint"] == {"characters": [{"name": "林墨"}]}
-    assert context["chapter_outline"]["chapter_number"] == 3
-    assert context["previous_chapter"]["summary"] == "上一章摘要"
-    assert context["completed_chapters"] == [{"chapter_number": 1, "summary": "开端"}]
+    assert "ReviewContextAdapter.to_prompt_context(state[\"chapter_context\"])" in source
+    assert "ChapterContextResolver(" in source
+    assert "def _build_review_context(" not in source
 
 
 def test_pipeline_stage_flags_preserve_existing_debug_contract() -> None:
@@ -189,7 +176,6 @@ def test_langgraph_pipeline_preserves_stage_routing_keys() -> None:
     source = _source()
 
     for stage_key in (
-        'stage="summary_memory"',
         'stage="chapter_mission"',
         'stage="chapter_writing"',
         'stage="chapter_rewrite"',
@@ -198,6 +184,7 @@ def test_langgraph_pipeline_preserves_stage_routing_keys() -> None:
         'stage="chapter_optimization"',
     ):
         assert stage_key in source
+    assert 'stage="summary_memory"' not in source
 
 
 def test_langgraph_pipeline_preserves_word_count_safeguards() -> None:
@@ -233,7 +220,7 @@ def test_pipeline_trace_metadata_describes_actions_and_model_calls() -> None:
     assert '"data_reads"' in source
     assert '"metrics"' in source
     assert '"skip_reason"' in source
-    assert "是否调用摘要模型由前文章节是否缺少 real_summary 决定" in source
+    assert "缺失 real_summary 时使用确定性正文摘录，不调用摘要模型" in source
 
 
 def test_pipeline_marks_director_mission_before_running_director_llm() -> None:
@@ -475,8 +462,9 @@ def test_pipeline_state_does_not_reuse_orm_entities_across_commits() -> None:
     assert "_serialize_project(state[\"project\"])" not in source
     assert "chapters: List[Chapter]" not in source
     assert "await self._set_chapter_generation_state(" in source
-    assert "await self._load_generation_project_schema(" in source
-    assert "selectinload(Chapter.selected_version)" in source
+    assert "await self.chapter_context_resolver.resolve(" in source
+    assert "GenerationContextAdapter.to_context(chapter_context)" in source
+    assert '"chapter_context": chapter_context.snapshot_payload()' in source
 
 
 @pytest.mark.asyncio(loop_scope="session")

@@ -18,12 +18,11 @@ from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 from enum import Enum
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models.project_memory import ProjectMemory
-from ..models.novel import NovelBlueprint, Chapter
-from ..models.foreshadowing import Foreshadowing
+from ..schemas.chapter_context import ChapterContext
+from .chapter_context_adapters import ConsistencyContextAdapter
+from .chapter_context_resolver import ChapterContextResolver
 from .llm_service import LLMService
 
 logger = logging.getLogger(__name__)
@@ -166,7 +165,9 @@ class ConsistencyService:
         project_id: str,
         chapter_text: str,
         user_id: int,
-        include_foreshadowing: bool = True
+        include_foreshadowing: bool = True,
+        chapter_number: Optional[int] = None,
+        chapter_context: Optional[ChapterContext | Dict[str, Any]] = None,
     ) -> ConsistencyCheckResult:
         """
         检查章节一致性
@@ -186,7 +187,13 @@ class ConsistencyService:
         start_time = time.time()
         
         # 获取检查所需的上下文
-        context = await self._get_check_context(project_id, include_foreshadowing)
+        context = await self._get_check_context(
+            project_id,
+            include_foreshadowing,
+            chapter_number=chapter_number,
+            chapter_context=chapter_context,
+            user_id=user_id,
+        )
         
         # 构建检查提示词
         prompt = CONSISTENCY_CHECK_PROMPT.format(
@@ -225,7 +232,9 @@ class ConsistencyService:
         project_id: str,
         chapter_text: str,
         violations: List[ConsistencyViolation],
-        user_id: int
+        user_id: int,
+        chapter_number: Optional[int] = None,
+        chapter_context: Optional[ChapterContext | Dict[str, Any]] = None,
     ) -> Optional[str]:
         """
         自动修复一致性问题
@@ -243,7 +252,12 @@ class ConsistencyService:
             return chapter_text
         
         # 获取上下文
-        context = await self._get_check_context(project_id)
+        context = await self._get_check_context(
+            project_id,
+            chapter_number=chapter_number,
+            chapter_context=chapter_context,
+            user_id=user_id,
+        )
         
         # 格式化冲突信息
         violations_text = "\n".join([
@@ -278,7 +292,8 @@ class ConsistencyService:
         project_id: str,
         chapter_text: str,
         user_id: int,
-        auto_fix_threshold: ViolationSeverity = ViolationSeverity.CRITICAL
+        auto_fix_threshold: ViolationSeverity = ViolationSeverity.CRITICAL,
+        chapter_number: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
         检查并自动修复一致性问题
@@ -292,11 +307,18 @@ class ConsistencyService:
         Returns:
             包含检查结果和修复内容的字典
         """
-        # 执行检查
+        chapter_context = await self._resolve_chapter_context(
+            project_id=project_id,
+            chapter_number=chapter_number,
+            user_id=user_id,
+        )
+        # 执行检查和修复时复用同一份冻结上下文，避免两次读取发生漂移。
         check_result = await self.check_consistency(
             project_id=project_id,
             chapter_text=chapter_text,
-            user_id=user_id
+            user_id=user_id,
+            chapter_number=chapter_number,
+            chapter_context=chapter_context,
         )
         
         result = {
@@ -323,7 +345,9 @@ class ConsistencyService:
                 project_id=project_id,
                 chapter_text=chapter_text,
                 violations=violations_to_fix,
-                user_id=user_id
+                user_id=user_id,
+                chapter_number=chapter_number,
+                chapter_context=chapter_context,
             )
             result["fixed_content"] = fixed_content
         
@@ -339,81 +363,44 @@ class ConsistencyService:
     async def _get_check_context(
         self,
         project_id: str,
-        include_foreshadowing: bool = True
+        include_foreshadowing: bool = True,
+        *,
+        chapter_number: Optional[int] = None,
+        chapter_context: Optional[ChapterContext | Dict[str, Any]] = None,
+        user_id: int = 0,
     ) -> Dict[str, str]:
-        """获取检查所需的上下文"""
-        context = {}
-        
-        # 获取小说设定
-        blueprint = (
-            await self.session.execute(
-                select(NovelBlueprint).where(NovelBlueprint.project_id == project_id)
+        """从 canonical context 派生检查输入，不再直接读取 ORM。"""
+        canonical = (
+            ChapterContext.model_validate(chapter_context)
+            if chapter_context is not None
+            else await self._resolve_chapter_context(
+                project_id=project_id,
+                chapter_number=chapter_number,
+                user_id=user_id,
             )
-        ).scalars().first()
-        
-        if blueprint:
-            setting_parts = []
-            if blueprint.genre:
-                setting_parts.append(f"类型: {blueprint.genre}")
-            if blueprint.style:
-                setting_parts.append(f"风格: {blueprint.style}")
-            if blueprint.world_setting:
-                setting_parts.append(f"世界观: {blueprint.world_setting}")
-            if blueprint.full_synopsis:
-                setting_parts.append(f"故事概要: {blueprint.full_synopsis}")
-            context["novel_setting"] = "\n".join(setting_parts)
-        
-        # 获取项目记忆
-        memory = (
-            await self.session.execute(
-                select(ProjectMemory).where(ProjectMemory.project_id == project_id)
-            )
-        ).scalars().first()
-        
-        if memory:
-            context["global_summary"] = memory.global_summary or ""
-            if memory.plot_arcs:
-                import json
-                context["plot_arcs"] = json.dumps(memory.plot_arcs, ensure_ascii=False, indent=2)
-        
-        # 获取角色状态（简化版）
-        from ..models.memory_layer import CharacterState
-        states = (
-            await self.session.execute(
-                select(CharacterState)
-                .where(CharacterState.project_id == project_id)
-                .order_by(CharacterState.chapter_number.desc())
-                .limit(10)
-            )
-        ).scalars().all()
-        
-        if states:
-            state_texts = []
-            for s in states:
-                if s.extra and "raw_state_text" in s.extra:
-                    state_texts.append(s.extra["raw_state_text"])
-                    break
-            context["character_state"] = "\n".join(state_texts) if state_texts else ""
-        
-        # 获取未回收伏笔
-        if include_foreshadowing:
-            foreshadowings = (
-                await self.session.execute(
-                    select(Foreshadowing).where(
-                        Foreshadowing.project_id == project_id,
-                        Foreshadowing.status.in_(["planted", "developing"])
-                    )
-                )
-            ).scalars().all()
-            
-            if foreshadowings:
-                foreshadowing_texts = [
-                    f"- 第{f.chapter_number}章埋设: {f.content[:100]}..."
-                    for f in foreshadowings[:10]
-                ]
-                context["foreshadowings"] = "\n".join(foreshadowing_texts)
-        
-        return context
+        )
+        return ConsistencyContextAdapter.to_prompt_context(
+            canonical,
+            include_foreshadowing=include_foreshadowing,
+        )
+
+    async def _resolve_chapter_context(
+        self,
+        *,
+        project_id: str,
+        chapter_number: Optional[int],
+        user_id: int,
+    ) -> ChapterContext:
+        resolver = ChapterContextResolver(
+            self.session,
+            llm_service=self.llm_service,
+            vector_store=None,
+        )
+        return await resolver.resolve_for_consistency(
+            project_id=project_id,
+            chapter_number=chapter_number,
+            user_id=user_id,
+        )
     
     def _parse_check_response(self, response: str) -> ConsistencyCheckResult:
         """解析检查响应"""
