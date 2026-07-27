@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Pydantic response_model 与 schema 规则"}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"现有手写 DTO 规则及目标迁移点"}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"generated types 进入 query 的边界"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"OpenAPI 到 UI 的契约流"}

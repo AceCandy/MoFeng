@@ -1,0 +1,3 @@
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"Alembic source of truth 与事务规则"}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"当前 app bootstrap 与进程入口约定"}
+{"file":".trellis/spec/backend/security-guidelines.md","reason":"管理员凭据、密钥迁移与日志安全"}

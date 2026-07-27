@@ -1,0 +1,5 @@
+{"file":".trellis/spec/frontend/index.md","reason":"WritingDesk 分层与前端总规则"}
+{"file":".trellis/spec/frontend/state-management.md","reason":"XState、Vue Query 与本地 UI state ownership"}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"query/mutation/SSE actor 边界"}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"generated event/snapshot 类型与 unknown narrowing"}
+{"file":".trellis/spec/frontend/task-reminders.md","reason":"保持全局任务提醒契约"}

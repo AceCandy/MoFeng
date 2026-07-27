@@ -1,0 +1,5 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"后端异步、schema、测试与复核门禁"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"事务 ownership、Alembic 与 PostgreSQL 约束"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"前端 type-check、测试、API 边界与复核门禁"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"最终集成数据流与契约一致性检查"}
+{"file":".trellis/tasks/07-27-architecture-convergence/research/durable-runtime-selection.md","reason":"检查实现是否偷换 runtime 能力边界"}

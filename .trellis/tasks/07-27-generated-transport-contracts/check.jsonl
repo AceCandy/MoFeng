@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"检查 OpenAPI schema 完整且稳定"}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"检查无手工 wire DTO 和 any 回退"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"type-check、lint、test 与 HTTP wrapper 门禁"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"检查 duplicate contract 是否真正删除"}

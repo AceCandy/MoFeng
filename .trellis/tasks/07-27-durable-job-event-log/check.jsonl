@@ -1,0 +1,5 @@
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"检查 claim/fencing/event atomicity"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"worker 与 API 质量门禁"}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"检查 SSE 主通道与 polling fallback"}
+{"file":".trellis/spec/frontend/task-reminders.md","reason":"检查 task indicator 行为不回归"}
+{"file":".trellis/tasks/07-27-architecture-convergence/research/durable-runtime-selection.md","reason":"检查未把 checkpointer 或 Redis 当作 durable queue"}

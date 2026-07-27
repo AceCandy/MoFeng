@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"outbox、projection 与 commit ownership"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"async external calls、schema 与测试规则"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Chapter lifecycle 到前端状态的跨层影响"}
+{"file":".trellis/tasks/07-27-architecture-convergence/research/durable-runtime-selection.md","reason":"projection worker 的 durable execution 边界"}
