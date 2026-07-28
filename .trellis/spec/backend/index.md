@@ -1,6 +1,6 @@
 # Backend Development Guidelines
 
-> FastAPI + SQLAlchemy 2.0 (async) + Pydantic v2 + Celery. Backend lives under `backend/app/`.
+> FastAPI + SQLAlchemy 2.0 async + Pydantic v2 + PostgreSQL/asyncpg. Long-running chapter work uses the independent durable worker; Celery remains legacy-only. Backend lives under `backend/app/`.
 
 ---
 
@@ -16,6 +16,7 @@
 | Quality | `httpx.AsyncClient`, `response_model=` on routes, AIMETA header on every file | [quality-guidelines](./quality-guidelines.md) |
 | Security | CORS whitelist, Fernet secret encryption, SSRF guard, auth hardening | [security-guidelines](./security-guidelines.md) |
 | Chapter context | One versioned snapshot for generation, review, consistency, and recovery | [chapter-context-contract](./chapter-context-contract.md) |
+| Durable jobs | PostgreSQL leases, fencing, event replay, public projections, and worker recovery | [durable-job-guidelines](./durable-job-guidelines.md) |
 
 ---
 
@@ -30,6 +31,7 @@
 | [Quality Guidelines](./quality-guidelines.md) | Async discipline, Pydantic schemas, config, Celery, review checklist |
 | [Security Guidelines](./security-guidelines.md) | CORS, Fernet secret encryption, SSRF, auth hardening |
 | [Canonical Chapter Context](./chapter-context-contract.md) | Resolver/adapters, revision layers, snapshot recovery, and tests |
+| [Durable Job And Event Log](./durable-job-guidelines.md) | Enqueue identity, lease/fencing, handler side effects, SSE cursor recovery, and process tests |
 
 ---
 
@@ -37,6 +39,7 @@
 
 - Read the guide for every touched concern; for database lifecycle changes, read Database, Quality, Security, and Logging Guidelines.
 - For changes crossing runtime, storage, and deployment, read the [Cross-Layer Thinking Guide](../guides/cross-layer-thinking-guide.md).
+- For background execution, task APIs, SSE, Redis wake-up, or worker deployment, read the [Durable Job And Event Log](./durable-job-guidelines.md).
 - Before adding helpers or copied contracts, read the [Code Reuse Thinking Guide](../guides/code-reuse-thinking-guide.md).
 
 ## Quality Check
@@ -44,6 +47,7 @@
 - Always apply [Quality Guidelines](./quality-guidelines.md) and [Logging Guidelines](./logging-guidelines.md).
 - For schema, migration, bootstrap, readiness, or database config changes, also apply [Database Guidelines](./database-guidelines.md) and [Security Guidelines](./security-guidelines.md).
 - For changes spanning multiple layers or repeated constants/commands, apply the [Cross-Layer](../guides/cross-layer-thinking-guide.md) and [Code Reuse](../guides/code-reuse-thinking-guide.md) checklists.
+- Durable job changes require PostgreSQL lease/fencing coverage; recovery claims require a real independent-process termination/reclaim test.
 - Run focused tests plus syntax/type/static checks; database lifecycle changes require isolated PostgreSQL coverage, not SQLite-only evidence.
 
 ---

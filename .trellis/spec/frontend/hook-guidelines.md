@@ -79,6 +79,16 @@ For one-shot reads outside a hook (e.g. router guard session restore), use `quer
 
 When SSE is the primary sync channel, keep a long `refetchInterval` as a fallback for connection drops (see `useTasksQuery` above). Do not remove polling just because SSE exists.
 
+For cursor-based task SSE:
+
+- Keep the last applied durable cursor and ignore events whose cursor is not greater.
+- Send the same cursor in the query and `Last-Event-ID` when both are present.
+- Treat `reset` as a state replacement boundary: fetch a new `snapshot_revision + resume_cursor` pair for the same stream scope, replace the cached task list/cursor, then reconnect.
+- Clear snapshot and cursor before reconnecting when the authenticated user or `(stream_type, stream_id)` changes.
+- Redis availability is not a frontend state signal. The backend event log and snapshot pair remain authoritative, while the long polling interval remains the final fallback.
+
+See [Durable Job And Event Log](../backend/durable-job-guidelines.md) for the cross-layer contract.
+
 ---
 
 ## Anti-patterns to avoid

@@ -6,7 +6,7 @@
 
 ## Async/sync discipline
 
-- All DB I/O goes through `AsyncSession` and is awaited.
+- Application business/runtime DB I/O goes through `AsyncSession` and is awaited. Alembic may use SQLAlchemy's documented synchronous callback through `run_sync`.
 - All HTTP I/O uses `httpx.AsyncClient`. **No `requests`, no `httpx.Client` sync calls.**
 - Wrapping a genuinely sync library (smtplib, etc.): use `asyncio.to_thread`, never `asyncio.run` inside an async path.
 
@@ -83,7 +83,7 @@ settings = get_settings()
 Rules for new config:
 
 - Every field names its env var explicitly via `env=` (and use `validation_alias=AliasChoices(...)` for backwards-compatible renames, e.g. `OPENAI_API_BASE_URL` / `OPENAI_BASE_URL`).
-- Compute derived values (DB URLs, dialect flags) as `@property`s (`sqlalchemy_database_uri`, `is_sqlite_backend`), not stored fields.
+- Compute derived values such as the DB URL as `@property`s (`sqlalchemy_database_uri`), not stored fields.
 - Consume `settings` by import, not by re-reading env vars ad hoc.
 
 > Existing quirks (do not copy, do not "fix" without a task): `env_file` references a non-existent `new-backend/.env`; some validators use the deprecated pydantic v1 `@validator` instead of `@field_validator`.
@@ -114,6 +114,9 @@ Rule for new tasks: reuse `app.db.session.AsyncSessionLocal` and `settings.sqlal
 - `pytest` + `pytest-asyncio`. Config in `pytest.ini` and `conftest.py` at repo root.
 - Tests live in `backend/tests/`.
 - Mark async tests per `pytest-asyncio` mode; do not spin up `asyncio.run` inside them.
+- PostgreSQL locking, migration, lease/fencing, event ordering, and async-driver behavior require PostgreSQL integration tests; SQLite cannot satisfy those acceptance criteria.
+- Durable worker recovery requires independent OS processes: terminate the lease owner, start a second worker, wait for lease expiry, and assert attempt/fencing increments, event order, and the single valid final outcome. Simulated method calls alone are not recovery evidence.
+- Test external provider dedupe and ambiguous-result dead-letter separately. Database fencing is not evidence of external exactly-once execution.
 
 ---
 
@@ -136,8 +139,10 @@ Rule for new tasks: reuse `app.db.session.AsyncSessionLocal` and `settings.sqlal
 - [ ] Router uses `Depends(get_session)` / `Depends(get_<x>_service)`; no manual `AsyncSessionLocal()`.
 - [ ] Repository subclasses `BaseRepository` and only `flush()`es.
 - [ ] Service owns `commit()`/`rollback()`; raises `ValueError` on business failure, not `HTTPException`.
+- [ ] A flush-time SQL-expression/server-generated value is read only after an explicit awaited refresh/query; new aggregates receive derived fields before their insert flush.
 - [ ] DTOs in `app/schemas/`, `response_model=` declared, `from_attributes = True` on Read models.
 - [ ] Outbound HTTP is `httpx.AsyncClient`; sync libs wrapped with `asyncio.to_thread`.
 - [ ] Logger declared at module top with `getLogger(__name__)`; uses `%s` args.
 - [ ] No secrets in log lines.
 - [ ] Schema change shipped as an Alembic migration under `backend/alembic/versions/` (see [database-guidelines](./database-guidelines.md)).
+- [ ] Durable job changes follow [durable-job-guidelines](./durable-job-guidelines.md), including public projection, fencing, event atomicity, and real-process recovery gates.

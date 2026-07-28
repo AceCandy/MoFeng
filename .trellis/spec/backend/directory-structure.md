@@ -6,7 +6,7 @@
 
 ## Tech stack
 
-FastAPI + SQLAlchemy 2.0 (async) + Pydantic v2 + Celery/Redis + LangGraph. Async drivers: `asyncmy` (MySQL) and `aiosqlite` (SQLite). See `backend/requirements.txt`.
+FastAPI + SQLAlchemy 2.0 async + Pydantic v2 + PostgreSQL/asyncpg + LangGraph. Long-running chapter work uses the independent durable worker; Redis is an optional wake-up transport, not the job/event source of truth. Legacy Celery code remains isolated under `app/tasks/`. SQLite/aiosqlite is limited to isolated unit tests and is not a runtime, Alembic, or durable-job deployment target. See `backend/requirements.txt`.
 
 ---
 
@@ -38,6 +38,7 @@ The dependency chain is wired by `Depends`. Routers never call repositories dire
 | `app/core/` | Cross-cutting infra: `config.py` (pydantic-settings), `security.py` (JWT/password), `dependencies.py` (auth + session DI). | `app/core/dependencies.py` |
 | `app/db/` | Engine/session factory, Alembic orchestration, versioned bootstrap, readiness, and explicit CLI. | `app/db/session.py`, `cli.py` |
 | `app/tasks/` | Celery tasks (sync entrypoints that bootstrap an event loop). | `app/tasks/emotion_tasks.py` |
+| `app/worker.py` + `app/services/job_*.py` | Independent durable worker entrypoint, lease/fencing runtime, handler registry, and event transitions. | `app/worker.py`, `app/services/job_worker.py` |
 | `app/utils/` | Pure helpers, no DB/HTTP side effects. | `app/utils/json_utils.py`, `llm_tool.py` |
 | `app/config/` | Celery app definition only. | `app/config/celery_config.py` |
 

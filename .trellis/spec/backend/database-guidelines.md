@@ -6,7 +6,7 @@
 
 ## Engine and session
 
-Single async engine + session factory in `app/db/session.py`. SQLite uses `NullPool` and relaxes `check_same_thread`; MySQL and PostgreSQL enable `pool_pre_ping` and `pool_recycle=3600`. `expire_on_commit=False` so returned ORM objects stay usable after commit.
+Single async engine + session factory in `app/db/session.py`. Application runtime, Alembic/bootstrap, and the durable job runtime support PostgreSQL through the asyncpg driver. SQLite/aiosqlite is allowed only for isolated unit tests that do not claim deployment, migration, locking, lease, or event-log compatibility; MySQL is not a supported target. PostgreSQL enables `pool_pre_ping` and `pool_recycle=3600`. `expire_on_commit=False` keeps returned ORM objects usable after commit, but it does not prevent flush-time expiry of SQL-expression/server-generated attributes.
 
 ```python
 engine = create_async_engine(settings.sqlalchemy_database_uri, **engine_kwargs)
@@ -72,6 +72,28 @@ async def get_by_username(self, username: str) -> Optional[User]:
 ```
 
 For relations, use `.options(selectinload(...))` (see `app/repositories/novel_repository.py`).
+
+---
+
+## Async ORM attributes after flush
+
+An async flush can expire attributes populated by `server_default`, SQL-expression `onupdate`, or another database-side expression. Reading such an attribute synchronously may issue an implicit `SELECT`; outside SQLAlchemy's awaited greenlet this raises `MissingGreenlet`. `expire_on_commit=False` does not change this flush behavior.
+
+Assign database-derived identifiers before adding a new aggregate to the session. In particular, a durable job remains transient while its stream row is locked and `event_sequence` is allocated; only then is the job inserted and used to build its public event snapshot.
+
+```python
+# Wrong: the second flush updates a persistent job and may expire updated_at.
+await repo.add(job)
+sequence = await next_stream_sequence(job)
+payload = public_task_snapshot(job)
+
+# Correct: allocate derived fields while the job is transient, then insert once.
+sequence = await next_stream_sequence(job)
+await repo.add(job)
+payload = public_task_snapshot(job)
+```
+
+If code genuinely needs a database-generated value after flush, load it explicitly with `await session.refresh(instance, attribute_names=[...])` or an awaited `select(...)`. Never rely on ordinary Python attribute access to perform async I/O.
 
 ---
 
@@ -153,6 +175,16 @@ python -m app.db.cli db-adopt-legacy \
 python -m app.db.cli db-bootstrap
 python -m app.db.cli db-check
 
+# External PostgreSQL: complete URL, no bundled postgres profile.
+DATABASE_URL=postgresql+asyncpg://<user>:<password>@<host>:<port>/<database>
+
+# Bundled PostgreSQL: DATABASE_URL is unset and POSTGRES_* forms the URL.
+POSTGRES_HOST=pg
+POSTGRES_PORT=5432
+POSTGRES_USER=<user>
+POSTGRES_PASSWORD=<password>
+POSTGRES_DATABASE=<database>
+
 GET /health
 GET /api/health
 GET /ready
@@ -171,7 +203,9 @@ Persistent contracts:
 - `db-check` and the HTTP readiness endpoints are read-only. Their payload is `{"status": "ready" | "not_ready", "codes": string[]}`; HTTP readiness returns 200 when ready and 503 otherwise.
 - `/health` and `/api/health` are dependency-free liveness endpoints and remain 200 while the process can respond.
 - `BOOTSTRAP_CREATE_DEFAULT_ADMIN` defaults to `true`. When it is true in production, `ADMIN_DEFAULT_PASSWORD` must pass the production strength gate; when false, an administrator password is not required.
-- `DATABASE_URL`, when set, is the complete target URL. Otherwise `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DATABASE` form the target URL.
+- `DATABASE_URL`, when set, is the complete target URL and takes precedence over every `POSTGRES_*` value. External-URL mode does not require `POSTGRES_PASSWORD` as a separate variable and deployment must not enable the bundled `postgres` profile.
+- When `DATABASE_URL` is absent, `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DATABASE` form the target URL. `POSTGRES_HOST=pg` selects the bundled Compose PostgreSQL profile.
+- Application runtime, Alembic/bootstrap, and durable jobs accept PostgreSQL only. SQLite remains an isolated unit-test aid, not a local/deployment compatibility target; tests that exercise PostgreSQL locking, migration SQL, JSON behavior, or async driver semantics must use PostgreSQL.
 - Logs and CLI output may contain revision ids, status codes, counts, and schema fingerprints. They must never contain database passwords, administrator passwords, provider keys, or decrypted values.
 
 ### 4. Validation & Error Matrix
@@ -187,11 +221,16 @@ Persistent contracts:
 | Adoption fingerprint is unknown or differs from the observed value | Adoption makes no change and reports `unknown_legacy_schema` or `legacy_fingerprint_mismatch` |
 | Adoption lacks operator identity or backup confirmation | Adoption makes no change and fails validation |
 | Production default-admin bootstrap uses a weak/empty password | Bootstrap refuses to write data |
+| `DATABASE_URL` is set without a separate `POSTGRES_PASSWORD` | External mode remains valid and no bundled PostgreSQL service starts |
+| `DATABASE_URL` and `POSTGRES_*` are both set | The complete `DATABASE_URL` wins; values are never merged |
+| A release/deployment targets a non-PostgreSQL URL | Unsupported target; it cannot satisfy the release/readiness evidence and must not be presented as compatible |
 
 ### 5. Good / Base / Bad Cases
 
 - Good: an empty database runs `db-migrate -> db-bootstrap -> db-check`; the check reports ready and runtime starts without any write-side initialization.
+- Good: an external `DATABASE_URL` deploys migrate/bootstrap/app/worker without a separate `POSTGRES_PASSWORD` and without starting the bundled `pg` service.
 - Base: rerunning migrate/bootstrap against a current database performs no additional bootstrap mutation and still validates every immutable ledger contract.
+- Base: isolated, database-agnostic unit tests may use SQLite but cannot satisfy a PostgreSQL integration acceptance criterion.
 - Bad: API lifespan, worker import, or a health endpoint invokes Alembic, `create_all`, seed logic, administrator creation, legacy key migration, or automatic `stamp`.
 
 ### 6. Tests Required
@@ -199,7 +238,9 @@ Persistent contracts:
 - Unit: fingerprinting is insensitive to unordered table/constraint discovery but changes when ordered composite key/index columns or CHECK constraints change.
 - Unit: readiness asserts every stable code above, including name/checksum/floor drift and HTTP 503 response shape.
 - PostgreSQL integration: empty and current databases, explicit legacy adoption with audit row, unknown/mismatched legacy rejection, migration rollback on injected failure, and concurrent bootstrap execution exactly once.
+- PostgreSQL async integration: flush paths that use SQL-expression/server-generated timestamps perform explicit refreshes when needed; durable job enqueue allocates its stream sequence before the job insert and does not require a second job-row flush before public serialization.
 - Static/deployment: runtime imports no mixed `init_db`; the image contains Alembic files; Compose resolves in bundled and external PostgreSQL modes and orders `migrate -> bootstrap -> app`.
+- Deployment matrix: external `DATABASE_URL` works without `POSTGRES_PASSWORD` and does not enable bundled `pg`; bundled mode requires its `POSTGRES_*` values; no non-PostgreSQL target is accepted as runtime/Alembic/durable-job evidence.
 
 ### 7. Wrong vs Correct
 
@@ -225,6 +266,8 @@ async def lifespan(app: FastAPI):
 
 Deployment owns the write-side sequence before this runtime starts.
 
+For external PostgreSQL, pass the complete `DATABASE_URL` and omit the Compose `postgres` profile. For bundled PostgreSQL, leave `DATABASE_URL` unset and provide `POSTGRES_*`; never combine a URL from parts of both modes.
+
 ---
 
 ## Anti-patterns to avoid
@@ -234,3 +277,4 @@ Deployment owns the write-side sequence before this runtime starts.
 - **Celery tasks building their own engine + `sessionmaker`.** `app/tasks/emotion_tasks.py` imports the sync `sessionmaker` from `sqlalchemy.orm` and reads `settings.database_url` (the raw, possibly non-async-driver URL) instead of reusing `AsyncSessionLocal` and `settings.sqlalchemy_database_uri`. New background tasks must reuse `app.db.session.AsyncSessionLocal`.
 - **Adding a model without an Alembic migration.** The migration history is the source of truth; `create_all` only creates new tables, it does not alter existing ones. Add a migration under `backend/alembic/versions/` for any column/table change.
 - **Calling sync `Session.query(...)` inside an `async def` service.** An `AsyncSession`'s `sync_session` only works under a greenlet; calling it directly from an `async` method raises `MissingGreenlet` and surfaces as a 500. Use `await session.execute(select(...))` + `.scalars()`. `ConsistencyService._get_check_context` is the reference. When a service needs both DB reads and long LLM calls, commit the read transaction first so the LLM call does not hold a DB connection (see `FinalizeService.finalize_chapter`).
+- **Flushing a newly inserted ORM aggregate again to assign a derived field, then synchronously serializing SQL-expression/server-generated attributes.** The update flush may expire attributes such as `updated_at`; ordinary access can trigger implicit I/O and `MissingGreenlet`. Allocate derived fields before the insert, or explicitly `await session.refresh(...)` before reading them.

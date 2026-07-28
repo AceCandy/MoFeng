@@ -144,6 +144,14 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.yml --profile pos
 
 Compose starts the shared application image in three roles: one-shot `migrate`, one-shot `bootstrap`, then `app`. `app` depends on successful completion of both database roles. The migration command includes its own connection wait, so the same Compose file also works with an external PostgreSQL server without a hard dependency on the optional `pg` profile.
 
+For external PostgreSQL, set the complete `DATABASE_URL` and omit `--profile postgres`:
+
+```bash
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build
+```
+
+In this mode `DATABASE_URL` takes precedence over `POSTGRES_*`; a separate `POSTGRES_PASSWORD` is not required and the bundled `pg` service is not started.
+
 Default access URL:
 
 - `http://127.0.0.1:6100`
@@ -173,7 +181,8 @@ Minimum startup configuration:
 | Variable | Required | Description |
 |---|---|---|
 | `SECRET_KEY` | Yes | JWT signing secret |
-| `POSTGRES_HOST` / `POSTGRES_PORT` / `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DATABASE` | Yes | PostgreSQL connection |
+| `DATABASE_URL` | One database mode required | Complete external PostgreSQL URL; no separate `POSTGRES_PASSWORD` is required |
+| `POSTGRES_PASSWORD` | Required when `DATABASE_URL` is unset | Bundled/composed PostgreSQL password; other `POSTGRES_*` values have defaults and may be overridden |
 
 Recommended for writing features:
 
@@ -196,7 +205,8 @@ Template: `deploy/.env.example`
 Additional common variables:
 
 - `APP_PORT`: exposed application port
-- `POSTGRES_*`: PostgreSQL connection or bundled PostgreSQL configuration
+- `DATABASE_URL`: complete external PostgreSQL URL; takes precedence and does not start bundled PostgreSQL
+- `POSTGRES_*`: PostgreSQL connection parts and bundled PostgreSQL configuration when `DATABASE_URL` is unset
 - `IMAGE_REPO`: image repository name
 
 ## 5. Database lifecycle commands

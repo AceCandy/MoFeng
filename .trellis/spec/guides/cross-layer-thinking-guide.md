@@ -42,9 +42,12 @@ If you cannot name the type at every hop, you are not ready to write the code.
 | Router ↔ Service | Service raising `HTTPException` (couples to FastAPI); router not translating `ValueError` → 400 |
 | Service ↔ Repository | Repository calling `commit()`; service not rolling back on `IntegrityError` |
 | ORM ↔ Schema | Forgetting `from_attributes = True`; `model_validate` failing on lazy-loaded relations |
+| ORM ↔ Async DB session | A flush expires an `onupdate`/server-generated attribute; synchronous serialization triggers implicit I/O and `MissingGreenlet` |
 | Backend ↔ Frontend | Field rename in Pydantic `*Read` not mirrored in `src/api/<domain>.ts` |
 | HTTP error ↔ User message | Router raising with a non-`detail` field the frontend's `readErrorMessage` won't find |
 | Celery task ↔ Async session | Task building its own engine / sync `sessionmaker` instead of reusing `AsyncSessionLocal` |
+| PostgreSQL event log ↔ Redis | Treating a wake-up notification as durable data instead of rereading by cursor |
+| SSE snapshot ↔ Client cursor | Reusing an expired cursor or changing stream scope without replacing the snapshot/cursor pair |
 
 ---
 
@@ -88,7 +91,7 @@ The router raises `HTTPException(status_code=..., detail="<Chinese message>")`. 
 
 ### Scenario E: Celery task reusing async infrastructure
 
-Background tasks must reuse `app.db.session.AsyncSessionLocal` and `settings.sqlalchemy_database_uri`, not build a separate engine or import the sync `sessionmaker` from `sqlalchemy.orm`. See [backend/quality-guidelines](../backend/quality-guidelines.md). The task ↔ async boundary is a frequent source of "works in dev (SQLite), breaks in prod (MySQL)" bugs because the wrong URL/driver is used.
+Legacy Celery tasks must reuse `app.db.session.AsyncSessionLocal` and `settings.sqlalchemy_database_uri`, not build a separate engine or import the sync `sessionmaker` from `sqlalchemy.orm`. New long-running chapter work uses the independent durable worker contract in [backend/durable-job-guidelines](../backend/durable-job-guidelines.md). SQLite-only evidence cannot validate PostgreSQL driver, locking, migration, or lease behavior.
 
 ---
 
@@ -98,6 +101,8 @@ Background tasks must reuse `app.db.session.AsyncSessionLocal` and `settings.sql
 - **Scattered validation** — validating the same rule in the Pydantic schema, the service, and the frontend handler. Validate once at the entry point per layer.
 - **Leaky abstractions** — a Vue component reaching into raw response shapes instead of consuming the typed `useQuery<T>` data; a service importing FastAPI's `HTTPException`.
 - **Every consumer re-parses the same payload** — multiple components casting the same untyped SSE/socket event. Put one decoder/type guard at the event boundary; see [code-reuse-thinking-guide](./code-reuse-thinking-guide.md) pattern 4.
+- **Flush as invisible I/O setup** — inserting an ORM aggregate, flushing it again to fill a derived field, then serializing an expired attribute. Allocate derived fields while transient or explicitly await a refresh.
+- **Wake-up as truth** — applying a Redis notification directly to UI state. Redis may duplicate or lose notifications; always reread the PostgreSQL event log from the durable cursor.
 
 ---
 
@@ -109,6 +114,8 @@ Before implementation:
 - [ ] Named the type at every hop.
 - [ ] Decided where validation lives for each input.
 - [ ] Confirmed the ORM relation is eager-loaded if the Read schema reads it.
+- [ ] Mapped database-generated/`onupdate` attributes and any explicit refresh required after flush.
+- [ ] For an event stream, named the durable source, scope/owner gate, cursor, snapshot pair, reset behavior, and optional wake-up path.
 
 After implementation:
 
@@ -118,3 +125,5 @@ After implementation:
 - [ ] For a field add: model + Alembic revision/test + backend schema + frontend interface all updated.
 - [ ] For a path/field rename: every call site + legacy redirect updated.
 - [ ] Consumers import a shared type / decoder instead of casting payload fields locally.
+- [ ] A transient job/event receives its stream sequence before the job insert; public serialization does not depend on implicit async ORM I/O.
+- [ ] SSE reset and user/scope changes replace both snapshot and cursor before reconnecting.
