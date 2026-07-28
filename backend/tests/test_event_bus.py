@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+import pytest_asyncio
 
 from app.services import event_bus
 
@@ -20,16 +21,12 @@ TASKS_ROUTER_SOURCE = ROOT / "app/api/routers/tasks.py"
 BACKGROUND_TASK_SERVICE_SOURCE = ROOT / "app/services/background_task_service.py"
 
 
-@pytest.fixture(autouse=True)
-def _reset_event_bus():
+@pytest_asyncio.fixture(autouse=True, loop_scope="session")
+async def _reset_event_bus():
     """每个测试前重置 event_bus 模块级单例状态，避免跨测试污染。"""
-    event_bus._async_client = None
-    event_bus._async_client_ready = False
-    event_bus._publish_tasks.clear()
+    await event_bus.shutdown_event_bus()
     yield
-    event_bus._async_client = None
-    event_bus._async_client_ready = False
-    event_bus._publish_tasks.clear()
+    await event_bus.shutdown_event_bus()
 
 
 def _install_client(client):
@@ -74,6 +71,66 @@ async def test_publish_task_swallows_redis_error() -> None:
     await event_bus.publish_chapter_status("p1", 1)
     await asyncio.sleep(0.05)
     # 到这里未抛异常即通过
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_shutdown_waits_for_publish_and_closes_client() -> None:
+    publish_started = asyncio.Event()
+    release_publish = asyncio.Event()
+    calls: list[str] = []
+
+    async def publish(_channel: str, _message: str) -> None:
+        publish_started.set()
+        await release_publish.wait()
+        calls.append("publish")
+
+    async def close() -> None:
+        calls.append("close")
+
+    client = MagicMock()
+    client.publish = AsyncMock(side_effect=publish)
+    client.aclose = AsyncMock(side_effect=close)
+    _install_client(client)
+
+    await event_bus.publish_background_task(7)
+    await publish_started.wait()
+    shutdown_task = asyncio.create_task(event_bus.shutdown_event_bus())
+    await asyncio.sleep(0)
+
+    client.aclose.assert_not_awaited()
+    release_publish.set()
+    await shutdown_task
+
+    client.publish.assert_awaited_once_with("task:status:7", "1")
+    client.aclose.assert_awaited_once()
+    assert calls == ["publish", "close"]
+    assert event_bus._publish_tasks == set()
+    assert event_bus._async_client is None
+    assert event_bus._async_client_ready is False
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_publish_is_skipped_while_event_bus_is_closing() -> None:
+    close_started = asyncio.Event()
+    release_close = asyncio.Event()
+
+    async def close() -> None:
+        close_started.set()
+        await release_close.wait()
+
+    client = MagicMock()
+    client.publish = AsyncMock()
+    client.aclose = AsyncMock(side_effect=close)
+    _install_client(client)
+
+    shutdown_task = asyncio.create_task(event_bus.shutdown_event_bus())
+    await close_started.wait()
+    await event_bus.publish_background_task(8)
+    release_close.set()
+    await shutdown_task
+
+    client.publish.assert_not_awaited()
+    assert event_bus._publish_tasks == set()
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -257,35 +314,51 @@ async def test_subscribe_background_task_returns_none_and_closes_pubsub_on_conne
 
 
 def test_tasks_sse_replaced_polling_with_pubsub_subscribe() -> None:
-    """stream_background_tasks 改事件驱动：subscribe channel + get_message，替代固定轮询。"""
+    """任务 SSE 以 PostgreSQL JobEvent 为真相，Redis 只负责唤醒。"""
     source = _tasks_source()
     assert "subscribe_background_task(current_user.id)" in source
     assert "pubsub.get_message(" in source
-    assert "async def fetch_payload" in source
-    assert "def build_event(payload" in source
+    assert "async def fetch_events" in source
+    assert "await service.list_events(" in source
+    assert "await service.list_stream_events(" in source
+    assert '"task"' in source
+    assert "event_id=event.cursor" in source
 
 
 def test_tasks_sse_emits_initial_state_before_subscribe() -> None:
-    """subscribe 前查 DB 发初始态，兜底 pub-sub 订阅前的消息丢失。"""
+    """首次连接先发 snapshot pair，再订阅并从 resume cursor 补发。"""
     source = _tasks_source()
-    initial_fetch = source.index("await fetch_payload()")
+    snapshot_emit = source.index("event_id=current_cursor")
     subscribe_call = source.index("await subscribe_background_task")
-    assert initial_fetch < subscribe_call
+    assert snapshot_emit < subscribe_call
+    assert "authorized_snapshot or await fetch_snapshot()" in source
+    assert '"snapshot"' in source
 
 
 def test_tasks_sse_falls_back_to_polling_when_redis_unavailable() -> None:
-    """Redis 不可用时 SSE 回退 1.5s 轮询查 DB。"""
+    """Redis 不可用时仍周期读取 JobEvent，不影响正确性。"""
     source = _tasks_source()
     assert "pubsub is None" in source
-    assert "asyncio.sleep(1.5)" in source
+    assert "asyncio.sleep(5.0)" in source
+    assert "events = await fetch_events(current_cursor)" in source
 
 
 def test_tasks_sse_falls_back_to_polling_on_pubsub_disconnect() -> None:
-    """运行中 Redis 断连（get_message 异常）时回退轮询，不靠异常断开 SSE。"""
+    """运行中 Redis 断连后清理订阅并继续 PostgreSQL 轮询。"""
     source = _tasks_source()
-    assert "redis_disconnected" in source
-    assert "async def poll_loop" in source
-    assert "async for evt in poll_loop():" in source
+    assert "后台任务 SSE pubsub 读取异常，回退轮询" in source
+    assert "await pubsub.aclose()" in source
+    assert "pubsub = None" in source
+
+
+def test_tasks_sse_supports_cursor_resume_and_typed_reset() -> None:
+    source = _tasks_source()
+
+    assert 'request.headers.get("last-event-id")' in source
+    assert "cursor: Optional[int] = Query(default=None, ge=0)" in source
+    assert "EventCursorExpiredError" in source
+    assert '"reset"' in source
+    assert "retained_through_cursor" in source
 
 
 def test_tasks_sse_closes_pubsub_on_exit() -> None:
@@ -295,8 +368,10 @@ def test_tasks_sse_closes_pubsub_on_exit() -> None:
     assert "await pubsub.aclose()" in source
 
 
-def test_background_task_service_publishes_on_state_changes() -> None:
-    """5 处状态变更（create/append_log/mark_running/mark_succeeded/mark_failed）commit 后 publish 通知。"""
+def test_background_task_service_delegates_transitions_to_durable_job_service() -> None:
+    """兼容 facade 不再维护第二套任务状态机。"""
     source = _background_task_service_source()
-    assert "from .event_bus import publish_background_task" in source
-    assert source.count("await publish_background_task(task.user_id)") >= 5
+    assert "from .job_service import JobService" in source
+    assert "self.jobs = JobService(session)" in source
+    assert "return await self.jobs.enqueue_job(" in source
+    assert "task.status =" not in source

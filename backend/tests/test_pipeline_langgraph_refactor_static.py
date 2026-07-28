@@ -5,9 +5,11 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.api.routers.writer import _build_evaluation_failure_detail, _build_generation_failure_detail
+from app.api.routers.writer import _build_evaluation_failure_detail
 from app.models import Chapter, ChapterOutline, ChapterVersion, NovelBlueprint, NovelProject
 from app.models.user import User
+from app.services.chapter_context_adapters import GenerationContextAdapter
+from app.services.chapter_context_resolver import ChapterContextResolver
 from app.services.novel_service import NovelService
 from app.services.pipeline_orchestrator import PipelineConfig, PipelineOrchestrator
 
@@ -25,8 +27,8 @@ def _source() -> str:
 
 def _writer_generate_block() -> str:
     source = WRITER_ROUTER_SOURCE.read_text(encoding="utf-8")
-    return source.split('@router.post("/novels/{project_id}/chapters/generate"', 1)[1].split(
-        "\n\n@router.post(\"/novels/{project_id}/chapters/select\"",
+    return source.split('"/novels/{project_id}/chapters/generate"', 1)[1].split(
+        '"/novels/{project_id}/chapters/{chapter_number}/confirm-finalize"',
         1,
     )[0]
 
@@ -113,14 +115,15 @@ def test_pipeline_stage_flags_preserve_existing_debug_contract() -> None:
     }
 
 
-def test_regular_generate_endpoint_delegates_to_langgraph_pipeline() -> None:
+def test_regular_generate_endpoint_submits_durable_langgraph_job() -> None:
     block = _writer_generate_block()
 
-    assert "orchestrator = PipelineOrchestrator(session)" in block
-    assert "await orchestrator.generate_chapter(" in block
+    assert "response_model=BackgroundTaskResponse" in block
+    assert "status_code=202" in block
+    assert "await _enqueue_chapter_generation(" in block
     assert '"preset": "basic"' in block
     assert '"enable_rag": True' in block
-    assert "return await _load_project_schema(novel_service, project_id, current_user.id)" in block
+    assert "PipelineOrchestrator(" not in block
 
     legacy_local_orchestration = [
         "prompt_service = PromptService(session)",
@@ -133,24 +136,6 @@ def test_regular_generate_endpoint_delegates_to_langgraph_pipeline() -> None:
     ]
     for legacy_marker in legacy_local_orchestration:
         assert legacy_marker not in block
-
-
-def test_regular_generate_endpoint_exposes_runtime_error_detail() -> None:
-    block = _writer_generate_block()
-
-    assert "_build_generation_failure_detail(exc)" in block
-    assert 'detail="生成章节失败，请重试。"' not in block
-
-
-def test_generation_failure_detail_keeps_reason_and_redacts_secrets() -> None:
-    detail = _build_generation_failure_detail(
-        RuntimeError("阶段 chapter_writing 使用的供应商缺少 API Key")
-    )
-    secret_detail = _build_generation_failure_detail(RuntimeError("api_key=sk-live-secret 请求失败"))
-
-    assert detail == "生成章节失败：阶段 chapter_writing 使用的供应商缺少 API Key"
-    assert "sk-live-secret" not in secret_detail
-    assert "api_key=[已隐藏]" in secret_detail
 
 
 def test_evaluate_endpoint_records_failure_trace_and_detail() -> None:
@@ -468,7 +453,7 @@ def test_pipeline_state_does_not_reuse_orm_entities_across_commits() -> None:
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_collect_history_context_loads_selected_version_with_async_session(db_session_factory) -> None:
+async def test_canonical_context_loads_selected_version_with_async_session(db_session_factory) -> None:
     async with db_session_factory() as session:
         project_id = "project-history-context"
         session.add(User(id=1, username="writer", hashed_password="secret"))
@@ -488,6 +473,14 @@ async def test_collect_history_context_loads_selected_version_with_async_session
             summary="旧章概要",
         )
         session.add(outline)
+        session.add(
+            ChapterOutline(
+                project_id=project_id,
+                chapter_number=2,
+                title="新章",
+                summary="新章概要",
+            )
+        )
         previous_chapter = Chapter(
             project_id=project_id,
             chapter_number=1,
@@ -506,13 +499,12 @@ async def test_collect_history_context_loads_selected_version_with_async_session
         previous_chapter.selected_version_id = selected_version.id
         await session.commit()
 
-        orchestrator = PipelineOrchestrator(session)
-        history = await orchestrator._collect_history_context(
+        context = await ChapterContextResolver(session, vector_store=None).resolve(
             project_id=project_id,
             chapter_number=2,
-            outlines_map={1: outline},
             user_id=1,
         )
+        history = GenerationContextAdapter.to_context(context)["history_context"]
 
         assert history["completed_chapters"] == [
             {

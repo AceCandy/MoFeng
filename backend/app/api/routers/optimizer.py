@@ -14,10 +14,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.dependencies import get_current_user
 from ...db.session import get_session
-from ...models.novel import ChapterVersion
-from ...schemas.novel import ChapterGenerationStatus
 from ...schemas.user import UserInDB
-from ...services.chapter_word_count_settings import count_chapter_words
+from ...services.chapter_edit_service import ChapterEditService
 from ...services.llm_service import LLMService
 from ...services.novel_service import NovelService
 from ...services.prompt_service import PromptService
@@ -394,7 +392,7 @@ async def optimize_recommended_version(
         )
 
 
-@router.post("/apply-optimization")
+@router.post("/apply-optimization", status_code=202)
 async def apply_optimization(
     request: Optional[ApplyOptimizationRequest] = None,
     project_id: Optional[str] = None,
@@ -402,10 +400,7 @@ async def apply_optimization(
     session: AsyncSession = Depends(get_session),
     current_user: UserInDB = Depends(get_current_user),
 ):
-    """
-    应用优化后的内容到章节，并立即同步伏笔（覆盖本章旧的自动伏笔）。
-    """
-    novel_service = NovelService(session)
+    """提交优化正文，并原子创建统一的 durable 后处理任务。"""
 
     resolved_project_id = request.project_id if request else project_id
     resolved_chapter_number = request.chapter_number if request else chapter_number
@@ -414,74 +409,24 @@ async def apply_optimization(
     if not resolved_project_id or resolved_chapter_number is None or resolved_optimized_content is None:
         raise HTTPException(status_code=422, detail="缺少必填参数: project_id/chapter_number/optimized_content")
 
-    project = await novel_service.ensure_project_owner(resolved_project_id, current_user.id)
-
-    chapter = next(
-        (ch for ch in project.chapters if ch.chapter_number == resolved_chapter_number),
-        None
+    edit_result = await ChapterEditService(session).apply_content(
+        project_id=resolved_project_id,
+        chapter_number=resolved_chapter_number,
+        content=resolved_optimized_content,
+        user_id=current_user.id,
+        version_label="optimized",
     )
-    if not chapter:
-        raise HTTPException(status_code=404, detail="章节不存在")
-
-    target_version = chapter.selected_version
-    if not target_version and chapter.versions:
-        target_version = sorted(chapter.versions, key=lambda item: item.created_at)[-1]
-
-    if target_version:
-        target_version.content = resolved_optimized_content
-        if not chapter.selected_version_id:
-            chapter.selected_version_id = target_version.id
-        chapter.selected_version = target_version
-    else:
-        target_version = ChapterVersion(
-            chapter_id=chapter.id,
-            content=resolved_optimized_content,
-            version_label="optimized",
-        )
-        session.add(target_version)
-        await session.flush()
-        chapter.selected_version_id = target_version.id
-        chapter.selected_version = target_version
-
-    chapter.status = ChapterGenerationStatus.SUCCESSFUL.value
-    chapter.generation_progress = 100
-    chapter.generation_step = "completed"
-    chapter.generation_step_index = 7
-    chapter.generation_step_total = 7
-    chapter.word_count = count_chapter_words(resolved_optimized_content or "")
-
-    try:
-        from .writer import _sync_foreshadowings_for_chapter
-
-        sync_stats = await _sync_foreshadowings_for_chapter(
-            session,
-            project_id=resolved_project_id,
-            chapter=chapter,
-            content=resolved_optimized_content,
-            user_id=current_user.id,
-        )
-    except Exception as exc:
-        await session.rollback()
-        logger.exception(
-            "应用优化后伏笔同步失败 project=%s chapter=%s err=%s",
-            resolved_project_id,
-            resolved_chapter_number,
-            exc,
-        )
-        raise HTTPException(status_code=500, detail="优化内容保存失败：伏笔同步异常，请重试")
 
     logger.info(
-        "用户 %s 应用了项目 %s 第 %s 章的优化内容并同步伏笔 created=%s revealed=%s developing=%s",
+        "用户 %s 应用了项目 %s 第 %s 章的优化内容，后处理任务=%s",
         current_user.id,
         resolved_project_id,
         resolved_chapter_number,
-        sync_stats.get("created", 0),
-        sync_stats.get("revealed", 0),
-        sync_stats.get("developing", 0),
+        edit_result.job.id,
     )
 
     return {
-        "status": "success",
-        "message": "优化内容已应用，伏笔已同步",
-        "foreshadowing_sync": sync_stats,
+        "status": "accepted",
+        "message": "优化内容已应用，章节后处理已进入队列",
+        "task_id": edit_result.job.id,
     }

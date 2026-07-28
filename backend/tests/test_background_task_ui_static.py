@@ -19,13 +19,33 @@ def test_outline_generation_is_submitted_as_background_task():
     novel_api = _source("api/novel.ts")
     novel_queries = _source("queries/novel.ts")
 
-    assert "background_tasks: BackgroundTasks" in outline_block
+    assert "background_tasks: BackgroundTasks" not in outline_block
     assert "BackgroundTaskResponse" in outline_block
-    assert "create_task(" in outline_block
-    assert "background_tasks.add_task(" in outline_block
-    assert "run_generate_chapters_outline_task" in outline_block
+    assert "JobService(session).enqueue_job(" in outline_block
+    assert 'job_type="chapter_outline"' in outline_block
+    assert "background_tasks.add_task(" not in outline_block
     assert "Promise<BackgroundTask>" in novel_api
     assert "tasksQueryKeys" in novel_queries
+
+
+def test_chapter_edits_submit_one_unified_durable_postprocess_job():
+    writer = WRITER_ROUTER.read_text(encoding="utf-8")
+    for route in ("chapters/edit\"", "chapters/edit-fast\""):
+        block = writer.split(route, 1)[1].split("\n\n@router.", 1)[0]
+        assert "background_tasks: BackgroundTasks" not in block
+        assert "background_tasks.add_task(" not in block
+        assert block.count("ChapterEditService(session).apply_content(") == 1
+
+
+def test_chapter_generation_and_finalize_are_submitted_to_durable_worker():
+    writer = WRITER_ROUTER.read_text(encoding="utf-8")
+
+    assert 'job_type="chapter_generation"' in writer
+    assert 'job_type="chapter_finalize"' not in writer
+    assert "ChapterFinalizeSubmissionService(session).submit(" in writer
+    assert writer.count("response_model=BackgroundTaskResponse") >= 6
+    assert writer.count("status_code=202") >= 6
+    assert "_confirm_finalize_chapter_sync" not in writer
 
 
 def test_app_shell_exposes_background_task_log_entry():
@@ -38,7 +58,11 @@ def test_app_shell_exposes_background_task_log_entry():
     assert "showTaskLogModal" in shell
     assert "TaskLogPanel" in shell
     assert "app-shell__task-button" in shell
-    assert "当前正在执行的任务日志" in shell
+    assert ':aria-label="taskButtonLabel"' in shell
+    assert "个任务执行中" in shell
+    assert "查看任务日志，有任务执行失败" in shell
+    assert "查看任务日志，有任务执行完成" in shell
+    assert "'9+'" in shell
     assert "任务日志" in task_panel
     assert "getTasks" in task_api
     assert "refetchInterval" in task_queries

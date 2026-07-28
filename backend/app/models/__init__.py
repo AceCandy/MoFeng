@@ -3,7 +3,15 @@
 
 from .admin_setting import AdminSetting
 from .ai_model_config import UserAIModel, UserAIStageRoute, UserModelProvider
-from .background_task import BackgroundTask
+from .background_task import BackgroundTask, JobRun
+from .job import (
+    JobActivity,
+    JobEvent,
+    JobEventRetention,
+    JobEventStream,
+    JobExecutorControl,
+    JobWorkerHeartbeat,
+)
 from .llm_config import LLMConfig
 from .novel import (
     BlueprintCharacter,
@@ -71,6 +79,13 @@ __all__ = [
     # 基础模型
     "AdminSetting",
     "BackgroundTask",
+    "JobRun",
+    "JobEvent",
+    "JobEventRetention",
+    "JobEventStream",
+    "JobActivity",
+    "JobExecutorControl",
+    "JobWorkerHeartbeat",
     "UserModelProvider",
     "UserAIModel",
     "UserAIStageRoute",

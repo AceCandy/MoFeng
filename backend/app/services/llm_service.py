@@ -13,6 +13,7 @@ from openai import APIConnectionError, APITimeoutError, AsyncOpenAI, InternalSer
 from ..core.config import settings
 from ..core.crypto import decrypt
 from ..core.ssrf import assert_safe_base_url
+from ..db.session import AsyncSessionLocal
 from ..repositories.ai_model_config_repository import (
     UserAIModelRepository,
     UserAIStageRouteRepository,
@@ -237,6 +238,45 @@ class LLMService:
             model_id=model_id,
         )
 
+    @classmethod
+    async def get_llm_response_detached(
+        cls,
+        system_prompt: str,
+        conversation_history: List[Dict[str, str]],
+        *,
+        session_factory=AsyncSessionLocal,
+        temperature: float = 0.7,
+        user_id: Optional[int] = None,
+        timeout: float = 300.0,
+        response_format: Optional[str] = "json_object",
+        max_tokens: Optional[int] = None,
+        top_p: Optional[float] = None,
+        stage: str = "chapter_writing",
+        model_id: Optional[int] = None,
+    ) -> str:
+        """短事务解析模型配置，关闭会话后再等待外部模型响应。"""
+
+        async with session_factory() as session:
+            service = cls(session)
+            config = await service._resolve_llm_config(
+                user_id,
+                stage=stage,
+                model_id=model_id,
+            )
+
+        messages = [{"role": "system", "content": system_prompt}, *conversation_history]
+        return await service._stream_and_collect_with_config(
+            messages,
+            config=config,
+            temperature=temperature,
+            user_id=user_id,
+            timeout=timeout,
+            response_format=response_format,
+            max_tokens=max_tokens,
+            top_p=top_p,
+            stage=stage,
+        )
+
     async def stream_llm_response(
         self,
         system_prompt: str,
@@ -424,6 +464,46 @@ class LLMService:
             model_id=model_id,
         )
 
+    @classmethod
+    async def get_summary_detached(
+        cls,
+        chapter_content: str,
+        *,
+        session_factory=AsyncSessionLocal,
+        temperature: float = 0.2,
+        user_id: Optional[int] = None,
+        timeout: float = 180.0,
+        system_prompt: Optional[str] = None,
+        stage: str = "summary_memory",
+        model_id: Optional[int] = None,
+    ) -> str:
+        """在短事务内解析摘要提示词和模型配置，再执行外部调用。"""
+
+        async with session_factory() as session:
+            service = cls(session)
+            resolved_prompt = system_prompt or await PromptService(session).get_prompt("extraction")
+            if not resolved_prompt:
+                logger.error("未配置名为 'extraction' 的摘要提示词，无法生成章节摘要")
+                raise HTTPException(status_code=500, detail="未配置摘要提示词，请联系管理员配置 'extraction' 提示词")
+            config = await service._resolve_llm_config(
+                user_id,
+                stage=stage,
+                model_id=model_id,
+            )
+
+        messages = [
+            {"role": "system", "content": resolved_prompt},
+            {"role": "user", "content": chapter_content},
+        ]
+        return await service._stream_and_collect_with_config(
+            messages,
+            config=config,
+            temperature=temperature,
+            user_id=user_id,
+            timeout=timeout,
+            stage=stage,
+        )
+
     async def _get_user_llm_config_record(self, user_id: Optional[int]):
         """统一校验并读取用户级 LLM 配置，禁止回退系统默认配置。"""
         if not user_id:
@@ -457,6 +537,31 @@ class LLMService:
         model_id: Optional[int] = None,
     ) -> str:
         config = await self._resolve_llm_config(user_id, stage=stage, model_id=model_id)
+        return await self._stream_and_collect_with_config(
+            messages,
+            config=config,
+            temperature=temperature,
+            user_id=user_id,
+            timeout=timeout,
+            response_format=response_format,
+            max_tokens=max_tokens,
+            top_p=top_p,
+            stage=stage,
+        )
+
+    async def _stream_and_collect_with_config(
+        self,
+        messages: List[Dict[str, str]],
+        *,
+        config: Dict[str, Any],
+        temperature: float,
+        user_id: Optional[int],
+        timeout: float,
+        response_format: Optional[str] = None,
+        max_tokens: Optional[int] = None,
+        top_p: Optional[float] = None,
+        stage: str = "chapter_writing",
+    ) -> str:
         client = LLMClient(
             api_key=config["api_key"],
             base_url=config.get("base_url"),
@@ -769,16 +874,15 @@ class LLMService:
             return []
         return embedding
 
-    async def get_embedding(
+    async def _resolve_embedding_route(
         self,
-        text: str,
         *,
-        user_id: Optional[int] = None,
-        model: Optional[str] = None,
-        stage: str = "rag_embedding",
-        model_id: Optional[int] = None,
-    ) -> List[float]:
-        """生成文本向量，用于章节 RAG 检索，支持 openai 与 ollama 双提供方。"""
+        user_id: Optional[int],
+        stage: str,
+        model_id: Optional[int],
+    ) -> Dict[str, Any]:
+        """在数据库短事务内解析用户的 embedding 路由。"""
+
         if not user_id:
             raise HTTPException(
                 status_code=400,
@@ -791,18 +895,81 @@ class LLMService:
             capability="embedding",
             model_id=model_id,
         )
-        if routed:
-            user_embedding_model = routed["model"]
-            user_embedding_base_url = routed.get("base_url")
-            user_embedding_api_key = routed.get("api_key")
-            user_llm_base_url = user_embedding_base_url
-            user_llm_api_key = user_embedding_api_key
-            user_embedding_provider_format = "ollama" if routed.get("provider_type") == "ollama" else "openai"
-        else:
+        if not routed:
             raise HTTPException(
                 status_code=400,
                 detail="请先在模型设置的向量模型中选择当前使用模型。系统默认向量配置已禁用。",
             )
+        return routed
+
+    @classmethod
+    async def get_embedding_detached(
+        cls,
+        text: str,
+        *,
+        session_factory=AsyncSessionLocal,
+        user_id: Optional[int] = None,
+        model: Optional[str] = None,
+        stage: str = "rag_embedding",
+        model_id: Optional[int] = None,
+    ) -> List[float]:
+        """短事务解析 embedding 路由，关闭会话后再等待外部响应。"""
+
+        async with session_factory() as session:
+            service = cls(session)
+            routed = await service._resolve_embedding_route(
+                user_id=user_id,
+                stage=stage,
+                model_id=model_id,
+            )
+        return await service._get_embedding_with_route(
+            text,
+            routed=routed,
+            user_id=user_id,
+            model=model,
+        )
+
+    async def get_embedding(
+        self,
+        text: str,
+        *,
+        user_id: Optional[int] = None,
+        model: Optional[str] = None,
+        stage: str = "rag_embedding",
+        model_id: Optional[int] = None,
+    ) -> List[float]:
+        """生成文本向量，用于章节 RAG 检索，支持 openai 与 ollama 双提供方。"""
+
+        routed = await self._resolve_embedding_route(
+            user_id=user_id,
+            stage=stage,
+            model_id=model_id,
+        )
+        return await self._get_embedding_with_route(
+            text,
+            routed=routed,
+            user_id=user_id,
+            model=model,
+        )
+
+    async def _get_embedding_with_route(
+        self,
+        text: str,
+        *,
+        routed: Dict[str, Any],
+        user_id: Optional[int],
+        model: Optional[str],
+    ) -> List[float]:
+        """使用已解析的纯数据路由执行 embedding 网络调用。"""
+
+        user_embedding_model = routed["model"]
+        user_embedding_base_url = routed.get("base_url")
+        user_embedding_api_key = routed.get("api_key")
+        user_llm_base_url = user_embedding_base_url
+        user_llm_api_key = user_embedding_api_key
+        user_embedding_provider_format = (
+            "ollama" if routed.get("provider_type") == "ollama" else "openai"
+        )
 
         provider = user_embedding_provider_format if user_embedding_provider_format in {"openai", "ollama"} else "openai"
 

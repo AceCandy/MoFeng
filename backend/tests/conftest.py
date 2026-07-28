@@ -5,12 +5,28 @@ import os
 import pytest
 import pytest_asyncio
 from sqlalchemy import text
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from testcontainers.postgres import PostgresContainer
 
 from app.core.config import settings
 from app.db.base import Base
 import app.models  # noqa: F401  确保所有模型注册到 Base.metadata
+from app.models.job import JobExecutorControl
+from app.services.event_bus import shutdown_event_bus
+
+
+async def _seed_job_executor_control(conn) -> None:
+    await conn.execute(
+        insert(JobExecutorControl)
+        .values(
+            scope="default",
+            active_generation=1,
+            rollout_owner="test-suite",
+            fencing_token=0,
+        )
+        .on_conflict_do_nothing(index_elements=["scope"])
+    )
 
 
 @pytest.fixture(autouse=True)
@@ -50,6 +66,7 @@ async def _pg_engine():
         async with engine.begin() as conn:
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
             await conn.run_sync(Base.metadata.create_all)
+            await _seed_job_executor_control(conn)
         try:
             yield engine
         finally:
@@ -61,8 +78,15 @@ async def _pg_engine():
         async with engine.begin() as conn:
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
             await conn.run_sync(Base.metadata.create_all)
+            await _seed_job_executor_control(conn)
         yield engine
         await engine.dispose()
+
+
+@pytest_asyncio.fixture(scope="session", autouse=True, loop_scope="session")
+async def _close_event_bus_before_session_loop_stops():
+    yield
+    await shutdown_event_bus()
 
 
 @pytest_asyncio.fixture(loop_scope="session")

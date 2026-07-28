@@ -25,6 +25,7 @@ import {
   type OptimizeResponse,
 } from '@/api/novel'
 import { AdminAPI, type Chapter as AdminChapter } from '@/api/admin'
+import { TaskAPI, type BackgroundTask } from '@/api/tasks'
 import { tasksQueryKeys } from '@/queries/tasks'
 
 type ProjectIdSource = MaybeRefOrGetter<string | null | undefined>
@@ -449,20 +450,24 @@ export function useDeleteNovelsMutation() {
 }
 
 export function useGenerateChapterMutation(projectId: ProjectIdSource) {
-  const { setProjectCache, refreshProjectQueries } = useNovelMutationRefresh(projectId)
+  const { refreshProjectQueries } = useNovelMutationRefresh(projectId)
 
-  return useMutation({
-    mutationFn: (payload: number | { chapterNumber: number; fromNode?: string }) => {
+  return useMutation<
+    BackgroundTask,
+    Error,
+    number | { chapterNumber: number; fromNode?: string }
+  >({
+    mutationFn: async (payload) => {
       const args = typeof payload === 'number' ? { chapterNumber: payload } : payload
-      return NovelAPI.generateChapter(
+      const task = await NovelAPI.generateChapter(
         requireProjectId(projectId),
         args.chapterNumber,
         args.fromNode,
       )
+      return TaskAPI.waitForCompletion(task.id)
     },
-    onSuccess: async (project) => {
-      setProjectCache(project)
-      await refreshProjectQueries(project.id)
+    onSuccess: async () => {
+      await refreshProjectQueries(requireProjectId(projectId))
     },
   })
 }
@@ -528,23 +533,31 @@ export function useApplyOptimizationMutation(projectId?: ProjectIdSource) {
 }
 
 export function useConfirmFinalizeChapterMutation(projectId: ProjectIdSource) {
-  const { refreshChapter, refreshProjectQueries, upsertChapterInProjectCache } =
-    useNovelMutationRefresh(projectId)
+  const { refreshChapter, refreshProjectQueries } = useNovelMutationRefresh(projectId)
 
-  return useMutation({
-    mutationFn: (payload: {
+  return useMutation<
+    BackgroundTask,
+    Error,
+    {
       chapterNumber: number
       selectedVersionIndex: number
       editedContent?: string | null
       skipVectorUpdate?: boolean
-    }) =>
-      NovelAPI.confirmFinalizeChapter(requireProjectId(projectId), payload.chapterNumber, {
+    }
+  >({
+    mutationFn: async (payload) => {
+      const task = await NovelAPI.confirmFinalizeChapter(
+        requireProjectId(projectId),
+        payload.chapterNumber,
+        {
         selected_version_index: payload.selectedVersionIndex,
         edited_content: payload.editedContent ?? null,
         skip_vector_update: payload.skipVectorUpdate ?? false,
-      }),
-    onSuccess: async (response, payload) => {
-      upsertChapterInProjectCache(undefined, response.chapter)
+        },
+      )
+      return TaskAPI.waitForCompletion(task.id)
+    },
+    onSuccess: async (_task, payload) => {
       await refreshChapter(undefined, payload.chapterNumber)
       await refreshProjectQueries(requireProjectId(projectId))
     },

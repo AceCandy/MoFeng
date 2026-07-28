@@ -8,7 +8,7 @@ x-application-environment: &application-environment
   POSTGRES_HOST: ${POSTGRES_HOST:-pg}
   POSTGRES_PORT: ${POSTGRES_PORT:-5432}
   POSTGRES_USER: ${POSTGRES_USER:-mofeng}
-  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请设置数据库密码}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
   POSTGRES_DATABASE: ${POSTGRES_DATABASE:-mofeng}
 
   BOOTSTRAP_CREATE_DEFAULT_ADMIN: ${BOOTSTRAP_CREATE_DEFAULT_ADMIN:-true}
@@ -44,6 +44,14 @@ x-application-environment: &application-environment
 
   # Redis 缓存（启用 --profile redis 时设为 redis://redis:6379/0）
   REDIS_URL: ${REDIS_URL:-}
+  JOB_WORKER_GENERATION: ${JOB_WORKER_GENERATION:-1}
+  JOB_LEASE_SECONDS: ${JOB_LEASE_SECONDS:-120}
+  JOB_HEARTBEAT_INTERVAL_SECONDS: ${JOB_HEARTBEAT_INTERVAL_SECONDS:-30}
+  JOB_WORKER_HEARTBEAT_INTERVAL_SECONDS: ${JOB_WORKER_HEARTBEAT_INTERVAL_SECONDS:-10}
+  JOB_WORKER_POLL_INTERVAL_SECONDS: ${JOB_WORKER_POLL_INTERVAL_SECONDS:-1}
+  JOB_WORKER_HEALTH_STALE_SECONDS: ${JOB_WORKER_HEALTH_STALE_SECONDS:-45}
+  JOB_EVENT_RETENTION_DAYS: ${JOB_EVENT_RETENTION_DAYS:-14}
+  JOB_EVENT_CLEANUP_INTERVAL_SECONDS: ${JOB_EVENT_CLEANUP_INTERVAL_SECONDS:-3600}
 
 x-application-runtime: &application-runtime
   image: ${IMAGE_REPO:-woshidayingxiong77240/mofeng}:local
@@ -90,6 +98,26 @@ services:
       retries: 3
       start_period: 30s
 
+  worker:
+    <<: *application-runtime
+    container_name: mofeng-worker
+    command: ["python", "-m", "app.worker", "run"]
+    user: "1000:1000"
+    restart: unless-stopped
+    stop_grace_period: 15m
+    environment:
+      <<: *application-environment
+      JOB_WORKER_NAME: ${JOB_WORKER_NAME:-mofeng-worker}
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-m", "app.worker", "health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
   # PostgreSQL 数据库服务（通过 profile postgres 启用）
   pg:
     image: pgvector/pgvector:pg16
@@ -98,7 +126,7 @@ services:
       - postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-mofeng}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请设置数据库密码}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
       POSTGRES_DB: ${POSTGRES_DATABASE:-mofeng}
       TZ: Asia/Shanghai
     volumes:

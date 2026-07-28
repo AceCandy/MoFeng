@@ -26,6 +26,8 @@ _publish_tasks: set = set()
 # 懒加载 async Redis 客户端单例；未配置或初始化失败为 None。
 _async_client: Optional[aioredis.Redis] = None
 _async_client_ready: bool = False
+_shutting_down: bool = False
+_shutdown_lock = asyncio.Lock()
 
 
 def chapter_status_channel(project_id: str, chapter_number: int) -> str:
@@ -39,6 +41,8 @@ def get_async_client() -> Optional[aioredis.Redis]:
     客户端在首次命令时才真正建连，连接失败由调用方 try/except 捕获。
     """
     global _async_client, _async_client_ready
+    if _shutting_down:
+        return None
     if _async_client_ready:
         return _async_client
     _async_client_ready = True
@@ -65,6 +69,30 @@ async def _safe_publish(client: aioredis.Redis, channel: str) -> None:
         await client.publish(channel, "1")
     except Exception as e:
         logger.warning(f"发布事件通知失败 channel={channel}: {e}")
+
+
+async def shutdown_event_bus() -> None:
+    """等待在途 publish 并关闭 Redis 连接，必须在所属 event loop 结束前调用。"""
+
+    global _async_client, _async_client_ready, _shutting_down
+    async with _shutdown_lock:
+        _shutting_down = True
+        try:
+            while _publish_tasks:
+                pending = tuple(_publish_tasks)
+                await asyncio.gather(*pending, return_exceptions=True)
+            _publish_tasks.clear()
+
+            client = _async_client
+            _async_client = None
+            _async_client_ready = False
+            if client is not None:
+                try:
+                    await client.aclose()
+                except Exception as exc:
+                    logger.warning("关闭事件总线 Redis 客户端失败: %s", exc)
+        finally:
+            _shutting_down = False
 
 
 async def publish_chapter_status(project_id: str, chapter_number: int) -> None:

@@ -152,36 +152,11 @@ class VectorStoreService:
         if not payload:
             return
 
-        dim = len(payload[0].get("embedding") or [])
         async with AsyncSessionLocal() as session:
-            if not await self._assert_dimension_consistent(session, RagChunk, dim):
-                return
-            stmt = pg_insert(RagChunk).values(
-                [
-                    {
-                        "id": item["id"],
-                        "project_id": item["project_id"],
-                        "chapter_number": item["chapter_number"],
-                        "chunk_index": item["chunk_index"],
-                        "chapter_title": item.get("chapter_title"),
-                        "content": item["content"],
-                        "embedding": item["embedding"],
-                        "meta": item.get("metadata") or {},
-                    }
-                    for item in payload
-                ]
-            )
-            stmt = stmt.on_conflict_do_update(
-                index_elements=[RagChunk.id],
-                set_={
-                    "content": stmt.excluded.content,
-                    "embedding": stmt.excluded.embedding,
-                    "metadata": stmt.excluded["metadata"],
-                    "chapter_title": stmt.excluded.chapter_title,
-                },
-            )
             try:
-                await session.execute(stmt)
+                if not await self._upsert_chunks_in_session(session, payload):
+                    await session.rollback()
+                    return
                 await session.commit()
             except Exception:
                 logger.error("写入 rag_chunks 失败", exc_info=True)
@@ -207,33 +182,11 @@ class VectorStoreService:
         if not payload:
             return
 
-        dim = len(payload[0].get("embedding") or [])
         async with AsyncSessionLocal() as session:
-            if not await self._assert_dimension_consistent(session, RagSummary, dim):
-                return
-            stmt = pg_insert(RagSummary).values(
-                [
-                    {
-                        "id": item["id"],
-                        "project_id": item["project_id"],
-                        "chapter_number": item["chapter_number"],
-                        "title": item["title"],
-                        "summary": item["summary"],
-                        "embedding": item["embedding"],
-                    }
-                    for item in payload
-                ]
-            )
-            stmt = stmt.on_conflict_do_update(
-                index_elements=[RagSummary.id],
-                set_={
-                    "summary": stmt.excluded.summary,
-                    "embedding": stmt.excluded.embedding,
-                    "title": stmt.excluded.title,
-                },
-            )
             try:
-                await session.execute(stmt)
+                if not await self._upsert_summaries_in_session(session, payload):
+                    await session.rollback()
+                    return
                 await session.commit()
             except Exception:
                 logger.error("写入 rag_summaries 失败", exc_info=True)
@@ -245,6 +198,113 @@ class VectorStoreService:
                 payload[0].get("chapter_number"),
                 len(payload),
             )
+
+    async def apply_chapter_projection(
+        self,
+        session: AsyncSession,
+        *,
+        project_id: str,
+        chapter_number: int,
+        chunk_records: Iterable[Dict[str, Any]],
+        summary_records: Iterable[Dict[str, Any]],
+    ) -> None:
+        """在调用方事务内原子替换单章的正文与摘要向量。"""
+
+        if not settings.vector_store_enabled:
+            return
+        chunks = list(chunk_records)
+        summaries = list(summary_records)
+        for item in [*chunks, *summaries]:
+            if item.get("project_id") != project_id or item.get("chapter_number") != chapter_number:
+                raise ValueError("章节向量记录与目标章节不匹配")
+
+        await session.execute(
+            delete(RagChunk).where(
+                RagChunk.project_id == project_id,
+                RagChunk.chapter_number == chapter_number,
+            )
+        )
+        await session.execute(
+            delete(RagSummary).where(
+                RagSummary.project_id == project_id,
+                RagSummary.chapter_number == chapter_number,
+            )
+        )
+        if not await self._upsert_chunks_in_session(session, chunks):
+            raise ValueError("章节正文 embedding 维度与现有向量不一致")
+        if not await self._upsert_summaries_in_session(session, summaries):
+            raise ValueError("章节摘要 embedding 维度与现有向量不一致")
+
+    async def _upsert_chunks_in_session(
+        self,
+        session: AsyncSession,
+        payload: List[Dict[str, Any]],
+    ) -> bool:
+        if not payload:
+            return True
+        dim = len(payload[0].get("embedding") or [])
+        if not await self._assert_dimension_consistent(session, RagChunk, dim):
+            return False
+        stmt = pg_insert(RagChunk).values(
+            [
+                {
+                    "id": item["id"],
+                    "project_id": item["project_id"],
+                    "chapter_number": item["chapter_number"],
+                    "chunk_index": item["chunk_index"],
+                    "chapter_title": item.get("chapter_title"),
+                    "content": item["content"],
+                    "embedding": item["embedding"],
+                    "meta": item.get("metadata") or {},
+                }
+                for item in payload
+            ]
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[RagChunk.id],
+            set_={
+                "content": stmt.excluded.content,
+                "embedding": stmt.excluded.embedding,
+                "metadata": stmt.excluded["metadata"],
+                "chapter_title": stmt.excluded.chapter_title,
+            },
+        )
+        await session.execute(stmt)
+        return True
+
+    async def _upsert_summaries_in_session(
+        self,
+        session: AsyncSession,
+        payload: List[Dict[str, Any]],
+    ) -> bool:
+        if not payload:
+            return True
+        dim = len(payload[0].get("embedding") or [])
+        if not await self._assert_dimension_consistent(session, RagSummary, dim):
+            return False
+        stmt = pg_insert(RagSummary).values(
+            [
+                {
+                    "id": item["id"],
+                    "project_id": item["project_id"],
+                    "chapter_number": item["chapter_number"],
+                    "title": item["title"],
+                    "summary": item["summary"],
+                    "embedding": item["embedding"],
+                }
+                for item in payload
+            ]
+        )
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[RagSummary.id],
+            set_={
+                "summary": stmt.excluded.summary,
+                "embedding": stmt.excluded.embedding,
+                "title": stmt.excluded.title,
+            },
+        )
+        await session.execute(stmt)
+        return True
 
     async def delete_by_chapters(self, project_id: str, chapter_numbers: Sequence[int]) -> None:
         """根据章节编号批量删除对应的上下文数据。"""

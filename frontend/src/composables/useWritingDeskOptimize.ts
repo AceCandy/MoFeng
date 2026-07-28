@@ -23,7 +23,7 @@ interface UseWritingDeskOptimizeOptions {
  * 写作台「评审推荐优化」流程。
  *
  * 从 WritingDesk.vue 抽出（行为逐行等价）。负责基于评审结果推荐版本的优化：
- * optimize 触发后端优化并预览、apply 应用优化正文并同步伏笔、close 在应用中拦截关闭。
+ * optimize 触发后端优化并预览、apply 应用优化正文并投递后处理、close 在应用中拦截关闭。
  * 优化结果 modal 的开关 state、优化内容/备注、优化中/应用中标志、两个 mutation 仅本流程使用，
  * 故内化；showEvaluationDetailModal 来自弹窗 composable（apply 后一并关闭评审详情）。
  */
@@ -115,15 +115,7 @@ export const useWritingDeskOptimize = ({
         optimizedContent: recommendedOptimizedContent.value,
       })
 
-      const syncStats = applyResult.foreshadowing_sync
-      if (syncStats) {
-        globalAlert.showToast(
-          `优化内容已应用，伏笔同步：新增 ${syncStats.created}，推进 ${syncStats.developing}，回收 ${syncStats.revealed}`,
-          'success',
-        )
-      } else {
-        globalAlert.showToast('优化内容已应用', 'success')
-      }
+      globalAlert.showToast(applyResult.message, 'success')
 
       showRecommendedOptimizeResultModal.value = false
       showEvaluationDetailModal.value = false

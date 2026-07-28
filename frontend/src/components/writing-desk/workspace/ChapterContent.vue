@@ -702,15 +702,7 @@ const applyOptimization = async () => {
       optimizedContent: optimizedContent.value,
     })
 
-    const syncStats = applyResult.foreshadowing_sync
-    if (syncStats) {
-      globalAlert.showToast(
-        `优化内容已应用，伏笔同步：新增 ${syncStats.created}，推进 ${syncStats.developing}，回收 ${syncStats.revealed}`,
-        'success',
-      )
-    } else {
-      globalAlert.showToast('优化内容已应用', 'success')
-    }
+    globalAlert.showToast(applyResult.message, 'success')
     showOptimizeResult.value = false
 
     // 重置状态

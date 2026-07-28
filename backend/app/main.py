@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from .core.config import assert_production_security, settings
 from .db.readiness import check_database_readiness
 from .services.prompt_service import PromptService
+from .services.event_bus import shutdown_event_bus
 from .db.session import AsyncSessionLocal
 from .api.routers import api_router
 
@@ -80,7 +81,10 @@ async def lifespan(app: FastAPI):
             "数据库未就绪，跳过 Prompt 预热，codes=%s",
             ",".join(readiness.codes),
         )
-    yield
+    try:
+        yield
+    finally:
+        await shutdown_event_bus()
 
 
 app = FastAPI(

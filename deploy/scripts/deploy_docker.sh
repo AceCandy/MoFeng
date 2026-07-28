@@ -44,7 +44,10 @@ set -a
 source "$DEPLOY_ENV_FILE"
 set +a
 
-REQUIRED_VARS=(SECRET_KEY POSTGRES_PASSWORD)
+REQUIRED_VARS=(SECRET_KEY)
+if [ -z "${DATABASE_URL:-}" ]; then
+    REQUIRED_VARS+=(POSTGRES_PASSWORD)
+fi
 if [ "${BOOTSTRAP_CREATE_DEFAULT_ADMIN:-true}" != "false" ]; then
     REQUIRED_VARS+=(ADMIN_DEFAULT_PASSWORD)
 fi
@@ -70,7 +73,9 @@ else
 fi
 
 PROFILE_ARGS=()
-if [ "${POSTGRES_HOST:-pg}" = "pg" ]; then
+if [ -n "${DATABASE_URL:-}" ]; then
+    echo "数据库模式：DATABASE_URL 指定的外部 PostgreSQL"
+elif [ "${POSTGRES_HOST:-pg}" = "pg" ]; then
     PROFILE_ARGS=(--profile postgres)
     echo "数据库模式：内置 PostgreSQL"
 else
@@ -85,7 +90,7 @@ echo "停止旧容器..."
 echo "构建应用镜像..."
 "${COMPOSE[@]}" "${COMPOSE_ARGS[@]}" build --no-cache migrate
 
-echo "执行 migrate -> bootstrap -> app 启动链..."
+echo "执行 migrate -> bootstrap -> app/worker 启动链..."
 "${COMPOSE[@]}" "${COMPOSE_ARGS[@]}" up -d
 
 echo "检查服务 readiness..."
@@ -96,12 +101,25 @@ until curl -fsS "http://127.0.0.1:${APP_PORT:-6100}/api/ready" >/dev/null 2>&1; 
     if [ "$RETRY_COUNT" -ge "$MAX_RETRIES" ]; then
         echo -e "${RED}服务 readiness 检查失败${NC}"
         "${COMPOSE[@]}" "${COMPOSE_ARGS[@]}" ps
-        "${COMPOSE[@]}" "${COMPOSE_ARGS[@]}" logs --tail=80 migrate bootstrap app
+        "${COMPOSE[@]}" "${COMPOSE_ARGS[@]}" logs --tail=80 migrate bootstrap app worker
         exit 1
     fi
     sleep 2
 done
 
-echo -e "${GREEN}部署完成，schema、bootstrap 与应用 readiness 均已通过。${NC}"
+echo "检查 durable worker heartbeat..."
+RETRY_COUNT=0
+until "${COMPOSE[@]}" "${COMPOSE_ARGS[@]}" exec -T worker python -m app.worker health >/dev/null 2>&1; do
+    RETRY_COUNT=$((RETRY_COUNT + 1))
+    if [ "$RETRY_COUNT" -ge "$MAX_RETRIES" ]; then
+        echo -e "${RED}durable worker 健康检查失败${NC}"
+        "${COMPOSE[@]}" "${COMPOSE_ARGS[@]}" ps
+        "${COMPOSE[@]}" "${COMPOSE_ARGS[@]}" logs --tail=80 worker
+        exit 1
+    fi
+    sleep 2
+done
+
+echo -e "${GREEN}部署完成，schema、bootstrap、应用 readiness 与 worker heartbeat 均已通过。${NC}"
 echo "访问地址：http://localhost:${APP_PORT:-6100}"
 echo "查看日志：docker compose --env-file $DEPLOY_ENV_FILE -f $COMPOSE_FILE logs -f"

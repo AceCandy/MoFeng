@@ -1,6 +1,11 @@
 import importlib.util
+import json
+import shutil
 import socket
+import subprocess
 from pathlib import Path
+
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -85,9 +90,128 @@ def test_deploy_examples_and_operator_commands_resolve_database_config():
 
     assert "host.docker.internal" not in env_example
     assert '--env-file "$DEPLOY_ENV_FILE"' in deploy_script
+    assert 'if [ -z "${DATABASE_URL:-}" ]; then' in deploy_script
+    assert "REQUIRED_VARS+=(POSTGRES_PASSWORD)" in deploy_script
+    assert 'if [ -n "${DATABASE_URL:-}" ]; then' in deploy_script
     assert "docker compose --env-file .env -f deploy/docker-compose.yml" in quick_deploy
     assert "docker compose --env-file .env -f deploy/docker-compose.yml" in server_deploy
     assert "/root/MoFeng/docs/DEPLOYMENT.md" in server_deploy
+
+
+def test_deploy_defines_and_gates_independent_durable_worker():
+    env_example = DEPLOY_ENV_EXAMPLE.read_text(encoding="utf-8")
+    compose = DEPLOY_COMPOSE.read_text(encoding="utf-8")
+    deploy_script = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+
+    assert "  worker:" in compose
+    assert 'command: ["python", "-m", "app.worker", "run"]' in compose
+    assert "restart: unless-stopped" in compose
+    assert "stop_grace_period: 15m" in compose
+    assert 'test: ["CMD", "python", "-m", "app.worker", "health"]' in compose
+    assert 'JOB_WORKER_NAME: ${JOB_WORKER_NAME:-mofeng-worker}' in compose
+
+    for key in (
+        "JOB_WORKER_GENERATION",
+        "JOB_LEASE_SECONDS",
+        "JOB_HEARTBEAT_INTERVAL_SECONDS",
+        "JOB_WORKER_HEARTBEAT_INTERVAL_SECONDS",
+        "JOB_WORKER_POLL_INTERVAL_SECONDS",
+        "JOB_WORKER_HEALTH_STALE_SECONDS",
+        "JOB_EVENT_RETENTION_DAYS",
+        "JOB_EVENT_CLEANUP_INTERVAL_SECONDS",
+    ):
+        assert f"{key}=" in env_example
+        assert f"{key}:" in compose
+
+    assert 'exec -T worker python -m app.worker health' in deploy_script
+    assert "durable worker 健康检查失败" in deploy_script
+    assert "logs --tail=80 worker" in deploy_script
+
+
+def test_deploy_compose_resolves_durable_worker_structure(tmp_path):
+    docker = shutil.which("docker")
+    if docker is None:
+        pytest.skip("docker compose CLI 不可用")
+
+    env_file = tmp_path / "compose.env"
+    env_file.write_text(
+        "SECRET_KEY=test-only-secret-key-at-least-32-characters\n"
+        "POSTGRES_PASSWORD=test-only-password\n"
+        "BOOTSTRAP_CREATE_DEFAULT_ADMIN=false\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [
+            docker,
+            "compose",
+            "--env-file",
+            str(env_file),
+            "-f",
+            str(DEPLOY_COMPOSE),
+            "config",
+            "--format",
+            "json",
+        ],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+
+    worker = json.loads(result.stdout)["services"]["worker"]
+    assert worker["command"] == ["python", "-m", "app.worker", "run"]
+    assert worker["restart"] == "unless-stopped"
+    assert worker["stop_grace_period"] == "15m0s"
+    assert worker["healthcheck"]["test"] == [
+        "CMD",
+        "python",
+        "-m",
+        "app.worker",
+        "health",
+    ]
+    assert worker["depends_on"]["bootstrap"]["condition"] == (
+        "service_completed_successfully"
+    )
+    assert worker["environment"]["JOB_WORKER_NAME"] == "mofeng-worker"
+
+
+def test_deploy_compose_accepts_database_url_without_postgres_password(tmp_path):
+    docker = shutil.which("docker")
+    if docker is None:
+        pytest.skip("docker compose CLI 不可用")
+
+    env_file = tmp_path / "external-database.env"
+    env_file.write_text(
+        "SECRET_KEY=test-only-secret-key-at-least-32-characters\n"
+        "DATABASE_URL=postgresql+asyncpg://test:test@database.example/mofeng\n"
+        "BOOTSTRAP_CREATE_DEFAULT_ADMIN=false\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [
+            docker,
+            "compose",
+            "--env-file",
+            str(env_file),
+            "-f",
+            str(DEPLOY_COMPOSE),
+            "config",
+            "--format",
+            "json",
+        ],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+
+    config = json.loads(result.stdout)
+    assert "pg" not in config["services"]
+    assert config["services"]["app"]["environment"]["DATABASE_URL"].startswith(
+        "postgresql+asyncpg://"
+    )
 
 
 def test_dev_server_port_probe_treats_loopback_listener_as_busy_for_wildcard_host():

@@ -58,7 +58,7 @@ const toggleDropdown = () => {
   isDropdownOpen.value = !isDropdownOpen.value
 }
 const { data: rawBackgroundTasks, isFetching: isFetchingTasks } = useTasksQuery()
-const { sseBackgroundTasks, isTaskStreamActive, startTaskStream } = useTaskStream()
+const { sseBackgroundTasks, isTaskStreamActive } = useTaskStream(() => authStore.user?.id)
 const completedOutlineTaskIds = new Set<string>()
 const taskReadStoragePrefix = 'mofeng-task-read:'
 const viewedCompletedTaskIds = ref<Set<string>>(new Set())
@@ -341,7 +341,6 @@ let themeMedia: MediaQueryList | null = null
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
   syncThemeState()
-  startTaskStream()
 
   // 监听系统的偏好改变
   themeMedia = window.matchMedia('(prefers-color-scheme: dark)')

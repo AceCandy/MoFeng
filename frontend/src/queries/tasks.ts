@@ -1,10 +1,24 @@
 // AIMETA P=后台任务Query_任务日志初始查询|R=任务列表初始查询_任务详情查询|NR=不含任务提交|E=query:tasks|X=internal|A=useTasksQuery|D=@tanstack/vue-query|S=net|RD=./README.ai
-import { computed, onUnmounted, ref, toValue, type MaybeRefOrGetter } from 'vue'
+import {
+  computed,
+  onMounted,
+  onUnmounted,
+  ref,
+  toValue,
+  watch,
+  type MaybeRefOrGetter,
+} from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 
-import { TaskAPI, type BackgroundTask } from '@/api/tasks'
+import {
+  TaskAPI,
+  type BackgroundTask,
+  type BackgroundTaskEvent,
+  type BackgroundTaskStreamScope,
+} from '@/api/tasks'
 
 type TaskIdSource = MaybeRefOrGetter<string | null | undefined>
+type TaskStreamScopeSource = MaybeRefOrGetter<BackgroundTaskStreamScope | null | undefined>
 
 export const tasksQueryKeys = {
   all: ['tasks'] as const,
@@ -29,15 +43,38 @@ export function useTaskQuery(taskId: TaskIdSource) {
   })
 }
 
+export function reduceTaskEvent(
+  tasks: BackgroundTask[],
+  currentCursor: number | null,
+  event: BackgroundTaskEvent,
+  limit = 20,
+): { tasks: BackgroundTask[]; cursor: number } {
+  if (currentCursor !== null && event.cursor <= currentCursor) {
+    return { tasks, cursor: currentCursor }
+  }
+  const nextTasks = tasks.filter((task) => task.id !== event.task.id)
+  nextTasks.push(event.task)
+  nextTasks.sort((left, right) => Date.parse(right.created_at) - Date.parse(left.created_at))
+  return {
+    tasks: nextTasks.slice(0, limit),
+    cursor: event.cursor,
+  }
+}
+
 /**
  * 后台任务 SSE 流：封装订阅、断线重连与卸载清理，供 AppShell 等外壳组件复用。
  * 返回 sseBackgroundTasks（SSE 推送快照）、isTaskStreamActive（连接态）与 start/stop 控制。
  */
-export function useTaskStream() {
+export function useTaskStream(
+  ownerId?: MaybeRefOrGetter<number | null | undefined>,
+  streamScope?: TaskStreamScopeSource,
+) {
   const sseBackgroundTasks = ref<BackgroundTask[] | null>(null)
   const isTaskStreamActive = ref(false)
+  const resumeCursor = ref<number | null>(null)
   const controller = ref<AbortController | null>(null)
   const reconnectTimer = ref<number | null>(null)
+  let mounted = false
 
   const stopTaskStream = () => {
     if (reconnectTimer.value !== null) {
@@ -45,9 +82,12 @@ export function useTaskStream() {
       reconnectTimer.value = null
     }
     controller.value?.abort()
+    controller.value = null
+    isTaskStreamActive.value = false
   }
 
   const startTaskStream = () => {
+    if (ownerId && toValue(ownerId) == null) return
     if (reconnectTimer.value !== null) {
       window.clearTimeout(reconnectTimer.value)
       reconnectTimer.value = null
@@ -57,23 +97,80 @@ export function useTaskStream() {
     controller.value = ac
     isTaskStreamActive.value = true
 
-    void TaskAPI.subscribeTasks({
-      signal: ac.signal,
-      onTasks: (tasks) => {
-        sseBackgroundTasks.value = tasks
-        isTaskStreamActive.value = false
-      },
-      onError: (error) => {
+    void (async () => {
+      try {
+        const outcome = await TaskAPI.subscribeTasks({
+          signal: ac.signal,
+          cursor: resumeCursor.value,
+          scope: streamScope ? toValue(streamScope) ?? undefined : undefined,
+          onSnapshot: (snapshot) => {
+            sseBackgroundTasks.value = snapshot.tasks
+            resumeCursor.value = snapshot.resume_cursor
+            isTaskStreamActive.value = false
+          },
+          onTask: (event) => {
+            const next = reduceTaskEvent(
+              sseBackgroundTasks.value ?? [],
+              resumeCursor.value,
+              event,
+            )
+            sseBackgroundTasks.value = next.tasks
+            resumeCursor.value = next.cursor
+            isTaskStreamActive.value = false
+          },
+          onReset: () => {
+            isTaskStreamActive.value = true
+          },
+          onError: (error) => {
+            if (ac.signal.aborted) return
+            console.error('任务日志 SSE 同步失败:', error)
+            isTaskStreamActive.value = false
+          },
+        })
+        if (ac.signal.aborted || outcome !== 'reset') return
+        const snapshot = await TaskAPI.getSnapshot(
+          20,
+          streamScope ? toValue(streamScope) ?? undefined : undefined,
+        )
         if (ac.signal.aborted) return
-        console.error('任务日志 SSE 同步失败:', error)
+        sseBackgroundTasks.value = snapshot.tasks
+        resumeCursor.value = snapshot.resume_cursor
+        startTaskStream()
+      } catch (error) {
+        if (ac.signal.aborted) return
+        console.error('任务日志 SSE 连接失败:', error)
         isTaskStreamActive.value = false
+        reconnectTimer.value = window.setTimeout(startTaskStream, 3000)
+      }
+    })()
+  }
+
+  onMounted(() => {
+    mounted = true
+    startTaskStream()
+  })
+
+  if (ownerId || streamScope) {
+    watch(
+      () => [
+        ownerId ? toValue(ownerId) : null,
+        streamScope
+          ? `${toValue(streamScope)?.stream_type ?? ''}:${toValue(streamScope)?.stream_id ?? ''}`
+          : '',
+      ] as const,
+      (nextIdentity, previousIdentity) => {
+        if (
+          nextIdentity[0] === previousIdentity[0]
+          && nextIdentity[1] === previousIdentity[1]
+        ) return
+        stopTaskStream()
+        sseBackgroundTasks.value = null
+        resumeCursor.value = null
+        if (mounted && (!ownerId || nextIdentity[0] != null)) {
+          startTaskStream()
+        }
       },
-    }).catch((error) => {
-      if (ac.signal.aborted) return
-      console.error('任务日志 SSE 连接失败:', error)
-      isTaskStreamActive.value = false
-      reconnectTimer.value = window.setTimeout(startTaskStream, 3000)
-    })
+    )
   }
 
   onUnmounted(stopTaskStream)
@@ -81,6 +178,7 @@ export function useTaskStream() {
   return {
     sseBackgroundTasks,
     isTaskStreamActive,
+    resumeCursor,
     startTaskStream,
     stopTaskStream,
   }

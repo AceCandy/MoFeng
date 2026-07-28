@@ -8,9 +8,13 @@ from __future__ import annotations
 """
 
 import logging
-from typing import Dict, List, Optional, Sequence
+from dataclasses import dataclass
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence
+
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.config import settings
+from ..db.session import AsyncSessionLocal
 from ..services.llm_service import LLMService
 from ..services.vector_store_service import VectorStoreService
 
@@ -22,16 +26,44 @@ except ImportError:  # pragma: no cover - 未安装时会走后备方案
     RecursiveCharacterTextSplitter = None  # type: ignore[assignment]
 
 
+EmbeddingProvider = Callable[[str], Awaitable[List[float]]]
+
+
+@dataclass(frozen=True)
+class PreparedChapterIngestion:
+    """已完成外部 embedding、等待数据库事务应用的章节投影。"""
+
+    enabled: bool
+    complete: bool
+    chunk_records: List[Dict[str, Any]]
+    summary_records: List[Dict[str, Any]]
+
+    def to_payload(self) -> Dict[str, Any]:
+        return {
+            "enabled": self.enabled,
+            "complete": self.complete,
+            "chunk_records": self.chunk_records,
+            "summary_records": self.summary_records,
+        }
+
+    @classmethod
+    def from_payload(cls, payload: Dict[str, Any]) -> "PreparedChapterIngestion":
+        return cls(
+            enabled=bool(payload.get("enabled")),
+            complete=bool(payload.get("complete")),
+            chunk_records=list(payload.get("chunk_records") or []),
+            summary_records=list(payload.get("summary_records") or []),
+        )
+
+
 class ChapterIngestionService:
     """封装章节内容与摘要的向量化与入库流程。"""
 
     def __init__(
         self,
         *,
-        llm_service: LLMService,
         vector_store: Optional[VectorStoreService] = None,
     ) -> None:
-        self._llm_service = llm_service
         self._vector_store = vector_store or VectorStoreService()
         self._text_splitter = self._init_text_splitter()
 
@@ -46,40 +78,70 @@ class ChapterIngestionService:
         user_id: int,
     ) -> None:
         """将章节正文与摘要写入向量库，供后续 RAG 检索使用。"""
+        prepared = await self.prepare_chapter(
+            project_id=project_id,
+            chapter_number=chapter_number,
+            title=title,
+            content=content,
+            content_hash="",
+            summary=summary,
+            user_id=user_id,
+        )
+        if not prepared.enabled:
+            return
+        if not prepared.complete:
+            logger.warning(
+                "章节向量仅生成部分 embedding: project=%s chapter=%s",
+                project_id,
+                chapter_number,
+            )
+        async with AsyncSessionLocal() as session:
+            try:
+                await self.apply_prepared(
+                    session,
+                    project_id=project_id,
+                    chapter_number=chapter_number,
+                    prepared=prepared,
+                )
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
+
+    async def prepare_chapter(
+        self,
+        *,
+        project_id: str,
+        chapter_number: int,
+        title: str,
+        content: str,
+        content_hash: str,
+        summary: Optional[str],
+        user_id: int,
+        embedding_provider: Optional[EmbeddingProvider] = None,
+    ) -> PreparedChapterIngestion:
+        """只执行文本切分与 embedding，不写数据库。"""
+
         if not settings.vector_store_enabled:
             logger.warning("向量库未启用，跳过章节向量写入: project=%s chapter=%s", project_id, chapter_number)
-            return
-        if not content.strip():
-            logger.warning("章节正文为空，跳过向量写入: project=%s chapter=%s", project_id, chapter_number)
-            return
+            return PreparedChapterIngestion(False, True, [], [])
 
-        chunks = self._split_into_chunks(content)
-        if not chunks:
-            logger.warning("章节正文切分后为空，跳过向量写入: project=%s chapter=%s", project_id, chapter_number)
-            return
-
-        logger.info(
-            "开始写入章节向量: project=%s chapter=%s chunks=%d",
-            project_id,
-            chapter_number,
-            len(chunks),
-        )
-        await self._vector_store.delete_by_chapters(project_id, [chapter_number])
-
-        chunk_records = []
-        for index, chunk_text in enumerate(chunks):
-            embedding = await self._llm_service.get_embedding(
-                chunk_text,
+        async def embed(text: str) -> List[float]:
+            if embedding_provider is not None:
+                return await embedding_provider(text)
+            return await LLMService.get_embedding_detached(
+                text,
                 user_id=user_id,
                 stage="rag_embedding",
             )
+
+        chunks = self._split_into_chunks(content)
+        chunk_records: List[Dict[str, Any]] = []
+        missing_embeddings = 0
+        for index, chunk_text in enumerate(chunks):
+            embedding = await embed(chunk_text)
             if not embedding:
-                logger.warning(
-                    "生成章节片段向量失败，已跳过: project=%s chapter=%s chunk=%s",
-                    project_id,
-                    chapter_number,
-                    index,
-                )
+                missing_embeddings += 1
                 continue
             record_id = f"{project_id}:{chapter_number}:{index}"
             chunk_records.append(
@@ -94,52 +156,55 @@ class ChapterIngestionService:
                     "metadata": {
                         "chunk_id": record_id,
                         "length": len(chunk_text),
+                        "content_hash": content_hash,
                     },
                 }
             )
 
-        if chunk_records:
-            await self._vector_store.upsert_chunks(records=chunk_records)
-            logger.info(
-                "章节正文向量写入完成: project=%s chapter=%s 成功片段=%d",
-                project_id,
-                chapter_number,
-                len(chunk_records),
-            )
-
-        if summary:
-            cleaned_summary = summary.strip()
-            if cleaned_summary:
-                summary_embedding = await self._llm_service.get_embedding(
-                    cleaned_summary,
-                    user_id=user_id,
-                    stage="rag_embedding",
+        summary_records: List[Dict[str, Any]] = []
+        cleaned_summary = (summary or "").strip()
+        if cleaned_summary:
+            summary_embedding = await embed(cleaned_summary)
+            if summary_embedding:
+                summary_records.append(
+                    {
+                        "id": f"{project_id}:{chapter_number}:summary",
+                        "project_id": project_id,
+                        "chapter_number": chapter_number,
+                        "title": title,
+                        "summary": cleaned_summary,
+                        "embedding": summary_embedding,
+                    }
                 )
-                if summary_embedding:
-                    summary_id = f"{project_id}:{chapter_number}:summary"
-                    await self._vector_store.upsert_summaries(
-                        records=[
-                            {
-                                "id": summary_id,
-                                "project_id": project_id,
-                                "chapter_number": chapter_number,
-                                "title": title,
-                                "summary": cleaned_summary,
-                                "embedding": summary_embedding,
-                            }
-                        ]
-                    )
-                    logger.info(
-                        "章节摘要向量写入完成: project=%s chapter=%s",
-                        project_id,
-                        chapter_number,
-                    )
-                else:
-                    logger.warning(
-                        "生成章节摘要向量失败，已跳过: project=%s chapter=%s",
-                        project_id,
-                        chapter_number,
-                    )
+            else:
+                missing_embeddings += 1
+
+        return PreparedChapterIngestion(
+            enabled=True,
+            complete=missing_embeddings == 0,
+            chunk_records=chunk_records,
+            summary_records=summary_records,
+        )
+
+    async def apply_prepared(
+        self,
+        session: AsyncSession,
+        *,
+        project_id: str,
+        chapter_number: int,
+        prepared: PreparedChapterIngestion,
+    ) -> None:
+        """把已计算投影写入调用方事务，不自行提交。"""
+
+        if not prepared.enabled:
+            return
+        await self._vector_store.apply_chapter_projection(
+            session,
+            project_id=project_id,
+            chapter_number=chapter_number,
+            chunk_records=prepared.chunk_records,
+            summary_records=prepared.summary_records,
+        )
 
     async def delete_chapters(self, project_id: str, chapter_numbers: Sequence[int]) -> None:
         """从向量库中删除指定章节的所有片段与摘要。"""
@@ -217,7 +282,7 @@ class ChapterIngestionService:
             separators=separators,
             chunk_size=chunk_size,
             chunk_overlap=overlap,
-            keep_separator=False,
+            keep_separator="end",
             strip_whitespace=True,
         )
         logger.info(
@@ -262,4 +327,4 @@ class ChapterIngestionService:
         return chunks
 
 
-__all__ = ["ChapterIngestionService"]
+__all__ = ["ChapterIngestionService", "PreparedChapterIngestion"]

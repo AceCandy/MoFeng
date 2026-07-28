@@ -8,6 +8,11 @@ const DEFAULT_NOVEL_REQUEST_TIMEOUT_MS = 60_000
 const BLUEPRINT_GENERATION_TIMEOUT_MS = 480_000
 const CHAPTER_GENERATION_TIMEOUT_MS = 660_000
 
+const createIdempotencyHeaders = (): Record<string, string> | undefined => {
+  if (typeof globalThis.crypto?.randomUUID !== 'function') return undefined
+  return { 'Idempotency-Key': globalThis.crypto.randomUUID() }
+}
+
 // 统一的请求处理函数
 const request = async <T = any>(url: string, options: HttpRequestOptions = {}) =>
   authJson<T>(url, {
@@ -38,17 +43,21 @@ const parseSSEData = (rawData: string): unknown => {
   }
 }
 
-type SSEMessage = {
+export type SSEMessage = {
+  id: string | null
   event: string
   data: unknown
 }
 
 const parseSSEMessage = (message: string): SSEMessage | null => {
+  let id: string | null = null
   let event = 'message'
   const dataLines: string[] = []
 
   for (const line of message.split(/\r?\n/)) {
-    if (line.startsWith('event:')) {
+    if (line.startsWith('id:')) {
+      id = line.slice('id:'.length).trim()
+    } else if (line.startsWith('event:')) {
       event = line.slice('event:'.length).trim()
     } else if (line.startsWith('data:')) {
       dataLines.push(line.slice('data:'.length).trimStart())
@@ -60,6 +69,7 @@ const parseSSEMessage = (message: string): SSEMessage | null => {
   }
 
   return {
+    id,
     event,
     data: parseSSEData(dataLines.join('\n')),
   }
@@ -591,11 +601,11 @@ export class NovelAPI {
     projectId: string,
     chapterNumber: number,
     fromNode?: string,
-  ): Promise<NovelProject> {
+  ): Promise<BackgroundTask> {
     return request(`${WRITER_BASE}/${projectId}/chapters/generate`, {
       method: 'POST',
       body: JSON.stringify({ chapter_number: chapterNumber, from_node_key: fromNode }),
-      timeoutMs: CHAPTER_GENERATION_TIMEOUT_MS,
+      headers: createIdempotencyHeaders(),
     })
   }
 
@@ -610,11 +620,11 @@ export class NovelAPI {
     projectId: string,
     chapterNumber: number,
     payload: ConfirmFinalizeChapterRequest,
-  ): Promise<ConfirmFinalizeChapterResponse> {
+  ): Promise<BackgroundTask> {
     return request(`${WRITER_BASE}/${projectId}/chapters/${chapterNumber}/confirm-finalize`, {
       method: 'POST',
       body: JSON.stringify(payload),
-      timeoutMs: CHAPTER_GENERATION_TIMEOUT_MS,
+      headers: createIdempotencyHeaders(),
     })
   }
 
@@ -738,16 +748,10 @@ export interface OptimizeResponse {
   dimension: string
 }
 
-export interface ForeshadowingSyncStats {
-  created: number
-  revealed: number
-  developing: number
-}
-
 export interface ApplyOptimizationResponse {
-  status: string
+  status: 'accepted'
   message: string
-  foreshadowing_sync?: ForeshadowingSyncStats
+  task_id: string
 }
 
 // 优化API

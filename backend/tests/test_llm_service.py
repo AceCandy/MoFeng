@@ -16,6 +16,116 @@ def _disable_model_routes(service: LLMService) -> None:
 
 
 @pytest.mark.asyncio(loop_scope="session")
+async def test_detached_llm_call_closes_config_session_before_external_wait(monkeypatch):
+    events: list[str] = []
+
+    class SessionContext:
+        async def __aenter__(self):
+            events.append("session_enter")
+            return AsyncMock()
+
+        async def __aexit__(self, exc_type, exc, traceback):
+            events.append("session_exit")
+
+    def session_factory():
+        return SessionContext()
+
+    async def resolve_config(self, user_id, *, stage, model_id):
+        events.append("resolve_config")
+        return {"api_key": "test-key", "model": "test-model"}
+
+    async def collect(self, messages, **kwargs):
+        events.append("external_wait")
+        return "ok"
+
+    monkeypatch.setattr(LLMService, "_resolve_llm_config", resolve_config)
+    monkeypatch.setattr(LLMService, "_stream_and_collect_with_config", collect)
+
+    result = await LLMService.get_llm_response_detached(
+        "system",
+        [{"role": "user", "content": "hello"}],
+        session_factory=session_factory,
+        user_id=7,
+    )
+
+    assert result == "ok"
+    assert events == ["session_enter", "resolve_config", "session_exit", "external_wait"]
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_detached_summary_closes_config_session_before_external_wait(monkeypatch):
+    events: list[str] = []
+
+    class SessionContext:
+        async def __aenter__(self):
+            events.append("session_enter")
+            return AsyncMock()
+
+        async def __aexit__(self, exc_type, exc, traceback):
+            events.append("session_exit")
+
+    def session_factory():
+        return SessionContext()
+
+    async def resolve_config(self, user_id, *, stage, model_id):
+        events.append("resolve_config")
+        return {"api_key": "test-key", "model": "test-model"}
+
+    async def collect(self, messages, **kwargs):
+        events.append("external_wait")
+        return "summary"
+
+    monkeypatch.setattr(LLMService, "_resolve_llm_config", resolve_config)
+    monkeypatch.setattr(LLMService, "_stream_and_collect_with_config", collect)
+
+    result = await LLMService.get_summary_detached(
+        "chapter",
+        session_factory=session_factory,
+        system_prompt="summarize",
+        user_id=7,
+    )
+
+    assert result == "summary"
+    assert events == ["session_enter", "resolve_config", "session_exit", "external_wait"]
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_detached_embedding_closes_config_session_before_external_wait(monkeypatch):
+    events: list[str] = []
+
+    class SessionContext:
+        async def __aenter__(self):
+            events.append("session_enter")
+            return AsyncMock()
+
+        async def __aexit__(self, exc_type, exc, traceback):
+            events.append("session_exit")
+
+    def session_factory():
+        return SessionContext()
+
+    async def resolve_route(self, *, user_id, stage, model_id):
+        events.append("resolve_route")
+        return {"model": "test-model"}
+
+    async def embed(self, text, **kwargs):
+        events.append("external_wait")
+        return [0.1, 0.2]
+
+    monkeypatch.setattr(LLMService, "_resolve_embedding_route", resolve_route)
+    monkeypatch.setattr(LLMService, "_get_embedding_with_route", embed)
+
+    result = await LLMService.get_embedding_detached(
+        "chapter",
+        session_factory=session_factory,
+        user_id=7,
+    )
+
+    assert result == [0.1, 0.2]
+    assert events == ["session_enter", "resolve_route", "session_exit", "external_wait"]
+
+
+@pytest.mark.asyncio(loop_scope="session")
 async def test_resolve_llm_config_rejects_missing_user_context():
     service = LLMService(AsyncMock())
     _disable_model_routes(service)

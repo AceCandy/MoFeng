@@ -1,46 +1,26 @@
-from datetime import datetime
+from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
 
 import pytest
 
-from app.api.routers import optimizer, writer
-from app.services.chapter_word_count_settings import count_chapter_words
+from app.api.routers import optimizer
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_apply_optimization_passes_current_user_id_to_foreshadowing_sync(monkeypatch):
-    session = AsyncMock()
+async def test_apply_optimization_enqueues_unified_postprocess(monkeypatch):
+    session = object()
     current_user = SimpleNamespace(id=42)
-    selected_version = SimpleNamespace(content="旧内容", created_at=datetime.now())
-    chapter = SimpleNamespace(
-        id="chapter-1",
-        chapter_number=3,
-        selected_version=selected_version,
-        selected_version_id="version-1",
-        versions=[selected_version],
-        status=None,
-        generation_progress=None,
-        generation_step=None,
-        generation_step_index=None,
-        generation_step_total=None,
-        word_count=None,
-    )
-    project = SimpleNamespace(chapters=[chapter])
+    captured = {}
 
-    class DummyNovelService:
+    class DummyChapterEditService:
         def __init__(self, db_session):
-            self.db_session = db_session
+            assert db_session is session
 
-        async def ensure_project_owner(self, project_id, user_id):
-            assert project_id == "project-1"
-            assert user_id == current_user.id
-            return project
+        async def apply_content(self, **kwargs):
+            captured.update(kwargs)
+            return SimpleNamespace(job=SimpleNamespace(id="postprocess-job"))
 
-    sync_mock = AsyncMock(return_value={"created": 0, "revealed": 0, "developing": 0})
-
-    monkeypatch.setattr(optimizer, "NovelService", DummyNovelService)
-    monkeypatch.setattr(writer, "_sync_foreshadowings_for_chapter", sync_mock)
+    monkeypatch.setattr(optimizer, "ChapterEditService", DummyChapterEditService)
 
     result = await optimizer.apply_optimization(
         request=optimizer.ApplyOptimizationRequest(
@@ -52,8 +32,42 @@ async def test_apply_optimization_passes_current_user_id_to_foreshadowing_sync(m
         current_user=current_user,
     )
 
-    assert result["status"] == "success"
-    assert selected_version.content == "新\n 内 容"
-    assert chapter.word_count == count_chapter_words("新\n 内 容")
-    assert sync_mock.await_count == 1
-    assert sync_mock.await_args.kwargs["user_id"] == current_user.id
+    assert result == {
+        "status": "accepted",
+        "message": "优化内容已应用，章节后处理已进入队列",
+        "task_id": "postprocess-job",
+    }
+    assert captured == {
+        "project_id": "project-1",
+        "chapter_number": 3,
+        "content": "新\n 内 容",
+        "user_id": current_user.id,
+        "version_label": "optimized",
+    }
+
+
+def test_optimizer_does_not_import_writer_private_foreshadowing_logic() -> None:
+    source = optimizer.__file__
+    assert source is not None
+    text = Path(source).read_text(encoding="utf-8")
+
+    assert "from .writer import" not in text
+    assert "_sync_foreshadowings_for_chapter" not in text
+
+
+def test_optimizer_frontend_uses_durable_acceptance_contract() -> None:
+    root = Path(__file__).resolve().parents[2]
+    api_source = (root / "frontend/src/api/novel.ts").read_text(encoding="utf-8")
+    response_block = api_source.split("export interface ApplyOptimizationResponse", 1)[1].split("}", 1)[0]
+    writing_desk = (root / "frontend/src/composables/useWritingDeskOptimize.ts").read_text(encoding="utf-8")
+    chapter_content = (
+        root / "frontend/src/components/writing-desk/workspace/ChapterContent.vue"
+    ).read_text(encoding="utf-8")
+
+    assert "status: 'accepted'" in response_block
+    assert "task_id: string" in response_block
+    assert "foreshadowing_sync" not in response_block
+    assert "applyResult.foreshadowing_sync" not in writing_desk
+    assert "applyResult.foreshadowing_sync" not in chapter_content
+    assert "globalAlert.showToast(applyResult.message, 'success')" in writing_desk
+    assert "globalAlert.showToast(applyResult.message, 'success')" in chapter_content

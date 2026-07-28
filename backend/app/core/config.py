@@ -137,6 +137,59 @@ class Settings(BaseSettings):
         env="REDIS_URL",
         description="Redis 连接串（如 redis://localhost:6379/0），留空则禁用缓存与分布式会话",
     )
+    job_worker_name: Optional[str] = Field(
+        default=None,
+        env="JOB_WORKER_NAME",
+        description="durable worker 服务名；进程实例 ID 会附加 pid 与随机 incarnation",
+    )
+    job_worker_generation: int = Field(
+        default=1,
+        ge=1,
+        env="JOB_WORKER_GENERATION",
+        description="durable worker 当前 executor generation",
+    )
+    job_lease_seconds: int = Field(
+        default=120,
+        ge=2,
+        env="JOB_LEASE_SECONDS",
+        description="单次 job lease 时长",
+    )
+    job_heartbeat_interval_seconds: float = Field(
+        default=30.0,
+        gt=0,
+        env="JOB_HEARTBEAT_INTERVAL_SECONDS",
+        description="执行中 job lease 续租间隔，必须小于 lease",
+    )
+    job_worker_heartbeat_interval_seconds: float = Field(
+        default=10.0,
+        gt=0,
+        env="JOB_WORKER_HEARTBEAT_INTERVAL_SECONDS",
+        description="worker 进程生命周期心跳间隔",
+    )
+    job_worker_poll_interval_seconds: float = Field(
+        default=1.0,
+        gt=0,
+        env="JOB_WORKER_POLL_INTERVAL_SECONDS",
+        description="无任务时 PostgreSQL 扫描间隔",
+    )
+    job_worker_health_stale_seconds: int = Field(
+        default=45,
+        ge=2,
+        env="JOB_WORKER_HEALTH_STALE_SECONDS",
+        description="worker heartbeat 超过该秒数即不健康",
+    )
+    job_event_retention_days: int = Field(
+        default=14,
+        ge=1,
+        env="JOB_EVENT_RETENTION_DAYS",
+        description="JobEvent 保留天数",
+    )
+    job_event_cleanup_interval_seconds: int = Field(
+        default=3600,
+        ge=60,
+        env="JOB_EVENT_CLEANUP_INTERVAL_SECONDS",
+        description="worker 执行 JobEvent retention cleanup 的间隔",
+    )
 
     # -------------------- Linux.do OAuth 配置 --------------------
     linuxdo_client_id: Optional[str] = Field(default=None, env="LINUXDO_CLIENT_ID", description="Linux.do OAuth Client ID")

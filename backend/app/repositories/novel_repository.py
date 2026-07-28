@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from .base import BaseRepository
-from ..models import Chapter, NovelProject
+from ..models import Chapter, ChapterVersion, NovelProject
 
 
 class NovelRepository(BaseRepository[NovelProject]):
@@ -57,3 +57,54 @@ class NovelRepository(BaseRepository[NovelProject]):
             )
         )
         return result.scalars().all()
+
+    async def get_chapter_for_update(
+        self,
+        *,
+        project_id: str,
+        chapter_number: int,
+    ) -> Optional[Chapter]:
+        """锁定章节后加载编辑所需关系，串行化同章正文修改。"""
+
+        stmt = (
+            select(Chapter)
+            .where(
+                Chapter.project_id == project_id,
+                Chapter.chapter_number == chapter_number,
+            )
+            .with_for_update()
+            .execution_options(populate_existing=True)
+            .options(
+                selectinload(Chapter.versions),
+                selectinload(Chapter.selected_version),
+            )
+        )
+        result = await self.session.execute(stmt)
+        return result.scalars().first()
+
+    async def get_owned_selected_version(
+        self,
+        *,
+        project_id: str,
+        chapter_number: int,
+        user_id: int,
+        for_update: bool = False,
+    ) -> Optional[tuple[Chapter, ChapterVersion]]:
+        """读取任务绑定的当前选中版本；提交阶段同时锁定章节和版本。"""
+
+        stmt = (
+            select(Chapter, ChapterVersion)
+            .join(NovelProject, NovelProject.id == Chapter.project_id)
+            .join(ChapterVersion, ChapterVersion.id == Chapter.selected_version_id)
+            .where(
+                Chapter.project_id == project_id,
+                Chapter.chapter_number == chapter_number,
+                NovelProject.user_id == user_id,
+            )
+        )
+        if for_update:
+            stmt = stmt.with_for_update()
+        row = (await self.session.execute(stmt)).first()
+        if row is None:
+            return None
+        return row[0], row[1]
