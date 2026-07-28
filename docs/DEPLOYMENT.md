@@ -236,6 +236,59 @@ python -m app.db.cli db-check
 
 Unknown or partial schemas are not modified. Data bootstrap is forward-only; rollback is limited to binaries that understand the ledger rollback floor.
 
+### 5.1 F2 projection telemetry and retention migration
+
+The expected Alembic head for this release is `f2a6c9d4e8b1`. It is an expand-only
+migration: it adds nullable pricing columns to `user_ai_models`, creates
+`ai_usage_records`, and creates the append-only
+`chapter_projection_retention_audits` table and indexes. It does not remove or
+rewrite canonical chapter data. PostgreSQL still needs a reviewed DDL lock window.
+
+Before production deployment, validate the release against both an empty database
+and a restored copy of the current production database:
+
+```bash
+cd backend
+alembic heads
+python -m app.db.cli db-migrate
+python -m app.db.cli db-bootstrap
+python -m app.db.cli db-check
+```
+
+`alembic heads` must report exactly `f2a6c9d4e8b1`. Run the remaining three commands
+once against each validation database. Do not use an unverified production database
+as the empty-database test.
+
+Production sequence:
+
+1. Take a database backup and verify that the restore procedure can open the copy.
+2. Capture `python -m app.worker health` and `python -m app.worker metrics`, then stop
+   durable job workers and outbox consumers. Put write traffic in maintenance mode,
+   or explicitly accept that outbox backlog will grow while consumers are paused.
+3. Run `db-check` with the currently deployed binary. Resolve any schema, bootstrap,
+   or rollback-floor error before migration.
+4. Run `db-migrate`, `db-bootstrap`, and `db-check` with the release binary. Confirm
+   that the database is at `f2a6c9d4e8b1` before starting a worker.
+5. Start one candidate worker, verify health and metrics, then restore the remaining
+   workers. Investigate any projection cost/usage or external-activity alert before
+   rollout cutover.
+
+If migration or readiness fails, keep workers and outbox consumers paused. Do not
+invoke Alembic downgrade: F2 intentionally raises an error because usage and
+retention rows are audit data. Fix forward from the preserved database state. Restore
+the backup only under the approved maintenance procedure when no post-backup writes
+must be retained.
+
+A binary rollback leaves the schema at F2. The rollback candidate must pass
+`db-check`, understand the bootstrap ledger rollback floor, and tolerate the added
+columns and tables. `binary_below_rollback_floor` is a hard stop; never work around it
+by stamping Alembic or dropping audit tables.
+
+After deployment, use `python -m app.worker metrics` for cost/usage completeness and
+the bounded `projection-retention-preview` / `projection-retention-purge` commands for
+inactive artifact cleanup. The exact safety gates and command examples are in
+`docs/runbooks/chapter-projections.md`.
+
 ## 6. Default admin account
 
 The default admin comes from environment variables:
@@ -309,6 +362,7 @@ Check:
 - `README.md`
 - `README-en.md`
 - `backend/env.example`
+- `docs/runbooks/chapter-projections.md`
 - `deploy/.env.example`
 - `deploy/docker-compose.yml`
 - `deploy/Dockerfile`

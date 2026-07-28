@@ -17,6 +17,7 @@
 | Security | CORS whitelist, Fernet secret encryption, SSRF guard, auth hardening | [security-guidelines](./security-guidelines.md) |
 | Chapter context | One versioned snapshot for generation, review, consistency, and recovery | [chapter-context-contract](./chapter-context-contract.md) |
 | Durable jobs | PostgreSQL leases, fencing, event replay, public projections, and worker recovery | [durable-job-guidelines](./durable-job-guidelines.md) |
+| Chapter projections | Immutable outbox lineage, aggregate lock order, replay, and rollout fencing | [chapter-projection-contract](./chapter-projection-contract.md) |
 
 ---
 
@@ -32,6 +33,7 @@
 | [Security Guidelines](./security-guidelines.md) | CORS, Fernet secret encryption, SSRF, auth hardening |
 | [Canonical Chapter Context](./chapter-context-contract.md) | Resolver/adapters, revision layers, snapshot recovery, and tests |
 | [Durable Job And Event Log](./durable-job-guidelines.md) | Enqueue identity, lease/fencing, handler side effects, SSE cursor recovery, and process tests |
+| [Replayable Chapter Projections](./chapter-projection-contract.md) | Finalize outbox validation, live/tombstone lock order, replay snapshots, and race tests |
 
 ---
 
@@ -40,6 +42,7 @@
 - Read the guide for every touched concern; for database lifecycle changes, read Database, Quality, Security, and Logging Guidelines.
 - For changes crossing runtime, storage, and deployment, read the [Cross-Layer Thinking Guide](../guides/cross-layer-thinking-guide.md).
 - For background execution, task APIs, SSE, Redis wake-up, or worker deployment, read the [Durable Job And Event Log](./durable-job-guidelines.md).
+- For Chapter projection dispatch, replay, runtime, rollout, or tombstone changes, read the [Replayable Chapter Projections](./chapter-projection-contract.md).
 - Before adding helpers or copied contracts, read the [Code Reuse Thinking Guide](../guides/code-reuse-thinking-guide.md).
 
 ## Quality Check
@@ -48,6 +51,7 @@
 - For schema, migration, bootstrap, readiness, or database config changes, also apply [Database Guidelines](./database-guidelines.md) and [Security Guidelines](./security-guidelines.md).
 - For changes spanning multiple layers or repeated constants/commands, apply the [Cross-Layer](../guides/cross-layer-thinking-guide.md) and [Code Reuse](../guides/code-reuse-thinking-guide.md) checklists.
 - Durable job changes require PostgreSQL lease/fencing coverage; recovery claims require a real independent-process termination/reclaim test.
+- Chapter projection changes must preserve the documented aggregate lock order and validate outbox lineage at the final runtime boundary.
 - Run focused tests plus syntax/type/static checks; database lifecycle changes require isolated PostgreSQL coverage, not SQLite-only evidence.
 
 ---
