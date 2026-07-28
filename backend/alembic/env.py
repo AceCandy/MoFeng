@@ -17,8 +17,11 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# 用应用配置的数据库连接串覆盖 alembic.ini 的占位
-config.set_main_option("sqlalchemy.url", settings.sqlalchemy_database_uri)
+# CLI 可显式注入目标连接串；默认仍使用应用配置。
+config.set_main_option(
+    "sqlalchemy.url",
+    config.attributes.get("database_url", settings.sqlalchemy_database_uri).replace("%", "%%"),
+)
 target_metadata = Base.metadata
 
 
@@ -55,6 +58,10 @@ async def run_async_migrations() -> None:
 
 
 def run_migrations_online() -> None:
+    injected_connection = config.attributes.get("connection")
+    if injected_connection is not None:
+        do_run_migrations(injected_connection)
+        return
     asyncio.run(run_async_migrations())
 
 

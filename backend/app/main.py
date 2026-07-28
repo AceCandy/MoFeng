@@ -7,9 +7,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from .core.config import assert_production_security, settings
-from .db.init_db import init_db
+from .db.readiness import check_database_readiness
 from .services.prompt_service import PromptService
 from .db.session import AsyncSessionLocal
 from .api.routers import api_router
@@ -63,16 +64,22 @@ dictConfig(
         },
     }
 )
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 应用启动时初始化数据库，并预热提示词缓存
     assert_production_security()
-    await init_db()
-    async with AsyncSessionLocal() as session:
-        prompt_service = PromptService(session)
-        await prompt_service.preload()
+    readiness = await check_database_readiness()
+    if readiness.ready:
+        async with AsyncSessionLocal() as session:
+            prompt_service = PromptService(session)
+            await prompt_service.preload()
+    else:
+        logger.warning(
+            "数据库未就绪，跳过 Prompt 预热，codes=%s",
+            ",".join(readiness.codes),
+        )
     yield
 
 
@@ -95,7 +102,7 @@ app.add_middleware(
 app.include_router(api_router)
 
 
-# 健康检查接口（用于 Docker 健康检查和监控）
+# Liveness 只确认应用进程可响应，不访问依赖。
 @app.get("/health", tags=["Health"])
 @app.get("/api/health", tags=["Health"])
 async def health_check():
@@ -105,3 +112,15 @@ async def health_check():
         "app": settings.app_name,
         "version": "1.0.0",
     }
+
+
+@app.get("/ready", tags=["Health"])
+@app.get("/api/ready", tags=["Health"])
+async def readiness_check():
+    """动态检查数据库 schema、bootstrap 与二进制回滚下限。"""
+
+    readiness = await check_database_readiness()
+    return JSONResponse(
+        status_code=200 if readiness.ready else 503,
+        content=readiness.as_dict(),
+    )

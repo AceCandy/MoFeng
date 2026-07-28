@@ -34,6 +34,7 @@ from .chapter_blueprint import (
     ChapterFunction,
 )
 from .chapter_generation_trace import ChapterGenerationTrace
+from .database_bootstrap import DatabaseBootstrapVersion, LegacyDatabaseAdoption
 
 # 新增：记忆层模型
 from .memory_layer import (
@@ -83,6 +84,8 @@ __all__ = [
     "ChapterVersion",
     "ChapterEvaluation",
     "ChapterGenerationTrace",
+    "DatabaseBootstrapVersion",
+    "LegacyDatabaseAdoption",
     "NovelProject",
     "Prompt",
     "UpdateLog",

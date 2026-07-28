@@ -46,3 +46,17 @@ def test_assert_production_security_skips_non_production(monkeypatch) -> None:
     monkeypatch.setattr(settings, "environment", "development")
     monkeypatch.setattr(settings, "admin_default_password", "your-admin-password-change-me")
     assert_production_security()  # 不抛即通过
+
+
+def test_production_allows_empty_admin_password_when_admin_bootstrap_is_disabled() -> None:
+    config = settings.model_copy(
+        update={
+            "environment": "production",
+            "debug": False,
+            "secret_key": _STRONG_SECRET,
+            "bootstrap_create_default_admin": False,
+            "admin_default_password": "",
+        }
+    )
+
+    assert_production_security(config)

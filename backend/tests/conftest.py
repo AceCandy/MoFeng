@@ -1,4 +1,7 @@
 """pytest 全局 fixture。"""
+import asyncio
+import os
+
 import pytest
 import pytest_asyncio
 from sqlalchemy import text
@@ -22,6 +25,17 @@ def _bypass_ssrf_in_integration_tests():
     settings.allow_private_llm_endpoints = previous
 
 
+@pytest.fixture(autouse=True)
+def _restore_session_loop_for_marked_tests(request):
+    """避免函数级 loop 测试污染后续 session loop 测试。"""
+    marker = request.node.get_closest_marker("asyncio")
+    if marker is None:
+        return
+    loop_scope = marker.kwargs.get("loop_scope") or marker.kwargs.get("scope")
+    if loop_scope == "session":
+        asyncio.set_event_loop(request.getfixturevalue("_session_event_loop"))
+
+
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def _pg_engine():
     """session 级别启动 pgvector PG 测试容器，建表一次。
@@ -30,6 +44,18 @@ async def _pg_engine():
     engine 在 session event loop 内创建并复用；asyncpg connection 绑定创建它的 loop，
     因此依赖该 fixture 的测试也必须用 session loop（见各测试 marker loop_scope="session"）。
     """
+    configured_url = os.environ.get("TEST_POSTGRES_URL")
+    if configured_url:
+        engine = create_async_engine(configured_url)
+        async with engine.begin() as conn:
+            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+            await conn.run_sync(Base.metadata.create_all)
+        try:
+            yield engine
+        finally:
+            await engine.dispose()
+        return
+
     with PostgresContainer("pgvector/pgvector:pg16", driver="asyncpg") as container:
         engine = create_async_engine(container.get_connection_url())
         async with engine.begin() as conn:

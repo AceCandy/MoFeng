@@ -67,6 +67,11 @@ class Settings(BaseSettings):
     postgres_database: str = Field(default="mofeng", env="POSTGRES_DATABASE", description="PostgreSQL 数据库名称")
 
     # -------------------- 管理员初始化配置 --------------------
+    bootstrap_create_default_admin: bool = Field(
+        default=True,
+        env="BOOTSTRAP_CREATE_DEFAULT_ADMIN",
+        description="显式数据库引导时是否在无管理员的情况下创建默认管理员",
+    )
     admin_default_username: str = Field(default="admin", env="ADMIN_DEFAULT_USERNAME", description="默认管理员用户名")
     admin_default_password: str = Field(default="your-admin-password-change-me", env="ADMIN_DEFAULT_PASSWORD", description="默认管理员密码；生产环境必须改为强密码")
     admin_default_email: Optional[str] = Field(default=None, env="ADMIN_DEFAULT_EMAIL", description="默认管理员邮箱")
@@ -239,20 +244,22 @@ _WEAK_SECRET_KEYS = {
 }
 
 
-def assert_production_security() -> None:
+def assert_production_security(config: Settings = settings) -> None:
     """生产环境启动前校验关键安全配置，弱配置直接拒绝启动。"""
-    if settings.environment != "production":
+    if config.environment != "production":
         return
-    if settings.debug:
+    if config.debug:
         raise RuntimeError("生产环境不得开启 debug（debug 模式暴露错误栈与 SQL 参数）")
-    key = settings.secret_key or ""
+    key = config.secret_key or ""
     if len(key) < 32 or key.strip() in _WEAK_SECRET_KEYS:
         raise RuntimeError(
             "生产环境 SECRET_KEY 不安全：长度需 >=32 且不得使用默认/弱值；"
             "请用 `openssl rand -hex 32` 生成后写入 SECRET_KEY。"
         )
-    admin_pwd = settings.admin_default_password or ""
-    if len(admin_pwd) < 8 or admin_pwd.strip() in _WEAK_SECRET_KEYS:
+    admin_pwd = config.admin_default_password or ""
+    if config.bootstrap_create_default_admin and (
+        len(admin_pwd) < 8 or admin_pwd.strip() in _WEAK_SECRET_KEYS
+    ):
         raise RuntimeError(
             "生产环境 ADMIN_DEFAULT_PASSWORD 不安全：长度需 >=8 且不得使用默认/弱值"
             "（如 ChangeMe123!、your-admin-password-change-me）；请设置强密码后写入 ADMIN_DEFAULT_PASSWORD。"
