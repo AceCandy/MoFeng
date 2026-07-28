@@ -1,0 +1,9 @@
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"验证 canonical/outbox atomicity 与 adapter 不 commit"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"projection retry、错误和测试复核"}
+{"file":".trellis/spec/backend/index.md","reason":"执行完整后端 Quality Check"}
+{"file":".trellis/spec/backend/durable-job-guidelines.md","reason":"检查没有第二套 claim 控制面且 fencing/歧义契约闭合"}
+{"file":".trellis/spec/backend/chapter-context-contract.md","reason":"检查 revision、snapshot、hash 与 stale guard 一致"}
+{"file":".trellis/spec/backend/security-guidelines.md","reason":"检查 replay/dry-run 授权、审计和输出脱敏"}
+{"file":".trellis/spec/backend/logging-guidelines.md","reason":"检查 metrics、关联字段与日志脱敏"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"检查 lifecycle/contract 全链路一致"}
+{"file":".trellis/spec/backend/chapter-projection-contract.md","reason":"检查 live/tombstone 锁序、outbox 最终守卫与真实并发测试"}

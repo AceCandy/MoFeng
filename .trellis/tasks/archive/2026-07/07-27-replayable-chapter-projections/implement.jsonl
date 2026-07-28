@@ -1,0 +1,10 @@
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"outbox、projection 与 commit ownership"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"async external calls、schema 与测试规则"}
+{"file":".trellis/spec/backend/index.md","reason":"后端分层、预开发与质量门禁入口"}
+{"file":".trellis/spec/backend/durable-job-guidelines.md","reason":"复用 JobRun claim、lease、fencing、side-effect 与事件契约"}
+{"file":".trellis/spec/backend/chapter-context-contract.md","reason":"canonical revision、immutable snapshot 与 source hash 语义"}
+{"file":".trellis/spec/backend/security-guidelines.md","reason":"replay/dry-run 权限、scope、审计与敏感输出规则"}
+{"file":".trellis/spec/backend/logging-guidelines.md","reason":"projection 可观测性与结构化脱敏日志"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Chapter lifecycle 到前端状态的跨层影响"}
+{"file":".trellis/tasks/07-27-architecture-convergence/research/durable-runtime-selection.md","reason":"projection worker 的 durable execution 边界"}
+{"file":".trellis/spec/backend/chapter-projection-contract.md","reason":"遵循 outbox lineage、aggregate lock order、replay snapshot 与 PostgreSQL race contract"}
