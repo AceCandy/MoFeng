@@ -110,18 +110,9 @@ if ! command -v docker &> /dev/null; then
 fi
 echo -e "${GREEN}✓ Docker 已就绪${NC}"
 
-# 5. 执行数据库迁移
+# 5. 部署 Docker 容器（Compose 显式执行 migrate -> bootstrap -> app）
 echo ""
-echo "5. 执行数据库迁移..."
-if [ -f "deploy/scripts/run_migrations.sh" ]; then
-    bash deploy/scripts/run_migrations.sh || echo -e "${YELLOW}⚠ 迁移脚本执行失败或已执行过${NC}"
-else
-    echo -e "${YELLOW}⚠ 未找到迁移脚本${NC}"
-fi
-
-# 6. 部署 Docker 容器
-echo ""
-echo "6. 部署 Docker 容器..."
+echo "5. 部署 Docker 容器..."
 bash deploy/scripts/deploy_docker.sh
 
 echo ""
@@ -141,5 +132,5 @@ echo "访问地址："
 echo "  http://$SERVER_IP"
 echo ""
 echo "查看远程日志："
-echo "  ssh $SERVER_USER@$SERVER_IP 'cd $PROJECT_DIR && docker-compose -f deploy/docker-compose.yml logs -f'"
+echo "  ssh $SERVER_USER@$SERVER_IP 'cd $PROJECT_DIR && docker compose --env-file .env -f deploy/docker-compose.yml --profile postgres logs -f app'"
 echo ""

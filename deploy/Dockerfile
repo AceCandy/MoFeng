@@ -83,6 +83,8 @@ COPY --from=python-builder /opt/venv /opt/venv
 # 仅复制运行时必需的后端代码与内置提示词，避免无关文件进入镜像
 COPY backend/app ./app
 COPY backend/prompts ./prompts
+COPY backend/alembic.ini ./alembic.ini
+COPY backend/alembic ./alembic
 
 # 清理可能残留的本地数据文件，确保首次启动时根据环境变量初始化管理员密码
 RUN rm -rf /app/storage && mkdir -p /app/storage

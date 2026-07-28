@@ -212,6 +212,12 @@ def start_servers(repo_root: Path) -> None:
 
     _ensure_frontend_dependencies(frontend_dir)
     python_exe = _ensure_backend_environment(repo_root, backend_dir)
+    for database_command in ("db-migrate", "db-bootstrap", "db-check"):
+        _run_checked(
+            [python_exe, "-m", "app.db.cli", database_command],
+            cwd=backend_dir,
+            failure_message=f"Database command failed: {database_command}",
+        )
     backend_port = _find_available_port(BACKEND_HOST, BACKEND_DEFAULT_PORT)
     frontend_port = _find_available_port(FRONTEND_HOST, FRONTEND_DEFAULT_PORT)
     ps_exe = _powershell_executable()

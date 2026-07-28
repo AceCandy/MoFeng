@@ -106,6 +106,16 @@ ensure_backend_environment() {
   "$BACKEND_PYTHON" -m pip install -r "$requirements_file"
 }
 
+prepare_database() {
+  echo "执行数据库 migration 与 versioned bootstrap..."
+  (
+    cd "$BACKEND_DIR"
+    "$BACKEND_PYTHON" -m app.db.cli db-migrate
+    "$BACKEND_PYTHON" -m app.db.cli db-bootstrap
+    "$BACKEND_PYTHON" -m app.db.cli db-check
+  )
+}
+
 python_for_port_check() {
   if command -v python3 >/dev/null 2>&1; then
     printf '%s\n' "python3"
@@ -239,6 +249,8 @@ fi
 if [ ! -f "$BACKEND_DIR/.env" ] && [ -f "$BACKEND_DIR/env.example" ]; then
   echo "提示：backend/.env 不存在，可参考 backend/env.example 创建。"
 fi
+
+prepare_database
 
 echo "启动后端开发服务..."
 (

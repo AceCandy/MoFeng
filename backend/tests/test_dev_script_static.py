@@ -11,6 +11,9 @@ DEPLOY_ENV_EXAMPLE = ROOT / "deploy" / ".env.example"
 DEPLOY_COMPOSE = ROOT / "deploy" / "docker-compose.yml"
 DEPLOY_NGINX = ROOT / "deploy" / "nginx.conf"
 DEPLOY_SUPERVISOR = ROOT / "deploy" / "supervisord.conf"
+DEPLOY_SCRIPT = ROOT / "deploy" / "scripts" / "deploy_docker.sh"
+QUICK_DEPLOY_SCRIPT = ROOT / "deploy" / "scripts" / "quick_deploy.sh"
+SERVER_DEPLOY_SCRIPT = ROOT / "deploy" / "scripts" / "server_deploy.sh"
 
 
 def _load_dev_servers_module():
@@ -28,6 +31,15 @@ def test_dev_script_disables_node_webstorage_for_vite_devtools():
     assert "--no-experimental-webstorage" in source
     assert "NODE_OPTIONS" in source
     assert "npm run dev" in source
+
+
+def test_dev_script_prepares_database_before_starting_runtime():
+    source = DEV_SCRIPT.read_text(encoding="utf-8")
+
+    migration = source.index("app.db.cli db-migrate")
+    bootstrap = source.index("app.db.cli db-bootstrap")
+    runtime = source.index("app.main:app")
+    assert migration < bootstrap < runtime
 
 
 def test_dev_script_port_probe_does_not_allow_reusing_occupied_ports():
@@ -58,11 +70,24 @@ def test_deploy_default_ports_are_consistent():
 
     assert "APP_PORT=6100" in env_example
     assert '"${APP_PORT:-6100}:6100"' in compose
-    assert "http://127.0.0.1:6101/api/health" in compose
+    assert "http://127.0.0.1:6101/api/ready" in compose
     assert "listen 6100;" in nginx
     assert "listen [::]:6100;" in nginx
     assert "proxy_pass http://127.0.0.1:6101;" in nginx
     assert "--port 6101" in supervisor
+
+
+def test_deploy_examples_and_operator_commands_resolve_database_config():
+    env_example = DEPLOY_ENV_EXAMPLE.read_text(encoding="utf-8")
+    deploy_script = DEPLOY_SCRIPT.read_text(encoding="utf-8")
+    quick_deploy = QUICK_DEPLOY_SCRIPT.read_text(encoding="utf-8")
+    server_deploy = SERVER_DEPLOY_SCRIPT.read_text(encoding="utf-8")
+
+    assert "host.docker.internal" not in env_example
+    assert '--env-file "$DEPLOY_ENV_FILE"' in deploy_script
+    assert "docker compose --env-file .env -f deploy/docker-compose.yml" in quick_deploy
+    assert "docker compose --env-file .env -f deploy/docker-compose.yml" in server_deploy
+    assert "/root/MoFeng/docs/DEPLOYMENT.md" in server_deploy
 
 
 def test_dev_server_port_probe_treats_loopback_listener_as_busy_for_wildcard_host():

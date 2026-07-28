@@ -118,6 +118,13 @@ function Ensure-BackendEnvironment {
     Invoke-CheckedProcess -FilePath $script:BackendPython -ArgumentList @('-m', 'pip', 'install', '-r', $requirementsFile) -WorkingDirectory $BackendDir -FailureMessage 'Backend dependency installation failed.'
 }
 
+function Initialize-Database {
+    Write-Host 'Running database migration and versioned bootstrap...'
+    foreach ($command in @('db-migrate', 'db-bootstrap', 'db-check')) {
+        Invoke-CheckedProcess -FilePath $script:BackendPython -ArgumentList @('-m', 'app.db.cli', $command) -WorkingDirectory $BackendDir -FailureMessage "Database command failed: $command"
+    }
+}
+
 function Test-PortAvailable {
     param(
         [Parameter(Mandatory = $true)]
@@ -202,6 +209,8 @@ try {
     if (-not (Test-Path (Join-Path $BackendDir '.env')) -and (Test-Path (Join-Path $BackendDir 'env.example'))) {
         Write-Host 'Hint: backend/.env not found. You can create it from backend/env.example.' -ForegroundColor Yellow
     }
+
+    Initialize-Database
 
     Write-Host 'Starting backend dev server...'
     $backendProcess = Start-Process -FilePath $BackendPython -ArgumentList '-m', 'uvicorn', 'app.main:app', '--reload', '--host', $BackendHost, '--port', $BackendPort -WorkingDirectory $BackendDir -PassThru

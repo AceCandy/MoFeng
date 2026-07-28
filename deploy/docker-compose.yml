@@ -1,68 +1,94 @@
+x-application-environment: &application-environment
+  SECRET_KEY: ${SECRET_KEY:?请设置SECRET_KEY}
+  ENVIRONMENT: ${ENVIRONMENT:-production}
+  DEBUG: ${DEBUG:-false}
+  LOGGING_LEVEL: ${LOGGING_LEVEL:-INFO}
+
+  DATABASE_URL: ${DATABASE_URL:-}
+  POSTGRES_HOST: ${POSTGRES_HOST:-pg}
+  POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+  POSTGRES_USER: ${POSTGRES_USER:-mofeng}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请设置数据库密码}
+  POSTGRES_DATABASE: ${POSTGRES_DATABASE:-mofeng}
+
+  BOOTSTRAP_CREATE_DEFAULT_ADMIN: ${BOOTSTRAP_CREATE_DEFAULT_ADMIN:-true}
+  ADMIN_DEFAULT_USERNAME: ${ADMIN_DEFAULT_USERNAME:-admin}
+  ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:-}
+  ADMIN_DEFAULT_EMAIL: ${ADMIN_DEFAULT_EMAIL:-admin@example.com}
+
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL:-https://api.openai.com/v1}
+  OPENAI_MODEL_NAME: ${OPENAI_MODEL_NAME:-gpt-3.5-turbo}
+  WRITER_CHAPTER_VERSION_COUNT: ${WRITER_CHAPTER_VERSION_COUNT:-2}
+
+  VECTOR_STORE_ENABLED: ${VECTOR_STORE_ENABLED:-true}
+  VECTOR_TOP_K_CHUNKS: ${VECTOR_TOP_K_CHUNKS:-5}
+  VECTOR_TOP_K_SUMMARIES: ${VECTOR_TOP_K_SUMMARIES:-3}
+  VECTOR_CHUNK_SIZE: ${VECTOR_CHUNK_SIZE:-480}
+  VECTOR_CHUNK_OVERLAP: ${VECTOR_CHUNK_OVERLAP:-120}
+
+  SMTP_SERVER: ${SMTP_SERVER:-smtp.example.com}
+  SMTP_PORT: ${SMTP_PORT:-465}
+  SMTP_USERNAME: ${SMTP_USERNAME:-no-reply@example.com}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+  EMAIL_FROM: ${EMAIL_FROM:-MoFeng}
+
+  ALLOW_USER_REGISTRATION: ${ALLOW_USER_REGISTRATION:-true}
+  ENABLE_LINUXDO_LOGIN: ${ENABLE_LINUXDO_LOGIN:-false}
+  LINUXDO_CLIENT_ID: ${LINUXDO_CLIENT_ID:-}
+  LINUXDO_CLIENT_SECRET: ${LINUXDO_CLIENT_SECRET:-}
+  LINUXDO_REDIRECT_URI: ${LINUXDO_REDIRECT_URI:-}
+  LINUXDO_AUTH_URL: ${LINUXDO_AUTH_URL:-https://connect.linux.do/oauth2/authorize}
+  LINUXDO_TOKEN_URL: ${LINUXDO_TOKEN_URL:-https://connect.linux.do/oauth2/token}
+  LINUXDO_USER_INFO_URL: ${LINUXDO_USER_INFO_URL:-https://connect.linux.do/api/user}
+
+  # Redis 缓存（启用 --profile redis 时设为 redis://redis:6379/0）
+  REDIS_URL: ${REDIS_URL:-}
+
+x-application-runtime: &application-runtime
+  image: ${IMAGE_REPO:-woshidayingxiong77240/mofeng}:local
+  environment: *application-environment
+  networks:
+    - app-network
+
 services:
-  app:
+  migrate:
+    <<: *application-runtime
     build:
       context: ..
       dockerfile: deploy/Dockerfile
-    image: ${IMAGE_REPO:-woshidayingxiong77240/mofeng}:local
+    container_name: mofeng-migrate
+    command: ["python", "-m", "app.db.cli", "db-migrate"]
+    user: "1000:1000"
+    restart: "no"
+
+  bootstrap:
+    <<: *application-runtime
+    container_name: mofeng-bootstrap
+    command: ["python", "-m", "app.db.cli", "db-bootstrap"]
+    user: "1000:1000"
+    restart: "no"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  app:
+    <<: *application-runtime
     container_name: mofeng-app
     ports:
       - "${APP_PORT:-6100}:6100"
-    environment:
-      SECRET_KEY: ${SECRET_KEY:?请设置SECRET_KEY}
-      ENVIRONMENT: ${ENVIRONMENT:-production}
-      DEBUG: ${DEBUG:-false}
-      LOGGING_LEVEL: ${LOGGING_LEVEL:-INFO}
-
-      POSTGRES_HOST: ${POSTGRES_HOST:-pg}
-      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
-      POSTGRES_USER: ${POSTGRES_USER:-mofeng}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请设置数据库密码}
-      POSTGRES_DATABASE: ${POSTGRES_DATABASE:-mofeng}
-
-      ADMIN_DEFAULT_USERNAME: ${ADMIN_DEFAULT_USERNAME:-admin}
-      ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:?请设置管理员默认密码}
-      ADMIN_DEFAULT_EMAIL: ${ADMIN_DEFAULT_EMAIL:-admin@example.com}
-
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      OPENAI_API_BASE_URL: ${OPENAI_API_BASE_URL:-https://api.openai.com/v1}
-      OPENAI_MODEL_NAME: ${OPENAI_MODEL_NAME:-gpt-3.5-turbo}
-      WRITER_CHAPTER_VERSION_COUNT: ${WRITER_CHAPTER_VERSION_COUNT:-2}
-
-      VECTOR_STORE_ENABLED: ${VECTOR_STORE_ENABLED:-true}
-      VECTOR_TOP_K_CHUNKS: ${VECTOR_TOP_K_CHUNKS:-5}
-      VECTOR_TOP_K_SUMMARIES: ${VECTOR_TOP_K_SUMMARIES:-3}
-      VECTOR_CHUNK_SIZE: ${VECTOR_CHUNK_SIZE:-480}
-      VECTOR_CHUNK_OVERLAP: ${VECTOR_CHUNK_OVERLAP:-120}
-
-      SMTP_SERVER: ${SMTP_SERVER:-smtp.example.com}
-      SMTP_PORT: ${SMTP_PORT:-465}
-      SMTP_USERNAME: ${SMTP_USERNAME:-no-reply@example.com}
-      SMTP_PASSWORD: ${SMTP_PASSWORD}
-      EMAIL_FROM: ${EMAIL_FROM:-MoFeng}
-
-      ALLOW_USER_REGISTRATION: ${ALLOW_USER_REGISTRATION:-true}
-      ENABLE_LINUXDO_LOGIN: ${ENABLE_LINUXDO_LOGIN:-false}
-
-      LINUXDO_CLIENT_ID: ${LINUXDO_CLIENT_ID}
-      LINUXDO_CLIENT_SECRET: ${LINUXDO_CLIENT_SECRET}
-      LINUXDO_REDIRECT_URI: ${LINUXDO_REDIRECT_URI}
-      LINUXDO_AUTH_URL: ${LINUXDO_AUTH_URL:-https://connect.linux.do/oauth2/authorize}
-      LINUXDO_TOKEN_URL: ${LINUXDO_TOKEN_URL:-https://connect.linux.do/oauth2/token}
-      LINUXDO_USER_INFO_URL: ${LINUXDO_USER_INFO_URL:-https://connect.linux.do/api/user}
-
-      # Redis 缓存（启用 --profile redis 时设为 redis://redis:6379/0）
-      REDIS_URL: ${REDIS_URL:-}
     restart: unless-stopped
     volumes:
       - ${STORAGE_SOURCE:-app-storage}:/app/storage
-    networks:
-      - app-network
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://127.0.0.1:6101/api/health"]
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:6101/api/ready"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 90s
+      start_period: 30s
 
   # PostgreSQL 数据库服务（通过 profile postgres 启用）
   pg:
@@ -87,7 +113,7 @@ services:
       retries: 5
       start_period: 30s
 
-  # Redis 缓存服务（可选，通过 profile redis 启用：docker compose --profile redis up -d）
+  # Redis 缓存服务（可选，通过 profile redis 启用）
   redis:
     image: redis:7-alpine
     container_name: mofeng-redis
@@ -111,4 +137,3 @@ volumes:
 networks:
   app-network:
     driver: bridge
-

@@ -91,10 +91,10 @@ echo -e "${BLUE}4. 配置环境变量...${NC}"
 
 if [ ! -f ".env" ]; then
     echo "创建 .env 文件..."
-    
+
     # 生成随机密钥
     SECRET_KEY=$(openssl rand -hex 32)
-    
+
     cat > .env << ENVEOF
 # 应用配置
 SECRET_KEY=${SECRET_KEY}
@@ -111,6 +111,7 @@ POSTGRES_PASSWORD=MoFeng-PG-$(openssl rand -hex 16)
 POSTGRES_DATABASE=mofeng
 
 # 管理员账号
+BOOTSTRAP_CREATE_DEFAULT_ADMIN=true
 ADMIN_DEFAULT_USERNAME=admin
 ADMIN_DEFAULT_PASSWORD=MoFeng-$(openssl rand -hex 12)
 ADMIN_DEFAULT_EMAIL=admin@mofeng.com
@@ -150,64 +151,9 @@ fi
 # 5. 部署 Docker 容器
 echo ""
 echo -e "${BLUE}5. 部署 Docker 容器...${NC}"
+bash deploy/scripts/deploy_docker.sh
 
-cd deploy
-
-# 停止旧容器
-echo "停止旧容器..."
-docker compose down 2>/dev/null || true
-
-# 构建镜像
-echo "构建 Docker 镜像（这可能需要几分钟）..."
-docker compose build --no-cache
-
-# 启动容器
-echo "启动容器..."
-docker compose up -d
-
-echo -e "${GREEN}✓ 容器已启动${NC}"
-
-# 6. 等待服务启动
-echo ""
-echo -e "${BLUE}6. 等待服务启动...${NC}"
-sleep 20
-
-# 7. 健康检查
-echo ""
-echo -e "${BLUE}7. 健康检查...${NC}"
-
-MAX_RETRIES=30
-RETRY_COUNT=0
-HEALTH_OK=false
-
-while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-    if curl -f http://127.0.0.1:6100/api/health > /dev/null 2>&1; then
-        echo -e "${GREEN}✓ 服务健康检查通过${NC}"
-        HEALTH_OK=true
-        break
-    else
-        RETRY_COUNT=$((RETRY_COUNT + 1))
-        echo "等待服务启动... ($RETRY_COUNT/$MAX_RETRIES)"
-        sleep 2
-    fi
-done
-
-if [ "$HEALTH_OK" = false ]; then
-    echo -e "${RED}✗ 服务健康检查失败${NC}"
-    echo ""
-    echo "查看日志："
-    docker compose logs --tail=50 app
-    echo ""
-    echo "可能的原因："
-    echo "1. 端口 6100 被占用"
-    echo "2. 数据库配置错误"
-    echo "3. 依赖安装失败"
-    echo ""
-    echo "请检查日志并重新运行脚本"
-    exit 1
-fi
-
-# 8. 显示部署信息
+# 6. 显示部署信息
 echo ""
 echo "========================================="
 echo -e "${GREEN}部署成功！${NC}"
@@ -226,12 +172,12 @@ echo -e "${YELLOW}重要提示：${NC}"
 echo "1. 请立即修改管理员密码"
 echo "2. 配置 OPENAI_API_KEY（如果还没有）："
 echo "   nano /root/MoFeng/.env"
-echo "   然后重启服务: cd /root/MoFeng/deploy && docker compose restart"
+echo "   然后重建应用: cd /root/MoFeng && docker compose --env-file .env -f deploy/docker-compose.yml --profile postgres up -d --force-recreate app"
 echo ""
 echo "常用命令："
-echo "  查看日志: cd /root/MoFeng/deploy && docker compose logs -f app"
-echo "  重启服务: cd /root/MoFeng/deploy && docker compose restart"
-echo "  停止服务: cd /root/MoFeng/deploy && docker compose down"
+echo "  查看日志: cd /root/MoFeng && docker compose --env-file .env -f deploy/docker-compose.yml --profile postgres logs -f app"
+echo "  重启服务: cd /root/MoFeng && docker compose --env-file .env -f deploy/docker-compose.yml --profile postgres restart app"
+echo "  停止服务: cd /root/MoFeng && docker compose --env-file .env -f deploy/docker-compose.yml --profile postgres down"
 echo ""
-echo "如需帮助，请查看: /root/MoFeng/DEPLOYMENT_GUIDE_FULL.md"
+echo "如需帮助，请查看: /root/MoFeng/docs/DEPLOYMENT.md"
 echo ""
