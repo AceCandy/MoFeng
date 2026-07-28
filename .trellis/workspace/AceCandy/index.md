@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 23
-- **Last Active**: 2026-07-28
+- **Total Sessions**: 24
+- **Last Active**: 2026-07-29
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~804 | Active |
+| `journal-1.md` | ~838 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 24 | 2026-07-29 | 完成可重放章节投影 | `b28be70`, `3a7f203` | `main` |
 | 23 | 2026-07-28 | 收敛 durable job 与 event log | `8dbed8e`, `918b151` | `main` |
 | 22 | 2026-07-28 | 显式数据库生命周期 | `00afc02`, `afa3c16`, `2f62c06` | `main` |
 | 21 | 2026-07-28 | 统一章节上下文契约 | `2516ada`, `edebafb` | `main` |

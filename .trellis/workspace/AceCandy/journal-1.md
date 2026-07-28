@@ -802,3 +802,37 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Next Steps
 
 - None - task complete
+
+
+## Session 24: 完成可重放章节投影
+
+**Date**: 2026-07-29
+**Task**: 完成可重放章节投影
+**Branch**: `main`
+
+### Summary
+
+完成 transactional outbox 驱动的章节投影、重放与 rollout fencing，补齐 AI 用量成本、retention、告警和发布契约，并以真实 PostgreSQL 全量测试及随机 schema 隔离验证收敛并发与清理风险。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b28be70` | (see git log) |
+| `3a7f203` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
