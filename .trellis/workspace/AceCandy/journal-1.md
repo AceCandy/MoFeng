@@ -768,3 +768,37 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Next Steps
 
 - None - task complete
+
+
+## Session 23: 收敛 durable job 与 event log
+
+**Date**: 2026-07-28
+**Task**: 收敛 durable job 与 event log
+**Branch**: `main`
+
+### Summary
+
+建立 PostgreSQL durable job、独立 worker lease/fencing、可重放 SSE cursor，并迁移章节长任务、补齐部署与恢复测试契约。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8dbed8e` | (see git log) |
+| `918b151` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
