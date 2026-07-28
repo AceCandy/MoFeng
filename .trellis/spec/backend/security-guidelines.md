@@ -72,20 +72,20 @@ Rules:
 
 ### SECRET_KEY strength gate
 
-`app/core/config.py::assert_production_security` runs at app startup (`main.py` lifespan). In `production` it refuses to boot when `SECRET_KEY` is shorter than 32 chars or matches a known weak/default value (`ChangeMe123!`, `"secret"`, etc.).
+`app/core/config.py::assert_production_security` runs at app startup (`main.py` lifespan) and before explicit data bootstrap. In `production` it refuses to proceed when `SECRET_KEY` is shorter than 32 chars or matches a known weak/default value (`ChangeMe123!`, `"secret"`, etc.).
 
 ```python
-def assert_production_security() -> None:
-    if settings.environment != "production":
+def assert_production_security(config: Settings = settings) -> None:
+    if config.environment != "production":
         return
-    key = settings.secret_key or ""
+    key = config.secret_key or ""
     if len(key) < 32 or key.strip() in _WEAK_SECRET_KEYS:
         raise RuntimeError(...)
 ```
 
 Non-production environments skip the check so local dev keeps working with placeholder keys.
 
-The same gate also covers `ADMIN_DEFAULT_PASSWORD`: in production it rejects passwords shorter than 8 chars or matching a known weak/default value (`ChangeMe123!`, `your-admin-password-change-me`, etc.). `deploy/docker-compose.yml` enforces `${ADMIN_DEFAULT_PASSWORD:?...}` (required, no fallback) so the app never boots with the placeholder. Default-credential risk (CWE-798) is closed at both the config layer (no usable default) and the startup gate (rejects weak values).
+The same gate covers `ADMIN_DEFAULT_PASSWORD` only when `BOOTSTRAP_CREATE_DEFAULT_ADMIN=true`: in production it rejects passwords shorter than 8 chars or matching a known weak/default value (`ChangeMe123!`, `your-admin-password-change-me`, etc.). The deployment script requires a non-empty password under the same condition; disabling default-admin bootstrap permits an empty value. Credentials are consumed only by `db-bootstrap` and never logged.
 
 ### Default admin password rotation
 

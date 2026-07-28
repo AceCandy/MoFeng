@@ -126,7 +126,7 @@ raise ValueError(f"unsupported provider: {provider}")
 
 Several MoFeng changes are inherently multi-site. Treat each as a checklist:
 
-- **DB schema change**: model field + `_ensure_schema_updates` block + `backend/db/migrations/*.sql` note. Forgetting any one leaves existing deployments stale. See [backend/database-guidelines](../backend/database-guidelines.md).
+- **DB schema change**: model field + Alembic revision under `backend/alembic/versions/` + isolated migration test. Runtime and `db-bootstrap` must not patch schema. See [backend/database-guidelines](../backend/database-guidelines.md).
 - **API response shape change**: backend Pydantic schema + the matching `frontend/src/api/<domain>.ts` interface + every component prop/emit that reads the field. The frontend type is a hand-maintained mirror of the backend schema.
 - **Error message field change**: `app/services/*` raises the value; `frontend/src/api/http.ts::readErrorMessage` reads it. Keep the field name (`detail`) consistent.
 - **Renaming an API path**: router prefix + every call site in `frontend/src/api/*` + any legacy redirect in `src/router/index.ts`.

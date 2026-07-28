@@ -184,6 +184,7 @@ The launcher script will:
 - Auto-install frontend dependencies (if `frontend/node_modules` is missing)
 - Auto-create backend virtual environment (if `backend/.venv` is missing)
 - Auto-install `uvicorn` and backend requirements when needed
+- Explicitly run `db-migrate`, `db-bootstrap`, and `db-check` before the runtime
 - Auto-switch to available ports if default ports are occupied
 - Print actual access URLs and effective API proxy target
 
@@ -205,6 +206,9 @@ copy env.example .env
 # macOS / Linux
 # cp env.example .env
 
+python -m app.db.cli db-migrate
+python -m app.db.cli db-bootstrap
+python -m app.db.cli db-check
 uvicorn app.main:app --reload
 ```
 
@@ -232,15 +236,17 @@ copy deploy\.env.example deploy\.env
 # macOS / Linux
 # cp deploy/.env.example deploy/.env
 
-docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml --profile postgres up -d --build
 ```
+
+Compose runs `migrate -> bootstrap -> app`; the application is not started if either one-shot service fails.
 
 Default URL: `http://127.0.0.1:6100`
 
-To enable bundled PostgreSQL profile:
+To use an external PostgreSQL server, first update the connection values in `deploy/.env`, then omit the profile:
 
 ```bash
-docker compose --env-file deploy/.env -f deploy/docker-compose.yml --profile postgres up -d --build
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build
 ```
 
 ---
@@ -262,19 +268,20 @@ Recommended settings for full writing capabilities:
 - `OPENAI_MODEL_NAME`
 - `ADMIN_DEFAULT_USERNAME`
 - `ADMIN_DEFAULT_PASSWORD`
+- `BOOTSTRAP_CREATE_DEFAULT_ADMIN`
 
 ---
 
-## First-Run Auto Initialization
+## Explicit Database Preparation
 
-On first backend startup, the application will automatically:
+The API runtime never creates a database, runs Alembic, seeds defaults, or migrates business data. Use these commands for a first installation:
 
-1. Ensure the database exists
-2. Create missing tables
-3. Backfill missing legacy fields
-4. Create the default admin account if none exists
-5. Import `backend/prompts/*.md` into the database if missing
-6. Sync default system configuration
+1. `python -m app.db.cli db-create`: optional PostgreSQL database creation for installation only.
+2. `python -m app.db.cli db-migrate`: Alembic `upgrade head` only.
+3. `python -m app.db.cli db-bootstrap`: version-ledger-backed defaults and historical data migrations.
+4. `python -m app.db.cli db-check`: read-only connection, schema head, bootstrap, and rollback-floor checks.
+
+`/health` is process liveness; `/ready` and `/api/ready` report database readiness. A business database without `alembic_version` is never stamped automatically. `db-migrate` prints its read-only schema fingerprint and stops; only a registered baseline can be adopted with `db-adopt-legacy` plus `--operator`, `--expected-fingerprint`, and `--backup-confirmed`.
 
 ---
 

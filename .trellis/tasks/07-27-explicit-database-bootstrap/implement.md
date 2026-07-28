@@ -2,14 +2,14 @@
 
 ## Steps
 
-- [ ] 提取现有 `init_db.py` 每项职责和数据覆盖规则，补 characterization tests。
-- [ ] 增加 CLI/entrypoints 与只读 schema/bootstrap check。
-- [ ] 定义已知 legacy baseline fingerprints、只读 classification、显式 adopt/stamp 与审计记录；未知结构 fail closed。
-- [ ] 增加 bootstrap ledger Alembic migration、互斥执行器和版本化步骤。
-- [ ] 将历史 key 加密、Prompt/config/admin seed 迁入显式 version。
-- [ ] 从 FastAPI lifespan 移除 mutation，只保留 security check、readiness 和 read-only preload。
-- [ ] 分两阶段更新 runtime/deploy：先落 ledger-aware rollback floor，再执行新 bootstrap version；Compose/scripts 使 migrate/bootstrap 在 API/worker 前执行。
-- [ ] 删除本任务产生的兼容 dead code，并独立复核启动导入链。
+- [x] 提取现有 `init_db.py` 每项职责和数据覆盖规则，补 characterization tests。
+- [x] 增加 CLI/entrypoints 与只读 schema/bootstrap check。
+- [x] 定义已知 legacy baseline fingerprints、只读 classification、显式 adopt/stamp 与审计记录；未知结构 fail closed。
+- [x] 增加 bootstrap ledger Alembic migration、互斥执行器和版本化步骤。
+- [x] 将历史 key 加密、Prompt/config/admin seed 迁入显式 version。
+- [x] 从 FastAPI lifespan 移除 mutation，只保留 security check、readiness 和 read-only preload。
+- [x] 建立 ledger-aware rollback floor，并更新 Compose/scripts，使 migrate/bootstrap 在 API/worker 前执行；部署规范要求先落兼容 binary，再执行新的 bootstrap version。
+- [x] 删除本任务产生的兼容 dead code，并独立复核启动导入链；仅保留设计要求的一个发布窗口兼容 wrapper。
 
 ## Validation
 
@@ -21,6 +21,15 @@ alembic upgrade head
 ```
 
 必须增加 PostgreSQL integration cases：empty/current/legacy database、重复执行、双进程竞争和 migration failure。不要只用 SQLite 证明此契约。
+
+## Validation Record
+
+- Passed: `30 passed, 4 deselected` for database bootstrap/readiness, production config, and development/deployment static contracts (`-k 'not postgres'`).
+- Passed: Alembic reports the single head `9c2f47a1d8e6`.
+- Passed: bundled and external PostgreSQL Compose configurations parse successfully.
+- Passed: Bash syntax checks and `git -c core.whitespace=cr-at-eol diff --check`.
+- Added but not executed here: PostgreSQL empty/current/legacy adoption, migration rollback, and concurrent bootstrap integration cases. The environment cannot access the Docker socket and no `TEST_POSTGRES_URL` was provided.
+- Not executed: PowerShell runtime validation because `pwsh` is unavailable.
 
 ## Rollback
 

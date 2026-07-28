@@ -3,7 +3,7 @@
   "name": "explicit-database-bootstrap",
   "title": "拆分数据库 migration bootstrap runtime",
   "description": "把 schema migration、versioned bootstrap、readiness 与 app runtime 启动解耦",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

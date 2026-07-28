@@ -10,7 +10,7 @@
 |---------|------------|-----------|
 | Layering | `routers → services → repositories → models` + `schemas` | [directory-structure](./directory-structure.md) |
 | DI | `Depends(get_session)` + `get_<x>_service` factories, wired in `core/dependencies.py` | [directory-structure](./directory-structure.md) |
-| DB | SQLAlchemy 2.0 async; repository `flush()`es, service `commit()`s | [database-guidelines](./database-guidelines.md) |
+| DB | SQLAlchemy 2.0 async; explicit migrate/bootstrap/check; no runtime mutation | [database-guidelines](./database-guidelines.md) |
 | Errors | Service raises `ValueError`; router translates to `HTTPException` | [error-handling](./error-handling.md) |
 | Logging | stdlib `logging`, `getLogger(__name__)`, lazy `%s` args | [logging-guidelines](./logging-guidelines.md) |
 | Quality | `httpx.AsyncClient`, `response_model=` on routes, AIMETA header on every file | [quality-guidelines](./quality-guidelines.md) |
@@ -24,12 +24,27 @@
 | Guide | Description |
 |-------|-------------|
 | [Directory Structure](./directory-structure.md) | Request flow, directory map, DI wiring, AIMETA header |
-| [Database Guidelines](./database-guidelines.md) | Engine/session, repository pattern, transaction ownership, schema init (Alembic + startup fallback) |
+| [Database Guidelines](./database-guidelines.md) | Engine/session, transaction ownership, explicit Alembic/bootstrap/readiness lifecycle |
 | [Error Handling](./error-handling.md) | Domain errors vs `HTTPException`, status-code map, anti-patterns |
 | [Logging Guidelines](./logging-guidelines.md) | `dictConfig` setup, level conventions, lazy formatting |
 | [Quality Guidelines](./quality-guidelines.md) | Async discipline, Pydantic schemas, config, Celery, review checklist |
 | [Security Guidelines](./security-guidelines.md) | CORS, Fernet secret encryption, SSRF, auth hardening |
 | [Canonical Chapter Context](./chapter-context-contract.md) | Resolver/adapters, revision layers, snapshot recovery, and tests |
+
+---
+
+## Pre-Development Checklist
+
+- Read the guide for every touched concern; for database lifecycle changes, read Database, Quality, Security, and Logging Guidelines.
+- For changes crossing runtime, storage, and deployment, read the [Cross-Layer Thinking Guide](../guides/cross-layer-thinking-guide.md).
+- Before adding helpers or copied contracts, read the [Code Reuse Thinking Guide](../guides/code-reuse-thinking-guide.md).
+
+## Quality Check
+
+- Always apply [Quality Guidelines](./quality-guidelines.md) and [Logging Guidelines](./logging-guidelines.md).
+- For schema, migration, bootstrap, readiness, or database config changes, also apply [Database Guidelines](./database-guidelines.md) and [Security Guidelines](./security-guidelines.md).
+- For changes spanning multiple layers or repeated constants/commands, apply the [Cross-Layer](../guides/cross-layer-thinking-guide.md) and [Code Reuse](../guides/code-reuse-thinking-guide.md) checklists.
+- Run focused tests plus syntax/type/static checks; database lifecycle changes require isolated PostgreSQL coverage, not SQLite-only evidence.
 
 ---
 

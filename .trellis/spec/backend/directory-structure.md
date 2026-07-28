@@ -36,23 +36,25 @@ The dependency chain is wired by `Depends`. Routers never call repositories dire
 | `app/models/` | SQLAlchemy 2.0 `Mapped` / `mapped_column` ORM tables. Re-exported via `app/models/__init__.py`. | `app/models/user.py`, `novel.py` |
 | `app/schemas/` | Pydantic v2 request/response DTOs. Fully separate from ORM models. | `app/schemas/user.py`, `novel.py` |
 | `app/core/` | Cross-cutting infra: `config.py` (pydantic-settings), `security.py` (JWT/password), `dependencies.py` (auth + session DI). | `app/core/dependencies.py` |
-| `app/db/` | Engine/session factory, `Base`, `init_db.py`, `system_config_defaults.py`. | `app/db/session.py`, `base.py` |
+| `app/db/` | Engine/session factory, Alembic orchestration, versioned bootstrap, readiness, and explicit CLI. | `app/db/session.py`, `cli.py` |
 | `app/tasks/` | Celery tasks (sync entrypoints that bootstrap an event loop). | `app/tasks/emotion_tasks.py` |
 | `app/utils/` | Pure helpers, no DB/HTTP side effects. | `app/utils/json_utils.py`, `llm_tool.py` |
 | `app/config/` | Celery app definition only. | `app/config/celery_config.py` |
 
 ---
 
-## App bootstrap
+## App runtime startup
 
-`app/main.py` builds the FastAPI app, runs `init_db()` and prompt preload in the lifespan, then includes the aggregated router.
+`app/main.py` builds the FastAPI app. Its lifespan validates production security, performs a read-only database readiness check, and preloads prompts only when ready. It never runs database creation, Alembic, bootstrap, administrator creation, or historical data migration.
 
 ```python
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
-    async with AsyncSessionLocal() as session:
-        await PromptService(session).preload()
+    assert_production_security()
+    readiness = await check_database_readiness()
+    if readiness.ready:
+        async with AsyncSessionLocal() as session:
+            await PromptService(session).preload()
     yield
 
 app = FastAPI(title=settings.app_name, debug=settings.debug, version="1.0.0", lifespan=lifespan)
@@ -60,6 +62,8 @@ app.include_router(api_router)
 ```
 
 Reference: `app/main.py`.
+
+Installation/deployment runs `app.db.cli` roles in `db-migrate -> db-bootstrap -> db-check` order before runtime. `/health` is dependency-free liveness; `/ready` and `/api/ready` return 503 when the read-only database contract is not satisfied.
 
 ---
 

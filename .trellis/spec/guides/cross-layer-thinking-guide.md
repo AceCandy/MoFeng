@@ -65,12 +65,12 @@ For each boundary, decide and write down:
 Trace every site and update them in one change:
 
 1. `app/models/<thing>.py` — add the column (typed `Mapped[...]`).
-2. `app/db/init_db.py::_ensure_schema_updates` — add the `ALTER TABLE` for existing deployments, plus a `backend/db/migrations/*.sql` note.
+2. `backend/alembic/versions/<revision>.py` — add the Alembic upgrade/downgrade and verify it against an isolated database.
 3. `app/schemas/<thing>.py` — add the field to the relevant `*Read` (and `*Create` / `*Update` if writable).
 4. `frontend/src/api/<thing>.ts` — add the field to the TS interface (snake_case, matching the backend).
 5. `frontend/src/queries/<thing>.ts` + components — the `useQuery<T>` type already flows; update props/emits that consume the field.
 
-Forgetting step 2 leaves existing databases without the column. Forgetting step 4 makes the field invisible to the UI even though the backend sends it.
+Forgetting step 2 leaves existing databases without the column. Do not add a runtime or bootstrap schema fallback. Forgetting step 4 makes the field invisible to the UI even though the backend sends it.
 
 ### Scenario B: ORM ↔ Schema conversion
 
@@ -115,6 +115,6 @@ After implementation:
 - [ ] Tested null / missing / empty / invalid at each boundary.
 - [ ] Confirmed error messages flow through `detail` and surface in the UI.
 - [ ] Confirmed the value survives a round-trip (create → read → update → read).
-- [ ] For a field add: model + `_ensure_schema_updates` + `.sql` + backend schema + frontend interface all updated.
+- [ ] For a field add: model + Alembic revision/test + backend schema + frontend interface all updated.
 - [ ] For a path/field rename: every call site + legacy redirect updated.
 - [ ] Consumers import a shared type / decoder instead of casting payload fields locally.

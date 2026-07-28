@@ -43,9 +43,12 @@ copy env.example .env
 # cp env.example .env
 ```
 
-Start the backend:
+Prepare the database, then start the backend runtime:
 
 ```bash
+python -m app.db.cli db-migrate
+python -m app.db.cli db-bootstrap
+python -m app.db.cli db-check
 uvicorn app.main:app --reload
 ```
 
@@ -53,7 +56,8 @@ Default URLs:
 
 - API: `http://127.0.0.1:6101`
 - Swagger: `http://127.0.0.1:6101/docs`
-- Health: `http://127.0.0.1:6101/api/health`
+- Liveness: `http://127.0.0.1:6101/api/health`
+- Readiness: `http://127.0.0.1:6101/api/ready`
 
 ### 2.3 Frontend
 
@@ -94,6 +98,7 @@ Helper script behavior:
 - If `frontend/node_modules` is missing, frontend dependencies are installed automatically.
 - If `backend/.venv` is missing, the backend virtual environment is created automatically.
 - If the selected Python environment is missing `uvicorn`, backend dependencies from `backend/requirements.txt` are installed automatically.
+- Before starting uvicorn, the scripts run `db-migrate`, `db-bootstrap`, and `db-check` in order.
 - If default ports `6101` or `6100` are occupied, the scripts switch to the next available port.
 - Frontend and backend listen on `0.0.0.0`, so the dev environment can be opened from other devices on the local network.
 - After startup, the scripts print the local frontend URL and the effective local API proxy target.
@@ -137,6 +142,8 @@ Recommended for forks:
 docker compose --env-file deploy/.env -f deploy/docker-compose.yml --profile postgres up -d --build
 ```
 
+Compose starts the shared application image in three roles: one-shot `migrate`, one-shot `bootstrap`, then `app`. `app` depends on successful completion of both database roles. The migration command includes its own connection wait, so the same Compose file also works with an external PostgreSQL server without a hard dependency on the optional `pg` profile.
+
 Default access URL:
 
 - `http://127.0.0.1:6100`
@@ -176,6 +183,7 @@ Recommended for writing features:
 | `OPENAI_API_BASE_URL` | As needed | OpenAI-compatible API base URL |
 | `OPENAI_MODEL_NAME` | Yes | Default generation model |
 | `VECTOR_STORE_ENABLED` | No | Enable pgvector RAG retrieval (default true) |
+| `BOOTSTRAP_CREATE_DEFAULT_ADMIN` | As needed | Create a default admin during explicit bootstrap (default true) |
 | `ADMIN_DEFAULT_USERNAME` | Yes | Default admin username |
 | `ADMIN_DEFAULT_PASSWORD` | Strongly recommended | Default admin password |
 | `ALLOW_USER_REGISTRATION` | As needed | Whether users can sign up |
@@ -191,27 +199,38 @@ Additional common variables:
 - `POSTGRES_*`: PostgreSQL connection or bundled PostgreSQL configuration
 - `IMAGE_REPO`: image repository name
 
-## 5. First-start initialization
+## 5. Database lifecycle commands
 
-On first backend startup, the application automatically:
+The API runtime performs no schema or data mutation. Installation and deployment orchestration use separate commands:
 
-1. Ensures the database exists
-2. Creates required tables
-3. Backfills missing legacy fields
-4. Creates a default admin account if none exists
-5. Imports `backend/prompts/*.md` into the database when absent
-6. Syncs default system configuration
+```bash
+cd backend
+python -m app.db.cli db-create      # optional; installation-only CREATE DATABASE
+python -m app.db.cli db-migrate     # Alembic upgrade head only
+python -m app.db.cli db-bootstrap   # versioned defaults and data migrations
+python -m app.db.cli db-check       # read-only readiness check
+```
 
-This means:
+`db-bootstrap` creates the default administrator only when enabled and no administrator exists. Active system configuration and prompt defaults are inserted only when missing, so user values are not overwritten. The initial immutable version also deletes only the explicitly obsolete system keys and the obsolete `character_dna_guide` prompt. Historical provider API keys are encrypted by a separate version without logging key values. Every version records its checksum, completion status, and minimum compatible binary version.
 
-- You do not need to create tables manually
-- You do not need to import default prompts manually
-- Environment configuration is the main preparation step
+If `db-migrate` finds business tables without `alembic_version`, it fails closed and reports a schema fingerprint. Do not stamp it manually. After verifying the fingerprint is a registered baseline and taking a backup, adoption is explicit:
+
+```bash
+python -m app.db.cli db-adopt-legacy \
+  --operator release-operator \
+  --expected-fingerprint <fingerprint-from-db-migrate> \
+  --backup-confirmed
+python -m app.db.cli db-bootstrap
+python -m app.db.cli db-check
+```
+
+Unknown or partial schemas are not modified. Data bootstrap is forward-only; rollback is limited to binaries that understand the ledger rollback floor.
 
 ## 6. Default admin account
 
 The default admin comes from environment variables:
 
+- `BOOTSTRAP_CREATE_DEFAULT_ADMIN`
 - `ADMIN_DEFAULT_USERNAME`
 - `ADMIN_DEFAULT_PASSWORD`
 - `ADMIN_DEFAULT_EMAIL`
@@ -254,7 +273,8 @@ If the frontend opens but keeps loading, check these first:
 Check:
 
 - `http://127.0.0.1:6101/docs`
-- `http://127.0.0.1:6101/api/health`
+- `http://127.0.0.1:6101/api/health` for liveness
+- `http://127.0.0.1:6101/api/ready` for database readiness
 
 The frontend depends on backend APIs during startup and route restoration.
 
@@ -271,8 +291,8 @@ Check:
 Check:
 
 1. Whether `APP_PORT` is already occupied
-2. Container health status
-3. Compose logs for backend startup errors
+2. Container readiness status
+3. Compose logs for `migrate`, `bootstrap`, and `app`
 
 ## 9. Related files
 

@@ -32,7 +32,7 @@ These guides help you ask the right questions before coding.
 
 - [ ] Feature touches 3+ layers (component, query, api, router, service, repository, model).
 - [ ] You are adding or renaming a field on a backend Pydantic `*Read` model.
-- [ ] You are adding a column to an ORM model (→ `_ensure_schema_updates` + `.sql`).
+- [ ] You are adding a column to an ORM model (→ Alembic revision + isolated migration test).
 - [ ] You are renaming an API path (→ frontend call sites + legacy redirect).
 - [ ] A Read schema reads a relation — is it eager-loaded in the repository?
 - [ ] Error messages stop surfacing in the UI — does the router raise them in `detail`?

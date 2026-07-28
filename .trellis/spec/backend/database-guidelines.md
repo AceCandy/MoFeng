@@ -115,15 +115,115 @@ Primary key types are **not uniform** across the codebase: `User.id` is `Integer
 
 ---
 
-## Schema initialization (Alembic)
+## Explicit database lifecycle
 
-Alembic is in use: `backend/alembic.ini`, `backend/alembic/env.py` (async), and `backend/alembic/versions/a53385d06521_baseline.py` (the current schema frozen as baseline). `alembic upgrade head` builds the schema from an empty database.
+Alembic is in use: `backend/alembic.ini`, `backend/alembic/env.py` (async), and `backend/alembic/versions/a53385d06521_baseline.py` (the original frozen baseline). The full revision chain through the current head builds the schema from an empty database.
 
-Production startup (`app/db/init_db.py::_run_alembic_upgrade`) is pure Alembic: a fresh database runs `alembic upgrade head` to build all tables; a legacy database without an `alembic_version` table is first stamped at `head` (`_needs_alembic_stamp`) then upgraded. There is no `Base.metadata.create_all` or `_ensure_schema_updates` fallback at boot - those were retired when the Alembic baseline was adopted.
+Database creation, schema migration, data bootstrap, and runtime are separate roles:
 
-`Base.metadata.create_all` is now **test-only**: DB-connected tests under `backend/tests/` build an in-memory SQLite schema from the models directly, bypassing Alembic. Raw `.sql` files under `backend/db/migrations/` are legacy (pre-Alembic) and read only by static tests; they are not executed at boot.
+- `python -m app.db.cli db-create` optionally creates a PostgreSQL database for installation only.
+- `python -m app.db.cli db-migrate` runs Alembic `upgrade head` only.
+- `python -m app.db.cli db-bootstrap` runs immutable, transactional data steps under a version ledger and advisory lock.
+- `python -m app.db.cli db-check` is read-only and verifies connectivity, Alembic head, bootstrap contracts, and the binary rollback floor.
+- API/worker runtime never creates a database, migrates schema, seeds defaults, creates an administrator, or rewrites historical data.
 
-**When adding a column/table**: write an Alembic migration under `backend/alembic/versions/` (autogenerate, then `alembic upgrade head` locally). Do not rely on `create_all` to patch existing tables - it only creates new tables and does not alter existing ones.
+A database with business tables but no `alembic_version` is never stamped automatically. Migration first computes a read-only manifest fingerprint (tables, columns, types, ordered key/index columns, constraints, and indexes). Only an exact registered baseline can be adopted with `db-adopt-legacy`, an operator identity, the observed fingerprint, and explicit backup confirmation; unknown or partial schemas fail closed.
+
+Bootstrap versions insert active configuration and prompt defaults only when missing, and create a default administrator only when enabled and no administrator exists. A version may explicitly remove named obsolete rows; that destructive rule is part of the immutable checksum and must not be broadened in place. Historical provider keys are encrypted by a separate version without logging key values.
+
+`Base.metadata.create_all` is **test-only**: DB-connected tests may build isolated schemas directly from models, bypassing Alembic. Raw `.sql` files under `backend/db/migrations/` are legacy and are not executed by runtime or the explicit CLI.
+
+**When adding a column/table**: write an Alembic migration under `backend/alembic/versions/` (autogenerate, then run the migration against an isolated database). Do not rely on `create_all` to patch existing tables - it only creates new tables and does not alter existing ones.
+
+## Scenario: changing the database lifecycle
+
+### 1. Scope / Trigger
+
+Apply this contract whenever a change touches Alembic, bootstrap data, database readiness, legacy adoption, database deployment ordering, or the environment values consumed by those roles. It prevents application processes from becoming implicit schema/data writers and makes failed releases observable before traffic is accepted.
+
+### 2. Signatures
+
+```text
+python -m app.db.cli db-create
+python -m app.db.cli db-migrate
+python -m app.db.cli db-adopt-legacy \
+  --operator <identity> \
+  --expected-fingerprint <sha256> \
+  --backup-confirmed
+python -m app.db.cli db-bootstrap
+python -m app.db.cli db-check
+
+GET /health
+GET /api/health
+GET /ready
+GET /api/ready
+```
+
+Persistent contracts:
+
+- `database_bootstrap_versions`: `version`, `name`, `checksum`, `status`, `minimum_binary_version`, start/completion/failure timestamps, and a non-secret `failure_code`.
+- `legacy_database_adoptions`: schema fingerprint, adopted Alembic revision, operator, backup confirmation, result, and adoption time.
+
+### 3. Contracts
+
+- `db-migrate` performs schema migration only. It never seeds data or stamps an unversioned business database automatically.
+- `db-bootstrap` requires the schema at code head. Each registered version is ordered, immutable, transactional, and mutually exclusive; a completed version is validated and skipped on rerun.
+- `db-check` and the HTTP readiness endpoints are read-only. Their payload is `{"status": "ready" | "not_ready", "codes": string[]}`; HTTP readiness returns 200 when ready and 503 otherwise.
+- `/health` and `/api/health` are dependency-free liveness endpoints and remain 200 while the process can respond.
+- `BOOTSTRAP_CREATE_DEFAULT_ADMIN` defaults to `true`. When it is true in production, `ADMIN_DEFAULT_PASSWORD` must pass the production strength gate; when false, an administrator password is not required.
+- `DATABASE_URL`, when set, is the complete target URL. Otherwise `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DATABASE` form the target URL.
+- Logs and CLI output may contain revision ids, status codes, counts, and schema fingerprints. They must never contain database passwords, administrator passwords, provider keys, or decrypted values.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|-----------|-----------------|
+| Database cannot be reached | CLI fails; readiness includes `database_unreachable` or `readiness_check_failed` |
+| Database revision set differs from code heads | Bootstrap refuses to run; readiness includes `schema_not_at_head` |
+| Required bootstrap version is absent or not completed | Readiness includes `bootstrap_incomplete` |
+| Ledger name/checksum/minimum binary version drifts | Bootstrap fails closed; readiness includes `bootstrap_contract_mismatch` |
+| A completed row requires a newer binary | Readiness includes `binary_below_rollback_floor` |
+| Business tables exist without `alembic_version` | `db-migrate` makes no schema change and reports `legacy_database_requires_adoption` plus the observed fingerprint |
+| Adoption fingerprint is unknown or differs from the observed value | Adoption makes no change and reports `unknown_legacy_schema` or `legacy_fingerprint_mismatch` |
+| Adoption lacks operator identity or backup confirmation | Adoption makes no change and fails validation |
+| Production default-admin bootstrap uses a weak/empty password | Bootstrap refuses to write data |
+
+### 5. Good / Base / Bad Cases
+
+- Good: an empty database runs `db-migrate -> db-bootstrap -> db-check`; the check reports ready and runtime starts without any write-side initialization.
+- Base: rerunning migrate/bootstrap against a current database performs no additional bootstrap mutation and still validates every immutable ledger contract.
+- Bad: API lifespan, worker import, or a health endpoint invokes Alembic, `create_all`, seed logic, administrator creation, legacy key migration, or automatic `stamp`.
+
+### 6. Tests Required
+
+- Unit: fingerprinting is insensitive to unordered table/constraint discovery but changes when ordered composite key/index columns or CHECK constraints change.
+- Unit: readiness asserts every stable code above, including name/checksum/floor drift and HTTP 503 response shape.
+- PostgreSQL integration: empty and current databases, explicit legacy adoption with audit row, unknown/mismatched legacy rejection, migration rollback on injected failure, and concurrent bootstrap execution exactly once.
+- Static/deployment: runtime imports no mixed `init_db`; the image contains Alembic files; Compose resolves in bundled and external PostgreSQL modes and orders `migrate -> bootstrap -> app`.
+
+### 7. Wrong vs Correct
+
+Wrong:
+
+```python
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db()  # schema and data mutation in every runtime process
+    yield
+```
+
+Correct:
+
+```python
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    readiness = await check_database_readiness()
+    if readiness.ready:
+        await preload_read_only_state()
+    yield
+```
+
+Deployment owns the write-side sequence before this runtime starts.
 
 ---
 

@@ -183,6 +183,7 @@ flowchart TD
 - 自动安装前端依赖（若 `frontend/node_modules` 不存在）
 - 自动创建后端虚拟环境（若 `backend/.venv` 不存在）
 - 自动补装 `uvicorn` 及后端依赖
+- 启动 runtime 前显式执行 `db-migrate`、`db-bootstrap`、`db-check`
 - 默认端口冲突时自动切换可用端口
 - 输出实际可访问地址与 API 代理地址
 
@@ -204,6 +205,9 @@ copy env.example .env
 # macOS / Linux
 # cp env.example .env
 
+python -m app.db.cli db-migrate
+python -m app.db.cli db-bootstrap
+python -m app.db.cli db-check
 uvicorn app.main:app --reload
 ```
 
@@ -231,15 +235,17 @@ copy deploy\.env.example deploy\.env
 # macOS / Linux
 # cp deploy/.env.example deploy/.env
 
-docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml --profile postgres up -d --build
 ```
+
+Compose 会按 `migrate → bootstrap → app` 执行；任一 one-shot 失败时应用不会启动。
 
 默认访问地址：`http://127.0.0.1:6100`
 
-如需启用内置 PostgreSQL：
+如需连接外部 PostgreSQL，请先修改 `deploy/.env` 中的 `POSTGRES_HOST` 等连接参数，然后不启用 profile：
 
 ```bash
-docker compose --env-file deploy/.env -f deploy/docker-compose.yml --profile postgres up -d --build
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml up -d --build
 ```
 
 ---
@@ -261,19 +267,20 @@ Docker 部署：使用 `deploy/.env.example` 作为 `deploy/.env` 模板。
 - `OPENAI_MODEL_NAME`
 - `ADMIN_DEFAULT_USERNAME`
 - `ADMIN_DEFAULT_PASSWORD`
+- `BOOTSTRAP_CREATE_DEFAULT_ADMIN`
 
 ---
 
-## 首次启动自动初始化
+## 显式数据库准备
 
-后端首次启动会自动：
+API runtime 不创建数据库、不执行 Alembic，也不 seed 或迁移业务数据。首次安装按职责使用以下命令：
 
-1. 确保数据库存在
-2. 创建缺失表结构
-3. 补齐历史缺失字段
-4. 在无管理员时创建默认管理员账号
-5. 将 `backend/prompts/*.md` 导入数据库
-6. 同步默认系统配置
+1. `python -m app.db.cli db-create`：可选，仅安装场景创建 PostgreSQL database。
+2. `python -m app.db.cli db-migrate`：只执行 Alembic `upgrade head`。
+3. `python -m app.db.cli db-bootstrap`：执行有版本账本的数据初始化和历史迁移。
+4. `python -m app.db.cli db-check`：只读检查连接、schema head、bootstrap 和回滚下限。
+
+`/health` 是进程 liveness；`/ready` 与 `/api/ready` 是数据库 readiness。无 `alembic_version` 的旧业务库不会被自动 stamp：`db-migrate` 会输出只读 schema fingerprint 并退出，只有登记过的 baseline 才能通过带 `--operator`、`--expected-fingerprint`、`--backup-confirmed` 的 `db-adopt-legacy` 显式认领。
 
 ---
 
