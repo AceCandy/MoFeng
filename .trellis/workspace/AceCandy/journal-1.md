@@ -733,3 +733,38 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Next Steps
 
 - None - task complete
+
+
+## Session 22: 显式数据库生命周期
+
+**Date**: 2026-07-28
+**Task**: 显式数据库生命周期
+**Branch**: `main`
+
+### Summary
+
+拆分数据库 migration、versioned bootstrap、readiness 与 runtime，增加旧库显式认领和部署顺序契约。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `00afc02` | (see git log) |
+| `afa3c16` | (see git log) |
+| `2f62c06` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 21
+- **Total Sessions**: 22
 - **Last Active**: 2026-07-28
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~735 | Active |
+| `journal-1.md` | ~770 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 22 | 2026-07-28 | 显式数据库生命周期 | `00afc02`, `afa3c16`, `2f62c06` | `main` |
 | 21 | 2026-07-28 | 统一章节上下文契约 | `2516ada`, `edebafb` | `main` |
 | 20 | 2026-07-23 | 任务状态提醒 | `017823f` | `main` |
 | 19 | 2026-07-23 | 升级 Trellis 至 0.6.8 | `7137108` | `main` |
