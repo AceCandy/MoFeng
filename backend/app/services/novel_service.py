@@ -5,7 +5,7 @@ import json
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
 from sqlalchemy.exc import IntegrityError
 
@@ -92,17 +92,10 @@ from ..models import (
     ChapterEvaluation,
     ChapterGenerationTrace,
     ChapterOutline,
-    ChapterSnapshot,
     ChapterVersion,
-    CharacterState,
-    Foreshadowing,
-    ForeshadowingReminder,
-    ForeshadowingResolution,
-    ForeshadowingStatusHistory,
     NovelBlueprint,
     NovelConversation,
     NovelProject,
-    ProjectMemory,
 )
 from ..repositories.novel_repository import NovelRepository
 from ..schemas.admin import AdminNovelSummary
@@ -118,6 +111,8 @@ from ..schemas.novel import (
     NovelSectionType,
 )
 from .chapter_word_count_settings import count_chapter_words
+from .chapter_projection_service import ChapterProjectionService
+from .event_bus import publish_background_task
 
 logger = logging.getLogger(__name__)
 
@@ -584,10 +579,39 @@ class NovelService:
         evaluation_feedback: Optional[str] = None,
     ) -> List[ChapterVersion]:
         # 生成完成只保存候选草稿；真实正文、章节梳理和选中版本必须等用户确认定稿后写入。
+        # 调用方可能持有 finalize 提交前的 ORM 快照；必须先锁定并覆盖为数据库当前值。
+        with self.session.no_autoflush:
+            locked_chapter = (
+                await self.session.execute(
+                    select(Chapter)
+                    .where(Chapter.id == chapter.id)
+                    .with_for_update()
+                    .execution_options(populate_existing=True)
+                )
+            ).scalars().first()
+        if locked_chapter is None:
+            raise ValueError("章节不存在")
+        chapter = locked_chapter
+        supersede_job = None
+        if chapter.selected_version_id is not None and (
+            int(chapter.current_revision or 0) > 0 or chapter.projection_generation is not None
+        ):
+            owner_id = await self.session.scalar(
+                select(NovelProject.user_id).where(NovelProject.id == chapter.project_id)
+            )
+            if owner_id is None:
+                raise ValueError("章节所属项目不存在")
+            supersede_job = await ChapterProjectionService(self.session).create_tombstone_job(
+                chapter=chapter,
+                user_id=owner_id,
+                reason="chapter_regenerated",
+                event_type="ChapterRevisionSuperseded",
+            )
         chapter.selected_version_id = None
         chapter.selected_version = None
         chapter.real_summary = None
         chapter.word_count = 0
+        chapter.projection_generation = None
         await self.session.flush()
         await self.session.execute(delete(ChapterEvaluation).where(ChapterEvaluation.chapter_id == chapter.id))
         await self.session.execute(delete(ChapterVersion).where(ChapterVersion.chapter_id == chapter.id))
@@ -621,6 +645,8 @@ class NovelService:
         chapter.generation_step_total = 7
         await self.session.commit()
         await self.session.refresh(chapter)
+        if supersede_job is not None:
+            await publish_background_task(supersede_job.user_id)
         await self._touch_project(chapter.project_id)
         return versions
 
@@ -673,7 +699,6 @@ class NovelService:
         project_id: str,
         chapter_numbers: Iterable[int],
         *,
-        delete_vector_data: Optional[Callable[[List[int]], Awaitable[None]]] = None,
         delete_artifacts_confirmed: bool = False,
         confirmation_text: Optional[str] = None,
     ) -> None:
@@ -695,8 +720,13 @@ class NovelService:
                 detail=f"章节大纲不存在: {', '.join(map(str, missing_numbers))}",
             )
 
+        project = await self.repo.get_by_id(project_id)
+        if project is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="项目不存在")
         chapters_result = await self.session.execute(
-            select(Chapter).where(Chapter.project_id == project_id)
+            select(Chapter)
+            .where(Chapter.project_id == project_id)
+            .with_for_update()
         )
         chapters_by_number = {chapter.chapter_number: chapter for chapter in chapters_result.scalars()}
         completed_numbers = sorted(
@@ -754,15 +784,19 @@ class NovelService:
         completed_chapter_ids = [
             chapters_by_number[number].id for number in completed_to_delete if number in chapters_by_number
         ]
+        tombstone_jobs = []
 
         try:
             if completed_chapter_ids:
-                # 已完成章删除必须移除正文、版本、评审、trace、定稿产物和自动伏笔产物。
-                await self._delete_completed_chapter_artifacts(
-                    project_id=project_id,
-                    chapter_numbers=completed_to_delete,
-                    chapter_ids=completed_chapter_ids,
-                )
+                projection_service = ChapterProjectionService(self.session)
+                for number in completed_to_delete:
+                    tombstone_jobs.append(
+                        await projection_service.create_tombstone_job(
+                            chapter=chapters_by_number[number],
+                            user_id=project.user_id,
+                            reason="chapter_deleted",
+                        )
+                    )
                 await self.session.execute(
                     delete(ChapterEvaluation).where(ChapterEvaluation.chapter_id.in_(completed_chapter_ids))
                 )
@@ -780,8 +814,6 @@ class NovelService:
                         Chapter.chapter_number.in_(completed_to_delete),
                     )
                 )
-                if delete_vector_data:
-                    await delete_vector_data(completed_to_delete)
 
             if draft_numbers:
                 draft_chapter_ids = [
@@ -810,97 +842,9 @@ class NovelService:
         except Exception:
             await self.session.rollback()
             raise
+        for job in tombstone_jobs:
+            await publish_background_task(job.user_id)
         await self._touch_project(project_id)
-
-    async def _delete_completed_chapter_artifacts(
-        self,
-        *,
-        project_id: str,
-        chapter_numbers: List[int],
-        chapter_ids: List[int],
-    ) -> None:
-        foreshadowing_result = await self.session.execute(
-            select(Foreshadowing.id).where(
-                Foreshadowing.project_id == project_id,
-                Foreshadowing.chapter_id.in_(chapter_ids),
-                Foreshadowing.is_manual.is_(False),
-            )
-        )
-        auto_foreshadowing_ids = list(foreshadowing_result.scalars())
-
-        if auto_foreshadowing_ids:
-            await self.session.execute(
-                delete(ForeshadowingStatusHistory).where(
-                    ForeshadowingStatusHistory.foreshadowing_id.in_(auto_foreshadowing_ids)
-                )
-            )
-            await self.session.execute(
-                delete(ForeshadowingReminder).where(
-                    ForeshadowingReminder.foreshadowing_id.in_(auto_foreshadowing_ids)
-                )
-            )
-            await self.session.execute(
-                delete(ForeshadowingResolution).where(
-                    ForeshadowingResolution.foreshadowing_id.in_(auto_foreshadowing_ids)
-                )
-            )
-            await self.session.execute(
-                delete(Foreshadowing).where(Foreshadowing.id.in_(auto_foreshadowing_ids))
-            )
-
-        # 删除本章造成的伏笔推进/回收历史，避免已删除章节继续影响后续判断。
-        await self.session.execute(
-            delete(ForeshadowingStatusHistory).where(
-                ForeshadowingStatusHistory.chapter_number.in_(chapter_numbers)
-            )
-        )
-        await self.session.execute(
-            delete(ChapterSnapshot).where(
-                ChapterSnapshot.project_id == project_id,
-                ChapterSnapshot.chapter_number.in_(chapter_numbers),
-            )
-        )
-        await self.session.execute(
-            delete(CharacterState).where(
-                CharacterState.project_id == project_id,
-                CharacterState.chapter_number.in_(chapter_numbers),
-            )
-        )
-        await self._restore_project_memory_after_completed_delete(project_id, min(chapter_numbers))
-
-    async def _restore_project_memory_after_completed_delete(
-        self,
-        project_id: str,
-        deleted_from_chapter_number: int,
-    ) -> None:
-        memory_result = await self.session.execute(
-            select(ProjectMemory).where(ProjectMemory.project_id == project_id)
-        )
-        memory = memory_result.scalars().first()
-        if not memory:
-            return
-
-        snapshot_result = await self.session.execute(
-            select(ChapterSnapshot)
-            .where(
-                ChapterSnapshot.project_id == project_id,
-                ChapterSnapshot.chapter_number < deleted_from_chapter_number,
-            )
-            .order_by(ChapterSnapshot.chapter_number.desc())
-        )
-        previous_snapshot = snapshot_result.scalars().first()
-        if previous_snapshot:
-            memory.last_updated_chapter = previous_snapshot.chapter_number
-            memory.global_summary = previous_snapshot.global_summary_snapshot
-            if previous_snapshot.plot_arcs_snapshot is not None:
-                memory.plot_arcs = previous_snapshot.plot_arcs_snapshot
-            memory.version += 1
-            return
-
-        memory.last_updated_chapter = 0
-        memory.global_summary = ""
-        memory.plot_arcs = {}
-        memory.version += 1
 
     # ------------------------------------------------------------------
     # 序列化辅助

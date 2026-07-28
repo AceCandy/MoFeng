@@ -7,7 +7,7 @@ import logging
 import re
 from typing import Awaitable, Callable, Dict, List, Optional
 
-from sqlalchemy import delete, select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.session import AsyncSessionLocal
@@ -103,6 +103,92 @@ class ForeshadowingPlan:
 
 
 ForeshadowingLLMCall = Callable[[ForeshadowingLLMRequest], Awaitable[str]]
+
+
+def serialize_foreshadowing_plan(plan: ForeshadowingPlan) -> dict:
+    """把不可变计算结果保存到 typed projection run。"""
+
+    return {
+        "candidates": list(plan.candidates),
+        "active": [
+            {
+                "id": item.id,
+                "status": item.status,
+                "content": item.content,
+                "keywords": list(item.keywords),
+            }
+            for item in plan.active
+        ],
+        "status_decisions": {
+            str(item_id): decision for item_id, decision in plan.status_decisions.items()
+        },
+    }
+
+
+def serialize_foreshadowing_context(context: ForeshadowingComputeContext) -> dict:
+    """冻结 projection 计算基线，避免 legacy owner 先提交导致输入漂移。"""
+
+    return {
+        "chapter_number": context.chapter_number,
+        "content": context.content,
+        "rule_candidates": list(context.rule_candidates),
+        "active": [
+            {
+                "id": item.id,
+                "status": item.status,
+                "content": item.content,
+                "keywords": list(item.keywords),
+            }
+            for item in context.active
+        ],
+        "candidate_prompt": context.candidate_prompt,
+        "status_prompt": context.status_prompt,
+    }
+
+
+def deserialize_foreshadowing_context(payload: dict) -> ForeshadowingComputeContext:
+    """恢复 canonical revision 中保存的伏笔计算基线。"""
+
+    return ForeshadowingComputeContext(
+        chapter_number=int(payload["chapter_number"]),
+        content=str(payload.get("content") or ""),
+        rule_candidates=list(payload.get("rule_candidates") or []),
+        active=[
+            ActiveForeshadowingSnapshot(
+                id=int(item["id"]),
+                status=str(item["status"]),
+                content=str(item.get("content") or ""),
+                keywords=list(item.get("keywords") or []),
+            )
+            for item in payload.get("active", [])
+            if isinstance(item, dict) and item.get("id") is not None
+        ],
+        candidate_prompt=payload.get("candidate_prompt"),
+        status_prompt=payload.get("status_prompt"),
+    )
+
+
+def deserialize_foreshadowing_plan(payload: dict) -> ForeshadowingPlan:
+    """恢复已持久化的伏笔计划，供 cutover 原子提升。"""
+
+    active = [
+        ActiveForeshadowingSnapshot(
+            id=int(item["id"]),
+            status=str(item["status"]),
+            content=str(item.get("content") or ""),
+            keywords=list(item.get("keywords") or []),
+        )
+        for item in payload.get("active", [])
+        if isinstance(item, dict) and item.get("id") is not None
+    ]
+    return ForeshadowingPlan(
+        candidates=list(payload.get("candidates") or []),
+        active=active,
+        status_decisions={
+            int(item_id): str(decision)
+            for item_id, decision in dict(payload.get("status_decisions") or {}).items()
+        },
+    )
 
 
 def _normalize_snippet(text: str) -> str:
@@ -256,6 +342,7 @@ class ForeshadowingSyncService:
                     select(Foreshadowing).where(
                         Foreshadowing.project_id == project_id,
                         Foreshadowing.chapter_number < chapter_number,
+                        Foreshadowing.is_active.is_(True),
                         Foreshadowing.status.in_(["planted", "developing", "partial"]),
                     )
                 )
@@ -338,16 +425,24 @@ class ForeshadowingSyncService:
         project_id: str,
         chapter: Chapter,
         plan: ForeshadowingPlan,
+        chapter_revision: int = 0,
+        artifact_generation: str = "legacy",
+        projection_run_id: Optional[str] = None,
+        activate: bool = True,
     ) -> dict:
-        """在调用方事务内应用计划，不自行提交。"""
+        """写入计划；shadow 只落 inactive candidate，不触碰 active owner。"""
 
-        await self.session.execute(
-            delete(Foreshadowing).where(
-                Foreshadowing.project_id == project_id,
-                Foreshadowing.chapter_id == chapter.id,
-                Foreshadowing.is_manual.is_(False),
+        if activate:
+            await self.session.execute(
+                update(Foreshadowing)
+                .where(
+                    Foreshadowing.project_id == project_id,
+                    Foreshadowing.chapter_id == chapter.id,
+                    Foreshadowing.is_manual.is_(False),
+                    Foreshadowing.is_active.is_(True),
+                )
+                .values(is_active=False)
             )
-        )
         reveal_offset = {"major": 8, "minor": 4, "subtle": 12}
         for candidate in plan.candidates:
             self.session.add(
@@ -355,6 +450,10 @@ class ForeshadowingSyncService:
                     project_id=project_id,
                     chapter_id=chapter.id,
                     chapter_number=chapter.chapter_number,
+                    chapter_revision=chapter_revision,
+                    artifact_generation=artifact_generation,
+                    projection_run_id=projection_run_id,
+                    is_active=activate,
                     content=candidate["content"],
                     type=candidate["type"],
                     keywords=candidate["keywords"],
@@ -368,20 +467,104 @@ class ForeshadowingSyncService:
                 )
             )
 
-        active_by_id: Dict[int, Foreshadowing] = {}
-        active_ids = [item.id for item in plan.active]
-        if active_ids:
-            rows = (
+        revealed_count = 0
+        developing_count = 0
+        if activate:
+            revealed_count, developing_count = await self._apply_status_decisions(
+                project_id=project_id,
+                chapter=chapter,
+                plan=plan,
+                chapter_revision=chapter_revision,
+                artifact_generation=artifact_generation,
+                projection_run_id=projection_run_id,
+            )
+
+        return {
+            "created": len(plan.candidates),
+            "revealed": revealed_count,
+            "developing": developing_count,
+        }
+
+    async def promote_staged_plan(
+        self,
+        *,
+        project_id: str,
+        chapter: Chapter,
+        plan_payload: dict,
+        chapter_revision: int,
+        artifact_generation: str,
+        projection_run_id: str,
+    ) -> dict:
+        """在 cutover 事务内提升已写入的 candidate，并应用延迟状态变更。"""
+
+        plan = deserialize_foreshadowing_plan(plan_payload)
+        await self.session.execute(
+            update(Foreshadowing)
+            .where(
+                Foreshadowing.project_id == project_id,
+                Foreshadowing.chapter_id == chapter.id,
+                Foreshadowing.is_manual.is_(False),
+                Foreshadowing.is_active.is_(True),
+            )
+            .values(is_active=False)
+        )
+        staged = list(
+            (
                 await self.session.execute(
                     select(Foreshadowing)
                     .where(
                         Foreshadowing.project_id == project_id,
-                        Foreshadowing.id.in_(active_ids),
+                        Foreshadowing.chapter_id == chapter.id,
+                        Foreshadowing.chapter_revision == chapter_revision,
+                        Foreshadowing.artifact_generation == artifact_generation,
+                        Foreshadowing.projection_run_id == projection_run_id,
+                        Foreshadowing.is_active.is_(False),
                     )
                     .with_for_update()
                 )
             ).scalars().all()
-            active_by_id = {item.id: item for item in rows}
+        )
+        for item in staged:
+            item.is_active = True
+        revealed_count, developing_count = await self._apply_status_decisions(
+            project_id=project_id,
+            chapter=chapter,
+            plan=plan,
+            chapter_revision=chapter_revision,
+            artifact_generation=artifact_generation,
+            projection_run_id=projection_run_id,
+        )
+        return {
+            "created": len(staged),
+            "revealed": revealed_count,
+            "developing": developing_count,
+        }
+
+    async def _apply_status_decisions(
+        self,
+        *,
+        project_id: str,
+        chapter: Chapter,
+        plan: ForeshadowingPlan,
+        chapter_revision: int,
+        artifact_generation: str,
+        projection_run_id: Optional[str],
+    ) -> tuple[int, int]:
+        active_ids = [item.id for item in plan.active]
+        if not active_ids:
+            return 0, 0
+        rows = (
+            await self.session.execute(
+                select(Foreshadowing)
+                .where(
+                    Foreshadowing.project_id == project_id,
+                    Foreshadowing.id.in_(active_ids),
+                    Foreshadowing.is_active.is_(True),
+                )
+                .with_for_update()
+            )
+        ).scalars().all()
+        active_by_id = {item.id: item for item in rows}
 
         revealed_count = 0
         developing_count = 0
@@ -400,6 +583,9 @@ class ForeshadowingSyncService:
                         old_status=source.status,
                         new_status="revealed",
                         chapter_number=chapter.chapter_number,
+                        chapter_revision=chapter_revision,
+                        artifact_generation=artifact_generation,
+                        projection_run_id=projection_run_id,
                         reason="语义判定本章已回收该伏笔",
                     )
                 )
@@ -412,16 +598,14 @@ class ForeshadowingSyncService:
                         old_status="planted",
                         new_status="developing",
                         chapter_number=chapter.chapter_number,
+                        chapter_revision=chapter_revision,
+                        artifact_generation=artifact_generation,
+                        projection_run_id=projection_run_id,
                         reason="语义判定本章继续推进该伏笔",
                     )
                 )
                 developing_count += 1
-
-        return {
-            "created": len(plan.candidates),
-            "revealed": revealed_count,
-            "developing": developing_count,
-        }
+        return revealed_count, developing_count
 
     async def sync_chapter(
         self,
@@ -594,5 +778,9 @@ __all__ = [
     "ForeshadowingLLMRequest",
     "ForeshadowingPlan",
     "ForeshadowingSyncService",
+    "deserialize_foreshadowing_context",
+    "deserialize_foreshadowing_plan",
     "extract_foreshadowing_candidates",
+    "serialize_foreshadowing_context",
+    "serialize_foreshadowing_plan",
 ]

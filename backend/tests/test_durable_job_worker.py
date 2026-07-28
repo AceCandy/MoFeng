@@ -20,11 +20,21 @@ from app.services.llm_service import LLMService
 from app.services.prompt_service import PromptService
 
 
-def _run_process_worker(database_url: str, worker_id: str, handler_delay: float) -> None:
+def _run_process_worker(
+    database_url: str,
+    schema: str,
+    worker_id: str,
+    handler_delay: float,
+) -> None:
     """在独立进程中 claim 并执行单个测试 job。"""
 
     async def run() -> None:
-        engine = create_async_engine(database_url)
+        engine = create_async_engine(
+            database_url,
+            connect_args={
+                "server_settings": {"search_path": f'"{schema}", public'}
+            },
+        )
         session_factory = async_sessionmaker(engine, expire_on_commit=False)
         registry = JobHandlerRegistry()
 
@@ -132,8 +142,8 @@ async def test_worker_dispatches_versioned_handler_and_dead_letters_unknown_vers
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_worker_cancels_running_handler_after_durable_cancel_request(_pg_engine):
-    session_factory = async_sessionmaker(_pg_engine, expire_on_commit=False)
+async def test_worker_cancels_running_handler_after_durable_cancel_request(isolated_pg):
+    session_factory = isolated_pg.session_factory
     handler_started = asyncio.Event()
     keep_running = asyncio.Event()
 
@@ -188,8 +198,8 @@ async def test_worker_cancels_running_handler_after_durable_cancel_request(_pg_e
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_worker_run_forever_records_lifecycle_and_stops_cleanly(_pg_engine):
-    session_factory = async_sessionmaker(_pg_engine, expire_on_commit=False)
+async def test_worker_run_forever_records_lifecycle_and_stops_cleanly(isolated_pg):
+    session_factory = isolated_pg.session_factory
     stop_event = asyncio.Event()
     worker = JobWorker(
         session_factory=session_factory,
@@ -217,8 +227,8 @@ async def test_worker_run_forever_records_lifecycle_and_stops_cleanly(_pg_engine
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_worker_process_crash_is_reclaimed_after_lease_expiry(_pg_engine):
-    session_factory = async_sessionmaker(_pg_engine, expire_on_commit=False)
+async def test_worker_process_crash_is_reclaimed_after_lease_expiry(isolated_pg):
+    session_factory = isolated_pg.session_factory
     async with session_factory() as session:
         user = User(
             username=f"worker-process-crash-{uuid4().hex}",
@@ -235,11 +245,11 @@ async def test_worker_process_crash_is_reclaimed_after_lease_expiry(_pg_engine):
             idempotency_key="process-crash-recovery",
         )
 
-    database_url = _pg_engine.url.render_as_string(hide_password=False)
+    database_url = isolated_pg.engine.url.render_as_string(hide_password=False)
     process_context = multiprocessing.get_context("spawn")
     first_process = process_context.Process(
         target=_run_process_worker,
-        args=(database_url, "process-worker-a", 60.0),
+        args=(database_url, isolated_pg.schema, "process-worker-a", 60.0),
     )
     second_process = None
     try:
@@ -266,7 +276,7 @@ async def test_worker_process_crash_is_reclaimed_after_lease_expiry(_pg_engine):
 
         second_process = process_context.Process(
             target=_run_process_worker,
-            args=(database_url, "process-worker-b", 0.0),
+            args=(database_url, isolated_pg.schema, "process-worker-b", 0.0),
         )
         second_process.start()
         await asyncio.to_thread(second_process.join, 10)
@@ -306,10 +316,10 @@ async def test_worker_process_crash_is_reclaimed_after_lease_expiry(_pg_engine):
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_worker_run_forever_propagates_lifecycle_heartbeat_failure(
-    _pg_engine,
+    isolated_pg,
     monkeypatch,
 ):
-    session_factory = async_sessionmaker(_pg_engine, expire_on_commit=False)
+    session_factory = isolated_pg.session_factory
     stop_event = asyncio.Event()
 
     async def fail_heartbeat_worker(self, *, worker_id, executor_generation, now=None):

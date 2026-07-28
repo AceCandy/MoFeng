@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import JSON, BigInteger, DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import JSON, BigInteger, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base
@@ -22,8 +22,20 @@ class Foreshadowing(Base):
     
     id: Mapped[int] = mapped_column(BIGINT_PK_TYPE, primary_key=True, autoincrement=True)
     project_id: Mapped[str] = mapped_column(ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False, index=True)
-    chapter_id: Mapped[int] = mapped_column(ForeignKey("chapters.id", ondelete="CASCADE"), nullable=False)
+    chapter_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("chapters.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     chapter_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    chapter_revision: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+    artifact_generation: Mapped[str] = mapped_column(
+        String(36), nullable=False, default="legacy", server_default="legacy"
+    )
+    projection_run_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        ForeignKey("chapter_projection_runs.id", ondelete="SET NULL"),
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
     
     # 伏笔内容
     content: Mapped[str] = mapped_column(LONG_TEXT_TYPE, nullable=False)
@@ -59,7 +71,7 @@ class Foreshadowing(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # 关系
-    chapter: Mapped["Chapter"] = relationship("Chapter", foreign_keys=[chapter_id])
+    chapter: Mapped[Optional["Chapter"]] = relationship("Chapter", foreign_keys=[chapter_id])
     resolved_chapter: Mapped[Optional["Chapter"]] = relationship("Chapter", foreign_keys=[resolved_chapter_id])
     resolutions: Mapped[list["ForeshadowingResolution"]] = relationship(
         back_populates="foreshadowing", cascade="all, delete-orphan"
@@ -135,6 +147,14 @@ class ForeshadowingStatusHistory(Base):
     
     # 变更上下文
     chapter_number: Mapped[Optional[int]] = mapped_column(Integer)  # 发生在哪一章
+    chapter_revision: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+    artifact_generation: Mapped[str] = mapped_column(
+        String(36), nullable=False, default="legacy", server_default="legacy"
+    )
+    projection_run_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        ForeignKey("chapter_projection_runs.id", ondelete="SET NULL"),
+    )
     reason: Mapped[Optional[str]] = mapped_column(Text)  # 变更原因
     action_taken: Mapped[Optional[str]] = mapped_column(Text)  # 采取的行动
     

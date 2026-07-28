@@ -4,7 +4,18 @@
 from .admin_setting import AdminSetting
 from .ai_model_config import UserAIModel, UserAIStageRoute, UserModelProvider
 from .background_task import BackgroundTask, JobRun
+from .chapter_projection import (
+    ChapterOutboxEvent,
+    ChapterProjectionReplayAudit,
+    ChapterProjectionRetentionAudit,
+    ChapterProjectionRollout,
+    ChapterProjectionRolloutTransition,
+    ChapterProjectionRun,
+    ChapterProjectionShadowObservation,
+    ChapterRevision,
+)
 from .job import (
+    AIUsageRecord,
     JobActivity,
     JobEvent,
     JobEventRetention,
@@ -77,6 +88,7 @@ from .rag import RagChunk, RagSummary
 
 __all__ = [
     # 基础模型
+    "AIUsageRecord",
     "AdminSetting",
     "BackgroundTask",
     "JobRun",
@@ -86,6 +98,14 @@ __all__ = [
     "JobActivity",
     "JobExecutorControl",
     "JobWorkerHeartbeat",
+    "ChapterOutboxEvent",
+    "ChapterProjectionReplayAudit",
+    "ChapterProjectionRetentionAudit",
+    "ChapterProjectionRollout",
+    "ChapterProjectionRolloutTransition",
+    "ChapterProjectionRun",
+    "ChapterProjectionShadowObservation",
+    "ChapterRevision",
     "UserModelProvider",
     "UserAIModel",
     "UserAIStageRoute",

@@ -118,6 +118,11 @@ class LLMConfigService:
             tts_protocol=getattr(model, "tts_protocol", None),
             tts_voice=getattr(model, "tts_voice", None),
             tts_speed=getattr(model, "tts_speed", 1.0),
+            input_price_per_million=model.input_price_per_million,
+            output_price_per_million=model.output_price_per_million,
+            cached_input_price_per_million=model.cached_input_price_per_million,
+            cache_write_input_price_per_million=model.cache_write_input_price_per_million,
+            pricing_currency=model.pricing_currency,
             is_enabled=model.is_enabled,
             sort_order=model.sort_order,
         )
@@ -418,6 +423,11 @@ class LLMConfigService:
             tts_protocol=payload.tts_protocol,
             tts_voice=(payload.tts_voice or "").strip() or None,
             tts_speed=payload.tts_speed,
+            input_price_per_million=payload.input_price_per_million,
+            output_price_per_million=payload.output_price_per_million,
+            cached_input_price_per_million=payload.cached_input_price_per_million,
+            cache_write_input_price_per_million=payload.cache_write_input_price_per_million,
+            pricing_currency=payload.pricing_currency,
             is_enabled=payload.is_enabled,
             sort_order=payload.sort_order,
         )
@@ -460,6 +470,15 @@ class LLMConfigService:
             model.tts_voice = (data["tts_voice"] or "").strip() or None
         if "tts_speed" in data and data["tts_speed"] is not None:
             model.tts_speed = data["tts_speed"]
+        for pricing_field in (
+            "input_price_per_million",
+            "output_price_per_million",
+            "cached_input_price_per_million",
+            "cache_write_input_price_per_million",
+            "pricing_currency",
+        ):
+            if pricing_field in data:
+                setattr(model, pricing_field, data[pricing_field])
         if "is_enabled" in data and data["is_enabled"] is not None:
             model.is_enabled = data["is_enabled"]
         if "sort_order" in data and data["sort_order"] is not None:

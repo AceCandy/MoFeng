@@ -18,6 +18,20 @@ from .core.config import settings
 from .db.readiness import check_database_readiness
 from .db.session import AsyncSessionLocal, engine
 from .services.event_bus import shutdown_event_bus
+from .services.chapter_outbox_dispatcher import repair_chapter_outbox_backlog
+from .schemas.chapter_projection import (
+    ChapterProjectionOperationRequest,
+    ChapterProjectionRetentionRequest,
+)
+from .services.chapter_projection_ops import (
+    ChapterProjectionOperationError,
+    ChapterProjectionOpsService,
+)
+from .services.chapter_projection_retention import (
+    ChapterProjectionRetentionError,
+    ChapterProjectionRetentionService,
+)
+from .services.chapter_projection_service import ChapterProjectionService
 from .services.job_handlers import build_job_handler_registry
 from .services.job_service import JobService
 from .services.job_worker import JobWorker
@@ -33,6 +47,41 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("health", help="检查 worker heartbeat")
     subparsers.add_parser("metrics", help="输出 durable runtime 聚合指标")
     subparsers.add_parser("cleanup-events", help="立即执行一次 JobEvent retention cleanup")
+    for command, help_text in (
+        ("projection-dry-run", "检查指定章节投影是否可重放"),
+        ("projection-replay", "重放指定章节投影"),
+    ):
+        operation = subparsers.add_parser(command, help=help_text)
+        operation.add_argument("--operator-user-id", type=int, required=True)
+        operation.add_argument("--project-id", required=True)
+        operation.add_argument("--chapter-id", type=int, required=True)
+        operation.add_argument("--revision", type=int, required=True)
+        operation.add_argument(
+            "--projection-name",
+            choices=sorted(ChapterProjectionOpsService.ALLOWED_PROJECTIONS),
+            required=True,
+        )
+        operation.add_argument("--idempotency-key", required=True)
+        operation.add_argument("--reason", required=True)
+        operation.add_argument("--outbox-event-id")
+    for command, help_text in (
+        ("projection-retention-preview", "预览指定章节投影 generation 的可清理制品"),
+        ("projection-retention-purge", "清理指定章节投影 generation 的失活制品"),
+    ):
+        retention = subparsers.add_parser(command, help=help_text)
+        retention.add_argument("--operator-user-id", type=int, required=True)
+        retention.add_argument("--project-id", required=True)
+        retention.add_argument("--chapter-number", type=int, required=True)
+        retention.add_argument("--revision", type=int, required=True)
+        retention.add_argument("--artifact-generation", required=True)
+        retention.add_argument(
+            "--artifact-kind",
+            choices=("rag", "foreshadowing"),
+            required=True,
+        )
+        retention.add_argument("--idempotency-key", required=True)
+        retention.add_argument("--reason", required=True)
+        retention.add_argument("--max-rows", type=int, default=500)
     return parser
 
 
@@ -114,6 +163,7 @@ async def _run_worker() -> int:
         executor_generation=settings.job_worker_generation,
         worker_heartbeat_interval_seconds=settings.job_worker_heartbeat_interval_seconds,
         poll_interval_seconds=settings.job_worker_poll_interval_seconds,
+        maintenance_callbacks=(repair_chapter_outbox_backlog,),
     )
     retention_task = asyncio.create_task(_retention_loop(stop_event))
     try:
@@ -139,7 +189,89 @@ async def _run_metrics() -> int:
     await _require_database_ready()
     async with AsyncSessionLocal() as session:
         metrics = await JobService(session).get_runtime_metrics()
-    _emit({"command": "metrics", **asdict(metrics)})
+        chapter_projections = await ChapterProjectionService(session).get_runtime_metrics()
+    _emit(
+        {
+            "command": "metrics",
+            **asdict(metrics),
+            "chapter_projections": chapter_projections,
+        }
+    )
+    return 0
+
+
+async def _run_projection_operation(
+    args: argparse.Namespace,
+    *,
+    mode: str,
+) -> int:
+    await _require_database_ready()
+    request = ChapterProjectionOperationRequest(
+        project_id=args.project_id,
+        chapter_id=args.chapter_id,
+        revision=args.revision,
+        projection_name=args.projection_name,
+        idempotency_key=args.idempotency_key,
+        reason=args.reason,
+        outbox_event_id=args.outbox_event_id,
+    )
+    async with AsyncSessionLocal() as session:
+        try:
+            response = await ChapterProjectionOpsService(session).execute(
+                request=request,
+                operator_user_id=args.operator_user_id,
+                mode=mode,
+            )
+        except ChapterProjectionOperationError as exc:
+            await session.rollback()
+            _emit(
+                {
+                    "command": args.command,
+                    "status": "failed",
+                    "error": exc.code,
+                },
+                stream=sys.stderr,
+            )
+            return 1
+    _emit({"command": args.command, **response.model_dump(mode="json")})
+    return 0
+
+
+async def _run_projection_retention(
+    args: argparse.Namespace,
+    *,
+    mode: str,
+) -> int:
+    await _require_database_ready()
+    request = ChapterProjectionRetentionRequest(
+        project_id=args.project_id,
+        chapter_number=args.chapter_number,
+        revision=args.revision,
+        artifact_generation=args.artifact_generation,
+        artifact_kind=args.artifact_kind,
+        idempotency_key=args.idempotency_key,
+        reason=args.reason,
+        max_rows=args.max_rows,
+    )
+    async with AsyncSessionLocal() as session:
+        try:
+            response = await ChapterProjectionRetentionService(session).execute(
+                request=request,
+                operator_user_id=args.operator_user_id,
+                mode=mode,
+            )
+        except ChapterProjectionRetentionError as exc:
+            await session.rollback()
+            _emit(
+                {
+                    "command": args.command,
+                    "status": "failed",
+                    "error": exc.code,
+                },
+                stream=sys.stderr,
+            )
+            return 1
+    _emit({"command": args.command, **response.model_dump(mode="json")})
     return 0
 
 
@@ -155,6 +287,14 @@ async def _run_command(args: argparse.Namespace) -> int:
             await _require_database_ready()
             _emit({"command": args.command, **await _cleanup_events_once()})
             return 0
+        if args.command == "projection-dry-run":
+            return await _run_projection_operation(args, mode="dry_run")
+        if args.command == "projection-replay":
+            return await _run_projection_operation(args, mode="replay")
+        if args.command == "projection-retention-preview":
+            return await _run_projection_retention(args, mode="preview")
+        if args.command == "projection-retention-purge":
+            return await _run_projection_retention(args, mode="purge")
         raise RuntimeError("unknown_worker_command")
     finally:
         await shutdown_event_bus()

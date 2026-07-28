@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from hashlib import sha256
 import re
 from typing import Any, Awaitable, Callable, Optional
@@ -12,11 +13,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.background_task import BackgroundTask
-from ..models.job import JobActivity, JobEvent, JobWorkerHeartbeat
+from ..models.chapter_projection import ChapterProjectionRun
+from ..models.job import AIUsageRecord, JobActivity, JobEvent, JobWorkerHeartbeat
 from ..repositories.job_repository import JobRepository
 from ..schemas.task import BackgroundTaskResponse
 from .event_bus import publish_background_task
 from .job_registry import SideEffectClass
+from ..utils.ai_telemetry import AICallResult
 
 
 class LeaseLostError(RuntimeError):
@@ -229,6 +232,67 @@ class JobService:
         stream_type: Optional[str] = None,
         stream_id: Optional[str] = None,
     ) -> BackgroundTask:
+        """Create and publish a job, committing the caller's current transaction."""
+
+        return await self._enqueue_job(
+            user_id=user_id,
+            job_type=job_type,
+            title=title,
+            project_id=project_id,
+            payload=payload,
+            payload_version=payload_version,
+            idempotency_key=idempotency_key,
+            max_attempts=max_attempts,
+            stream_type=stream_type,
+            stream_id=stream_id,
+            commit=True,
+        )
+
+    async def enqueue_job_in_transaction(
+        self,
+        *,
+        user_id: int,
+        job_type: str,
+        title: str,
+        project_id: Optional[str] = None,
+        payload: Optional[dict[str, Any]] = None,
+        payload_version: int = 1,
+        idempotency_key: Optional[str] = None,
+        max_attempts: int = 3,
+        stream_type: Optional[str] = None,
+        stream_id: Optional[str] = None,
+    ) -> BackgroundTask:
+        """Flush a queued job into the caller-owned transaction without publishing."""
+
+        return await self._enqueue_job(
+            user_id=user_id,
+            job_type=job_type,
+            title=title,
+            project_id=project_id,
+            payload=payload,
+            payload_version=payload_version,
+            idempotency_key=idempotency_key,
+            max_attempts=max_attempts,
+            stream_type=stream_type,
+            stream_id=stream_id,
+            commit=False,
+        )
+
+    async def _enqueue_job(
+        self,
+        *,
+        user_id: int,
+        job_type: str,
+        title: str,
+        project_id: Optional[str],
+        payload: Optional[dict[str, Any]],
+        payload_version: int,
+        idempotency_key: Optional[str],
+        max_attempts: int,
+        stream_type: Optional[str],
+        stream_id: Optional[str],
+        commit: bool,
+    ) -> BackgroundTask:
         if payload_version < 1:
             raise ValueError("payload_version 必须大于等于 1")
         if max_attempts < 1:
@@ -311,8 +375,13 @@ class JobService:
                     payload={"task": _public_task_snapshot(job)},
                 )
             )
-            await self.session.commit()
+            if commit:
+                await self.session.commit()
+            else:
+                await self.session.flush()
         except IntegrityError:
+            if not commit:
+                raise
             await self.session.rollback()
             if normalized_key is None:
                 raise
@@ -333,8 +402,9 @@ class JobService:
             )
             return existing
 
-        await self.session.refresh(job)
-        await publish_background_task(job.user_id)
+        if commit:
+            await self.session.refresh(job)
+            await publish_background_task(job.user_id)
         return job
 
     async def get_job(self, job_id: str) -> Optional[BackgroundTask]:
@@ -536,6 +606,11 @@ class JobService:
                 *(job.log_entries or []),
                 _log_entry("任务在提交结果前完成取消", level="warning", now=completed_at),
             ]
+            await self._sync_projection_run_status(
+                job,
+                status="failed",
+                error_category="job_cancelled",
+            )
             await self._append_event(job, "job.cancelled", now=completed_at)
             await self.session.commit()
             await self.session.refresh(job)
@@ -616,6 +691,11 @@ class JobService:
             *(job.log_entries or []),
             _log_entry(f"任务进入死信：{job.error}", level="error", now=dead_lettered_at),
         ]
+        await self._sync_projection_run_status(
+            job,
+            status="dead_letter",
+            error_category=job.error_category,
+        )
         await self._append_event(job, "job.dead_lettered", now=dead_lettered_at)
         await self.session.commit()
         await self.session.refresh(job)
@@ -675,6 +755,11 @@ class JobService:
             ]
             event_type = "job.failed"
 
+        await self._sync_projection_run_status(
+            job,
+            status=job.status,
+            error_category=safe_category,
+        )
         await self._append_event(job, event_type, now=failed_at)
         await self.session.commit()
         await self.session.refresh(job)
@@ -712,6 +797,11 @@ class JobService:
             job.lease_owner = None
             job.lease_expires_at = None
             event_type = "job.cancelled"
+            await self._sync_projection_run_status(
+                job,
+                status="failed",
+                error_category="job_cancelled",
+            )
         else:
             event_type = "job.cancel_requested"
 
@@ -754,6 +844,19 @@ class JobService:
                     should_execute=False,
                     result=dict(activity.result_payload or {}),
                 )
+            if activity.status == "retryable_failed":
+                activity.status = "started"
+                activity.error_category = None
+                activity.attempt = lease.attempt
+                activity.fencing_token = lease.fencing_token
+                activity.updated_at = started_at
+                await self._append_event(job, "activity.retried", now=started_at)
+                await self.session.commit()
+                await publish_background_task(job.user_id)
+                return ActivityExecution(
+                    provider_request_key=activity.provider_request_key,
+                    should_execute=True,
+                )
             if side_effect_class == SideEffectClass.AMBIGUOUS_EXTERNAL:
                 job.status = "needs_attention"
                 job.error_category = "ambiguous_external_result"
@@ -765,6 +868,11 @@ class JobService:
                     *(job.log_entries or []),
                     _log_entry("外部调用结果未知，任务已停止自动重试", level="error", now=started_at),
                 ]
+                await self._sync_projection_run_status(
+                    job,
+                    status="needs_attention",
+                    error_category="ambiguous_external_result",
+                )
                 await self._append_event(job, "job.needs_attention", now=started_at)
                 await self.session.commit()
                 await publish_background_task(job.user_id)
@@ -807,6 +915,7 @@ class JobService:
         activity_key: str,
         provider_request_key: str,
         result: dict[str, Any],
+        ai_call: Optional[AICallResult[Any]] = None,
         now: Optional[datetime] = None,
     ) -> JobActivity:
         completed_at = now or _utc_now()
@@ -829,14 +938,99 @@ class JobService:
             await self.session.commit()
             return activity
 
+        activity_result = dict(result)
+        if ai_call is not None:
+            activity_result["ai_telemetry"] = ai_call.telemetry_dict()
+            usage = ai_call.usage
+            await self.repo.add_ai_usage(
+                AIUsageRecord(
+                    job_activity_id=activity.id,
+                    job_id=job.id,
+                    user_id=job.user_id,
+                    project_id=job.project_id,
+                    provider_type=ai_call.provider_type,
+                    model_name=ai_call.model,
+                    model_id=ai_call.model_id,
+                    stage=ai_call.stage,
+                    input_tokens=usage.input_tokens,
+                    output_tokens=usage.output_tokens,
+                    total_tokens=usage.total_tokens,
+                    cached_input_tokens=usage.cached_input_tokens,
+                    cache_write_input_tokens=usage.cache_write_input_tokens,
+                    reasoning_tokens=usage.reasoning_tokens,
+                    usage_complete=usage.is_complete,
+                    cost_amount=(
+                        Decimal(ai_call.cost_amount)
+                        if ai_call.cost_amount is not None
+                        else None
+                    ),
+                    cost_currency=ai_call.cost_currency,
+                    cost_known=ai_call.cost_unknown_reason is None,
+                    cost_unknown_reason=ai_call.cost_unknown_reason,
+                    created_at=completed_at,
+                )
+            )
+
         activity.status = "succeeded"
-        activity.result_payload = result
+        activity.result_payload = activity_result
         activity.attempt = lease.attempt
         activity.fencing_token = lease.fencing_token
         activity.completed_at = completed_at
         activity.updated_at = completed_at
         await self.session.flush()
         await self._append_event(job, "activity.succeeded", now=completed_at)
+        await self.session.commit()
+        await self.session.refresh(activity)
+        await publish_background_task(job.user_id)
+        return activity
+
+    async def mark_activity_failed(
+        self,
+        lease: JobLease,
+        *,
+        activity_key: str,
+        provider_request_key: str,
+        error_category: str,
+        retryable: bool,
+        now: Optional[datetime] = None,
+    ) -> JobActivity:
+        """记录明确失败的 activity；不会把确定失败误判为 ambiguous。"""
+
+        recorded_at = now or _utc_now()
+        try:
+            job = await self._require_lease(lease, now=recorded_at)
+        except LeaseLostError:
+            await self.session.rollback()
+            raise
+        activity = await self.repo.get_activity_for_update(
+            job_id=job.id,
+            activity_key=activity_key,
+        )
+        if activity is None:
+            await self.session.rollback()
+            raise ValueError("activity intent 不存在")
+        if activity.provider_request_key != provider_request_key:
+            await self.session.rollback()
+            raise ValueError("provider_request_key 与 activity intent 不匹配")
+        if activity.status == "succeeded":
+            await self.session.rollback()
+            raise ValueError("已完成的 activity 不可标记为失败")
+
+        safe_category = re.sub(
+            r"[^a-z0-9_.-]",
+            "_",
+            error_category.strip().lower(),
+        )[:64] or "activity_error"
+        activity.status = "retryable_failed" if retryable else "failed"
+        activity.error_category = safe_category
+        activity.attempt = lease.attempt
+        activity.fencing_token = lease.fencing_token
+        activity.updated_at = recorded_at
+        await self._append_event(
+            job,
+            "activity.retryable_failed" if retryable else "activity.failed",
+            now=recorded_at,
+        )
         await self.session.commit()
         await self.session.refresh(activity)
         await publish_background_task(job.user_id)
@@ -890,6 +1084,11 @@ class JobService:
             *(job.log_entries or []),
             _log_entry(safe_message, level="error", now=recorded_at),
         ]
+        await self._sync_projection_run_status(
+            job,
+            status="needs_attention",
+            error_category="ambiguous_external_result",
+        )
         await self._append_event(job, "job.needs_attention", now=recorded_at)
         await self.session.commit()
         await self.session.refresh(job)
@@ -945,6 +1144,11 @@ class JobService:
             *(job.log_entries or []),
             _log_entry("任务已取消", level="warning", now=cancelled_at),
         ]
+        await self._sync_projection_run_status(
+            job,
+            status="failed",
+            error_category="job_cancelled",
+        )
         await self._append_event(job, "job.cancelled", now=cancelled_at)
         await self.session.commit()
         await self.session.refresh(job)
@@ -1216,6 +1420,11 @@ class JobService:
         job.lease_owner = None
         job.lease_expires_at = None
         job.log_entries = [*(job.log_entries or []), log_entry]
+        await self._sync_projection_run_status(
+            job,
+            status="failed" if job.status == "cancelled" else job.status,
+            error_category=job.error_category or "job_cancelled",
+        )
         await self._append_event(job, event_type, now=now)
         await self.session.commit()
         await self.session.refresh(job)
@@ -1234,6 +1443,36 @@ class JobService:
         if heartbeat.executor_generation != executor_generation:
             raise RuntimeError("worker heartbeat generation 不匹配")
         return heartbeat
+
+    async def _sync_projection_run_status(
+        self,
+        job: BackgroundTask,
+        *,
+        status: str,
+        error_category: Optional[str],
+    ) -> None:
+        """在 JobRun 终态事务内镜像 typed projection 的领域状态。"""
+
+        payload = job.payload if isinstance(job.payload, dict) else {}
+        run_id = payload.get("projection_run_id")
+        if not isinstance(run_id, str) or not run_id:
+            return
+        run = await self.session.get(
+            ChapterProjectionRun,
+            run_id,
+            with_for_update=True,
+        )
+        if run is None or run.job_id not in (None, job.id):
+            return
+        run.job_id = job.id
+        run.status = status
+        run.is_active = False
+        run.error_category = error_category
+        run.checkpoint = {
+            **(run.checkpoint or {}),
+            "job_status": job.status,
+            "job_attempt": job.attempt,
+        }
 
     async def _append_event(
         self,

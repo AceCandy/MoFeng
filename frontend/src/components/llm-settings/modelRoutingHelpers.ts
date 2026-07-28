@@ -2,6 +2,7 @@ import type {
   ProviderType,
   UserAIModel,
   UserAIModelCreate,
+  UserAIModelPricing,
   UserModelProvider,
 } from '@/api/llm'
 import type { Capability, RoutingSection } from './modelRoutingTypes'
@@ -67,6 +68,79 @@ export const groupModelsByProvider = (
   }, {})
 }
 
+export interface ModelPricingForm {
+  inputPrice: string
+  outputPrice: string
+  cachedInputPrice: string
+  cacheWriteInputPrice: string
+  currency: string
+}
+
+const EMPTY_MODEL_PRICING: UserAIModelPricing = {
+  input_price_per_million: null,
+  output_price_per_million: null,
+  cached_input_price_per_million: null,
+  cache_write_input_price_per_million: null,
+  pricing_currency: null,
+}
+
+export const createModelPricingForm = (model: UserAIModel): ModelPricingForm => ({
+  inputPrice: model.input_price_per_million || '',
+  outputPrice: model.output_price_per_million || '',
+  cachedInputPrice: model.cached_input_price_per_million || '',
+  cacheWriteInputPrice: model.cache_write_input_price_per_million || '',
+  currency: model.pricing_currency || 'USD',
+})
+
+export const formatModelPrice = (value: string | null): string => {
+  if (!value) {
+    return '未设'
+  }
+  const [integerPart, fractionPart] = value.split('.')
+  const trimmedFraction = fractionPart?.replace(/0+$/, '')
+  return trimmedFraction ? `${integerPart}.${trimmedFraction}` : integerPart
+}
+
+export const validateModelPricing = (form: ModelPricingForm): string | null => {
+  const prices = [
+    form.inputPrice,
+    form.outputPrice,
+    form.cachedInputPrice,
+    form.cacheWriteInputPrice,
+  ].map((value) => value.trim())
+  for (const price of prices) {
+    if (!price) {
+      continue
+    }
+    if (!/^\d+(?:\.\d{1,12})?$/.test(price)) {
+      return '价格必须是非负小数，最多保留 12 位小数。'
+    }
+    const [integerPart] = price.split('.')
+    if (integerPart.replace(/^0+/, '').length > 12) {
+      return '价格整数部分最多 12 位。'
+    }
+  }
+  const currency = form.currency.trim()
+  if (prices.some(Boolean) && !/^[A-Za-z]{3}$/.test(currency)) {
+    return '配置价格时，币种必须是三位字母代码。'
+  }
+  if (currency && !/^[A-Za-z]{3}$/.test(currency)) {
+    return '币种必须是三位字母代码。'
+  }
+  return null
+}
+
+export const toModelPricingUpdate = (form: ModelPricingForm): UserAIModelPricing => {
+  const optionalPrice = (value: string): string | null => value.trim() || null
+  return {
+    input_price_per_million: optionalPrice(form.inputPrice),
+    output_price_per_million: optionalPrice(form.outputPrice),
+    cached_input_price_per_million: optionalPrice(form.cachedInputPrice),
+    cache_write_input_price_per_million: optionalPrice(form.cacheWriteInputPrice),
+    pricing_currency: form.currency.trim().toUpperCase() || null,
+  }
+}
+
 /**
  * 生成新增模型的 payload。hasPrimaryChatModel 决定 chat 模型是否设为默认主模型
  * （无主模型时首个 chat 模型自动默认）。tts 固定 mimo_chat_audio 协议，
@@ -92,6 +166,7 @@ export const createModelPayload = (
       tts_protocol: null,
       tts_voice: null,
       tts_speed: 1.0,
+      ...EMPTY_MODEL_PRICING,
       is_enabled: true,
       sort_order: 0,
     }
@@ -111,6 +186,7 @@ export const createModelPayload = (
       tts_protocol: 'mimo_chat_audio',
       tts_voice: null,
       tts_speed: 1.0,
+      ...EMPTY_MODEL_PRICING,
       is_enabled: true,
       sort_order: 0,
     }
@@ -128,6 +204,7 @@ export const createModelPayload = (
     tts_protocol: null,
     tts_voice: null,
     tts_speed: 1.0,
+    ...EMPTY_MODEL_PRICING,
     is_enabled: true,
     sort_order: 0,
   }

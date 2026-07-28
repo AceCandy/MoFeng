@@ -33,7 +33,8 @@ class ForeshadowingTrackerService:
             select(Foreshadowing).where(
                 and_(
                     Foreshadowing.project_id == project_id,
-                    Foreshadowing.status.in_(["planted", "developing", "partial"])
+                    Foreshadowing.status.in_(["planted", "developing", "partial"]),
+                    Foreshadowing.is_active.is_(True),
                 )
             ).order_by(Foreshadowing.chapter_number)
         )
@@ -92,7 +93,10 @@ class ForeshadowingTrackerService:
     ) -> Optional[Foreshadowing]:
         """更新伏笔状态并记录历史"""
         result = await self.db.execute(
-            select(Foreshadowing).where(Foreshadowing.id == foreshadowing_id)
+            select(Foreshadowing).where(
+                Foreshadowing.id == foreshadowing_id,
+                Foreshadowing.is_active.is_(True),
+            )
         )
         fs = result.scalar_one_or_none()
         
@@ -108,7 +112,10 @@ class ForeshadowingTrackerService:
             new_status=new_status,
             chapter_number=chapter_number,
             reason=reason,
-            action_taken=action_taken
+            action_taken=action_taken,
+            chapter_revision=fs.chapter_revision,
+            artifact_generation=fs.artifact_generation,
+            projection_run_id=fs.projection_run_id,
         )
         self.db.add(history)
         
@@ -278,7 +285,10 @@ class ForeshadowingTrackerService:
     async def analyze_foreshadowing_health(self, project_id: str) -> Dict[str, Any]:
         """分析伏笔系统健康度"""
         all_foreshadowings = await self.db.execute(
-            select(Foreshadowing).where(Foreshadowing.project_id == project_id)
+            select(Foreshadowing).where(
+                Foreshadowing.project_id == project_id,
+                Foreshadowing.is_active.is_(True),
+            )
         )
         all_fs = list(all_foreshadowings.scalars().all())
         

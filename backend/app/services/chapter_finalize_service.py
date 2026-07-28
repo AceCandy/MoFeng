@@ -11,7 +11,7 @@ from ..models.novel import Chapter, ChapterVersion
 from ..schemas.chapter_context import stable_digest
 from ..schemas.novel import ChapterGenerationStatus
 from .chapter_word_count_settings import count_chapter_words
-from .job_service import JobService
+from .chapter_projection_service import ChapterProjectionService
 from .novel_service import NovelService
 
 
@@ -79,6 +79,19 @@ class ChapterFinalizeSubmissionService:
         if not final_content:
             raise ValueError("最终正文为空，无法定稿")
 
+        source_hash = stable_digest(final_content)
+        projection_service = ChapterProjectionService(self.session)
+        existing = await projection_service.find_existing_finalize_job(
+            user_id=user_id,
+            project_id=project_id,
+            selected_version_id=selected_version.id,
+            source_hash=source_hash,
+            skip_vector_update=skip_vector_update,
+            idempotency_key=idempotency_key,
+        )
+        if existing is not None:
+            return existing
+
         selected_version.content = final_content
         chapter.status = ChapterGenerationStatus.FINALIZING.value
         chapter.generation_progress = 0
@@ -89,21 +102,20 @@ class ChapterFinalizeSubmissionService:
         chapter.selected_version = selected_version
         chapter.word_count = count_chapter_words(final_content)
 
-        return await JobService(self.session).enqueue_job(
-            user_id=user_id,
-            project_id=project_id,
-            job_type="chapter_finalize",
-            title=f"定稿第 {chapter_number} 章",
-            payload={
-                "project_id": project_id,
-                "chapter_number": chapter_number,
-                "selected_version_id": selected_version.id,
-                "content_hash": stable_digest(final_content),
-                "skip_vector_update": skip_vector_update,
-            },
-            payload_version=1,
-            idempotency_key=idempotency_key,
-        )
+        try:
+            result = await projection_service.create_finalize(
+                chapter=chapter,
+                selected_version=selected_version,
+                source_content=final_content,
+                source_hash=source_hash,
+                user_id=user_id,
+                skip_vector_update=skip_vector_update,
+                idempotency_key=idempotency_key,
+            )
+            return await projection_service.commit_finalize(result)
+        except Exception:
+            await self.session.rollback()
+            raise
 
 
 __all__ = ["ChapterFinalizeSubmissionService"]

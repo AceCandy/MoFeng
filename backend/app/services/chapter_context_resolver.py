@@ -1,7 +1,6 @@
 # AIMETA P=章节上下文解析器_统一事实读取入口|R=DB_RAG读取_可见性_预算_降级|NR=不含prompt评审与持久化|E=ChapterContextResolver|X=internal|A=resolver|D=sqlalchemy,pydantic|S=db,net|RD=./README.ai
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import math
@@ -403,9 +402,14 @@ class ChapterContextResolver:
                     .where(
                         Foreshadowing.project_id == project_id,
                         Foreshadowing.chapter_number < chapter_number,
+                        Foreshadowing.is_active.is_(True),
                         Foreshadowing.status.in_(["planted", "developing", "partial"]),
                     )
-                    .order_by(Foreshadowing.chapter_number, Foreshadowing.id)
+                    .order_by(
+                        Foreshadowing.chapter_number,
+                        Foreshadowing.chapter_revision.desc(),
+                        Foreshadowing.id,
+                    )
                 )
             ).scalars().all()
         )
@@ -416,8 +420,13 @@ class ChapterContextResolver:
                     .where(
                         CharacterState.project_id == project_id,
                         CharacterState.chapter_number < chapter_number,
+                        CharacterState.is_active.is_(True),
                     )
-                    .order_by(CharacterState.chapter_number.desc(), CharacterState.id.desc())
+                    .order_by(
+                        CharacterState.chapter_number.desc(),
+                        CharacterState.chapter_revision.desc(),
+                        CharacterState.id.desc(),
+                    )
                     .limit(self.policy.max_character_states + 1)
                 )
             ).scalars().all()
@@ -971,17 +980,17 @@ class ChapterContextResolver:
             )
 
         try:
-            raw_chunks, raw_summaries = await asyncio.gather(
-                self.vector_store.query_chunks(
-                    project_id=context.project_id,
-                    embedding=embedding,
-                    top_k=self.policy.max_rag_chunks,
-                ),
-                self.vector_store.query_summaries(
-                    project_id=context.project_id,
-                    embedding=embedding,
-                    top_k=self.policy.max_rag_summaries,
-                ),
+            raw_chunks = await self.vector_store.query_chunks(
+                self.session,
+                project_id=context.project_id,
+                embedding=embedding,
+                top_k=self.policy.max_rag_chunks,
+            )
+            raw_summaries = await self.vector_store.query_summaries(
+                self.session,
+                project_id=context.project_id,
+                embedding=embedding,
+                top_k=self.policy.max_rag_summaries,
             )
         except Exception:
             logger.warning("canonical context 查询 RAG snapshot 失败")

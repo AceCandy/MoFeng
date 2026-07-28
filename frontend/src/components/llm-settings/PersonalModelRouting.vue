@@ -81,6 +81,7 @@
             :provider-fetch-state="providerFetchState"
             :is-model-picker-open="isModelPickerOpen"
             :selected-model-chips-for-provider="selectedModelChipsForProvider"
+            :save-model-pricing="saveModelPricing"
             @update-field="updateProviderField"
             @save-provider="saveProviderForm"
             @cancel-provider="cancelProviderForm"
@@ -302,6 +303,7 @@ const {
   selectPendingTTSModel,
   saveTTSSelection,
   deleteModelForActiveSection,
+  saveModelPricing,
 } = useModelSelection({
   models,
   activeSection,

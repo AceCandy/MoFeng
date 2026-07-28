@@ -1,4 +1,4 @@
-# AIMETA P=定稿服务_章节定稿和记忆更新|R=定稿流程_摘要更新_状态更新_向量库写入|NR=不含生成逻辑|E=FinalizeService|X=internal|A=定稿_记忆更新|D=llm_service_vector_store_service|S=none|RD=./README.ai
+# AIMETA P=旧定稿记忆服务_兼容入口与记忆辅助|R=摘要_角色状态_剧情线_章节快照|NR=不写入RAG或拥有durable任务事务|E=FinalizeService|X=internal|A=compat_service|D=llm_service,sqlalchemy|S=db,net|RD=./README.ai
 """
 定稿服务 (FinalizeService)
 
@@ -6,8 +6,7 @@
 1. 更新全局摘要 (global_summary)
 2. 更新角色状态 (character_state)
 3. 更新剧情线追踪 (plot_arcs)
-4. 写入向量库 (vectorstore)
-5. 创建章节快照 (chapter_snapshot)
+4. 创建章节快照 (chapter_snapshot)
 
 这是"生成后闭环"的核心服务，确保长程一致性。
 """
@@ -24,7 +23,6 @@ from ..models.novel import BlueprintCharacter
 from ..models.chapter_blueprint import ChapterBlueprint
 from .chapter_word_count_settings import count_chapter_words
 from .llm_service import LLMService
-from .vector_store_service import VectorStoreService
 
 logger = logging.getLogger(__name__)
 
@@ -142,18 +140,16 @@ class FinalizeService:
     """
     定稿服务
 
-    负责章节定稿后的一系列处理，包括更新记忆、状态和向量库。
+    兼容旧调用并提供记忆投影复用的持久化辅助方法。
     """
 
     def __init__(
         self,
         db: AsyncSession,
         llm_service: LLMService,
-        vector_store_service: Optional[VectorStoreService] = None
     ):
         self.db = db
         self.llm_service = llm_service
-        self.vector_store_service = vector_store_service
 
     async def finalize_chapter(
         self,
@@ -171,7 +167,7 @@ class FinalizeService:
             chapter_number: 章节号
             chapter_text: 章节正文
             user_id: 用户ID
-            skip_vector_update: 是否跳过向量库更新
+            skip_vector_update: 兼容旧调用；RAG 已由章节投影链路统一处理
 
         Returns:
             包含更新结果的字典。success 严格反映核心记忆字段是否至少有一个有效写入；
@@ -249,17 +245,10 @@ class FinalizeService:
                 )
                 return result
 
-            # 5-8. 写快照（新短事务）：仅写入有效结果。
+            # 5-7. 写快照（新短事务）：仅写入有效结果。
             if new_state:
                 await self._save_character_state(project_id, chapter_number, new_state)
                 result["updates"]["character_state"] = "updated"
-            if not skip_vector_update and self.vector_store_service:
-                await self._update_vector_store(
-                    project_id=project_id,
-                    chapter_number=chapter_number,
-                    chapter_text=chapter_text,
-                )
-                result["updates"]["vector_store"] = "updated"
             await self._create_chapter_snapshot(
                 project_id=project_id,
                 chapter_number=chapter_number,
@@ -376,8 +365,15 @@ class FinalizeService:
         states = (
             await self.db.execute(
                 select(CharacterState)
-                .where(CharacterState.project_id == project_id)
-                .order_by(CharacterState.chapter_number.desc())
+                .where(
+                    CharacterState.project_id == project_id,
+                    CharacterState.is_active.is_(True),
+                )
+                .order_by(
+                    CharacterState.chapter_number.desc(),
+                    CharacterState.chapter_revision.desc(),
+                    CharacterState.id.desc(),
+                )
             )
         ).scalars().all()
 
@@ -433,7 +429,12 @@ class FinalizeService:
         self,
         project_id: str,
         chapter_number: int,
-        state_text: str
+        state_text: str,
+        *,
+        chapter_revision: int = 0,
+        artifact_generation: str = "legacy",
+        projection_run_id: Optional[str] = None,
+        is_active: bool = True,
     ):
         """保存角色状态到数据库"""
         characters = await self._get_blueprint_characters(project_id)
@@ -461,6 +462,10 @@ class FinalizeService:
                 character_id=character.id,
                 character_name=character.name,
                 chapter_number=chapter_number,
+                chapter_revision=chapter_revision,
+                artifact_generation=artifact_generation,
+                projection_run_id=projection_run_id,
+                is_active=is_active,
                 extra={"raw_state_text": block},
                 **state_kwargs,
             )
@@ -549,26 +554,6 @@ class FinalizeService:
                 response = response[4:]
         return json.loads(response)
 
-    async def _update_vector_store(
-        self,
-        project_id: str,
-        chapter_number: int,
-        chapter_text: str
-    ):
-        """更新向量库"""
-        if not self.vector_store_service:
-            return
-
-        try:
-            # 将章节文本分块并存入向量库
-            await self.vector_store_service.add_chapter_to_store(
-                project_id=project_id,
-                chapter_number=chapter_number,
-                content=chapter_text
-            )
-        except Exception as e:
-            logger.error(f"更新向量库失败: {e}")
-
     async def _generate_chapter_summary(
         self,
         chapter_text: str,
@@ -597,7 +582,12 @@ class FinalizeService:
         character_states: Optional[str],
         plot_arcs: Optional[Dict],
         chapter_summary: Optional[str],
-        word_count: int
+        word_count: int,
+        *,
+        chapter_revision: int = 0,
+        artifact_generation: str = "legacy",
+        projection_run_id: Optional[str] = None,
+        is_active: bool = True,
     ):
         """创建章节快照"""
         snapshot = ChapterSnapshot(
@@ -607,7 +597,11 @@ class FinalizeService:
             character_states_snapshot={"raw_text": character_states} if character_states else None,
             plot_arcs_snapshot=plot_arcs,
             chapter_summary=chapter_summary,
-            word_count=word_count
+            word_count=word_count,
+            chapter_revision=chapter_revision,
+            artifact_generation=artifact_generation,
+            projection_run_id=projection_run_id,
+            is_active=is_active,
         )
         self.db.add(snapshot)
 
@@ -648,8 +642,13 @@ class FinalizeService:
                 .where(
                     ChapterSnapshot.project_id == project_id,
                     ChapterSnapshot.chapter_number < chapter_number,
+                    ChapterSnapshot.is_active.is_(True),
                 )
-                .order_by(ChapterSnapshot.chapter_number.desc())
+                .order_by(
+                    ChapterSnapshot.chapter_number.desc(),
+                    ChapterSnapshot.chapter_revision.desc(),
+                    ChapterSnapshot.id.desc(),
+                )
                 .limit(3)
             )
         ).scalars().all()

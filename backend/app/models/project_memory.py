@@ -11,7 +11,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import JSON, BigInteger, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import JSON, BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base
@@ -59,6 +59,9 @@ class ProjectMemory(Base):
     
     # 版本号，用于乐观锁
     version: Mapped[int] = mapped_column(Integer, default=1)
+
+    projection_revision: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+    projection_generation: Mapped[Optional[str]] = mapped_column(String(36))
     
     # 元数据
     extra: Mapped[Optional[dict]] = mapped_column(JSON)
@@ -76,6 +79,15 @@ class ChapterSnapshot(Base):
     - 版本对比
     """
     __tablename__ = "chapter_snapshots"
+    __table_args__ = (
+        Index(
+            "ix_chapter_snapshots_projection",
+            "project_id",
+            "chapter_number",
+            "chapter_revision",
+            "is_active",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(BIGINT_PK_TYPE, primary_key=True, autoincrement=True)
     project_id: Mapped[str] = mapped_column(
@@ -99,6 +111,16 @@ class ChapterSnapshot(Base):
     
     # 章节字数
     word_count: Mapped[int] = mapped_column(Integer, default=0)
+
+    chapter_revision: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+    artifact_generation: Mapped[str] = mapped_column(
+        String(36), nullable=False, default="legacy", server_default="legacy"
+    )
+    projection_run_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        ForeignKey("chapter_projection_runs.id", ondelete="SET NULL"),
+    )
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
     
     # 元数据
     extra: Mapped[Optional[dict]] = mapped_column(JSON)

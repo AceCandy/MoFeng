@@ -1,4 +1,4 @@
-// AIMETA P=LLM_API客户端_模型配置接口|R=LLM配置CRUD|NR=不含UI逻辑|E=api:llm|X=internal|A=llmApi对象|D=axios|S=net|RD=./README.ai
+// AIMETA P=LLM_API客户端_模型配置接口|R=LLM配置CRUD|NR=不含UI逻辑|E=api:llm|X=internal|A=llmApi对象|D=fetch|S=net|RD=./README.ai
 import { API_BASE_URL, API_PREFIX } from './base';
 import { authJson } from './client';
 
@@ -40,7 +40,15 @@ export interface ProviderCreate {
 
 export type ProviderUpdate = Partial<ProviderCreate>;
 
-export interface UserAIModel {
+export interface UserAIModelPricing {
+  input_price_per_million: string | null;
+  output_price_per_million: string | null;
+  cached_input_price_per_million: string | null;
+  cache_write_input_price_per_million: string | null;
+  pricing_currency: string | null;
+}
+
+export interface UserAIModel extends UserAIModelPricing {
   id: number;
   user_id: number;
   provider_id: number;
@@ -58,7 +66,7 @@ export interface UserAIModel {
   sort_order: number;
 }
 
-export interface UserAIModelCreate {
+export interface UserAIModelCreate extends UserAIModelPricing {
   provider_id: number;
   display_name: string;
   model_name: string;

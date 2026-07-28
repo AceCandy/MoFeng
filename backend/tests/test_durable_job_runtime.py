@@ -2,10 +2,9 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 
 import pytest
-from sqlalchemy import delete
-from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlalchemy import delete, select
 
-from app.models import BackgroundTask, JobExecutorControl, NovelProject
+from app.models import AIUsageRecord, BackgroundTask, JobActivity, JobExecutorControl, NovelProject
 from app.models.user import User
 from app.services.job_registry import SideEffectClass
 from app.services.job_service import (
@@ -15,6 +14,7 @@ from app.services.job_service import (
     LeaseLostError,
     RetryPolicy,
 )
+from app.utils.ai_telemetry import AICallResult, TokenUsage
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -52,8 +52,8 @@ async def test_duplicate_idempotency_key_returns_one_job_and_one_queued_event(db
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_concurrent_claim_and_fencing_reject_stale_worker(_pg_engine):
-    session_factory = async_sessionmaker(_pg_engine, expire_on_commit=False)
+async def test_concurrent_claim_and_fencing_reject_stale_worker(isolated_pg):
+    session_factory = isolated_pg.session_factory
 
     async with session_factory() as session:
         session.add(User(id=1001, username="claim-writer", hashed_password="secret"))
@@ -93,13 +93,20 @@ async def test_concurrent_claim_and_fencing_reject_stale_worker(_pg_engine):
         assert second_lease is not None
         assert (second_lease.attempt, second_lease.fencing_token) == (2, 2)
 
+        stale_outcome_writes: list[str] = []
+
+        async def stale_outcome_writer(_session) -> None:
+            stale_outcome_writes.append(first_lease.worker_id)
+
         async with session_factory() as session:
             with pytest.raises(LeaseLostError):
                 await JobService(session).mark_succeeded(
                     first_lease,
                     result={"winner": first_lease.worker_id},
+                    outcome_writer=stale_outcome_writer,
                     now=now + timedelta(seconds=32),
                 )
+        assert stale_outcome_writes == []
 
         async with session_factory() as session:
             await JobService(session).mark_succeeded(
@@ -489,6 +496,94 @@ async def test_idempotent_external_activity_reuses_provider_key_after_lease_loss
         assert provider_call_count == 1
         assert cached.should_execute is False
         assert cached.result == {"provider_id": "result-1"}
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_activity_result_and_ai_usage_ledger_commit_atomically_and_idempotently(
+    db_session_factory,
+):
+    async with db_session_factory() as session:
+        session.add(User(id=6, username="telemetry-writer", hashed_password="secret"))
+        session.add(
+            NovelProject(
+                id="telemetry-project",
+                user_id=6,
+                title="Telemetry",
+                initial_prompt="test",
+            )
+        )
+        await session.commit()
+        service = JobService(session)
+        job = await service.enqueue_job(
+            user_id=6,
+            project_id="telemetry-project",
+            job_type="chapter_finalize",
+            title="Telemetry activity",
+            idempotency_key="telemetry-activity",
+        )
+        lease = await service.claim_next(worker_id="telemetry-worker", lease_seconds=30)
+        assert lease is not None
+        intent = await service.begin_activity(
+            lease,
+            activity_key="summary_generation",
+            side_effect_class=SideEffectClass.AMBIGUOUS_EXTERNAL,
+        )
+        ai_call = AICallResult.from_config(
+            "summary",
+            config={
+                "provider_type": "openai_compatible",
+                "model": "chat-model",
+                "model_id": 12,
+                "input_price_per_million": "2",
+                "output_price_per_million": "8",
+                "cached_input_price_per_million": "0.5",
+                "cache_write_input_price_per_million": None,
+                "pricing_currency": "USD",
+            },
+            usage=TokenUsage(
+                input_tokens=10,
+                output_tokens=2,
+                total_tokens=12,
+                cached_input_tokens=4,
+                cache_write_input_tokens=0,
+                reasoning_tokens=1,
+                is_complete=True,
+            ),
+            stage="summary_memory",
+        )
+
+        first = await service.complete_activity(
+            lease,
+            activity_key="summary_generation",
+            provider_request_key=intent.provider_request_key,
+            result={"response": "summary"},
+            ai_call=ai_call,
+        )
+        second = await service.complete_activity(
+            lease,
+            activity_key="summary_generation",
+            provider_request_key=intent.provider_request_key,
+            result={"response": "summary"},
+            ai_call=ai_call,
+        )
+
+        records = list((await session.execute(select(AIUsageRecord))).scalars())
+        activity = await session.get(JobActivity, first.id)
+        assert second.id == first.id
+        assert len(records) == 1
+        assert records[0].job_activity_id == first.id
+        assert records[0].job_id == job.id
+        assert records[0].project_id == "telemetry-project"
+        assert records[0].input_tokens == 10
+        assert records[0].output_tokens == 2
+        assert str(records[0].cost_amount) == "0.000030000000"
+        assert records[0].cost_currency == "USD"
+        assert records[0].cost_unknown_reason is None
+        assert activity is not None
+        assert activity.result_payload == {
+            "response": "summary",
+            "ai_telemetry": ai_call.telemetry_dict(),
+        }
 
 
 @pytest.mark.asyncio(loop_scope="session")

@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest'
 import type { UserAIModel, UserModelProvider } from '@/api/llm'
 import {
   capabilityForSection,
+  createModelPricingForm,
   createModelPayload,
   createProviderCapabilities,
+  formatModelPrice,
   groupModelsByProvider,
   modelDisplayName,
+  toModelPricingUpdate,
+  validateModelPricing,
 } from '../llm-settings/modelRoutingHelpers'
 
 const provider = { id: 42 } as UserModelProvider
@@ -85,6 +89,8 @@ describe('createModelPayload', () => {
     expect(payload.tts_protocol).toBeNull()
     expect(payload.is_enabled).toBe(true)
     expect(payload.display_name).toBe('gpt-4')
+    expect(payload.input_price_per_million).toBeNull()
+    expect(payload.pricing_currency).toBeNull()
   })
 
   it('does not override an existing primary chat model', () => {
@@ -111,5 +117,79 @@ describe('createModelPayload', () => {
     expect(payload.tts_voice).toBeNull()
     expect(payload.tts_speed).toBe(1.0)
     expect(payload.capabilities).toEqual({ chat: false, embedding: false, tts: true })
+  })
+})
+
+describe('model pricing', () => {
+  const model = {
+    input_price_per_million: '2.5',
+    output_price_per_million: '8',
+    cached_input_price_per_million: '0.5',
+    cache_write_input_price_per_million: null,
+    pricing_currency: 'USD',
+  } as UserAIModel
+
+  it('round-trips API pricing through the editable form', () => {
+    const form = createModelPricingForm(model)
+
+    expect(form).toEqual({
+      inputPrice: '2.5',
+      outputPrice: '8',
+      cachedInputPrice: '0.5',
+      cacheWriteInputPrice: '',
+      currency: 'USD',
+    })
+    expect(validateModelPricing(form)).toBeNull()
+    expect(toModelPricingUpdate({ ...form, currency: ' eur ' })).toEqual({
+      input_price_per_million: '2.5',
+      output_price_per_million: '8',
+      cached_input_price_per_million: '0.5',
+      cache_write_input_price_per_million: null,
+      pricing_currency: 'EUR',
+    })
+  })
+
+  it('formats database-scale decimals without trailing zero noise', () => {
+    expect(formatModelPrice('2.500000000000')).toBe('2.5')
+    expect(formatModelPrice('10.000000000000')).toBe('10')
+    expect(formatModelPrice('0')).toBe('0')
+    expect(formatModelPrice(null)).toBe('未设')
+  })
+
+  it('accepts zero, maximum precision, and trimmed currency input', () => {
+    const form = {
+      ...createModelPricingForm(model),
+      inputPrice: '0',
+      outputPrice: '123456789012.123456789012',
+      currency: ' cny ',
+    }
+
+    expect(validateModelPricing(form)).toBeNull()
+    expect(toModelPricingUpdate(form)).toMatchObject({
+      input_price_per_million: '0',
+      output_price_per_million: '123456789012.123456789012',
+      pricing_currency: 'CNY',
+    })
+  })
+
+  it('rejects negative, over-precision, and invalid currency values', () => {
+    expect(
+      validateModelPricing({
+        ...createModelPricingForm(model),
+        inputPrice: '-1',
+      }),
+    ).toContain('非负小数')
+    expect(
+      validateModelPricing({
+        ...createModelPricingForm(model),
+        outputPrice: '0.1234567890123',
+      }),
+    ).toContain('12 位小数')
+    expect(
+      validateModelPricing({
+        ...createModelPricingForm(model),
+        currency: 'US',
+      }),
+    ).toContain('三位字母')
   })
 })

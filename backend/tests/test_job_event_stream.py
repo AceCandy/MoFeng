@@ -4,7 +4,6 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy import delete, select, update
-from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models.background_task import BackgroundTask
 from app.models.job import JobEvent
@@ -139,9 +138,9 @@ async def test_retention_cleanup_requires_snapshot_reset_and_preserves_resume_cu
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_concurrent_workflow_jobs_share_sequence_and_resume_without_gap(
-    _pg_engine,
+    isolated_pg,
 ):
-    session_factory = async_sessionmaker(_pg_engine, expire_on_commit=False)
+    session_factory = isolated_pg.session_factory
     async with session_factory() as session:
         user = User(
             username=f"workflow-stream-{uuid4().hex}",

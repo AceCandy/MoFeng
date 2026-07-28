@@ -126,6 +126,90 @@ async def test_detached_embedding_closes_config_session_before_external_wait(mon
 
 
 @pytest.mark.asyncio(loop_scope="session")
+async def test_openai_embedding_result_includes_real_usage_and_cost(monkeypatch):
+    class FakeEmbeddings:
+        async def create(self, **_kwargs):
+            return SimpleNamespace(
+                data=[SimpleNamespace(embedding=[0.1, 0.2])],
+                usage=SimpleNamespace(prompt_tokens=25, total_tokens=25),
+            )
+
+    class FakeAsyncOpenAI:
+        def __init__(self, **_kwargs):
+            self.embeddings = FakeEmbeddings()
+
+        async def close(self):
+            return None
+
+    monkeypatch.setattr("app.services.llm_service.AsyncOpenAI", FakeAsyncOpenAI)
+    service = LLMService(AsyncMock())
+
+    result = await service._get_embedding_with_route_result(
+        "chapter",
+        routed={
+            "api_key": "test-key",
+            "base_url": "https://api.example.test/v1",
+            "model": "embedding-model",
+            "model_id": 9,
+            "provider_type": "openai_compatible",
+            "input_price_per_million": "0.20",
+            "output_price_per_million": None,
+            "cached_input_price_per_million": None,
+            "cache_write_input_price_per_million": None,
+            "pricing_currency": "USD",
+        },
+        user_id=7,
+        model=None,
+        stage="rag_embedding",
+    )
+
+    assert result.value == [0.1, 0.2]
+    assert result.usage.to_dict() == {
+        "input_tokens": 25,
+        "output_tokens": 0,
+        "total_tokens": 25,
+        "cached_input_tokens": 0,
+        "cache_write_input_tokens": 0,
+        "reasoning_tokens": 0,
+        "is_complete": True,
+    }
+    assert result.cost_amount == "0.000005"
+    assert result.cost_unknown_reason is None
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_ollama_embedding_result_marks_usage_unknown(monkeypatch):
+    class FakeOllamaClient:
+        def __init__(self, *, host):
+            self.host = host
+
+    monkeypatch.setattr("app.services.llm_service.OllamaAsyncClient", FakeOllamaClient)
+    service = LLMService(AsyncMock())
+    service._request_ollama_embedding = AsyncMock(return_value=[0.3, 0.4])
+
+    result = await service._get_embedding_with_route_result(
+        "chapter",
+        routed={
+            "api_key": None,
+            "base_url": "http://localhost:11434",
+            "model": "nomic-embed-text",
+            "model_id": 10,
+            "provider_type": "ollama",
+            "input_price_per_million": "0",
+            "pricing_currency": "USD",
+        },
+        user_id=7,
+        model=None,
+        stage="rag_embedding",
+    )
+
+    assert result.value == [0.3, 0.4]
+    assert result.usage.is_complete is False
+    assert result.cost_amount is None
+    assert result.cost_unknown_reason == "usage_unavailable"
+
+
+@pytest.mark.asyncio(loop_scope="session")
 async def test_resolve_llm_config_rejects_missing_user_context():
     service = LLMService(AsyncMock())
     _disable_model_routes(service)
@@ -221,6 +305,11 @@ async def test_resolve_llm_config_uses_stage_route_model():
         model_name="stage-chat",
         capabilities_json={"chat": True},
         is_enabled=True,
+        input_price_per_million=2,
+        output_price_per_million=8,
+        cached_input_price_per_million=0.5,
+        cache_write_input_price_per_million=None,
+        pricing_currency="USD",
         provider=provider,
     )
     service.stage_route_repo = SimpleNamespace(
@@ -243,6 +332,9 @@ async def test_resolve_llm_config_uses_stage_route_model():
     assert config["base_url"] == "https://api.stage.test/v1"
     assert config["stage"] == "chapter_writing"
     assert config["model_id"] == 42
+    assert config["input_price_per_million"] == 2
+    assert config["output_price_per_million"] == 8
+    assert config["pricing_currency"] == "USD"
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -368,6 +460,93 @@ async def test_stream_and_collect_retries_transient_concurrency_limit(monkeypatc
     assert response == "ok"
     assert FakeLLMClient.attempts == 2
     assert len(sleep_calls) == 1
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_stream_and_collect_result_keeps_only_successful_attempt_usage(monkeypatch):
+    class FakeLLMClient:
+        attempts = 0
+
+        def __init__(self, *, api_key, base_url, provider_type):
+            pass
+
+        async def aclose(self) -> None:
+            pass
+
+        async def stream_chat(self, **kwargs):
+            FakeLLMClient.attempts += 1
+            if FakeLLMClient.attempts == 1:
+                yield {
+                    "content": "discarded",
+                    "finish_reason": None,
+                    "usage": {
+                        "input_tokens": 100,
+                        "output_tokens": 20,
+                        "total_tokens": 120,
+                        "cached_input_tokens": 0,
+                        "cache_write_input_tokens": 0,
+                        "reasoning_tokens": 0,
+                        "is_complete": True,
+                    },
+                }
+                raise RuntimeError("Concurrency limit exceeded, please retry later")
+            yield {"content": "ok", "finish_reason": "stop"}
+            yield {
+                "content": None,
+                "finish_reason": None,
+                "usage": {
+                    "input_tokens": 10,
+                    "output_tokens": 2,
+                    "total_tokens": 12,
+                    "cached_input_tokens": 4,
+                    "cache_write_input_tokens": 0,
+                    "reasoning_tokens": 1,
+                    "is_complete": True,
+                },
+            }
+
+    async def fake_sleep(_delay):
+        return None
+
+    service = LLMService(AsyncMock())
+    service.usage_service = SimpleNamespace(increment=AsyncMock())
+    monkeypatch.setattr("app.services.llm_service.LLMClient", FakeLLMClient)
+    monkeypatch.setattr("asyncio.sleep", fake_sleep)
+
+    result = await service._stream_and_collect_with_config_result(
+        [{"role": "user", "content": "hello"}],
+        config={
+            "api_key": "test-key",
+            "base_url": "https://api.example.test/v1",
+            "model": "chat-model",
+            "model_id": 8,
+            "provider_type": "openai_compatible",
+            "input_price_per_million": "2.00",
+            "output_price_per_million": "8.00",
+            "cached_input_price_per_million": "0.50",
+            "cache_write_input_price_per_million": None,
+            "pricing_currency": "USD",
+        },
+        temperature=0.2,
+        user_id=7,
+        timeout=30.0,
+        stage="summary_memory",
+    )
+
+    assert result.value == "ok"
+    assert result.usage.to_dict() == {
+        "input_tokens": 10,
+        "output_tokens": 2,
+        "total_tokens": 12,
+        "cached_input_tokens": 4,
+        "cache_write_input_tokens": 0,
+        "reasoning_tokens": 1,
+        "is_complete": True,
+    }
+    assert result.cost_amount == "0.000030"
+    assert result.cost_currency == "USD"
+    assert result.cost_unknown_reason is None
+    assert FakeLLMClient.attempts == 2
 
 
 @pytest.mark.asyncio(loop_scope="session")

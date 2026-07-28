@@ -462,6 +462,7 @@ class KnowledgeRetrievalService:
                     if not embedding:
                         raise RuntimeError("RAG embedding 为空")
                     chunks = await self.vector_store_service.query_chunks(
+                        self.session,
                         project_id=project_id,
                         embedding=embedding,
                         top_k=top_k,
@@ -587,7 +588,12 @@ class KnowledgeRetrievalService:
             select(ChapterSnapshot).where(
                 ChapterSnapshot.project_id == project_id,
                 ChapterSnapshot.chapter_number < current_chapter,
-            ).order_by(ChapterSnapshot.chapter_number.desc()).limit(count)
+                ChapterSnapshot.is_active.is_(True),
+            ).order_by(
+                ChapterSnapshot.chapter_number.desc(),
+                ChapterSnapshot.chapter_revision.desc(),
+                ChapterSnapshot.id.desc(),
+            ).limit(count)
         )).scalars().all()
 
         return [
@@ -636,8 +642,10 @@ class KnowledgeRetrievalService:
         states = (await self.session.execute(
             select(CharacterState).where(
                 CharacterState.project_id == project_id,
+                CharacterState.is_active.is_(True),
             ).order_by(
                 CharacterState.chapter_number.desc(),
+                CharacterState.chapter_revision.desc(),
                 CharacterState.id.desc(),
             ).limit(50)
         )).scalars().all()

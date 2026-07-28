@@ -9,12 +9,11 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.config import settings
-from ..db.session import AsyncSessionLocal
 from ..services.llm_service import LLMService
 from ..services.vector_store_service import VectorStoreService
 
@@ -69,6 +68,7 @@ class ChapterIngestionService:
 
     async def ingest_chapter(
         self,
+        session: AsyncSession,
         *,
         project_id: str,
         chapter_number: int,
@@ -86,6 +86,9 @@ class ChapterIngestionService:
             content_hash="",
             summary=summary,
             user_id=user_id,
+            revision=0,
+            artifact_generation="legacy",
+            projection_run_id=None,
         )
         if not prepared.enabled:
             return
@@ -95,18 +98,15 @@ class ChapterIngestionService:
                 project_id,
                 chapter_number,
             )
-        async with AsyncSessionLocal() as session:
-            try:
-                await self.apply_prepared(
-                    session,
-                    project_id=project_id,
-                    chapter_number=chapter_number,
-                    prepared=prepared,
-                )
-                await session.commit()
-            except Exception:
-                await session.rollback()
-                raise
+        await self.apply_prepared(
+            session,
+            project_id=project_id,
+            chapter_number=chapter_number,
+            revision=0,
+            artifact_generation="legacy",
+            projection_run_id=None,
+            prepared=prepared,
+        )
 
     async def prepare_chapter(
         self,
@@ -118,6 +118,9 @@ class ChapterIngestionService:
         content_hash: str,
         summary: Optional[str],
         user_id: int,
+        revision: int = 0,
+        artifact_generation: str = "legacy",
+        projection_run_id: Optional[str] = None,
         embedding_provider: Optional[EmbeddingProvider] = None,
     ) -> PreparedChapterIngestion:
         """只执行文本切分与 embedding，不写数据库。"""
@@ -143,7 +146,7 @@ class ChapterIngestionService:
             if not embedding:
                 missing_embeddings += 1
                 continue
-            record_id = f"{project_id}:{chapter_number}:{index}"
+            record_id = f"{project_id}:{chapter_number}:{revision}:{artifact_generation}:{index}"
             chunk_records.append(
                 {
                     "id": record_id,
@@ -153,6 +156,9 @@ class ChapterIngestionService:
                     "chapter_title": title,
                     "content": chunk_text,
                     "embedding": embedding,
+                    "source_revision": revision,
+                    "artifact_generation": artifact_generation,
+                    "projection_run_id": projection_run_id,
                     "metadata": {
                         "chunk_id": record_id,
                         "length": len(chunk_text),
@@ -168,12 +174,15 @@ class ChapterIngestionService:
             if summary_embedding:
                 summary_records.append(
                     {
-                        "id": f"{project_id}:{chapter_number}:summary",
+                        "id": f"{project_id}:{chapter_number}:{revision}:{artifact_generation}:summary",
                         "project_id": project_id,
                         "chapter_number": chapter_number,
                         "title": title,
                         "summary": cleaned_summary,
                         "embedding": summary_embedding,
+                        "source_revision": revision,
+                        "artifact_generation": artifact_generation,
+                        "projection_run_id": projection_run_id,
                     }
                 )
             else:
@@ -192,7 +201,13 @@ class ChapterIngestionService:
         *,
         project_id: str,
         chapter_number: int,
+        revision: int = 0,
+        artifact_generation: str = "legacy",
+        projection_run_id: Optional[str] = None,
+        expected_source_hash: Optional[str] = None,
+        expected_source_generation: Optional[str] = None,
         prepared: PreparedChapterIngestion,
+        activate: bool = True,
     ) -> None:
         """把已计算投影写入调用方事务，不自行提交。"""
 
@@ -202,20 +217,15 @@ class ChapterIngestionService:
             session,
             project_id=project_id,
             chapter_number=chapter_number,
+            revision=revision,
+            artifact_generation=artifact_generation,
+            projection_run_id=projection_run_id,
+            expected_source_hash=expected_source_hash,
+            expected_source_generation=expected_source_generation,
             chunk_records=prepared.chunk_records,
             summary_records=prepared.summary_records,
+            activate=activate,
         )
-
-    async def delete_chapters(self, project_id: str, chapter_numbers: Sequence[int]) -> None:
-        """从向量库中删除指定章节的所有片段与摘要。"""
-        if not settings.vector_store_enabled or not chapter_numbers:
-            return
-        logger.info(
-            "准备删除章节向量: project=%s chapters=%s",
-            project_id,
-            list(chapter_numbers),
-        )
-        await self._vector_store.delete_by_chapters(project_id, list(chapter_numbers))
 
     def _split_into_chunks(self, text: str) -> List[str]:
         """按照配置的 chunk 大小与重叠度切分章节正文。"""

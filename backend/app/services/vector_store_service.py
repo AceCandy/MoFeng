@@ -15,12 +15,12 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.config import settings
-from ..db.session import AsyncSessionLocal
+from ..models.novel import Chapter
 from ..models.rag import RagChunk, RagSummary
 
 logger = logging.getLogger(__name__)
@@ -56,6 +56,7 @@ class VectorStoreService:
 
     async def query_chunks(
         self,
+        session: AsyncSession,
         *,
         project_id: str,
         embedding: Sequence[float],
@@ -72,19 +73,19 @@ class VectorStoreService:
         distance = RagChunk.embedding.cosine_distance(embedding).label("distance")
         stmt = (
             select(RagChunk, distance)
-            .where(RagChunk.project_id == project_id)
+            .where(RagChunk.project_id == project_id, RagChunk.is_active.is_(True))
             .order_by(distance)
             .limit(top_k)
         )
         try:
-            async with AsyncSessionLocal() as session:
-                result = await session.execute(stmt)
+            result = await session.execute(stmt)
+            rows = result.all()
         except Exception as exc:
             logger.warning("向量检索剧情片段失败: %s", exc)
             raise
 
         items: List[RetrievedChunk] = []
-        for row in result.all():
+        for row in rows:
             chunk = row[0]
             items.append(
                 RetrievedChunk(
@@ -99,6 +100,7 @@ class VectorStoreService:
 
     async def query_summaries(
         self,
+        session: AsyncSession,
         *,
         project_id: str,
         embedding: Sequence[float],
@@ -115,19 +117,19 @@ class VectorStoreService:
         distance = RagSummary.embedding.cosine_distance(embedding).label("distance")
         stmt = (
             select(RagSummary, distance)
-            .where(RagSummary.project_id == project_id)
+            .where(RagSummary.project_id == project_id, RagSummary.is_active.is_(True))
             .order_by(distance)
             .limit(top_k)
         )
         try:
-            async with AsyncSessionLocal() as session:
-                result = await session.execute(stmt)
+            result = await session.execute(stmt)
+            rows = result.all()
         except Exception as exc:
             logger.warning("向量检索章节摘要失败: %s", exc)
             raise
 
         items: List[RetrievedSummary] = []
-        for row in result.all():
+        for row in rows:
             summary = row[0]
             items.append(
                 RetrievedSummary(
@@ -141,10 +143,11 @@ class VectorStoreService:
 
     async def upsert_chunks(
         self,
+        session: AsyncSession,
         *,
         records: Iterable[Dict[str, Any]],
     ) -> None:
-        """批量写入章节片段，供后续检索使用。"""
+        """在调用方事务内批量写入章节片段。"""
         if not settings.vector_store_enabled:
             return
 
@@ -152,29 +155,16 @@ class VectorStoreService:
         if not payload:
             return
 
-        async with AsyncSessionLocal() as session:
-            try:
-                if not await self._upsert_chunks_in_session(session, payload):
-                    await session.rollback()
-                    return
-                await session.commit()
-            except Exception:
-                logger.error("写入 rag_chunks 失败", exc_info=True)
-                await session.rollback()
-                raise
-            logger.debug(
-                "已写入章节片段: project=%s chapter=%s count=%d",
-                payload[0].get("project_id"),
-                payload[0].get("chapter_number"),
-                len(payload),
-            )
+        if not await self._upsert_chunks_in_session(session, payload):
+            raise ValueError("章节正文 embedding 维度与现有向量不一致")
 
     async def upsert_summaries(
         self,
+        session: AsyncSession,
         *,
         records: Iterable[Dict[str, Any]],
     ) -> None:
-        """同步章节摘要向量，供摘要层检索使用。"""
+        """在调用方事务内同步章节摘要向量。"""
         if not settings.vector_store_enabled:
             return
 
@@ -182,22 +172,8 @@ class VectorStoreService:
         if not payload:
             return
 
-        async with AsyncSessionLocal() as session:
-            try:
-                if not await self._upsert_summaries_in_session(session, payload):
-                    await session.rollback()
-                    return
-                await session.commit()
-            except Exception:
-                logger.error("写入 rag_summaries 失败", exc_info=True)
-                await session.rollback()
-                raise
-            logger.debug(
-                "已写入章节摘要: project=%s chapter=%s count=%d",
-                payload[0].get("project_id"),
-                payload[0].get("chapter_number"),
-                len(payload),
-            )
+        if not await self._upsert_summaries_in_session(session, payload):
+            raise ValueError("章节摘要 embedding 维度与现有向量不一致")
 
     async def apply_chapter_projection(
         self,
@@ -205,40 +181,101 @@ class VectorStoreService:
         *,
         project_id: str,
         chapter_number: int,
+        revision: int,
+        artifact_generation: str,
+        projection_run_id: Optional[str],
+        expected_source_hash: Optional[str],
+        expected_source_generation: Optional[str],
         chunk_records: Iterable[Dict[str, Any]],
         summary_records: Iterable[Dict[str, Any]],
+        activate: bool = True,
     ) -> None:
-        """在调用方事务内原子替换单章的正文与摘要向量。"""
+        """写入 generation；active owner 才在同一事务切换可见性。"""
 
         if not settings.vector_store_enabled:
             return
+        if activate and revision > 0:
+            if not expected_source_hash or not expected_source_generation:
+                raise ValueError("章节向量激活缺少 canonical identity")
+            current_chapter_id = await session.scalar(
+                select(Chapter.id)
+                .where(
+                    Chapter.project_id == project_id,
+                    Chapter.chapter_number == chapter_number,
+                    Chapter.current_revision == revision,
+                    Chapter.source_hash == expected_source_hash,
+                    Chapter.projection_generation == expected_source_generation,
+                    Chapter.tombstone_revision < revision,
+                )
+                .with_for_update()
+            )
+            if current_chapter_id is None:
+                raise ValueError("章节向量激活条件已失效")
         chunks = list(chunk_records)
         summaries = list(summary_records)
         for item in [*chunks, *summaries]:
             if item.get("project_id") != project_id or item.get("chapter_number") != chapter_number:
                 raise ValueError("章节向量记录与目标章节不匹配")
+            if (
+                int(item.get("source_revision", 0)) != revision
+                or item.get("artifact_generation") != artifact_generation
+                or item.get("projection_run_id") != projection_run_id
+            ):
+                raise ValueError("章节向量记录与目标 revision/generation 不匹配")
+
+        if not await self._upsert_chunks_in_session(session, chunks, is_active=False):
+            raise ValueError("章节正文 embedding 维度与现有向量不一致")
+        if not await self._upsert_summaries_in_session(session, summaries, is_active=False):
+            raise ValueError("章节摘要 embedding 维度与现有向量不一致")
+
+        if not activate:
+            return
 
         await session.execute(
-            delete(RagChunk).where(
+            update(RagChunk)
+            .where(
                 RagChunk.project_id == project_id,
                 RagChunk.chapter_number == chapter_number,
+                RagChunk.is_active.is_(True),
+                RagChunk.artifact_generation != artifact_generation,
             )
+            .values(is_active=False)
         )
         await session.execute(
-            delete(RagSummary).where(
+            update(RagSummary)
+            .where(
                 RagSummary.project_id == project_id,
                 RagSummary.chapter_number == chapter_number,
+                RagSummary.is_active.is_(True),
+                RagSummary.artifact_generation != artifact_generation,
             )
+            .values(is_active=False)
         )
-        if not await self._upsert_chunks_in_session(session, chunks):
-            raise ValueError("章节正文 embedding 维度与现有向量不一致")
-        if not await self._upsert_summaries_in_session(session, summaries):
-            raise ValueError("章节摘要 embedding 维度与现有向量不一致")
+        await session.execute(
+            update(RagChunk)
+            .where(
+                RagChunk.project_id == project_id,
+                RagChunk.chapter_number == chapter_number,
+                RagChunk.artifact_generation == artifact_generation,
+            )
+            .values(is_active=True)
+        )
+        await session.execute(
+            update(RagSummary)
+            .where(
+                RagSummary.project_id == project_id,
+                RagSummary.chapter_number == chapter_number,
+                RagSummary.artifact_generation == artifact_generation,
+            )
+            .values(is_active=True)
+        )
 
     async def _upsert_chunks_in_session(
         self,
         session: AsyncSession,
         payload: List[Dict[str, Any]],
+        *,
+        is_active: Optional[bool] = None,
     ) -> bool:
         if not payload:
             return True
@@ -256,6 +293,10 @@ class VectorStoreService:
                     "content": item["content"],
                     "embedding": item["embedding"],
                     "meta": item.get("metadata") or {},
+                    "source_revision": int(item.get("source_revision", 0)),
+                    "artifact_generation": item.get("artifact_generation", "legacy"),
+                    "projection_run_id": item.get("projection_run_id"),
+                    "is_active": bool(item.get("is_active", True)) if is_active is None else is_active,
                 }
                 for item in payload
             ]
@@ -267,6 +308,10 @@ class VectorStoreService:
                 "embedding": stmt.excluded.embedding,
                 "metadata": stmt.excluded["metadata"],
                 "chapter_title": stmt.excluded.chapter_title,
+                "source_revision": stmt.excluded.source_revision,
+                "artifact_generation": stmt.excluded.artifact_generation,
+                "projection_run_id": stmt.excluded.projection_run_id,
+                "is_active": stmt.excluded.is_active,
             },
         )
         await session.execute(stmt)
@@ -276,6 +321,8 @@ class VectorStoreService:
         self,
         session: AsyncSession,
         payload: List[Dict[str, Any]],
+        *,
+        is_active: Optional[bool] = None,
     ) -> bool:
         if not payload:
             return True
@@ -291,6 +338,10 @@ class VectorStoreService:
                     "title": item["title"],
                     "summary": item["summary"],
                     "embedding": item["embedding"],
+                    "source_revision": int(item.get("source_revision", 0)),
+                    "artifact_generation": item.get("artifact_generation", "legacy"),
+                    "projection_run_id": item.get("projection_run_id"),
+                    "is_active": bool(item.get("is_active", True)) if is_active is None else is_active,
                 }
                 for item in payload
             ]
@@ -301,40 +352,14 @@ class VectorStoreService:
                 "summary": stmt.excluded.summary,
                 "embedding": stmt.excluded.embedding,
                 "title": stmt.excluded.title,
+                "source_revision": stmt.excluded.source_revision,
+                "artifact_generation": stmt.excluded.artifact_generation,
+                "projection_run_id": stmt.excluded.projection_run_id,
+                "is_active": stmt.excluded.is_active,
             },
         )
         await session.execute(stmt)
         return True
-
-    async def delete_by_chapters(self, project_id: str, chapter_numbers: Sequence[int]) -> None:
-        """根据章节编号批量删除对应的上下文数据。"""
-        if not settings.vector_store_enabled or not chapter_numbers:
-            return
-
-        async with AsyncSessionLocal() as session:
-            try:
-                await session.execute(
-                    delete(RagChunk).where(
-                        RagChunk.project_id == project_id,
-                        RagChunk.chapter_number.in_(list(chapter_numbers)),
-                    )
-                )
-                await session.execute(
-                    delete(RagSummary).where(
-                        RagSummary.project_id == project_id,
-                        RagSummary.chapter_number.in_(list(chapter_numbers)),
-                    )
-                )
-                await session.commit()
-                logger.info(
-                    "已删除章节向量: project=%s chapters=%s",
-                    project_id,
-                    list(chapter_numbers),
-                )
-            except Exception as exc:  # pragma: no cover - 删除失败时记录日志
-                logger.error("删除章节向量失败: project=%s chapters=%s error=%s", project_id, chapter_numbers, exc)
-                await session.rollback()
-                raise
 
     async def _assert_dimension_consistent(
         self,

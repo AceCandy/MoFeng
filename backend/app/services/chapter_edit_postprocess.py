@@ -10,7 +10,7 @@ from sqlalchemy import select
 from ..models.novel import ChapterOutline
 from ..repositories.novel_repository import NovelRepository
 from ..schemas.chapter_context import stable_digest
-from ..schemas.job import ChapterEditPostprocessJobPayload
+from ..schemas.job import ChapterEditPostprocessJobPayload, ChapterFinalizeJobPayload
 from ..utils.json_utils import remove_think_tags
 from .chapter_ingest_service import ChapterIngestionService, PreparedChapterIngestion
 from .foreshadowing_sync_service import (
@@ -39,6 +39,22 @@ class ChapterPostprocessSnapshot:
 
 
 ActivityCall = Callable[[], Awaitable[dict[str, Any]]]
+
+
+def _artifact_lineage(
+    payload: ChapterEditPostprocessJobPayload,
+) -> tuple[int, str, Optional[str], Optional[str]]:
+    """把 canonical legacy payload 映射为派生产物 lineage。"""
+
+    if not isinstance(payload, ChapterFinalizeJobPayload) or payload.chapter_revision_id is None:
+        return 0, "legacy", None, None
+    if (
+        payload.revision is None
+        or payload.source_hash is None
+        or payload.source_generation is None
+    ):
+        raise PermanentJobError("invalid_legacy_lineage", "章节定稿任务缺少 canonical lineage")
+    return payload.revision, "legacy", payload.source_hash, payload.source_generation
 
 
 async def _is_current(
@@ -149,17 +165,28 @@ def _superseded_outcome(payload: ChapterEditPostprocessJobPayload) -> JobOutcome
     )
 
 
-async def handle_chapter_edit_postprocess_job(context) -> JobOutcome:
+async def handle_chapter_edit_postprocess_job(
+    context,
+    *,
+    payload_override: Optional[ChapterEditPostprocessJobPayload] = None,
+    snapshot_override: Optional[ChapterPostprocessSnapshot] = None,
+) -> JobOutcome:
     """计算外部结果，并在 job success 事务内 CAS 应用全部 PostgreSQL 投影。"""
 
-    try:
-        payload = ChapterEditPostprocessJobPayload.model_validate(context.lease.payload)
-    except ValidationError as exc:
-        raise PermanentJobError("invalid_chapter_edit_payload", "章节后处理任务参数无效") from exc
+    if payload_override is None:
+        try:
+            payload = ChapterEditPostprocessJobPayload.model_validate(context.lease.payload)
+        except ValidationError as exc:
+            raise PermanentJobError("invalid_chapter_edit_payload", "章节后处理任务参数无效") from exc
+    else:
+        payload = payload_override
     if context.lease.project_id != payload.project_id:
         raise PermanentJobError("chapter_edit_project_mismatch", "章节后处理任务项目不匹配")
 
-    snapshot = await _load_snapshot(context, payload)
+    revision, artifact_generation, expected_source_hash, expected_source_generation = (
+        _artifact_lineage(payload)
+    )
+    snapshot = snapshot_override or await _load_snapshot(context, payload)
     if snapshot is None:
         return _superseded_outcome(payload)
 
@@ -249,6 +276,9 @@ async def handle_chapter_edit_postprocess_job(context) -> JobOutcome:
                     content_hash=payload.content_hash,
                     summary=summary_text,
                     user_id=context.lease.user_id,
+                    revision=revision,
+                    artifact_generation=artifact_generation,
+                    projection_run_id=None,
                     embedding_provider=embed,
                 )
                 if not candidate.complete:
@@ -308,12 +338,20 @@ async def handle_chapter_edit_postprocess_job(context) -> JobOutcome:
                 session,
                 project_id=payload.project_id,
                 chapter_number=payload.chapter_number,
+                revision=revision,
+                artifact_generation=artifact_generation,
+                projection_run_id=None,
+                expected_source_hash=expected_source_hash,
+                expected_source_generation=expected_source_generation,
                 prepared=prepared,
             )
         stats = await ForeshadowingSyncService(session).apply_plan(
             project_id=payload.project_id,
             chapter=chapter,
             plan=foreshadowing_plan,
+            chapter_revision=revision,
+            artifact_generation=artifact_generation,
+            projection_run_id=None,
         )
         result["foreshadowing_sync"] = stats
 

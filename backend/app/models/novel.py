@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import JSON, BigInteger, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy import JSON, BigInteger, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base
@@ -171,6 +171,16 @@ class Chapter(Base):
     generation_step_total: Mapped[int] = mapped_column(Integer, default=0)
     generation_started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     word_count: Mapped[int] = mapped_column(Integer, default=0)
+    current_revision: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+    source_hash: Mapped[Optional[str]] = mapped_column(String(64))
+    required_projection_snapshot: Mapped[list[str]] = mapped_column(
+        JSON,
+        nullable=False,
+        default=list,
+        server_default=text("'[]'::json"),
+    )
+    projection_generation: Mapped[Optional[str]] = mapped_column(String(36))
+    tombstone_revision: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
     selected_version_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("chapter_versions.id", ondelete="SET NULL"), nullable=True
     )

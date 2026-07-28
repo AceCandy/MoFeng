@@ -47,7 +47,8 @@ from ...schemas.user import UserInDB
 from ...services.chapter_generation_trace_service import CN_TIMEZONE, ChapterGenerationTraceService
 from ...services.chapter_edit_service import ChapterEditService
 from ...services.chapter_finalize_service import ChapterFinalizeSubmissionService
-from ...services.chapter_ingest_service import ChapterIngestionService
+from ...services.chapter_projection_rollout import ChapterProjectionRolloutConflictError
+from ...services.chapter_projection_service import ChapterFinalizeConflictError
 from ...services.chapter_word_count_settings import count_chapter_words
 from ...services.job_service import JobService
 from ...services.llm_service import LLMService
@@ -147,9 +148,12 @@ async def _enqueue_chapter_finalize(
             skip_vector_update=skip_vector_update,
             idempotency_key=idempotency_key,
         )
+    except ChapterFinalizeConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ChapterProjectionRolloutConflictError as exc:
+        raise HTTPException(status_code=409, detail=exc.code) from exc
     except ValueError as exc:
-        status_code = 409 if "idempotency_key" in str(exc) else 400
-        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/advanced/generate", response_model=BackgroundTaskResponse, status_code=202)
@@ -595,14 +599,9 @@ async def delete_chapters(
     novel_service = NovelService(session)
     await novel_service.ensure_project_owner(project_id, current_user.id)
 
-    async def delete_vector_data(chapter_numbers: List[int]) -> None:
-        ingest_service = ChapterIngestionService()
-        await ingest_service.delete_chapters(project_id, chapter_numbers)
-
     await novel_service.delete_chapters(
         project_id,
         request.chapter_numbers,
-        delete_vector_data=delete_vector_data,
         delete_artifacts_confirmed=request.delete_artifacts_confirmed,
         confirmation_text=request.confirmation_text,
     )

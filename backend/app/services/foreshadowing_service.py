@@ -31,7 +31,10 @@ class ForeshadowingService:
         offset: int = 0,
     ) -> tuple[List[Foreshadowing], int]:
         """获取伏笔列表"""
-        query = select(Foreshadowing).where(Foreshadowing.project_id == project_id)
+        query = select(Foreshadowing).where(
+            Foreshadowing.project_id == project_id,
+            Foreshadowing.is_active.is_(True),
+        )
 
         if status:
             query = query.where(Foreshadowing.status == status)
@@ -39,7 +42,10 @@ class ForeshadowingService:
             query = query.where(Foreshadowing.type == foreshadowing_type)
 
         # 获取总数
-        count_query = select(func.count()).select_from(Foreshadowing).where(Foreshadowing.project_id == project_id)
+        count_query = select(func.count()).select_from(Foreshadowing).where(
+            Foreshadowing.project_id == project_id,
+            Foreshadowing.is_active.is_(True),
+        )
         if status:
             count_query = count_query.where(Foreshadowing.status == status)
         if foreshadowing_type:
@@ -60,7 +66,14 @@ class ForeshadowingService:
         reason: Optional[str] = None,
     ) -> Foreshadowing:
         """放弃伏笔"""
-        foreshadowing = await self.session.get(Foreshadowing, foreshadowing_id)
+        foreshadowing = (
+            await self.session.execute(
+                select(Foreshadowing).where(
+                    Foreshadowing.id == foreshadowing_id,
+                    Foreshadowing.is_active.is_(True),
+                )
+            )
+        ).scalars().first()
         if not foreshadowing:
             raise ValueError(f"伏笔不存在: {foreshadowing_id}")
 
@@ -83,6 +96,7 @@ class ForeshadowingService:
                 Foreshadowing.project_id == project_id,
                 Foreshadowing.status.in_(ACTIVE_FORESHADOWING_STATUSES),
                 Foreshadowing.chapter_number < current_chapter_number,
+                Foreshadowing.is_active.is_(True),
             )
         ).order_by(Foreshadowing.chapter_number)
 

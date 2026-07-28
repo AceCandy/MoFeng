@@ -6,7 +6,7 @@
 from datetime import datetime, timezone
 from typing import Optional, List
 from sqlalchemy import (
-    Column, Integer, BigInteger, String, Text, JSON, 
+    Column, Integer, BigInteger, String, Text, JSON,
     ForeignKey, DateTime, Boolean, Float, Enum
 )
 from sqlalchemy.orm import relationship
@@ -45,6 +45,13 @@ class CharacterState(Base):
     
     # 状态快照（章节结束时）
     chapter_number = Column(Integer, nullable=False, index=True)
+    chapter_revision = Column(BigInteger, nullable=False, default=0, server_default="0")
+    artifact_generation = Column(String(36), nullable=False, default="legacy", server_default="legacy")
+    projection_run_id = Column(
+        String(36),
+        ForeignKey("chapter_projection_runs.id", ondelete="SET NULL"),
+    )
+    is_active = Column(Boolean, nullable=False, default=True, server_default="true")
     
     # 位置状态
     location = Column(String(255))  # 当前位置

@@ -1,11 +1,26 @@
 # AIMETA P=LLM配置模式_模型配置请求响应|R=LLM配置结构|NR=不含业务逻辑|E=LLMConfigSchema|X=internal|A=Pydantic模式|D=pydantic|S=none|RD=./README.ai
-from typing import Dict, List, Literal, Optional
+from decimal import Decimal
+from typing import Annotated, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field, HttpUrl, model_validator
+from pydantic import BaseModel, Field, HttpUrl, StringConstraints, model_validator
 
 
 ProviderType = Literal["openai_compatible", "anthropic", "ollama", "custom"]
 TTSProtocol = Literal["mimo_chat_audio", "openai_speech"]
+PricePerMillion = Annotated[
+    Decimal,
+    Field(ge=0, max_digits=24, decimal_places=12),
+]
+CurrencyCode = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        to_upper=True,
+        min_length=3,
+        max_length=3,
+        pattern=r"^[A-Za-z]{3}$",
+    ),
+]
 
 
 class LLMConfigBase(BaseModel):
@@ -94,6 +109,11 @@ class UserAIModelBase(BaseModel):
     tts_protocol: Optional[TTSProtocol] = None
     tts_voice: Optional[str] = Field(default=None, max_length=120)
     tts_speed: float = Field(default=1.0, ge=0.5, le=2.0)
+    input_price_per_million: Optional[PricePerMillion] = None
+    output_price_per_million: Optional[PricePerMillion] = None
+    cached_input_price_per_million: Optional[PricePerMillion] = None
+    cache_write_input_price_per_million: Optional[PricePerMillion] = None
+    pricing_currency: Optional[CurrencyCode] = None
     is_enabled: bool = True
     sort_order: int = 0
 
@@ -104,8 +124,6 @@ class UserAIModelBase(BaseModel):
         if self.capabilities.get("tts"):
             if not self.tts_protocol:
                 raise ValueError("TTS 模型必须选择语音协议")
-            if not (self.tts_voice or "").strip():
-                raise ValueError("TTS 模型必须配置音色")
         return self
 
 
@@ -125,6 +143,11 @@ class UserAIModelUpdate(BaseModel):
     tts_protocol: Optional[TTSProtocol] = None
     tts_voice: Optional[str] = Field(default=None, max_length=120)
     tts_speed: Optional[float] = Field(default=None, ge=0.5, le=2.0)
+    input_price_per_million: Optional[PricePerMillion] = None
+    output_price_per_million: Optional[PricePerMillion] = None
+    cached_input_price_per_million: Optional[PricePerMillion] = None
+    cache_write_input_price_per_million: Optional[PricePerMillion] = None
+    pricing_currency: Optional[CurrencyCode] = None
     is_enabled: Optional[bool] = None
     sort_order: Optional[int] = None
 
@@ -143,6 +166,11 @@ class UserAIModelRead(BaseModel):
     tts_protocol: Optional[TTSProtocol] = None
     tts_voice: Optional[str] = None
     tts_speed: float
+    input_price_per_million: Optional[Decimal] = None
+    output_price_per_million: Optional[Decimal] = None
+    cached_input_price_per_million: Optional[Decimal] = None
+    cache_write_input_price_per_million: Optional[Decimal] = None
+    pricing_currency: Optional[CurrencyCode] = None
     is_enabled: bool
     sort_order: int
 

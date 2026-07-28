@@ -5,10 +5,12 @@
 import json
 import os
 from dataclasses import asdict, dataclass
-from typing import AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional
 
 import httpx
 from openai import AsyncOpenAI
+
+from .ai_telemetry import normalize_anthropic_usage, normalize_openai_usage
 
 
 @dataclass
@@ -96,7 +98,7 @@ class LLMClient:
         top_p: Optional[float],
         max_tokens: Optional[int],
         timeout: int,
-    ) -> AsyncGenerator[Dict[str, Optional[str]], None]:
+    ) -> AsyncGenerator[Dict[str, Any], None]:
         url = self._anthropic_messages_url(self._base_url)
         headers = {
             "Content-Type": "application/json",
@@ -111,6 +113,7 @@ class LLMClient:
             max_tokens=max_tokens,
         )
 
+        cumulative_usage: Dict[str, Any] = {}
         async with httpx.AsyncClient(timeout=timeout) as client:
             async with client.stream("POST", url, headers=headers, json=payload) as response:
                 response.raise_for_status()
@@ -123,7 +126,17 @@ class LLMClient:
                         continue
                     event = json.loads(data)
                     event_type = event.get("type")
-                    if event_type == "content_block_delta":
+                    if event_type == "message_start":
+                        message = event.get("message") or {}
+                        usage = message.get("usage") or {}
+                        if isinstance(usage, dict):
+                            cumulative_usage.update(usage)
+                            yield {
+                                "content": None,
+                                "finish_reason": None,
+                                "usage": normalize_anthropic_usage(cumulative_usage).to_dict(),
+                            }
+                    elif event_type == "content_block_delta":
                         delta = event.get("delta") or {}
                         text = delta.get("text")
                         if text:
@@ -131,8 +144,19 @@ class LLMClient:
                     elif event_type == "message_delta":
                         delta = event.get("delta") or {}
                         finish_reason = delta.get("stop_reason")
-                        if finish_reason:
-                            yield {"content": None, "finish_reason": finish_reason}
+                        usage = event.get("usage") or {}
+                        normalized_usage = None
+                        if isinstance(usage, dict) and usage:
+                            cumulative_usage.update(usage)
+                            normalized_usage = normalize_anthropic_usage(cumulative_usage).to_dict()
+                        if finish_reason or normalized_usage is not None:
+                            chunk: Dict[str, Any] = {
+                                "content": None,
+                                "finish_reason": finish_reason,
+                            }
+                            if normalized_usage is not None:
+                                chunk["usage"] = normalized_usage
+                            yield chunk
                     elif event_type == "error":
                         error = event.get("error") or {}
                         raise RuntimeError(error.get("message") or "Anthropic API error")
@@ -147,7 +171,7 @@ class LLMClient:
         max_tokens: Optional[int] = None,
         timeout: int = 120,
         **kwargs,
-    ) -> AsyncGenerator[Dict[str, Optional[str]], None]:
+    ) -> AsyncGenerator[Dict[str, Any], None]:
         if self._provider_type == "anthropic":
             async for chunk in self._stream_anthropic_chat(
                 messages=messages,
@@ -165,6 +189,7 @@ class LLMClient:
             "messages": [msg.to_dict() for msg in messages],
             "stream": True,
             "timeout": timeout,
+            "stream_options": {"include_usage": True},
             **kwargs,
         }
         if response_format:
@@ -178,15 +203,25 @@ class LLMClient:
 
         stream = await self._client.chat.completions.create(**payload)
         async for chunk in stream:
+            usage = getattr(chunk, "usage", None)
             if not chunk.choices:
+                if usage is not None:
+                    yield {
+                        "content": None,
+                        "finish_reason": None,
+                        "usage": normalize_openai_usage(usage).to_dict(),
+                    }
                 continue
             choice = chunk.choices[0]
-            if not choice.delta:
+            if not choice.delta and usage is None:
                 continue
-            yield {
-                "content": choice.delta.content,
+            result: Dict[str, Any] = {
+                "content": choice.delta.content if choice.delta else None,
                 "finish_reason": choice.finish_reason,
             }
+            if usage is not None:
+                result["usage"] = normalize_openai_usage(usage).to_dict()
+            yield result
 
     async def aclose(self) -> None:
         """关闭底层 AsyncOpenAI 客户端，释放连接池。"""

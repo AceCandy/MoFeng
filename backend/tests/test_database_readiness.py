@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 from uuid import uuid4
@@ -9,7 +10,7 @@ from uuid import uuid4
 import pytest
 import sqlalchemy as sa
 from alembic import command
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncConnection, async_sessionmaker, create_async_engine
 
 from app.db import migration as migration_module
 from app.core.config import settings
@@ -87,6 +88,12 @@ def _upgrade_to_revision(connection, database_url: str, revision: str) -> None:
     config = build_alembic_config(database_url)
     config.attributes["connection"] = connection
     command.upgrade(config, revision)
+
+
+def _downgrade_to_revision(connection, database_url: str, revision: str) -> None:
+    config = build_alembic_config(database_url)
+    config.attributes["connection"] = connection
+    command.downgrade(config, revision)
 
 
 def test_readiness_requires_schema_head_and_every_bootstrap_contract() -> None:
@@ -235,10 +242,10 @@ def test_metadata_manifest_captures_check_constraints() -> None:
     assert manifest["tables"][0]["check_constraints"] == ["quantity >= 0"]
 
 
-def test_registered_legacy_fingerprint_matches_current_business_metadata() -> None:
+def test_current_metadata_is_not_registered_as_historical_legacy_schema() -> None:
     fingerprint = canonical_schema_fingerprint(metadata_schema_manifest(Base.metadata))
 
-    assert fingerprint in KNOWN_LEGACY_BASELINES
+    assert fingerprint not in KNOWN_LEGACY_BASELINES
 
 
 @pytest.mark.parametrize(
@@ -340,6 +347,244 @@ async def test_postgres_empty_and_current_database_lifecycle(
             assert (await check_database_readiness(engine)).ready is True
         finally:
             await engine.dispose()
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_concurrent_postgres_migrations_are_serialized_by_advisory_lock(
+    _pg_engine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_acquire_lock = migration_module._acquire_migration_lock
+    first_locked = asyncio.Event()
+    second_waiting = asyncio.Event()
+    release_first = asyncio.Event()
+    invocation_count = 0
+    backend_pids: dict[str, int] = {}
+
+    async def observe_lock(connection: AsyncConnection) -> None:
+        nonlocal invocation_count
+        invocation_count += 1
+        if invocation_count == 1:
+            await original_acquire_lock(connection)
+            backend_pids["first"] = int(
+                await connection.scalar(sa.text("SELECT pg_backend_pid()"))
+            )
+            first_locked.set()
+            await release_first.wait()
+            return
+
+        backend_pids["second"] = int(
+            await connection.scalar(sa.text("SELECT pg_backend_pid()"))
+        )
+        second_waiting.set()
+        await original_acquire_lock(connection)
+
+    monkeypatch.setattr(migration_module, "_acquire_migration_lock", observe_lock)
+
+    async with _temporary_postgres_database(_pg_engine) as database_url:
+        observer_engine = create_async_engine(database_url)
+        tasks: list[asyncio.Task[None]] = []
+        blocked_by_first = False
+        try:
+            tasks.append(asyncio.create_task(run_migrations(database_url)))
+            await asyncio.wait_for(first_locked.wait(), timeout=10)
+            tasks.append(asyncio.create_task(run_migrations(database_url)))
+            await asyncio.wait_for(second_waiting.wait(), timeout=10)
+
+            async with observer_engine.connect() as connection:
+                for _ in range(100):
+                    blocking_pids = await connection.scalar(
+                        sa.text("SELECT pg_blocking_pids(:pid)"),
+                        {"pid": backend_pids["second"]},
+                    )
+                    if backend_pids["first"] in (blocking_pids or []):
+                        blocked_by_first = True
+                        break
+                    await asyncio.sleep(0.01)
+
+            release_first.set()
+            await asyncio.wait_for(asyncio.gather(*tasks), timeout=30)
+
+            async with observer_engine.connect() as connection:
+                revisions = (
+                    await connection.execute(
+                        sa.text("SELECT version_num FROM alembic_version")
+                    )
+                ).scalars().all()
+                table_names = await connection.run_sync(
+                    lambda sync_connection: set(
+                        sa.inspect(sync_connection).get_table_names()
+                    )
+                )
+        finally:
+            release_first.set()
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            await observer_engine.dispose()
+
+        assert backend_pids["first"] != backend_pids["second"]
+        assert blocked_by_first is True
+        assert revisions == ["f2a6c9d4e8b1"]
+        assert {
+            "chapter_revisions",
+            "chapter_outbox_events",
+            "chapter_projection_runs",
+        } <= table_names
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_head_schema_accepts_pre_projection_chapter_insert(_pg_engine) -> None:
+    async with _temporary_postgres_database(_pg_engine) as database_url:
+        await run_migrations(database_url)
+        engine = create_async_engine(database_url)
+        try:
+            async with engine.begin() as connection:
+                await connection.execute(
+                    sa.text(
+                        "INSERT INTO users "
+                        "(id, username, hashed_password, is_admin, is_active) "
+                        "VALUES (7003, 'old-chapter-writer', 'secret', false, true)"
+                    )
+                )
+                await connection.execute(
+                    sa.text(
+                        "INSERT INTO novel_projects (id, user_id, title, status) "
+                        "VALUES ('old-chapter-project', 7003, '旧写入兼容项目', 'draft')"
+                    )
+                )
+                await connection.execute(
+                    sa.text(
+                        "INSERT INTO chapters "
+                        "(id, project_id, chapter_number, status, generation_progress, "
+                        "generation_step_index, generation_step_total, word_count) "
+                        "VALUES (8102, 'old-chapter-project', 1, 'pending', 0, 0, 0, 0)"
+                    )
+                )
+
+            async with engine.connect() as connection:
+                chapter = (
+                    await connection.execute(
+                        sa.text(
+                            "SELECT current_revision, source_hash, "
+                            "required_projection_snapshot, projection_generation, "
+                            "tombstone_revision FROM chapters WHERE id = 8102"
+                        )
+                    )
+                ).mappings().one()
+        finally:
+            await engine.dispose()
+
+        assert chapter == {
+            "current_revision": 0,
+            "source_hash": None,
+            "required_projection_snapshot": [],
+            "projection_generation": None,
+            "tombstone_revision": 0,
+        }
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_projection_migration_rejects_destructive_downgrade(_pg_engine) -> None:
+    async with _temporary_postgres_database(_pg_engine) as database_url:
+        await run_migrations(database_url)
+        engine = create_async_engine(database_url)
+        try:
+            async with engine.begin() as connection:
+                await connection.execute(
+                    sa.text(
+                        "INSERT INTO users "
+                        "(id, username, hashed_password, is_admin, is_active) "
+                        "VALUES (7999, 'rollback-floor-user', 'secret', true, true)"
+                    )
+                )
+                await connection.execute(
+                    sa.text(
+                        "INSERT INTO background_tasks "
+                        "(id, user_id, task_type, title, status, progress, payload, "
+                        "result, error, log_entries, stream_id) VALUES "
+                        "('rollback-floor-job', 7999, 'chapter_projection_rag', "
+                        "'rollback floor', 'queued', 0, '{}'::json, NULL, NULL, "
+                        "'[]'::json, 'rollback-floor-job')"
+                    )
+                )
+                await connection.execute(
+                    sa.text(
+                        "INSERT INTO job_activities "
+                        "(id, job_id, activity_key, side_effect_class, status, "
+                        "provider_request_key, attempt, fencing_token, request_payload, "
+                        "started_at) VALUES "
+                        "('rollback-floor-activity', 'rollback-floor-job', 'embedding', "
+                        "'idempotent_external', 'succeeded', 'rollback-floor-provider', "
+                        "1, 1, '{}'::json, now())"
+                    )
+                )
+                await connection.execute(
+                    sa.text(
+                        "INSERT INTO ai_usage_records "
+                        "(job_activity_id, job_id, user_id, provider_type, model_name, "
+                        "stage, usage_complete, cost_known, cost_unknown_reason) VALUES "
+                        "('rollback-floor-activity', 'rollback-floor-job', 7999, "
+                        "'openai_compatible', 'rollback-model', 'embedding', false, "
+                        "false, 'usage_unavailable')"
+                    )
+                )
+                await connection.execute(
+                    sa.text(
+                        "INSERT INTO chapter_projection_retention_audits "
+                        "(id, operator_user_id, project_id, chapter_number, revision, "
+                        "artifact_generation, artifact_kind, mode, status, idempotency_key, "
+                        "reason, request_scope, result) VALUES "
+                        "('rollback-floor-retention', 7999, 'deleted-project', 1, 1, "
+                        "'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'rag', 'purge', "
+                        "'completed', 'rollback-floor-retention', '保留审计', "
+                        "'{}'::json, '{}'::json)"
+                    )
+                )
+
+            with pytest.raises(RuntimeError, match="binary rollback floor"):
+                async with engine.begin() as connection:
+                    await connection.run_sync(
+                        _downgrade_to_revision,
+                        database_url,
+                        "d4b8f1a2c3e7",
+                    )
+
+            async with engine.connect() as connection:
+                revision = await connection.scalar(
+                    sa.text("SELECT version_num FROM alembic_version")
+                )
+                table_names = await connection.run_sync(
+                    lambda sync_connection: set(
+                        sa.inspect(sync_connection).get_table_names()
+                    )
+                )
+                usage_count = await connection.scalar(
+                    sa.text(
+                        "SELECT count(*) FROM ai_usage_records "
+                        "WHERE job_activity_id = 'rollback-floor-activity'"
+                    )
+                )
+                retention_count = await connection.scalar(
+                    sa.text(
+                        "SELECT count(*) FROM chapter_projection_retention_audits "
+                        "WHERE id = 'rollback-floor-retention'"
+                    )
+                )
+        finally:
+            await engine.dispose()
+
+        assert revision == "f2a6c9d4e8b1"
+        assert {
+            "chapter_revisions",
+            "chapter_outbox_events",
+            "chapter_projection_runs",
+            "ai_usage_records",
+            "chapter_projection_retention_audits",
+        } <= table_names
+        assert usage_count == 1
+        assert retention_count == 1
 
 
 @pytest.mark.asyncio(loop_scope="session")

@@ -2,16 +2,19 @@
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Any, Optional
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
     Index,
     Integer,
     JSON,
+    Numeric,
     String,
     UniqueConstraint,
     func,
@@ -159,6 +162,83 @@ class JobActivity(Base):
         nullable=False,
         server_default=func.now(),
         onupdate=func.now(),
+    )
+
+
+class AIUsageRecord(Base):
+    """与 durable activity 1:1 的供应商中立 token/cost 审计。"""
+
+    __tablename__ = "ai_usage_records"
+    __table_args__ = (
+        CheckConstraint(
+            "input_tokens IS NULL OR input_tokens >= 0",
+            name="ck_ai_usage_input_tokens",
+        ),
+        CheckConstraint(
+            "output_tokens IS NULL OR output_tokens >= 0",
+            name="ck_ai_usage_output_tokens",
+        ),
+        CheckConstraint(
+            "total_tokens IS NULL OR total_tokens >= 0",
+            name="ck_ai_usage_total_tokens",
+        ),
+        CheckConstraint(
+            "cost_amount IS NULL OR cost_amount >= 0",
+            name="ck_ai_usage_cost_amount",
+        ),
+        Index("ix_ai_usage_project_created", "project_id", "created_at"),
+        Index("ix_ai_usage_provider_model", "provider_type", "model_name"),
+    )
+
+    job_activity_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("job_activities.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    job_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("background_tasks.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    project_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("novel_projects.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    provider_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    model_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    model_id: Mapped[Optional[int]] = mapped_column(Integer)
+    stage: Mapped[str] = mapped_column(String(64), nullable=False)
+    input_tokens: Mapped[Optional[int]] = mapped_column(BigInteger)
+    output_tokens: Mapped[Optional[int]] = mapped_column(BigInteger)
+    total_tokens: Mapped[Optional[int]] = mapped_column(BigInteger)
+    cached_input_tokens: Mapped[Optional[int]] = mapped_column(BigInteger)
+    cache_write_input_tokens: Mapped[Optional[int]] = mapped_column(BigInteger)
+    reasoning_tokens: Mapped[Optional[int]] = mapped_column(BigInteger)
+    usage_complete: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
+    cost_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(24, 12))
+    cost_currency: Mapped[Optional[str]] = mapped_column(String(3))
+    cost_known: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false",
+    )
+    cost_unknown_reason: Mapped[Optional[str]] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
     )
 
 

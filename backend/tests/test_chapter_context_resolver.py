@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -494,6 +495,55 @@ async def test_rag_snapshot_is_normalized_and_filters_future_chapters() -> None:
     assert related.relevance_score == 0.12
     assert related.matched_content == "地图上标出了旧山道。"
     assert context.rag.value.retrieval_snapshot_id != "missing"
+    vector_store.query_chunks.assert_awaited_once_with(
+        resolver.session,
+        project_id="project-1",
+        embedding=[0.1, 0.2],
+        top_k=resolver.policy.max_rag_chunks,
+    )
+    vector_store.query_summaries.assert_awaited_once_with(
+        resolver.session,
+        project_id="project-1",
+        embedding=[0.1, 0.2],
+        top_k=resolver.policy.max_rag_summaries,
+    )
+
+
+@pytest.mark.asyncio
+async def test_rag_vector_queries_do_not_overlap_on_shared_session() -> None:
+    llm_service = AsyncMock()
+    llm_service.get_embedding.return_value = [0.1]
+    vector_store = AsyncMock()
+    chunks_running = False
+
+    async def query_chunks(*_args, **_kwargs):
+        nonlocal chunks_running
+        chunks_running = True
+        await asyncio.sleep(0)
+        chunks_running = False
+        return []
+
+    async def query_summaries(*_args, **_kwargs):
+        assert chunks_running is False
+        return []
+
+    vector_store.query_chunks.side_effect = query_chunks
+    vector_store.query_summaries.side_effect = query_summaries
+    resolver = await _resolver(
+        _sources(),
+        llm_service=llm_service,
+        vector_store=vector_store,
+    )
+
+    context = await resolver.resolve(
+        project_id="project-1",
+        chapter_number=3,
+        user_id=1,
+        rag_enabled=True,
+        rag_query="旧山道",
+    )
+
+    assert context.rag.fallback == ContextFallback.RETRIEVAL_EMPTY
 
 
 @pytest.mark.asyncio

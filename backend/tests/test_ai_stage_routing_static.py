@@ -14,7 +14,7 @@ def test_core_user_facing_ai_calls_pass_stage_keys():
             'stage="concept_conversation"',
             'stage="world_blueprint"',
         ],
-        "app/api/routers/writer.py": [
+        "app/services/chapter_outline_task_runner.py": [
             'stage="chapter_outline"',
         ],
         "app/services/pipeline_orchestrator.py": [

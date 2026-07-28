@@ -9,6 +9,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from ..models.background_task import BackgroundTask
 from ..models.job import (
+    AIUsageRecord,
     JobActivity,
     JobEvent,
     JobEventRetention,
@@ -381,6 +382,11 @@ class JobRepository(BaseRepository[BackgroundTask]):
         self.session.add(activity)
         await self.session.flush()
         return activity
+
+    async def add_ai_usage(self, usage: AIUsageRecord) -> AIUsageRecord:
+        self.session.add(usage)
+        await self.session.flush()
+        return usage
 
     async def list_events(
         self,

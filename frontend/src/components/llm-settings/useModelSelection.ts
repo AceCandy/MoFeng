@@ -1,5 +1,5 @@
 import { type ComputedRef, type Ref } from 'vue'
-import type { UserAIModel, UserModelProvider } from '@/api/llm'
+import type { UserAIModel, UserAIModelPricing, UserModelProvider } from '@/api/llm'
 import type {
   useDeleteUserModelMutation,
   useSaveUserModelMutation,
@@ -387,6 +387,22 @@ export const useModelSelection = (options: UseModelSelectionOptions) => {
     }
   }
 
+  const saveModelPricing = async (model: UserAIModel, pricing: UserAIModelPricing) => {
+    try {
+      await updateUserModelMutation.mutateAsync({
+        id: model.id,
+        data: pricing,
+      })
+      await loadBundle()
+      setFeedback('success', '模型定价已保存。')
+      onSaved()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '未知错误'
+      setFeedback('error', `保存模型定价失败：${message}`)
+      throw error
+    }
+  }
+
   return {
     modelNamesForProvider,
     filteredModelNamesForProvider,
@@ -404,5 +420,6 @@ export const useModelSelection = (options: UseModelSelectionOptions) => {
     selectPendingTTSModel,
     saveTTSSelection,
     deleteModelForActiveSection,
+    saveModelPricing,
   }
 }

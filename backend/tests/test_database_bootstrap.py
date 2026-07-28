@@ -192,10 +192,10 @@ async def test_sqlite_bootstrap_concurrency_is_serialized(tmp_path: Path) -> Non
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_postgres_bootstrap_advisory_lock_executes_version_once(_pg_engine) -> None:
+async def test_postgres_bootstrap_advisory_lock_executes_version_once(isolated_pg) -> None:
     """真实 PostgreSQL 验证两个执行者不会重复执行同一 bootstrap version。"""
 
-    session_factory = async_sessionmaker(_pg_engine, expire_on_commit=False)
+    session_factory = isolated_pg.session_factory
     calls = 0
 
     async def handler(session, _config, _prompts_dir) -> None:

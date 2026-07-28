@@ -9,7 +9,7 @@ import logging
 from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, desc
+from sqlalchemy import select, and_, desc, func
 
 from ..models.memory_layer import (
     CharacterState,
@@ -43,14 +43,19 @@ class MemoryLayerService:
         query = select(CharacterState).where(
             and_(
                 CharacterState.project_id == project_id,
-                CharacterState.character_name == character_name
+                CharacterState.character_name == character_name,
+                CharacterState.is_active.is_(True),
             )
         )
         
         if chapter_number:
             query = query.where(CharacterState.chapter_number <= chapter_number)
         
-        query = query.order_by(desc(CharacterState.chapter_number)).limit(1)
+        query = query.order_by(
+            desc(CharacterState.chapter_number),
+            desc(CharacterState.chapter_revision),
+            desc(CharacterState.id),
+        ).limit(1)
         
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
@@ -65,12 +70,13 @@ class MemoryLayerService:
         subquery = (
             select(
                 CharacterState.character_name,
-                CharacterState.chapter_number.label("max_chapter")
+                func.max(CharacterState.chapter_number).label("max_chapter")
             )
             .where(
                 and_(
                     CharacterState.project_id == project_id,
-                    CharacterState.chapter_number <= chapter_number
+                    CharacterState.chapter_number <= chapter_number,
+                    CharacterState.is_active.is_(True),
                 )
             )
             .group_by(CharacterState.character_name)
@@ -86,7 +92,15 @@ class MemoryLayerService:
                     CharacterState.chapter_number == subquery.c.max_chapter
                 )
             )
-            .where(CharacterState.project_id == project_id)
+            .where(
+                CharacterState.project_id == project_id,
+                CharacterState.is_active.is_(True),
+            )
+            .order_by(
+                CharacterState.character_name,
+                CharacterState.chapter_revision.desc(),
+                CharacterState.id.desc(),
+            )
         )
         
         result = await self.db.execute(query)

@@ -23,6 +23,11 @@ from ..repositories.system_config_repository import SystemConfigRepository
 from ..services.llm_config_service import CHAT_STAGE_KEYS, EMBEDDING_STAGE_KEYS
 from ..services.prompt_service import PromptService
 from ..services.usage_service import UsageService
+from ..utils.ai_telemetry import (
+    AICallResult,
+    TokenUsage,
+    normalize_openai_embedding_usage,
+)
 from ..utils.llm_tool import ChatMessage, LLMClient
 
 logger = logging.getLogger(__name__)
@@ -277,6 +282,44 @@ class LLMService:
             stage=stage,
         )
 
+    @classmethod
+    async def get_llm_response_result_detached(
+        cls,
+        system_prompt: str,
+        conversation_history: List[Dict[str, str]],
+        *,
+        session_factory=AsyncSessionLocal,
+        temperature: float = 0.7,
+        user_id: Optional[int] = None,
+        timeout: float = 300.0,
+        response_format: Optional[str] = "json_object",
+        max_tokens: Optional[int] = None,
+        top_p: Optional[float] = None,
+        stage: str = "chapter_writing",
+        model_id: Optional[int] = None,
+    ) -> AICallResult[str]:
+        """短事务解析路由，并返回供 durable activity 持久化的完整结果。"""
+
+        async with session_factory() as session:
+            service = cls(session)
+            config = await service._resolve_llm_config(
+                user_id,
+                stage=stage,
+                model_id=model_id,
+            )
+        messages = [{"role": "system", "content": system_prompt}, *conversation_history]
+        return await service._stream_and_collect_with_config_result(
+            messages,
+            config=config,
+            temperature=temperature,
+            user_id=user_id,
+            timeout=timeout,
+            response_format=response_format,
+            max_tokens=max_tokens,
+            top_p=top_p,
+            stage=stage,
+        )
+
     async def stream_llm_response(
         self,
         system_prompt: str,
@@ -434,6 +477,86 @@ class LLMService:
             model_id=model_id,
         )
 
+    @classmethod
+    async def generate_detached(
+        cls,
+        prompt: str,
+        *,
+        session_factory=AsyncSessionLocal,
+        system_prompt: Optional[str] = None,
+        temperature: float = 0.7,
+        user_id: Optional[int] = None,
+        timeout: float = 300.0,
+        max_tokens: Optional[int] = None,
+        response_format: Optional[str] = None,
+        top_p: Optional[float] = None,
+        stage: str = "chapter_writing",
+        model_id: Optional[int] = None,
+    ) -> str:
+        """Resolve model configuration in a short session, then call the provider."""
+
+        async with session_factory() as session:
+            service = cls(session)
+            config = await service._resolve_llm_config(
+                user_id,
+                stage=stage,
+                model_id=model_id,
+            )
+        messages = [
+            {"role": "system", "content": system_prompt or "你是一位专业写作助手。"},
+            {"role": "user", "content": prompt},
+        ]
+        return await service._stream_and_collect_with_config(
+            messages,
+            config=config,
+            temperature=temperature,
+            user_id=user_id,
+            timeout=timeout,
+            response_format=response_format,
+            max_tokens=max_tokens,
+            top_p=top_p,
+            stage=stage,
+        )
+
+    @classmethod
+    async def generate_result_detached(
+        cls,
+        prompt: str,
+        *,
+        session_factory=AsyncSessionLocal,
+        system_prompt: Optional[str] = None,
+        temperature: float = 0.7,
+        user_id: Optional[int] = None,
+        timeout: float = 300.0,
+        max_tokens: Optional[int] = None,
+        response_format: Optional[str] = None,
+        top_p: Optional[float] = None,
+        stage: str = "chapter_writing",
+        model_id: Optional[int] = None,
+    ) -> AICallResult[str]:
+        async with session_factory() as session:
+            service = cls(session)
+            config = await service._resolve_llm_config(
+                user_id,
+                stage=stage,
+                model_id=model_id,
+            )
+        messages = [
+            {"role": "system", "content": system_prompt or "你是一位专业写作助手。"},
+            {"role": "user", "content": prompt},
+        ]
+        return await service._stream_and_collect_with_config_result(
+            messages,
+            config=config,
+            temperature=temperature,
+            user_id=user_id,
+            timeout=timeout,
+            response_format=response_format,
+            max_tokens=max_tokens,
+            top_p=top_p,
+            stage=stage,
+        )
+
     async def get_summary(
         self,
         chapter_content: str,
@@ -504,6 +627,42 @@ class LLMService:
             stage=stage,
         )
 
+    @classmethod
+    async def get_summary_result_detached(
+        cls,
+        chapter_content: str,
+        *,
+        session_factory=AsyncSessionLocal,
+        temperature: float = 0.2,
+        user_id: Optional[int] = None,
+        timeout: float = 180.0,
+        system_prompt: Optional[str] = None,
+        stage: str = "summary_memory",
+        model_id: Optional[int] = None,
+    ) -> AICallResult[str]:
+        async with session_factory() as session:
+            service = cls(session)
+            resolved_prompt = system_prompt or await PromptService(session).get_prompt("extraction")
+            if not resolved_prompt:
+                raise HTTPException(status_code=500, detail="未配置摘要提示词，请联系管理员配置 'extraction' 提示词")
+            config = await service._resolve_llm_config(
+                user_id,
+                stage=stage,
+                model_id=model_id,
+            )
+        messages = [
+            {"role": "system", "content": resolved_prompt},
+            {"role": "user", "content": chapter_content},
+        ]
+        return await service._stream_and_collect_with_config_result(
+            messages,
+            config=config,
+            temperature=temperature,
+            user_id=user_id,
+            timeout=timeout,
+            stage=stage,
+        )
+
     async def _get_user_llm_config_record(self, user_id: Optional[int]):
         """统一校验并读取用户级 LLM 配置，禁止回退系统默认配置。"""
         if not user_id:
@@ -562,6 +721,32 @@ class LLMService:
         top_p: Optional[float] = None,
         stage: str = "chapter_writing",
     ) -> str:
+        result = await self._stream_and_collect_with_config_result(
+            messages,
+            config=config,
+            temperature=temperature,
+            user_id=user_id,
+            timeout=timeout,
+            response_format=response_format,
+            max_tokens=max_tokens,
+            top_p=top_p,
+            stage=stage,
+        )
+        return result.value
+
+    async def _stream_and_collect_with_config_result(
+        self,
+        messages: List[Dict[str, str]],
+        *,
+        config: Dict[str, Any],
+        temperature: float,
+        user_id: Optional[int],
+        timeout: float,
+        response_format: Optional[str] = None,
+        max_tokens: Optional[int] = None,
+        top_p: Optional[float] = None,
+        stage: str = "chapter_writing",
+    ) -> AICallResult[str]:
         client = LLMClient(
             api_key=config["api_key"],
             base_url=config.get("base_url"),
@@ -572,6 +757,7 @@ class LLMService:
 
         full_response = ""
         finish_reason = None
+        usage = TokenUsage()
 
         logger.info(
             "Streaming LLM response: model=%s user_id=%s messages=%d",
@@ -585,6 +771,7 @@ class LLMService:
             for attempt in range(1, LLM_RETRY_MAX_ATTEMPTS + 1):
                 full_response = ""
                 finish_reason = None
+                usage = TokenUsage()
                 try:
                     async for part in client.stream_chat(
                         messages=chat_messages,
@@ -599,6 +786,8 @@ class LLMService:
                             full_response += part["content"]
                         if part.get("finish_reason"):
                             finish_reason = part["finish_reason"]
+                        if isinstance(part.get("usage"), dict):
+                            usage = TokenUsage.from_dict(part["usage"])
                     break
                 except Exception as exc:
                     if attempt < LLM_RETRY_MAX_ATTEMPTS and self._is_retryable_llm_error(exc):
@@ -659,7 +848,12 @@ class LLMService:
             user_id,
             len(full_response),
         )
-        return full_response
+        return AICallResult.from_config(
+            full_response,
+            config=config,
+            usage=usage,
+            stage=stage,
+        )
 
     async def _resolve_llm_config(
         self,
@@ -734,6 +928,11 @@ class LLMService:
             "model_id": model.id,
             "stage": stage,
             "provider_type": provider.provider_type,
+            "input_price_per_million": model.input_price_per_million,
+            "output_price_per_million": model.output_price_per_million,
+            "cached_input_price_per_million": model.cached_input_price_per_million,
+            "cache_write_input_price_per_million": model.cache_write_input_price_per_million,
+            "pricing_currency": model.pricing_currency,
         }
 
     async def _resolve_llm_config_with_policy(
@@ -929,6 +1128,32 @@ class LLMService:
             model=model,
         )
 
+    @classmethod
+    async def get_embedding_result_detached(
+        cls,
+        text: str,
+        *,
+        session_factory=AsyncSessionLocal,
+        user_id: Optional[int] = None,
+        model: Optional[str] = None,
+        stage: str = "rag_embedding",
+        model_id: Optional[int] = None,
+    ) -> AICallResult[List[float]]:
+        async with session_factory() as session:
+            service = cls(session)
+            routed = await service._resolve_embedding_route(
+                user_id=user_id,
+                stage=stage,
+                model_id=model_id,
+            )
+        return await service._get_embedding_with_route_result(
+            text,
+            routed=routed,
+            user_id=user_id,
+            model=model,
+            stage=stage,
+        )
+
     async def get_embedding(
         self,
         text: str,
@@ -960,7 +1185,35 @@ class LLMService:
         user_id: Optional[int],
         model: Optional[str],
     ) -> List[float]:
+        result = await self._get_embedding_with_route_result(
+            text,
+            routed=routed,
+            user_id=user_id,
+            model=model,
+            stage=str(routed.get("stage") or "rag_embedding"),
+        )
+        return result.value
+
+    async def _get_embedding_with_route_result(
+        self,
+        text: str,
+        *,
+        routed: Dict[str, Any],
+        user_id: Optional[int],
+        model: Optional[str],
+        stage: str,
+    ) -> AICallResult[List[float]]:
         """使用已解析的纯数据路由执行 embedding 网络调用。"""
+
+        usage = TokenUsage()
+
+        def result(value: List[float]) -> AICallResult[List[float]]:
+            return AICallResult.from_config(
+                value,
+                config=routed,
+                usage=usage,
+                stage=stage,
+            )
 
         user_embedding_model = routed["model"]
         user_embedding_base_url = routed.get("base_url")
@@ -1011,7 +1264,7 @@ class LLMService:
                 base_url=base_url,
             )
             if not embedding:
-                return []
+                return result([])
         else:
             api_key = user_embedding_api_key or user_llm_api_key
             base_url = user_embedding_base_url or user_llm_base_url
@@ -1041,18 +1294,20 @@ class LLMService:
                         exc,
                         exc_info=True,
                     )
-                    return []
+                    return result([])
                 finally:
                     await client.close()
                 if not response.data:
                     logger.warning("OpenAI 嵌入请求返回空数据: model=%s user_id=%s", target_model, user_id)
-                    return []
+                    return result([])
                 embedding = response.data[0].embedding
+                if getattr(response, "usage", None) is not None:
+                    usage = normalize_openai_embedding_usage(response.usage)
             else:
                 endpoint = self._normalize_openai_embeddings_url(base_url)
                 if not endpoint:
                     logger.error("OpenAI 嵌入请求失败: 未配置可用 base_url，且未提供 API Key")
-                    return []
+                    return result([])
                 try:
                     async with httpx.AsyncClient(timeout=30.0) as client:
                         response = await client.post(
@@ -1071,22 +1326,25 @@ class LLMService:
                         exc,
                         exc_info=True,
                     )
-                    return []
+                    return result([])
 
                 data = payload.get("data") if isinstance(payload, dict) else None
                 if not data:
                     logger.warning("OpenAI 无 Key 嵌入请求返回空数据: model=%s endpoint=%s", target_model, endpoint)
-                    return []
+                    return result([])
                 first = data[0] if isinstance(data, list) else None
                 if not isinstance(first, dict) or "embedding" not in first:
                     logger.warning("OpenAI 无 Key 嵌入响应结构异常: model=%s endpoint=%s", target_model, endpoint)
-                    return []
+                    return result([])
                 embedding = first["embedding"]
+                raw_usage = payload.get("usage") if isinstance(payload, dict) else None
+                if raw_usage is not None:
+                    usage = normalize_openai_embedding_usage(raw_usage)
 
         if not isinstance(embedding, list):
             embedding = list(embedding)
 
-        return embedding
+        return result(embedding)
 
     async def _get_config_value(self, key: str) -> Optional[str]:
         record = await self.system_config_repo.get_by_key(key)

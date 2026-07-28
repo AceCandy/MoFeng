@@ -30,12 +30,13 @@ def _tts_model_payload(**overrides):
     return values
 
 
-def test_tts_model_requires_protocol_and_voice():
+def test_tts_model_requires_protocol_but_allows_runtime_voice():
     with pytest.raises(ValidationError):
         UserAIModelCreate(**_tts_model_payload(tts_protocol=None))
 
-    with pytest.raises(ValidationError):
-        UserAIModelCreate(**_tts_model_payload(tts_voice=""))
+    payload = UserAIModelCreate(**_tts_model_payload(tts_voice=None))
+
+    assert payload.tts_voice is None
 
 
 @pytest.mark.parametrize("speed", [0.49, 2.01])
@@ -109,6 +110,11 @@ async def test_update_model_locks_before_reading_existing_model():
         tts_protocol="mimo_chat_audio",
         tts_voice="白桦",
         tts_speed=1.0,
+        input_price_per_million=None,
+        output_price_per_million=None,
+        cached_input_price_per_million=None,
+        cache_write_input_price_per_million=None,
+        pricing_currency=None,
         is_enabled=True,
         sort_order=0,
     )
@@ -199,6 +205,11 @@ async def test_update_model_rejects_incomplete_tts_configuration():
         tts_protocol=None,
         tts_voice=None,
         tts_speed=1.0,
+        input_price_per_million=None,
+        output_price_per_million=None,
+        cached_input_price_per_million=None,
+        cache_write_input_price_per_million=None,
+        pricing_currency=None,
         is_enabled=True,
         sort_order=0,
     )

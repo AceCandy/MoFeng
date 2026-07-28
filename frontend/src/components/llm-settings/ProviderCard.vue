@@ -94,6 +94,7 @@
       <SelectedModelChips
         :chips="selectedModelChipsForProvider(provider.id)"
         :active-section="activeSection"
+        :save-model-pricing="saveModelPricing"
         @delete="(modelName) => emit('delete-model', modelName)"
       />
     </template>
@@ -101,7 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import type { UserAIModel, UserModelProvider } from '@/api/llm'
+import type { UserAIModel, UserAIModelPricing, UserModelProvider } from '@/api/llm'
 import type { ProviderFetchState, ProviderForm, RoutingSection } from './modelRoutingTypes'
 import { providerTypeLabel } from './modelRoutingHelpers'
 import ProviderFormPanel from './ProviderFormPanel.vue'
@@ -116,6 +117,7 @@ defineProps<{
   providerFetchState: (providerId: number) => ProviderFetchState
   isModelPickerOpen: (providerId: number) => boolean
   selectedModelChipsForProvider: (providerId: number) => UserAIModel[]
+  saveModelPricing: (model: UserAIModel, pricing: UserAIModelPricing) => Promise<void>
 }>()
 
 const emit = defineEmits<{

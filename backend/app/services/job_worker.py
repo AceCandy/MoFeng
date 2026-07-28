@@ -17,8 +17,11 @@ from .job_service import (
     LeaseLostError,
     RetryPolicy,
 )
+from ..utils.ai_telemetry import AICallResult
 
 logger = logging.getLogger(__name__)
+
+MaintenanceCallback = Callable[[AsyncSession], Awaitable[int]]
 
 
 class _JobCancelled(RuntimeError):
@@ -95,6 +98,7 @@ class JobExecutionContext:
         *,
         provider_request_key: str,
         result: dict[str, Any],
+        ai_call: Optional[AICallResult[Any]] = None,
     ) -> None:
         async with self._session_factory() as session:
             await JobService(session).complete_activity(
@@ -102,6 +106,7 @@ class JobExecutionContext:
                 activity_key=activity_key,
                 provider_request_key=provider_request_key,
                 result=result,
+                ai_call=ai_call,
             )
 
     async def mark_activity_ambiguous(
@@ -120,6 +125,23 @@ class JobExecutionContext:
             )
         raise AmbiguousActivityError(public_message)
 
+    async def mark_activity_failed(
+        self,
+        activity_key: str,
+        *,
+        provider_request_key: str,
+        error_category: str,
+        retryable: bool,
+    ) -> None:
+        async with self._session_factory() as session:
+            await JobService(session).mark_activity_failed(
+                self.lease,
+                activity_key=activity_key,
+                provider_request_key=provider_request_key,
+                error_category=error_category,
+                retryable=retryable,
+            )
+
 
 class JobWorker:
     """数据库扫描 worker；Redis 仅可作为外部 wake-up 优化。"""
@@ -136,6 +158,7 @@ class JobWorker:
         executor_generation: int = 1,
         worker_heartbeat_interval_seconds: float = 10.0,
         poll_interval_seconds: float = 1.0,
+        maintenance_callbacks: tuple[MaintenanceCallback, ...] = (),
     ) -> None:
         if lease_seconds < 1:
             raise ValueError("lease_seconds 必须大于等于 1")
@@ -154,8 +177,20 @@ class JobWorker:
         self.executor_generation = executor_generation
         self.worker_heartbeat_interval_seconds = worker_heartbeat_interval_seconds
         self.poll_interval_seconds = poll_interval_seconds
+        self.maintenance_callbacks = maintenance_callbacks
 
     async def run_once(self) -> bool:
+        for callback in self.maintenance_callbacks:
+            async with self.session_factory() as maintenance_session:
+                try:
+                    await callback(maintenance_session)
+                    await maintenance_session.commit()
+                except Exception:
+                    await maintenance_session.rollback()
+                    logger.exception(
+                        "worker maintenance 失败: callback=%s",
+                        getattr(callback, "__name__", type(callback).__name__),
+                    )
         async with self.session_factory() as session:
             lease = await JobService(session).claim_next(
                 worker_id=self.worker_id,
