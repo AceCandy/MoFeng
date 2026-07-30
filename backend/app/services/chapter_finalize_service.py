@@ -1,6 +1,7 @@
 # AIMETA P=章节定稿提交服务_版本选择与持久任务原子入队|R=鉴权_版本锁定_正文保存_job提交|NR=不执行外部后处理|E=ChapterFinalizeSubmissionService|X=internal|A=service|D=sqlalchemy,job_service|S=db|RD=./README.ai
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Optional
 
 from sqlalchemy import select
@@ -10,9 +11,22 @@ from ..models.background_task import BackgroundTask
 from ..models.novel import Chapter, ChapterVersion
 from ..schemas.chapter_context import stable_digest
 from ..schemas.novel import ChapterGenerationStatus
+from .chapter_projection_service import CanonicalFinalizeResult, ChapterProjectionService
 from .chapter_word_count_settings import count_chapter_words
-from .chapter_projection_service import ChapterProjectionService
 from .novel_service import NovelService
+
+
+@dataclass(frozen=True)
+class PreparedChapterFinalize:
+    """同一事务内已锁定并校验的 canonical finalize 输入。"""
+
+    chapter: Chapter
+    selected_version: ChapterVersion
+    source_content: str
+    source_hash: str
+    user_id: int
+    skip_vector_update: bool
+    idempotency_key: Optional[str]
 
 
 class ChapterFinalizeSubmissionService:
@@ -35,20 +49,57 @@ class ChapterFinalizeSubmissionService:
     ) -> BackgroundTask:
         """校验候选版本并把正文选择与 job.queued 原子提交。"""
 
+        try:
+            prepared = await self.prepare(
+                project_id=project_id,
+                chapter_number=chapter_number,
+                user_id=user_id,
+                selected_version_index=selected_version_index,
+                selected_version_id=selected_version_id,
+                edited_content=edited_content,
+                skip_vector_update=skip_vector_update,
+                idempotency_key=idempotency_key,
+            )
+            if isinstance(prepared, BackgroundTask):
+                return prepared
+            result = await self.apply(prepared)
+            return await ChapterProjectionService(self.session).commit_finalize(result)
+        except Exception:
+            await self.session.rollback()
+            raise
+
+    async def prepare(
+        self,
+        *,
+        project_id: str,
+        chapter_number: int,
+        user_id: int,
+        selected_version_index: Optional[int] = None,
+        selected_version_id: Optional[int] = None,
+        edited_content: Optional[str] = None,
+        skip_vector_update: bool = False,
+        idempotency_key: Optional[str] = None,
+    ) -> PreparedChapterFinalize | BackgroundTask:
+        """锁定 Chapter/版本并构造不提交事务的 finalize 输入。"""
+
         if (selected_version_index is None) == (selected_version_id is None):
             raise ValueError("必须且只能指定候选草稿索引或版本 ID")
 
         await NovelService(self.session).ensure_project_owner(project_id, user_id)
         chapter = (
-            await self.session.execute(
-                select(Chapter)
-                .where(
-                    Chapter.project_id == project_id,
-                    Chapter.chapter_number == chapter_number,
+            (
+                await self.session.execute(
+                    select(Chapter)
+                    .where(
+                        Chapter.project_id == project_id,
+                        Chapter.chapter_number == chapter_number,
+                    )
+                    .with_for_update()
                 )
-                .with_for_update()
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if chapter is None:
             raise ValueError("章节不存在")
 
@@ -60,7 +111,9 @@ class ChapterFinalizeSubmissionService:
                     .order_by(ChapterVersion.created_at, ChapterVersion.id)
                     .with_for_update()
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         if selected_version_index is not None:
             if selected_version_index < 0 or selected_version_index >= len(versions):
@@ -101,21 +154,34 @@ class ChapterFinalizeSubmissionService:
         chapter.selected_version_id = selected_version.id
         chapter.selected_version = selected_version
         chapter.word_count = count_chapter_words(final_content)
+        return PreparedChapterFinalize(
+            chapter=chapter,
+            selected_version=selected_version,
+            source_content=final_content,
+            source_hash=source_hash,
+            user_id=user_id,
+            skip_vector_update=skip_vector_update,
+            idempotency_key=idempotency_key,
+        )
 
-        try:
-            result = await projection_service.create_finalize(
-                chapter=chapter,
-                selected_version=selected_version,
-                source_content=final_content,
-                source_hash=source_hash,
-                user_id=user_id,
-                skip_vector_update=skip_vector_update,
-                idempotency_key=idempotency_key,
-            )
-            return await projection_service.commit_finalize(result)
-        except Exception:
-            await self.session.rollback()
-            raise
+    async def apply(
+        self,
+        prepared: PreparedChapterFinalize,
+        *,
+        workflow_stream_id: Optional[str] = None,
+    ) -> CanonicalFinalizeResult:
+        """在 prepare 的同一事务内追加 revision/outbox/job，但不提交。"""
+
+        return await ChapterProjectionService(self.session).create_finalize(
+            chapter=prepared.chapter,
+            selected_version=prepared.selected_version,
+            source_content=prepared.source_content,
+            source_hash=prepared.source_hash,
+            user_id=prepared.user_id,
+            skip_vector_update=prepared.skip_vector_update,
+            idempotency_key=prepared.idempotency_key,
+            workflow_stream_id=workflow_stream_id,
+        )
 
 
-__all__ = ["ChapterFinalizeSubmissionService"]
+__all__ = ["ChapterFinalizeSubmissionService", "PreparedChapterFinalize"]

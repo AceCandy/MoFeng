@@ -16,7 +16,7 @@ import json
 import logging
 import re
 from datetime import datetime
-from typing import List, Optional
+from typing import NoReturn, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy import select
@@ -27,9 +27,17 @@ from ...core.config import settings
 from ...core.dependencies import get_current_user
 from ...db.session import get_session
 from ...models.novel import Chapter, ChapterOutline, ChapterVersion
+from ...schemas.chapter_workflow import (
+    ChapterWorkflowCommandConflictDetail,
+    ChapterWorkflowCommandConflictResponse,
+    ChapterWorkflowCommandEnvelope,
+    ChapterWorkflowCommandResponse,
+    ChapterWorkflowSnapshot,
+    ChapterWorkflowStartRequest,
+    ChapterWorkflowStartResponse,
+)
 from ...schemas.novel import (
     AdvancedGenerateRequest,
-    Chapter as ChapterSchema,
     ChapterGenerationStatus,
     ConfirmFinalizeChapterRequest,
     DeleteChapterRequest,
@@ -38,32 +46,51 @@ from ...schemas.novel import (
     FinalizeChapterRequest,
     GenerateChapterRequest,
     GenerateOutlineRequest,
-    NovelProject as NovelProjectSchema,
     SelectVersionRequest,
     UpdateChapterOutlineRequest,
 )
+from ...schemas.novel import (
+    Chapter as ChapterSchema,
+)
+from ...schemas.novel import (
+    NovelProject as NovelProjectSchema,
+)
 from ...schemas.task import BackgroundTaskResponse
 from ...schemas.user import UserInDB
-from ...services.chapter_generation_trace_service import CN_TIMEZONE, ChapterGenerationTraceService
+from ...services.ai_review_service import AIReviewService
+from ...services.chapter_context_adapters import (
+    WRITER_VISIBILITY_SHADOW_PREFIXES,
+    ChapterContextShadowComparator,
+    ReviewContextAdapter,
+)
+from ...services.chapter_context_resolver import ChapterContextResolver
 from ...services.chapter_edit_service import ChapterEditService
 from ...services.chapter_finalize_service import ChapterFinalizeSubmissionService
+from ...services.chapter_generation_trace_service import CN_TIMEZONE, ChapterGenerationTraceService
 from ...services.chapter_projection_rollout import ChapterProjectionRolloutConflictError
 from ...services.chapter_projection_service import ChapterFinalizeConflictError
-from ...services.chapter_word_count_settings import count_chapter_words
-from ...services.job_service import JobService
+from ...services.chapter_workflow_compatibility import (
+    ChapterWorkflowCompatibilityConflictError,
+    ChapterWorkflowCompatibilityService,
+)
+from ...services.chapter_workflow_start import ChapterWorkflowStartService
+from ...services.job_service import ChapterWorkflowCommandRejectedError, JobService
 from ...services.llm_service import LLMService
 from ...services.novel_service import NovelService
 from ...services.prompt_service import PromptService
-from ...services.ai_review_service import AIReviewService
-from ...services.chapter_context_adapters import (
-    ChapterContextShadowComparator,
-    ReviewContextAdapter,
-    WRITER_VISIBILITY_SHADOW_PREFIXES,
-)
-from ...services.chapter_context_resolver import ChapterContextResolver
 
 router = APIRouter(prefix="/api/writer", tags=["Writer"])
 logger = logging.getLogger(__name__)
+
+
+def get_chapter_workflow_start_service(
+    session: AsyncSession = Depends(get_session),
+) -> ChapterWorkflowStartService:
+    return ChapterWorkflowStartService(session)
+
+
+def get_job_service(session: AsyncSession = Depends(get_session)) -> JobService:
+    return JobService(session)
 
 
 async def _load_project_schema(service: NovelService, project_id: str, user_id: int) -> NovelProjectSchema:
@@ -103,8 +130,22 @@ async def _enqueue_chapter_generation(
     user_id: int,
     idempotency_key: Optional[str],
 ) -> BackgroundTaskResponse:
-    await NovelService(session).ensure_project_owner(project_id, user_id)
     try:
+        workflow_response = await ChapterWorkflowCompatibilityService(
+            session
+        ).adapt_generation(
+            user_id=user_id,
+            project_id=project_id,
+            chapter_number=chapter_number,
+            writing_notes=writing_notes,
+            flow_config=flow_config,
+            from_node_key=from_node_key,
+            idempotency_key=idempotency_key,
+            start_enabled=settings.chapter_workflow_start_enabled,
+        )
+        if workflow_response is not None:
+            return workflow_response
+        await NovelService(session).ensure_project_owner(project_id, user_id)
         return await JobService(session).enqueue_job(
             user_id=user_id,
             project_id=project_id,
@@ -120,6 +161,8 @@ async def _enqueue_chapter_generation(
             payload_version=1,
             idempotency_key=idempotency_key,
         )
+    except ChapterWorkflowCompatibilityConflictError as exc:
+        raise HTTPException(status_code=409, detail=exc.reason_code) from exc
     except ValueError as exc:
         status_code = 409 if "idempotency_key" in str(exc) else 400
         raise HTTPException(status_code=status_code, detail=str(exc)) from exc
@@ -138,6 +181,20 @@ async def _enqueue_chapter_finalize(
     idempotency_key: Optional[str] = None,
 ) -> BackgroundTaskResponse:
     try:
+        workflow_response = await ChapterWorkflowCompatibilityService(
+            session
+        ).adapt_finalize(
+            project_id=project_id,
+            chapter_number=chapter_number,
+            user_id=user_id,
+            selected_version_index=selected_version_index,
+            selected_version_id=selected_version_id,
+            edited_content=edited_content,
+            skip_vector_update=skip_vector_update,
+            idempotency_key=idempotency_key,
+        )
+        if workflow_response is not None:
+            return workflow_response
         return await ChapterFinalizeSubmissionService(session).submit(
             project_id=project_id,
             chapter_number=chapter_number,
@@ -148,12 +205,129 @@ async def _enqueue_chapter_finalize(
             skip_vector_update=skip_vector_update,
             idempotency_key=idempotency_key,
         )
+    except ChapterWorkflowCompatibilityConflictError as exc:
+        raise HTTPException(status_code=409, detail=exc.reason_code) from exc
     except ChapterFinalizeConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ChapterProjectionRolloutConflictError as exc:
         raise HTTPException(status_code=409, detail=exc.code) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+def _raise_workflow_lookup_error(exc: ValueError) -> NoReturn:
+    if str(exc) == "workflow run 不存在":
+        raise HTTPException(status_code=404, detail="章节工作流不存在") from exc
+    raise HTTPException(status_code=409, detail="章节工作流当前不可用") from exc
+
+
+@router.post(
+    "/chapter-workflows",
+    response_model=ChapterWorkflowStartResponse,
+    status_code=202,
+)
+async def start_chapter_workflow(
+    request: ChapterWorkflowStartRequest,
+    start_service: ChapterWorkflowStartService = Depends(get_chapter_workflow_start_service),
+    job_service: JobService = Depends(get_job_service),
+    current_user: UserInDB = Depends(get_current_user),
+) -> ChapterWorkflowStartResponse:
+    """创建或复用 durable Chapter workflow；切流前由配置显式关闭。"""
+
+    if not settings.chapter_workflow_start_enabled:
+        raise HTTPException(status_code=404, detail="章节工作流入口未启用")
+    try:
+        result = await start_service.start(
+            user_id=current_user.id,
+            project_id=request.project_id,
+            chapter_number=request.chapter_number,
+            writing_notes=request.writing_notes,
+            flow_config=request.flow_config,
+        )
+        snapshot = await job_service.get_chapter_workflow_snapshot(
+            result.run.id,
+            user_id=current_user.id,
+        )
+    except ValueError as exc:
+        if str(exc) == "项目不存在":
+            raise HTTPException(status_code=404, detail="项目不存在") from exc
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return ChapterWorkflowStartResponse(
+        created=result.created,
+        snapshot=snapshot,
+        events_url=(
+            "/api/tasks/events?stream_type=workflow"
+            f"&stream_id={snapshot.run_id}"
+        ),
+    )
+
+
+@router.get(
+    "/chapter-workflows/{run_id}",
+    response_model=ChapterWorkflowSnapshot,
+)
+async def get_chapter_workflow(
+    run_id: str,
+    job_service: JobService = Depends(get_job_service),
+    current_user: UserInDB = Depends(get_current_user),
+) -> ChapterWorkflowSnapshot:
+    try:
+        snapshot: ChapterWorkflowSnapshot = await job_service.get_chapter_workflow_snapshot(
+            run_id,
+            user_id=current_user.id,
+        )
+        return snapshot
+    except ValueError as exc:
+        _raise_workflow_lookup_error(exc)
+
+
+@router.post(
+    "/chapter-workflows/{run_id}/commands",
+    response_model=ChapterWorkflowCommandResponse,
+    status_code=202,
+    responses={409: {"model": ChapterWorkflowCommandConflictResponse}},
+)
+async def submit_chapter_workflow_command(
+    run_id: str,
+    request: ChapterWorkflowCommandEnvelope,
+    job_service: JobService = Depends(get_job_service),
+    current_user: UserInDB = Depends(get_current_user),
+) -> ChapterWorkflowCommandResponse:
+    try:
+        command = await job_service.submit_chapter_workflow_command(
+            run_id,
+            actor_user_id=current_user.id,
+            envelope=request,
+        )
+    except ChapterWorkflowCommandRejectedError as exc:
+        snapshot = await job_service.get_chapter_workflow_snapshot(
+            run_id,
+            user_id=current_user.id,
+        )
+        detail = ChapterWorkflowCommandConflictDetail(
+            reason_code=exc.reason_code,
+            current_snapshot=snapshot,
+        )
+        raise HTTPException(
+            status_code=409,
+            detail=detail.model_dump(mode="json"),
+        ) from exc
+    except ValueError as exc:
+        if str(exc) == "workflow run 不存在":
+            _raise_workflow_lookup_error(exc)
+        status_code = 409 if "command id 已绑定不同请求" in str(exc) else 400
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
+
+    snapshot = await job_service.get_chapter_workflow_snapshot(
+        run_id,
+        user_id=current_user.id,
+    )
+    return ChapterWorkflowCommandResponse(
+        command_id=command.id,
+        type=command.type,
+        status=command.status,
+        snapshot=snapshot,
+    )
 
 
 @router.post("/advanced/generate", response_model=BackgroundTaskResponse, status_code=202)

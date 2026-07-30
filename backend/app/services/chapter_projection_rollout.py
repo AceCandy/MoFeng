@@ -3,10 +3,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 from uuid import uuid4
 
@@ -33,8 +33,7 @@ from .foreshadowing_sync_service import (
     deserialize_foreshadowing_plan,
 )
 
-
-NONTERMINAL_JOB_STATUSES = {"queued", "running", "retry_wait"}
+NONTERMINAL_JOB_STATUSES = {"queued", "running", "retry_wait", "waiting"}
 ALLOWED_TRANSITIONS = {
     ("legacy", "shadow"),
     ("shadow", "draining"),

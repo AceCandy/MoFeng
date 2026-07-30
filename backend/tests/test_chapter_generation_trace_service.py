@@ -1,9 +1,8 @@
 from datetime import datetime, timedelta, timezone
 
+import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
-
-import pytest
 
 from app.models import Chapter, ChapterOutline, NovelProject
 from app.models.user import User
@@ -12,12 +11,16 @@ from app.services.novel_service import NovelService
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_chapter_generation_trace_service_records_real_prompt_and_response(db_session_factory):
+async def test_chapter_generation_trace_service_records_real_prompt_and_response(
+    db_session_factory,
+):
     async with db_session_factory() as session:
         project_id = "project-trace"
         session.add(User(id=1, username="writer", hashed_password="secret"))
         session.add(NovelProject(id=project_id, user_id=1, title="测试小说", initial_prompt="测试"))
-        session.add(ChapterOutline(project_id=project_id, chapter_number=1, title="第一章", summary="开篇"))
+        session.add(
+            ChapterOutline(project_id=project_id, chapter_number=1, title="第一章", summary="开篇")
+        )
         session.add(Chapter(project_id=project_id, chapter_number=1, status="generating"))
         await session.commit()
 
@@ -45,6 +48,8 @@ async def test_chapter_generation_trace_service_records_real_prompt_and_response
         assert traces[0].raw_response == "模型原始响应"
         assert traces[0].cleaned_output == "清洗后的章节正文"
         assert traces[0].metadata == {"version_index": 1, "uses_llm": True}
+        assert traces[0].source_run_id is None
+        assert traces[0].source_event_cursor is None
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -53,7 +58,9 @@ async def test_chapter_generation_trace_service_records_node_duration_ms(db_sess
         project_id = "project-trace-duration"
         session.add(User(id=1, username="writer", hashed_password="secret"))
         session.add(NovelProject(id=project_id, user_id=1, title="测试小说", initial_prompt="测试"))
-        session.add(ChapterOutline(project_id=project_id, chapter_number=1, title="第一章", summary="开篇"))
+        session.add(
+            ChapterOutline(project_id=project_id, chapter_number=1, title="第一章", summary="开篇")
+        )
         session.add(Chapter(project_id=project_id, chapter_number=1, status="generating"))
         await session.commit()
 
@@ -81,7 +88,9 @@ async def test_chapter_generation_trace_service_marks_whether_node_used_llm(db_s
         project_id = "project-trace-llm-flag"
         session.add(User(id=1, username="writer", hashed_password="secret"))
         session.add(NovelProject(id=project_id, user_id=1, title="测试小说", initial_prompt="测试"))
-        session.add(ChapterOutline(project_id=project_id, chapter_number=1, title="第一章", summary="开篇"))
+        session.add(
+            ChapterOutline(project_id=project_id, chapter_number=1, title="第一章", summary="开篇")
+        )
         session.add(Chapter(project_id=project_id, chapter_number=1, status="generating"))
         await session.commit()
 
@@ -124,7 +133,9 @@ async def test_novel_service_serializes_chapter_generation_traces(db_session_fac
         session.add(User(id=1, username="writer", hashed_password="secret"))
         project = NovelProject(id=project_id, user_id=1, title="测试小说", initial_prompt="测试")
         session.add(project)
-        outline = ChapterOutline(project_id=project_id, chapter_number=1, title="第一章", summary="开篇")
+        outline = ChapterOutline(
+            project_id=project_id, chapter_number=1, title="第一章", summary="开篇"
+        )
         chapter = Chapter(project_id=project_id, chapter_number=1, status="generating")
         session.add_all([outline, chapter])
         await session.commit()
@@ -172,7 +183,9 @@ async def test_novel_service_get_chapter_schema_loads_generation_traces(db_sessi
         project_id = "project-trace-single-chapter"
         session.add(User(id=1, username="writer", hashed_password="secret"))
         session.add(NovelProject(id=project_id, user_id=1, title="测试小说", initial_prompt="测试"))
-        session.add(ChapterOutline(project_id=project_id, chapter_number=1, title="第一章", summary="开篇"))
+        session.add(
+            ChapterOutline(project_id=project_id, chapter_number=1, title="第一章", summary="开篇")
+        )
         session.add(Chapter(project_id=project_id, chapter_number=1, status="generating"))
         await session.commit()
 

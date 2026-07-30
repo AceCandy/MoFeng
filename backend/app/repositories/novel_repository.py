@@ -2,10 +2,11 @@
 from typing import Iterable, Optional
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import selectinload
 
-from .base import BaseRepository
 from ..models import Chapter, ChapterVersion, NovelProject
+from .base import BaseRepository
 
 
 class NovelRepository(BaseRepository[NovelProject]):
@@ -81,6 +82,57 @@ class NovelRepository(BaseRepository[NovelProject]):
         )
         result = await self.session.execute(stmt)
         return result.scalars().first()
+
+    async def ensure_chapter_for_update(
+        self,
+        *,
+        project_id: str,
+        chapter_number: int,
+    ) -> Chapter:
+        """原子确保章节存在并锁行，供 durable workflow start 串行化活动槽。"""
+
+        await self.session.execute(
+            pg_insert(Chapter)
+            .values(project_id=project_id, chapter_number=chapter_number)
+            .on_conflict_do_nothing(index_elements=[Chapter.project_id, Chapter.chapter_number])
+        )
+        chapter = await self.get_chapter_for_update(
+            project_id=project_id,
+            chapter_number=chapter_number,
+        )
+        if chapter is None:
+            raise RuntimeError("创建 Chapter 后无法重新锁定")
+        return chapter
+
+    async def get_owned_chapter(
+        self,
+        *,
+        project_id: str,
+        chapter_number: int,
+        user_id: int,
+    ) -> Optional[Chapter]:
+        """读取属于当前用户的 Chapter identity，不获取行锁。"""
+
+        result = await self.session.execute(
+            select(Chapter)
+            .join(NovelProject, NovelProject.id == Chapter.project_id)
+            .where(
+                Chapter.project_id == project_id,
+                Chapter.chapter_number == chapter_number,
+                NovelProject.user_id == user_id,
+            )
+        )
+        return result.scalars().first()
+
+    async def list_chapter_versions(self, *, chapter_id: int) -> list[ChapterVersion]:
+        """按 legacy index 契约的稳定顺序返回章节版本。"""
+
+        result = await self.session.execute(
+            select(ChapterVersion)
+            .where(ChapterVersion.chapter_id == chapter_id)
+            .order_by(ChapterVersion.created_at, ChapterVersion.id)
+        )
+        return list(result.scalars().all())
 
     async def get_owned_selected_version(
         self,

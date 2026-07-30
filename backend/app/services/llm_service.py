@@ -8,7 +8,13 @@ from urllib.parse import urlparse
 
 import httpx
 from fastapi import HTTPException
-from openai import APIConnectionError, APITimeoutError, AsyncOpenAI, InternalServerError, PermissionDeniedError
+from openai import (
+    APIConnectionError,
+    APITimeoutError,
+    AsyncOpenAI,
+    InternalServerError,
+    PermissionDeniedError,
+)
 
 from ..core.config import settings
 from ..core.crypto import decrypt
@@ -164,7 +170,9 @@ class LLMService:
         return min(delay + jitter, LLM_RETRY_MAX_DELAY_SECONDS)
 
     @classmethod
-    def _raise_llm_stream_error(cls, exc: Exception, config: Dict[str, Any], user_id: Optional[int]) -> None:
+    def _raise_llm_stream_error(
+        cls, exc: Exception, config: Dict[str, Any], user_id: Optional[int]
+    ) -> None:
         if isinstance(exc, InternalServerError):
             detail = cls._extract_llm_error_detail(exc, "AI 服务内部错误，请稍后重试")
             logger.error(
@@ -176,7 +184,9 @@ class LLMService:
             )
             raise HTTPException(status_code=503, detail=detail) from exc
 
-        if isinstance(exc, (httpx.RemoteProtocolError, httpx.ReadTimeout, APIConnectionError, APITimeoutError)):
+        if isinstance(
+            exc, (httpx.RemoteProtocolError, httpx.ReadTimeout, APIConnectionError, APITimeoutError)
+        ):
             if isinstance(exc, httpx.RemoteProtocolError):
                 detail = "AI 服务连接被意外中断，请稍后重试"
             elif isinstance(exc, (httpx.ReadTimeout, APITimeoutError)):
@@ -297,6 +307,7 @@ class LLMService:
         top_p: Optional[float] = None,
         stage: str = "chapter_writing",
         model_id: Optional[int] = None,
+        provider_request_key: Optional[str] = None,
     ) -> AICallResult[str]:
         """短事务解析路由，并返回供 durable activity 持久化的完整结果。"""
 
@@ -318,6 +329,7 @@ class LLMService:
             max_tokens=max_tokens,
             top_p=top_p,
             stage=stage,
+            provider_request_key=provider_request_key,
         )
 
     async def stream_llm_response(
@@ -389,7 +401,12 @@ class LLMService:
                 exc_info=exc,
             )
             raise HTTPException(status_code=503, detail=detail)
-        except (httpx.RemoteProtocolError, httpx.ReadTimeout, APIConnectionError, APITimeoutError) as exc:
+        except (
+            httpx.RemoteProtocolError,
+            httpx.ReadTimeout,
+            APIConnectionError,
+            APITimeoutError,
+        ) as exc:
             if isinstance(exc, httpx.RemoteProtocolError):
                 detail = "AI 服务连接被意外中断，请稍后重试"
             elif isinstance(exc, (httpx.ReadTimeout, APITimeoutError)):
@@ -426,7 +443,7 @@ class LLMService:
             )
             raise HTTPException(
                 status_code=500,
-                detail=f"AI 响应因长度限制被截断（已生成 {len(full_response)} 字符），请缩短输入内容或调整模型参数"
+                detail=f"AI 响应因长度限制被截断（已生成 {len(full_response)} 字符），请缩短输入内容或调整模型参数",
             )
 
         if not full_response:
@@ -438,7 +455,7 @@ class LLMService:
             )
             raise HTTPException(
                 status_code=500,
-                detail=f"AI 未返回有效内容（结束原因: {finish_reason or '未知'}），请稍后重试或联系管理员"
+                detail=f"AI 未返回有效内容（结束原因: {finish_reason or '未知'}），请稍后重试或联系管理员",
             )
 
         await self.usage_service.increment("api_request_count")
@@ -573,7 +590,9 @@ class LLMService:
             system_prompt = await prompt_service.get_prompt("extraction")
         if not system_prompt:
             logger.error("未配置名为 'extraction' 的摘要提示词，无法生成章节摘要")
-            raise HTTPException(status_code=500, detail="未配置摘要提示词，请联系管理员配置 'extraction' 提示词")
+            raise HTTPException(
+                status_code=500, detail="未配置摘要提示词，请联系管理员配置 'extraction' 提示词"
+            )
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": chapter_content},
@@ -607,7 +626,9 @@ class LLMService:
             resolved_prompt = system_prompt or await PromptService(session).get_prompt("extraction")
             if not resolved_prompt:
                 logger.error("未配置名为 'extraction' 的摘要提示词，无法生成章节摘要")
-                raise HTTPException(status_code=500, detail="未配置摘要提示词，请联系管理员配置 'extraction' 提示词")
+                raise HTTPException(
+                    status_code=500, detail="未配置摘要提示词，请联系管理员配置 'extraction' 提示词"
+                )
             config = await service._resolve_llm_config(
                 user_id,
                 stage=stage,
@@ -644,7 +665,9 @@ class LLMService:
             service = cls(session)
             resolved_prompt = system_prompt or await PromptService(session).get_prompt("extraction")
             if not resolved_prompt:
-                raise HTTPException(status_code=500, detail="未配置摘要提示词，请联系管理员配置 'extraction' 提示词")
+                raise HTTPException(
+                    status_code=500, detail="未配置摘要提示词，请联系管理员配置 'extraction' 提示词"
+                )
             config = await service._resolve_llm_config(
                 user_id,
                 stage=stage,
@@ -746,6 +769,7 @@ class LLMService:
         max_tokens: Optional[int] = None,
         top_p: Optional[float] = None,
         stage: str = "chapter_writing",
+        provider_request_key: Optional[str] = None,
     ) -> AICallResult[str]:
         client = LLMClient(
             api_key=config["api_key"],
@@ -781,6 +805,7 @@ class LLMService:
                         response_format=response_format,
                         max_tokens=max_tokens,
                         top_p=top_p,
+                        provider_request_key=provider_request_key,
                     ):
                         if part.get("content"):
                             full_response += part["content"]
@@ -826,7 +851,7 @@ class LLMService:
             )
             raise HTTPException(
                 status_code=500,
-                detail=f"AI 响应因长度限制被截断（已生成 {len(full_response)} 字符），请缩短输入内容或调整模型参数"
+                detail=f"AI 响应因长度限制被截断（已生成 {len(full_response)} 字符），请缩短输入内容或调整模型参数",
             )
 
         if not full_response:
@@ -838,7 +863,7 @@ class LLMService:
             )
             raise HTTPException(
                 status_code=500,
-                detail=f"AI 未返回有效内容（结束原因: {finish_reason or '未知'}），请稍后重试或联系管理员"
+                detail=f"AI 未返回有效内容（结束原因: {finish_reason or '未知'}），请稍后重试或联系管理员",
             )
 
         await self.usage_service.increment("api_request_count")
@@ -891,8 +916,12 @@ class LLMService:
             route = await self.stage_route_repo.get_by_stage(user_id, stage)
             model = route.model if route else None
             if not model:
-                models = list(await self.ai_model_repo.list_enabled_by_capability(user_id, capability))
-                default_flag = "is_default_embedding" if capability == "embedding" else "is_default_chat"
+                models = list(
+                    await self.ai_model_repo.list_enabled_by_capability(user_id, capability)
+                )
+                default_flag = (
+                    "is_default_embedding" if capability == "embedding" else "is_default_chat"
+                )
                 model = next((item for item in models if getattr(item, default_flag, False)), None)
                 if models and not model:
                     section_name = "向量模型" if capability == "embedding" else "LLM 模型"
@@ -907,7 +936,9 @@ class LLMService:
         if not model.is_enabled:
             raise HTTPException(status_code=400, detail=f"模型 {model.model_name} 已禁用")
         if not (model.capabilities_json or {}).get(capability):
-            raise HTTPException(status_code=400, detail=f"模型 {model.model_name} 不支持 {capability}")
+            raise HTTPException(
+                status_code=400, detail=f"模型 {model.model_name} 不支持 {capability}"
+            )
 
         provider = model.provider
         if not provider or not provider.is_enabled:
@@ -957,8 +988,14 @@ class LLMService:
             model_id=model_id,
         )
         if routed:
-            if require_api_key and not routed.get("api_key") and routed.get("provider_type") != "ollama":
-                raise HTTPException(status_code=400, detail=f"阶段 {stage} 使用的供应商缺少 API Key")
+            if (
+                require_api_key
+                and not routed.get("api_key")
+                and routed.get("provider_type") != "ollama"
+            ):
+                raise HTTPException(
+                    status_code=400, detail=f"阶段 {stage} 使用的供应商缺少 API Key"
+                )
             return routed
 
         logger.warning("用户 %s 没有可用的 LLM 模型，stage=%s", user_id, stage)
@@ -993,7 +1030,11 @@ class LLMService:
     @staticmethod
     def _extract_ollama_embed_vector(response: Any) -> Optional[List[float]]:
         """解析 /api/embed 响应，提取第一条向量。"""
-        embeddings = response.get("embeddings") if isinstance(response, dict) else getattr(response, "embeddings", None)
+        embeddings = (
+            response.get("embeddings")
+            if isinstance(response, dict)
+            else getattr(response, "embeddings", None)
+        )
         if not embeddings:
             return None
         first = embeddings[0] if isinstance(embeddings, list) else None
@@ -1004,7 +1045,11 @@ class LLMService:
     @staticmethod
     def _extract_ollama_legacy_vector(response: Any) -> Optional[List[float]]:
         """解析 /api/embeddings（旧接口）响应。"""
-        embedding = response.get("embedding") if isinstance(response, dict) else getattr(response, "embedding", None)
+        embedding = (
+            response.get("embedding")
+            if isinstance(response, dict)
+            else getattr(response, "embedding", None)
+        )
         if not embedding:
             return None
         return embedding if isinstance(embedding, list) else list(embedding)
@@ -1046,7 +1091,9 @@ class LLMService:
                 embedding = self._extract_ollama_embed_vector(response)
                 if embedding:
                     return embedding
-                logger.warning("Ollama /api/embed 返回空向量: model=%s base_url=%s", model, base_url)
+                logger.warning(
+                    "Ollama /api/embed 返回空向量: model=%s base_url=%s", model, base_url
+                )
             except Exception as exc:
                 logger.warning(
                     "Ollama /api/embed 请求失败，尝试回退旧接口 /api/embeddings: model=%s base_url=%s error=%s",
@@ -1069,7 +1116,9 @@ class LLMService:
 
         embedding = self._extract_ollama_legacy_vector(response)
         if not embedding:
-            logger.warning("Ollama /api/embeddings 返回空向量: model=%s base_url=%s", model, base_url)
+            logger.warning(
+                "Ollama /api/embeddings 返回空向量: model=%s base_url=%s", model, base_url
+            )
             return []
         return embedding
 
@@ -1224,11 +1273,17 @@ class LLMService:
             "ollama" if routed.get("provider_type") == "ollama" else "openai"
         )
 
-        provider = user_embedding_provider_format if user_embedding_provider_format in {"openai", "ollama"} else "openai"
+        provider = (
+            user_embedding_provider_format
+            if user_embedding_provider_format in {"openai", "ollama"}
+            else "openai"
+        )
 
         if provider not in {"openai", "ollama"}:
             logger.error("非法 embedding.provider 配置: %s", provider)
-            raise HTTPException(status_code=500, detail="embedding.provider 仅支持 openai 或 ollama")
+            raise HTTPException(
+                status_code=500, detail="embedding.provider 仅支持 openai 或 ollama"
+            )
         target_model = model or user_embedding_model
         if not target_model:
             logger.warning("用户 %s 未配置用户级向量模型", user_id)
@@ -1240,7 +1295,9 @@ class LLMService:
         if provider == "ollama":
             if OllamaAsyncClient is None:
                 logger.error("未安装 ollama 依赖，无法调用本地嵌入模型。")
-                raise HTTPException(status_code=500, detail="缺少 Ollama 依赖，请先安装 ollama 包。")
+                raise HTTPException(
+                    status_code=500, detail="缺少 Ollama 依赖，请先安装 ollama 包。"
+                )
 
             raw_base_url = user_embedding_base_url or user_llm_base_url
             if not raw_base_url:
@@ -1298,7 +1355,9 @@ class LLMService:
                 finally:
                     await client.close()
                 if not response.data:
-                    logger.warning("OpenAI 嵌入请求返回空数据: model=%s user_id=%s", target_model, user_id)
+                    logger.warning(
+                        "OpenAI 嵌入请求返回空数据: model=%s user_id=%s", target_model, user_id
+                    )
                     return result([])
                 embedding = response.data[0].embedding
                 if getattr(response, "usage", None) is not None:
@@ -1330,11 +1389,19 @@ class LLMService:
 
                 data = payload.get("data") if isinstance(payload, dict) else None
                 if not data:
-                    logger.warning("OpenAI 无 Key 嵌入请求返回空数据: model=%s endpoint=%s", target_model, endpoint)
+                    logger.warning(
+                        "OpenAI 无 Key 嵌入请求返回空数据: model=%s endpoint=%s",
+                        target_model,
+                        endpoint,
+                    )
                     return result([])
                 first = data[0] if isinstance(data, list) else None
                 if not isinstance(first, dict) or "embedding" not in first:
-                    logger.warning("OpenAI 无 Key 嵌入响应结构异常: model=%s endpoint=%s", target_model, endpoint)
+                    logger.warning(
+                        "OpenAI 无 Key 嵌入响应结构异常: model=%s endpoint=%s",
+                        target_model,
+                        endpoint,
+                    )
                     return result([])
                 embedding = first["embedding"]
                 raw_usage = payload.get("usage") if isinstance(payload, dict) else None

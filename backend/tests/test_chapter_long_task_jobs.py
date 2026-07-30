@@ -12,8 +12,8 @@ from app.models import (
     Chapter,
     ChapterOutboxEvent,
     ChapterOutline,
-    ChapterProjectionRollout,
     ChapterProjectionReplayAudit,
+    ChapterProjectionRollout,
     ChapterProjectionRun,
     ChapterRevision,
     ChapterSnapshot,
@@ -29,8 +29,12 @@ from app.models.job import JobActivity
 from app.models.user import User
 from app.schemas.chapter_context import stable_digest
 from app.schemas.chapter_projection import ChapterProjectionOperationRequest
-from app.services.chapter_finalize_service import ChapterFinalizeSubmissionService
+from app.services.chapter_finalize_service import (
+    ChapterFinalizeSubmissionService,
+    PreparedChapterFinalize,
+)
 from app.services.chapter_projection_ops import ChapterProjectionOpsService
+from app.services.chapter_projection_service import ChapterProjectionService
 from app.services.job_handlers import build_job_handler_registry
 from app.services.job_service import JobService
 from app.services.job_worker import JobWorker
@@ -90,8 +94,12 @@ async def _seed_finalize_chapter(
         await session.flush()
         session.add_all(
             [
-                ChapterVersion(chapter_id=chapter.id, version_label="version1", content="旧候选正文"),
-                ChapterVersion(chapter_id=chapter.id, version_label="version2", content="第二候选正文"),
+                ChapterVersion(
+                    chapter_id=chapter.id, version_label="version1", content="旧候选正文"
+                ),
+                ChapterVersion(
+                    chapter_id=chapter.id, version_label="version2", content="第二候选正文"
+                ),
             ]
         )
         await session.commit()
@@ -138,10 +146,16 @@ async def test_finalize_submission_commits_content_with_one_queued_dispatcher(
             )
         ).scalar_one()
         projection = (
-            await session.execute(
-                select(ChapterProjectionRun).where(ChapterProjectionRun.chapter_id == chapter.id)
+            (
+                await session.execute(
+                    select(ChapterProjectionRun).where(
+                        ChapterProjectionRun.chapter_id == chapter.id
+                    )
+                )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         job_count = await session.scalar(
             select(func.count(BackgroundTask.id)).where(
                 BackgroundTask.project_id == "finalize-submit-project"
@@ -168,6 +182,8 @@ async def test_finalize_submission_commits_content_with_one_queued_dispatcher(
     assert revision.source_content == "最终正文"
     assert revision.source_hash == chapter.source_hash
     assert outbox.event_type == "ChapterFinalizationRequested"
+    assert task.stream_id == outbox.workflow_stream_id
+    assert outbox.payload["workflow_stream_id"] == outbox.workflow_stream_id
     assert "source_content" not in outbox.payload
     assert projection is None
     assert job_count == 1
@@ -193,6 +209,57 @@ async def test_finalize_submission_commits_content_with_one_queued_dispatcher(
 
 
 @pytest.mark.asyncio(loop_scope="session")
+async def test_finalize_prepare_apply_reuses_workflow_stream_without_early_commit(
+    isolated_pg,
+):
+    project_id = str(uuid4())
+    workflow_stream_id = str(uuid4())
+    session_factory = isolated_pg.session_factory
+    await _seed_finalize_chapter(
+        session_factory,
+        user_id=1411,
+        project_id=project_id,
+    )
+
+    async with session_factory() as session:
+        service = ChapterFinalizeSubmissionService(session)
+        prepared = await service.prepare(
+            project_id=project_id,
+            chapter_number=1,
+            user_id=1411,
+            selected_version_index=0,
+            edited_content="workflow 定稿正文",
+            skip_vector_update=True,
+            idempotency_key="workflow-finalize-prepare-apply",
+        )
+        assert isinstance(prepared, PreparedChapterFinalize)
+        result = await service.apply(
+            prepared,
+            workflow_stream_id=workflow_stream_id,
+        )
+        assert result.job.stream_id == workflow_stream_id
+        assert result.outbox_event.workflow_stream_id == workflow_stream_id
+        assert result.outbox_event.payload["workflow_stream_id"] == workflow_stream_id
+
+        other_session = session_factory()
+        try:
+            assert await other_session.get(ChapterOutboxEvent, result.outbox_event.id) is None
+        finally:
+            await other_session.close()
+
+        task = await ChapterProjectionService(session).commit_finalize(result)
+        task_id = task.id
+        outbox_id = result.outbox_event.id
+
+    async with session_factory() as session:
+        task = await session.get(BackgroundTask, task_id)
+        outbox = await session.get(ChapterOutboxEvent, outbox_id)
+
+    assert task is not None and task.stream_id == workflow_stream_id
+    assert outbox is not None and outbox.workflow_stream_id == workflow_stream_id
+
+
+@pytest.mark.asyncio(loop_scope="session")
 async def test_finalize_worker_applies_stats_and_skips_vectors(
     db_session_factory,
     monkeypatch,
@@ -211,13 +278,9 @@ async def test_finalize_worker_applies_stats_and_skips_vectors(
     monkeypatch.setattr(
         LLMService,
         "get_llm_response_result_detached",
-        AsyncMock(
-            return_value=_ai_call_result('{"items":[]}', stage="foreshadowing")
-        ),
+        AsyncMock(return_value=_ai_call_result('{"items":[]}', stage="foreshadowing")),
     )
-    embedding_call = AsyncMock(
-        return_value=_ai_call_result([0.1, 0.2, 0.3], stage="rag_embedding")
-    )
+    embedding_call = AsyncMock(return_value=_ai_call_result([0.1, 0.2, 0.3], stage="rag_embedding"))
     monkeypatch.setattr(LLMService, "get_embedding_result_detached", embedding_call)
     monkeypatch.setattr(
         LLMService,
@@ -276,22 +339,32 @@ async def test_finalize_worker_applies_stats_and_skips_vectors(
                     .join(BackgroundTask, BackgroundTask.id == JobActivity.job_id)
                     .where(BackgroundTask.project_id == "finalize-worker-project")
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         projections = (
-            await session.execute(
-                select(ChapterProjectionRun)
-                .where(ChapterProjectionRun.project_id == "finalize-worker-project")
-                .order_by(ChapterProjectionRun.projection_name)
-            )
-        ).scalars().all()
-        all_jobs = (
-            await session.execute(
-                select(BackgroundTask).where(
-                    BackgroundTask.project_id == "finalize-worker-project"
+            (
+                await session.execute(
+                    select(ChapterProjectionRun)
+                    .where(ChapterProjectionRun.project_id == "finalize-worker-project")
+                    .order_by(ChapterProjectionRun.projection_name)
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
+        all_jobs = (
+            (
+                await session.execute(
+                    select(BackgroundTask).where(
+                        BackgroundTask.project_id == "finalize-worker-project"
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
 
     assert dispatcher_task is not None
     assert dispatcher_task.status == "succeeded"
@@ -319,10 +392,7 @@ async def test_finalize_worker_applies_stats_and_skips_vectors(
         "rag",
         "reconcile",
     }
-    assert all(
-        run.status in {"succeeded", "skipped"}
-        for run in projections
-    )
+    assert all(run.status in {"succeeded", "skipped"} for run in projections)
     assert len(all_jobs) == 6
     embedding_call.assert_not_awaited()
 
@@ -357,9 +427,7 @@ async def test_legacy_finalize_artifacts_follow_canonical_revision_and_tombstone
         ),
     )
     memory_results = ["legacy 全局摘要", "主角：状态稳定", "{}", "legacy 记忆摘要"]
-    legacy_generate = AsyncMock(
-        side_effect=AssertionError("不应再调用 legacy finalize monolith")
-    )
+    legacy_generate = AsyncMock(side_effect=AssertionError("不应再调用 legacy finalize monolith"))
     memory_call = AsyncMock(side_effect=memory_results.copy())
     embedding_call = AsyncMock(return_value=[0.1, 0.2, 0.3])
     monkeypatch.setattr(LLMService, "generate", legacy_generate)
@@ -435,26 +503,28 @@ async def test_legacy_finalize_artifacts_follow_canonical_revision_and_tombstone
                 await session.execute(
                     select(CharacterState).where(CharacterState.project_id == project_id)
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         chunks = list(
-            (
-                await session.execute(select(RagChunk).where(RagChunk.project_id == project_id))
-            ).scalars().all()
+            (await session.execute(select(RagChunk).where(RagChunk.project_id == project_id)))
+            .scalars()
+            .all()
         )
         summaries = list(
-            (
-                await session.execute(
-                    select(RagSummary).where(RagSummary.project_id == project_id)
-                )
-            ).scalars().all()
+            (await session.execute(select(RagSummary).where(RagSummary.project_id == project_id)))
+            .scalars()
+            .all()
         )
         foreshadowings = list(
             (
                 await session.execute(
                     select(Foreshadowing).where(Foreshadowing.project_id == project_id)
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
 
         assert dispatcher is not None
@@ -497,8 +567,7 @@ async def test_legacy_finalize_artifacts_follow_canonical_revision_and_tombstone
         chunks = [await session.get(RagChunk, chunk.id) for chunk in chunks]
         summaries = [await session.get(RagSummary, summary.id) for summary in summaries]
         foreshadowings = [
-            await session.get(Foreshadowing, foreshadowing.id)
-            for foreshadowing in foreshadowings
+            await session.get(Foreshadowing, foreshadowing.id) for foreshadowing in foreshadowings
         ]
         assert snapshot is not None
         assert snapshot.is_active is False
@@ -577,6 +646,8 @@ async def test_legacy_finalize_dead_letters_incompatible_memory_activity(
         dispatcher = await JobService(session).get_job(dispatcher_id)
         assert dispatcher is not None
         legacy_job_id = dispatcher.result["root_job_id"]
+        legacy_job = await JobService(session).get_job(legacy_job_id)
+        assert legacy_job is not None
         now = datetime.now(timezone.utc)
         session.add(
             JobActivity(
@@ -588,7 +659,12 @@ async def test_legacy_finalize_dead_letters_incompatible_memory_activity(
                 provider_request_key=str(uuid4()),
                 attempt=0,
                 fencing_token=0,
-                request_payload={},
+                request_payload={
+                    "project_id": legacy_job.payload["project_id"],
+                    "chapter_number": legacy_job.payload["chapter_number"],
+                    "content_hash": legacy_job.payload["content_hash"],
+                    "skip_vector_update": legacy_job.payload["skip_vector_update"],
+                },
                 result_payload={"success": True, "updated_fields": []},
                 started_at=now,
                 completed_at=now,
@@ -609,7 +685,9 @@ async def test_legacy_finalize_dead_letters_incompatible_memory_activity(
                 await session.execute(
                     select(ChapterSnapshot).where(ChapterSnapshot.project_id == project_id)
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
 
     assert legacy_job is not None
@@ -683,9 +761,7 @@ async def test_finalize_worker_preserves_draft_when_external_result_is_ambiguous
         ).scalar_one()
         projection = (
             await session.execute(
-                select(ChapterProjectionRun).where(
-                    ChapterProjectionRun.job_id == summary_task_id
-                )
+                select(ChapterProjectionRun).where(ChapterProjectionRun.job_id == summary_task_id)
             )
         ).scalar_one()
 
@@ -769,9 +845,7 @@ async def test_failed_summary_replay_completes_without_regenerating_canonical_co
         ).scalar_one()
         failed_run = (
             await session.execute(
-                select(ChapterProjectionRun).where(
-                    ChapterProjectionRun.job_id == summary_job_id
-                )
+                select(ChapterProjectionRun).where(ChapterProjectionRun.job_id == summary_job_id)
             )
         ).scalar_one()
         selected_version_id = chapter.selected_version_id
@@ -821,7 +895,9 @@ async def test_failed_summary_replay_completes_without_regenerating_canonical_co
                         ChapterProjectionRun.projection_name == "summary",
                     )
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
 
     assert replay_run is not None
@@ -838,9 +914,7 @@ async def test_failed_summary_replay_completes_without_regenerating_canonical_co
     monkeypatch.setattr(
         LLMService,
         "get_llm_response_result_detached",
-        AsyncMock(
-            return_value=_ai_call_result('{"items":[]}', stage="foreshadowing")
-        ),
+        AsyncMock(return_value=_ai_call_result('{"items":[]}', stage="foreshadowing")),
     )
     monkeypatch.setattr(
         LLMService,
@@ -871,14 +945,10 @@ async def test_failed_summary_replay_completes_without_regenerating_canonical_co
         revision = await session.get(ChapterRevision, revision.id)
         selected_version = await session.get(ChapterVersion, selected_version_id)
         revision_count = await session.scalar(
-            select(func.count(ChapterRevision.id)).where(
-                ChapterRevision.project_id == project_id
-            )
+            select(func.count(ChapterRevision.id)).where(ChapterRevision.project_id == project_id)
         )
         version_count = await session.scalar(
-            select(func.count(ChapterVersion.id)).where(
-                ChapterVersion.chapter_id == chapter.id
-            )
+            select(func.count(ChapterVersion.id)).where(ChapterVersion.chapter_id == chapter.id)
         )
         finalized_count = await session.scalar(
             select(func.count(ChapterOutboxEvent.id)).where(
@@ -900,7 +970,9 @@ async def test_failed_summary_replay_completes_without_regenerating_canonical_co
                         ChapterProjectionRun.projection_name == "summary",
                     )
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         downstream_runs = list(
             (
@@ -912,7 +984,9 @@ async def test_failed_summary_replay_completes_without_regenerating_canonical_co
                         ),
                     )
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
 
     assert chapter is not None

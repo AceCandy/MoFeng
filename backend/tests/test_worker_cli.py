@@ -1,6 +1,8 @@
 # AIMETA P=durable_worker运维命令测试|R=验证CLI输出_退出码_清理顺序|NR=不连接真实数据库|E=pytest|X=test|A=单元测试|D=pytest|S=none|RD=../app/README.ai
 import argparse
 import json
+from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -11,6 +13,8 @@ from app.schemas.chapter_projection import (
     ChapterProjectionRetentionResponse,
 )
 from app.services.chapter_projection_ops import ChapterProjectionNotFoundError
+from app.services.chapter_workflow_observability import ChapterWorkflowRuntimeMetrics
+from app.services.chapter_workflow_retention import ChapterWorkflowRetentionResult
 from app.services.job_service import JobRuntimeMetrics, JobWorkerHealth
 
 
@@ -83,6 +87,30 @@ async def test_metrics_command_emits_json(monkeypatch, capsys) -> None:
             "alerts": ["chapter_outbox_backlog"],
         }
     )
+    workflow_service = MagicMock()
+    workflow_service.get_runtime_metrics = AsyncMock(
+        return_value=ChapterWorkflowRuntimeMetrics(
+            window_seconds=3600,
+            status_counts={"waiting_for_selection": 1},
+            oldest_state_age_seconds={"waiting_for_selection": 12.0},
+            active_runs=1,
+            oldest_active_age_seconds=20.0,
+            waiting_runs=1,
+            oldest_waiting_duration_seconds=12.0,
+            command_rejections=0,
+            command_rejection_type_counts={},
+            command_rejection_reason_counts={},
+            needs_attention=0,
+            oldest_needs_attention_age_seconds=None,
+            checkpoint_runs_observed=1,
+            checkpoint_lag=0,
+            checkpoint_problem_counts={},
+            projection_lag=0,
+            oldest_projection_lag_seconds=None,
+            reconciler_fix_counts={"projection_completed": 1},
+            alerts=(),
+        )
+    )
     monkeypatch.setattr(worker_cli, "_require_database_ready", AsyncMock())
     monkeypatch.setattr(worker_cli, "AsyncSessionLocal", _SessionFactory())
     monkeypatch.setattr(worker_cli, "JobService", lambda _session: service)
@@ -90,6 +118,11 @@ async def test_metrics_command_emits_json(monkeypatch, capsys) -> None:
         worker_cli,
         "ChapterProjectionService",
         lambda _session: projection_service,
+    )
+    monkeypatch.setattr(
+        worker_cli,
+        "ChapterWorkflowObservabilityService",
+        lambda _session, checkpoint_reader: workflow_service,
     )
 
     exit_code = await worker_cli._run_metrics()
@@ -102,6 +135,131 @@ async def test_metrics_command_emits_json(monkeypatch, capsys) -> None:
     assert payload["status_counts"] == {"failed": 1, "queued": 2}
     assert payload["chapter_projections"]["outbox_backlog"] == 1
     assert payload["chapter_projections"]["alerts"] == ["chapter_outbox_backlog"]
+    assert payload["chapter_workflows"]["waiting_runs"] == 1
+    assert payload["chapter_workflows"]["reconciler_fix_counts"] == {"projection_completed": 1}
+    assert payload["chapter_workflows"]["alerts"] == []
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_cleanup_workflows_command_emits_bounded_result(monkeypatch, capsys) -> None:
+    cleanup = AsyncMock(
+        return_value={
+            "scanned": 3,
+            "cleaned_runs": 1,
+            "deleted_threads": 1,
+            "scrubbed_commands": 2,
+            "scrubbed_activities": 4,
+            "protected_current_revision": 1,
+            "checkpoint_unavailable": 1,
+            "retention_days": 30,
+        }
+    )
+    monkeypatch.setattr(worker_cli, "_require_database_ready", AsyncMock())
+    monkeypatch.setattr(worker_cli, "_cleanup_workflows_once", cleanup)
+    monkeypatch.setattr(worker_cli, "shutdown_event_bus", AsyncMock())
+    fake_engine = MagicMock()
+    fake_engine.dispose = AsyncMock()
+    monkeypatch.setattr(worker_cli, "engine", fake_engine)
+
+    exit_code = await worker_cli._run_command(argparse.Namespace(command="cleanup-workflows"))
+    payload = json.loads(capsys.readouterr().out)
+
+    assert exit_code == 0
+    assert payload == {
+        "checkpoint_unavailable": 1,
+        "cleaned_runs": 1,
+        "command": "cleanup-workflows",
+        "deleted_threads": 1,
+        "protected_current_revision": 1,
+        "retention_days": 30,
+        "scanned": 3,
+        "scrubbed_activities": 4,
+        "scrubbed_commands": 2,
+    }
+    worker_cli._require_database_ready.assert_awaited_once_with()
+    cleanup.assert_awaited_once_with()
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_cleanup_workflows_uses_retention_settings(monkeypatch) -> None:
+    fixed_now = datetime(2026, 7, 30, 12, 0, tzinfo=timezone.utc)
+
+    class _FrozenDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            assert tz == timezone.utc
+            return fixed_now
+
+    result = ChapterWorkflowRetentionResult(
+        scanned=3,
+        cleaned_runs=1,
+        deleted_threads=1,
+        scrubbed_commands=2,
+        scrubbed_activities=4,
+        protected_current_revision=1,
+        checkpoint_unavailable=1,
+    )
+    service = MagicMock()
+    service.cleanup = AsyncMock(return_value=result)
+    service_factory = MagicMock(return_value=service)
+    checkpoint_reader = object()
+    checkpoint_cleaner = object()
+    reader_factory = MagicMock(return_value=checkpoint_reader)
+    cleaner_factory = MagicMock(return_value=checkpoint_cleaner)
+    settings = SimpleNamespace(
+        chapter_workflow_retention_days=45,
+        chapter_workflow_retention_batch_size=7,
+        sqlalchemy_database_uri="postgresql+asyncpg://workflow-retention",
+    )
+    session_factory = _SessionFactory()
+    monkeypatch.setattr(worker_cli, "datetime", _FrozenDateTime)
+    monkeypatch.setattr(worker_cli, "settings", settings)
+    monkeypatch.setattr(worker_cli, "AsyncSessionLocal", session_factory)
+    monkeypatch.setattr(worker_cli, "ChapterWorkflowRetentionService", service_factory)
+    monkeypatch.setattr(worker_cli, "PostgresChapterWorkflowCheckpointReader", reader_factory)
+    monkeypatch.setattr(worker_cli, "PostgresChapterWorkflowCheckpointCleaner", cleaner_factory)
+
+    payload = await worker_cli._cleanup_workflows_once()
+
+    reader_factory.assert_called_once_with(settings.sqlalchemy_database_uri)
+    cleaner_factory.assert_called_once_with(settings.sqlalchemy_database_uri)
+    service_factory.assert_called_once_with(
+        session_factory.session,
+        checkpoint_reader=checkpoint_reader,
+        checkpoint_cleaner=checkpoint_cleaner,
+    )
+    service.cleanup.assert_awaited_once_with(
+        before=fixed_now - timedelta(days=45),
+        limit=7,
+    )
+    assert payload == {**result.__dict__, "retention_days": 45}
+
+
+@pytest.mark.asyncio(loop_scope="session")
+@pytest.mark.parametrize("failing_cleanup", ["events", "workflows"])
+async def test_retention_loop_isolates_cleanup_failures(
+    monkeypatch,
+    failing_cleanup,
+) -> None:
+    stop_event = worker_cli.asyncio.Event()
+    events_cleanup = AsyncMock(return_value={"deleted_events": 0})
+
+    async def finish_or_fail_workflow_cleanup():
+        stop_event.set()
+        if failing_cleanup == "workflows":
+            raise RuntimeError("workflow cleanup failed")
+        return {"cleaned_runs": 0}
+
+    workflows_cleanup = AsyncMock(side_effect=finish_or_fail_workflow_cleanup)
+    if failing_cleanup == "events":
+        events_cleanup.side_effect = RuntimeError("event cleanup failed")
+    monkeypatch.setattr(worker_cli, "_cleanup_events_once", events_cleanup)
+    monkeypatch.setattr(worker_cli, "_cleanup_workflows_once", workflows_cleanup)
+
+    await worker_cli._retention_loop(stop_event)
+
+    events_cleanup.assert_awaited_once_with()
+    workflows_cleanup.assert_awaited_once_with()
 
 
 @pytest.mark.asyncio(loop_scope="session")

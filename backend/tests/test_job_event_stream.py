@@ -6,16 +6,35 @@ import pytest
 from sqlalchemy import delete, select, update
 
 from app.models.background_task import BackgroundTask
+from app.models.chapter_generation_trace import (
+    ChapterGenerationTraceProjectionCheckpoint,
+)
 from app.models.job import JobEvent
 from app.models.novel import NovelProject
 from app.models.user import User
+from app.repositories.chapter_generation_trace_projection_repository import (
+    CHAPTER_GENERATION_TRACE_PROJECTOR_NAME,
+)
 from app.schemas.task import BackgroundTaskResponse
+from app.services.chapter_generation_trace_projector import (
+    project_chapter_generation_traces,
+)
 from app.services.job_service import (
     EventCursorExpiredError,
     JobService,
     JobStreamNotFoundError,
     _utc_now,
 )
+
+
+async def _seed_trace_projector_checkpoint(session) -> None:
+    session.add(
+        ChapterGenerationTraceProjectionCheckpoint(
+            projector_name=CHAPTER_GENERATION_TRACE_PROJECTOR_NAME,
+            last_event_cursor=0,
+        )
+    )
+    await session.commit()
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -94,8 +113,9 @@ async def test_empty_snapshot_returns_current_user_cursor(db_session_factory):
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_retention_cleanup_requires_snapshot_reset_and_preserves_resume_cursor(
-    db_session_factory,
+    isolated_pg,
 ):
+    db_session_factory = isolated_pg.session_factory
     async with db_session_factory() as session:
         session.add(User(id=25, username="retention-stream", hashed_password="secret"))
         await session.commit()
@@ -108,6 +128,9 @@ async def test_retention_cleanup_requires_snapshot_reset_and_preserves_resume_cu
         )
         before_cleanup = await service.get_snapshot(user_id=25, limit=20)
 
+        await _seed_trace_projector_checkpoint(session)
+        await project_chapter_generation_traces(session)
+        await session.commit()
         cleanup = await service.cleanup_events(before=_utc_now() + timedelta(days=1))
 
         assert cleanup.deleted_events == 1
@@ -189,8 +212,7 @@ async def test_concurrent_workflow_jobs_share_sequence_and_resume_without_gap(
         assert snapshot.stream_type == "workflow"
         assert snapshot.stream_id == "workflow-concurrent-run"
         assert snapshot.snapshot_revision == (
-            "stream:workflow:workflow-concurrent-run:"
-            f"sequence:2:cursor:{snapshot.resume_cursor}"
+            "stream:workflow:workflow-concurrent-run:" f"sequence:2:cursor:{snapshot.resume_cursor}"
         )
 
         projection = await enqueue("workflow-projection", "workflow-projection-key")
@@ -308,7 +330,8 @@ async def test_workflow_stream_authorization_and_idempotency_identity(
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_stream_retention_watermarks_are_isolated(db_session_factory):
+async def test_stream_retention_watermarks_are_isolated(isolated_pg):
+    db_session_factory = isolated_pg.session_factory
     async with db_session_factory() as session:
         session.add(User(id=28, username="stream-retention-owner", hashed_password="secret"))
         await session.commit()
@@ -341,6 +364,9 @@ async def test_stream_retention_watermarks_are_isolated(db_session_factory):
             .where(JobEvent.stream_id == "retention-stream-a")
             .values(created_at=now - timedelta(days=2))
         )
+        await session.commit()
+        await _seed_trace_projector_checkpoint(session)
+        await project_chapter_generation_traces(session)
         await session.commit()
         cleanup = await service.cleanup_events(before=now - timedelta(days=1))
 
@@ -409,6 +435,7 @@ async def test_deleting_job_keeps_append_only_event(db_session_factory):
 def test_internal_job_statuses_preserve_four_state_background_task_contract():
     assert BackgroundTaskResponse.public_status("queued") == "queued"
     assert BackgroundTaskResponse.public_status("retry_wait") == "queued"
+    assert BackgroundTaskResponse.public_status("waiting") == "queued"
     assert BackgroundTaskResponse.public_status("running") == "running"
     assert BackgroundTaskResponse.public_status("succeeded") == "succeeded"
     assert BackgroundTaskResponse.public_status("dead_letter") == "failed"

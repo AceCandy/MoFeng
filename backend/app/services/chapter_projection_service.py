@@ -32,26 +32,25 @@ from ..schemas.job import (
     ChapterFinalizeOutboxPayload,
     ChapterOutboxDispatchJobPayload,
 )
-from .event_bus import publish_background_task
-from .chapter_projection_rollout import (
-    ChapterProjectionRolloutConflictError,
-    ChapterProjectionRolloutService,
-)
 from .chapter_memory_projection import load_memory_input
-from .foreshadowing_sync_service import (
-    ForeshadowingSyncService,
-    serialize_foreshadowing_context,
-)
-from .chapter_projection_runtime import _derived_projection_id
 from .chapter_projection_contract import (
     FINALIZE_EVENT_TYPE,
     OUTBOX_EVENT_VERSION,
     payload_fingerprint,
 )
-from .job_service import JobService
+from .chapter_projection_rollout import (
+    ChapterProjectionRolloutConflictError,
+    ChapterProjectionRolloutService,
+)
+from .chapter_projection_runtime import _derived_projection_id
+from .event_bus import publish_background_task
+from .foreshadowing_sync_service import (
+    ForeshadowingSyncService,
+    serialize_foreshadowing_context,
+)
 from .job_registry import SideEffectClass
+from .job_service import JobService
 from .prompt_service import PromptService
-
 
 FINALIZE_PAYLOAD_VERSION = 2
 PROJECTION_JOB_PAYLOAD_VERSION = 1
@@ -137,9 +136,7 @@ class ChapterProjectionService:
             idempotency_key=normalized_key,
         )
         if existing is not None:
-            command_payload = ChapterOutboxDispatchJobPayload.model_validate(
-                existing.payload or {}
-            )
+            command_payload = ChapterOutboxDispatchJobPayload.model_validate(existing.payload or {})
             outbox = await self.session.get(
                 ChapterOutboxEvent,
                 command_payload.outbox_event_id,
@@ -192,16 +189,19 @@ class ChapterProjectionService:
         user_id: int,
         skip_vector_update: bool,
         idempotency_key: Optional[str],
+        workflow_stream_id: Optional[str] = None,
     ) -> CanonicalFinalizeResult:
         """Append a canonical revision, outbox fact, root projection and typed JobRun."""
 
         if chapter.id is None or selected_version.id is None:
             raise ValueError("章节与选中版本必须已持久化")
+        if workflow_stream_id is not None and not workflow_stream_id.strip():
+            raise ValueError("workflow_stream_id 不能为空")
 
         current_revision, _ = await self._lock_revision_state(chapter.id)
-        rollout = await ChapterProjectionRolloutService(
-            self.session
-        ).ensure_projection_rollout(chapter=chapter)
+        rollout = await ChapterProjectionRolloutService(self.session).ensure_projection_rollout(
+            chapter=chapter
+        )
         if rollout.owner == "projection" and rollout.state == "projection":
             execution_mode = "active"
         elif rollout.owner == "legacy" and rollout.state == "legacy":
@@ -209,15 +209,13 @@ class ChapterProjectionService:
         elif rollout.owner == "legacy" and rollout.state == "shadow":
             execution_mode = "shadow"
         else:
-            raise ChapterProjectionRolloutConflictError(
-                "rollout_finalize_unavailable"
-            )
+            raise ChapterProjectionRolloutConflictError("rollout_finalize_unavailable")
 
         revision_number = current_revision + 1
         revision_id = str(uuid4())
         source_generation = str(uuid4())
         outbox_event_id = str(uuid4())
-        workflow_id = str(uuid4())
+        workflow_id = workflow_stream_id or str(uuid4())
 
         required = [] if execution_mode == "legacy" else ["summary", "memory", "foreshadowing"]
         skipped: list[str] = []
@@ -230,21 +228,23 @@ class ChapterProjectionService:
             self.session,
             project_id=chapter.project_id,
         )
-        foreshadowing_context = await ForeshadowingSyncService(
-            self.session
-        ).load_compute_context(
+        foreshadowing_context = await ForeshadowingSyncService(self.session).load_compute_context(
             project_id=chapter.project_id,
             chapter_number=chapter.chapter_number,
             content=source_content,
         )
         outline = (
-            await self.session.execute(
-                select(ChapterOutline).where(
-                    ChapterOutline.project_id == chapter.project_id,
-                    ChapterOutline.chapter_number == chapter.chapter_number,
+            (
+                await self.session.execute(
+                    select(ChapterOutline).where(
+                        ChapterOutline.project_id == chapter.project_id,
+                        ChapterOutline.chapter_number == chapter.chapter_number,
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         projection_context = {
             "memory": memory_input,
             "foreshadowing": serialize_foreshadowing_context(foreshadowing_context),
@@ -410,15 +410,19 @@ class ChapterProjectionService:
         target_revision_row: Optional[ChapterRevision] = None
         if target_revision > 0:
             target_revision_row = (
-                await self.session.execute(
-                    select(ChapterRevision)
-                    .where(
-                        ChapterRevision.chapter_id == chapter.id,
-                        ChapterRevision.revision == target_revision,
+                (
+                    await self.session.execute(
+                        select(ChapterRevision)
+                        .where(
+                            ChapterRevision.chapter_id == chapter.id,
+                            ChapterRevision.revision == target_revision,
+                        )
+                        .with_for_update()
                     )
-                    .with_for_update()
                 )
-            ).scalars().first()
+                .scalars()
+                .first()
+            )
             if target_revision_row is None:
                 raise RuntimeError("章节 current_revision 缺少 immutable revision")
             source_content = target_revision_row.source_content
@@ -430,9 +434,9 @@ class ChapterProjectionService:
                 else None
             )
             source_content = selected_version.content if selected_version is not None else ""
-            source_hash = chapter.source_hash or hashlib.sha256(
-                source_content.encode("utf-8")
-            ).hexdigest()
+            source_hash = (
+                chapter.source_hash or hashlib.sha256(source_content.encode("utf-8")).hexdigest()
+            )
 
         command_revision_id = str(uuid4())
         command_generation = str(uuid4())
@@ -478,12 +482,8 @@ class ChapterProjectionService:
                 projection_name,
                 fallback_artifact_generation,
             )
-        rag_generation = target_artifact_generations.get(
-            "rag", fallback_artifact_generation
-        )
-        memory_generation = target_artifact_generations.get(
-            "memory", fallback_artifact_generation
-        )
+        rag_generation = target_artifact_generations.get("rag", fallback_artifact_generation)
+        memory_generation = target_artifact_generations.get("memory", fallback_artifact_generation)
         foreshadowing_generation = target_artifact_generations.get(
             "foreshadowing", fallback_artifact_generation
         )
@@ -656,12 +656,16 @@ class ChapterProjectionService:
         """仅当项目记忆仍指向目标代时，回退到前一份 active 快照。"""
 
         memory = (
-            await self.session.execute(
-                select(ProjectMemory)
-                .where(ProjectMemory.project_id == project_id)
-                .with_for_update()
+            (
+                await self.session.execute(
+                    select(ProjectMemory)
+                    .where(ProjectMemory.project_id == project_id)
+                    .with_for_update()
+                )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if memory is None or memory.last_updated_chapter != chapter_number:
             return
         if target_revision > 0:
@@ -670,27 +674,31 @@ class ChapterProjectionService:
                 or memory.projection_generation != target_generation
             ):
                 return
-        elif (
-            memory.projection_revision not in (0, target_revision)
-            or memory.projection_generation not in (None, "legacy")
-        ):
+        elif memory.projection_revision not in (
+            0,
+            target_revision,
+        ) or memory.projection_generation not in (None, "legacy"):
             return
 
         previous_snapshot = (
-            await self.session.execute(
-                select(ChapterSnapshot)
-                .where(
-                    ChapterSnapshot.project_id == project_id,
-                    ChapterSnapshot.chapter_number < chapter_number,
-                    ChapterSnapshot.is_active.is_(True),
-                )
-                .order_by(
-                    ChapterSnapshot.chapter_number.desc(),
-                    ChapterSnapshot.chapter_revision.desc(),
-                    ChapterSnapshot.id.desc(),
+            (
+                await self.session.execute(
+                    select(ChapterSnapshot)
+                    .where(
+                        ChapterSnapshot.project_id == project_id,
+                        ChapterSnapshot.chapter_number < chapter_number,
+                        ChapterSnapshot.is_active.is_(True),
+                    )
+                    .order_by(
+                        ChapterSnapshot.chapter_number.desc(),
+                        ChapterSnapshot.chapter_revision.desc(),
+                        ChapterSnapshot.id.desc(),
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         memory.version = int(memory.version or 0) + 1
         if previous_snapshot is None:
             memory.last_updated_chapter = 0
@@ -713,11 +721,11 @@ class ChapterProjectionService:
         """Return allowlisted projection/outbox aggregates for operational alerts."""
 
         checked_at = now or datetime.now(timezone.utc)
-        age_seconds = lambda value: (
-            max(0.0, (checked_at - value).total_seconds())
-            if isinstance(value, datetime)
-            else None
-        )
+
+        def age_seconds(value: object) -> Optional[float]:
+            if not isinstance(value, datetime):
+                return None
+            return max(0.0, (checked_at - value).total_seconds())
 
         current_run_filter = and_(
             ChapterProjectionRun.revision == Chapter.current_revision,
@@ -751,18 +759,16 @@ class ChapterProjectionService:
             )
         ).all()
         projection_status_counts = {
-            f"{projection}.{status}": int(count)
-            for projection, status, count in projection_rows
+            f"{projection}.{status}": int(count) for projection, status, count in projection_rows
         }
         history_status_rows = (
             await self.session.execute(
-                select(ChapterProjectionRun.status, func.count(ChapterProjectionRun.id))
-                .group_by(ChapterProjectionRun.status)
+                select(ChapterProjectionRun.status, func.count(ChapterProjectionRun.id)).group_by(
+                    ChapterProjectionRun.status
+                )
             )
         ).all()
-        history_status_counts = {
-            str(status): int(count) for status, count in history_status_rows
-        }
+        history_status_counts = {str(status): int(count) for status, count in history_status_rows}
         history_projection_rows = (
             await self.session.execute(
                 select(
@@ -793,9 +799,7 @@ class ChapterProjectionService:
         )
         projection_outbox_total = int(
             await self.session.scalar(
-                select(func.count(ChapterOutboxEvent.id)).where(
-                    projection_outbox_filter
-                )
+                select(func.count(ChapterOutboxEvent.id)).where(projection_outbox_filter)
             )
             or 0
         )
@@ -901,8 +905,7 @@ class ChapterProjectionService:
             )
         ).all()
         projection_job_status_counts = {
-            str(status): int(count)
-            for status, count, _oldest_at in projection_job_rows
+            str(status): int(count) for status, count, _oldest_at in projection_job_rows
         }
         operational_statuses = {
             "queued",
@@ -914,8 +917,7 @@ class ChapterProjectionService:
         projection_job_oldest_age_seconds = {
             str(status): age
             for status, _count, oldest_at in projection_job_rows
-            if status in operational_statuses
-            and (age := age_seconds(oldest_at)) is not None
+            if status in operational_statuses and (age := age_seconds(oldest_at)) is not None
         }
         expired_lease_count, oldest_expired_lease_at = (
             await self.session.execute(
@@ -989,8 +991,8 @@ class ChapterProjectionService:
             status_key = str(status)
             if status_key not in _EXTERNAL_ACTIVITY_STATUSES:
                 status_key = "unknown"
-            external_status_counts[status_key] = (
-                external_status_counts.get(status_key, 0) + int(count)
+            external_status_counts[status_key] = external_status_counts.get(status_key, 0) + int(
+                count
             )
         cost_envelope_known = and_(
             AIUsageRecord.cost_known.is_(True),
@@ -1032,9 +1034,7 @@ class ChapterProjectionService:
                 select(
                     func.count(AIUsageRecord.job_activity_id),
                     func.coalesce(
-                        func.sum(
-                            case((AIUsageRecord.usage_complete.is_(False), 1), else_=0)
-                        ),
+                        func.sum(case((AIUsageRecord.usage_complete.is_(False), 1), else_=0)),
                         0,
                     ),
                     func.coalesce(func.sum(AIUsageRecord.input_tokens), 0),
@@ -1047,15 +1047,11 @@ class ChapterProjectionService:
                     ),
                     func.coalesce(func.sum(AIUsageRecord.reasoning_tokens), 0),
                     func.coalesce(
-                        func.sum(
-                            case((cost_envelope_known, 1), else_=0)
-                        ),
+                        func.sum(case((cost_envelope_known, 1), else_=0)),
                         0,
                     ),
                     func.coalesce(
-                        func.sum(
-                            case((cost_envelope_unknown, 1), else_=0)
-                        ),
+                        func.sum(case((cost_envelope_unknown, 1), else_=0)),
                         0,
                     ),
                 )
@@ -1079,9 +1075,7 @@ class ChapterProjectionService:
                 .group_by(AIUsageRecord.cost_currency)
             )
         ).all()
-        ai_cost_totals = {
-            str(currency): str(amount) for currency, amount in ai_cost_rows
-        }
+        ai_cost_totals = {str(currency): str(amount) for currency, amount in ai_cost_rows}
         ai_cost_unknown_rows = (
             await self.session.execute(
                 select(
@@ -1102,8 +1096,8 @@ class ChapterProjectionService:
             reason_key = str(reason or "unspecified")
             if reason_key not in _AI_COST_UNKNOWN_REASONS:
                 reason_key = "other"
-            ai_cost_unknown_counts[reason_key] = (
-                ai_cost_unknown_counts.get(reason_key, 0) + int(count)
+            ai_cost_unknown_counts[reason_key] = ai_cost_unknown_counts.get(reason_key, 0) + int(
+                count
             )
         rollout_rows = (
             await self.session.execute(
@@ -1117,10 +1111,7 @@ class ChapterProjectionService:
                 )
             )
         ).all()
-        rollout_counts = {
-            f"{owner}.{state}": int(count)
-            for owner, state, count in rollout_rows
-        }
+        rollout_counts = {f"{owner}.{state}": int(count) for owner, state, count in rollout_rows}
         rollout_transition_rows = (
             await self.session.execute(
                 select(
@@ -1138,8 +1129,7 @@ class ChapterProjectionService:
             )
         ).all()
         rollout_transition_counts = {
-            f"{from_owner or 'none'}.{from_state or 'none'}->"
-            f"{to_owner}.{to_state}": int(count)
+            f"{from_owner or 'none'}.{from_state or 'none'}->" f"{to_owner}.{to_state}": int(count)
             for from_owner, from_state, to_owner, to_state, count in rollout_transition_rows
         }
         shadow_rollout_filter = ChapterProjectionRollout.state.in_(("shadow", "draining"))
@@ -1178,7 +1168,9 @@ class ChapterProjectionService:
                             case(
                                 (
                                     and_(
-                                        ChapterProjectionRollout.observation_deadline_at.is_not(None),
+                                        ChapterProjectionRollout.observation_deadline_at.is_not(
+                                            None
+                                        ),
                                         ChapterProjectionRollout.observation_deadline_at
                                         <= checked_at,
                                     ),
@@ -1205,8 +1197,7 @@ class ChapterProjectionService:
                 .select_from(ChapterProjectionShadowObservation)
                 .join(
                     ChapterProjectionRollout,
-                    ChapterProjectionRollout.id
-                    == ChapterProjectionShadowObservation.rollout_id,
+                    ChapterProjectionRollout.id == ChapterProjectionShadowObservation.rollout_id,
                 )
                 .where(
                     shadow_rollout_filter,
@@ -1217,8 +1208,7 @@ class ChapterProjectionService:
             )
         ).all()
         shadow_observation_outcome_counts = {
-            str(outcome): int(count)
-            for outcome, count in shadow_observation_rows
+            str(outcome): int(count) for outcome, count in shadow_observation_rows
         }
         next_shadow_deadline_seconds = None
         if isinstance(next_shadow_deadline_at, datetime):
@@ -1232,10 +1222,7 @@ class ChapterProjectionService:
             alerts.append("chapter_outbox_backlog")
         if oldest_backlog_age is not None and oldest_backlog_age > 300:
             alerts.append("chapter_outbox_stuck")
-        if (
-            projection_job_status_counts.get("needs_attention", 0) > 0
-            or ambiguous_external > 0
-        ):
+        if projection_job_status_counts.get("needs_attention", 0) > 0 or ambiguous_external > 0:
             alerts.append("chapter_projection_needs_attention")
         if projection_job_status_counts.get("dead_letter", 0) > 0:
             alerts.append("chapter_projection_dead_letter")
@@ -1254,8 +1241,7 @@ class ChapterProjectionService:
         if int(ai_usage_incomplete_count or 0) > 0:
             alerts.append("chapter_projection_usage_incomplete")
         if any(
-            external_status_counts.get(status, 0) > 0
-            for status in ("failed", "retryable_failed")
+            external_status_counts.get(status, 0) > 0 for status in ("failed", "retryable_failed")
         ):
             alerts.append("chapter_projection_external_failed")
 
@@ -1272,9 +1258,7 @@ class ChapterProjectionService:
             "projection_job_status_counts": projection_job_status_counts,
             "projection_job_oldest_age_seconds": projection_job_oldest_age_seconds,
             "projection_expired_lease_count": int(expired_lease_count or 0),
-            "projection_oldest_expired_lease_age_seconds": age_seconds(
-                oldest_expired_lease_at
-            ),
+            "projection_oldest_expired_lease_age_seconds": age_seconds(oldest_expired_lease_at),
             "projection_reclaim_event_count": projection_reclaim_event_count,
             "reconcile_success_count": int(reconcile_count or 0),
             "reconcile_latency_seconds_avg": (

@@ -9,24 +9,24 @@ from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
-from alembic import command
 from sqlalchemy.ext.asyncio import AsyncConnection, async_sessionmaker, create_async_engine
 
-from app.db import migration as migration_module
+from alembic import command
 from app.core.config import settings
+from app.db import migration as migration_module
+from app.db.base import Base
 from app.db.bootstrap import (
     BOOTSTRAP_STEPS,
     CURRENT_BOOTSTRAP_BINARY_VERSION,
     run_bootstrap,
 )
-from app.db.base import Base
 from app.db.cli import build_parser
 from app.db.migration import (
     KNOWN_LEGACY_BASELINES,
     LegacyDatabaseRequiresAdoption,
     adopt_legacy_database,
-    canonical_schema_fingerprint,
     build_alembic_config,
+    canonical_schema_fingerprint,
     classify_database_tables,
     create_database,
     metadata_schema_manifest,
@@ -67,9 +67,7 @@ async def _temporary_postgres_database(source_engine, *, create: bool = True):
             async with admin_engine.connect() as connection:
                 quoted_name = connection.dialect.identifier_preparer.quote(database_name)
                 await connection.execute(sa.text(f"CREATE DATABASE {quoted_name}"))
-        yield source_engine.url.set(database=database_name).render_as_string(
-            hide_password=False
-        )
+        yield source_engine.url.set(database=database_name).render_as_string(hide_password=False)
     finally:
         async with admin_engine.connect() as connection:
             await connection.execute(
@@ -158,6 +156,26 @@ def test_readiness_rejects_bootstrap_name_drift() -> None:
     assert "bootstrap_contract_mismatch" in evaluate_database_readiness(state).codes
 
 
+def test_readiness_rejects_checkpoint_schema_or_version_drift() -> None:
+    missing_table = DatabaseState(
+        reachable=True,
+        database_revisions=("head-revision",),
+        code_heads=("head-revision",),
+        bootstrap_rows=_completed_ledger(),
+        checkpoint_tables=frozenset({"checkpoints"}),
+    )
+    assert "checkpoint_schema_missing" in evaluate_database_readiness(missing_table).codes
+
+    future_version = DatabaseState(
+        reachable=True,
+        database_revisions=("head-revision",),
+        code_heads=("head-revision",),
+        bootstrap_rows=_completed_ledger(),
+        checkpoint_migration_versions=tuple(range(11)),
+    )
+    assert "checkpoint_schema_mismatch" in evaluate_database_readiness(future_version).codes
+
+
 def test_legacy_database_classification_and_fingerprint_are_fail_closed() -> None:
     assert classify_database_tables(set()) == "empty"
     assert classify_database_tables({"alembic_version"}) == "versioned"
@@ -216,9 +234,7 @@ def test_legacy_database_classification_and_fingerprint_are_fail_closed() -> Non
         ]
     }
     without_check = {"tables": [{"name": "items", "columns": []}]}
-    assert canonical_schema_fingerprint(with_check) != canonical_schema_fingerprint(
-        without_check
-    )
+    assert canonical_schema_fingerprint(with_check) != canonical_schema_fingerprint(without_check)
 
     assert KNOWN_LEGACY_BASELINES
     fingerprint, revision = next(iter(KNOWN_LEGACY_BASELINES.items()))
@@ -338,12 +354,8 @@ async def test_postgres_empty_and_current_database_lifecycle(
                 prompts_dir=tmp_path,
             )
 
-            assert first.completed_versions == tuple(
-                step.version for step in BOOTSTRAP_STEPS
-            )
-            assert second.skipped_versions == tuple(
-                step.version for step in BOOTSTRAP_STEPS
-            )
+            assert first.completed_versions == tuple(step.version for step in BOOTSTRAP_STEPS)
+            assert second.skipped_versions == tuple(step.version for step in BOOTSTRAP_STEPS)
             assert (await check_database_readiness(engine)).ready is True
         finally:
             await engine.dispose()
@@ -366,16 +378,12 @@ async def test_concurrent_postgres_migrations_are_serialized_by_advisory_lock(
         invocation_count += 1
         if invocation_count == 1:
             await original_acquire_lock(connection)
-            backend_pids["first"] = int(
-                await connection.scalar(sa.text("SELECT pg_backend_pid()"))
-            )
+            backend_pids["first"] = int(await connection.scalar(sa.text("SELECT pg_backend_pid()")))
             first_locked.set()
             await release_first.wait()
             return
 
-        backend_pids["second"] = int(
-            await connection.scalar(sa.text("SELECT pg_backend_pid()"))
-        )
+        backend_pids["second"] = int(await connection.scalar(sa.text("SELECT pg_backend_pid()")))
         second_waiting.set()
         await original_acquire_lock(connection)
 
@@ -407,14 +415,12 @@ async def test_concurrent_postgres_migrations_are_serialized_by_advisory_lock(
 
             async with observer_engine.connect() as connection:
                 revisions = (
-                    await connection.execute(
-                        sa.text("SELECT version_num FROM alembic_version")
-                    )
-                ).scalars().all()
+                    (await connection.execute(sa.text("SELECT version_num FROM alembic_version")))
+                    .scalars()
+                    .all()
+                )
                 table_names = await connection.run_sync(
-                    lambda sync_connection: set(
-                        sa.inspect(sync_connection).get_table_names()
-                    )
+                    lambda sync_connection: set(sa.inspect(sync_connection).get_table_names())
                 )
         finally:
             release_first.set()
@@ -426,7 +432,7 @@ async def test_concurrent_postgres_migrations_are_serialized_by_advisory_lock(
 
         assert backend_pids["first"] != backend_pids["second"]
         assert blocked_by_first is True
-        assert revisions == ["f2a6c9d4e8b1"]
+        assert revisions == ["c8e5f2a1d4b6"]
         assert {
             "chapter_revisions",
             "chapter_outbox_events",
@@ -465,14 +471,18 @@ async def test_head_schema_accepts_pre_projection_chapter_insert(_pg_engine) -> 
 
             async with engine.connect() as connection:
                 chapter = (
-                    await connection.execute(
-                        sa.text(
-                            "SELECT current_revision, source_hash, "
-                            "required_projection_snapshot, projection_generation, "
-                            "tombstone_revision FROM chapters WHERE id = 8102"
+                    (
+                        await connection.execute(
+                            sa.text(
+                                "SELECT current_revision, source_hash, "
+                                "required_projection_snapshot, projection_generation, "
+                                "tombstone_revision FROM chapters WHERE id = 8102"
+                            )
                         )
                     )
-                ).mappings().one()
+                    .mappings()
+                    .one()
+                )
         finally:
             await engine.dispose()
 
@@ -556,9 +566,7 @@ async def test_projection_migration_rejects_destructive_downgrade(_pg_engine) ->
                     sa.text("SELECT version_num FROM alembic_version")
                 )
                 table_names = await connection.run_sync(
-                    lambda sync_connection: set(
-                        sa.inspect(sync_connection).get_table_names()
-                    )
+                    lambda sync_connection: set(sa.inspect(sync_connection).get_table_names())
                 )
                 usage_count = await connection.scalar(
                     sa.text(
@@ -575,7 +583,7 @@ async def test_projection_migration_rejects_destructive_downgrade(_pg_engine) ->
         finally:
             await engine.dispose()
 
-        assert revision == "f2a6c9d4e8b1"
+        assert revision == "c8e5f2a1d4b6"
         assert {
             "chapter_revisions",
             "chapter_outbox_events",
@@ -668,9 +676,7 @@ async def test_postgres_migration_failure_rolls_back_and_stays_not_ready(
         try:
             async with engine.connect() as connection:
                 table_names = await connection.run_sync(
-                    lambda sync_connection: set(
-                        sa.inspect(sync_connection).get_table_names()
-                    )
+                    lambda sync_connection: set(sa.inspect(sync_connection).get_table_names())
                 )
             assert "migration_probe" not in table_names
             assert (await check_database_readiness(engine)).ready is False

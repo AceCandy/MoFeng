@@ -62,6 +62,7 @@ async def test_anthropic_stream_chat_uses_custom_messages_url(monkeypatch):
             temperature=0.2,
             max_tokens=1024,
             timeout=30,
+            provider_request_key="workflow-provider-key",
         )
     ]
 
@@ -73,6 +74,7 @@ async def test_anthropic_stream_chat_uses_custom_messages_url(monkeypatch):
     assert FakeAsyncClient.last_request["url"] == "https://anthropic-proxy.example/v1/messages"
     assert FakeAsyncClient.last_request["headers"]["x-api-key"] == "anthropic-key"
     assert FakeAsyncClient.last_request["headers"]["anthropic-version"] == "2023-06-01"
+    assert FakeAsyncClient.last_request["headers"]["Idempotency-Key"] == ("workflow-provider-key")
     assert FakeAsyncClient.last_request["json"]["system"] == "system prompt"
     assert FakeAsyncClient.last_request["json"]["messages"] == [
         {"role": "user", "content": "hello"}
@@ -141,10 +143,12 @@ async def test_openai_stream_chat_preserves_usage_only_final_chunk(monkeypatch):
         async for chunk in client.stream_chat(
             messages=[ChatMessage(role="user", content="hello")],
             model="gpt-test",
+            provider_request_key="workflow-provider-key",
         )
     ]
 
     assert FakeCompletions.payload["stream_options"] == {"include_usage": True}
+    assert FakeCompletions.payload["extra_headers"] == {"Idempotency-Key": "workflow-provider-key"}
     assert chunks == [
         {"content": "完成", "finish_reason": "stop"},
         {

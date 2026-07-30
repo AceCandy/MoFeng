@@ -466,6 +466,7 @@ async def test_stream_and_collect_retries_transient_concurrency_limit(monkeypatc
 async def test_stream_and_collect_result_keeps_only_successful_attempt_usage(monkeypatch):
     class FakeLLMClient:
         attempts = 0
+        provider_request_keys = []
 
         def __init__(self, *, api_key, base_url, provider_type):
             pass
@@ -475,6 +476,7 @@ async def test_stream_and_collect_result_keeps_only_successful_attempt_usage(mon
 
         async def stream_chat(self, **kwargs):
             FakeLLMClient.attempts += 1
+            FakeLLMClient.provider_request_keys.append(kwargs.get("provider_request_key"))
             if FakeLLMClient.attempts == 1:
                 yield {
                     "content": "discarded",
@@ -531,6 +533,7 @@ async def test_stream_and_collect_result_keeps_only_successful_attempt_usage(mon
         user_id=7,
         timeout=30.0,
         stage="summary_memory",
+        provider_request_key="workflow-provider-key",
     )
 
     assert result.value == "ok"
@@ -547,6 +550,10 @@ async def test_stream_and_collect_result_keeps_only_successful_attempt_usage(mon
     assert result.cost_currency == "USD"
     assert result.cost_unknown_reason is None
     assert FakeLLMClient.attempts == 2
+    assert FakeLLMClient.provider_request_keys == [
+        "workflow-provider-key",
+        "workflow-provider-key",
+    ]
 
 
 @pytest.mark.asyncio(loop_scope="session")

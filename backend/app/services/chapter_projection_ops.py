@@ -4,8 +4,9 @@
 from __future__ import annotations
 
 from collections import Counter
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, cast
 from uuid import uuid4
 
 from sqlalchemy import func, select
@@ -23,6 +24,7 @@ from ..models.user import User
 from ..schemas.chapter_projection import (
     ChapterProjectionOperationRequest,
     ChapterProjectionOperationResponse,
+    ProjectionName,
 )
 from ..schemas.job import ChapterProjectionJobPayload
 from .chapter_projection_contract import (
@@ -30,6 +32,7 @@ from .chapter_projection_contract import (
     validate_finalize_outbox_event,
 )
 from .chapter_projection_runtime import PROJECTION_JOB_TYPES
+from .chapter_projection_state import retryable_projection_names
 from .event_bus import publish_background_task
 from .job_service import JobService
 
@@ -52,6 +55,19 @@ class ChapterProjectionConflictError(ChapterProjectionOperationError):
 
 class ChapterProjectionRateLimitError(ChapterProjectionOperationError):
     pass
+
+
+@dataclass(frozen=True)
+class ChapterProjectionReplayRequest:
+    """内部 projection replay 范围；HTTP 长度约束不泄漏到领域 identity。"""
+
+    project_id: str
+    chapter_id: int
+    revision: int
+    projection_name: ProjectionName
+    idempotency_key: str
+    reason: str
+    outbox_event_id: Optional[str] = None
 
 
 class ChapterProjectionOpsService:
@@ -103,12 +119,14 @@ class ChapterProjectionOpsService:
             authority_user_ids.add(int(project_owner_user_id))
         for authority_user_id in sorted(authority_user_ids):
             locked_user = (
-                await self.session.execute(
-                    select(User)
-                    .where(User.id == authority_user_id)
-                    .with_for_update()
+                (
+                    await self.session.execute(
+                        select(User).where(User.id == authority_user_id).with_for_update()
+                    )
                 )
-            ).scalars().first()
+                .scalars()
+                .first()
+            )
             if locked_user is None:
                 code = (
                     "operator_not_found"
@@ -184,6 +202,137 @@ class ChapterProjectionOpsService:
                 raise ChapterProjectionConflictError(response.reason_code or "replay_rejected")
             return response
 
+        await self._enqueue_replay_locked(
+            request=request,
+            response=response,
+            project=project,
+            chapter=chapter,
+            revision=revision,
+            outbox=outbox,
+            rollout=rollout,
+            previous=previous,
+            dependency=dependency,
+            job_idempotency_key=f"chapter-replay:{audit.id}",
+            checkpoint={"replay_audit_id": audit.id},
+        )
+        audit.status = "completed"
+        audit.result = response.model_dump(mode="json")
+        audit.completed_at = now
+        await self.session.commit()
+        await publish_background_task(project.user_id)
+        return response
+
+    async def enqueue_replay_in_transaction(
+        self,
+        *,
+        request: ChapterProjectionReplayRequest,
+        job_idempotency_key: str,
+        checkpoint: Optional[dict[str, object]] = None,
+    ) -> ChapterProjectionOperationResponse:
+        """校验并写入 replay run/job；调用方持有事务且负责提交与通知。"""
+
+        project, chapter, revision, outbox, rollout, runs = await self._load_scope(
+            request,
+            for_update=True,
+        )
+        response, previous, dependency = await self._describe(
+            request=request,
+            mode="replay",
+            idempotency_key=request.idempotency_key.strip(),
+            chapter=chapter,
+            revision=revision,
+            outbox=outbox,
+            rollout=rollout,
+            runs=runs,
+        )
+        if response.status == "rejected":
+            raise ChapterProjectionConflictError(response.reason_code or "replay_rejected")
+        await self._enqueue_replay_locked(
+            request=request,
+            response=response,
+            project=project,
+            chapter=chapter,
+            revision=revision,
+            outbox=outbox,
+            rollout=rollout,
+            previous=previous,
+            dependency=dependency,
+            job_idempotency_key=job_idempotency_key,
+            checkpoint=checkpoint,
+        )
+        return response
+
+    async def enqueue_failed_replays_in_transaction(
+        self,
+        *,
+        request: ChapterProjectionReplayRequest,
+        job_idempotency_key_prefix: str,
+        checkpoint: Optional[dict[str, object]] = None,
+    ) -> list[ChapterProjectionOperationResponse]:
+        """锁定一个修订并原子重放其中最新且确定失败的 projections。"""
+
+        project, chapter, revision, outbox, rollout, runs = await self._load_scope(
+            request,
+            for_update=True,
+        )
+        names = retryable_projection_names(
+            runs,
+            required_projections=revision.required_projections or [],
+        )
+        responses: list[ChapterProjectionOperationResponse] = []
+        for projection_name in names:
+            replay_request = ChapterProjectionReplayRequest(
+                project_id=request.project_id,
+                chapter_id=request.chapter_id,
+                revision=request.revision,
+                projection_name=cast(ProjectionName, projection_name),
+                idempotency_key=f"{request.idempotency_key}:{projection_name}",
+                reason=request.reason,
+                outbox_event_id=request.outbox_event_id,
+            )
+            response, previous, dependency = await self._describe(
+                request=replay_request,
+                mode="replay",
+                idempotency_key=replay_request.idempotency_key,
+                chapter=chapter,
+                revision=revision,
+                outbox=outbox,
+                rollout=rollout,
+                runs=runs,
+            )
+            if response.status == "rejected":
+                raise ChapterProjectionConflictError(response.reason_code or "replay_rejected")
+            await self._enqueue_replay_locked(
+                request=replay_request,
+                response=response,
+                project=project,
+                chapter=chapter,
+                revision=revision,
+                outbox=outbox,
+                rollout=rollout,
+                previous=previous,
+                dependency=dependency,
+                job_idempotency_key=(f"{job_idempotency_key_prefix}:{projection_name}"),
+                checkpoint=checkpoint,
+            )
+            responses.append(response)
+        return responses
+
+    async def _enqueue_replay_locked(
+        self,
+        *,
+        request: ChapterProjectionOperationRequest | ChapterProjectionReplayRequest,
+        response: ChapterProjectionOperationResponse,
+        project: NovelProject,
+        chapter: Chapter,
+        revision: ChapterRevision,
+        outbox: ChapterOutboxEvent,
+        rollout: ChapterProjectionRollout,
+        previous: Optional[ChapterProjectionRun],
+        dependency: Optional[ChapterProjectionRun],
+        job_idempotency_key: str,
+        checkpoint: Optional[dict[str, object]],
+    ) -> None:
         run_id = str(uuid4())
         artifact_generation = str(uuid4())
         dependency_run_id = dependency.id if dependency is not None else None
@@ -203,7 +352,7 @@ class ChapterProjectionOpsService:
             is_active=False,
             checkpoint={
                 "outbox_event_id": outbox.id,
-                "replay_audit_id": audit.id,
+                **dict(checkpoint or {}),
             },
         )
         self.session.add(run)
@@ -243,7 +392,7 @@ class ChapterProjectionOpsService:
             title=f"重放第 {chapter.chapter_number} 章 {request.projection_name} 投影",
             payload=payload.model_dump(),
             payload_version=2 if request.projection_name == "summary" else 1,
-            idempotency_key=f"chapter-replay:{audit.id}",
+            idempotency_key=job_idempotency_key,
             stream_type="workflow",
             stream_id=workflow_stream_id,
         )
@@ -251,12 +400,6 @@ class ChapterProjectionOpsService:
         response.status = "queued"
         response.projection_run_id = run.id
         response.job_id = job.id
-        audit.status = "completed"
-        audit.result = response.model_dump(mode="json")
-        audit.completed_at = now
-        await self.session.commit()
-        await publish_background_task(project.user_id)
-        return response
 
     async def _find_audit(
         self,
@@ -264,13 +407,17 @@ class ChapterProjectionOpsService:
         idempotency_key: str,
     ) -> Optional[ChapterProjectionReplayAudit]:
         return (
-            await self.session.execute(
-                select(ChapterProjectionReplayAudit).where(
-                    ChapterProjectionReplayAudit.operator_user_id == operator_user_id,
-                    ChapterProjectionReplayAudit.idempotency_key == idempotency_key,
+            (
+                await self.session.execute(
+                    select(ChapterProjectionReplayAudit).where(
+                        ChapterProjectionReplayAudit.operator_user_id == operator_user_id,
+                        ChapterProjectionReplayAudit.idempotency_key == idempotency_key,
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
 
     @staticmethod
     def _existing_response(
@@ -300,7 +447,7 @@ class ChapterProjectionOpsService:
 
     async def _load_scope(
         self,
-        request: ChapterProjectionOperationRequest,
+        request: ChapterProjectionOperationRequest | ChapterProjectionReplayRequest,
         *,
         for_update: bool,
     ) -> tuple[
@@ -359,7 +506,7 @@ class ChapterProjectionOpsService:
     async def _describe(
         self,
         *,
-        request: ChapterProjectionOperationRequest,
+        request: ChapterProjectionOperationRequest | ChapterProjectionReplayRequest,
         mode: str,
         idempotency_key: str,
         chapter: Chapter,
@@ -372,12 +519,8 @@ class ChapterProjectionOpsService:
         Optional[ChapterProjectionRun],
         Optional[ChapterProjectionRun],
     ]:
-        status_counts = dict(
-            Counter(f"{run.projection_name}.{run.status}" for run in runs)
-        )
-        active_projections = sorted(
-            run.projection_name for run in runs if run.is_active
-        )
+        status_counts = dict(Counter(f"{run.projection_name}.{run.status}" for run in runs))
+        active_projections = sorted(run.projection_name for run in runs if run.is_active)
         previous = max(
             (run for run in runs if run.projection_name == request.projection_name),
             key=lambda run: (run.created_at is not None, run.created_at, run.id),
@@ -435,7 +578,7 @@ class ChapterProjectionOpsService:
     @staticmethod
     def _identity_reason(
         *,
-        request: ChapterProjectionOperationRequest,
+        request: ChapterProjectionOperationRequest | ChapterProjectionReplayRequest,
         chapter: Chapter,
         revision: ChapterRevision,
         outbox: ChapterOutboxEvent,
@@ -501,7 +644,7 @@ class ChapterProjectionOpsService:
     @staticmethod
     def _eligibility_reason(
         *,
-        request: ChapterProjectionOperationRequest,
+        request: ChapterProjectionOperationRequest | ChapterProjectionReplayRequest,
         chapter: Chapter,
         revision: ChapterRevision,
         outbox: ChapterOutboxEvent,
@@ -550,4 +693,5 @@ __all__ = [
     "ChapterProjectionOperationError",
     "ChapterProjectionOpsService",
     "ChapterProjectionRateLimitError",
+    "ChapterProjectionReplayRequest",
 ]

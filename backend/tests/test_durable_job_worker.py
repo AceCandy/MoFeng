@@ -1,21 +1,24 @@
 import asyncio
-from datetime import datetime, timezone
 import json
 import multiprocessing
-from uuid import uuid4
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from test_chapter_workflow_start import _seed_project
 
-from app.models import ChapterOutline, NovelBlueprint, NovelProject
+from app.models import ChapterOutline, ChapterWorkflowRun, JobEvent, NovelBlueprint, NovelProject
 from app.models.job import JobActivity, JobWorkerHeartbeat
 from app.models.user import User
+from app.services.chapter_workflow_start import ChapterWorkflowStartService
+from app.services.chapter_workflow_transition import ChapterWorkflowTransition
 from app.services.job_handlers import build_job_handler_registry
 from app.services.job_registry import JobHandlerRegistry, SideEffectClass
 from app.services.job_service import JobService
-from app.services.job_worker import JobOutcome, JobWorker
+from app.services.job_worker import JobOutcome, JobWaitOutcome, JobWorker
 from app.services.llm_service import LLMService
 from app.services.prompt_service import PromptService
 
@@ -31,9 +34,7 @@ def _run_process_worker(
     async def run() -> None:
         engine = create_async_engine(
             database_url,
-            connect_args={
-                "server_settings": {"search_path": f'"{schema}", public'}
-            },
+            connect_args={"server_settings": {"search_path": f'"{schema}", public'}},
         )
         session_factory = async_sessionmaker(engine, expire_on_commit=False)
         registry = JobHandlerRegistry()
@@ -85,7 +86,9 @@ async def _wait_for_job_state(
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_worker_dispatches_versioned_handler_and_dead_letters_unknown_version(db_session_factory):
+async def test_worker_dispatches_versioned_handler_and_dead_letters_unknown_version(
+    db_session_factory,
+):
     async with db_session_factory() as session:
         session.add(User(id=11, username="worker-writer", hashed_password="secret"))
         await session.commit()
@@ -139,6 +142,155 @@ async def test_worker_dispatches_versioned_handler_and_dead_letters_unknown_vers
     assert unsupported_result is not None
     assert unsupported_result.status == "dead_letter"
     assert unsupported_result.error_category == "unknown_payload_version"
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_execution_context_allows_per_activity_side_effect_class_and_outcome_writer(
+    db_session_factory,
+):
+    async with db_session_factory() as session:
+        session.add(User(id=1100, username="mixed-activity-writer", hashed_password="secret"))
+        await session.commit()
+        job = await JobService(session).enqueue_job(
+            user_id=1100,
+            job_type="mixed-activity-handler",
+            title="Mixed activity handler",
+            idempotency_key="mixed-activity-handler",
+        )
+
+    outcome_writes: list[str] = []
+    registry = JobHandlerRegistry()
+
+    async def handler(context):
+        intent = await context.begin_activity(
+            "persist-result",
+            side_effect_class=SideEffectClass.TRANSACTIONAL,
+            request_payload={"job_id": context.lease.job_id},
+        )
+
+        async def outcome_writer(_session) -> None:
+            outcome_writes.append(context.lease.job_id)
+
+        await context.complete_activity(
+            "persist-result",
+            provider_request_key=intent.provider_request_key,
+            result={"persisted": True},
+            outcome_writer=outcome_writer,
+        )
+        return JobOutcome(result={"done": True})
+
+    registry.register(
+        job_type="mixed-activity-handler",
+        payload_version=1,
+        side_effect_class=SideEffectClass.AMBIGUOUS_EXTERNAL,
+        handler=handler,
+    )
+    worker = JobWorker(
+        session_factory=db_session_factory,
+        registry=registry,
+        worker_id="mixed-activity-worker",
+        lease_seconds=30,
+        heartbeat_interval_seconds=5,
+    )
+
+    assert await worker.run_once() is True
+
+    async with db_session_factory() as session:
+        refreshed = await JobService(session).get_job(job.id)
+        activity = (
+            await session.execute(select(JobActivity).where(JobActivity.job_id == job.id))
+        ).scalar_one()
+
+    assert refreshed is not None
+    assert refreshed.status == "succeeded"
+    assert activity.side_effect_class == SideEffectClass.TRANSACTIONAL.value
+    assert activity.status == "succeeded"
+    assert outcome_writes == [job.id]
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_worker_wait_outcome_releases_workflow_lease_without_marking_success(
+    isolated_pg,
+):
+    session_factory = isolated_pg.session_factory
+    async with session_factory() as session:
+        await _seed_project(
+            session,
+            user_id=1102,
+            project_id="workflow-worker-wait-project",
+        )
+        started = await ChapterWorkflowStartService(session).start(
+            user_id=1102,
+            project_id="workflow-worker-wait-project",
+            chapter_number=1,
+        )
+
+    outcome_writes: list[str] = []
+    registry = JobHandlerRegistry()
+
+    async def handler(context):
+        async def outcome_writer(_session) -> None:
+            outcome_writes.append(context.lease.job_id)
+
+        return JobWaitOutcome(
+            workflow_transition=ChapterWorkflowTransition(
+                status="waiting_for_selection",
+                node_key="waiting_for_selection",
+                checkpoint_id="checkpoint-selection",
+                progress=60,
+            ),
+            outcome_writer=outcome_writer,
+        )
+
+    registry.register(
+        job_type="chapter_workflow",
+        payload_version=1,
+        side_effect_class=SideEffectClass.AMBIGUOUS_EXTERNAL,
+        handler=handler,
+    )
+    worker = JobWorker(
+        session_factory=session_factory,
+        registry=registry,
+        worker_id="workflow-wait-worker",
+        lease_seconds=30,
+        heartbeat_interval_seconds=5,
+    )
+
+    assert await worker.run_once() is True
+
+    async with session_factory() as session:
+        job = await JobService(session).get_job(started.root_job.id)
+        run = await session.get(ChapterWorkflowRun, started.run.id)
+        event_types = list(
+            (
+                await session.execute(
+                    select(JobEvent.event_type)
+                    .where(JobEvent.stream_id == started.run.id)
+                    .order_by(JobEvent.sequence)
+                )
+            ).scalars()
+        )
+        unclaimed = await JobService(session).claim_next(
+            worker_id="workflow-wait-worker-b",
+            lease_seconds=30,
+        )
+
+    assert job is not None
+    assert job.status == "waiting"
+    assert job.lease_owner is None
+    assert job.lease_expires_at is None
+    assert job.heartbeat_at is None
+    assert job.result is None
+    assert run is not None
+    assert run.status == "waiting_for_selection"
+    assert run.node_key == "waiting_for_selection"
+    assert run.checkpoint_id == "checkpoint-selection"
+    assert run.progress == 60
+    assert run.is_active is True
+    assert outcome_writes == [started.root_job.id]
+    assert event_types[-2:] == ["workflow.phase_changed", "workflow.waiting"]
+    assert "workflow.completed" not in event_types
+    assert unclaimed is None
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -268,9 +420,7 @@ async def test_worker_process_crash_is_reclaimed_after_lease_expiry(isolated_pg)
 
         lease_expires_at = running.lease_expires_at
         assert lease_expires_at is not None
-        wait_seconds = (
-            lease_expires_at - datetime.now(timezone.utc)
-        ).total_seconds() + 0.2
+        wait_seconds = (lease_expires_at - datetime.now(timezone.utc)).total_seconds() + 0.2
         if wait_seconds > 0:
             await asyncio.sleep(wait_seconds)
 

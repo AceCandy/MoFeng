@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
 import hashlib
 import json
+from contextlib import asynccontextmanager
 from uuid import uuid4
 
 import pytest
 import sqlalchemy as sa
-from alembic import command
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from alembic import command
 from app.db.migration import build_alembic_config
 
 
@@ -24,9 +24,7 @@ async def _temporary_database(source_engine):
         async with admin_engine.connect() as connection:
             quoted_name = connection.dialect.identifier_preparer.quote(database_name)
             await connection.execute(sa.text(f"CREATE DATABASE {quoted_name}"))
-        yield source_engine.url.set(database=database_name).render_as_string(
-            hide_password=False
-        )
+        yield source_engine.url.set(database=database_name).render_as_string(hide_password=False)
     finally:
         async with admin_engine.connect() as connection:
             await connection.execute(
@@ -98,41 +96,57 @@ async def test_durable_job_migration_backfills_legacy_rows_without_private_paylo
                     sa.text("SELECT version_num FROM alembic_version")
                 )
                 tasks = (
-                    await connection.execute(
-                        sa.text(
-                            "SELECT id, status, available_at, stream_type, stream_id, "
-                            "event_sequence, error_category "
-                            "FROM background_tasks ORDER BY id"
+                    (
+                        await connection.execute(
+                            sa.text(
+                                "SELECT id, status, available_at, stream_type, stream_id, "
+                                "event_sequence, error_category "
+                                "FROM background_tasks ORDER BY id"
+                            )
                         )
                     )
-                ).mappings().all()
+                    .mappings()
+                    .all()
+                )
                 streams = (
-                    await connection.execute(
-                        sa.text(
-                            "SELECT stream_type, stream_id, last_sequence, "
-                            "retained_through_cursor FROM job_event_streams "
-                            "ORDER BY stream_id"
+                    (
+                        await connection.execute(
+                            sa.text(
+                                "SELECT stream_type, stream_id, last_sequence, "
+                                "retained_through_cursor FROM job_event_streams "
+                                "ORDER BY stream_id"
+                            )
                         )
                     )
-                ).mappings().all()
+                    .mappings()
+                    .all()
+                )
                 events = (
-                    await connection.execute(
-                        sa.text(
-                            "SELECT job_id, sequence, event_type, payload "
-                            "FROM job_events ORDER BY cursor"
+                    (
+                        await connection.execute(
+                            sa.text(
+                                "SELECT job_id, sequence, event_type, payload "
+                                "FROM job_events ORDER BY cursor"
+                            )
                         )
                     )
-                ).mappings().all()
+                    .mappings()
+                    .all()
+                )
                 control = (
-                    await connection.execute(
-                        sa.text(
-                            "SELECT active_generation, rollout_owner "
-                            "FROM job_executor_controls WHERE scope = 'default'"
+                    (
+                        await connection.execute(
+                            sa.text(
+                                "SELECT active_generation, rollout_owner "
+                                "FROM job_executor_controls WHERE scope = 'default'"
+                            )
                         )
                     )
-                ).mappings().one()
+                    .mappings()
+                    .one()
+                )
 
-            assert revision == "f2a6c9d4e8b1"
+            assert revision == "c8e5f2a1d4b6"
             assert [(task["id"], task["status"]) for task in tasks] == [
                 ("legacy-queued", "queued"),
                 ("legacy-running", "needs_attention"),
@@ -156,7 +170,9 @@ async def test_durable_job_migration_backfills_legacy_rows_without_private_paylo
                 ("job", "legacy-running", 1, 0),
             ]
             assert tasks[1]["error_category"] == "legacy_running_state_ambiguous"
-            assert [(event["job_id"], event["sequence"], event["event_type"]) for event in events] == [
+            assert [
+                (event["job_id"], event["sequence"], event["event_type"]) for event in events
+            ] == [
                 ("legacy-queued", 1, "job.legacy_imported"),
                 ("legacy-running", 1, "job.legacy_imported"),
             ]
@@ -224,15 +240,19 @@ async def test_schema_convergence_migration_adds_pricing_usage_and_retention(
                     sa.text("SELECT version_num FROM alembic_version")
                 )
                 pricing = (
-                    await connection.execute(
-                        sa.text(
-                            "SELECT input_price_per_million, output_price_per_million, "
-                            "cached_input_price_per_million, "
-                            "cache_write_input_price_per_million, pricing_currency "
-                            "FROM user_ai_models WHERE id = 9010"
+                    (
+                        await connection.execute(
+                            sa.text(
+                                "SELECT input_price_per_million, output_price_per_million, "
+                                "cached_input_price_per_million, "
+                                "cache_write_input_price_per_million, pricing_currency "
+                                "FROM user_ai_models WHERE id = 9010"
+                            )
                         )
                     )
-                ).mappings().one()
+                    .mappings()
+                    .one()
+                )
 
                 def inspect_schema(sync_connection):
                     inspector = sa.inspect(sync_connection)
@@ -254,9 +274,7 @@ async def test_schema_convergence_migration_adds_pricing_usage_and_retention(
                     def index_contract(table_name: str):
                         result = {}
                         for item in inspector.get_indexes(table_name):
-                            where = item.get("dialect_options", {}).get(
-                                "postgresql_where"
-                            )
+                            where = item.get("dialect_options", {}).get("postgresql_where")
                             result[item["name"]] = (
                                 item["column_names"],
                                 item["unique"],
@@ -290,9 +308,9 @@ async def test_schema_convergence_migration_adds_pricing_usage_and_retention(
                             for item in inspector.get_check_constraints("ai_usage_records")
                         },
                         "usage_columns": column_contract("ai_usage_records"),
-                        "usage_pk": inspector.get_pk_constraint(
-                            "ai_usage_records"
-                        )["constrained_columns"],
+                        "usage_pk": inspector.get_pk_constraint("ai_usage_records")[
+                            "constrained_columns"
+                        ],
                         "usage_indexes": {
                             item["name"]: item["column_names"]
                             for item in inspector.get_indexes("ai_usage_records")
@@ -310,9 +328,7 @@ async def test_schema_convergence_migration_adds_pricing_usage_and_retention(
                                 "chapter_projection_retention_audits"
                             )
                         },
-                        "retention_columns": column_contract(
-                            "chapter_projection_retention_audits"
-                        ),
+                        "retention_columns": column_contract("chapter_projection_retention_audits"),
                         "retention_pk": inspector.get_pk_constraint(
                             "chapter_projection_retention_audits"
                         )["constrained_columns"],
@@ -322,9 +338,7 @@ async def test_schema_convergence_migration_adds_pricing_usage_and_retention(
                                 "chapter_projection_retention_audits"
                             )
                         },
-                        "retention_indexes": index_contract(
-                            "chapter_projection_retention_audits"
-                        ),
+                        "retention_indexes": index_contract("chapter_projection_retention_audits"),
                         "retention_fks": inspector.get_foreign_keys(
                             "chapter_projection_retention_audits"
                         ),
@@ -332,7 +346,7 @@ async def test_schema_convergence_migration_adds_pricing_usage_and_retention(
 
                 schema = await connection.run_sync(inspect_schema)
 
-            assert revision == "f2a6c9d4e8b1"
+            assert revision == "c8e5f2a1d4b6"
             assert set(pricing.values()) == {None}
             assert {
                 "ai_usage_records",
@@ -444,12 +458,11 @@ async def test_schema_convergence_migration_adds_pricing_usage_and_retention(
                     "idempotency_key",
                 ]
             }
-            assert schema["retention_indexes"][
-                "ix_chapter_projection_retention_rate"
-            ][:2] == (["operator_user_id", "created_at"], False)
-            assert schema["retention_indexes"][
-                "ix_chapter_projection_retention_target"
-            ][:2] == (
+            assert schema["retention_indexes"]["ix_chapter_projection_retention_rate"][:2] == (
+                ["operator_user_id", "created_at"],
+                False,
+            )
+            assert schema["retention_indexes"]["ix_chapter_projection_retention_target"][:2] == (
                 [
                     "project_id",
                     "chapter_number",
@@ -458,9 +471,9 @@ async def test_schema_convergence_migration_adds_pricing_usage_and_retention(
                 ],
                 False,
             )
-            assert schema["retention_indexes"][
-                "uq_chapter_projection_retention_completed_purge"
-            ][:2] == (
+            assert schema["retention_indexes"]["uq_chapter_projection_retention_completed_purge"][
+                :2
+            ] == (
                 [
                     "project_id",
                     "chapter_number",
@@ -572,9 +585,7 @@ async def test_projection_migration_backfills_legacy_rollout_and_enforces_checks
                     )
                 )
                 await connection.execute(
-                    sa.text(
-                        "UPDATE chapters SET selected_version_id = 9101 WHERE id = 8101"
-                    )
+                    sa.text("UPDATE chapters SET selected_version_id = 9101 WHERE id = 8101")
                 )
                 await connection.execute(
                     sa.text(
@@ -608,70 +619,98 @@ async def test_projection_migration_backfills_legacy_rollout_and_enforces_checks
                     sa.text("SELECT version_num FROM alembic_version")
                 )
                 rollout = (
-                    await connection.execute(
-                        sa.text(
-                            "SELECT id, chapter_id, project_id, owner, state, generation, "
-                            "fencing_token, transition_sequence, required_observations, "
-                            "successful_observations, failed_observations "
-                            "FROM chapter_projection_rollouts WHERE chapter_id = 8101"
+                    (
+                        await connection.execute(
+                            sa.text(
+                                "SELECT id, chapter_id, project_id, owner, state, generation, "
+                                "fencing_token, transition_sequence, required_observations, "
+                                "successful_observations, failed_observations "
+                                "FROM chapter_projection_rollouts WHERE chapter_id = 8101"
+                            )
                         )
                     )
-                ).mappings().one()
+                    .mappings()
+                    .one()
+                )
                 transition = (
-                    await connection.execute(
-                        sa.text(
-                            "SELECT id, rollout_id, aggregate_id, project_id, chapter_id, "
-                            "sequence, from_owner, to_owner, from_state, to_state, generation, "
-                            "fencing_token, operator_user_id, reason, details "
-                            "FROM chapter_projection_rollout_transitions "
-                            "WHERE rollout_id = :rollout_id"
-                        ),
-                        {"rollout_id": rollout["id"]},
+                    (
+                        await connection.execute(
+                            sa.text(
+                                "SELECT id, rollout_id, aggregate_id, project_id, chapter_id, "
+                                "sequence, from_owner, to_owner, from_state, to_state, generation, "
+                                "fencing_token, operator_user_id, reason, details "
+                                "FROM chapter_projection_rollout_transitions "
+                                "WHERE rollout_id = :rollout_id"
+                            ),
+                            {"rollout_id": rollout["id"]},
+                        )
                     )
-                ).mappings().one()
+                    .mappings()
+                    .one()
+                )
                 chapter = (
-                    await connection.execute(
-                        sa.text(
-                            "SELECT current_revision, source_hash, projection_generation "
-                            "FROM chapters WHERE id = 8101"
+                    (
+                        await connection.execute(
+                            sa.text(
+                                "SELECT current_revision, source_hash, projection_generation "
+                                "FROM chapters WHERE id = 8101"
+                            )
                         )
                     )
-                ).mappings().one()
+                    .mappings()
+                    .one()
+                )
                 canonical_revision = (
-                    await connection.execute(
-                        sa.text(
-                            "SELECT id, chapter_id, revision, selected_version_id, source_hash, "
-                            "source_content, lifecycle, source_generation "
-                            "FROM chapter_revisions WHERE chapter_id = 8101"
+                    (
+                        await connection.execute(
+                            sa.text(
+                                "SELECT id, chapter_id, revision, selected_version_id, source_hash, "
+                                "source_content, lifecycle, source_generation "
+                                "FROM chapter_revisions WHERE chapter_id = 8101"
+                            )
                         )
                     )
-                ).mappings().one()
+                    .mappings()
+                    .one()
+                )
                 memory = (
-                    await connection.execute(
-                        sa.text(
-                            "SELECT projection_revision, projection_generation "
-                            "FROM project_memories WHERE id = 9201"
+                    (
+                        await connection.execute(
+                            sa.text(
+                                "SELECT projection_revision, projection_generation "
+                                "FROM project_memories WHERE id = 9201"
+                            )
                         )
                     )
-                ).mappings().one()
+                    .mappings()
+                    .one()
+                )
                 snapshot = (
-                    await connection.execute(
-                        sa.text(
-                            "SELECT chapter_revision, artifact_generation, is_active "
-                            "FROM chapter_snapshots WHERE id = 9301"
+                    (
+                        await connection.execute(
+                            sa.text(
+                                "SELECT chapter_revision, artifact_generation, is_active "
+                                "FROM chapter_snapshots WHERE id = 9301"
+                            )
                         )
                     )
-                ).mappings().one()
+                    .mappings()
+                    .one()
+                )
                 foreshadowing = (
-                    await connection.execute(
-                        sa.text(
-                            "SELECT chapter_revision, artifact_generation, is_active "
-                            "FROM foreshadowings WHERE id = 9401"
+                    (
+                        await connection.execute(
+                            sa.text(
+                                "SELECT chapter_revision, artifact_generation, is_active "
+                                "FROM foreshadowings WHERE id = 9401"
+                            )
                         )
                     )
-                ).mappings().one()
+                    .mappings()
+                    .one()
+                )
 
-            assert revision == "f2a6c9d4e8b1"
+            assert revision == "c8e5f2a1d4b6"
             source_hash = hashlib.sha256("旧章节正文".encode()).hexdigest()
             assert chapter == {
                 "current_revision": 1,
@@ -743,9 +782,7 @@ async def test_projection_migration_backfills_legacy_rollout_and_enforces_checks
                                 "WHERE chapter_id = 8101"
                             )
                         )
-                assert "ck_chapter_projection_rollout_owner_state" in str(
-                    owner_state_error.value
-                )
+                assert "ck_chapter_projection_rollout_owner_state" in str(owner_state_error.value)
 
                 with pytest.raises(sa.exc.IntegrityError) as edge_error:
                     async with connection.begin_nested():
@@ -843,9 +880,7 @@ async def test_projection_migration_rejects_unbackfillable_finalized_chapters(
                     sa.text("SELECT version_num FROM alembic_version")
                 )
                 tables = await connection.run_sync(
-                    lambda sync_connection: set(
-                        sa.inspect(sync_connection).get_table_names()
-                    )
+                    lambda sync_connection: set(sa.inspect(sync_connection).get_table_names())
                 )
                 chapter_columns = await connection.run_sync(
                     lambda sync_connection: {

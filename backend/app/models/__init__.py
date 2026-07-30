@@ -4,6 +4,19 @@
 from .admin_setting import AdminSetting
 from .ai_model_config import UserAIModel, UserAIStageRoute, UserModelProvider
 from .background_task import BackgroundTask, JobRun
+
+# 新增：章节蓝图模型
+from .chapter_blueprint import (
+    BlueprintTemplate,
+    ChapterBlueprint,
+    ChapterFunction,
+    ForeshadowingOp,
+    SuspenseDensity,
+)
+from .chapter_generation_trace import (
+    ChapterGenerationTrace,
+    ChapterGenerationTraceProjectionCheckpoint,
+)
 from .chapter_projection import (
     ChapterOutboxEvent,
     ChapterProjectionReplayAudit,
@@ -13,6 +26,26 @@ from .chapter_projection import (
     ChapterProjectionRun,
     ChapterProjectionShadowObservation,
     ChapterRevision,
+)
+from .chapter_workflow import ChapterWorkflowCommand, ChapterWorkflowRun
+from .constitution import NovelConstitution
+from .database_bootstrap import DatabaseBootstrapVersion, LegacyDatabaseAdoption
+
+# 新增：势力/宪法/Writer人格模型
+from .faction import (
+    Faction,
+    FactionMember,
+    FactionRelationship,
+    FactionRelationshipHistory,
+)
+
+# 新增：伏笔模型
+from .foreshadowing import (
+    Foreshadowing,
+    ForeshadowingAnalysis,
+    ForeshadowingReminder,
+    ForeshadowingResolution,
+    ForeshadowingStatusHistory,
 )
 from .job import (
     AIUsageRecord,
@@ -24,6 +57,15 @@ from .job import (
     JobWorkerHeartbeat,
 )
 from .llm_config import LLMConfig
+
+# 新增：记忆层模型
+from .memory_layer import (
+    CausalChain,
+    CharacterState,
+    CharacterStateType,
+    StoryTimeTracker,
+    TimelineEvent,
+)
 from .novel import (
     BlueprintCharacter,
     BlueprintRelationship,
@@ -35,56 +77,18 @@ from .novel import (
     NovelConversation,
     NovelProject,
 )
-from .prompt import Prompt
-from .update_log import UpdateLog
-from .usage_metric import UsageMetric
-from .user import User
-from .system_config import SystemConfig
 
 # 新增：项目记忆模型
-from .project_memory import ProjectMemory, ChapterSnapshot
-
-# 新增：章节蓝图模型
-from .chapter_blueprint import (
-    ChapterBlueprint,
-    BlueprintTemplate,
-    SuspenseDensity,
-    ForeshadowingOp,
-    ChapterFunction,
-)
-from .chapter_generation_trace import ChapterGenerationTrace
-from .database_bootstrap import DatabaseBootstrapVersion, LegacyDatabaseAdoption
-
-# 新增：记忆层模型
-from .memory_layer import (
-    CharacterState,
-    CharacterStateType,
-    TimelineEvent,
-    CausalChain,
-    StoryTimeTracker,
-)
-
-# 新增：伏笔模型
-from .foreshadowing import (
-    Foreshadowing,
-    ForeshadowingResolution,
-    ForeshadowingReminder,
-    ForeshadowingStatusHistory,
-    ForeshadowingAnalysis,
-)
-
-# 新增：势力/宪法/Writer人格模型
-from .faction import (
-    Faction,
-    FactionRelationship,
-    FactionMember,
-    FactionRelationshipHistory,
-)
-from .constitution import NovelConstitution
-from .writer_persona import WriterPersona
+from .project_memory import ChapterSnapshot, ProjectMemory
+from .prompt import Prompt
 
 # RAG 向量检索模型（pgvector）
 from .rag import RagChunk, RagSummary
+from .system_config import SystemConfig
+from .update_log import UpdateLog
+from .usage_metric import UsageMetric
+from .user import User
+from .writer_persona import WriterPersona
 
 __all__ = [
     # 基础模型
@@ -106,6 +110,8 @@ __all__ = [
     "ChapterProjectionRun",
     "ChapterProjectionShadowObservation",
     "ChapterRevision",
+    "ChapterWorkflowCommand",
+    "ChapterWorkflowRun",
     "UserModelProvider",
     "UserAIModel",
     "UserAIStageRoute",
@@ -119,6 +125,7 @@ __all__ = [
     "ChapterVersion",
     "ChapterEvaluation",
     "ChapterGenerationTrace",
+    "ChapterGenerationTraceProjectionCheckpoint",
     "DatabaseBootstrapVersion",
     "LegacyDatabaseAdoption",
     "NovelProject",

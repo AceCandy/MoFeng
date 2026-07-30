@@ -34,7 +34,6 @@ from app.services.job_service import AmbiguousActivityError
 from app.services.job_worker import PermanentJobError, RetryableJobError
 from app.utils.ai_telemetry import AICallResult, TokenUsage, combine_ai_call_results
 
-
 PROJECT_ID = "11111111-1111-1111-1111-111111111111"
 REVISION_ID = "22222222-2222-2222-2222-222222222222"
 RUN_ID = "33333333-3333-3333-3333-333333333333"
@@ -289,7 +288,13 @@ async def test_writer_finalize_maps_only_domain_conflicts_to_409(
     expected_status,
     expected_detail,
 ) -> None:
+    compatibility = SimpleNamespace(adapt_finalize=AsyncMock(return_value=None))
     submission = SimpleNamespace(submit=AsyncMock(side_effect=service_error))
+    monkeypatch.setattr(
+        writer_router,
+        "ChapterWorkflowCompatibilityService",
+        lambda _session: compatibility,
+    )
     monkeypatch.setattr(
         writer_router,
         "ChapterFinalizeSubmissionService",
@@ -346,6 +351,8 @@ def test_rollout_gate_requires_elapsed_window_current_match_and_zero_failures() 
         "current_revision_not_observed",
         "shadow_diff_gate_failed",
     }
+
+
 class _ActivityContext:
     def __init__(self) -> None:
         self.failed: list[dict[str, object]] = []

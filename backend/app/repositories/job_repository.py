@@ -8,6 +8,9 @@ from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from ..models.background_task import BackgroundTask
+from ..models.chapter_generation_trace import (
+    ChapterGenerationTraceProjectionCheckpoint,
+)
 from ..models.job import (
     AIUsageRecord,
     JobActivity,
@@ -19,6 +22,9 @@ from ..models.job import (
 )
 from ..models.novel import NovelProject
 from .base import BaseRepository
+from .chapter_generation_trace_projection_repository import (
+    CHAPTER_GENERATION_TRACE_PROJECTOR_NAME,
+)
 
 
 class JobRepository(BaseRepository[BackgroundTask]):
@@ -47,6 +53,7 @@ class JobRepository(BaseRepository[BackgroundTask]):
             select(BackgroundTask)
             .where(BackgroundTask.id == job_id)
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
         return result.scalars().first()
 
@@ -63,6 +70,7 @@ class JobRepository(BaseRepository[BackgroundTask]):
                 BackgroundTask.user_id == user_id,
             )
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
         return result.scalars().first()
 
@@ -278,6 +286,7 @@ class JobRepository(BaseRepository[BackgroundTask]):
             .where(or_(ready, expired))
             .order_by(BackgroundTask.available_at.asc(), BackgroundTask.created_at.asc())
             .with_for_update(skip_locked=True)
+            .execution_options(populate_existing=True)
             .limit(1)
         )
         return result.scalars().first()
@@ -303,7 +312,7 @@ class JobRepository(BaseRepository[BackgroundTask]):
             update(BackgroundTask)
             .where(
                 BackgroundTask.executor_generation == previous_generation,
-                BackgroundTask.status.in_(("queued", "retry_wait")),
+                BackgroundTask.status.in_(("queued", "retry_wait", "waiting")),
             )
             .values(executor_generation=new_generation)
         )
@@ -315,7 +324,7 @@ class JobRepository(BaseRepository[BackgroundTask]):
             .where(
                 JobActivity.job_id == job_id,
                 JobActivity.side_effect_class == "ambiguous_external",
-                JobActivity.status == "started",
+                JobActivity.status.in_(("started", "ambiguous")),
             )
             .limit(1)
         )
@@ -375,8 +384,45 @@ class JobRepository(BaseRepository[BackgroundTask]):
                 JobActivity.activity_key == activity_key,
             )
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
         return result.scalars().first()
+
+    async def get_activity(
+        self,
+        *,
+        job_id: str,
+        activity_key: str,
+    ) -> Optional[JobActivity]:
+        result = await self.session.execute(
+            select(JobActivity).where(
+                JobActivity.job_id == job_id,
+                JobActivity.activity_key == activity_key,
+            )
+        )
+        return result.scalars().first()
+
+    async def list_activities_for_update(self, *, job_id: str) -> list[JobActivity]:
+        result = await self.session.execute(
+            select(JobActivity)
+            .where(JobActivity.job_id == job_id)
+            .order_by(JobActivity.activity_key, JobActivity.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        return list(result.scalars())
+
+    async def list_ambiguous_activities(self, *, job_id: str) -> list[JobActivity]:
+        result = await self.session.execute(
+            select(JobActivity)
+            .where(
+                JobActivity.job_id == job_id,
+                JobActivity.side_effect_class == "ambiguous_external",
+                JobActivity.status == "ambiguous",
+            )
+            .order_by(JobActivity.activity_key, JobActivity.id)
+        )
+        return list(result.scalars())
 
     async def add_activity(self, activity: JobActivity) -> JobActivity:
         self.session.add(activity)
@@ -432,9 +478,21 @@ class JobRepository(BaseRepository[BackgroundTask]):
     ) -> tuple[int, list[int]]:
         """删除过期事件，并在同一事务推进用户与 stream retention 水位。"""
 
+        projected_through_cursor = await self.session.scalar(
+            select(ChapterGenerationTraceProjectionCheckpoint.last_event_cursor).where(
+                ChapterGenerationTraceProjectionCheckpoint.projector_name
+                == CHAPTER_GENERATION_TRACE_PROJECTOR_NAME
+            )
+        )
+        if projected_through_cursor is None:
+            return 0, []
+        eligible_event = (
+            JobEvent.created_at < before,
+            JobEvent.cursor <= projected_through_cursor,
+        )
         result = await self.session.execute(
             select(JobEvent.user_id, func.max(JobEvent.cursor))
-            .where(JobEvent.created_at < before)
+            .where(*eligible_event)
             .group_by(JobEvent.user_id)
         )
         watermarks = [
@@ -466,7 +524,7 @@ class JobRepository(BaseRepository[BackgroundTask]):
                 JobEvent.stream_id.label("stream_id"),
                 func.max(JobEvent.cursor).label("retained_through_cursor"),
             )
-            .where(JobEvent.created_at < before)
+            .where(*eligible_event)
             .group_by(JobEvent.stream_type, JobEvent.stream_id)
             .subquery()
         )
@@ -484,9 +542,7 @@ class JobRepository(BaseRepository[BackgroundTask]):
                 updated_at=func.now(),
             )
         )
-        delete_result = await self.session.execute(
-            delete(JobEvent).where(JobEvent.created_at < before)
-        )
+        delete_result = await self.session.execute(delete(JobEvent).where(*eligible_event))
         return int(delete_result.rowcount or 0), [item["user_id"] for item in watermarks]
 
     async def get_runtime_metric_values(self, *, now: datetime) -> dict[str, object]:
@@ -495,10 +551,7 @@ class JobRepository(BaseRepository[BackgroundTask]):
                 BackgroundTask.status
             )
         )
-        status_counts = {
-            str(status): int(count)
-            for status, count in status_result.all()
-        }
+        status_counts = {str(status): int(count) for status, count in status_result.all()}
         oldest_queued_at = await self.session.scalar(
             select(func.min(BackgroundTask.created_at)).where(
                 BackgroundTask.status.in_(("queued", "retry_wait"))
@@ -515,9 +568,7 @@ class JobRepository(BaseRepository[BackgroundTask]):
             select(func.coalesce(func.max(JobEvent.cursor), 0))
         )
         retained_event_count = await self.session.scalar(select(func.count(JobEvent.cursor)))
-        retention_users = await self.session.scalar(
-            select(func.count(JobEventRetention.user_id))
-        )
+        retention_users = await self.session.scalar(select(func.count(JobEventRetention.user_id)))
         return {
             "status_counts": status_counts,
             "oldest_queued_at": oldest_queued_at,

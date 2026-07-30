@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..utils.ai_telemetry import AICallResult
+from .chapter_workflow_transition import ChapterWorkflowTransition
 from .job_registry import JobHandlerDefinition, JobHandlerRegistry, SideEffectClass
 from .job_service import (
     AmbiguousActivityError,
@@ -17,7 +19,6 @@ from .job_service import (
     LeaseLostError,
     RetryPolicy,
 )
-from ..utils.ai_telemetry import AICallResult
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,14 @@ class JobOutcome:
     """handler 结果；outcome_writer 与 success event 在同一事务提交。"""
 
     result: dict[str, Any]
+    outcome_writer: Optional[Callable[[AsyncSession], Awaitable[None]]] = None
+
+
+@dataclass(frozen=True)
+class JobWaitOutcome:
+    """handler 已持久化恢复点；worker 以当前 fence 释放 lease。"""
+
+    workflow_transition: ChapterWorkflowTransition
     outcome_writer: Optional[Callable[[AsyncSession], Awaitable[None]]] = None
 
 
@@ -82,13 +91,14 @@ class JobExecutionContext:
         self,
         activity_key: str,
         *,
+        side_effect_class: Optional[SideEffectClass] = None,
         request_payload: Optional[dict[str, Any]] = None,
     ):
         async with self._session_factory() as session:
             return await JobService(session).begin_activity(
                 self.lease,
                 activity_key=activity_key,
-                side_effect_class=self.side_effect_class,
+                side_effect_class=side_effect_class or self.side_effect_class,
                 request_payload=request_payload,
             )
 
@@ -99,14 +109,16 @@ class JobExecutionContext:
         provider_request_key: str,
         result: dict[str, Any],
         ai_call: Optional[AICallResult[Any]] = None,
-    ) -> None:
+        outcome_writer: Optional[Callable[[AsyncSession], Awaitable[None]]] = None,
+    ):
         async with self._session_factory() as session:
-            await JobService(session).complete_activity(
+            return await JobService(session).complete_activity(
                 self.lease,
                 activity_key=activity_key,
                 provider_request_key=provider_request_key,
                 result=result,
                 ai_call=ai_call,
+                outcome_writer=outcome_writer,
             )
 
     async def mark_activity_ambiguous(
@@ -218,11 +230,18 @@ class JobWorker:
         try:
             outcome = await self._run_handler(definition, context)
             async with self.session_factory() as session:
-                await JobService(session).mark_succeeded(
-                    lease,
-                    result=outcome.result,
-                    outcome_writer=outcome.outcome_writer,
-                )
+                if isinstance(outcome, JobWaitOutcome):
+                    await JobService(session).wait_for_resume(
+                        lease,
+                        outcome_writer=outcome.outcome_writer,
+                        workflow_transition=outcome.workflow_transition,
+                    )
+                else:
+                    await JobService(session).mark_succeeded(
+                        lease,
+                        result=outcome.result,
+                        outcome_writer=outcome.outcome_writer,
+                    )
         except AmbiguousActivityError:
             return True
         except _JobCancelled:
@@ -292,9 +311,11 @@ class JobWorker:
         self,
         definition: JobHandlerDefinition,
         context: JobExecutionContext,
-    ) -> JobOutcome:
+    ) -> JobOutcome | JobWaitOutcome:
         handler_task = asyncio.create_task(definition.handler(context))
-        heartbeat_task = asyncio.create_task(self._heartbeat_until_done(context.lease, handler_task))
+        heartbeat_task = asyncio.create_task(
+            self._heartbeat_until_done(context.lease, handler_task)
+        )
         try:
             done, _ = await asyncio.wait(
                 {handler_task, heartbeat_task},
@@ -304,7 +325,7 @@ class JobWorker:
                 heartbeat_task.cancel()
                 await asyncio.gather(heartbeat_task, return_exceptions=True)
                 result = await handler_task
-                if not isinstance(result, JobOutcome):
+                if not isinstance(result, (JobOutcome, JobWaitOutcome)):
                     raise PermanentJobError("invalid_handler_result", "任务 handler 返回了无效结果")
                 return result
 

@@ -1,8 +1,15 @@
-# AIMETA P=持久任务payload契约_版本化业务参数|R=任务payload校验|NR=不含任务执行逻辑|E=ChapterOutlineJobPayload_ChapterGenerationJobPayload_ChapterFinalizeJobPayload|X=internal|A=pydantic_contract|D=pydantic|S=none|RD=./README.ai
+# AIMETA P=持久任务payload契约_版本化业务参数|R=任务payload校验|NR=不含任务执行逻辑|E=ChapterOutlineJobPayload_ChapterGenerationJobPayload_ChapterWorkflowJobPayload_ChapterFinalizeJobPayload|X=internal|A=pydantic_contract|D=pydantic|S=none|RD=./README.ai
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from .chapter_context import stable_digest
+from .chapter_workflow import (
+    CHAPTER_WORKFLOW_CONTEXT_SCHEMA_VERSION_V1,
+    CHAPTER_WORKFLOW_STATE_SCHEMA_VERSION_V1,
+    CHAPTER_WORKFLOW_VERSION_V1,
+    ChapterWorkflowRunId,
+)
 from .novel import FlowConfig
 
 
@@ -72,12 +79,10 @@ class ChapterFinalizeOutboxPayload(BaseModel):
     @model_validator(mode="after")
     def validate_summary_identity(self):
         has_summary_identity = (
-            self.summary_run_id is not None
-            and self.summary_artifact_generation is not None
+            self.summary_run_id is not None and self.summary_artifact_generation is not None
         )
         if self.execution_mode == "legacy" and (
-            self.summary_run_id is not None
-            or self.summary_artifact_generation is not None
+            self.summary_run_id is not None or self.summary_artifact_generation is not None
         ):
             raise ValueError("legacy 事件不能携带 summary projection identity")
         if self.execution_mode != "legacy" and not has_summary_identity:
@@ -167,3 +172,58 @@ class ChapterGenerationJobPayload(BaseModel):
     writing_notes: Optional[str] = None
     flow_config: FlowConfig = Field(default_factory=FlowConfig)
     from_node_key: Optional[str] = None
+
+
+class ChapterWorkflowRetrievalInputs(BaseModel):
+    """freeze_context activity 使用的规范化检索输入。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal[1] = 1
+    enabled: bool
+    mode: Literal["simple", "two_stage"]
+    query_text: str = Field(max_length=2000)
+    pov_character: Optional[str] = Field(default=None, max_length=255)
+
+
+class ChapterWorkflowRuntimeInputs(BaseModel):
+    """root job 内冻结的规范化请求；retrieval 仍由后续 activity 执行。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal[1] = 1
+    project_id: str = Field(min_length=1, max_length=36)
+    chapter_number: int = Field(ge=1)
+    writing_notes: Optional[str] = None
+    flow_config: FlowConfig = Field(default_factory=FlowConfig)
+    retrieval_inputs: ChapterWorkflowRetrievalInputs
+
+
+class ChapterWorkflowJobPayload(BaseModel):
+    """durable Chapter workflow root job v1 的冻结启动参数。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    run_id: ChapterWorkflowRunId
+    project_id: str = Field(min_length=1, max_length=36)
+    chapter_id: int = Field(ge=1)
+    chapter_number: int = Field(ge=1)
+    base_revision: int = Field(ge=0)
+    workflow_version: Literal[1] = CHAPTER_WORKFLOW_VERSION_V1
+    state_schema_version: Literal[1] = CHAPTER_WORKFLOW_STATE_SCHEMA_VERSION_V1
+    context_schema_version: Literal[1] = CHAPTER_WORKFLOW_CONTEXT_SCHEMA_VERSION_V1
+    context_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    runtime_input_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    runtime_inputs: ChapterWorkflowRuntimeInputs
+
+    @model_validator(mode="after")
+    def validate_frozen_runtime_identity(self):
+        if (
+            self.runtime_inputs.project_id != self.project_id
+            or self.runtime_inputs.chapter_number != self.chapter_number
+        ):
+            raise ValueError("workflow runtime input 身份与 root payload 不一致")
+        expected_hash = stable_digest(self.runtime_inputs.model_dump(mode="json"))
+        if self.runtime_input_hash != expected_hash:
+            raise ValueError("workflow runtime input hash 与冻结 payload 不一致")
+        return self

@@ -132,6 +132,11 @@ class Settings(BaseSettings):
         env="CHAPTER_CONTEXT_SHADOW_COMPARE",
         description="是否记录 canonical Chapter context 与旧 prompt contract 的脱敏结构差异",
     )
+    chapter_workflow_start_enabled: bool = Field(
+        default=False,
+        env="CHAPTER_WORKFLOW_START_ENABLED",
+        description="是否开放 durable Chapter workflow start API",
+    )
     redis_url: Optional[str] = Field(
         default=None,
         env="REDIS_URL",
@@ -189,6 +194,19 @@ class Settings(BaseSettings):
         ge=60,
         env="JOB_EVENT_CLEANUP_INTERVAL_SECONDS",
         description="worker 执行 JobEvent retention cleanup 的间隔",
+    )
+    chapter_workflow_retention_days: int = Field(
+        default=30,
+        ge=1,
+        env="CHAPTER_WORKFLOW_RETENTION_DAYS",
+        description="terminal Chapter workflow 私有状态保留天数",
+    )
+    chapter_workflow_retention_batch_size: int = Field(
+        default=100,
+        ge=1,
+        le=500,
+        env="CHAPTER_WORKFLOW_RETENTION_BATCH_SIZE",
+        description="单次 Chapter workflow retention 最大 run 数",
     )
 
     # -------------------- Linux.do OAuth 配置 --------------------

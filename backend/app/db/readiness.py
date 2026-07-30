@@ -8,6 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from ..models.database_bootstrap import DatabaseBootstrapVersion
 from .bootstrap import BOOTSTRAP_STEPS, CURRENT_BOOTSTRAP_BINARY_VERSION
+from .chapter_workflow_checkpoint_schema import (
+    CHECKPOINT_MIGRATION_VERSIONS,
+    CHECKPOINT_TABLES,
+)
 from .migration import get_code_heads
 from .session import engine as application_engine
 
@@ -31,6 +35,8 @@ class DatabaseState:
     database_revisions: tuple[str, ...] = ()
     code_heads: tuple[str, ...] = ()
     bootstrap_rows: tuple[BootstrapLedgerState, ...] = ()
+    checkpoint_tables: frozenset[str] = CHECKPOINT_TABLES
+    checkpoint_migration_versions: tuple[int, ...] = CHECKPOINT_MIGRATION_VERSIONS
     probe_error_code: str | None = None
 
 
@@ -84,6 +90,10 @@ def evaluate_database_readiness(state: DatabaseState) -> DatabaseReadiness:
         for row in state.bootstrap_rows
     ):
         codes.append("binary_below_rollback_floor")
+    if state.checkpoint_tables != CHECKPOINT_TABLES:
+        codes.append("checkpoint_schema_missing")
+    elif state.checkpoint_migration_versions != CHECKPOINT_MIGRATION_VERSIONS:
+        codes.append("checkpoint_schema_mismatch")
 
     return DatabaseReadiness(not codes, tuple(codes))
 
@@ -134,11 +144,21 @@ async def inspect_database_state(
                     )
                     for row in rows
                 )
+
+            checkpoint_tables = frozenset(table_names & CHECKPOINT_TABLES)
+            checkpoint_migration_versions: tuple[int, ...] = ()
+            if "checkpoint_migrations" in checkpoint_tables:
+                versions = await connection.scalars(
+                    sa.text("SELECT v FROM checkpoint_migrations ORDER BY v")
+                )
+                checkpoint_migration_versions = tuple(int(value) for value in versions)
         return DatabaseState(
             reachable=True,
             database_revisions=database_revisions,
             code_heads=code_heads,
             bootstrap_rows=bootstrap_rows,
+            checkpoint_tables=checkpoint_tables,
+            checkpoint_migration_versions=checkpoint_migration_versions,
         )
     except (OSError, sa.exc.SQLAlchemyError):
         return DatabaseState(reachable=False, code_heads=code_heads)

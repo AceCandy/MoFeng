@@ -4,7 +4,6 @@ from typing import Any, ClassVar, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-
 PublicTaskStatus = Literal["queued", "running", "succeeded", "failed"]
 
 
@@ -18,6 +17,7 @@ class BackgroundTaskResponse(BaseModel):
     _PUBLIC_STATUS_BY_INTERNAL_STATUS: ClassVar[dict[str, PublicTaskStatus]] = {
         "queued": "queued",
         "retry_wait": "queued",
+        "waiting": "queued",
         "running": "running",
         "succeeded": "succeeded",
         "failed": "failed",

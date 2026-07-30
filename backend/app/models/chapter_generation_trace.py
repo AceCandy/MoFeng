@@ -4,7 +4,19 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, ForeignKey, Index, Integer, JSON, String, Text, func
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base
@@ -28,12 +40,24 @@ class ChapterGenerationTrace(Base):
 
     __tablename__ = "chapter_generation_traces"
     __table_args__ = (
+        UniqueConstraint(
+            "source_run_id",
+            "source_event_cursor",
+            name="uq_chapter_generation_trace_source",
+        ),
+        CheckConstraint(
+            "(source_run_id IS NULL AND source_event_cursor IS NULL) OR "
+            "(source_run_id IS NOT NULL AND source_event_cursor IS NOT NULL)",
+            name="ck_chapter_generation_trace_source_pair",
+        ),
         Index("idx_chapter_generation_traces_chapter", "chapter_id", "node_key"),
         Index("idx_chapter_generation_traces_project_chapter", "project_id", "chapter_number"),
     )
 
     id: Mapped[int] = mapped_column(BIGINT_PK_TYPE, primary_key=True, autoincrement=True)
-    chapter_id: Mapped[int] = mapped_column(ForeignKey("chapters.id", ondelete="CASCADE"), nullable=False)
+    chapter_id: Mapped[int] = mapped_column(
+        ForeignKey("chapters.id", ondelete="CASCADE"), nullable=False
+    )
     project_id: Mapped[str] = mapped_column(String(36), nullable=False)
     chapter_number: Mapped[int] = mapped_column(Integer, nullable=False)
     node_key: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -47,6 +71,8 @@ class ChapterGenerationTrace(Base):
     error: Mapped[Optional[str]] = mapped_column(Text)
     metadata_: Mapped[Optional[dict]] = mapped_column("metadata", JSON)
     metadata = _MetadataAccessor()
+    source_run_id: Mapped[Optional[str]] = mapped_column(String(36))
+    source_event_cursor: Mapped[Optional[int]] = mapped_column(BigInteger)
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -55,4 +81,30 @@ class ChapterGenerationTrace(Base):
         "Chapter",
         back_populates="generation_traces",
         foreign_keys=[chapter_id],
+    )
+
+
+class ChapterGenerationTraceProjectionCheckpoint(Base):
+    """兼容 trace projector 的全局 durable cursor。"""
+
+    __tablename__ = "chapter_generation_trace_projection_checkpoints"
+    __table_args__ = (
+        CheckConstraint(
+            "last_event_cursor >= 0",
+            name="ck_chapter_generation_trace_projection_cursor",
+        ),
+    )
+
+    projector_name: Mapped[str] = mapped_column(String(64), primary_key=True)
+    last_event_cursor: Mapped[int] = mapped_column(
+        BigInteger,
+        nullable=False,
+        default=0,
+        server_default="0",
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
     )

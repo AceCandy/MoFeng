@@ -4,9 +4,11 @@ from .ai_model_config_repository import (
     UserAIStageRouteRepository,
     UserModelProviderRepository,
 )
+from .chapter_workflow_repository import ChapterWorkflowRepository
 
 __all__ = [
     "UserModelProviderRepository",
     "UserAIModelRepository",
     "UserAIStageRouteRepository",
+    "ChapterWorkflowRepository",
 ]

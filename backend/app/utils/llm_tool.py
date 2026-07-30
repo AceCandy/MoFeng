@@ -34,7 +34,9 @@ class LLMClient:
         self._provider_type = (provider_type or "openai_compatible").strip().lower()
         if self._provider_type == "anthropic":
             key = api_key or os.environ.get("ANTHROPIC_API_KEY")
-            self._base_url = base_url or os.environ.get("ANTHROPIC_API_BASE") or "https://api.anthropic.com/v1"
+            self._base_url = (
+                base_url or os.environ.get("ANTHROPIC_API_BASE") or "https://api.anthropic.com/v1"
+            )
         else:
             key = api_key or os.environ.get("OPENAI_API_KEY")
             self._base_url = base_url or os.environ.get("OPENAI_API_BASE")
@@ -98,6 +100,7 @@ class LLMClient:
         top_p: Optional[float],
         max_tokens: Optional[int],
         timeout: int,
+        provider_request_key: Optional[str],
     ) -> AsyncGenerator[Dict[str, Any], None]:
         url = self._anthropic_messages_url(self._base_url)
         headers = {
@@ -105,6 +108,8 @@ class LLMClient:
             "x-api-key": self._api_key,
             "anthropic-version": "2023-06-01",
         }
+        if provider_request_key:
+            headers["Idempotency-Key"] = provider_request_key
         payload = self._to_anthropic_payload(
             messages,
             model=model,
@@ -170,6 +175,7 @@ class LLMClient:
         top_p: Optional[float] = None,
         max_tokens: Optional[int] = None,
         timeout: int = 120,
+        provider_request_key: Optional[str] = None,
         **kwargs,
     ) -> AsyncGenerator[Dict[str, Any], None]:
         if self._provider_type == "anthropic":
@@ -180,6 +186,7 @@ class LLMClient:
                 top_p=top_p,
                 max_tokens=max_tokens,
                 timeout=timeout,
+                provider_request_key=provider_request_key,
             ):
                 yield chunk
             return
@@ -200,6 +207,8 @@ class LLMClient:
             payload["top_p"] = top_p
         if max_tokens is not None:
             payload["max_tokens"] = max_tokens
+        if provider_request_key:
+            payload["extra_headers"] = {"Idempotency-Key": provider_request_key}
 
         stream = await self._client.chat.completions.create(**payload)
         async for chunk in stream:

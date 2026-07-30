@@ -1,4 +1,5 @@
 """Alembic 迁移环境（async 适配 asyncpg）。"""
+
 import asyncio
 from logging.config import fileConfig
 
@@ -6,11 +7,11 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+import app.models  # noqa: F401  确保所有模型注册到 Base.metadata
 from alembic import context
-
 from app.core.config import settings
 from app.db.base import Base
-import app.models  # noqa: F401  确保所有模型注册到 Base.metadata
+from app.db.chapter_workflow_checkpoint_schema import CHECKPOINT_TABLES
 
 config = context.config
 
@@ -25,6 +26,17 @@ config.set_main_option(
 target_metadata = Base.metadata
 
 
+def include_object(object_, name, type_, reflected, compare_to) -> bool:
+    """LangGraph owns these reflected tables; pinned migrations own their DDL."""
+
+    if type_ == "table" and name in CHECKPOINT_TABLES:
+        return False
+    table = getattr(object_, "table", None)
+    if table is not None and table.name in CHECKPOINT_TABLES:
+        return False
+    return True
+
+
 def run_migrations_offline() -> None:
     """离线模式：仅依据 URL 生成 SQL，不需要真实连接。"""
     url = config.get_main_option("sqlalchemy.url")
@@ -35,13 +47,20 @@ def run_migrations_offline() -> None:
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
         compare_server_default=True,
+        include_object=include_object,
     )
     with context.begin_transaction():
         context.run_migrations()
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata, compare_type=True, compare_server_default=True)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        compare_type=True,
+        compare_server_default=True,
+        include_object=include_object,
+    )
     with context.begin_transaction():
         context.run_migrations()
 
