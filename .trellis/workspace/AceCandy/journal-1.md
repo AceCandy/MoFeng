@@ -836,3 +836,37 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Next Steps
 
 - None - task complete
+
+
+## Session 25: 完成持久化章节工作流
+
+**Date**: 2026-07-30
+**Task**: 完成持久化章节工作流
+**Branch**: `main`
+
+### Summary
+
+建立 PostgreSQL 持久化 Chapter workflow，收敛 checkpoint、command、activity、finalize、projection、trace、恢复与测试隔离契约，并完成全量质量门禁。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e82423c` | (see git log) |
+| `794c9bc` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
