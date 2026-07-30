@@ -13,7 +13,7 @@
 | Components | `<script setup lang="ts">`; generic `defineProps<Props>()` / call-signature `defineEmits`; Naive UI from deep paths | [component-guidelines](./component-guidelines.md) |
 | Data fetching | UI hooks in `composables/`, server cache in `queries/` (Vue Query + key factories) | [hook-guidelines](./hook-guidelines.md) |
 | State | Pinia = client/UI state; Vue Query = server cache | [state-management](./state-management.md) |
-| Types | `strict`; hand-authored interfaces colocated with `src/api/*`; no `any` | [type-safety](./type-safety.md) |
+| Types | `strict`; migrated wire DTOs use generated aliases, legacy/domain types remain colocated; no `any` | [type-safety](./type-safety.md) |
 | Quality | Manual form validation, `useAlert()` feedback, AIMETA header, `vue-tsc` + `vitest` | [quality-guidelines](./quality-guidelines.md) |
 
 ---
@@ -27,6 +27,7 @@
 | [Hook Guidelines](./hook-guidelines.md) | `composables/` vs `queries/`, Vue Query key factories, QueryClient |
 | [State Management](./state-management.md) | Pinia vs Vue Query boundary, store styles, auth token plumbing |
 | [Type Safety](./type-safety.md) | strict tsconfig, colocated interfaces, `any` policy |
+| [Generated Transport Contract](../backend/transport-contracts.md) | OpenAPI ownership, generated aliases, runtime decoder, and CI gates |
 | [Quality Guidelines](./quality-guidelines.md) | HTTP, routing, Tailwind tokens, forms, testing, review checklist |
 | [LLM Settings](./llm-settings.md) | PersonalModelRouting supplier/model capability isolation, TTS provider separation |
 | [Chapter Reader](./chapter-reader.md) | useChapterReader TTS-model-vs-browser playback routing, model voice label, preview split |

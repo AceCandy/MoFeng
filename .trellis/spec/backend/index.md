@@ -14,6 +14,7 @@
 | Errors | Service raises `ValueError`; router translates to `HTTPException` | [error-handling](./error-handling.md) |
 | Logging | stdlib `logging`, `getLogger(__name__)`, lazy `%s` args | [logging-guidelines](./logging-guidelines.md) |
 | Quality | `httpx.AsyncClient`, `response_model=` on routes, AIMETA header on every file | [quality-guidelines](./quality-guidelines.md) |
+| Transport contracts | Deterministic OpenAPI, generated TypeScript aliases, versioned SSE decoders, CI gates | [transport-contracts](./transport-contracts.md) |
 | Security | CORS whitelist, Fernet secret encryption, SSRF guard, auth hardening | [security-guidelines](./security-guidelines.md) |
 | Chapter context | One versioned snapshot for generation, review, consistency, and recovery | [chapter-context-contract](./chapter-context-contract.md) |
 | Durable jobs | PostgreSQL leases, fencing, event replay, public projections, and worker recovery | [durable-job-guidelines](./durable-job-guidelines.md) |
@@ -30,6 +31,7 @@
 | [Error Handling](./error-handling.md) | Domain errors vs `HTTPException`, status-code map, anti-patterns |
 | [Logging Guidelines](./logging-guidelines.md) | `dictConfig` setup, level conventions, lazy formatting |
 | [Quality Guidelines](./quality-guidelines.md) | Async discipline, Pydantic schemas, config, Celery, review checklist |
+| [Generated Transport Contract](./transport-contracts.md) | OpenAPI artifacts, generated ownership, task decoder, and semantic CI gate |
 | [Security Guidelines](./security-guidelines.md) | CORS, Fernet secret encryption, SSRF, auth hardening |
 | [Canonical Chapter Context](./chapter-context-contract.md) | Resolver/adapters, revision layers, snapshot recovery, and tests |
 | [Durable Job And Event Log](./durable-job-guidelines.md) | Enqueue identity, lease/fencing, handler side effects, SSE cursor recovery, and process tests |
@@ -42,6 +44,7 @@
 - Read the guide for every touched concern; for database lifecycle changes, read Database, Quality, Security, and Logging Guidelines.
 - For changes crossing runtime, storage, and deployment, read the [Cross-Layer Thinking Guide](../guides/cross-layer-thinking-guide.md).
 - For background execution, task APIs, SSE, Redis wake-up, or worker deployment, read the [Durable Job And Event Log](./durable-job-guidelines.md).
+- For route/schema changes or migrated frontend DTOs, read the [Generated Transport Contract](./transport-contracts.md).
 - For Chapter projection dispatch, replay, runtime, rollout, or tombstone changes, read the [Replayable Chapter Projections](./chapter-projection-contract.md).
 - Before adding helpers or copied contracts, read the [Code Reuse Thinking Guide](../guides/code-reuse-thinking-guide.md).
 

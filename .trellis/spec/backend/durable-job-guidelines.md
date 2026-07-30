@@ -71,7 +71,10 @@ GET /api/tasks/events?limit=<1..50>[&cursor=<non-negative>][&stream_type=<job|wo
 Last-Event-ID: <same value as cursor when both are present>
 ```
 
-SSE events are `snapshot`, `task`, `reset`, and a sanitized terminal `error`. A `task` event uses the durable `JobEvent.cursor` as the SSE `id`.
+SSE events are `snapshot`, `task`, `reset`, and a sanitized terminal `error`. A `task`
+event uses the durable `JobEvent.cursor` as the SSE `id`. The three state-bearing data
+payloads are `BackgroundTaskSnapshotResponse`, `BackgroundTaskEventResponse`, and
+`BackgroundTaskCursorResetResponse`; each carries `schema_version: Literal[1]`.
 
 ### Persistent boundary
 
@@ -113,8 +116,20 @@ SSE events are `snapshot`, `task`, `reset`, and a sanitized terminal `error`. A 
 - Public error/log text is length-bounded and secret-redacted before it enters the current row or append-only event.
 - `stream_type` and `stream_id` are optional as a pair and invalid separately. A scoped snapshot/SSE request authorizes the stream against the current user before streaming headers are returned. Missing and foreign streams both return 404.
 - Snapshot tasks and `resume_cursor` come from one database snapshot. A scoped snapshot also binds `snapshot_revision` to the stream sequence and cursor.
+- HTTP and SSE snapshots pass through the same frontend runtime decoder before state
+  mutation. Snapshot/task/reset payloads validate `schema_version` and the fields used
+  by cursor/reducer logic. Snapshot `stream_type`/`stream_id` must match the requested
+  scope (or both remain absent/null for an unscoped request). Unknown outer event names
+  are ignored; malformed, scope-drifted, or unknown-version payloads never enter task
+  state.
 - PostgreSQL event rows are the source of truth. Redis only wakes readers; missing, duplicated, disconnected, or restarted Redis cannot change ordering or recovery.
-- `cursor` and `Last-Event-ID` must agree. Events with `cursor <= current_cursor` are ignored by the client. When retention emits `reset {reason: "cursor_expired", retained_through_cursor}`, the client obtains a new snapshot pair for the same scope, replaces local state/cursor, then reconnects.
+- `cursor` and `Last-Event-ID` must agree. Events with `cursor <= current_cursor` are ignored by the client. When retention emits `reset {schema_version: 1, reason: "cursor_expired", retained_through_cursor}`, the client obtains a new snapshot pair for the same scope, replaces local state/cursor, then reconnects.
+- The first malformed or unsupported stream payload triggers one snapshot fetch for the
+  same authenticated scope. If that recovery snapshot is also invalid, the client
+  aborts SSE, clears its SSE override/cursor, and yields to the existing 15-second
+  polling query. Network failures retain the bounded reconnect path.
+- A stream callback may mutate state only while its AbortController is the current
+  non-aborted connection. Late callbacks from a prior identity/scope are discarded.
 - Changing authenticated user or stream scope clears the prior snapshot and cursor before reconnecting.
 
 ## 4. Validation & Error Matrix
@@ -141,6 +156,11 @@ SSE events are `snapshot`, `task`, `reset`, and a sanitized terminal `error`. A 
 | `Last-Event-ID` is negative/non-integer, or differs from `cursor` | HTTP 400 before streaming |
 | `cursor` query is negative/non-integer | Reject through FastAPI request validation before streaming |
 | Cursor is older than retention watermark | Emit one typed `reset`, then close the stream |
+| State-bearing payload is malformed or has unsupported `schema_version` | Do not mutate state; attempt one same-scope snapshot recovery |
+| Snapshot response scope differs from the request | Treat it as malformed; do not replace snapshot/cursor |
+| Superseded connection delivers a late snapshot/task/reset | Ignore it without changing current state |
+| Same-scope recovery snapshot is malformed or unsupported | Abort SSE state and retain the polling fallback |
+| Outer SSE event name is unknown | Ignore it without changing task state or cursor |
 | Redis is unavailable | Continue PostgreSQL polling and emit keepalives |
 | Event lacks an allowlisted public task snapshot | Log internally and emit only a sanitized SSE error |
 
@@ -170,7 +190,12 @@ SSE events are `snapshot`, `task`, `reset`, and a sanitized terminal `error`. A 
 - Event log: state/event atomicity, global cursor order, stream-local sequence uniqueness, owner filtering, retention cleanup, and reset watermark.
 - Snapshot/SSE: snapshot/event race has no gap; reconnect deduplicates; query/header mismatch fails; foreign stream is indistinguishable from missing; Redis-off polling passes.
 - Projection: list, snapshot, SSE, and detail assert that private payload is absent; list/snapshot/SSE also assert result is absent and error text is sanitized.
-- Frontend: reducer ignores old cursors, reset refetches the same scope before reconnect, identity/scope change clears cursor, and the 15-second polling fallback remains.
+- Frontend: shared HTTP/SSE snapshot decoding covers valid snapshot/task/reset,
+  malformed shapes, unsupported versions, response-scope mismatch, and unknown outer
+  events; invalid data never invokes handlers. The reducer ignores old cursors, reset
+  refetches the same scope before reconnect, identity/scope change clears cursor, late
+  callbacks from the old connection are ignored, a failed recovery yields to the
+  15-second polling fallback, and network errors retain bounded reconnect.
 - Test isolation: PostgreSQL combination suites run in the session's disposable
   `mofeng_pytest_<uuid>` database. Migration or independent-process tests may own a
   separate randomly named disposable database such as `mofeng_workflow_<uuid>` when

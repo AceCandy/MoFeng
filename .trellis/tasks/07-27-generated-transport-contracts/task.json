@@ -3,7 +3,7 @@
   "name": "generated-transport-contracts",
   "title": "生成 transport contracts",
   "description": "从 FastAPI OpenAPI 生成前端 transport 契约并保留单一 domain mapping seam",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,
@@ -21,6 +21,6 @@
   "children": [],
   "parent": "07-27-architecture-convergence",
   "relatedFiles": [],
-  "notes": "",
+  "notes": "实现、生成物、跨层契约与本地质量门禁已完成；OpenAPI/task SSE 15 tests、frontend 25 files/177 tests、api:check、type-check、lint、ruff、black、mypy、compileall 均通过。三项 container-backed chapter workflow HTTP tests 因 Docker socket PermissionError 在 fixture 阶段未执行断言；本机未安装 actionlint。未启动服务、连接/迁移数据库或 push，等待提交授权。",
   "meta": {}
 }

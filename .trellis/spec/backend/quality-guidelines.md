@@ -52,6 +52,13 @@ Rules:
 - Declare `response_model=...` on the route decorator (do not rely on return-type annotation alone). Reference: `app/api/routers/admin.py` (`response_model=UserSchema`, `status_code=201`).
 - Convert ORM → schema with `Schema.model_validate(obj)` at the router/service boundary (see `user_service.py`).
 - Aliasing: when importing both ORM `User` and schema `User` into the same file, alias the schema import (`from ...schemas.user import User as UserSchema`).
+- For routes under generated transport ownership, the Pydantic request/response model is
+  the only field-level wire source. Regenerate `backend/openapi.json` and
+  `frontend/src/api/generated/schema.d.ts`; never patch either artifact or restate the
+  fields in a frontend interface. See [transport-contracts](./transport-contracts.md).
+- A handler rename can change the compatibility-preserving operation ID. Pin the old
+  explicit `operation_id` before an internal rename unless the public identifier is
+  intentionally going through a compatibility rollout.
 
 Bad example — defining schemas inline in a router (`app/api/routers/foreshadowing.py`). Put them in `app/schemas/`.
 
@@ -117,6 +124,9 @@ Rule for new tasks: reuse `app.db.session.AsyncSessionLocal` and `settings.sqlal
 - PostgreSQL locking, migration, lease/fencing, event ordering, and async-driver behavior require PostgreSQL integration tests; SQLite cannot satisfy those acceptance criteria.
 - Durable worker recovery requires independent OS processes: terminate the lease owner, start a second worker, wait for lease expiry, and assert attempt/fencing increments, event order, and the single valid final outcome. Simulated method calls alone are not recovery evidence.
 - Test external provider dedupe and ambiguous-result dead-letter separately. Database fencing is not evidence of external exactly-once execution.
+- Route/schema changes under generated transport ownership run the hermetic OpenAPI
+  contract tests plus `npm run api:check`. Byte drift and semantic compatibility are
+  separate gates; passing one is not evidence for the other.
 
 ---
 
@@ -130,6 +140,8 @@ Rule for new tasks: reuse `app.db.session.AsyncSessionLocal` and `settings.sqlal
 - f-string / `.format` inside `logger.<level>(...)` calls (see [logging-guidelines](./logging-guidelines.md)).
 - Bare `except Exception: pass`.
 - Logging secrets, tokens, or full prompt bodies.
+- Editing canonical/generated transport artifacts by hand, or recreating a migrated
+  Pydantic response shape as a TypeScript interface/object-literal alias.
 
 ---
 
@@ -141,6 +153,10 @@ Rule for new tasks: reuse `app.db.session.AsyncSessionLocal` and `settings.sqlal
 - [ ] Service owns `commit()`/`rollback()`; raises `ValueError` on business failure, not `HTTPException`.
 - [ ] A flush-time SQL-expression/server-generated value is read only after an explicit awaited refresh/query; new aggregates receive derived fields before their insert flush.
 - [ ] DTOs in `app/schemas/`, `response_model=` declared, `from_attributes = True` on Read models.
+- [ ] Generated-ownership route/schema changes update both committed artifacts and pass
+  exporter/type-generation byte checks plus the ownership guard.
+- [ ] Internal handler renames preserve the prior operation ID, or the public rename has
+  an explicit compatibility plan and semantic-diff evidence.
 - [ ] Outbound HTTP is `httpx.AsyncClient`; sync libs wrapped with `asyncio.to_thread`.
 - [ ] Logger declared at module top with `getLogger(__name__)`; uses `%s` args.
 - [ ] No secrets in log lines.

@@ -1,4 +1,11 @@
-{"file":".trellis/spec/backend/quality-guidelines.md","reason":"检查 OpenAPI schema 完整且稳定"}
-{"file":".trellis/spec/frontend/type-safety.md","reason":"检查无手工 wire DTO 和 any 回退"}
-{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"type-check、lint、test 与 HTTP wrapper 门禁"}
-{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"检查 duplicate contract 是否真正删除"}
+{"file":".trellis/spec/backend/index.md","reason":"检查后端目录、质量和 durable SSE 规则均被覆盖"}
+{"file":".trellis/spec/backend/transport-contracts.md","reason":"检查生成 ownership、运行时 decoder、发布单元与 CI semantic gate"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"检查 OpenAPI schema、response_model、配置隔离与 focused tests"}
+{"file":".trellis/spec/backend/durable-job-guidelines.md","reason":"检查 public payload、cursor/reset、polling 与隐私契约未回归"}
+{"file":".trellis/spec/frontend/index.md","reason":"检查前端规范索引与新 generated ownership 一致"}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"检查无手写 wire DTO、any 回退或未验证 external JSON"}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"检查 query cache、SSE reset/resync 与 polling fallback"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"检查 HTTP wrapper、type-check、lint 与 unit tests"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"复核 OpenAPI 到 UI 的端到端 contract flow"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"检查 duplicate contract 是否真正删除且未新增平行 decoder"}
+{"file":".trellis/tasks/07-27-generated-transport-contracts/research/openapi-toolchain.md","reason":"按精确版本能力与已知限制复核生成和 semantic gate"}

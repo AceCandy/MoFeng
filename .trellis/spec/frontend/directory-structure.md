@@ -70,7 +70,7 @@ New files should include this header.
 
 ## Adding a new API domain
 
-1. `src/api/<domain>.ts` — typed interface for response shapes + an API object (or namespace) of methods calling `requestJson<T>`. Reference: `src/api/tasks.ts`.
+1. `src/api/<domain>.ts` — generated aliases for migrated OpenAPI response shapes (or colocated legacy/domain types) + an API object of methods calling `requestJson<T>`. Reference: `src/api/tasks.ts`.
 2. `src/queries/<domain>.ts` — `xxxQueryKeys` factory + `useXxxQuery` / `useXxxMutation` hooks. Reference: `src/queries/tasks.ts`.
 3. Components consume the hooks; they do not call `src/api/*` directly except in mutations' `mutationFn`.
 
@@ -82,4 +82,5 @@ New files should include this header.
 - **Reimplementing an HTTP wrapper.** `src/api/auth.ts` defines its own `authRequest` fetch/abort/timeout path instead of reusing `http.ts` — legacy; new code reuses `http.ts`.
 - **Misleading `AIMETA` headers.** `src/api/novel.ts` and `src/api/llm.ts` declare `D=axios`; the code is fetch. Keep headers truthful.
 - **Creating `types/`, `services/`, `pages/`, or `hooks/` dirs.** They break the established split.
+- **Restating a migrated Pydantic schema.** Regenerate artifacts and expose an indexed alias; do not copy fields into `src/api/*`.
 - **Importing Naive UI from the top-level barrel** (`from 'naive-ui'`) in feature components — use deep paths (`naive-ui/es/...`) for tree-shaking (see [component-guidelines](./component-guidelines.md)).

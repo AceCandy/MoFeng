@@ -1,6 +1,8 @@
 # Frontend Type Safety
 
-> TypeScript `strict` mode. Types are hand-authored and colocated with their API module — there is no central `types/` dir.
+> TypeScript `strict` mode. Migrated HTTP wire DTOs are generated from backend OpenAPI;
+> UI/domain types and not-yet-migrated contracts stay colocated. There is no central
+> `types/` directory.
 
 ---
 
@@ -14,29 +16,20 @@ Type-check command: `npm run type-check` (`vue-tsc --build`).
 
 ## Where types live
 
-Response interfaces are **hand-authored** in the API module that owns the endpoint, then re-exported and threaded into `Promise<T>` signatures, `useQuery<T>`, and component props. There is **no codegen** and **no central `types/` directory**. Reference: `src/api/novel.ts`.
+The canonical generated artifact is `src/api/generated/schema.d.ts`, produced from
+`backend/openapi.json`. Do not edit it. Migrated API modules expose readable indexed
+aliases and thread them through `Promise<T>`, `useQuery<T>`, and component props.
 
 ```ts
-export interface NovelProject {
-  id: string
-  title: string
-  initial_prompt: string
-  blueprint?: Blueprint
-  chapters: Chapter[]
-  conversation_history: ConversationMessage[]
-}
-
-export interface NovelProjectSummary {
-  id: string
-  title: string
-  genre: string
-  last_edited: string
-  completed_chapters: number
-  total_chapters: number
-}
+export type NovelProject = components['schemas']['NovelProject']
+export type Chapter = components['schemas']['Chapter']
 ```
 
-When adding an endpoint, define the response interface in the same `src/api/<domain>.ts` file and export it so `queries/<domain>.ts` and components can import it.
+Legacy endpoints without generated ownership still keep their types in the owning
+`src/api/<domain>.ts` file. Do not move them to a central directory. When migrating a
+domain, add the generated alias first, cut consumers over, then remove the old field
+declaration in the same release unit. See
+[Generated Transport Contract](../backend/transport-contracts.md).
 
 ---
 
@@ -46,6 +39,8 @@ When adding an endpoint, define the response interface in the same `src/api/<dom
 - Type props and emits with the generic forms (see [component-guidelines](./component-guidelines.md)).
 - For external/untrusted payloads (SSE events, parsed JSON), narrow with a type guard or `unknown` + runtime check before casting.
 - Mirror the backend snake_case field names in API interfaces (`must_change_password`, `last_edited`); convert to camelCase at a typed boundary if a component needs it. Do not silently rename halfway.
+- Do not restore a migrated DTO as an interface or object-literal type alias. Run `npm run api:check` to execute byte and ownership gates.
+- Keep genuine dynamic dictionaries as `unknown` and narrow them once in a domain utility. Do not weaken a generated alias with `any`.
 
 ---
 
@@ -85,5 +80,6 @@ async converse(novelId: string, conversationState: ConversationState): Promise<C
 - `as any` to silence a type error.
 - `any` in exported API signatures or emit payloads.
 - Leaving `useQuery` / `useMutation` without a type parameter.
-- Creating a `types/` directory; colocate with the API module instead.
+- Hand-writing fields for a migrated OpenAPI schema instead of indexing `components`/`operations`.
+- Creating a `types/` directory; use generated aliases or colocate legacy/domain types with their owner.
 - Loosening `tsconfig` strictness to make an error disappear.

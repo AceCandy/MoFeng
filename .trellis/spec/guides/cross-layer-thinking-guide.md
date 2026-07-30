@@ -28,7 +28,7 @@ Before coding, draw the path the value will travel and name the type at each hop
 | Service call | Service | ORM model or `Optional[...]` |
 | Persistence | Repository | ORM model (`flush`, not `commit`) |
 | Response | Router | Pydantic `*Read` with `from_attributes = True` |
-| Frontend contract | `src/api/<domain>.ts` | hand-authored TS interface (mirrors `*Read`) |
+| Frontend transport | `src/api/generated/schema.d.ts` + `src/api/<domain>.ts` | generated component + readable indexed alias |
 | UI consumption | `queries/*` then component | `useQuery<T>` + props |
 
 If you cannot name the type at every hop, you are not ready to write the code.
@@ -43,7 +43,7 @@ If you cannot name the type at every hop, you are not ready to write the code.
 | Service ↔ Repository | Repository calling `commit()`; service not rolling back on `IntegrityError` |
 | ORM ↔ Schema | Forgetting `from_attributes = True`; `model_validate` failing on lazy-loaded relations |
 | ORM ↔ Async DB session | A flush expires an `onupdate`/server-generated attribute; synchronous serialization triggers implicit I/O and `MissingGreenlet` |
-| Backend ↔ Frontend | Field rename in Pydantic `*Read` not mirrored in `src/api/<domain>.ts` |
+| Backend ↔ Frontend | Pydantic field changes without regenerating/checking OpenAPI and TypeScript artifacts |
 | HTTP error ↔ User message | Router raising with a non-`detail` field the frontend's `readErrorMessage` won't find |
 | Celery task ↔ Async session | Task building its own engine / sync `sessionmaker` instead of reusing `AsyncSessionLocal` |
 | PostgreSQL event log ↔ Redis | Treating a wake-up notification as durable data instead of rereading by cursor |
@@ -70,10 +70,16 @@ Trace every site and update them in one change:
 1. `app/models/<thing>.py` — add the column (typed `Mapped[...]`).
 2. `backend/alembic/versions/<revision>.py` — add the Alembic upgrade/downgrade and verify it against an isolated database.
 3. `app/schemas/<thing>.py` — add the field to the relevant `*Read` (and `*Create` / `*Update` if writable).
-4. `frontend/src/api/<thing>.ts` — add the field to the TS interface (snake_case, matching the backend).
-5. `frontend/src/queries/<thing>.ts` + components — the `useQuery<T>` type already flows; update props/emits that consume the field.
+4. `backend/openapi.json` + `frontend/src/api/generated/schema.d.ts` — regenerate the
+   committed artifacts; do not edit them by hand.
+5. `frontend/src/api/<thing>.ts` — reuse the existing generated indexed alias. Add a
+   domain mapper only when the UI shape genuinely differs.
+6. `frontend/src/queries/<thing>.ts` + components — the `useQuery<T>` type already
+   flows; update props/emits and null/`unknown` narrowing at the owning boundary.
 
-Forgetting step 2 leaves existing databases without the column. Do not add a runtime or bootstrap schema fallback. Forgetting step 4 makes the field invisible to the UI even though the backend sends it.
+Forgetting step 2 leaves existing databases without the column. Do not add a runtime
+or bootstrap schema fallback. Forgetting step 4 leaves committed transport artifacts
+stale and must fail `npm run api:check`.
 
 ### Scenario B: ORM ↔ Schema conversion
 
@@ -85,9 +91,15 @@ Watch lazy-loaded relations: if a Read schema touches a relation, the repository
 
 The router raises `HTTPException(status_code=..., detail="<Chinese message>")`. `frontend/src/api/http.ts::readErrorMessage` looks for `detail` first. Keep error messages in `detail`. If you introduce a new error envelope field, update `readErrorMessage`'s field list in the same change.
 
-### Scenario D: backend response ↔ frontend type mirror
+### Scenario D: backend response ↔ generated frontend transport
 
-`frontend/src/api/*` interfaces are a **hand-maintained mirror** of backend Pydantic `*Read` models — there is no codegen. Treat the backend schema as the source of truth. When fields diverge, the UI silently shows `undefined`. Field names stay snake_case across the wire (`must_change_password`, `last_edited`).
+For migrated routes, backend Pydantic models are the field-level source of truth.
+`backend/openapi.json` and `src/api/generated/schema.d.ts` are generated artifacts;
+`src/api/*` exposes readable indexed aliases without repeating fields. Dynamic
+`unknown` values are narrowed once in a domain utility or transport decoder before UI
+use. Field names stay snake_case across the wire (`must_change_password`,
+`last_edited`). See
+[Generated Transport Contract](../backend/transport-contracts.md).
 
 ### Scenario E: Celery task reusing async infrastructure
 
@@ -122,8 +134,11 @@ After implementation:
 - [ ] Tested null / missing / empty / invalid at each boundary.
 - [ ] Confirmed error messages flow through `detail` and surface in the UI.
 - [ ] Confirmed the value survives a round-trip (create → read → update → read).
-- [ ] For a field add: model + Alembic revision/test + backend schema + frontend interface all updated.
+- [ ] For a field add: model + Alembic revision/test + backend schema + both generated
+  artifacts + affected consumers all updated.
 - [ ] For a path/field rename: every call site + legacy redirect updated.
 - [ ] Consumers import a shared type / decoder instead of casting payload fields locally.
+- [ ] `npm run api:check` passes without rewriting artifacts; semantic breaking changes
+  have compatibility evidence in addition to byte-drift evidence.
 - [ ] A transient job/event receives its stream sequence before the job insert; public serialization does not depend on implicit async ORM I/O.
 - [ ] SSE reset and user/scope changes replace both snapshot and cursor before reconnecting.

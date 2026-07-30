@@ -9,7 +9,8 @@
 **Most bugs come from "didn't think of that"**, not from lack of skill:
 
 - Didn't think about what happens at the router↔service↔repository boundary → cross-layer bugs.
-- Didn't think about the backend↔frontend response-shape mirror → UI shows `undefined`.
+- Didn't think about the backend↔generated-contract release unit → artifacts drift or
+  UI null/`unknown` assumptions break.
 - Didn't think about reusing `BaseRepository` / `http.ts` / `xxxQueryKeys` → duplicated, drifting logic.
 - Didn't think about which other sites a value change touches → "forgot to update X" bugs.
 
@@ -31,7 +32,8 @@ These guides help you ask the right questions before coding.
 ### When to think about cross-layer issues
 
 - [ ] Feature touches 3+ layers (component, query, api, router, service, repository, model).
-- [ ] You are adding or renaming a field on a backend Pydantic `*Read` model.
+- [ ] You are adding or renaming a field on a generated-ownership Pydantic model
+      (→ OpenAPI + generated TypeScript + aliases/decoders + consumers).
 - [ ] You are adding a column to an ORM model (→ Alembic revision + isolated migration test).
 - [ ] You are renaming an API path (→ frontend call sites + legacy redirect).
 - [ ] A Read schema reads a relation — is it eager-loaded in the repository?
@@ -45,9 +47,10 @@ These guides help you ask the right questions before coding.
 - [ ] You're about to write a fetch/timeout/abort wrapper → use `src/api/http.ts`.
 - [ ] You're about to write `select(model).filter_by(...)` in a service → subclass `BaseRepository`.
 - [ ] You're about to define a Pydantic schema inside a router → move it to `app/schemas/`.
-- [ ] You're about to inline-cast an untyped payload field → define the interface in `src/api/*`.
+- [ ] You're about to inline-cast an untyped payload field → reuse a generated alias
+      and one boundary decoder/domain narrowing utility.
 - [ ] You're adding a query key → use the domain's `xxxQueryKeys` factory.
-- [ ] You're modifying a `Literal`/enum value → grep every if/elif/else that switches on it.
+- [ ] You're modifying a `Literal`/enum value → use `rg` to find every switch on it.
 - [ ] You're changing a value that has N copies (schema field, path, error field) → update all sites.
 
 → Read [Code Reuse Thinking Guide](./code-reuse-thinking-guide.md)
@@ -75,10 +78,10 @@ These guides help you ask the right questions before coding.
 
 ```bash
 # A field rename — find every site
-grep -rn "old_field_name" backend/app frontend/src
+rg -n "old_field_name" backend/app frontend/src
 
 # A path rename — find every call site + redirect
-grep -rn "/api/old-path" backend/app frontend/src
+rg -n "/api/old-path" backend/app frontend/src
 ```
 
 This single habit prevents most "forgot to update X" bugs. The high-value targets in MoFeng: ORM columns, Pydantic schema fields, API paths, error-message field names, query keys.

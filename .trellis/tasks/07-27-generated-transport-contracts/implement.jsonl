@@ -1,4 +1,13 @@
-{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Pydantic response_model 与 schema 规则"}
-{"file":".trellis/spec/frontend/type-safety.md","reason":"现有手写 DTO 规则及目标迁移点"}
-{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"generated types 进入 query 的边界"}
-{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"OpenAPI 到 UI 的契约流"}
+{"file":".trellis/spec/backend/index.md","reason":"后端预开发清单与跨层/SSE 规范路由"}
+{"file":".trellis/spec/backend/transport-contracts.md","reason":"生成 artifact、DTO ownership、SSE decoder 与 semantic gate 的可执行契约"}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"OpenAPI 模块、CLI 与 AIMETA 文件归属"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Pydantic response_model、配置与测试规则"}
+{"file":".trellis/spec/backend/durable-job-guidelines.md","reason":"任务 public projection、SSE cursor/reset 与隐私契约"}
+{"file":".trellis/spec/frontend/index.md","reason":"前端目录、类型和质量规范入口"}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"generated artifact 与 API boundary 的目录职责"}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"严格类型、unknown narrowing 与 DTO ownership 迁移"}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"generated aliases 进入 Vue Query 和 SSE 恢复边界"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"HTTP wrapper、AIMETA、lint/type/test 规则"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Pydantic 到 generated alias、decoder、query 的完整数据流"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"禁止重复 wire DTO、HTTP wrapper 和 decoder"}
+{"file":".trellis/tasks/07-27-generated-transport-contracts/research/openapi-toolchain.md","reason":"FastAPI、openapi-typescript、oasdiff 的精确版本行为与限制"}
