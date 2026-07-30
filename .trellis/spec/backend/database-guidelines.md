@@ -73,6 +73,31 @@ async def get_by_username(self, username: str) -> Optional[User]:
 
 For relations, use `.options(selectinload(...))` (see `app/repositories/novel_repository.py`).
 
+### Locking rereads must refresh the identity map
+
+When a service first reads an identity without a lock and later reacquires that row with
+`FOR UPDATE`, the locking query must use `execution_options(populate_existing=True)`.
+SQLAlchemy otherwise may return the object already cached by the `AsyncSession`, even
+though the database lock was acquired after another transaction committed. Command,
+fencing, revision, and status validation must use the refreshed locked row.
+
+```python
+# Wrong: row may still expose values cached by an earlier unlocked read.
+stmt = select(Command).where(Command.id == command_id).with_for_update()
+
+# Correct: the locked database row replaces cached attributes.
+stmt = (
+    select(Command)
+    .where(Command.id == command_id)
+    .with_for_update()
+    .execution_options(populate_existing=True)
+)
+```
+
+PostgreSQL concurrency tests must preload the old entity in two independent sessions,
+let one transaction commit, and assert the waiter observes the committed status after
+acquiring its lock. A sequential replay test does not cover this identity-map hazard.
+
 ---
 
 ## Async ORM attributes after flush
@@ -278,3 +303,116 @@ For external PostgreSQL, pass the complete `DATABASE_URL` and omit the Compose `
 - **Adding a model without an Alembic migration.** The migration history is the source of truth; `create_all` only creates new tables, it does not alter existing ones. Add a migration under `backend/alembic/versions/` for any column/table change.
 - **Calling sync `Session.query(...)` inside an `async def` service.** An `AsyncSession`'s `sync_session` only works under a greenlet; calling it directly from an `async` method raises `MissingGreenlet` and surfaces as a 500. Use `await session.execute(select(...))` + `.scalars()`. `ConsistencyService._get_check_context` is the reference. When a service needs both DB reads and long LLM calls, commit the read transaction first so the LLM call does not hold a DB connection (see `FinalizeService.finalize_chapter`).
 - **Flushing a newly inserted ORM aggregate again to assign a derived field, then synchronously serializing SQL-expression/server-generated attributes.** The update flush may expire attributes such as `updated_at`; ordinary access can trigger implicit I/O and `MissingGreenlet`. Allocate derived fields before the insert, or explicitly `await session.refresh(...)` before reading them.
+
+## LangGraph PostgreSQL Checkpoint Schema
+
+- The pinned runtime contract is `langgraph==1.2.2`, `langgraph-checkpoint==4.1.1`, `langgraph-checkpoint-postgres==3.1.0`, `psycopg==3.3.4`, `psycopg-pool==3.3.1`, and `orjson==3.11.9`. Deployment uses the matching Psycopg binary build so the runtime image does not depend on an implicit system `libpq` resolution.
+- Alembic exclusively owns the vendor `checkpoint_migrations`, `checkpoints`, `checkpoint_blobs`, and `checkpoint_writes` tables and their pinned migration rows. API and worker startup may validate this schema but must never call `AsyncPostgresSaver.setup()` or execute fallback DDL.
+- `db-check` is read-only and fails closed when a required checkpoint table, constraint, index, or pinned vendor migration version is missing or newer than the binary understands. Checkpoint schema contributes to the binary rollback floor.
+- Psycopg connection parameters are derived structurally from the configured SQLAlchemy URL. Do not replace driver names, credentials, query parameters, or search paths with string substitution.
+- PostgreSQL tests give asyncpg and Psycopg connections the same random schema/database. Vendor tables must be proven present in that namespace and absent from `public`; `search_path` fallback is not isolation evidence.
+- Test cleanup owns the random namespace before creation, closes the checkpointer connection/pool and SQLAlchemy engines on every failure path, then executes `DROP SCHEMA ... CASCADE`. A failed setup, seed, or checkpoint write must not leak a `test_*` schema.
+- Checkpointer `setup()` is permitted only in a dependency smoke test that discovers/verifies the pinned vendor schema inside a disposable namespace. Application integration tests and runtime paths use the Alembic-installed schema.
+
+### Disposable PostgreSQL test database
+
+#### 1. Scope / Trigger
+
+Apply whenever pytest uses PostgreSQL through `TEST_POSTGRES_URL`, including migration,
+locking, durable worker, LangGraph checkpoint, and independent-process tests. The
+configured URL locates a PostgreSQL service; it is never the database that tests mutate.
+
+#### 2. Signatures
+
+```text
+TEST_POSTGRES_URL=postgresql+asyncpg://<user>:<password>@<host>:<port>/<service-database>
+
+_temporary_postgres_engine(database_url: str | URL) -> AsyncIterator[AsyncEngine]
+_pg_engine -> session-scoped AsyncEngine(database="mofeng_pytest_<uuid>")
+```
+
+The service account must connect to the `postgres` administration database, create and
+drop databases, terminate connections to databases it created, and install the
+`vector` extension in a new database.
+
+#### 3. Contracts
+
+- Build the administration and test URLs with SQLAlchemy `URL` operations so driver,
+  credentials, host, port, and unrelated query parameters are preserved.
+- Create one random `mofeng_pytest_<uuid>` database per pytest session. Install
+  `vector`, create the complete ORM metadata with `checkfirst=False`, and seed executor
+  control before yielding its engine.
+- Independent-connection tests may create an additional random `test_<uuid>` schema
+  inside that database. asyncpg and Psycopg must use the same database and schema.
+- The configured service database and its `public` schema are never isolation
+  boundaries. Tests must not delete, truncate, seed, or otherwise clean business rows.
+- Cleanup ownership starts before `CREATE DATABASE`. Immediately after that statement
+  succeeds, record that the database exists. On every later failure, dispose test
+  engines, terminate remaining sessions, drop the random database, and finally dispose
+  the administration engine.
+
+#### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|-----------|-----------------|
+| `postgres` administration database is unreachable | Fail before creating test state; report the connection prerequisite |
+| Account lacks database or extension privileges | Fail setup; drop any random database already created |
+| Metadata creation, seed, Psycopg validation, or checkpoint write fails | Close both drivers and remove the random schema/database |
+| A connection remains attached at teardown | Terminate only sessions whose `datname` is the generated test database, then drop it |
+| A table resolves only through `public` | Fail the qualified table/schema assertion; never accept fallback as isolation |
+| Configured business rows change | Fail the resource audit; test cleanup must never repair them with `DELETE` |
+
+#### 5. Good / Base / Bad Cases
+
+- Good: two pytest sessions use distinct random databases, and a child worker receives
+  the generated database URL rather than the configured service database URL.
+- Base: setup fails after `CREATE DATABASE`; teardown still removes the database and
+  leaves no `test_*` schema or test-tagged connection.
+- Bad: connect the session fixture directly to `TEST_POSTGRES_URL`, use business
+  `public` plus transaction rollback as isolation, or clean shared rows after a test.
+
+#### 6. Tests Required
+
+- Assert the session engine database starts with `mofeng_pytest_` and differs from the
+  configured service target.
+- Inject metadata, seed, Psycopg validation, and checkpoint-write failures; assert the
+  generated database/schema and application-named connections are absent afterward.
+- Run a real asyncpg/Psycopg checkpoint round trip and prove vendor tables exist only
+  in the selected random schema.
+- After full and independent-process suites, audit zero `mofeng_pytest_*` databases,
+  zero `test_*` schemas, zero test-tagged connections, and unchanged business counts.
+
+#### 7. Wrong vs Correct
+
+```python
+# Wrong: TEST_POSTGRES_URL becomes the mutable test target.
+engine = create_async_engine(os.environ["TEST_POSTGRES_URL"])
+async with engine.begin() as connection:
+    await connection.run_sync(Base.metadata.create_all)
+
+# Correct: the configured URL locates the service; the context owns a disposable DB.
+async with _temporary_postgres_engine(os.environ["TEST_POSTGRES_URL"]) as engine:
+    yield engine
+```
+
+### Checkpoint autogenerate ownership
+
+1. **Scope / Trigger**: apply whenever a migration, readiness check, or pinned checkpoint schema identifier changes.
+2. **Signatures**: `CHECKPOINT_TABLES` and `CHECKPOINT_MIGRATION_VERSIONS` live in `app.db.chapter_workflow_checkpoint_schema`; Alembic passes `include_object=include_object` in online and offline configuration.
+3. **Contracts**: migrations create and upgrade the four vendor tables, readiness inspects them, while autogenerate excludes reflected objects belonging to those tables. ORM `Base.metadata` must not pretend to own vendor DDL.
+4. **Validation & Error Matrix**: a missing table/version makes readiness fail closed; a valid pinned table must not produce Alembic `remove_table/remove_index`; drift in ordinary business tables must still fail `alembic check`.
+5. **Good / Base / Bad**: good is one shared identifier contract used by readiness and Alembic; base is a head database with no autogenerate diff; bad is importing a runtime engine into Alembic or adding vendor tables to ORM metadata solely to silence diffs.
+6. **Tests Required**: upgrade an isolated PostgreSQL database to head, run `alembic check`, assert all four tables and exact pinned versions remain, and prove a LangGraph checkpoint round trip without calling `setup()`.
+7. **Wrong vs Correct**:
+
+```python
+# Wrong: Alembic sees reflected vendor tables as deletions.
+context.configure(connection=connection, target_metadata=Base.metadata)
+
+# Correct: retain schema validation while excluding external ORM ownership.
+context.configure(
+    connection=connection,
+    target_metadata=Base.metadata,
+    include_object=include_object,
+)
+```

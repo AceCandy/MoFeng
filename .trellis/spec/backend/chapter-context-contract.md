@@ -37,6 +37,17 @@ await resolver.with_retrieval(
     pov_character: str | None = None,
 ) -> ChapterContext
 
+ChapterWorkflowRetrievalInputs(
+    schema_version=1,
+    enabled: bool,
+    mode: Literal["simple", "two_stage"],
+    query_text: str,
+    pov_character: str | None,
+)
+
+await ChapterWorkflowContextService.execute_retrieval_activity(
+) -> ChapterWorkflowContextResult
+
 GenerationContextAdapter.to_context(context) -> dict[str, Any]
 ReviewContextAdapter.to_prompt_context(context) -> dict[str, Any]
 ConsistencyContextAdapter.to_prompt_context(context) -> dict[str, Any]
@@ -51,6 +62,9 @@ ConsistencyContextAdapter.to_prompt_context(context) -> dict[str, Any]
 - `input_hash` covers the complete normalized snapshot except `created_at` and itself. `ChapterContext.model_validate()` rejects a supplied hash that does not match the payload.
 - A durable snapshot is reusable only for the same `project_id` and `chapter_number`. Invalid, legacy, or mismatched snapshots are rebuilt through the resolver.
 - Recovery reapplies runtime notes/mission. RAG is refreshed or disabled when runtime inputs, enabled state, normalized query, or mode changes; an identical retrieval snapshot is reused.
+- A durable Chapter workflow freezes two layers. `ChapterWorkflowRun.context_snapshot/context_hash` remain the base PostgreSQL identity for the lifetime of the run and are never overwritten after retrieval. Effective retrieval inputs are part of `runtime_inputs` and its hash.
+- The retrieval activity stores the enriched `context_snapshot`, `context_hash`, base hash, retrieval provenance, and a content-addressed `result_hash` only in private `JobActivity.result_payload`. Its Graph update contains only the enriched context hash plus `activity_refs["retrieval_context"]` and `result_refs["retrieval_context"]`.
+- Effective retrieval configuration preserves legacy ordering: default enabled/simple, enhanced or ultimate selects two-stage, then explicit `enable_rag` and `rag_mode` override. Query is outline title + summary + writing notes passed through `normalize_rag_query`; POV prefers mission `pov`, then `pov_character`.
 - Writer visibility is applied before the contract reaches adapters. Review/generation adapters must not expose the full blueprint.
 - Adapters perform no database or network I/O. Compatibility shadow mappings are independent pure mappings, and diff logs contain paths/types/sizes only, never prompt values.
 
@@ -76,12 +90,18 @@ Configuration:
 | Snapshot identity differs | Rebuild for the requested project/chapter. |
 | Snapshot retrieval inputs are unchanged | Reuse the frozen RAG snapshot. |
 | Snapshot retrieval inputs change | Re-run `with_retrieval`, including explicit disable. |
+| Workflow run/root/base/runtime identity differs | Reject before creating a retrieval activity intent. |
+| Persisted retrieval result hash or snapshot hash differs | Reject replay; never call retrieval again to hide corruption. |
+| Retrieval provider degrades through a declared fallback | Complete the activity with the explicit fallback snapshot. |
+| Retrieval raises an unclassified error | Mark the activity `retryable_failed`; a lost lease remains `LeaseLostError`. |
 
 ## 5. Good / Base / Bad Cases
 
 - Good: resolve once, persist `snapshot_payload()`, and derive generation/review/consistency views from that same object.
 - Base: a first chapter has typed empty history with `first_chapter`; missing optional projections remain explicit and serializable.
 - Bad: a router or service queries memory/constitution/persona/RAG again after receiving `ChapterContext`, or reconstructs prompt context from ORM entities.
+- Good workflow: keep the base run hash stable, persist the enriched snapshot once in the activity ledger, and checkpoint only its hash/references.
+- Bad workflow: replace `ChapterWorkflowRun.context_hash` with the enriched hash; the root payload would no longer match its frozen start identity.
 
 ## 6. Tests Required
 
@@ -89,6 +109,8 @@ Configuration:
 - `test_chapter_context_resolver.py`: first chapter, budgets, projection versus canonical revisions, content-sensitive history/record revisions, RAG fallbacks, and no second DB read in two-stage retrieval.
 - `test_pipeline_context_restore.py`: invalid/mismatched snapshot rebuild, runtime updates, retrieval input refresh/disable, and unchanged snapshot reuse.
 - Static wiring tests must assert pipeline/writer/review/consistency use resolver/adapters and do not restore deleted context builders.
+- `test_chapter_workflow_context.py`: real PostgreSQL intent/result, explicit fallback, replay without a second resolver call, private-result tamper rejection, identity drift before intent, retryable failure, and reference-only state update.
+- `test_chapter_workflow_start.py`: effective retrieval inputs participate in `runtime_input_hash`, unsupported modes fail the typed freeze, and the base RAG section remains disabled.
 
 ## 7. Wrong vs Correct
 
@@ -108,4 +130,16 @@ context = resolver.with_runtime_inputs(context, writing_notes=notes, chapter_mis
 if retrieval_inputs_changed:
     context = await resolver.with_retrieval(context, enabled=rag_enabled, ...)
 return context
+```
+
+For a durable workflow, the correct persistence split is:
+
+```python
+# Wrong: mutates the root/start identity after retrieval.
+run.context_snapshot = enriched.snapshot_payload()
+run.context_hash = enriched.input_hash
+
+# Correct: private activity result owns the enriched snapshot; Graph owns refs.
+activity_result = {"context_snapshot": enriched.snapshot_payload(), ...}
+state_update = {"context_hash": enriched.input_hash, "activity_refs": {...}, "result_refs": {...}}
 ```

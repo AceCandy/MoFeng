@@ -95,9 +95,10 @@ checks read legacy job state at READ COMMITTED without adding the reverse edge.
   a row-count mismatch rolls back as `artifact_state_changed`. Preview, rejection,
   and completed purge append bounded, idempotent audit records. Canonical revisions,
   outbox, projection runs, and retention audit are never purge targets.
-- Alembic head `f2a6c9d4e8b1` is expand-only. Its AI usage and retention audit data have
-  no destructive downgrade; binary rollback keeps the schema and must pass
-  `db-check` rollback-floor validation.
+- Projection revision `f2a6c9d4e8b1` is expand-only. The binary rollback floor is
+  `b7d4e2f1a9c3`, and the current database head is `c8e5f2a1d4b6`. AI usage and
+  retention audit data have no destructive downgrade; binary rollback keeps the
+  schema and must pass `db-check` rollback-floor validation.
 
 ## 4. Validation & Error Matrix
 
