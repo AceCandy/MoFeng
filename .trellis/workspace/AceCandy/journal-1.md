@@ -870,3 +870,37 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Next Steps
 
 - None - task complete
+
+
+## Session 26: 生成 Transport Contracts
+
+**Date**: 2026-07-30
+**Task**: 生成 Transport Contracts
+**Branch**: `main`
+
+### Summary
+
+建立确定性 FastAPI OpenAPI 导出、generated TypeScript ownership、版本化 task SSE decoder 与跨层 CI 门禁，并固化可执行 transport contract 规范。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `529490e` | (see git log) |
+| `cc28aad` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
