@@ -1,0 +1,7 @@
+{"file":".trellis/spec/backend/chapter-context-contract.md","reason":"检查run冻结/恢复不漂移且graph state不复制完整context"}
+{"file":".trellis/spec/backend/durable-job-guidelines.md","reason":"检查没有第二control plane、等待释放lease、activity和transition保持fenced"}
+{"file":".trellis/spec/backend/chapter-projection-contract.md","reason":"检查finalize沿用run stream、workflow不越权写successful且锁序无反向边"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"检查checkpointer DDL只由Alembic拥有、readiness/rollback floor与测试隔离"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"检查async边界、公开payload、真实进程/PostgreSQL恢复证据"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"检查start/snapshot/command/SSE/legacy adapter数据流和错误契约"}
+{"file":".trellis/tasks/07-27-architecture-convergence/research/durable-runtime-selection.md","reason":"检查没有隐式扩展为第二套workflow平台或混淆checkpoint/job职责"}

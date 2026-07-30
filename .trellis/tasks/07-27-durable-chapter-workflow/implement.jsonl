@@ -1,4 +1,0 @@
-{"file":".trellis/spec/backend/index.md","reason":"workflow service、router、schema 分层总规则"}
-{"file":".trellis/spec/backend/database-guidelines.md","reason":"checkpoint、step result 与 domain transaction ownership"}
-{"file":".trellis/spec/backend/quality-guidelines.md","reason":"async LLM、错误和恢复测试规则"}
-{"file":".trellis/tasks/07-27-architecture-convergence/research/durable-runtime-selection.md","reason":"LangGraph checkpoint 与 job runtime 的明确分工"}

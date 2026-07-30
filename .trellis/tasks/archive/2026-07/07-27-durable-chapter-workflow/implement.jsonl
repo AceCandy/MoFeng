@@ -1,0 +1,9 @@
+{"file":".trellis/spec/backend/index.md","reason":"workflow service、router、schema、测试与跨契约入口"}
+{"file":".trellis/spec/backend/chapter-context-contract.md","reason":"冻结context snapshot/hash、恢复与retrieval输入契约"}
+{"file":".trellis/spec/backend/durable-job-guidelines.md","reason":"复用唯一JobRun、activity、lease/fencing与workflow event stream"}
+{"file":".trellis/spec/backend/chapter-projection-contract.md","reason":"finalize/outbox/projection事实源、stream lineage与aggregate锁序"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"Alembic拥有checkpointer schema、事务边界与隔离PostgreSQL测试"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"async、Pydantic、真实进程恢复与外部副作用测试规则"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"API→workflow→job→projection→SSE全链路契约"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"禁止复制JobRun/activity/event/finalize contract"}
+{"file":".trellis/tasks/07-27-architecture-convergence/research/durable-runtime-selection.md","reason":"LangGraph checkpointer与PostgreSQL job runtime分工及Temporal升级条件"}
