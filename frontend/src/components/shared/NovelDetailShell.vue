@@ -20,7 +20,7 @@
     <OverviewStrip
       v-if="isAdmin"
       :title="formattedTitle"
-      :summary="overviewData?.one_sentence_summary"
+      :summary="overviewSummary"
       :status="projectStatus"
       :current-chapter-label="currentChapterLabel"
       :updated-at="overviewMeta.updated_at"
@@ -168,6 +168,7 @@ const {
   currentChapterLabel,
   foreshadowingOverview,
   overviewData,
+  overviewSummary,
   overviewMeta,
   formattedTitle,
 } = useShellOverview({

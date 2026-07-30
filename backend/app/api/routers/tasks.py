@@ -9,8 +9,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.dependencies import get_current_user
-from ...db.session import AsyncSessionLocal
-from ...db.session import get_session
+from ...db.session import AsyncSessionLocal, get_session
 from ...models.job import JobEvent
 from ...schemas.task import (
     BackgroundTaskCursorResetResponse,
@@ -115,6 +114,7 @@ def _public_task_response(
 
 def _serialize_snapshot(snapshot: JobSnapshot) -> dict:
     return BackgroundTaskSnapshotResponse(
+        schema_version=1,
         tasks=[_public_task_response(job) for job in snapshot.jobs],
         snapshot_revision=snapshot.snapshot_revision,
         resume_cursor=snapshot.resume_cursor,
@@ -128,6 +128,7 @@ def _serialize_event(event: JobEvent) -> dict:
     if not isinstance(task_payload, dict):
         raise ValueError("任务事件缺少 public task snapshot")
     return BackgroundTaskEventResponse(
+        schema_version=1,
         cursor=event.cursor,
         event_type=event.event_type,
         task=_public_task_response(task_payload),
@@ -178,7 +179,16 @@ async def get_background_task_snapshot(
     return BackgroundTaskSnapshotResponse.model_validate(_serialize_snapshot(snapshot))
 
 
-@router.get("/events")
+@router.get(
+    "/events",
+    response_class=StreamingResponse,
+    responses={
+        200: {
+            "description": "Durable task events",
+            "content": {"text/event-stream": {"schema": {"type": "string"}}},
+        }
+    },
+)
 async def stream_background_tasks(
     request: Request,
     limit: int = Query(default=20, ge=1, le=50),
@@ -249,7 +259,7 @@ async def stream_background_tasks(
                     events = await fetch_events(current_cursor)
                 except EventCursorExpiredError as exc:
                     reset = BackgroundTaskCursorResetResponse(
-                        retained_through_cursor=exc.retained_through_cursor
+                        schema_version=1, retained_through_cursor=exc.retained_through_cursor
                     )
                     yield _sse_event(
                         "reset",

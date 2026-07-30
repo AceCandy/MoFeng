@@ -199,9 +199,10 @@
       </n-form-item>
       <n-form-item label="标签">
         <n-dynamic-tags
-          v-model:value="createForm.tags"
+          :value="createForm.tags ?? []"
           size="small"
           placeholder="输入标签后回车"
+          @update:value="createForm.tags = $event"
         />
       </n-form-item>
       <n-form-item label="内容">
@@ -314,7 +315,11 @@ const validateName = (name: string): string | null => {
   return null
 }
 
-const validatePromptPayload = (payload: { title?: string; content: string; tags: string[] }): string | null => {
+const validatePromptPayload = (payload: {
+  title?: string | null
+  content: string
+  tags: string[]
+}): string | null => {
   if (!payload.content.trim()) {
     return '提示词内容不能为空'
   }

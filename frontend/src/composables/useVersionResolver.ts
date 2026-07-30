@@ -1,6 +1,7 @@
 import { computed, type ComputedRef } from 'vue'
 import type { Chapter, ChapterVersion } from '@/api/novel'
 import { cleanVersionContent } from '@/utils/chapter'
+import { traceMetadata } from '@/utils/generationTrace'
 
 interface UseVersionResolverOptions {
   /** 当前选中的章节（解析其展示正文的主体） */
@@ -60,7 +61,7 @@ export const useVersionResolver = ({
       if (trace.node_key !== 'save_draft') {
         continue
       }
-      const metadata = trace.metadata && typeof trace.metadata === 'object' ? trace.metadata : {}
+      const metadata = traceMetadata(trace)
       for (const candidate of [
         metadata.input_payload?.recommended_version_index,
         metadata.metrics?.recommended_version_index,

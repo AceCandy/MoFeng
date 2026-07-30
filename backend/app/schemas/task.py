@@ -66,6 +66,7 @@ class BackgroundTaskResponse(BaseModel):
 class BackgroundTaskSnapshotResponse(BaseModel):
     """同一数据库快照中的任务列表与可续传游标。"""
 
+    schema_version: Literal[1]
     tasks: List[BackgroundTaskResponse]
     snapshot_revision: str
     resume_cursor: int
@@ -76,6 +77,7 @@ class BackgroundTaskSnapshotResponse(BaseModel):
 class BackgroundTaskEventResponse(BaseModel):
     """SSE 中一条可按任务 ID upsert 的 durable 事件。"""
 
+    schema_version: Literal[1]
     cursor: int
     event_type: str
     task: BackgroundTaskResponse
@@ -84,5 +86,6 @@ class BackgroundTaskEventResponse(BaseModel):
 class BackgroundTaskCursorResetResponse(BaseModel):
     """游标已越过保留窗口，客户端必须重新获取 snapshot。"""
 
+    schema_version: Literal[1]
     reason: Literal["cursor_expired"] = "cursor_expired"
     retained_through_cursor: int

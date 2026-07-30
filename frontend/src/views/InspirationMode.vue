@@ -200,6 +200,7 @@ import BlueprintConfirmation from '@/components/BlueprintConfirmation.vue'
 import BlueprintDisplay from '@/components/BlueprintDisplay.vue'
 import InspirationLoading from '@/components/InspirationLoading.vue'
 import { globalAlert } from '@/composables/useAlert'
+import { decodeConversationHistory } from '@/utils/novelContract'
 
 interface ChatMessage {
   content: string
@@ -498,9 +499,10 @@ const restoreConversation = async (projectId: string) => {
     const project = result.data ?? projectQuery.data.value ?? null
     currentProject.value = project
     currentConversationState.value = {}
-    if (project && project.conversation_history) {
+    if (project) {
+      const conversationHistory = decodeConversationHistory(project.conversation_history)
       conversationStarted.value = true
-      chatMessages.value = project.conversation_history
+      chatMessages.value = conversationHistory
         .map((item): ChatMessage | null => {
           if (item.role === 'user') {
             try {
@@ -521,7 +523,7 @@ const restoreConversation = async (projectId: string) => {
         })
         .filter((msg): msg is ChatMessage => msg !== null && msg.content !== null) // 过滤掉空的 user message
 
-      const lastAssistantMsgStr = project.conversation_history
+      const lastAssistantMsgStr = conversationHistory
         .filter((m) => m.role === 'assistant')
         .pop()?.content
       if (lastAssistantMsgStr) {
@@ -537,7 +539,7 @@ const restoreConversation = async (projectId: string) => {
         }
       }
       // 计算当前轮次
-      currentTurn.value = project.conversation_history.filter((m) => m.role === 'assistant').length
+      currentTurn.value = conversationHistory.filter((m) => m.role === 'assistant').length
       if (currentTurn.value === 0 && chatMessages.value.length === 0) {
         await showLocalOpeningMessage()
       }

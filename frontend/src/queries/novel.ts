@@ -24,7 +24,7 @@ import {
   type OptimizeRequest,
   type OptimizeResponse,
 } from '@/api/novel'
-import { AdminAPI, type Chapter as AdminChapter } from '@/api/admin'
+import { AdminAPI } from '@/api/admin'
 import { TaskAPI, type BackgroundTask } from '@/api/tasks'
 import { tasksQueryKeys } from '@/queries/tasks'
 
@@ -154,7 +154,7 @@ export function useNovelChapterDetailQuery(
   chapterNumber: ChapterNumberSource,
   isAdmin: AdminModeSource = false,
 ) {
-  return useQuery<Chapter | AdminChapter>({
+  return useQuery<Chapter>({
     queryKey: computed(() =>
       novelQueryKeys.chapterDetail(
         toValue(projectId) || '__missing__',

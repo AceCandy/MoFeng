@@ -1,0 +1,174 @@
+name: transport-contract-ci
+
+on:
+  pull_request:
+    paths:
+      - 'backend/app/main.py'
+      - 'backend/app/openapi_*.py'
+      - 'backend/app/api/routers/**'
+      - 'backend/app/schemas/**'
+      - 'backend/openapi.json'
+      - 'backend/pyproject.toml'
+      - 'backend/pytest.ini'
+      - 'backend/requirements*.txt'
+      - 'backend/tests/test_openapi_contract.py'
+      - 'backend/tests/test_task_event_sse.py'
+      - 'backend/tests/test_chapter_workflow_http.py'
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
+      - 'frontend/eslint.config.*'
+      - 'frontend/tsconfig*.json'
+      - 'frontend/vitest.config.ts'
+      - 'frontend/scripts/check-api-contract-ownership*.mjs'
+      - 'frontend/src/api/**'
+      - 'frontend/src/queries/**'
+      - 'frontend/src/components/**'
+      - 'frontend/src/composables/**'
+      - 'frontend/src/utils/**'
+      - 'frontend/src/views/**'
+      - '.github/workflows/transport-contract-ci.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/app/main.py'
+      - 'backend/app/openapi_*.py'
+      - 'backend/app/api/routers/**'
+      - 'backend/app/schemas/**'
+      - 'backend/openapi.json'
+      - 'backend/pyproject.toml'
+      - 'backend/pytest.ini'
+      - 'backend/requirements*.txt'
+      - 'backend/tests/test_openapi_contract.py'
+      - 'backend/tests/test_task_event_sse.py'
+      - 'backend/tests/test_chapter_workflow_http.py'
+      - 'frontend/package.json'
+      - 'frontend/package-lock.json'
+      - 'frontend/eslint.config.*'
+      - 'frontend/tsconfig*.json'
+      - 'frontend/vitest.config.ts'
+      - 'frontend/scripts/check-api-contract-ownership*.mjs'
+      - 'frontend/src/api/**'
+      - 'frontend/src/queries/**'
+      - 'frontend/src/components/**'
+      - 'frontend/src/composables/**'
+      - 'frontend/src/utils/**'
+      - 'frontend/src/views/**'
+      - '.github/workflows/transport-contract-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+
+      - name: Install backend dependencies
+        run: python -m pip install -r requirements-dev.txt
+        working-directory: backend
+
+      - name: Check backend transport contracts
+        run: |
+          python -m pytest -q \
+            tests/test_openapi_contract.py \
+            tests/test_task_event_sse.py \
+            tests/test_chapter_workflow_http.py
+          python -m ruff check \
+            app/main.py \
+            app/openapi_schema.py \
+            app/openapi_export.py \
+            app/api/routers/tasks.py \
+            app/schemas/task.py \
+            tests/test_openapi_contract.py
+          python -m black --check \
+            app/main.py \
+            app/openapi_schema.py \
+            app/openapi_export.py \
+            app/api/routers/tasks.py \
+            app/schemas/task.py \
+            tests/test_openapi_contract.py
+          python -m mypy app/openapi_schema.py app/openapi_export.py
+          python -m compileall -q app
+        working-directory: backend
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Check generated transport artifacts
+        run: npm run api:check
+        working-directory: frontend
+
+      - name: Test task transport decoder
+        run: >-
+          npm run test:unit --
+          src/queries/__tests__/tasks.spec.ts
+          src/components/__tests__/uiAuditRegression.spec.ts
+        working-directory: frontend
+
+      - name: Type check frontend
+        run: npm run type-check
+        working-directory: frontend
+
+      - name: Lint frontend
+        run: npm run lint
+        working-directory: frontend
+
+      - name: Install pinned oasdiff
+        if: github.event_name == 'pull_request'
+        env:
+          OASDIFF_SHA256: ea0007fe536c7915785f754885d2afdb11352d6a14531950edf9d601a2baa674
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/oasdiff_1.26.1_linux_amd64.tar.gz"
+          curl -fsSLo "$archive" \
+            'https://github.com/Tufin/oasdiff/releases/download/v1.26.1/oasdiff_1.26.1_linux_amd64.tar.gz'
+          printf '%s  %s\n' "$OASDIFF_SHA256" "$archive" | sha256sum -c -
+          tar -xzf "$archive" -C "$RUNNER_TEMP" oasdiff
+          chmod +x "$RUNNER_TEMP/oasdiff"
+
+      - name: Check semantic breaking changes
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          base_spec="$RUNNER_TEMP/openapi-base.json"
+          trap 'rm -f "$base_spec"' EXIT
+
+          git cat-file -e "${BASE_SHA}^{commit}"
+          test -s backend/openapi.json
+
+          if ! git cat-file -e "${BASE_SHA}:backend/openapi.json" 2>/dev/null; then
+            echo '::notice title=OpenAPI semantic baseline::Baseline introduced; semantic comparison starts after merge.'
+            exit 0
+          fi
+
+          git show "${BASE_SHA}:backend/openapi.json" > "$base_spec"
+          "$RUNNER_TEMP/oasdiff" breaking \
+            "$base_spec" \
+            backend/openapi.json \
+            --fail-on ERR \
+            --format githubactions

@@ -152,6 +152,7 @@
 
 <script setup lang="ts">
 import type { ChapterOutline, NovelProject } from '@/api/novel'
+import { readStringProperty } from '@/utils/novelContract'
 import { computed, onMounted, onUnmounted } from 'vue'
 
 interface Props {
@@ -196,7 +197,8 @@ const resolvedCharacterStates = computed(() => {
   if (result.length === 0 && props.project?.blueprint?.characters) {
     const blueprintChars = props.project.blueprint.characters.slice(0, 4)
     for (const char of blueprintChars) {
-      result.push({ name: char.name, state: '备战 / 待定' })
+      const name = readStringProperty(char, 'name')
+      if (name) result.push({ name, state: '备战 / 待定' })
     }
   }
 

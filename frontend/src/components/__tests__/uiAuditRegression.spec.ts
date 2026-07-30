@@ -287,9 +287,10 @@ describe('UI audit regressions', () => {
     // currentComponentProps 装配随 composable 抽至 useChapterBodyProps，断言改读 composable 源码
     const bodyPropsSource = readSource('src/composables/useChapterBodyProps.ts')
 
-    expect(apiSource).toContain('export interface ChapterGenerationTrace')
-    expect(apiSource).toContain('generation_traces?: ChapterGenerationTrace[]')
-    expect(apiSource).toContain('uses_llm: boolean')
+    expect(apiSource).toContain(
+      "export type ChapterGenerationTrace = components['schemas']['ChapterGenerationTrace']",
+    )
+    expect(apiSource).toContain("export type Chapter = components['schemas']['Chapter']")
     expect(bodyPropsSource).toContain('generationTraces: renderAsLocalGenerating')
     expect(bodyPropsSource).toContain('selectedChapter.value?.generation_traces ?? []')
     expect(generatingSource).toContain('generationTraces?: ChapterGenerationTrace[]')

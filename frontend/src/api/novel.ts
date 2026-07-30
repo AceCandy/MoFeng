@@ -1,6 +1,7 @@
 // AIMETA P=小说API客户端_小说和章节接口|R=小说CRUD_章节管理_生成|NR=不含UI逻辑|E=api:novel|X=internal|A=novelApi对象|D=axios|S=net|RD=./README.ai
 import { API_BASE_URL, API_PREFIX } from './base'
 import { authJson, authRaw } from './client'
+import type { components } from './generated/schema'
 import { type HttpRequestOptions } from './http'
 import type { BackgroundTask } from './tasks'
 
@@ -240,23 +241,8 @@ export const readSSESubscription = async (
 }
 
 // 类型定义
-export interface NovelProject {
-  id: string
-  title: string
-  initial_prompt: string
-  blueprint?: Blueprint
-  chapters: Chapter[]
-  conversation_history: ConversationMessage[]
-}
-
-export interface NovelProjectSummary {
-  id: string
-  title: string
-  genre: string
-  last_edited: string
-  completed_chapters: number
-  total_chapters: number
-}
+export type NovelProject = components['schemas']['NovelProject']
+export type NovelProjectSummary = components['schemas']['NovelProjectSummary']
 
 export interface Blueprint {
   title?: string
@@ -282,14 +268,7 @@ export interface Character {
   relationship_to_protagonist?: string
 }
 
-export interface ChapterOutline {
-  chapter_number: number
-  title: string
-  summary: string
-  goals?: string
-  highlights?: string[]
-  character_states?: Record<string, string>
-}
+export type ChapterOutline = components['schemas']['ChapterOutline']
 
 export interface ChapterVersion {
   content: string
@@ -297,52 +276,8 @@ export interface ChapterVersion {
   metadata?: Record<string, any> | null
 }
 
-export interface ChapterGenerationTrace {
-  id: number
-  node_key: string
-  node_label: string
-  stage?: string | null
-  status: string
-  uses_llm: boolean
-  system_prompt?: string | null
-  user_prompt?: string | null
-  raw_response?: string | null
-  cleaned_output?: string | null
-  error?: string | null
-  metadata?: Record<string, any> | null
-  duration_ms?: number | null
-  started_at?: string | null
-  ended_at?: string | null
-  created_at?: string | null
-}
-
-export interface Chapter {
-  chapter_number: number
-  title: string
-  summary: string
-  real_summary?: string | null
-  content: string | null
-  versions: string[] | null  // versions是字符串数组，不是对象数组
-  evaluation: string | null
-  generation_status:
-    | 'not_generated'
-    | 'generating'
-    | 'evaluating'
-    | 'selecting'
-    | 'failed'
-    | 'evaluation_failed'
-    | 'waiting_for_confirm'
-    | 'finalizing'
-    | 'successful'
-  generation_progress?: number | null
-  generation_step?: string | null
-  generation_step_index?: number | null
-  generation_step_total?: number | null
-  generation_started_at?: string | null
-  status_updated_at?: string | null
-  word_count?: number  // 字数统计
-  generation_traces?: ChapterGenerationTrace[]
-}
+export type ChapterGenerationTrace = components['schemas']['ChapterGenerationTrace']
+export type Chapter = components['schemas']['Chapter']
 
 export interface ConversationMessage {
   role: 'user' | 'assistant'
@@ -463,7 +398,7 @@ export interface ForeshadowingDbListResponse {
 }
 
 // 内容型Section（对应后端NovelSectionType枚举）
-export type NovelSectionType = 'overview' | 'world_setting' | 'characters' | 'relationships' | 'chapter_outline' | 'chapters'
+export type NovelSectionType = components['schemas']['NovelSectionType']
 
 // 分析型Section（不属于NovelSectionType，使用独立的analytics API）
 export type AnalysisSectionType = 'emotion_curve' | 'foreshadowing'
@@ -471,10 +406,7 @@ export type AnalysisSectionType = 'emotion_curve' | 'foreshadowing'
 // 所有Section的联合类型
 export type AllSectionType = NovelSectionType | AnalysisSectionType
 
-export interface NovelSectionResponse {
-  section: NovelSectionType
-  data: Record<string, any>
-}
+export type NovelSectionResponse = components['schemas']['NovelSectionResponse']
 
 // API 函数
 const NOVELS_BASE = `${API_BASE_URL}${API_PREFIX}/novels`

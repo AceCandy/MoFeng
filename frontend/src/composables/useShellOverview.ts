@@ -3,6 +3,7 @@ import type { NovelProject } from '@/api/novel'
 import type { useForeshadowingQuery } from '@/queries/novel'
 import type { useShellSectionNavigation } from '@/composables/useShellSectionNavigation'
 import { resolveChapterNumberForEntry } from '@/utils/chapter'
+import { readStringProperty } from '@/utils/novelContract'
 
 type ForeshadowingQuery = ReturnType<typeof useForeshadowingQuery>
 type OverviewQuery = ReturnType<typeof useShellSectionNavigation>['overviewQuery']
@@ -67,9 +68,12 @@ export function useShellOverview(options: {
   })
 
   const overviewData = computed(() => overviewQuery.data.value?.data ?? null)
+  const overviewSummary = computed(() =>
+    readStringProperty(overviewData.value, 'one_sentence_summary'),
+  )
   const overviewMeta = computed(() => ({
-    title: overviewData.value?.title || novel.value?.title || '加载中...',
-    updated_at: overviewData.value?.updated_at || null,
+    title: readStringProperty(overviewData.value, 'title') || novel.value?.title || '加载中...',
+    updated_at: readStringProperty(overviewData.value, 'updated_at') || null,
   }))
 
   const formattedTitle = computed(() => {
@@ -85,6 +89,7 @@ export function useShellOverview(options: {
     currentChapterLabel,
     foreshadowingOverview,
     overviewData,
+    overviewSummary,
     overviewMeta,
     formattedTitle,
   }

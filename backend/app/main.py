@@ -2,20 +2,20 @@
 """FastAPI 应用入口，负责装配路由、依赖与生命周期管理。"""
 
 import logging
-from logging.config import dictConfig
 from contextlib import asynccontextmanager
+from logging.config import dictConfig
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from .api.routers import api_router
 from .core.config import assert_production_security, settings
 from .db.readiness import check_database_readiness
-from .services.prompt_service import PromptService
-from .services.event_bus import shutdown_event_bus
 from .db.session import AsyncSessionLocal
-from .api.routers import api_router
-
+from .openapi_schema import install_openapi_schema, stable_operation_id
+from .services.event_bus import shutdown_event_bus
+from .services.prompt_service import PromptService
 
 dictConfig(
     {
@@ -92,6 +92,7 @@ app = FastAPI(
     debug=settings.debug,
     version="1.0.0",
     lifespan=lifespan,
+    generate_unique_id_function=stable_operation_id,
 )
 
 # CORS 配置：仅允许白名单来源，生产环境通过 CORS_ORIGINS 配置具体域名
@@ -128,3 +129,6 @@ async def readiness_check():
         status_code=200 if readiness.ready else 503,
         content=readiness.as_dict(),
     )
+
+
+install_openapi_schema(app)

@@ -104,7 +104,7 @@ watch(
 
         <ol class="task-log-panel__logs">
           <li
-            v-for="entry in selectedTask.log_entries"
+            v-for="entry in selectedTask.log_entries ?? []"
             :key="`${entry.timestamp}-${entry.message}`"
             class="task-log-panel__log"
             :class="statusClass(entry.level)"

@@ -1,6 +1,7 @@
 import { computed, ref, watch, type ComputedRef, type Ref } from 'vue'
 import type { Chapter, ChapterGenerationResponse, ChapterVersion } from '@/api/novel'
 import { cleanVersionContent, parseEvaluationPayload } from '@/utils/chapter'
+import { traceMetadata } from '@/utils/generationTrace'
 
 interface UseWritingDeskVersionDetailOptions {
   selectedChapter: ComputedRef<Chapter | null>
@@ -185,7 +186,7 @@ export const useWritingDeskVersionDetail = ({
       if (trace.node_key !== 'save_draft') {
         continue
       }
-      const metadata = trace.metadata && typeof trace.metadata === 'object' ? trace.metadata : {}
+      const metadata = traceMetadata(trace)
       for (const candidate of [
         metadata.input_payload?.recommended_version_index,
         metadata.metrics?.recommended_version_index,

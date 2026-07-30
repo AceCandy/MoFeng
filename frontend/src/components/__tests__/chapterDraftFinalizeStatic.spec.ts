@@ -8,8 +8,10 @@ const readSource = (relativePath: string) =>
 describe('chapter draft finalization contracts', () => {
   it('adds finalizing status and confirm finalize API', () => {
     const api = readSource('src/api/novel.ts')
+    const generatedContract = readSource('src/api/generated/schema.d.ts')
 
-    expect(api).toContain("'finalizing'")
+    expect(generatedContract).toContain('ChapterGenerationStatus:')
+    expect(generatedContract).toContain('| "finalizing" |')
     expect(api).toContain('export interface ConfirmFinalizeChapterRequest')
     expect(api).toContain('selected_version_index: number')
     expect(api).toContain('edited_content?: string | null')

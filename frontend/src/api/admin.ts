@@ -1,7 +1,14 @@
 // AIMETA P=管理员API客户端_管理接口调用|R=用户管理_系统配置_统计|NR=不含UI逻辑|E=api:admin|X=internal|A=adminApi对象|D=axios|S=net|RD=./README.ai
-import type { NovelSectionResponse, NovelSectionType } from '@/api/novel'
+import type {
+  Chapter as NovelChapter,
+  NovelProject as NovelProjectContract,
+  NovelProjectSummary as NovelProjectSummaryContract,
+  NovelSectionResponse,
+  NovelSectionType,
+} from '@/api/novel'
 import { authJson } from './client'
 import { API_BASE_URL } from './base'
+import type { components } from './generated/schema'
 export { API_BASE_URL } from './base'
 
 // API 配置
@@ -19,113 +26,22 @@ const adminRequest = <T = any>(path: string, options: RequestInit = {}) =>
   request<T>(`${API_BASE_URL}${ADMIN_API_PREFIX}${path}`, options)
 
 // 类型定义
-export interface Statistics {
-  novel_count: number
-  user_count: number
-  api_request_count: number
-}
-
-export interface AdminUser {
-  id: number
-  username: string
-  email?: string | null
-  is_admin: boolean
-  is_active: boolean
-}
-
-export interface UserCreatePayload {
-  username: string
-  email?: string
-  password: string
-  is_admin?: boolean
-  is_active?: boolean
-}
-
-export interface UserUpdatePayload {
-  username?: string
-  email?: string
-  password?: string
-  is_admin?: boolean
-  is_active?: boolean
-}
-
-export interface NovelProjectSummary {
-  id: string
-  title: string
-  genre: string
-  last_edited: string
-  completed_chapters: number
-  total_chapters: number
-}
-
-export interface AdminNovelSummary extends NovelProjectSummary {
-  owner_id: number
-  owner_username: string
-}
-
-export interface Chapter {
-  chapter_number: number
-  title: string
-  summary: string
-  content?: string | null
-  status?: string
-  version_id?: string | number | null
-  versions?: any[]
-  word_count?: number
-}
-
-export interface NovelProject {
-  id: string
-  user_id: number
-  title: string
-  initial_prompt: string
-  conversation_history: any[]
-  blueprint?: any
-  chapters: Chapter[]
-}
-
-export interface PromptItem {
-  id: number
-  name: string
-  title?: string | null
-  content: string
-  tags?: string[] | null
-}
-
-export interface PromptCreatePayload {
-  name: string
-  content: string
-  title?: string
-  tags?: string[]
-}
-
-export type PromptUpdatePayload = Partial<Omit<PromptCreatePayload, 'name'>>
-
-export interface UpdateLog {
-  id: number
-  content: string
-  created_at: string
-  created_by?: string | null
-  is_pinned: boolean
-}
-
-export interface UpdateLogPayload {
-  content?: string
-  is_pinned?: boolean
-}
-
-export interface SystemConfig {
-  key: string
-  value: string
-  description?: string | null
-}
-
-export interface SystemConfigUpsertPayload {
-  value: string
-  description?: string | null
-}
-
-export type SystemConfigUpdatePayload = Partial<SystemConfigUpsertPayload>
+export type Statistics = components['schemas']['Statistics']
+export type AdminUser = components['schemas']['User']
+export type UserCreatePayload = components['schemas']['UserCreateAdmin']
+export type UserUpdatePayload = components['schemas']['UserUpdateAdmin']
+export type NovelProjectSummary = NovelProjectSummaryContract
+export type AdminNovelSummary = components['schemas']['AdminNovelSummary']
+export type Chapter = NovelChapter
+export type NovelProject = NovelProjectContract
+export type PromptItem = components['schemas']['PromptRead']
+export type PromptCreatePayload = components['schemas']['PromptCreate']
+export type PromptUpdatePayload = components['schemas']['PromptUpdate']
+export type UpdateLog = components['schemas']['UpdateLogRead']
+export type UpdateLogPayload = components['schemas']['UpdateLogUpdate']
+export type SystemConfig = components['schemas']['SystemConfigRead']
+export type SystemConfigUpsertPayload = Omit<components['schemas']['SystemConfigCreate'], 'key'>
+export type SystemConfigUpdatePayload = components['schemas']['SystemConfigUpdate']
 
 export class AdminAPI {
   private static request<T = any>(path: string, options: RequestInit = {}) {

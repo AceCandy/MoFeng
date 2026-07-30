@@ -11,9 +11,11 @@ import {
 import { useQuery } from '@tanstack/vue-query'
 
 import {
+  TaskContractError,
   TaskAPI,
   type BackgroundTask,
   type BackgroundTaskEvent,
+  type BackgroundTaskSnapshot,
   type BackgroundTaskStreamScope,
 } from '@/api/tasks'
 
@@ -75,6 +77,13 @@ export function useTaskStream(
   const controller = ref<AbortController | null>(null)
   const reconnectTimer = ref<number | null>(null)
   let mounted = false
+  let contractRecoveryAttempted = false
+
+  const applySnapshot = (snapshot: BackgroundTaskSnapshot) => {
+    sseBackgroundTasks.value = snapshot.tasks
+    resumeCursor.value = snapshot.resume_cursor
+    isTaskStreamActive.value = false
+  }
 
   const stopTaskStream = () => {
     if (reconnectTimer.value !== null) {
@@ -84,9 +93,19 @@ export function useTaskStream(
     controller.value?.abort()
     controller.value = null
     isTaskStreamActive.value = false
+    contractRecoveryAttempted = false
   }
 
-  const startTaskStream = () => {
+  const fallBackToPolling = (ac: AbortController) => {
+    ac.abort()
+    if (controller.value === ac) controller.value = null
+    sseBackgroundTasks.value = null
+    resumeCursor.value = null
+    isTaskStreamActive.value = false
+    console.error('任务日志数据校验失败，已回退到轮询同步')
+  }
+
+  const connectTaskStream = () => {
     if (ownerId && toValue(ownerId) == null) return
     if (reconnectTimer.value !== null) {
       window.clearTimeout(reconnectTimer.value)
@@ -96,19 +115,23 @@ export function useTaskStream(
     const ac = new AbortController()
     controller.value = ac
     isTaskStreamActive.value = true
+    const scope = streamScope ? toValue(streamScope) ?? undefined : undefined
+    const isCurrentConnection = () => controller.value === ac && !ac.signal.aborted
 
     void (async () => {
       try {
         const outcome = await TaskAPI.subscribeTasks({
           signal: ac.signal,
           cursor: resumeCursor.value,
-          scope: streamScope ? toValue(streamScope) ?? undefined : undefined,
+          scope,
           onSnapshot: (snapshot) => {
-            sseBackgroundTasks.value = snapshot.tasks
-            resumeCursor.value = snapshot.resume_cursor
-            isTaskStreamActive.value = false
+            if (!isCurrentConnection()) return
+            contractRecoveryAttempted = false
+            applySnapshot(snapshot)
           },
           onTask: (event) => {
+            if (!isCurrentConnection()) return
+            contractRecoveryAttempted = false
             const next = reduceTaskEvent(
               sseBackgroundTasks.value ?? [],
               resumeCursor.value,
@@ -119,30 +142,65 @@ export function useTaskStream(
             isTaskStreamActive.value = false
           },
           onReset: () => {
+            if (!isCurrentConnection()) return
+            contractRecoveryAttempted = false
             isTaskStreamActive.value = true
           },
           onError: (error) => {
-            if (ac.signal.aborted) return
+            if (!isCurrentConnection()) return
             console.error('任务日志 SSE 同步失败:', error)
             isTaskStreamActive.value = false
           },
         })
-        if (ac.signal.aborted || outcome !== 'reset') return
-        const snapshot = await TaskAPI.getSnapshot(
-          20,
-          streamScope ? toValue(streamScope) ?? undefined : undefined,
-        )
-        if (ac.signal.aborted) return
-        sseBackgroundTasks.value = snapshot.tasks
-        resumeCursor.value = snapshot.resume_cursor
-        startTaskStream()
+        if (!isCurrentConnection() || outcome !== 'reset') return
+        let snapshot: BackgroundTaskSnapshot
+        try {
+          snapshot = await TaskAPI.getSnapshot(20, scope)
+        } catch (error) {
+          if (error instanceof TaskContractError) {
+            fallBackToPolling(ac)
+            return
+          }
+          throw error
+        }
+        if (!isCurrentConnection()) return
+        applySnapshot(snapshot)
+        connectTaskStream()
       } catch (error) {
-        if (ac.signal.aborted) return
+        if (!isCurrentConnection()) return
+        if (error instanceof TaskContractError) {
+          if (contractRecoveryAttempted) {
+            fallBackToPolling(ac)
+            return
+          }
+          contractRecoveryAttempted = true
+          try {
+            const snapshot = await TaskAPI.getSnapshot(20, scope)
+            if (!isCurrentConnection()) return
+            applySnapshot(snapshot)
+            connectTaskStream()
+          } catch (snapshotError) {
+            if (!isCurrentConnection()) return
+            if (snapshotError instanceof TaskContractError) {
+              fallBackToPolling(ac)
+              return
+            }
+            console.error('任务日志 snapshot 恢复失败:', snapshotError)
+            isTaskStreamActive.value = false
+            reconnectTimer.value = window.setTimeout(connectTaskStream, 3000)
+          }
+          return
+        }
         console.error('任务日志 SSE 连接失败:', error)
         isTaskStreamActive.value = false
-        reconnectTimer.value = window.setTimeout(startTaskStream, 3000)
+        reconnectTimer.value = window.setTimeout(connectTaskStream, 3000)
       }
     })()
+  }
+
+  const startTaskStream = () => {
+    contractRecoveryAttempted = false
+    connectTaskStream()
   }
 
   onMounted(() => {
