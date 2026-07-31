@@ -264,13 +264,13 @@ describe('UI audit regressions', () => {
     expect(css).not.toMatch(/\.app-shell__project-welcome-message\s*\{[^}]*?data:image/)
   })
 
-  it('keeps failed chapter recovery focused on the real retry action', () => {
-    const source = readSource('src/components/writing-desk/workspace/ChapterFailed.vue')
-    const buttonCount = source.match(/<button\b/g)?.length ?? 0
+  it('keeps failed chapter recovery constrained by server allowed commands', () => {
+    const source = readSource('src/components/writing-desk/ChapterWorkflowPanel.vue')
 
-    expect(buttonCount).toBe(1)
-    expect(source).toContain('@click="$emit(\'generateChapter\', chapterNumber)"')
-    expect(source).toContain('重试生成本章')
+    expect(source).toContain("props.allowedCommands.includes('retry')")
+    expect(source).toContain("props.allowedCommands.includes('retry_external')")
+    expect(source).toContain("props.allowedCommands.includes('retry_projection')")
+    expect(source).toContain('确认风险并重试')
     expect(source).not.toContain('换用备用模型')
     expect(source).not.toContain('缩短上下文后重试')
     expect(source).not.toContain('保存已生成片段')
@@ -284,15 +284,14 @@ describe('UI audit regressions', () => {
     )
     // activeTrace/activeStepDetails 组装随 Slice 8 抽至 useChapterGenerationTrace，断言改读 composable 源码
     const traceSource = readSource('src/composables/useChapterGenerationTrace.ts')
-    // currentComponentProps 装配随 composable 抽至 useChapterBodyProps，断言改读 composable 源码
-    const bodyPropsSource = readSource('src/composables/useChapterBodyProps.ts')
+    const workspaceSource = readSource('src/components/writing-desk/WDWorkspace.vue')
 
     expect(apiSource).toContain(
       "export type ChapterGenerationTrace = components['schemas']['ChapterGenerationTrace']",
     )
     expect(apiSource).toContain("export type Chapter = components['schemas']['Chapter']")
-    expect(bodyPropsSource).toContain('generationTraces: renderAsLocalGenerating')
-    expect(bodyPropsSource).toContain('selectedChapter.value?.generation_traces ?? []')
+    expect(workspaceSource).toContain('const traceReplayProps = computed')
+    expect(workspaceSource).toContain('selectedChapter.value?.generation_traces ?? []')
     expect(generatingSource).toContain('generationTraces?: ChapterGenerationTrace[]')
     expect(traceSource).toContain('const activeTrace = computed')
     // traceMetadata 随 Slice 1 抽至 utils，composable import 后在 activeStepDetails 内调用
@@ -474,25 +473,22 @@ describe('UI audit regressions', () => {
     expect(titleButtonBlock).toContain('padding:')
   })
 
-  it('keeps version cards free of nested detail buttons inside radios', () => {
-    const source = readSource('src/components/writing-desk/workspace/VersionSelector.vue')
+  it('keeps workflow candidate cards as one accessible radio group', () => {
+    const source = readSource('src/components/writing-desk/ChapterWorkflowPanel.vue')
 
     expect(source).toContain('role="radiogroup"')
     expect(source).toContain('role="radio"')
-    expect(source).not.toContain('version-card__details-action')
-    expect(source).not.toContain('version-card__actions')
+    expect(source).toContain(':aria-checked="selectedCandidateId === candidate.id"')
+    expect(source).toContain('@click="selectedCandidateId = candidate.id"')
   })
 
-  it('announces version banners with live region semantics', () => {
-    const source = readSource('src/components/writing-desk/workspace/VersionSelector.vue')
+  it('announces workflow status and failures with live region semantics', () => {
+    const source = readSource('src/components/writing-desk/ChapterWorkflowPanel.vue')
 
-    expect(source).toContain('version-ready')
-    expect(source).toContain('role="status"')
-    expect(source).toContain('aria-live="polite"')
+    expect(source).toContain(":role=\"isAlert ? 'alert' : 'status'\"")
+    expect(source).toContain(":aria-live=\"isAlert ? 'assertive' : 'polite'\"")
     expect(source).toContain('aria-atomic="true"')
-    expect(source).toContain('version-notice')
-    expect(source).toContain(':role="versionNotice.tone === \'error\' ? \'alert\' : \'status\'"')
-    expect(source).toContain(':aria-live="versionNotice.tone === \'error\' ? \'assertive\' : \'polite\'"')
+    expect(source).toContain("props.phase === 'fatal' || props.phase === 'failed'")
   })
 
   it('exposes project card progress as an accessible progressbar', () => {

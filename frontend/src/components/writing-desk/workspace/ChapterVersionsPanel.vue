@@ -1,4 +1,4 @@
-<!-- AIMETA P=历史版本预览面板_多版本平铺查阅|R=版本卡片_应用版本|NR=不含版本数据来源与tab切换|E=component:ChapterVersionsPanel|X=internal|A=版本预览|D=vue|S=dom|RD=./README.ai -->
+<!-- AIMETA P=历史版本预览面板_多版本平铺查阅|R=版本卡片_详情入口_应用版本|NR=不含版本数据来源与tab切换|E=component:ChapterVersionsPanel|X=internal|A=版本预览|D=vue|S=dom|RD=./README.ai -->
 <template>
   <div class="writing-workspace__versions-panel flex flex-col h-full overflow-hidden">
     <div class="flex-1 flex min-h-0 divide-x" style="border-color: var(--md-outline-variant)">
@@ -35,15 +35,24 @@
           <span class="text-sm md-on-surface-variant font-medium">
             此版本共 {{ previewVersionWordCount }} 字，风格为【{{ availableVersions[previewVersionIndex]?.style || '标准' }}】
           </span>
-          <button
-            type="button"
-            class="md-btn md-btn-filled md-ripple flex items-center gap-2"
-            style="background-color: var(--md-primary); color: var(--md-on-primary)"
-            :disabled="isCurrentVersion(previewVersionIndex)"
-            @click="selectVersionFromTab(previewVersionIndex)"
-          >
-            <span>{{ isCurrentVersion(previewVersionIndex) ? '当前正在使用' : '应用此版本为当前正文' }}</span>
-          </button>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              class="md-btn md-btn-outlined md-ripple"
+              @click="emit('showVersionDetail', previewVersionIndex)"
+            >
+              版本详情
+            </button>
+            <button
+              type="button"
+              class="md-btn md-btn-filled md-ripple flex items-center gap-2"
+              style="background-color: var(--md-primary); color: var(--md-on-primary)"
+              :disabled="isCurrentVersion(previewVersionIndex)"
+              @click="selectVersionFromTab(previewVersionIndex)"
+            >
+              <span>{{ isCurrentVersion(previewVersionIndex) ? '当前正在使用' : '应用此版本为当前正文' }}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -65,7 +74,11 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const emit = defineEmits(['editChapter', 'switchToContent'])
+const emit = defineEmits<{
+  (event: 'showVersionDetail', versionIndex: number): void
+  (event: 'editChapter', payload: { chapterNumber: number; content: string }): void
+  (event: 'switchToContent'): void
+}>()
 
 const previewVersionIndex = ref<number>(0)
 

@@ -1,28 +1,26 @@
-import { computed, ref } from 'vue'
+// AIMETA P=写作台当前章节查询派生|R=章节实体_大纲_最近完成章|NR=不镜像工作流状态_不持有mutation状态|E=composable:writing-desk-chapter-state|X=internal|A=useWritingDeskChapterState|D=vue,@tanstack/vue-query|S=cache|RD=./README.ai
+import { computed } from 'vue'
 import type { ComputedRef, Ref } from 'vue'
 import type { NovelProject } from '@/api/novel'
-import { useConfirmFinalizeChapterMutation, useNovelChapterQuery } from '@/queries/novel'
+import { useNovelChapterQuery } from '@/queries/novel'
 
 interface UseWritingDeskChapterStateOptions {
   project: ComputedRef<NovelProject | null>
   selectedChapterNumber: Ref<number | null>
   chapterQuery: ReturnType<typeof useNovelChapterQuery>
-  confirmFinalizeChapterMutation: ReturnType<typeof useConfirmFinalizeChapterMutation>
 }
 
 /**
  * 写作台当前章节的派生状态。
  *
  * 从 WritingDesk.vue 抽出（行为逐行等价）。集中维护由「选中章节 + 项目数据」派生的
- * 状态：当前章节对象、版本选择器可见性、评审中章节号、定稿选择中标志、章节大纲、
- * 最近完成章节号。这些 computed 共享 project/selectedChapterNumber/chapterQuery 三个
- * 响应式源，内聚度高；evaluatingChapter ref 仅 activeEvaluatingChapter 消费，故同入本块。
+ * 状态：当前章节对象、章节大纲与最近完成章节号。工作流交互状态只由 XState actor
+ * 持有，不能从 generation_status 或 mutation pending 再构造本地镜像。
  */
 export const useWritingDeskChapterState = ({
   project,
   selectedChapterNumber,
   chapterQuery,
-  confirmFinalizeChapterMutation,
 }: UseWritingDeskChapterStateOptions) => {
   const selectedChapter = computed(() => {
     if (!project.value || selectedChapterNumber.value === null) return null
@@ -31,35 +29,6 @@ export const useWritingDeskChapterState = ({
     }
     return (
       project.value.chapters.find((ch) => ch.chapter_number === selectedChapterNumber.value) || null
-    )
-  })
-
-  const showVersionSelector = computed(() => {
-    if (!selectedChapter.value) return false
-    const status = selectedChapter.value.generation_status
-    return (
-      status === 'waiting_for_confirm' ||
-      status === 'evaluating' ||
-      status === 'evaluation_failed' ||
-      status === 'selecting'
-    )
-  })
-
-  const evaluatingChapter = ref<number | null>(null)
-
-  const activeEvaluatingChapter = computed(() => {
-    return (
-      evaluatingChapter.value ??
-      (selectedChapter.value?.generation_status === 'evaluating'
-        ? selectedChapter.value.chapter_number
-        : null)
-    )
-  })
-
-  const isSelectingVersion = computed(() => {
-    return (
-      selectedChapter.value?.generation_status === 'finalizing' ||
-      confirmFinalizeChapterMutation.isPending.value
     )
   })
 
@@ -83,10 +52,6 @@ export const useWritingDeskChapterState = ({
 
   return {
     selectedChapter,
-    showVersionSelector,
-    evaluatingChapter,
-    activeEvaluatingChapter,
-    isSelectingVersion,
     selectedChapterOutline,
     latestCompletedChapterNumber,
   }

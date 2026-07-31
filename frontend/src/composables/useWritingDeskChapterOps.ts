@@ -1,91 +1,24 @@
+// AIMETA P=写作台章节删除操作|R=删除范围确认_章节产物二次确认|NR=不触发生成评审或工作流命令|E=composable:writing-desk-chapter-ops|X=internal|A=useWritingDeskChapterOps|D=@tanstack/vue-query|S=state,cache|RD=./README.ai
 import type { ComputedRef, Ref } from 'vue'
-import type { NovelProject } from '@/api/novel'
-import { useDeleteChapterMutation, useEvaluateChapterMutation } from '@/queries/novel'
+import { useDeleteChapterMutation } from '@/queries/novel'
 import { globalAlert } from '@/composables/useAlert'
 
 interface UseWritingDeskChapterOpsOptions {
   projectId: () => string
-  project: ComputedRef<NovelProject | null>
   selectedChapterNumber: Ref<number | null>
-  evaluatingChapter: Ref<number | null>
   latestCompletedChapterNumber: ComputedRef<number | null>
 }
 
 /**
- * 写作台章节评审与删除操作。
- *
- * 从 WritingDesk.vue 抽出（行为逐行等价）。评审与删除各自依赖独立的 mutation、
- * 互不耦合，故同处一个 composable；章节定稿（confirmVersionSelection）因依赖
- * 版本提取群（availableVersions/resolveRecommendedVersionIndex），待该群抽出后
- * 另行收敛，故未纳入本 composable。
+ * 写作台章节删除操作。生成、评审恢复与定稿全部属于章节工作流 actor，不能在此
+ * 通过 legacy mutation 或 generation_status 乐观写入形成第二 owner。
  */
 export const useWritingDeskChapterOps = ({
   projectId,
-  project,
   selectedChapterNumber,
-  evaluatingChapter,
   latestCompletedChapterNumber,
 }: UseWritingDeskChapterOpsOptions) => {
-  const evaluateChapterMutation = useEvaluateChapterMutation(projectId)
   const deleteChapterMutation = useDeleteChapterMutation(projectId)
-
-  const evaluateChapter = async () => {
-    if (selectedChapterNumber.value !== null) {
-      const targetChapter = selectedChapterNumber.value
-      evaluatingChapter.value = targetChapter
-
-      // 保存原始状态，用于失败时恢复
-      let previousStatus:
-        | 'not_generated'
-        | 'generating'
-        | 'evaluating'
-        | 'selecting'
-        | 'failed'
-        | 'evaluation_failed'
-        | 'waiting_for_confirm'
-        | 'finalizing'
-        | 'successful'
-        | undefined
-
-      try {
-        // 在本地更新章节状态为evaluating以立即反映在UI上
-        if (project.value?.chapters) {
-          const chapter = project.value.chapters.find(
-            (ch) => ch.chapter_number === targetChapter,
-          )
-          if (chapter) {
-            previousStatus = chapter.generation_status // 保存原状态
-            chapter.generation_status = 'evaluating'
-          }
-        }
-        await evaluateChapterMutation.mutateAsync(targetChapter)
-
-        // 评审完成后，状态会通过store和轮询更新，这里不需要额外操作
-        globalAlert.showToast('章节评审结果已生成', 'success')
-      } catch (error) {
-        console.error('评审章节失败:', error)
-
-        // 错误状态下恢复章节状态为原始状态
-        if (project.value?.chapters) {
-          const chapter = project.value.chapters.find(
-            (ch) => ch.chapter_number === targetChapter,
-          )
-          if (chapter && previousStatus) {
-            chapter.generation_status = previousStatus // 恢复为原状态
-          }
-        }
-
-        globalAlert.showError(
-          `评审章节失败: ${error instanceof Error ? error.message : '未知错误'}`,
-          '评审失败',
-        )
-      } finally {
-        if (evaluatingChapter.value === targetChapter) {
-          evaluatingChapter.value = null
-        }
-      }
-    }
-  }
 
   const deleteChapter = async (chapterNumbers: number | number[]) => {
     const numbersToDelete = Array.isArray(chapterNumbers) ? chapterNumbers : [chapterNumbers]
@@ -143,7 +76,6 @@ export const useWritingDeskChapterOps = ({
   }
 
   return {
-    evaluateChapter,
     deleteChapter,
   }
 }

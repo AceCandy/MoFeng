@@ -1,11 +1,10 @@
-import { computed, ref, watch, type ComputedRef, type Ref } from 'vue'
-import type { Chapter, ChapterGenerationResponse, ChapterVersion } from '@/api/novel'
-import { cleanVersionContent, parseEvaluationPayload } from '@/utils/chapter'
-import { traceMetadata } from '@/utils/generationTrace'
+// AIMETA P=写作台章节版本详情|R=Chapter_Query版本归一化_详情选择|NR=不读取生成响应_不提交工作流命令|E=composable:writing-desk-version-detail|X=internal|A=useWritingDeskVersionDetail|D=vue|S=state,cache|RD=./README.ai
+import { computed, ref, type ComputedRef, type Ref } from 'vue'
+import type { Chapter, ChapterVersion } from '@/api/novel'
+import { cleanVersionContent } from '@/utils/chapter'
 
 interface UseWritingDeskVersionDetailOptions {
   selectedChapter: ComputedRef<Chapter | null>
-  chapterGenerationResult: Ref<ChapterGenerationResponse | null>
   selectedVersionIndex: Ref<number>
   /** 版本详情弹窗组件懒加载 loader（父侧 defineAsyncComponent 同源） */
   loadWDVersionDetailModal: () => Promise<unknown>
@@ -15,23 +14,16 @@ interface UseWritingDeskVersionDetailOptions {
  * 写作台版本提取与版本详情操作。
  *
  * 从 WritingDesk.vue 抽出（行为逐行等价）。内聚版本内容/元数据提取、可用版本
- * 计算（availableVersions）、推荐版本解析（resolveRecommendedVersionIndex）、
- * 等待确认态的自动选版（syncRecommendedVersionSelection + watch）、版本详情
- * 弹窗操作与隐藏版本选择器。extractVersionContent 本地多 object 分支与
- * @/utils/chapter 仅 string 版本不等价，故保留本地实现。章节定稿
- * （confirmVersionSelection）消费本 composable 返回的 availableVersions 与
- * resolveRecommendedVersionIndex，待其自身收敛后另行抽出。
+ * 计算（availableVersions）与版本详情弹窗操作。候选选版由 Chapter Query 的
+ * version_selections + 当前 workflow run_id 单独负责，不再混入历史版本索引。
  */
 export const useWritingDeskVersionDetail = ({
   selectedChapter,
-  chapterGenerationResult,
   selectedVersionIndex,
   loadWDVersionDetailModal,
 }: UseWritingDeskVersionDetailOptions) => {
   const showVersionDetailModal = ref(false)
   const detailVersionIndex = ref<number>(0)
-  const lastAutoRecommendedSelectionKey = ref<string | null>(null)
-
   const extractVersionContent = (raw: unknown): string => {
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
       const record = raw as Record<string, unknown>
@@ -75,25 +67,18 @@ export const useWritingDeskVersionDetail = ({
     return raw
   }
 
-  const extractVersionMetadata = (raw: unknown): Record<string, any> | null => {
+  const extractVersionMetadata = (raw: unknown): Record<string, unknown> | null => {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
       return null
     }
     const metadata = (raw as Record<string, unknown>).metadata
     return metadata && typeof metadata === 'object' && !Array.isArray(metadata)
-      ? (metadata as Record<string, any>)
+      ? (metadata as Record<string, unknown>)
       : null
   }
 
-  // 可用版本列表（来源优先级：生成结果 > 章节 versions > 章节 content 兜底）
+  // 历史版本只来自 Chapter Query；工作流候选通过 version_selections 单独展示。
   const availableVersions = computed<ChapterVersion[]>(() => {
-    if (
-      Array.isArray(chapterGenerationResult.value?.versions) &&
-      chapterGenerationResult.value.versions.length > 0
-    ) {
-      return chapterGenerationResult.value.versions.filter((item) => Boolean(item?.content?.trim()))
-    }
-
     const chapter = selectedChapter.value
     if (!chapter) {
       return []
@@ -136,103 +121,6 @@ export const useWritingDeskVersionDetail = ({
     return cleanCurrentContent === cleanVersionContentStr
   }
 
-  const toBoundedVersionIndex = (value: unknown, versionCount: number): number | null => {
-    const index = Number(value)
-    if (!Number.isInteger(index) || index < 0 || index >= versionCount) {
-      return null
-    }
-    return index
-  }
-
-  const resolveRecommendedVersionIndex = (
-    chapter: Chapter | null,
-    versions: ChapterVersion[],
-  ): number | null => {
-    if (!versions.length) {
-      return null
-    }
-
-    const metadataIndex = versions.findIndex((version) => {
-      const metadata = version.metadata
-      return metadata?.ai_review?.is_best === true
-    })
-    if (metadataIndex >= 0) {
-      return metadataIndex
-    }
-
-    for (const version of versions) {
-      const metadata = version.metadata
-      const metadataBestIndex = toBoundedVersionIndex(
-        metadata?.review_summaries?.ai_review?.best_version_index ??
-          metadata?.ai_review?.best_version_index,
-        versions.length,
-      )
-      if (metadataBestIndex !== null) {
-        return metadataBestIndex
-      }
-    }
-
-    const evaluationPayload = parseEvaluationPayload(chapter?.evaluation || null)
-    const bestChoiceIndex = toBoundedVersionIndex(
-      Number(evaluationPayload?.best_choice) - 1,
-      versions.length,
-    )
-    if (bestChoiceIndex !== null) {
-      return bestChoiceIndex
-    }
-
-    const traces = [...(chapter?.generation_traces ?? [])].reverse()
-    for (const trace of traces) {
-      if (trace.node_key !== 'save_draft') {
-        continue
-      }
-      const metadata = traceMetadata(trace)
-      for (const candidate of [
-        metadata.input_payload?.recommended_version_index,
-        metadata.metrics?.recommended_version_index,
-        metadata.recommended_version_index,
-        metadata.input_payload?.best_version_index,
-        metadata.metrics?.best_version_index,
-      ]) {
-        const traceIndex = toBoundedVersionIndex(candidate, versions.length)
-        if (traceIndex !== null) {
-          return traceIndex
-        }
-      }
-    }
-
-    return null
-  }
-
-  const syncRecommendedVersionSelection = () => {
-    const chapter = selectedChapter.value
-    const versions = availableVersions.value
-    if (!chapter || chapter.generation_status !== 'waiting_for_confirm' || versions.length === 0) {
-      lastAutoRecommendedSelectionKey.value = null
-      return
-    }
-
-    const recommendedIndex = resolveRecommendedVersionIndex(chapter, versions)
-    if (recommendedIndex === null) {
-      return
-    }
-
-    const selectionKey = [
-      chapter.chapter_number,
-      chapter.status_updated_at ?? '',
-      chapter.generation_traces?.length ?? 0,
-      versions.length,
-      recommendedIndex,
-    ].join(':')
-
-    if (lastAutoRecommendedSelectionKey.value === selectionKey) {
-      return
-    }
-
-    selectedVersionIndex.value = recommendedIndex
-    lastAutoRecommendedSelectionKey.value = selectionKey
-  }
-
   // 显示版本详情
   const showVersionDetail = (versionIndex: number) => {
     if (versionIndex < 0 || versionIndex >= availableVersions.value.length) {
@@ -248,38 +136,17 @@ export const useWritingDeskVersionDetail = ({
     showVersionDetailModal.value = false
   }
 
-  // 隐藏版本选择器，返回内容视图
-  const hideVersionSelector = () => {
-    // Now controlled by computed property, but we can clear the generation result
-    chapterGenerationResult.value = null
-    selectedVersionIndex.value = 0
-  }
-
   // 从详情弹窗中选择版本
   const selectVersionFromDetail = async () => {
     selectedVersionIndex.value = detailVersionIndex.value
     closeVersionDetail()
   }
 
-  watch(
-    [
-      () => selectedChapter.value?.chapter_number ?? null,
-      () => selectedChapter.value?.generation_status ?? null,
-      () => selectedChapter.value?.status_updated_at ?? null,
-      () => selectedChapter.value?.generation_traces ?? [],
-      () => availableVersions.value,
-    ],
-    syncRecommendedVersionSelection,
-    { deep: true, immediate: true },
-  )
-
   return {
     availableVersions,
     isCurrentVersion,
-    resolveRecommendedVersionIndex,
     showVersionDetail,
     closeVersionDetail,
-    hideVersionSelector,
     selectVersionFromDetail,
     showVersionDetailModal,
     detailVersionIndex,

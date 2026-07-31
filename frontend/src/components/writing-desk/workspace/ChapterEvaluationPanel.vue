@@ -1,7 +1,17 @@
-<!-- AIMETA P=章节评审反馈面板_多版本评阅展示|R=评审展示_呼叫评阅|NR=不含评审触发逻辑|E=component:ChapterEvaluationPanel|X=internal|A=评审面板|D=vue|S=dom|RD=./README.ai -->
+<!-- AIMETA P=章节评审反馈面板_多版本评阅展示|R=评审展示_详情入口|NR=不含评审触发逻辑|E=component:ChapterEvaluationPanel|X=internal|A=评审面板|D=vue|S=dom|RD=./README.ai -->
 <template>
   <div class="writing-workspace__evaluation-panel flex flex-col h-full overflow-y-auto">
     <div v-if="evaluation" class="space-y-6">
+      <div class="flex justify-end">
+        <button
+          type="button"
+          class="md-btn md-btn-outlined md-ripple"
+          @click="emit('showEvaluationDetail')"
+        >
+          评审详情
+        </button>
+      </div>
+
       <!-- 情况 A：解析 JSON 成功 -->
       <template v-if="parsedEvaluation">
         <!-- 格式 1: 含有 best_choice 或 evaluation 的多版本评阅 -->
@@ -92,7 +102,7 @@
                 {{ key }}
               </h5>
               <p class="dimension-desc md-body-small">
-                {{ item.analysis || item }}
+                {{ item.analysis }}
               </p>
             </div>
           </div>
@@ -120,17 +130,8 @@
         <span class="text-4xl">⚖️</span>
         <h4 class="md-title-large font-semibold">尚无本章评阅报告</h4>
         <p class="md-body-medium md-on-surface-variant">
-          阁主可呼叫 AI 评阅官，对当前已完成的章节正文进行全方位结构、文笔和剧情连贯性评阅。
+          章节工作流会自动完成结构、文笔和剧情连贯性评审，结果就绪后将在此显示。
         </p>
-        <button
-          type="button"
-          class="md-btn md-btn-filled md-ripple"
-          style="background-color: var(--md-secondary); color: var(--md-on-secondary)"
-          :disabled="evaluatingChapter !== null"
-          @click="$emit('evaluateChapter')"
-        >
-          <span>{{ evaluatingChapter !== null ? '正在分析评审中...' : '呼叫 AI 评阅官' }}</span>
-        </button>
       </div>
     </div>
   </div>
@@ -141,24 +142,103 @@ import { computed } from 'vue'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 
+interface EvaluationVersionResult {
+  overall_review?: string
+  pros?: string[]
+  cons?: string[]
+}
+
+interface EvaluationDimension {
+  analysis: string
+}
+
+interface EvaluationPayload {
+  best_choice?: string | number
+  reason_for_choice?: string
+  evaluation?: Record<string, EvaluationVersionResult>
+  scores?: Record<string, string | number>
+  feedback?: string
+  decision?: string
+  summary?: string
+  dimensions?: Record<string, EvaluationDimension>
+  suggestions?: string[]
+}
+
 interface Props {
   evaluation: string | null | undefined
-  evaluatingChapter: number | null
 }
 
 const props = defineProps<Props>()
+const emit = defineEmits<{
+  (event: 'showEvaluationDetail'): void
+}>()
 
-defineEmits(['evaluateChapter'])
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value)
+
+const optionalString = (value: unknown) => typeof value === 'string' ? value : undefined
+
+const stringList = (value: unknown): string[] | undefined => {
+  if (!Array.isArray(value)) return undefined
+  return value.filter((item): item is string => typeof item === 'string')
+}
+
+const decodeEvaluationPayload = (value: unknown): EvaluationPayload | null => {
+  if (!isRecord(value)) return null
+  const payload: EvaluationPayload = {}
+  if (typeof value.best_choice === 'string' || typeof value.best_choice === 'number') {
+    payload.best_choice = value.best_choice
+  }
+  payload.reason_for_choice = optionalString(value.reason_for_choice)
+  payload.feedback = optionalString(value.feedback)
+  payload.decision = optionalString(value.decision)
+  payload.summary = optionalString(value.summary)
+  payload.suggestions = stringList(value.suggestions)
+
+  if (isRecord(value.evaluation)) {
+    const evaluations: Record<string, EvaluationVersionResult> = {}
+    for (const [key, rawResult] of Object.entries(value.evaluation)) {
+      if (!isRecord(rawResult)) continue
+      evaluations[key] = {
+        overall_review: optionalString(rawResult.overall_review),
+        pros: stringList(rawResult.pros),
+        cons: stringList(rawResult.cons),
+      }
+    }
+    payload.evaluation = evaluations
+  }
+
+  if (isRecord(value.scores)) {
+    const scores: Record<string, string | number> = {}
+    for (const [key, score] of Object.entries(value.scores)) {
+      if (typeof score === 'string' || typeof score === 'number') scores[key] = score
+    }
+    payload.scores = scores
+  }
+
+  if (isRecord(value.dimensions)) {
+    const dimensions: Record<string, EvaluationDimension> = {}
+    for (const [key, dimension] of Object.entries(value.dimensions)) {
+      if (typeof dimension === 'string') {
+        dimensions[key] = { analysis: dimension }
+      } else if (isRecord(dimension)) {
+        dimensions[key] = { analysis: optionalString(dimension.analysis) ?? '' }
+      }
+    }
+    payload.dimensions = dimensions
+  }
+  return payload
+}
 
 const parsedEvaluation = computed(() => {
   const evalStr = props.evaluation
   if (!evalStr) return null
   try {
-    let data = JSON.parse(evalStr)
+    let data: unknown = JSON.parse(evalStr)
     if (typeof data === 'string') {
       data = JSON.parse(data)
     }
-    return data
+    return decodeEvaluationPayload(data)
   } catch (error) {
     console.error('Failed to parse evaluation JSON in ChapterEvaluationPanel:', error)
     return null
@@ -181,7 +261,7 @@ const sortedEvaluationEntries = computed(() => {
   return Object.entries(evaluation)
     .map(([key, result]) => ({
       key,
-      result: result as Record<string, any>,
+      result,
       versionNumber: getEvaluationVersionNumber(key),
     }))
     .sort((a, b) => a.versionNumber - b.versionNumber)
@@ -196,14 +276,7 @@ const parseMarkdown = (text: string | null | undefined): string => {
       .replace(/\\'/g, "'")
       .replace(/\\\\/g, '\\')
 
-    let parsed = ''
-    if (marked && typeof marked.parse === 'function') {
-      parsed = marked.parse(cleaned, { breaks: true }) as string
-    } else if (typeof marked === 'function') {
-      parsed = (marked as any)(cleaned, { breaks: true }) as string
-    } else {
-      parsed = cleaned
-    }
+    const parsed = marked.parse(cleaned, { breaks: true }) as string
 
     return DOMPurify.sanitize(parsed, {
       USE_PROFILES: { html: true },

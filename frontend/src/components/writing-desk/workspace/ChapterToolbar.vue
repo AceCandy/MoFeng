@@ -1,4 +1,4 @@
-<!-- AIMETA P=章节工具栏_复制导出编辑定稿与AI优化菜单|R=AI优化下拉_编辑草稿_确认定稿|NR=不含正文组件ref来源与模态框|E=component:ChapterToolbar|X=internal|A=章节操作工具栏|D=vue|S=dom|RD=./README.ai -->
+<!-- AIMETA P=章节正文工具栏_复制导出与AI优化|R=已提交正文的非工作流操作|NR=不提交选版定稿或生命周期命令|E=component:ChapterToolbar|X=internal|A=章节操作工具栏|D=vue|S=dom|RD=./README.ai -->
 <template>
   <aside
     class="writing-workspace__toolbar"
@@ -23,31 +23,19 @@
         >
           导出
         </button>
-      </div>
-    </div>
-
-    <div v-if="isDraftWaitingConfirm" class="writing-workspace__toolbar-row writing-workspace__toolbar-row--primary">
-      <div class="writing-workspace__toolbar-group writing-workspace__toolbar-group--emphasis">
         <button
           type="button"
           @click="$emit('openEditModal')"
           :disabled="!hasSelectedChapterContent"
-          class="md-btn md-btn-outlined md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--secondary writing-workspace__tool-btn--hero disabled:opacity-50 disabled:cursor-not-allowed"
+          class="md-btn md-btn-text md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--ghost disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <span class="writing-workspace__label-full">编辑草稿</span>
-          <span class="writing-workspace__label-short">编辑</span>
+          编辑
         </button>
+      </div>
+    </div>
 
-        <button
-          v-if="isDraftWaitingConfirm && hasSelectedChapterContent"
-          type="button"
-          @click="$emit('confirmVersionSelection', {})"
-          class="md-btn md-btn-filled md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--primary writing-workspace__tool-btn--hero"
-        >
-          <span class="writing-workspace__label-full">确认定稿</span>
-          <span class="writing-workspace__label-short">定稿</span>
-        </button>
-
+    <div v-if="isFinalizedSuccessful" class="writing-workspace__toolbar-row writing-workspace__toolbar-row--primary">
+      <div class="writing-workspace__toolbar-group writing-workspace__toolbar-group--emphasis">
         <div ref="aiMenuRef" class="writing-workspace__ai-menu">
           <button
             ref="aiMenuTriggerRef"
@@ -142,7 +130,6 @@ interface Props {
   /** 当前章节号，切换章节时用于收起 AI 菜单 */
   chapterNumber: number | null
   isFinalizedSuccessful: boolean
-  isDraftWaitingConfirm: boolean
   hasSelectedChapterContent: boolean
   isChapterContentView: boolean
   isAiMenuDisabled: boolean
@@ -151,7 +138,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-defineEmits(['copyContent', 'openEditModal', 'confirmVersionSelection'])
+defineEmits(['copyContent', 'openEditModal'])
 
 const {
   aiMenuRef,

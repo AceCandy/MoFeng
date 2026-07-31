@@ -185,6 +185,7 @@
 import { computed, ref, nextTick, watch } from 'vue'
 import type { ComponentPublicInstance } from 'vue'
 import type { NovelProject } from '@/api/novel'
+import type { ChapterWorkflowActorPhase } from '@/composables/useChapterWorkflowActor'
 import Tooltip from '@/components/Tooltip.vue'
 import { findNearestIncompleteChapterNumber, isChapterCompletedStatus } from '@/utils/chapter'
 import { resolveChapterDisplayWordCount } from '@/utils/text'
@@ -192,21 +193,17 @@ import { resolveChapterDisplayWordCount } from '@/utils/text'
 interface Props {
   project: NovelProject
   selectedChapterNumber: number | null
-  generatingChapter: number | null
-  evaluatingChapter: number | null
+  workflowPhase: ChapterWorkflowActorPhase
   isGeneratingOutline: boolean
 }
 
 const props = defineProps<Props>()
 
-const emit = defineEmits([
-  'openProjectDetail',
-  'selectChapter',
-  'generateChapter',
-  'editChapter',
-  'deleteChapter',
-  'generateOutline',
-])
+const emit = defineEmits<{
+  (event: 'selectChapter', chapterNumber: number): void
+  (event: 'deleteChapter', chapterNumbers: number[]): void
+  (event: 'generateOutline'): void
+}>()
 
 const listContainer = ref<HTMLElement | null>(null)
 const chapterRefs = ref<Record<number, HTMLElement | null>>({})
@@ -373,7 +370,7 @@ const isChapterGenerating = (chapterNumber: number) => {
 }
 
 const isChapterGeneratingLike = (chapterNumber: number) => {
-  return props.generatingChapter === chapterNumber || isChapterGenerating(chapterNumber)
+  return isChapterGenerating(chapterNumber)
 }
 
 const isChapterEvaluating = (chapterNumber: number) => {
@@ -396,6 +393,29 @@ const getChapterWordCount = (chapterNumber: number): number => {
 }
 
 const getChapterTag = (chapterNumber: number): string => {
+  if (props.selectedChapterNumber === chapterNumber) {
+    switch (props.workflowPhase) {
+      case 'booting':
+      case 'superseded':
+        return '同步中'
+      case 'submitting':
+      case 'running':
+      case 'finalizing':
+      case 'projectionPending':
+        return '创作中'
+      case 'waitingForSelection':
+        return '待选择'
+      case 'succeeded':
+        return '已完成'
+      case 'failed':
+        return '待修复'
+      case 'fatal':
+        return '同步失败'
+      case 'idle':
+      case 'cancelled':
+        return '待开始'
+    }
+  }
   if (isChapterCompleted(chapterNumber)) return '已完成'
   if (isChapterGeneratingLike(chapterNumber)) return '创作中'
   if (isChapterEvaluating(chapterNumber)) return '待润色'
@@ -405,6 +425,16 @@ const getChapterTag = (chapterNumber: number): string => {
 }
 
 const chapterStatusDotClass = (chapterNumber: number) => {
+  if (props.selectedChapterNumber === chapterNumber) {
+    if (props.workflowPhase === 'succeeded') return 'is-completed'
+    if (props.workflowPhase === 'failed' || props.workflowPhase === 'fatal') return 'is-failed'
+    if (
+      props.workflowPhase !== 'idle'
+      && props.workflowPhase !== 'cancelled'
+    ) {
+      return 'is-progress'
+    }
+  }
   if (isChapterCompleted(chapterNumber)) return 'is-completed'
   if (
     isChapterGeneratingLike(chapterNumber) ||

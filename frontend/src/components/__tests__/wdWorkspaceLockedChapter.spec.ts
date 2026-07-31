@@ -5,7 +5,9 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import WDWorkspace from '@/components/writing-desk/WDWorkspace.vue'
-import type { NovelProject } from '@/api/novel'
+import type { ChapterVersionSelection, NovelProject } from '@/api/novel'
+import type { ChapterWorkflowCommand } from '@/api/chapterWorkflow'
+import type { ChapterWorkflowActorPhase } from '@/composables/useChapterWorkflowActor'
 
 const readSource = (relativePath: string) =>
   readFileSync(resolve(process.cwd(), relativePath), 'utf8')
@@ -14,14 +16,22 @@ const mountWorkspace = async (
   project: NovelProject,
   selectedChapterNumber: number,
   overrides: {
-    generatingChapter?: number | null
     selectedVersionIndex?: number
-    availableVersions?: Array<{ content: string; style?: string; metadata?: Record<string, any> }>
+    availableVersions?: Array<{ content: string; style?: string; metadata?: Record<string, unknown> }>
+    workflowPhase?: ChapterWorkflowActorPhase
+    workflowAllowedCommands?: ChapterWorkflowCommand[]
+    workflowCandidates?: ChapterVersionSelection[]
+    workflowPending?: boolean
+    workflowError?: string | null
   } = {},
 ) => {
   const host = document.createElement('div')
   document.body.appendChild(host)
   const selectedChapters: number[] = []
+  const selectedWorkflowVersions: number[] = []
+  const shownVersionDetails: number[] = []
+  let workflowRetryCount = 0
+  let evaluationDetailCount = 0
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -30,15 +40,27 @@ const mountWorkspace = async (
   })
   const app = createApp(WDWorkspace, {
     project,
+    selectedChapter:
+      project.chapters.find((chapter) => chapter.chapter_number === selectedChapterNumber) ?? null,
     selectedChapterNumber,
-    generatingChapter: overrides.generatingChapter ?? null,
-    evaluatingChapter: null,
-    showVersionSelector: false,
-    chapterGenerationResult: null,
     selectedVersionIndex: overrides.selectedVersionIndex ?? 0,
     availableVersions: overrides.availableVersions ?? [],
-    isSelectingVersion: false,
+    workflowPhase: overrides.workflowPhase ?? 'idle',
+    workflowTransport: 'disconnected',
+    workflowAllowedCommands: overrides.workflowAllowedCommands ?? [],
+    workflowPending: overrides.workflowPending ?? false,
+    workflowError: overrides.workflowError ?? null,
+    workflowRetryActivityKey: null,
+    workflowCandidates: overrides.workflowCandidates ?? [],
     onSelectChapter: (chapterNumber: number) => selectedChapters.push(chapterNumber),
+    onWorkflowSelectVersion: (versionId: number) => selectedWorkflowVersions.push(versionId),
+    onShowVersionDetail: (versionIndex: number) => shownVersionDetails.push(versionIndex),
+    onShowEvaluationDetail: () => {
+      evaluationDetailCount += 1
+    },
+    onWorkflowRetry: () => {
+      workflowRetryCount += 1
+    },
   })
 
   app.use(VueQueryPlugin, { queryClient })
@@ -48,6 +70,10 @@ const mountWorkspace = async (
   return {
     host,
     selectedChapters,
+    selectedWorkflowVersions,
+    shownVersionDetails,
+    getWorkflowRetryCount: () => workflowRetryCount,
+    getEvaluationDetailCount: () => evaluationDetailCount,
     unmount: () => {
       app.unmount()
       host.remove()
@@ -113,7 +139,7 @@ describe('WDWorkspace locked chapter state', () => {
     }
   })
 
-  it('keeps retrying failed chapters in the generating view while the retry request is in flight', async () => {
+  it('routes failed recovery through the allowed workflow retry command', async () => {
     const project: NovelProject = {
       id: 'novel-1',
       title: '全网退役',
@@ -143,13 +169,19 @@ describe('WDWorkspace locked chapter state', () => {
       ],
     }
 
-    const rendered = await mountWorkspace(project, 1, { generatingChapter: 1 })
+    const rendered = await mountWorkspace(project, 1, {
+      workflowPhase: 'failed',
+      workflowAllowedCommands: ['retry'],
+      workflowError: '候选生成未完成',
+    })
 
     try {
-      expect(rendered.host.textContent).toContain('生成进度')
-      expect(rendered.host.textContent).toContain('实时草稿预览')
-      expect(rendered.host.textContent).not.toContain('第1章生成异常')
-      expect(rendered.host.textContent).not.toContain('重试中')
+      expect(rendered.host.textContent).toContain('本轮需要处理')
+      expect(rendered.host.textContent).toContain('候选生成未完成')
+      const retryButton = rendered.host.querySelector<HTMLButtonElement>('[data-action="retry"]')
+      expect(retryButton).not.toBeNull()
+      retryButton?.click()
+      expect(rendered.getWorkflowRetryCount()).toBe(1)
     } finally {
       rendered.unmount()
     }
@@ -214,6 +246,16 @@ describe('WDWorkspace locked chapter state', () => {
     }
 
     const rendered = await mountWorkspace(project, 1, {
+      workflowPhase: 'waitingForSelection',
+      workflowAllowedCommands: ['select'],
+      workflowCandidates: [
+        {
+          id: 301,
+          content: '退役冠军林拓站在商业直播表演赛的灯下。',
+          version_label: '版本一',
+          workflow_run_id: 'run-1',
+        },
+      ],
       availableVersions: [
         {
           content: '退役冠军林拓站在商业直播表演赛的灯下。\n\n他看见对手穿着旧布鞋，却仍旧把拳架抬得很稳。',
@@ -223,9 +265,9 @@ describe('WDWorkspace locked chapter state', () => {
     })
 
     try {
-      expect(rendered.host.textContent).toContain('待确认')
-      expect(rendered.host.textContent).toContain('编辑草稿')
-      expect(rendered.host.textContent).toContain('确认定稿')
+      expect(rendered.host.textContent).toContain('待选版本')
+      expect(rendered.host.textContent).toContain('请选择候选版本')
+      expect(rendered.host.textContent).not.toContain('确认定稿')
       expect(rendered.host.textContent).toContain('退役冠军林拓站在商业直播表演赛的灯下')
       expect(rendered.host.querySelector('.chapter-paper')).not.toBeNull()
       expect(rendered.host.textContent).toContain('生成进度')
@@ -255,7 +297,7 @@ describe('WDWorkspace locked chapter state', () => {
     }
   })
 
-  it('renders the recommended waiting confirmation draft instead of the first non-empty version', async () => {
+  it('submits the selected durable candidate id instead of an array index', async () => {
     const project: NovelProject = {
       id: 'novel-1',
       title: '全网退役',
@@ -299,22 +341,98 @@ describe('WDWorkspace locked chapter state', () => {
     }
 
     const rendered = await mountWorkspace(project, 1, {
-      availableVersions: [
+      workflowPhase: 'waitingForSelection',
+      workflowAllowedCommands: ['select'],
+      workflowCandidates: [
         {
+          id: 401,
           content: '版本一只是铺垫，冲突还没有真正立起来。',
-          style: '标准',
+          version_label: '版本一',
+          workflow_run_id: 'run-2',
         },
         {
+          id: 909,
           content: '版本二让林拓在灯下直接迎上对手，是 AI 评审推荐的底稿。',
-          style: '强化冲突',
-          metadata: { ai_review: { is_best: true } },
+          version_label: '版本二',
+          workflow_run_id: 'run-2',
         },
       ],
     })
 
     try {
-      expect(rendered.host.textContent).toContain('版本二让林拓在灯下直接迎上对手')
-      expect(rendered.host.textContent).not.toContain('版本一只是铺垫')
+      const candidates = rendered.host.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+      candidates[1]?.click()
+      rendered.host.querySelector<HTMLButtonElement>('[data-action="select"]')?.click()
+      expect(rendered.selectedWorkflowVersions).toEqual([909])
+    } finally {
+      rendered.unmount()
+    }
+  })
+
+  it('keeps version and evaluation detail entry points reachable after cutover', async () => {
+    const evaluation = JSON.stringify({
+      best_choice: 1,
+      reason_for_choice: '人物动机更完整。',
+      evaluation: {
+        version1: { overall_review: '可采用', pros: ['节奏清晰'], cons: [] },
+      },
+    })
+    const project: NovelProject = {
+      id: 'novel-1',
+      title: '全网退役',
+      initial_prompt: '',
+      conversation_history: [],
+      blueprint: {
+        chapter_outline: [
+          { chapter_number: 1, title: '一招', summary: '林拓重新站上擂台。' },
+        ],
+      },
+      chapters: [
+        {
+          chapter_number: 1,
+          title: '一招',
+          summary: '林拓重新站上擂台。',
+          real_summary: null,
+          content: '林拓抬起拳架。',
+          versions: ['林拓抬起拳架。'],
+          evaluation,
+          generation_status: 'successful',
+        },
+      ],
+    }
+    const rendered = await mountWorkspace(project, 1, {
+      workflowPhase: 'succeeded',
+      availableVersions: [{ content: '林拓抬起拳架。', style: '标准' }],
+    })
+
+    try {
+      const tabs = Array.from(rendered.host.querySelectorAll<HTMLButtonElement>(
+        '.writing-workspace__tab-btn',
+      ))
+      tabs.find((button) => button.textContent?.includes('查看版本'))?.click()
+      await nextTick()
+
+      const versionDetailButton = Array.from(rendered.host.querySelectorAll<HTMLButtonElement>(
+        'button',
+      )).find((button) => button.textContent?.includes('版本详情'))
+      expect(versionDetailButton).toBeTruthy()
+      versionDetailButton?.click()
+      expect(rendered.shownVersionDetails).toEqual([0])
+
+      tabs.find((button) => button.textContent?.includes('AI 评审反馈'))?.click()
+      await nextTick()
+
+      const evaluationDetailButton = Array.from(rendered.host.querySelectorAll<HTMLButtonElement>(
+        'button',
+      )).find((button) => button.textContent?.includes('评审详情'))
+      expect(evaluationDetailButton).toBeTruthy()
+      evaluationDetailButton?.click()
+      expect(rendered.getEvaluationDetailCount()).toBe(1)
+
+      const deskSource = readSource('src/views/WritingDesk.vue')
+      const workspaceTag = deskSource.match(/<WDWorkspace[\s\S]*?\/>/)?.[0] ?? ''
+      expect(workspaceTag).toContain('@show-version-detail="showVersionDetail"')
+      expect(workspaceTag).toContain('@show-evaluation-detail="openEvaluationDetailModal"')
     } finally {
       rendered.unmount()
     }
@@ -327,25 +445,25 @@ describe('WDWorkspace locked chapter state', () => {
     expect(workspaceTag).toContain('@select-chapter="selectChapter"')
   })
 
-  it('defaults waiting confirmation selection from the structured recommended version index', () => {
-    const source = `${readSource('src/views/WritingDesk.vue')}\n${readSource('src/composables/useWritingDeskVersionDetail.ts')}`
+  it('filters candidate versions to the current workflow run', () => {
+    const source = readSource('src/views/WritingDesk.vue')
 
-    expect(source).toContain('const resolveRecommendedVersionIndex')
-    expect(source).toContain('recommended_version_index')
-    expect(source).toContain('metadata?.ai_review?.is_best')
-    expect(source).toContain('selectedVersionIndex.value = recommendedIndex')
-    expect(source).not.toContain('selectedVersionIndex.value = availableVersions.value.length - 1')
+    expect(source).toContain('candidate.workflow_run_id === runId')
+    expect(source).toContain("submitCommand('select', { selected_version_id: versionId })")
+    expect(source).not.toContain('selected_version_index')
   })
 
-  it('streams generation status instead of polling the selected chapter', () => {
+  it('uses the workflow actor transport instead of the legacy chapter stream', () => {
     const source = `${readSource('src/views/WritingDesk.vue')}\n${readSource('src/composables/useWritingDeskProject.ts')}`
-    const pollingBlock = source.match(/const fetchChapterStatus[\s\S]*?const selectChapter/)?.[0] ?? ''
     const workspaceSource = readSource('src/components/writing-desk/WDWorkspace.vue')
 
-    expect(pollingBlock).toContain('NovelAPI.subscribeChapterStatus')
-    expect(pollingBlock).toContain('upsertChapterInProjectCache(currentProjectId, chapter)')
+    expect(source).toContain('useChapterWorkflowActor(')
+    expect(source).toContain('useChapterWorkflowActorPorts()')
+    expect(source).not.toContain('NovelAPI.subscribeChapterStatus')
+    expect(source).not.toContain('fetchChapterStatus')
+    expect(workspaceSource).toContain('ChapterWorkflowPanel')
     expect(workspaceSource).not.toContain('setInterval(() =>')
-    expect(workspaceSource).not.toContain('POLLING_INTERVAL_MS')
+    expect(workspaceSource).not.toContain("emit('fetchChapterStatus')")
   })
 
   it('keeps the locked chapter light skin on a warm paper palette', () => {

@@ -232,11 +232,13 @@ export class TaskAPI {
       onSnapshot: (snapshot: BackgroundTaskSnapshot) => void
       onTask: (event: BackgroundTaskEvent) => void
       onReset: (reset: BackgroundTaskCursorReset) => void
+      onOpen?: () => void
       onError?: (error: Error) => void
       signal?: AbortSignal
       limit?: number
       cursor?: number | null
       scope?: BackgroundTaskStreamScope
+      eventsUrl?: string
     }
   ): Promise<'reset'> {
     const params = new URLSearchParams({ limit: String(handlers.limit ?? 20) })
@@ -244,7 +246,8 @@ export class TaskAPI {
       params.set('cursor', String(handlers.cursor))
     }
     appendStreamScope(params, handlers.scope)
-    const response = await streamRequest(`${TASKS_BASE}/events?${params.toString()}`, {
+    const eventsUrl = handlers.eventsUrl ?? `${TASKS_BASE}/events?${params.toString()}`
+    const response = await streamRequest(eventsUrl, {
       method: 'GET',
       signal: handlers.signal,
       timeoutMs: 600_000,
@@ -253,6 +256,7 @@ export class TaskAPI {
           ? undefined
           : { 'Last-Event-ID': String(handlers.cursor) },
     })
+    handlers.onOpen?.()
     let resetReceived = false
     await readSSESubscription(response, {
       onMessage: (message) => {

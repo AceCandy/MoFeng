@@ -63,8 +63,7 @@ const mountSidebar = async (project: NovelProject = baseProject) => {
   const app = createApp(WDSidebar, {
     project,
     selectedChapterNumber: 3,
-    generatingChapter: null,
-    evaluatingChapter: null,
+    workflowPhase: 'idle',
     isGeneratingOutline: false,
     onDeleteChapter: (chapterNumbers: number | number[]) => deletedRequests.push(chapterNumbers),
   })

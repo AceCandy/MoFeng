@@ -1,15 +1,9 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { createApp, nextTick } from 'vue'
 
 import ChapterGenerating from '@/components/writing-desk/workspace/ChapterGenerating.vue'
 import type { ChapterGenerationTrace } from '@/api/novel'
-import { globalAlert } from '@/composables/useAlert'
 import { formatAiReviewOutputs } from '@/utils/generationTrace'
-
-const flushPromises = async () => {
-  await Promise.resolve()
-  await Promise.resolve()
-}
 
 const mountChapterGenerating = async (
   trace: ChapterGenerationTrace | ChapterGenerationTrace[],
@@ -27,7 +21,6 @@ const mountChapterGenerating = async (
     generationStepIndex: 1,
     generationStepTotal: 7,
     generationTraces: traces,
-    generatingChapter: 3,
     ...props,
   })
 
@@ -178,7 +171,7 @@ describe('ChapterGenerating timing inspector', () => {
     }
   })
 
-  it('shows retained candidate versions inside the failure card', async () => {
+  it('keeps candidate selection outside the read-only trace replay', async () => {
     const rendered = await mountChapterGenerating(
       {
         id: 4,
@@ -199,26 +192,19 @@ describe('ChapterGenerating timing inspector', () => {
       {
         status: 'evaluation_failed',
         generationStep: 'evaluation_failed',
-        availableVersions: [
-          { content: '第一版正文，保留了主角和旧线索。', style: '标准' },
-          { content: '第二版正文，补强了冲突和结尾悬念。', style: '紧凑' },
-        ],
       },
     )
 
     try {
-      expect(rendered.host.textContent).toContain('本轮候选版本仍可查看')
-      expect(rendered.host.textContent).toContain('版本 1')
-      expect(rendered.host.textContent).toContain('第一版正文')
-      expect(rendered.host.textContent).toContain('版本 2')
-      expect(rendered.host.textContent).toContain('第二版正文')
+      expect(rendered.host.textContent).toContain('只读回溯')
+      expect(rendered.host.querySelector('[role="radiogroup"]')).toBeNull()
+      expect(rendered.host.textContent).not.toContain('本轮候选版本仍可查看')
     } finally {
       rendered.unmount()
     }
   })
 
-  it('uses AI review retry as the primary action for evaluation failures', async () => {
-    const events: string[] = []
+  it('keeps evaluation recovery commands out of the trace replay', async () => {
     const rendered = await mountChapterGenerating(
       {
         id: 5,
@@ -239,34 +225,23 @@ describe('ChapterGenerating timing inspector', () => {
       {
         status: 'evaluation_failed',
         generationStep: 'evaluation_failed',
-        generatingChapter: null,
-        onEvaluateChapter: () => events.push('evaluate'),
-        onGenerateChapter: () => events.push('generate'),
       },
     )
 
     try {
-      const buttons = Array.from(rendered.host.querySelectorAll('button'))
-      const reviewButton = buttons.find((button) => button.textContent?.includes('重新 AI评审'))
-      const regenerateButton = buttons.find((button) =>
-        button.textContent?.includes('放弃本轮草稿并重新生成'),
-      )
-
-      expect(reviewButton).toBeTruthy()
-      expect(regenerateButton).toBeTruthy()
+      expect(rendered.host.querySelector('.chapter-console__actions')).toBeNull()
+      expect(rendered.host.querySelector('.chapter-console__pipeline-retry')).toBeNull()
+      expect(rendered.host.textContent).not.toContain('重新 AI评审')
+      expect(rendered.host.textContent).not.toContain('放弃本轮草稿并重新生成')
       expect(rendered.host.textContent).not.toContain('重新生成本章')
       expect(rendered.host.textContent).not.toContain('重试生成本章')
-
-      reviewButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-      expect(events).toEqual(['evaluate'])
     } finally {
       rendered.unmount()
     }
   })
 
-  it('confirms before abandoning retained drafts to regenerate the chapter', async () => {
-    const events: string[] = []
-    const confirmSpy = vi.spyOn(globalAlert, 'showConfirm').mockResolvedValue(false)
+  it('keeps failed evaluation traces inspectable without legacy regeneration actions', async () => {
+    const fullError = 'AI评审失败：模型返回空结果'
     const rendered = await mountChapterGenerating(
       {
         id: 6,
@@ -275,7 +250,7 @@ describe('ChapterGenerating timing inspector', () => {
         stage: 'version_review',
         status: 'failed',
         uses_llm: true,
-        error: 'AI评审失败：模型返回空结果',
+        error: fullError,
         metadata: {
           duration_ms: 1600,
           actions: ['调用评审模型'],
@@ -287,34 +262,15 @@ describe('ChapterGenerating timing inspector', () => {
       {
         status: 'evaluation_failed',
         generationStep: 'evaluation_failed',
-        generatingChapter: null,
-        onGenerateChapter: () => events.push('generate'),
       },
     )
 
     try {
-      const button = Array.from(rendered.host.querySelectorAll('button')).find((item) =>
-        item.textContent?.includes('放弃本轮草稿并重新生成'),
-      )
-
-      expect(button).toBeTruthy()
-
-      button?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-      await flushPromises()
-
-      expect(confirmSpy).toHaveBeenCalledWith(
-        '重新生成会放弃本轮已生成的候选正文，并用新生成结果替换它们。确认要重新生成本章吗？',
-        '放弃本轮草稿',
-      )
-      expect(events).toEqual([])
-
-      confirmSpy.mockResolvedValue(true)
-      button?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-      await flushPromises()
-
-      expect(events).toEqual(['generate'])
+      await clickPipelineStep(rendered.host, 'AI评审')
+      expect(rendered.host.textContent).toContain('状态：失败')
+      expect(rendered.host.textContent).toContain(fullError)
+      expect(rendered.host.textContent).not.toContain('放弃本轮草稿并重新生成')
     } finally {
-      confirmSpy.mockRestore()
       rendered.unmount()
     }
   })

@@ -20,36 +20,37 @@ describe('chapter draft finalization contracts', () => {
     expect(api).toContain('/confirm-finalize')
   })
 
-  it('uses confirm finalize mutation instead of select mutation in writing desk', () => {
-    const queries = readSource('src/queries/novel.ts')
+  it('uses the durable select command in writing desk while retaining the rollback facade', () => {
+    const legacyQueries = readSource('src/queries/novel.ts')
+    const workflowQueries = readSource('src/queries/chapterWorkflow.ts')
     const desk = readSource('src/views/WritingDesk.vue')
 
-    expect(queries).toContain('export function useConfirmFinalizeChapterMutation')
-    expect(queries).toContain('NovelAPI.confirmFinalizeChapter')
-    expect(desk).toContain('useConfirmFinalizeChapterMutation')
-    expect(desk).toContain('confirmFinalizeChapterMutation')
+    expect(legacyQueries).toContain('export function useConfirmFinalizeChapterMutation')
+    expect(legacyQueries).toContain('NovelAPI.confirmFinalizeChapter')
+    expect(workflowQueries).toContain('useChapterWorkflowCommandMutation')
+    expect(desk).toContain("submitCommand('select', { selected_version_id: versionId })")
+    expect(desk).not.toContain('useConfirmFinalizeChapterMutation')
+    expect(desk).not.toContain('confirmFinalizeChapterMutation')
   })
 
-  it('shows draft confirmation copy and manual edit support', () => {
-    const versionSelector = readSource('src/components/writing-desk/workspace/VersionSelector.vue')
+  it('selects a query-owned workflow candidate by durable version id', () => {
+    const workflowPanel = readSource('src/components/writing-desk/ChapterWorkflowPanel.vue')
 
-    expect(versionSelector).toContain('草稿确认')
-    expect(versionSelector).toContain('确认定稿')
-    expect(versionSelector).toContain('编辑草稿')
-    expect(versionSelector).toContain('draftEditedContent')
-    expect(versionSelector).toContain('canConfirmDraft')
-    expect(versionSelector).toContain('draftEditOpen.value && draftEditedContent.value.trim()')
-    expect(versionSelector).toContain("emit('confirmVersionSelection'")
+    expect(workflowPanel).toContain('candidate.id')
+    expect(workflowPanel).toContain("emit('selectVersion', selectedCandidateId.value)")
+    expect(workflowPanel).toContain("props.allowedCommands.includes('select')")
+    expect(workflowPanel).toContain('候选版本同步中')
+    expect(workflowPanel).not.toContain('selected_version_index')
   })
 
   it('renders finalizing status in the node console', () => {
-    // 状态标签逻辑随 chapterStatusLabel/chapterStatusTone 抽至 useChapterStatus
-    const statusLogic = readSource('src/composables/useChapterStatus.ts')
     const workspace = readSource('src/components/writing-desk/WDWorkspace.vue')
+    const workflowPanel = readSource('src/components/writing-desk/ChapterWorkflowPanel.vue')
 
-    expect(statusLogic).toContain("case 'finalizing':")
-    expect(statusLogic).toContain("return '定稿中'")
-    expect(statusLogic).toContain("status === 'finalizing'")
+    expect(workspace).toContain("case 'finalizing':")
+    expect(workspace).toContain("return { label: '定稿中', tone: 'progress' }")
+    expect(workflowPanel).toContain("case 'finalizing':")
+    expect(workflowPanel).toContain("title: '正在提交正文'")
     expect(workspace).toContain('ChapterGenerating')
   })
 
@@ -68,8 +69,10 @@ describe('chapter draft finalization contracts', () => {
     expect(toolbar).toContain('v-if="isFinalizedSuccessful"')
     expect(toolbar).toContain("@click=\"$emit('copyContent')\"")
     expect(toolbar).toContain('@click="exportContentAsTxt"')
-    expect(toolbar).toContain('v-if="isDraftWaitingConfirm" class="writing-workspace__toolbar-row writing-workspace__toolbar-row--primary"')
-    expect(toolbar).not.toContain('v-if="isFinalizedSuccessful || isDraftWaitingConfirm"')
+    expect(toolbar).toContain('AI优化')
+    expect(toolbar).toContain("$emit('openEditModal')")
+    expect(toolbar).not.toContain('confirmVersionSelection')
+    expect(toolbar).not.toContain('确认定稿')
   })
 
   it('renders multi-version evaluations in numeric version order', () => {

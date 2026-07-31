@@ -226,6 +226,43 @@ describe('reduceTaskEvent', () => {
     expect(new Headers(eventOptions.headers).get('Last-Event-ID')).toBe('42')
   })
 
+  it('workflow opaque events_url 原样复用且仍通过 scope decoder', async () => {
+    const opaqueUrl = '/opaque/workflow/events?signature=token%2Fvalue&mode=durable'
+    const reset = {
+      schema_version: 1 as const,
+      reason: 'cursor_expired' as const,
+      retained_through_cursor: 42,
+    }
+    const fetchMock = vi.fn(async () => new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(
+          `event: reset\ndata: ${JSON.stringify(reset)}\n\n`,
+        ))
+        controller.close()
+      },
+    })))
+    vi.stubGlobal('fetch', fetchMock)
+    const scope = { stream_type: 'workflow' as const, stream_id: 'run-1' }
+    const onOpen = vi.fn()
+    const onReset = vi.fn()
+
+    await expect(TaskAPI.subscribeTasks({
+      eventsUrl: opaqueUrl,
+      cursor: 42,
+      scope,
+      onOpen,
+      onSnapshot: vi.fn(),
+      onTask: vi.fn(),
+      onReset,
+    })).resolves.toBe('reset')
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(opaqueUrl)
+    const eventOptions = fetchMock.mock.calls[0]?.[1] as RequestInit
+    expect(new Headers(eventOptions.headers).get('Last-Event-ID')).toBe('42')
+    expect(onOpen).toHaveBeenCalledOnce()
+    expect(onReset).toHaveBeenCalledWith(reset)
+  })
+
   it('SSE 仅将通过校验的事件交给 handler', async () => {
     const value = task('job-1', '2026-07-28T00:00:00Z')
     const currentSnapshot = snapshot([value], 10)

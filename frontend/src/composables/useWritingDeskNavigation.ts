@@ -1,17 +1,16 @@
+// AIMETA P=写作台章节定位导航|R=项目进入_路由选章_版本索引重置|NR=不管理章节工作流或网络连接|E=composable:writing-desk-navigation|X=internal|A=useWritingDeskNavigation|D=vue-router|S=state|RD=./README.ai
 import { ref, watch } from 'vue'
 import type { ComputedRef, Ref } from 'vue'
 import { useRoute } from 'vue-router'
-import type { ChapterGenerationResponse, NovelProject } from '@/api/novel'
+import type { NovelProject } from '@/api/novel'
 import { resolveChapterNumberForEntry, resolveChapterNumberForProjectEntry } from '@/utils/chapter'
 
 interface UseWritingDeskNavigationOptions {
   projectId: () => string
   project: ComputedRef<NovelProject | null>
   selectedChapterNumber: Ref<number | null>
-  chapterGenerationResult: Ref<ChapterGenerationResponse | null>
   selectedVersionIndex: Ref<number>
   selectChapter: (chapterNumber: number) => void
-  stopChapterStatusStream: () => void
 }
 
 /**
@@ -19,17 +18,14 @@ interface UseWritingDeskNavigationOptions {
  *
  * 从 WritingDesk.vue 抽出（行为逐行等价）。响应项目加载、路由 query 与项目切换，
  * 重新定位当前选中章节：项目就绪时按 blueprint + chapters + query 首次定位（immediate），
- * query 变化时跳转章节，项目切换时停止上一项目的章节生成 SSE 流。
- * resolvedProjectEntryId 仅用于检测项目切换、getQueryChapterNumber/route 仅本状态机使用，故内化。
+ * query 变化时跳转章节。工作流 scope 切换与连接清理由 actor 根据同一响应式章节号处理。
  */
 export const useWritingDeskNavigation = ({
   projectId,
   project,
   selectedChapterNumber,
-  chapterGenerationResult,
   selectedVersionIndex,
   selectChapter,
-  stopChapterStatusStream,
 }: UseWritingDeskNavigationOptions) => {
   const route = useRoute()
   const resolvedProjectEntryId = ref<string | null>(null)
@@ -63,7 +59,6 @@ export const useWritingDeskNavigation = ({
 
       selectedChapterNumber.value = resolvedChapterNumber
       selectedVersionIndex.value = 0
-      chapterGenerationResult.value = null
       resolvedProjectEntryId.value = newProject.id
     },
     { immediate: true },
@@ -89,8 +84,4 @@ export const useWritingDeskNavigation = ({
       }
     },
   )
-
-  watch(projectId, () => {
-    stopChapterStatusStream()
-  })
 }

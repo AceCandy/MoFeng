@@ -278,6 +278,7 @@ export interface ChapterVersion {
 
 export type ChapterGenerationTrace = components['schemas']['ChapterGenerationTrace']
 export type Chapter = components['schemas']['Chapter']
+export type ChapterVersionSelection = components['schemas']['ChapterVersionSelection']
 
 export interface ConversationMessage {
   role: 'user' | 'assistant'

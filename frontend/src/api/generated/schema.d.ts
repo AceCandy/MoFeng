@@ -1358,6 +1358,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/writer/chapter-workflows/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Current Chapter Workflow
+         * @description 恢复 owner scope 内可连接的当前 workflow；无可见 run 时返回 null。
+         */
+        get: operations["get_current_chapter_workflow_api_writer_chapter_workflows_current_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/writer/chapters/{chapter_number}/finalize": {
         parameters: {
             query?: never;
@@ -1928,6 +1948,8 @@ export interface components {
             summary: string;
             /** Title */
             title: string;
+            /** Version Selections */
+            version_selections?: components["schemas"]["ChapterVersionSelection"][] | null;
             /** Versions */
             versions?: string[] | null;
             /** Word Count */
@@ -2149,6 +2171,20 @@ export interface components {
             transition_sequence: number;
         };
         /**
+         * ChapterVersionSelection
+         * @description 章节候选的公开选版投影，不暴露 provider payload 或内部结果 hash。
+         */
+        ChapterVersionSelection: {
+            /** Content */
+            content: string;
+            /** Id */
+            id: number;
+            /** Version Label */
+            version_label?: string | null;
+            /** Workflow Run Id */
+            workflow_run_id?: string | null;
+        };
+        /**
          * ChapterWorkflowCommandConflictDetail
          * @description 409 冲突携带稳定原因和同事务事实之后读取的当前快照。
          */
@@ -2201,13 +2237,25 @@ export interface components {
             /** Command Id */
             command_id: string;
             snapshot: components["schemas"]["ChapterWorkflowSnapshot"];
-            /** Status */
-            status: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "applied" | "rejected";
             /**
              * Type
              * @enum {string}
              */
             type: "select" | "retry" | "retry_external" | "retry_projection" | "cancel";
+        };
+        /**
+         * ChapterWorkflowConnection
+         * @description 可恢复的公开 workflow 快照与 opaque durable event stream 地址。
+         */
+        ChapterWorkflowConnection: {
+            /** Events Url */
+            events_url: string;
+            snapshot: components["schemas"]["ChapterWorkflowSnapshot"];
         };
         /**
          * ChapterWorkflowSnapshot
@@ -2224,8 +2272,11 @@ export interface components {
             chapter_number: number;
             /** Checkpoint Id */
             checkpoint_id?: string | null;
-            /** Context Schema Version */
-            context_schema_version: number;
+            /**
+             * Context Schema Version
+             * @constant
+             */
+            context_schema_version: 1;
             /** Current Chapter Revision */
             current_chapter_revision: number;
             /** Error Category */
@@ -2233,7 +2284,7 @@ export interface components {
             /** Is Active */
             is_active: boolean;
             /** Node Key */
-            node_key: string;
+            node_key: ("freeze_context" | "plan_and_direct" | "generate_candidates" | "review_candidates" | "persist_candidates" | "waiting_for_selection" | "finalize_revision" | "projection_pending" | "observe_projection" | "successful") | ("failed" | "cancelled" | "superseded");
             /** Progress */
             progress: number;
             /** Project Id */
@@ -2242,22 +2293,36 @@ export interface components {
             public_error?: string | null;
             /** Resume Cursor */
             resume_cursor: number;
+            /** Retry Activity Key */
+            retry_activity_key: string | null;
             /** Root Job Id */
             root_job_id: string;
-            /** Root Job Status */
-            root_job_status: string;
+            /**
+             * Root Job Status
+             * @enum {string}
+             */
+            root_job_status: "queued" | "running" | "retry_wait" | "waiting" | "succeeded" | "failed" | "dead_letter" | "needs_attention" | "cancelled";
             /** Row Revision */
             row_revision: number;
             /** Run Id */
             run_id: string;
-            /** State Schema Version */
-            state_schema_version: number;
-            /** Status */
-            status: string;
+            /**
+             * State Schema Version
+             * @constant
+             */
+            state_schema_version: 1;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "retry_wait" | "waiting_for_selection" | "finalizing" | "projection_pending" | "needs_attention" | "successful" | "failed" | "cancelled" | "superseded";
             /** Successor Run Id */
             successor_run_id?: string | null;
-            /** Workflow Version */
-            workflow_version: number;
+            /**
+             * Workflow Version
+             * @constant
+             */
+            workflow_version: 1;
         };
         /**
          * ChapterWorkflowStartRequest
@@ -2274,7 +2339,7 @@ export interface components {
         };
         /**
          * ChapterWorkflowStartResponse
-         * @description start 结果只暴露公开快照与 durable event stream 地址。
+         * @description start 结果在可恢复连接之外标识本次是否创建 run。
          */
         ChapterWorkflowStartResponse: {
             /** Created */
@@ -6496,6 +6561,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChapterWorkflowCommandConflictResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_current_chapter_workflow_api_writer_chapter_workflows_current_get: {
+        parameters: {
+            query: {
+                chapter_number: number;
+                project_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChapterWorkflowConnection"] | null;
                 };
             };
             /** @description Validation Error */

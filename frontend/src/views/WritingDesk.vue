@@ -1,4 +1,4 @@
-<!-- AIMETA P=写作台_章节编辑主页面|R=写作界面_章节管理|NR=不含详情展示|E=route:/novel/:id#component:WritingDesk|X=ui|A=写作台|D=vue|S=dom,net|RD=./README.ai -->
+<!-- AIMETA P=写作台_章节编辑主页面|R=章节查询_工作流actor接线_弹窗协调|NR=不直接调用业务API|E=route:/novel/:id#component:WritingDesk|X=ui|A=写作台|D=vue|S=dom,state,cache|RD=./README.ai -->
 <template>
   <div class="writing-desk-page flex flex-col overflow-hidden">
     <!-- 主要内容区域 -->
@@ -37,13 +37,9 @@
             <WDSidebar
               :project="project"
               :selected-chapter-number="selectedChapterNumber"
-              :generating-chapter="generatingChapter"
-              :evaluating-chapter="activeEvaluatingChapter"
+              :workflow-phase="workflowPhase"
               :is-generating-outline="isGeneratingOutline"
-              @open-project-detail="viewProjectDetail"
               @select-chapter="selectChapter"
-              @generate-chapter="generateChapter"
-              @edit-chapter="openEditChapterModal"
               @delete-chapter="deleteChapter"
               @generate-outline="generateOutline"
             />
@@ -52,25 +48,27 @@
           <div class="writing-desk-workspace-shell">
             <WDWorkspace
               :project="project"
+              :selected-chapter="selectedChapter"
               :selected-chapter-number="selectedChapterNumber"
-              :generating-chapter="generatingChapter"
-              :evaluating-chapter="activeEvaluatingChapter"
-              :show-version-selector="showVersionSelector"
-              :chapter-generation-result="chapterGenerationResult"
               :selected-version-index="selectedVersionIndex"
               :available-versions="availableVersions"
-              :is-selecting-version="isSelectingVersion"
-              @regenerate-chapter="regenerateChapter"
-              @evaluate-chapter="evaluateChapter"
-              @hide-version-selector="hideVersionSelector"
-              @update:selected-version-index="selectedVersionIndex = $event"
-              @show-version-detail="showVersionDetail"
-              @confirm-version-selection="confirmVersionSelection"
-              @generate-chapter="generateChapter"
-              @retry-from-node="retryFromNode"
+              :workflow-phase="workflowPhase"
+              :workflow-transport="workflowTransport"
+              :workflow-allowed-commands="workflowAllowedCommands"
+              :workflow-pending="workflowPending"
+              :workflow-error="workflowError"
+              :workflow-retry-activity-key="workflowRetryActivityKey"
+              :workflow-candidates="workflowCandidates"
+              @workflow-start="startChapterWorkflow"
+              @workflow-select-version="selectWorkflowVersion"
+              @workflow-retry="retryChapterWorkflow"
+              @workflow-retry-external="retryExternalChapterWorkflow"
+              @workflow-retry-projection="retryProjectionChapterWorkflow"
+              @workflow-cancel="cancelChapterWorkflow"
+              @workflow-resync="chapterWorkflow.resync"
               @select-chapter="selectChapter"
+              @show-version-detail="showVersionDetail"
               @show-evaluation-detail="openEvaluationDetailModal"
-              @fetch-chapter-status="fetchChapterStatus"
               @edit-chapter="editChapterContent"
             />
 
@@ -146,20 +144,18 @@ import { ref, computed, defineAsyncComponent } from 'vue'
 import type {
   Chapter,
   ChapterOutline,
-  ChapterGenerationResponse,
   ChapterVersion,
 } from '@/api/novel'
 import {
-  useConfirmFinalizeChapterMutation,
   useNovelChapterQuery,
   useNovelMutationRefresh,
   useNovelProjectQuery,
 } from '@/queries/novel'
+import { useChapterWorkflowActorPorts } from '@/queries/chapterWorkflow'
+import { useChapterWorkflowActor } from '@/composables/useChapterWorkflowActor'
 import { useWritingDeskDrawers } from '@/composables/useWritingDeskDrawers'
-import { useWritingDeskChapterGeneration } from '@/composables/useWritingDeskChapterGeneration'
 import { useWritingDeskChapterOps } from '@/composables/useWritingDeskChapterOps'
 import { useWritingDeskChapterState } from '@/composables/useWritingDeskChapterState'
-import { useWritingDeskConfirm } from '@/composables/useWritingDeskConfirm'
 import { useWritingDeskModals } from '@/composables/useWritingDeskModals'
 import { useWritingDeskNavigation } from '@/composables/useWritingDeskNavigation'
 import { useWritingDeskOptimize } from '@/composables/useWritingDeskOptimize'
@@ -194,9 +190,7 @@ const projectQuery = useNovelProjectQuery(() => props.id)
 
 // 状态管理
 const selectedChapterNumber = ref<number | null>(null)
-const chapterGenerationResult = ref<ChapterGenerationResponse | null>(null)
 const selectedVersionIndex = ref<number>(0)
-const generatingChapter = ref<number | null>(null)
 const {
   isSidebarDrawerOpen,
   isAssistantDrawerOpen,
@@ -216,7 +210,6 @@ const chapterQuery = useNovelChapterQuery(() => props.id, selectedChapterNumber)
 const { refreshProjectQueries, upsertChapterInProjectCache } = useNovelMutationRefresh(
   () => props.id,
 )
-const confirmFinalizeChapterMutation = useConfirmFinalizeChapterMutation(() => props.id)
 
 // 计算属性
 const project = computed(() => projectQuery.data.value ?? null)
@@ -229,12 +222,8 @@ const projectError = computed(() => {
 const shouldRenderAssistantShell = computed(() => !!project.value)
 
 const {
-  goBack,
-  viewProjectDetail,
   loadProject,
   refetchChapterIntoProject,
-  stopChapterStatusStream,
-  fetchChapterStatus,
   selectChapter,
 } = useWritingDeskProject({
   projectId: () => props.id,
@@ -242,7 +231,6 @@ const {
   projectQuery,
   chapterQuery,
   selectedChapterNumber,
-  chapterGenerationResult,
   selectedVersionIndex,
   closeAllDrawers,
   upsertChapterInProjectCache,
@@ -255,7 +243,6 @@ const {
   editingChapter,
   isGeneratingOutline,
   showGenerateOutlineModal,
-  openEditChapterModal,
   openEvaluationDetailModal,
   saveChapterChanges,
   generateOutline,
@@ -273,40 +260,30 @@ useWritingDeskNavigation({
   projectId: () => props.id,
   project,
   selectedChapterNumber,
-  chapterGenerationResult,
   selectedVersionIndex,
   selectChapter,
-  stopChapterStatusStream,
 })
 
 const {
   selectedChapter,
-  showVersionSelector,
-  evaluatingChapter,
-  activeEvaluatingChapter,
-  isSelectingVersion,
   selectedChapterOutline,
   latestCompletedChapterNumber,
 } = useWritingDeskChapterState({
   project,
   selectedChapterNumber,
   chapterQuery,
-  confirmFinalizeChapterMutation,
 })
 
 const {
   availableVersions,
   isCurrentVersion,
-  resolveRecommendedVersionIndex,
   showVersionDetail,
   closeVersionDetail,
-  hideVersionSelector,
   selectVersionFromDetail,
   showVersionDetailModal,
   detailVersionIndex,
 } = useWritingDeskVersionDetail({
   selectedChapter,
-  chapterGenerationResult,
   selectedVersionIndex,
   loadWDVersionDetailModal,
 })
@@ -329,35 +306,65 @@ const {
   showEvaluationDetailModal,
 })
 
-const { generateChapter, retryFromNode, regenerateChapter } = useWritingDeskChapterGeneration({
-  projectId: () => props.id,
-  project,
-  generatingChapter,
+const workflowPorts = useChapterWorkflowActorPorts()
+const chapterWorkflow = useChapterWorkflowActor(
+  () => props.id,
   selectedChapterNumber,
-  chapterGenerationResult,
-  selectedVersionIndex,
-  upsertChapterInProjectCache,
-  fetchChapterStatus,
-  refetchChapterIntoProject,
+  workflowPorts,
+)
+const workflowPhase = chapterWorkflow.phase
+const workflowTransport = chapterWorkflow.transport
+const workflowAllowedCommands = computed(
+  () => chapterWorkflow.snapshot.value.context.allowedCommands,
+)
+const workflowPending = computed(
+  () => chapterWorkflow.snapshot.value.context.pendingCommandId !== null,
+)
+const workflowError = computed(
+  () => chapterWorkflow.snapshot.value.context.lastContractError
+    ?? chapterWorkflow.snapshot.value.context.lastCommandError,
+)
+const workflowRetryActivityKey = computed(
+  () => chapterWorkflow.snapshot.value.context.retryActivityKey,
+)
+const workflowCandidates = computed(() => {
+  const runId = chapterWorkflow.snapshot.value.context.runId
+  if (runId === null) return []
+  return (selectedChapter.value?.version_selections ?? []).filter(
+    (candidate) => candidate.workflow_run_id === runId,
+  )
 })
 
-const { confirmVersionSelection } = useWritingDeskConfirm({
-  selectedChapterNumber,
-  availableVersions,
-  selectedVersionIndex,
-  resolveRecommendedVersionIndex,
-  selectedChapter,
-  project,
-  confirmFinalizeChapterMutation,
-  refetchChapterIntoProject,
-  chapterGenerationResult,
-})
+const startChapterWorkflow = () => {
+  void chapterWorkflow.start()
+}
 
-const { evaluateChapter, deleteChapter } = useWritingDeskChapterOps({
+const selectWorkflowVersion = (versionId: number) => {
+  void chapterWorkflow.submitCommand('select', { selected_version_id: versionId })
+}
+
+const retryChapterWorkflow = () => {
+  void chapterWorkflow.submitCommand('retry')
+}
+
+const retryExternalChapterWorkflow = (activityKey: string) => {
+  void chapterWorkflow.submitCommand('retry_external', {
+    activity_key: activityKey,
+    acknowledge_possible_duplicate: true,
+  })
+}
+
+const retryProjectionChapterWorkflow = () => {
+  void chapterWorkflow.submitCommand('retry_projection')
+}
+
+const cancelChapterWorkflow = () => {
+  void chapterWorkflow.submitCommand('cancel')
+}
+
+const { deleteChapter } = useWritingDeskChapterOps({
   projectId: () => props.id,
-  project,
   selectedChapterNumber,
-  evaluatingChapter,
   latestCompletedChapterNumber,
 })
 

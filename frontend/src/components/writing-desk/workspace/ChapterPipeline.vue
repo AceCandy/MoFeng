@@ -1,27 +1,14 @@
+<!-- AIMETA P=章节工作流节点进度条|R=只读节点状态_节点选择|NR=不提交节点重试或生命周期命令|E=component:ChapterPipeline|X=internal|A=workflow-pipeline|D=vue|S=dom|RD=./README.ai -->
 <template>
   <article
     class="chapter-console__pipeline-card"
-    :class="{ 'is-read-only': readOnly }"
+    :class="{ 'is-read-only': true }"
     aria-label="生成进度"
   >
     <header class="chapter-console__pipeline-header-main">
       <div class="chapter-console__pipeline-title-group">
         <h4>生成进度</h4>
-        <span v-if="readOnly" class="chapter-console__read-only-badge">只读回溯</span>
-      </div>
-      <div
-        v-if="!readOnly && status && ['generating', 'evaluating', 'selecting'].includes(status)"
-        class="chapter-console__pipeline-meta-top"
-      >
-        <span class="chapter-console__meta-item">
-          <span class="meta-label">已耗时：</span>
-          <span class="meta-value">{{ elapsedText }}</span>
-        </span>
-        <span class="chapter-console__meta-divider">·</span>
-        <span class="chapter-console__meta-item">
-          <span class="meta-label">预计剩余：</span>
-          <span class="meta-value">{{ etaText }}</span>
-        </span>
+        <span class="chapter-console__read-only-badge">只读回溯</span>
       </div>
     </header>
     <ol class="chapter-console__pipeline">
@@ -67,15 +54,6 @@
               >
                 失败
               </span>
-              <button
-                v-if="canRetryFromNode(item.key, index)"
-                type="button"
-                class="chapter-console__pipeline-retry"
-                :disabled="generatingChapter === chapterNumber"
-                @click.stop="emit('retryFromNode', { chapterNumber: chapterNumber!, nodeKey: item.key })"
-              >
-                从此节点重试
-              </button>
             </div>
           </div>
         </Tooltip>
@@ -97,24 +75,13 @@ interface Props {
   stepState: (key: string, index: number) => { tone: string; label: string }
   stepTooltipText: (key: string, index: number) => string
   shouldShowManualConfirmBadge: (key: string) => boolean
-  canRetryFromNode: (key: string, index: number) => boolean
   activeStepKey: string | null
-  status: string | null
-  readOnly?: boolean
-  generatingChapter?: number | null
-  chapterNumber: number | null
-  elapsedText: string
-  etaText: string
 }
 
-withDefaults(defineProps<Props>(), {
-  readOnly: false,
-  generatingChapter: null,
-})
+defineProps<Props>()
 
 const emit = defineEmits<{
   select: [key: string, index: number]
-  retryFromNode: [payload: { chapterNumber: number; nodeKey: string }]
 }>()
 </script>
 

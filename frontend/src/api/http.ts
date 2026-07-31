@@ -196,6 +196,9 @@ export const requestRaw = async (url: string, options: HttpRequestOptions = {}):
 
 export const requestJson = async <T>(url: string, options: HttpRequestOptions = {}): Promise<T> => {
   const response = await requestRaw(url, options)
+  if (response.status === 204 || response.status === 205) {
+    return undefined as T
+  }
   const payload = await readResponsePayload(response)
-  return (payload ?? undefined) as T
+  return payload as T
 }

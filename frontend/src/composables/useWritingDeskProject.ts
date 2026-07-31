@@ -1,8 +1,8 @@
-import { nextTick, onUnmounted, ref } from 'vue'
+// AIMETA P=写作台项目与章节查询协调|R=项目加载_章节刷新_章节选择|NR=不订阅章节生命周期SSE_不持有工作流状态|E=composable:writing-desk-project|X=internal|A=useWritingDeskProject|D=vue-router,@tanstack/vue-query|S=state,cache|RD=./README.ai
+import { nextTick } from 'vue'
 import type { ComputedRef, Ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { NovelAPI } from '@/api/novel'
-import type { ChapterGenerationResponse, NovelProject } from '@/api/novel'
+import type { NovelProject } from '@/api/novel'
 import { useNovelChapterQuery, useNovelMutationRefresh, useNovelProjectQuery } from '@/queries/novel'
 
 interface UseWritingDeskProjectOptions {
@@ -11,7 +11,6 @@ interface UseWritingDeskProjectOptions {
   projectQuery: ReturnType<typeof useNovelProjectQuery>
   chapterQuery: ReturnType<typeof useNovelChapterQuery>
   selectedChapterNumber: Ref<number | null>
-  chapterGenerationResult: Ref<ChapterGenerationResponse | null>
   selectedVersionIndex: Ref<number>
   closeAllDrawers: () => void
   upsertChapterInProjectCache: ReturnType<typeof useNovelMutationRefresh>['upsertChapterInProjectCache']
@@ -19,13 +18,10 @@ interface UseWritingDeskProjectOptions {
 }
 
 /**
- * 写作台项目加载与章节状态同步。
+ * 写作台项目加载与章节查询协调。
  *
- * 从 WritingDesk.vue 抽出（行为逐行等价）。聚合项目加载/刷新、章节状态 SSE 流、
- * 章节选择三类副作用：loadProject/refetchChapterIntoProject 负责数据刷新，
- * fetchChapterStatus/stopChapterStatusStream 维护 SSE 订阅与重连，selectChapter 负责
- * 切换章节时的本地状态重置。章节状态 SSE 句柄（4 个 ref）仅本块使用，故内化；
- * onUnmounted 统一在此注销流。
+ * 章节工作流的 current lookup、SSE 与轮询由 useChapterWorkflowActor 独占；本块只
+ * 负责 Vue Query 项目/章节刷新和切章时的本地版本索引重置。
  */
 export const useWritingDeskProject = ({
   projectId,
@@ -33,19 +29,12 @@ export const useWritingDeskProject = ({
   projectQuery,
   chapterQuery,
   selectedChapterNumber,
-  chapterGenerationResult,
   selectedVersionIndex,
   closeAllDrawers,
   upsertChapterInProjectCache,
   refreshProjectQueries,
 }: UseWritingDeskProjectOptions) => {
   const router = useRouter()
-
-  // 章节状态 SSE 流的运行时句柄
-  const isFetchingChapterStatus = ref(false)
-  const statusStreamController = ref<AbortController | null>(null)
-  const statusStreamKey = ref<string | null>(null)
-  const statusStreamReconnectTimer = ref<number | null>(null)
 
   const goBack = () => {
     router.push('/workspace')
@@ -83,87 +72,17 @@ export const useWritingDeskProject = ({
     }
   }
 
-  const stopChapterStatusStream = () => {
-    if (statusStreamReconnectTimer.value !== null) {
-      window.clearTimeout(statusStreamReconnectTimer.value)
-      statusStreamReconnectTimer.value = null
-    }
-    statusStreamController.value?.abort()
-    statusStreamController.value = null
-    statusStreamKey.value = null
-    isFetchingChapterStatus.value = false
-  }
-
-  const fetchChapterStatus = () => {
-    if (selectedChapterNumber.value === null) {
-      return
-    }
-    const currentProjectId = projectId()
-    const chapterNumber = selectedChapterNumber.value
-    const streamKey = `${currentProjectId}:${chapterNumber}`
-    if (statusStreamKey.value === streamKey) {
-      return
-    }
-
-    stopChapterStatusStream()
-    if (statusStreamReconnectTimer.value !== null) {
-      window.clearTimeout(statusStreamReconnectTimer.value)
-      statusStreamReconnectTimer.value = null
-    }
-    const controller = new AbortController()
-    statusStreamController.value = controller
-    statusStreamKey.value = streamKey
-    isFetchingChapterStatus.value = true
-
-    void NovelAPI.subscribeChapterStatus(currentProjectId, chapterNumber, {
-      signal: controller.signal,
-      onChapter: (chapter) => {
-        if (chapter.chapter_number !== chapterNumber) return
-        upsertChapterInProjectCache(currentProjectId, chapter)
-      },
-      onError: (error) => {
-        if (controller.signal.aborted) return
-        console.error('章节状态 SSE 同步失败:', error)
-      },
-    }).catch((error) => {
-      if (controller.signal.aborted) return
-      console.error('章节状态 SSE 连接失败:', error)
-      if (projectId() === currentProjectId && selectedChapterNumber.value === chapterNumber) {
-        void refetchChapterIntoProject(chapterNumber, { refreshProject: false })
-      }
-      statusStreamReconnectTimer.value = window.setTimeout(() => {
-        if (projectId() === currentProjectId && selectedChapterNumber.value === chapterNumber) {
-          statusStreamKey.value = null
-          fetchChapterStatus()
-        }
-      }, 3000)
-    }).finally(() => {
-      if (statusStreamKey.value === streamKey) {
-        statusStreamController.value = null
-        statusStreamKey.value = null
-        isFetchingChapterStatus.value = false
-      }
-    })
-  }
-
   const selectChapter = (chapterNumber: number) => {
     selectedChapterNumber.value = chapterNumber
-    chapterGenerationResult.value = null
     selectedVersionIndex.value = 0
     closeAllDrawers()
   }
-
-  onUnmounted(() => {
-    stopChapterStatusStream()
-  })
 
   return {
     goBack,
     viewProjectDetail,
     loadProject,
     refetchChapterIntoProject,
-    stopChapterStatusStream,
-    fetchChapterStatus,
     selectChapter,
   }
 }

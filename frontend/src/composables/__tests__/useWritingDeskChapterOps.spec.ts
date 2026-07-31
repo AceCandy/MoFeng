@@ -2,7 +2,6 @@
 import { computed, ref } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { NovelProject } from '@/api/novel'
 import { globalAlert } from '@/composables/useAlert'
 import { useWritingDeskChapterOps } from '@/composables/useWritingDeskChapterOps'
 
@@ -10,7 +9,6 @@ const deleteChapter = vi.fn()
 
 vi.mock('@/queries/novel', () => ({
   useDeleteChapterMutation: () => ({ mutateAsync: deleteChapter }),
-  useEvaluateChapterMutation: () => ({ mutateAsync: vi.fn() }),
 }))
 
 describe('useWritingDeskChapterOps chapter deletion', () => {
@@ -25,9 +23,7 @@ describe('useWritingDeskChapterOps chapter deletion', () => {
 
     const { deleteChapter: deleteSelectedChapter } = useWritingDeskChapterOps({
       projectId: () => 'novel-delete',
-      project: computed<NovelProject | null>(() => null),
       selectedChapterNumber: ref<number | null>(2),
-      evaluatingChapter: ref<number | null>(null),
       latestCompletedChapterNumber: computed(() => 2),
     })
 

@@ -1,8 +1,7 @@
-<!-- AIMETA P=写作台工作区_主编辑区域|R=章节编辑_生成|NR=不含侧边栏|E=component:WDWorkspace|X=ui|A=工作区|D=vue|S=dom,net|RD=./README.ai -->
+<!-- AIMETA P=写作台工作区_主编辑区域|R=章节展示_工作流控制_版本评审分区|NR=不调用API_不拥有生命周期|E=component:WDWorkspace|X=ui|A=工作区|D=vue|S=dom,state|RD=./README.ai -->
 <template>
   <section class="writing-workspace">
     <div class="md-card md-card-outlined writing-workspace__panel">
-      <!-- 章节工作区头部 -->
       <div v-if="selectedChapterNumber !== null" class="writing-workspace__header">
         <div class="writing-workspace__header-row">
           <ChapterMeta
@@ -19,128 +18,141 @@
             v-if="shouldShowChapterToolbar"
             :chapter-number="selectedChapterNumber"
             :is-finalized-successful="isFinalizedSuccessful"
-            :is-draft-waiting-confirm="isDraftWaitingConfirm"
             :has-selected-chapter-content="hasSelectedChapterContent"
             :is-chapter-content-view="isChapterContentView"
             :is-ai-menu-disabled="isAiMenuDisabled ?? false"
             :body-component-ref="bodyComponentRef"
             @copy-content="copySelectedChapterContent"
             @open-edit-modal="editModalRef?.openEditModal()"
-            @confirm-version-selection="$emit('confirmVersionSelection', $event)"
           />
         </div>
       </div>
 
-      <div
-        v-if="selectedChapter?.generation_status === 'successful' && hasSelectedChapterContent"
-        class="writing-workspace__tabs-row"
-      >
+      <div v-if="hasSelectedChapterContent" class="writing-workspace__tabs-row">
         <ChapterTabs
           v-model:active-tab="activeTab"
           :versions-count="availableVersions.length"
         />
       </div>
 
-      <!-- 章节内容展示区 -->
       <div class="writing-workspace__content">
-          <ChapterReaderBar
-            v-if="isFinalizedSuccessful"
-            :status="readerStatus"
-            :isBrowserFallback="readerIsBrowserFallback"
-            :hasModelTTS="readerHasModelTTS"
-            :modelVoice="readerModelVoice"
-            :modelVoiceOptions="readerModelVoiceOptions"
-            :currentParagraphIndex="readerCurrentParagraphIndex"
-            :paragraphCount="readerParagraphCount"
-            :voiceURI="readerVoiceURI"
-            :rate="readerRate"
-            :forceBrowser="readerForceBrowser"
-            :voiceOptions="readerVoiceOptions"
-            :rateOptions="READER_RATE_OPTIONS"
-            @start="handleReaderStart"
-            @play-pause="handleReaderPlayPause"
-            @reset="handleReaderReset"
-            @voice-change="chapterReader.setVoiceURI"
-            @model-voice-change="chapterReader.setModelVoice"
-            @force-browser-change="chapterReader.setForceBrowser"
-            @rate-change="chapterReader.setRate"
-            @preview-voice="chapterReader.previewVoice"
+        <ChapterReaderBar
+          v-if="hasSelectedChapterContent"
+          :status="readerStatus"
+          :isBrowserFallback="readerIsBrowserFallback"
+          :hasModelTTS="readerHasModelTTS"
+          :modelVoice="readerModelVoice"
+          :modelVoiceOptions="readerModelVoiceOptions"
+          :currentParagraphIndex="readerCurrentParagraphIndex"
+          :paragraphCount="readerParagraphCount"
+          :voiceURI="readerVoiceURI"
+          :rate="readerRate"
+          :forceBrowser="readerForceBrowser"
+          :voiceOptions="readerVoiceOptions"
+          :rateOptions="READER_RATE_OPTIONS"
+          @start="handleReaderStart"
+          @play-pause="handleReaderPlayPause"
+          @reset="handleReaderReset"
+          @voice-change="chapterReader.setVoiceURI"
+          @model-voice-change="chapterReader.setModelVoice"
+          @force-browser-change="chapterReader.setForceBrowser"
+          @rate-change="chapterReader.setRate"
+          @preview-voice="chapterReader.previewVoice"
+        />
+
+        <div class="writing-workspace__body h-full">
+          <WorkspaceInitial v-if="selectedChapterNumber === null" />
+
+          <ChapterEmpty
+            v-else-if="isSelectedChapterLocked"
+            :chapter-number="selectedChapterNumber"
+            :locked-prerequisite-chapter-number="lockedPrerequisiteChapterNumber"
+            :locked-prerequisite-chapter-title="lockedPrerequisiteChapterTitle"
+            @select-chapter="emit('selectChapter', $event)"
           />
-          <div class="writing-workspace__body h-full">
+
+          <template v-else>
+            <ChapterWorkflowPanel
+              :phase="workflowPhase"
+              :transport="workflowTransport"
+              :allowed-commands="workflowAllowedCommands"
+              :pending="workflowPending"
+              :error="workflowError"
+              :retry-activity-key="workflowRetryActivityKey"
+              :candidates="workflowCandidates"
+              @start="emit('workflowStart')"
+              @select-version="emit('workflowSelectVersion', $event)"
+              @retry="emit('workflowRetry')"
+              @retry-external="emit('workflowRetryExternal', $event)"
+              @retry-projection="emit('workflowRetryProjection')"
+              @cancel="emit('workflowCancel')"
+              @resync="emit('workflowResync')"
+            />
+
             <ChapterGenerating
-              v-if="shouldShowDraftTraceReplay"
+              v-if="activeTab === 'content' && shouldShowTraceReplay"
               class="writing-workspace__trace-replay"
-              v-bind="draftTraceReplayProps"
+              v-bind="traceReplayProps"
             />
 
-            <!-- 1. 章节正文 Tab 分支 -->
-            <component
-              v-if="activeTab === 'content' || selectedChapter?.generation_status !== 'successful' || !hasSelectedChapterContent"
+            <ChapterContent
+              v-if="activeTab === 'content' && selectedChapterForDisplay && hasSelectedChapterContent"
               ref="bodyComponentRef"
-              :is="currentComponent"
-              v-bind="currentComponentProps"
-              @hideVersionSelector="$emit('hideVersionSelector')"
-              @update:selectedVersionIndex="$emit('update:selectedVersionIndex', $event)"
-              @showVersionDetail="$emit('showVersionDetail', $event)"
-              @confirmVersionSelection="$emit('confirmVersionSelection', $event)"
-              @generateChapter="$emit('generateChapter', $event)"
-              @retryFromNode="$emit('retryFromNode', $event)"
-              @selectChapter="$emit('selectChapter', $event)"
-              @showVersionSelector="$emit('showVersionSelector')"
-              @regenerateChapter="$emit('regenerateChapter')"
-              @evaluateChapter="$emit('evaluateChapter')"
-              @showEvaluationDetail="$emit('showEvaluationDetail')"
+              :selected-chapter="selectedChapterForDisplay"
+              :project-id="project?.id"
+              :active-paragraph-index="readerCurrentParagraphIndex"
+              :active-paragraph-end="readerCurrentParagraphEnd"
             />
 
-            <!-- 2. 历史版本多维平铺查阅面板 -->
             <ChapterVersionsPanel
               v-else-if="activeTab === 'versions'"
               :available-versions="availableVersions"
               :selected-chapter-number="selectedChapterNumber"
               :resolved-content="selectedChapterResolvedContent"
-              @edit-chapter="$emit('editChapter', $event)"
+              @show-version-detail="emit('showVersionDetail', $event)"
+              @edit-chapter="emit('editChapter', $event)"
               @switch-to-content="activeTab = 'content'"
             />
 
-            <!-- 3. AI 章节评审反馈面板 -->
             <ChapterEvaluationPanel
               v-else-if="activeTab === 'evaluation'"
               :evaluation="selectedChapter?.evaluation"
-              :evaluating-chapter="evaluatingChapter"
-              @evaluate-chapter="$emit('evaluateChapter')"
+              @show-evaluation-detail="emit('showEvaluationDetail')"
             />
-          </div>
+          </template>
         </div>
       </div>
 
-    <!-- 编辑章节内容模态框（抽至 ./workspace/EditChapterModal.vue） -->
-    <EditChapterModal
-      ref="editModalRef"
-      :has-content="hasSelectedChapterContent"
-      :resolved-content="selectedChapterResolvedContent"
-      :chapter-number="selectedChapterNumber"
-      @edit-chapter="$emit('editChapter', $event)"
-    />
+      <EditChapterModal
+        ref="editModalRef"
+        :has-content="hasSelectedChapterContent"
+        :resolved-content="selectedChapterResolvedContent"
+        :chapter-number="selectedChapterNumber"
+        @edit-chapter="emit('editChapter', $event)"
+      />
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { globalAlert } from '@/composables/useAlert'
 import { useChapterReaderBar } from '@/composables/useChapterReaderBar'
 import { useVersionResolver } from '@/composables/useVersionResolver'
-import { useChapterStatus } from '@/composables/useChapterStatus'
-import { useChapterBodyProps } from '@/composables/useChapterBodyProps'
 import { useChapterClipboard } from '@/composables/useChapterClipboard'
 import { useChapterInlineMeta } from '@/composables/useChapterInlineMeta'
 import type {
   Chapter,
-  ChapterOutline,
-  ChapterGenerationResponse,
   ChapterVersion,
+  ChapterVersionSelection,
   NovelProject,
 } from '@/api/novel'
+import type { ChapterWorkflowCommand } from '@/api/chapterWorkflow'
+import type { ChapterWorkflowActorPhase } from '@/composables/useChapterWorkflowActor'
+import type { ChapterWorkflowTransportPhase } from '@/composables/chapterWorkflowMachine'
+import ChapterWorkflowPanel from './ChapterWorkflowPanel.vue'
 import ChapterGenerating from './workspace/ChapterGenerating.vue'
+import ChapterContent from './workspace/ChapterContent.vue'
+import ChapterEmpty from './workspace/ChapterEmpty.vue'
 import ChapterReaderBar from './ChapterReaderBar.vue'
 import EditChapterModal from './workspace/EditChapterModal.vue'
 import ChapterEvaluationPanel from './workspace/ChapterEvaluationPanel.vue'
@@ -148,36 +160,38 @@ import ChapterVersionsPanel from './workspace/ChapterVersionsPanel.vue'
 import ChapterMeta from './workspace/ChapterMeta.vue'
 import ChapterToolbar from './workspace/ChapterToolbar.vue'
 import ChapterTabs from './workspace/ChapterTabs.vue'
+import WorkspaceInitial from './workspace/WorkspaceInitial.vue'
 
 interface Props {
   project: NovelProject | null
+  selectedChapter: Chapter | null
   selectedChapterNumber: number | null
-  generatingChapter: number | null
-  evaluatingChapter: number | null
-  showVersionSelector: boolean
-  chapterGenerationResult: ChapterGenerationResponse | null
   selectedVersionIndex: number
   availableVersions: ChapterVersion[]
-  isSelectingVersion?: boolean
+  workflowPhase: ChapterWorkflowActorPhase
+  workflowTransport: ChapterWorkflowTransportPhase
+  workflowAllowedCommands: readonly ChapterWorkflowCommand[]
+  workflowPending: boolean
+  workflowError: string | null
+  workflowRetryActivityKey: string | null
+  workflowCandidates: ChapterVersionSelection[]
 }
 
 const props = defineProps<Props>()
 
-const emit = defineEmits([
-  'regenerateChapter',
-  'evaluateChapter',
-  'hideVersionSelector',
-  'update:selectedVersionIndex',
-  'showVersionDetail',
-  'confirmVersionSelection',
-  'generateChapter',
-  'retryFromNode',
-  'selectChapter',
-  'showVersionSelector',
-  'showEvaluationDetail',
-  'fetchChapterStatus',
-  'editChapter',
-])
+const emit = defineEmits<{
+  (event: 'workflowStart'): void
+  (event: 'workflowSelectVersion', versionId: number): void
+  (event: 'workflowRetry'): void
+  (event: 'workflowRetryExternal', activityKey: string): void
+  (event: 'workflowRetryProjection'): void
+  (event: 'workflowCancel'): void
+  (event: 'workflowResync'): void
+  (event: 'selectChapter', chapterNumber: number): void
+  (event: 'showVersionDetail', versionIndex: number): void
+  (event: 'showEvaluationDetail'): void
+  (event: 'editChapter', payload: { chapterNumber: number; content: string }): void
+}>()
 
 interface ChapterContentExpose {
   openOptimizerPanel?: () => void
@@ -187,12 +201,7 @@ interface ChapterContentExpose {
 
 const bodyComponentRef = ref<ChapterContentExpose | null>(null)
 
-const selectedChapter = computed<Chapter | null>(() => {
-  if (!props.project || props.selectedChapterNumber === null) return null
-  return (
-    props.project.chapters.find((ch) => ch.chapter_number === props.selectedChapterNumber) || null
-  )
-})
+const selectedChapter = computed(() => props.selectedChapter)
 
 const selectedChapterOutline = computed(() => {
   if (!props.project?.blueprint?.chapter_outline || props.selectedChapterNumber === null)
@@ -226,9 +235,7 @@ const {
 
 const editModalRef = ref<InstanceType<typeof EditChapterModal> | null>(null)
 
-const isFinalizedSuccessful = computed(() => {
-  return selectedChapter.value?.generation_status === 'successful' && hasSelectedChapterContent.value
-})
+const isFinalizedSuccessful = computed(() => hasSelectedChapterContent.value)
 
 const {
   chapterReader,
@@ -252,15 +259,6 @@ const {
   props,
   selectedChapterOutline,
   selectedChapterResolvedContent,
-})
-
-const isDraftWaitingConfirm = computed(() => {
-  const status = selectedChapter.value?.generation_status
-  return status === 'waiting_for_confirm'
-})
-
-const shouldShowDraftTraceReplay = computed(() => {
-  return isDraftWaitingConfirm.value && hasSelectedChapterContent.value
 })
 
 const lockedPrerequisiteChapterNumber = computed(() => {
@@ -298,30 +296,48 @@ const lockedPrerequisiteChapterTitle = computed(() => {
   return outline?.title || null
 })
 
-const {
-  isSelectedChapterLocked,
-  shouldShowChapterToolbar,
-  chapterStatusLabel,
-  chapterStatusTone,
-  isChapterGenerating,
-  isSelectedChapterGeneratingLike,
-  isChapterFailed,
-  isChapterEvaluationFailed,
-  isInProgressStatus,
-  isGeneratingInFlight,
-  canGenerateChapter,
-  currentComponent,
-  isChapterContentView,
-  canViewVersions,
-  isAiMenuDisabled,
-} = useChapterStatus({
-  props,
-  selectedChapter,
-  hasSelectedChapterContent,
-  lockedPrerequisiteChapterNumber,
-  isFinalizedSuccessful,
-  isDraftWaitingConfirm,
+const isSelectedChapterLocked = computed(() =>
+  lockedPrerequisiteChapterNumber.value !== null
+  && !hasSelectedChapterContent.value
+  && props.workflowPhase === 'idle',
+)
+
+const activeTab = ref<'content' | 'versions' | 'evaluation'>('content')
+const shouldShowChapterToolbar = computed(() => hasSelectedChapterContent.value)
+const isChapterContentView = computed(() => activeTab.value === 'content' && hasSelectedChapterContent.value)
+const isAiMenuDisabled = computed(() => props.workflowPending)
+
+const workflowStatus = computed(() => {
+  switch (props.workflowPhase) {
+    case 'booting':
+      return { label: '同步中', tone: 'progress' }
+    case 'idle':
+      return { label: '待开始', tone: 'idle' }
+    case 'submitting':
+      return { label: '提交中', tone: 'progress' }
+    case 'running':
+      return { label: '生成中', tone: 'progress' }
+    case 'waitingForSelection':
+      return { label: '待选版本', tone: 'pending' }
+    case 'finalizing':
+      return { label: '定稿中', tone: 'progress' }
+    case 'projectionPending':
+      return { label: '同步中', tone: 'pending' }
+    case 'succeeded':
+      return { label: '已完成', tone: 'success' }
+    case 'failed':
+      return { label: '待处理', tone: 'error' }
+    case 'cancelled':
+      return { label: '已取消', tone: 'idle' }
+    case 'superseded':
+      return { label: '切换中', tone: 'progress' }
+    case 'fatal':
+      return { label: '同步失败', tone: 'error' }
+  }
+  return { label: '同步失败', tone: 'error' }
 })
+const chapterStatusLabel = computed(() => workflowStatus.value.label)
+const chapterStatusTone = computed(() => workflowStatus.value.tone)
 
 const { chapterInlineMeta } = useChapterInlineMeta({
   selectedChapter,
@@ -329,81 +345,36 @@ const { chapterInlineMeta } = useChapterInlineMeta({
   hasSelectedChapterContent,
 })
 
-const openVersionDetail = () => {
-  if (!canViewVersions.value) {
-    globalAlert.showError('当前章节暂无可查看版本')
-    return
-  }
-
-  const maxIndex = props.availableVersions.length - 1
-  const safeIndex = Math.min(Math.max(props.selectedVersionIndex, 0), maxIndex)
-  emit('showVersionDetail', safeIndex)
-}
-
-const requestChapterStatus = () => {
-  emit('fetchChapterStatus')
-}
-
-watch(
-  [
-    () => props.selectedChapterNumber,
-    () => selectedChapter.value?.generation_status ?? null,
-    () => selectedChapter.value?.versions?.length ?? 0,
-    () => Boolean(selectedChapter.value?.content),
-  ],
-  ([chapterNumber, status, versionsCount, hasContent]) => {
-    if (chapterNumber === null) {
-      return
-    }
-
-    // 需要服务端推送同步的场景：
-    // 1) 生成/评审/选择中（状态推进）
-    // 2) 等待确认但正文还没同步（含版本已到但正文未到的短暂窗口）
-    // 3) 已成功但正文暂未同步（避免必须手动刷新）
-    const needsPolling =
-      isGeneratingInFlight.value ||
-      status === 'generating' ||
-      status === 'evaluating' ||
-      status === 'selecting' ||
-      status === 'finalizing' ||
-      (status === 'waiting_for_confirm' && !hasContent) ||
-      (status === 'successful' && !hasContent)
-
-    if (needsPolling) {
-      requestChapterStatus()
-    }
-  },
-  { immediate: true },
-)
-
-const { currentComponentProps, draftTraceReplayProps } = useChapterBodyProps({
-  props,
-  selectedChapter,
-  selectedChapterOutline,
-  selectedChapterForDisplay,
-  selectedChapterResolvedContent,
-  hasSelectedChapterContent,
-  readerCurrentParagraphIndex,
-  readerCurrentParagraphEnd,
-  lockedPrerequisiteChapterNumber,
-  lockedPrerequisiteChapterTitle,
-  isInProgressStatus,
-  isGeneratingInFlight,
-  isChapterFailed,
-  isChapterEvaluationFailed,
-  canGenerateChapter,
+const shouldShowTraceReplay = computed(() => {
+  const traces = selectedChapter.value?.generation_traces ?? []
+  return traces.length > 0
+    && props.workflowPhase !== 'idle'
+    && props.workflowPhase !== 'succeeded'
+    && props.workflowPhase !== 'cancelled'
+    && props.workflowPhase !== 'fatal'
 })
 
-// ==========================================================================
-// 写作台正文/历史版本/AI评审三合一 Tab 切换区状态与逻辑
-// ==========================================================================
-const activeTab = ref<'content' | 'versions' | 'evaluation'>('content')
-// 切换章节时回到正文 tab（版本预览索引的重置随 ChapterVersionsPanel 迁入子组件）
+const traceReplayProps = computed(() => ({
+  chapterNumber: props.selectedChapterNumber,
+  chapterTitle: selectedChapterOutline.value?.title || '',
+  chapterSummary: selectedChapterOutline.value?.summary || '',
+  chapterContentPreview: selectedChapterResolvedContent.value,
+  status: selectedChapter.value?.generation_status ?? null,
+  generationProgress: selectedChapter.value?.generation_progress ?? null,
+  generationStep: selectedChapter.value?.generation_step ?? null,
+  generationStepIndex: selectedChapter.value?.generation_step_index ?? null,
+  generationStepTotal: selectedChapter.value?.generation_step_total ?? null,
+  generationStartedAt: selectedChapter.value?.generation_started_at ?? null,
+  statusUpdatedAt: selectedChapter.value?.status_updated_at ?? null,
+  generationTraces: selectedChapter.value?.generation_traces ?? [],
+  readOnly: true,
+}))
+
 watch(
   () => props.selectedChapterNumber,
   () => {
     activeTab.value = 'content'
-  }
+  },
 )
 </script>
 
