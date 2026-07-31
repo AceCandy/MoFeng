@@ -81,7 +81,7 @@ Backend focused checks from `backend/` with the backend virtual environment acti
 python -m pytest -q \
   tests/test_openapi_contract.py \
   tests/test_task_event_sse.py
-# Requires a usable Docker socket for its container-backed fixture.
+# Requires PostgreSQL through TEST_POSTGRES_URL or the container-backed fixture.
 python -m pytest -q tests/test_chapter_workflow_http.py
 python -m ruff check app/openapi_schema.py app/openapi_export.py tests/test_openapi_contract.py
 python -m black --check app/openapi_schema.py app/openapi_export.py tests/test_openapi_contract.py
@@ -109,11 +109,13 @@ git status --short
 
 CI-only semantic gate uses the checksum-verified `oasdiff 1.26.1` binary against the pull-request base artifact. Local execution is optional when the same pinned binary is available; CI is authoritative.
 
-## Validation Evidence (2026-07-30)
+## Validation Evidence (2026-07-31 Final Integration Rerun)
 
-- Backend OpenAPI and task SSE suites: 15 tests passed. Ruff, Black check, mypy,
-  and `compileall` passed; 64 existing Pydantic deprecation warnings remain.
-- Frontend: `npm run api:check`, all 25 unit-test files (177 tests), type-check,
+- Backend isolated-PostgreSQL full suite: `603 passed`, including the three
+  chapter workflow HTTP tests that were previously blocked at container setup.
+  OpenAPI/task SSE focused checks, Ruff, Black check, mypy, and `compileall` passed;
+  64 existing Pydantic/passlib deprecation warnings remain.
+- Frontend: `npm run api:check`, all 30 unit-test files (263 tests), type-check,
   and lint passed.
 - Two consecutive generation runs were byte-identical. SHA256 values:
   `backend/openapi.json` =
@@ -125,10 +127,8 @@ CI-only semantic gate uses the checksum-verified `oasdiff 1.26.1` binary against
   an added required request field.
 - Independent backend/frontend/spec/hygiene reviews found no unresolved contract
   drift after fixing scope mismatch and superseded-connection callback handling.
-- Environment limits: three container-backed chapter workflow HTTP tests stopped
-  in fixture setup with Docker socket `PermissionError: 13`; no business assertion
-  ran. `actionlint` is not installed, so the workflow was not checked by that tool.
-  CI remains authoritative for these two environment-dependent checks.
+- `actionlint` is not installed locally, so CI remains authoritative for that
+  workflow-specific static check.
 
 ## Risk Register
 

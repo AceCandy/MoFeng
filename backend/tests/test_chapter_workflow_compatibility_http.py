@@ -205,6 +205,69 @@ async def test_legacy_generate_uses_one_workflow_root_when_gate_is_open(
         assert list(legacy_jobs) == []
 
 
+async def test_legacy_generate_rejects_conflicting_start_idempotency_key(
+    isolated_pg,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(settings, "chapter_workflow_start_enabled", True)
+    await _seed(isolated_pg)
+
+    async with _client(isolated_pg, user_id=6101) as client:
+        first = await client.post(
+            "/api/writer/novels/workflow-http-project/chapters/generate",
+            headers={"Idempotency-Key": "workflow-start-conflict-1"},
+            json={"chapter_number": 1, "writing_notes": "first request"},
+        )
+        conflicting = await client.post(
+            "/api/writer/novels/workflow-http-project/chapters/generate",
+            headers={"Idempotency-Key": "workflow-start-conflict-1"},
+            json={"chapter_number": 1, "writing_notes": "different request"},
+        )
+
+    assert first.status_code == 202
+    assert conflicting.status_code == 409
+    assert conflicting.json() == {"detail": "同一 idempotency_key 不能用于不同的任务参数"}
+
+
+async def test_legacy_generate_replays_terminal_workflow_by_idempotency_key(
+    isolated_pg,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(settings, "chapter_workflow_start_enabled", True)
+    await _seed(isolated_pg)
+    payload = {"chapter_number": 1, "writing_notes": "terminal replay"}
+    headers = {"Idempotency-Key": "workflow-start-terminal-1"}
+
+    async with _client(isolated_pg, user_id=6101) as client:
+        first = await client.post(
+            "/api/writer/novels/workflow-http-project/chapters/generate",
+            headers=headers,
+            json=payload,
+        )
+
+    assert first.status_code == 202
+    async with isolated_pg.session_factory() as session:
+        run = (await session.execute(select(ChapterWorkflowRun))).scalars().one()
+        job = (await session.execute(select(BackgroundTask))).scalars().one()
+        run.status = "failed"
+        run.is_active = False
+        job.status = "failed"
+        await session.commit()
+
+    async with _client(isolated_pg, user_id=6101) as client:
+        replay = await client.post(
+            "/api/writer/novels/workflow-http-project/chapters/generate",
+            headers=headers,
+            json=payload,
+        )
+
+    assert replay.status_code == 202
+    assert replay.json()["id"] == first.json()["id"]
+    async with isolated_pg.session_factory() as session:
+        assert await _count(session, BackgroundTask) == 1
+        assert await _count(session, ChapterWorkflowRun) == 1
+
+
 async def test_rollout_gate_open_shares_one_owner_across_legacy_and_new_http(
     isolated_pg,
     monkeypatch,

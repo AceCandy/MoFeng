@@ -85,16 +85,16 @@
 
 ## Acceptance Criteria
 
-- [ ] AC1：统一 context contract 的 contract/golden tests 证明 pipeline、writer、consistency 对同一 source revision 使用同形上下文，且 RAG 关闭时降级确定。
-- [ ] AC2：worker 在任务执行中被终止后，lease 过期可由另一 worker 接管；同一幂等键只产生一次 canonical DB outcome。外部 provider 不支持幂等且结果不明时进入人工处理，不盲目重放。
-- [ ] AC3：SSE 使用旧 cursor 重连能按序补齐缺失事件；关闭 Redis 后仍正确，仅实时性下降。
-- [ ] AC4：Chapter 定稿事务失败时不产生可消费 outbox；projection 失败后可重放，重复重放不产生重复 memory、vector 或伏笔记录。
-- [ ] AC5：workflow 能在生成后、人工选版前、projection 处理中三个检查点分别重启恢复；已持久化完成的 LLM/DB step 不重复，crash-after-provider-response 的模糊结果进入 reconcile。
-- [ ] AC6：WritingDesk 刷新、断网重连、重复点击、节点重试、定稿失败和 projection pending 均由合法 statechart transition 处理。
-- [ ] AC7：后端 schema 改动后未更新生成物会使 CI 失败；`novel.ts` 与 `admin.ts` 不再各自声明 `Chapter` wire DTO。
-- [ ] AC8：API 与 worker 在空库或 schema 落后时 fail readiness，但不会自行 migration/bootstrap；显式命令可完成新库和升级库初始化。
-- [ ] AC9：切换完成后，FastAPI request 进程内不再运行章节长任务，trace 不再作为恢复事实源，Redis 不再作为事件事实源。
-- [ ] AC10：每个子任务独立通过其测试与回滚门禁，最终集成测试覆盖 API → job → workflow → projection → SSE → statechart 全链路。
+- [x] AC1：统一 context contract 的 contract/golden tests 证明 pipeline、writer、consistency 对同一 source revision 使用同形上下文，且 RAG 关闭时降级确定。
+- [x] AC2：worker 在任务执行中被终止后，lease 过期可由另一 worker 接管；同一幂等键只产生一次 canonical DB outcome。外部 provider 不支持幂等且结果不明时进入人工处理，不盲目重放。
+- [x] AC3：SSE 使用旧 cursor 重连能按序补齐缺失事件；关闭 Redis 后仍正确，仅实时性下降。
+- [x] AC4：Chapter 定稿事务失败时不产生可消费 outbox；projection 失败后可重放，重复重放不产生重复 memory、vector 或伏笔记录。
+- [x] AC5：workflow 能在生成后、人工选版前、projection 处理中三个检查点分别重启恢复；已持久化完成的 LLM/DB step 不重复，crash-after-provider-response 的模糊结果进入 reconcile。
+- [x] AC6：WritingDesk 刷新、断网重连、重复点击、节点重试、定稿失败和 projection pending 均由合法 statechart transition 处理。
+- [x] AC7：后端 schema 改动后未更新生成物会使 CI 失败；`novel.ts` 与 `admin.ts` 不再各自声明 `Chapter` wire DTO。
+- [x] AC8：API 与 worker 在空库或 schema 落后时 fail readiness，但不会自行 migration/bootstrap；显式命令可完成新库和升级库初始化。
+- [x] AC9：切换完成后，FastAPI request 进程内不再运行章节长任务，trace 不再作为恢复事实源，Redis 不再作为事件事实源。
+- [x] AC10：每个子任务独立通过其测试与回滚门禁，分层集成测试覆盖 API → job → workflow → projection → SSE → statechart 全链路。
 - [ ] AC11：durable runtime 记录预期峰值并通过至少 2 倍目标负载演练；恢复延迟满足显式配置的 SLO，queue age、expired lease、dead-letter、event/projection lag 和 retention cleanup 均有指标与告警。任一门禁失败即重新打开 Temporal 选型。
 
 ## Out Of Scope

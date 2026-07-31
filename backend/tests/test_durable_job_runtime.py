@@ -5,10 +5,12 @@ import pytest
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 
+from app.core.config import settings
 from app.models import (
     AIUsageRecord,
     BackgroundTask,
     Chapter,
+    ChapterGenerationTraceProjectionCheckpoint,
     ChapterWorkflowRun,
     JobActivity,
     JobEvent,
@@ -16,6 +18,9 @@ from app.models import (
     NovelProject,
 )
 from app.models.user import User
+from app.repositories.chapter_generation_trace_projection_repository import (
+    CHAPTER_GENERATION_TRACE_PROJECTOR_NAME,
+)
 from app.services.chapter_workflow_transition import ChapterWorkflowTransition
 from app.services.job_public_projection import public_job_snapshot
 from app.services.job_registry import SideEffectClass
@@ -1247,25 +1252,130 @@ async def test_runtime_metrics_report_queue_age_statuses_and_expired_leases(
         expired.created_at = checked_at - timedelta(seconds=20)
         expired.lease_owner = "dead-worker"
         expired.lease_expires_at = checked_at - timedelta(seconds=1)
-        waiting.status = "waiting"
         waiting.created_at = checked_at - timedelta(seconds=90)
+        waiting.status = "dead_letter"
+        await session.commit()
+        events = (
+            await session.execute(select(JobEvent).where(JobEvent.user_id == 1301))
+        ).scalars().all()
+        for event in events:
+            event.created_at = checked_at - timedelta(seconds=400)
         await session.commit()
 
-        metrics = await service.get_runtime_metrics(now=checked_at)
+        metrics = await service.get_runtime_metrics(
+            now=checked_at,
+            queue_age_alert_after_seconds=40,
+            retention_max_bytes=1,
+        )
 
         assert queued.status == "queued"
         assert metrics.status_counts == {
             "queued": 1,
             "retry_wait": 1,
             "running": 1,
-            "waiting": 1,
+            "dead_letter": 1,
         }
         assert metrics.queue_depth == 2
         assert metrics.oldest_queued_age_seconds == 50
         assert metrics.expired_leases == 1
         assert metrics.latest_event_cursor > 0
+        assert metrics.event_lag == metrics.latest_event_cursor
+        assert metrics.oldest_event_lag_seconds == 400
         assert metrics.retained_event_count == 4
+        assert metrics.retained_event_bytes > 1
         assert metrics.retention_users == 0
+        assert metrics.retention_budget_bytes == 1
+        assert metrics.alerts == (
+            "job_dead_letter",
+            "job_event_lag",
+            "job_expired_lease",
+            "job_queue_age",
+            "job_retention_budget",
+        )
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_runtime_metrics_subtracts_trace_projector_checkpoint(db_session_factory):
+    checked_at = datetime(2026, 7, 28, 9, 0, tzinfo=timezone.utc)
+
+    async with db_session_factory() as session:
+        session.add(User(id=1303, username="metrics-checkpoint-writer", hashed_password="secret"))
+        await session.commit()
+        service = JobService(session)
+        for index in range(2):
+            await service.enqueue_job(
+                user_id=1303,
+                job_type="metrics-checkpoint-test",
+                title=f"投影游标指标 {index}",
+                idempotency_key=f"metrics-checkpoint-{index}",
+            )
+
+        events = (
+            await session.execute(
+                select(JobEvent)
+                .where(JobEvent.user_id == 1303)
+                .order_by(JobEvent.cursor)
+            )
+        ).scalars().all()
+        for event in events:
+            event.created_at = checked_at - timedelta(seconds=400)
+        checkpoint_cursor = events[0].cursor
+        session.add(
+            ChapterGenerationTraceProjectionCheckpoint(
+                projector_name=CHAPTER_GENERATION_TRACE_PROJECTOR_NAME,
+                last_event_cursor=checkpoint_cursor,
+            )
+        )
+        await session.commit()
+
+        metrics = await service.get_runtime_metrics(now=checked_at)
+
+        assert metrics.event_lag == metrics.latest_event_cursor - checkpoint_cursor
+        assert metrics.oldest_event_lag_seconds == 400
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_enqueue_rejects_payload_over_readiness_limit(db_session_factory, monkeypatch):
+    async with db_session_factory() as session:
+        session.add(User(id=1302, username="payload-limit-writer", hashed_password="secret"))
+        await session.commit()
+        monkeypatch.setattr(settings, "job_payload_max_bytes", 16)
+
+        accepted = await JobService(session).enqueue_job(
+            user_id=1302,
+            job_type="payload-limit-test",
+            title="payload at limit",
+            payload={"x": "a" * 8},
+            idempotency_key="payload-at-limit",
+        )
+        assert accepted.payload == {"x": "a" * 8}
+
+        with pytest.raises(ValueError, match="payload 必须是 JSON 对象"):
+            await JobService(session).enqueue_job(
+                user_id=1302,
+                job_type="payload-object-test",
+                title="payload object",
+                payload=["not-an-object"],  # type: ignore[arg-type]
+                idempotency_key="payload-object",
+            )
+
+        with pytest.raises(ValueError, match="payload 必须是 JSON 可序列化对象"):
+            await JobService(session).enqueue_job(
+                user_id=1302,
+                job_type="payload-serialization-test",
+                title="payload serialization",
+                payload={"value": object()},
+                idempotency_key="payload-serialization",
+            )
+
+        with pytest.raises(ValueError, match="payload.*16"):
+            await JobService(session).enqueue_job(
+                user_id=1302,
+                job_type="payload-limit-test",
+                title="payload limit",
+                payload={"value": "x" * 20},
+                idempotency_key="payload-limit",
+            )
 
 
 @pytest.mark.asyncio(loop_scope="session")

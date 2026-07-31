@@ -71,6 +71,7 @@ class ChapterWorkflowStartService:
         chapter_number: int,
         writing_notes: Optional[str] = None,
         flow_config: Optional[FlowConfig | dict[str, Any]] = None,
+        idempotency_key: Optional[str] = None,
     ) -> ChapterWorkflowStartResult:
         if user_id < 1:
             raise ValueError("user_id 必须大于等于 1")
@@ -91,6 +92,17 @@ class ChapterWorkflowStartService:
                 chapter_number=chapter_number,
             )
             base_revision = chapter.current_revision
+            replay = await self._idempotent_result(
+                user_id=user_id,
+                project_id=project_id,
+                chapter_number=chapter_number,
+                writing_notes=writing_notes,
+                flow_config=flow_config,
+                idempotency_key=idempotency_key,
+            )
+            if replay is not None:
+                await self.session.commit()
+                return replay
             existing = await self.workflow_repo.get_active_run(
                 project_id=project_id,
                 chapter_number=chapter_number,
@@ -146,7 +158,9 @@ class ChapterWorkflowStartService:
                 title=f"生成第 {chapter_number} 章正文",
                 payload=payload.model_dump(mode="json"),
                 payload_version=1,
-                idempotency_key=f"chapter-workflow:{run_id}",
+                idempotency_key=(
+                    idempotency_key if idempotency_key is not None else f"chapter-workflow:{run_id}"
+                ),
                 stream_type="workflow",
                 stream_id=run_id,
             )
@@ -175,6 +189,18 @@ class ChapterWorkflowStartService:
             await self.session.commit()
         except IntegrityError as error:
             await self.session.rollback()
+            if _integrity_constraint_name(error) == "uq_background_tasks_idempotency":
+                replay = await self._idempotent_result(
+                    user_id=user_id,
+                    project_id=project_id,
+                    chapter_number=chapter_number,
+                    writing_notes=writing_notes,
+                    flow_config=flow_config,
+                    idempotency_key=idempotency_key,
+                )
+                if replay is not None:
+                    await self.session.commit()
+                    return replay
             if (
                 base_revision is None
                 or _integrity_constraint_name(error) != "uq_chapter_workflow_active"
@@ -198,6 +224,41 @@ class ChapterWorkflowStartService:
         await self.session.refresh(run)
         await publish_background_task(user_id)
         return ChapterWorkflowStartResult(run=run, root_job=root_job, created=True)
+
+    async def _idempotent_result(
+        self,
+        *,
+        user_id: int,
+        project_id: str,
+        chapter_number: int,
+        writing_notes: Optional[str],
+        flow_config: Optional[FlowConfig | dict[str, Any]],
+        idempotency_key: Optional[str],
+    ) -> Optional[ChapterWorkflowStartResult]:
+        if idempotency_key is None:
+            return None
+        existing_job = await self.job_service.repo.get_by_idempotency_key(
+            user_id=user_id,
+            job_type="chapter_workflow",
+            idempotency_key=idempotency_key.strip(),
+        )
+        if existing_job is None:
+            return None
+        payload = ChapterWorkflowJobPayload.model_validate(existing_job.payload)
+        requested_flow = FlowConfig.model_validate(flow_config or {})
+        if (
+            existing_job.project_id != project_id
+            or payload.project_id != project_id
+            or payload.chapter_number != chapter_number
+            or payload.runtime_inputs.writing_notes != writing_notes
+            or payload.runtime_inputs.flow_config != requested_flow
+        ):
+            raise ValueError("同一 idempotency_key 不能用于不同的任务参数")
+        run = await self.workflow_repo.get_user_run(payload.run_id, user_id=user_id)
+        if run is None or run.root_job_id != existing_job.id:
+            raise RuntimeError("workflow idempotency root 缺少对应 run")
+        self.job_service.assert_workflow_root_identity(job=existing_job, run=run)
+        return ChapterWorkflowStartResult(run=run, root_job=existing_job, created=False)
 
     async def _existing_result(
         self,

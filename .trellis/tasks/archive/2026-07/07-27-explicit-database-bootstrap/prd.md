@@ -28,15 +28,15 @@
 
 ## Acceptance Criteria
 
-- [ ] 导入/启动 API 或 worker 不会执行 `CREATE DATABASE`、Alembic、seed、管理员创建或数据迁移。
-- [ ] 空库通过显式命令可完成建库、migration 和 bootstrap；第二次运行无额外 mutation。
-- [ ] 两个并发 bootstrap 进程只有一个执行每个 version，另一个安全退出或等待。
-- [ ] legacy adoption 只接受登记的 schema fingerprint，并记录 operator、fingerprint、备份确认和 stamp 结果；未知结构不会改变数据库。
-- [ ] schema 落后时 liveness 可存活但 readiness 失败，且给出不含密钥的诊断。
-- [ ] 用户修改过的 Prompt/配置不会被后续 bootstrap 覆盖。
-- [ ] deploy compose/script 明确包含 one-shot migrate/bootstrap，并让 API/worker 等待成功。
-- [ ] `init_db.py` 不再是混合职责入口；对应直接测试覆盖每个命令。
-- [ ] 执行新 bootstrap version 后只允许回滚到理解 ledger/readiness floor 的兼容版本；更旧 binary 拒绝部署或 readiness 失败。
+- [x] 导入/启动 API 或 worker 不会执行 `CREATE DATABASE`、Alembic、seed、管理员创建或数据迁移。
+- [x] 空库通过显式命令可完成建库、migration 和 bootstrap；第二次运行无额外 mutation。
+- [x] 两个并发 bootstrap 进程只有一个执行每个 version，另一个安全退出或等待。
+- [x] legacy adoption 只接受登记的 schema fingerprint，并记录 operator、fingerprint、备份确认和 stamp 结果；未知结构不会改变数据库。
+- [x] schema 落后时 liveness 可存活但 readiness 失败，且给出不含密钥的诊断。
+- [x] 用户修改过的 Prompt/配置不会被后续 bootstrap 覆盖。
+- [x] deploy compose/script 明确包含 one-shot migrate/bootstrap，并让 API/worker 等待成功。
+- [x] `init_db.py` 不再是混合职责入口；对应直接测试覆盖每个命令。
+- [x] 执行新 bootstrap version 后只允许回滚到理解 ledger/readiness floor 的兼容版本；更旧 binary 拒绝部署或 readiness 失败。
 
 ## Out Of Scope
 

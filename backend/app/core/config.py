@@ -183,11 +183,59 @@ class Settings(BaseSettings):
         env="JOB_WORKER_HEALTH_STALE_SECONDS",
         description="worker heartbeat 超过该秒数即不健康",
     )
+    job_peak_concurrency: int = Field(
+        default=20,
+        ge=1,
+        env="JOB_PEAK_CONCURRENCY",
+        description="production readiness 预期 durable job 峰值并发",
+    )
+    job_load_test_concurrency: int = Field(
+        default=40,
+        ge=1,
+        env="JOB_LOAD_TEST_CONCURRENCY",
+        description="production readiness 至少双倍目标并发演练值",
+    )
+    job_payload_max_bytes: int = Field(
+        default=1024 * 1024,
+        ge=1,
+        env="JOB_PAYLOAD_MAX_BYTES",
+        description="durable job canonical JSON payload 最大 UTF-8 字节数",
+    )
+    job_max_duration_seconds: int = Field(
+        default=30 * 60,
+        ge=1,
+        env="JOB_MAX_DURATION_SECONDS",
+        description="durable job 单次执行最大时长",
+    )
+    job_recovery_slo_seconds: int = Field(
+        default=5 * 60,
+        ge=1,
+        env="JOB_RECOVERY_SLO_SECONDS",
+        description="worker crash recovery P95 目标上限",
+    )
+    job_queue_age_alert_seconds: int = Field(
+        default=60,
+        ge=1,
+        env="JOB_QUEUE_AGE_ALERT_SECONDS",
+        description="最老 queued/retry job 超过该秒数触发告警",
+    )
+    job_projection_lag_alert_seconds: int = Field(
+        default=5 * 60,
+        ge=1,
+        env="JOB_PROJECTION_LAG_ALERT_SECONDS",
+        description="projection backlog 超过该秒数触发告警",
+    )
     job_event_retention_days: int = Field(
-        default=14,
+        default=30,
         ge=1,
         env="JOB_EVENT_RETENTION_DAYS",
         description="JobEvent 保留天数",
+    )
+    job_retention_max_bytes: int = Field(
+        default=100 * 1024 * 1024 * 1024,
+        ge=1,
+        env="JOB_RETENTION_MAX_BYTES",
+        description="JobEvent retention 最大预算字节数",
     )
     job_event_cleanup_interval_seconds: int = Field(
         default=3600,
@@ -253,6 +301,14 @@ class Settings(BaseSettings):
         if candidate not in valid_levels:
             raise ValueError("LOGGING_LEVEL 仅支持 CRITICAL/ERROR/WARNING/INFO/DEBUG/NOTSET")
         return candidate
+
+    @validator("job_load_test_concurrency")
+    def _validate_load_test_concurrency(cls, value: int, values: dict[str, object]) -> int:
+        """确保 readiness 演练至少覆盖目标峰值的两倍。"""
+        peak = values.get("job_peak_concurrency", 20)
+        if isinstance(peak, int) and value < peak * 2:
+            raise ValueError("JOB_LOAD_TEST_CONCURRENCY 必须至少是 JOB_PEAK_CONCURRENCY 的 2 倍")
+        return value
 
     @property
     def sqlalchemy_database_uri(self) -> str:

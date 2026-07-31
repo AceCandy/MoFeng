@@ -130,14 +130,30 @@ async def test_metrics_command_emits_json(monkeypatch, capsys) -> None:
 
     assert exit_code == 0
     assert payload["command"] == "metrics"
+    assert payload["production_readiness"] == {
+        "peak_concurrency": 20,
+        "load_test_concurrency": 40,
+        "payload_max_bytes": 1024 * 1024,
+        "max_duration_seconds": 1800,
+        "retention_days": 30,
+        "retention_max_bytes": 100 * 1024 * 1024 * 1024,
+        "recovery_slo_seconds": 300,
+        "queue_age_alert_seconds": 60,
+        "projection_lag_alert_seconds": 300,
+    }
     assert payload["queue_depth"] == 2
     assert payload["expired_leases"] == 1
+    assert payload["event_lag"] == 0
+    assert payload["oldest_event_lag_seconds"] is None
     assert payload["status_counts"] == {"failed": 1, "queued": 2}
     assert payload["chapter_projections"]["outbox_backlog"] == 1
     assert payload["chapter_projections"]["alerts"] == ["chapter_outbox_backlog"]
     assert payload["chapter_workflows"]["waiting_runs"] == 1
     assert payload["chapter_workflows"]["reconciler_fix_counts"] == {"projection_completed": 1}
     assert payload["chapter_workflows"]["alerts"] == []
+    workflow_service.get_runtime_metrics.assert_awaited_once_with(
+        projection_alert_after_seconds=worker_cli.settings.job_projection_lag_alert_seconds,
+    )
 
 
 @pytest.mark.asyncio(loop_scope="session")

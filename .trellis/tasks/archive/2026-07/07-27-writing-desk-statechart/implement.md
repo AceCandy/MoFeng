@@ -69,7 +69,7 @@ Rollback checkpoint: integration is tested independently before it replaces any 
 - [x] Add/update component tests for controls, labels, ARIA status, no-legacy-endpoint ownership and retained non-workflow behavior.
 
 Phase 5 evidence (2026-07-31): `npm run lint`, `npm run type-check` and `npm run test:unit`
-pass (30 files / 257 tests); legacy owner and deleted-file reference scans are empty; independent
+pass on final rerun (30 files / 263 tests); legacy owner and deleted-file reference scans are empty; independent
 review found and the implementation restored the version/evaluation detail modal entry paths.
 
 Rollback checkpoint: do not retain a hidden frontend feature flag. Rollback uses the previous frontend artifact plus the backend compatibility facade.
@@ -85,9 +85,10 @@ Rollback checkpoint: do not retain a hidden frontend feature flag. Rollback uses
 - [x] Run the full validation matrix below, inspect `git diff --check`, tracked/untracked files and generated artifact drift.
 - [x] Perform an independent full-scope review against `check.jsonl`, PRD AC1-AC13 and the rollout/rollback sequence; fix findings and re-run affected gates.
 
-Phase 6 evidence (2026-07-31): PostgreSQL focused tests pass (34); frontend lint,
-type-check, unit tests (30 files / 262 tests), generated contract drift, production build
-and Playwright (20 desktop/mobile runs) pass. Rollout/rollback and browser review evidence
+Phase 6 evidence (2026-07-31): PostgreSQL focused tests pass (34), and the final isolated-
+PostgreSQL backend suite passes all 603 tests; frontend lint, type-check, unit tests
+(30 files / 263 tests), generated contract drift, production build and Playwright
+(20 desktop/mobile runs) pass. Rollout/rollback and browser review evidence
 lives in `research/rollout-rollback-drill.md` and `research/browser-review.md`. Final gzip
 is 446.93 KB JS, 85.19 KB CSS and 49.37 KB for the WritingDesk route chunk. Independent
 review findings for canonical UUID decoding and complete current ordering coverage were

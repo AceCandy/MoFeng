@@ -21,6 +21,6 @@
   "children": [],
   "parent": "07-27-architecture-convergence",
   "relatedFiles": [],
-  "notes": "实现、生成物、跨层契约与本地质量门禁已完成；OpenAPI/task SSE 15 tests、frontend 25 files/177 tests、api:check、type-check、lint、ruff、black、mypy、compileall 均通过。三项 container-backed chapter workflow HTTP tests 因 Docker socket PermissionError 在 fixture 阶段未执行断言；本机未安装 actionlint。未启动服务、连接/迁移数据库或 push，等待提交授权。",
+  "notes": "实现、生成物、跨层契约与质量门禁已完成；2026-07-31 最终集成复验为 backend 隔离 PostgreSQL 全量 603 passed、frontend 30 files/263 tests，api:check、type-check、lint、ruff、black、mypy、compileall 均通过；此前受 Docker socket 限制的三项 workflow HTTP tests 已覆盖。本机未安装 actionlint，CI 仍是该静态检查的权威门禁。",
   "meta": {}
 }

@@ -11,7 +11,7 @@
 - durable runtime 已提供唯一 JobRun current row、lease/fencing、版本化 handler、`JobActivity` intent/result、workflow `JobEvent` stream 和 ambiguous-result 停止语义：`backend/app/models/background_task.py:13-91`、`backend/app/models/job.py:27-165`、`backend/app/services/job_service.py:221-408,480-985`。
 - canonical finalize 已原子写入 Chapter revision、immutable outbox 和 dispatcher job；required projection 由既有 reconciler 唯一推进 Chapter `successful`：`backend/app/services/chapter_projection_service.py:185-390`、`backend/app/services/chapter_projection_runtime.py:577-663`、`backend/app/services/chapter_projection_rollout.py:1360-1377`。
 - finalize 当前会生成新的 workflow stream id，若直接复用会把生成 run 与 projection 事件拆成两条流：`backend/app/services/chapter_projection_service.py:216-220,319-375`。
-- 项目固定 `langgraph==1.2.2`，尚未引入 PostgreSQL checkpointer 或 Psycopg 3；runtime 不允许自行建表或 migration：`backend/requirements.txt:1-25`、`.trellis/spec/backend/database-guidelines.md`。
+- 实施前项目固定 `langgraph==1.2.2`，尚未引入 PostgreSQL checkpointer 或 Psycopg 3；本任务已按 WF-3 锁定兼容版本，runtime 仍不允许自行建表或 migration：`backend/requirements.txt:1-25`、`.trellis/spec/backend/database-guidelines.md`。
 
 ## Requirements
 
@@ -36,18 +36,18 @@
 
 ## Acceptance Criteria
 
-- [ ] AC1：在候选生成完成、等待选版和 projection pending 三个位置分别终止真实 worker 进程，重启后用同一 run/thread 从对应 checkpoint 继续。
-- [ ] AC2：重复 start/select/retry/cancel 不重复已成功的 LLM result、候选版本、canonical revision、outbox 或 projection；activity 调用次数和数据库唯一结果均有断言。
-- [ ] AC3：crash-after-provider-response-before-result 对 ambiguous external 转为 `needs_attention` 并持续占 active slot；worker 重启和普通 retry 均不再次调用 provider。原 ambiguous row保持不变；只有带重复调用确认的 `retry_external` 创建一个 command-derived intent并恰好再调用一次，同一 command重放不增加调用或intent；cancel不调用 provider。
-- [ ] AC4：stale run/revision/checkpoint command 返回 `409 + current snapshot`，不消费 command、不覆盖 successor，也不推进旧 checkpoint。
-- [ ] AC5：同章并发 start 只创建一个 active run/root JobRun/thread；另一请求返回同一 durable identity。cancel/failed/retry/superseded 与 JobRun transition 原子释放或重取 slot。
-- [ ] AC6：等待状态没有有效 worker lease；select command 和 projection resumer 能持久 requeue。Web、Redis 或 worker 进程重启不影响 run 最终进度，只影响唤醒延迟。
-- [ ] AC7：finalize outbox、dispatcher 和全部 projection child jobs 使用 start 时的 run id/workflow stream；只有 projection reconciler 能把 Chapter/current revision 推进为 `successful`。
-- [ ] AC8：删除全部 generation trace 或暂停 trace projector 后，checkpoint resume、command 去重和 terminal outcome 仍通过；兼容 trace 仅可由 JobEvent 重建。
-- [ ] AC9：旧 generate/finalize/select adapters 与新 API 指向同一 run，返回一致 Chapter lifecycle；旧 pending jobs drain 期间不存在双 executor。
-- [ ] AC10：空库/current 库迁移包含 pinned checkpointer 的完整 schema/version；API/worker 启动不执行 DDL，schema 漂移时 readiness fail closed，二进制回滚保留数据。
-- [ ] AC11：stale-run reconciler 能检测并安全收敛人为制造的 JobRun/run/checkpoint/Chapter 不一致；并发 start/command/finalize/reconcile 测试遵守既有 JobRun→Chapter 和 projection aggregate 锁序且无死锁。
-- [ ] AC12：retention 只清理超过保留期的 terminal thread checkpoint与私有 command/activity payload，不触碰 active、needs-attention、current Chapter、outbox、activity identity/status、AI usage/cost 或 projection audit；重复清理幂等且不遗留测试 schema/连接。
+- [x] AC1：在候选生成完成、等待选版和 projection pending 三个位置分别终止真实 worker 进程，重启后用同一 run/thread 从对应 checkpoint 继续。
+- [x] AC2：重复 start/select/retry/cancel 不重复已成功的 LLM result、候选版本、canonical revision、outbox 或 projection；activity 调用次数和数据库唯一结果均有断言。
+- [x] AC3：crash-after-provider-response-before-result 对 ambiguous external 转为 `needs_attention` 并持续占 active slot；worker 重启和普通 retry 均不再次调用 provider。原 ambiguous row保持不变；只有带重复调用确认的 `retry_external` 创建一个 command-derived intent并恰好再调用一次，同一 command重放不增加调用或intent；cancel不调用 provider。
+- [x] AC4：stale run/revision/checkpoint command 返回 `409 + current snapshot`，不消费 command、不覆盖 successor，也不推进旧 checkpoint。
+- [x] AC5：同章并发 start 只创建一个 active run/root JobRun/thread；另一请求返回同一 durable identity。cancel/failed/retry/superseded 与 JobRun transition 原子释放或重取 slot。
+- [x] AC6：等待状态没有有效 worker lease；select command 和 projection resumer 能持久 requeue。Web、Redis 或 worker 进程重启不影响 run 最终进度，只影响唤醒延迟。
+- [x] AC7：finalize outbox、dispatcher 和全部 projection child jobs 使用 start 时的 run id/workflow stream；只有 projection reconciler 能把 Chapter/current revision 推进为 `successful`。
+- [x] AC8：删除全部 generation trace 或暂停 trace projector 后，checkpoint resume、command 去重和 terminal outcome 仍通过；兼容 trace 仅可由 JobEvent 重建。
+- [x] AC9：旧 generate/finalize/select adapters 与新 API 指向同一 run，返回一致 Chapter lifecycle；旧 pending jobs drain 期间不存在双 executor。
+- [x] AC10：空库/current 库迁移包含 pinned checkpointer 的完整 schema/version；API/worker 启动不执行 DDL，schema 漂移时 readiness fail closed，二进制回滚保留数据。
+- [x] AC11：stale-run reconciler 能检测并安全收敛人为制造的 JobRun/run/checkpoint/Chapter 不一致；并发 start/command/finalize/reconcile 测试遵守既有 JobRun→Chapter 和 projection aggregate 锁序且无死锁。
+- [x] AC12：retention 只清理超过保留期的 terminal thread checkpoint与私有 command/activity payload，不触碰 active、needs-attention、current Chapter、outbox、activity identity/status、AI usage/cost 或 projection audit；重复清理幂等且不遗留测试 schema/连接。
 
 ## Out Of Scope
 

@@ -83,6 +83,7 @@ class ChapterWorkflowCompatibilityService:
                 chapter_number=chapter_number,
                 writing_notes=writing_notes,
                 flow_config=flow_config,
+                idempotency_key=idempotency_key,
             )
             return self._public_root_response(result.root_job)
 

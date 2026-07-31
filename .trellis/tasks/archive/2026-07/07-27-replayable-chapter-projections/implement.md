@@ -26,14 +26,12 @@ npm run test:unit
 npm run build
 ```
 
-2026-07-28 验证结果：backend `456 passed`；frontend `168 passed`，lint、type-check、
-production build 与 bundle budget 通过。backend 的 61 条 warnings 均来自既有 Pydantic v1
-兼容写法和 passlib `crypt` 弃用，本任务新增路径没有 warning。
-
-最终复核修正随机 schema fixture 的 `public` fallback 后，backend 再次全量
-`456 passed, 61 warnings`；14 个真实并发/跨进程用例在完整的 59 表随机 schema 中
-通过。初始化故障注入确认 schema 不残留；全量结束后 public 业务表与 `test_*` schema
-均为 0（仅保留 `job_executor_controls` 基础行）。
+2026-07-31 最终集成复验：隔离 PostgreSQL schema 的 backend 全量 `603 passed`，
+frontend Vitest `30 files / 263 tests`，lint、type-check、production build 与 bundle
+budget 通过。64 条 warning 均来自既有 Pydantic v1 兼容写法和 passlib `crypt` 弃用。
+14 个真实并发/跨进程用例在完整的 59 表随机 schema 中通过；初始化故障注入确认
+schema 不残留，全量结束后 public 业务表与 `test_*` schema 均为 0（仅保留
+`job_executor_controls` 基础行）。
 
 PostgreSQL integration tests 必须覆盖：
 

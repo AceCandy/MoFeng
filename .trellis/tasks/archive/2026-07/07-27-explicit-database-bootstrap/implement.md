@@ -24,12 +24,10 @@ alembic upgrade head
 
 ## Validation Record
 
-- Passed: `30 passed, 4 deselected` for database bootstrap/readiness, production config, and development/deployment static contracts (`-k 'not postgres'`).
-- Passed: Alembic reports the single head `9c2f47a1d8e6`.
-- Passed: bundled and external PostgreSQL Compose configurations parse successfully.
-- Passed: Bash syntax checks and `git -c core.whitespace=cr-at-eol diff --check`.
-- Added but not executed here: PostgreSQL empty/current/legacy adoption, migration rollback, and concurrent bootstrap integration cases. The environment cannot access the Docker socket and no `TEST_POSTGRES_URL` was provided.
-- Not executed: PowerShell runtime validation because `pwsh` is unavailable.
+- Final integration rerun (2026-07-31): the isolated PostgreSQL backend suite passed `603` tests, including empty/current/legacy migration, rollback, repeated bootstrap and concurrent bootstrap coverage.
+- Alembic reported a single head; bundled and external PostgreSQL Compose configurations parsed successfully.
+- Bash syntax checks and `git diff --check` passed.
+- PowerShell runtime validation was not executed because `pwsh` is unavailable; static deployment contract tests passed.
 
 ## Rollback
 

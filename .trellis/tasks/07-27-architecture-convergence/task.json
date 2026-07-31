@@ -3,7 +3,7 @@
   "name": "architecture-convergence",
   "title": "架构问题全面收敛",
   "description": "按架构评审顺序收敛章节生命周期、上下文、派生投影、后台任务、写作台状态、跨层契约与数据库启动职责",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

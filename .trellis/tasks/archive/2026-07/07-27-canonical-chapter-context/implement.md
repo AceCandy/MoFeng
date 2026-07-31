@@ -26,12 +26,11 @@ pytest tests/test_pipeline_langgraph_refactor_static.py
 
 ## Completion
 
-- canonical contract/resolver/adapter/recovery/AI review suite：`50 passed`。
-- pipeline 非数据库套件：`25 passed, 4 deselected`。
+- 最终集成复验（2026-07-31）：隔离 PostgreSQL schema 的 backend 全量 `603 passed`，包含此前未运行的 pipeline 4 个数据库测试与 consistency 2 个数据库测试。
+- canonical contract/resolver/adapter/recovery/AI review 与 pipeline 聚焦套件均由该全量结果覆盖。
 - `python -m compileall -q app`：通过。
 - `git -c core.whitespace=cr-at-eol diff --check`：通过。
 - 最终独立只读复核：无阻断项。
-- 未执行：pipeline 的 4 个数据库测试与 consistency 的 2 个数据库测试；`tests/conftest.py` 强制启动 testcontainers，当前环境无 Docker socket 权限。
 
 ## Rollback
 

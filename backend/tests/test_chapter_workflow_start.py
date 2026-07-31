@@ -125,6 +125,28 @@ async def test_start_freezes_identity_and_reuses_active_run(isolated_pg):
 
 
 @pytest.mark.asyncio(loop_scope="session")
+async def test_start_rejects_blank_idempotency_key(isolated_pg):
+    async with isolated_pg.session_factory() as session:
+        await _seed_project(session, user_id=4105, project_id="workflow-blank-key")
+        with pytest.raises(ValueError, match="idempotency_key 不能为空"):
+            await ChapterWorkflowStartService(session).start(
+                user_id=4105,
+                project_id="workflow-blank-key",
+                chapter_number=1,
+                idempotency_key="",
+            )
+
+    async with isolated_pg.session_factory() as session:
+        runs = await session.scalar(select(func.count()).select_from(ChapterWorkflowRun))
+        jobs = await session.scalar(
+            select(func.count())
+            .select_from(BackgroundTask)
+            .where(BackgroundTask.task_type == "chapter_workflow")
+        )
+    assert (runs, jobs) == (0, 0)
+
+
+@pytest.mark.asyncio(loop_scope="session")
 async def test_concurrent_start_returns_one_durable_identity(isolated_pg):
     session_factory = isolated_pg.session_factory
     async with session_factory() as session:

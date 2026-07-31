@@ -31,15 +31,15 @@
 
 ## Acceptance Criteria
 
-- [ ] 两个 worker 并发 claim 同一任务时只有一个成功；过期 worker 使用旧 fencing token 不能提交。
-- [ ] 执行中强制终止 worker，lease 到期后另一 worker 接管；attempt、事件顺序和最终状态正确。
-- [ ] 同一 idempotency key 的重复 enqueue 返回同一 active/succeeded job，只产生一次 canonical DB outcome；外部调用按其声明的 activity 语义验证。
-- [ ] crash-after-external-call-before-result 分别验证 provider dedupe 和 ambiguous dead-letter，不把 DB fencing 误当外部 exactly-once。
-- [ ] retry/backoff、不可重试失败、max-attempt dead-letter 和 cancel 各有集成测试。
-- [ ] SSE 从旧 cursor 重连按序补齐；Redis 关闭时测试仍通过。
-- [ ] snapshot/cursor 并发边界测试证明 snapshot 后发生的事件不会遗漏或倒退；cursor reset 必须获取新 snapshot pair。
-- [ ] API 路由中不再使用 FastAPI `BackgroundTasks` 承载章节长任务。
-- [ ] AppShell 的现有 running/succeeded/failed reminder 契约不回归。
+- [x] 两个 worker 并发 claim 同一任务时只有一个成功；过期 worker 使用旧 fencing token 不能提交。
+- [x] 执行中强制终止 worker，lease 到期后另一 worker 接管；attempt、事件顺序和最终状态正确。
+- [x] 同一 idempotency key 的重复 enqueue 返回同一 active/succeeded job，只产生一次 canonical DB outcome；外部调用按其声明的 activity 语义验证。
+- [x] crash-after-external-call-before-result 分别验证 provider dedupe 和 ambiguous dead-letter，不把 DB fencing 误当外部 exactly-once。
+- [x] retry/backoff、不可重试失败、max-attempt dead-letter 和 cancel 各有集成测试。
+- [x] SSE 从旧 cursor 重连按序补齐；Redis 关闭时测试仍通过。
+- [x] snapshot/cursor 并发边界测试证明 snapshot 后发生的事件不会遗漏或倒退；cursor reset 必须获取新 snapshot pair。
+- [x] API 路由中不再使用 FastAPI `BackgroundTasks` 承载章节长任务。
+- [x] AppShell 的现有 running/succeeded/failed reminder 契约不回归。
 
 ## Out Of Scope
 

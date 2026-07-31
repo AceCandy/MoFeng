@@ -100,10 +100,10 @@
 - [x] AC12：focused backend tests、`npm run api:check`、lint、type-check、Vitest、Playwright Chromium smoke 与 production build/bundle budget 全部通过。
 - [x] AC13：idle/running/waiting/finalizing/projection/failed/succeeded/cancelled/superseded/fatal 的文本、ARIA 语义和动作矩阵均有 component 或 browser 断言；waiting 但候选尚未同步时不能提交空选版。
 
-Acceptance evidence (2026-07-31): backend PostgreSQL tests, generated transport checks,
-frontend static/unit/browser/build gates, rollout/rollback drill and desktop/mobile
-browser review all pass. Detailed commands and counts are recorded in `implement.md` and
-the task `research/` artifacts.
+Acceptance evidence (2026-07-31): backend isolated-PostgreSQL suite `603 passed`,
+frontend Vitest `30 files / 263 tests`, Playwright desktop/mobile `20 passed`, and
+generated/static/build/rollout/rollback gates all pass. Detailed commands and evidence
+are recorded in `implement.md` and the task `research/` artifacts.
 
 ## Out Of Scope
 

@@ -102,6 +102,108 @@ payloads are `BackgroundTaskSnapshotResponse`, `BackgroundTaskEventResponse`, an
 - Retryable errors move to `retry_wait` with policy backoff. Permanent errors fail immediately. Exhausted retries move to `dead_letter`. Unknown `(job_type, payload_version)` also dead-letters instead of guessing a payload shape.
 - Public compatibility maps `retry_wait -> queued` and `dead_letter | needs_attention | cancelled -> failed`; the frontend remains a four-state consumer until that public contract is deliberately versioned.
 
+### Production readiness and payload contract
+
+#### 1. Scope / Trigger
+
+Apply this contract when changing durable-job payload admission, runtime metrics,
+retention cleanup, worker alert thresholds, or the deployment environment. These
+settings describe the PostgreSQL control-plane gate; they do not claim a provider
+throughput benchmark.
+
+#### 2. Signatures
+
+```text
+JOB_PEAK_CONCURRENCY=<integer >= 1>                 # default: 20
+JOB_LOAD_TEST_CONCURRENCY=<integer >= 2 * peak>     # default: 40
+JOB_PAYLOAD_MAX_BYTES=<integer >= 1>                # default: 1048576
+JOB_MAX_DURATION_SECONDS=<integer >= 1>             # default: 1800
+JOB_EVENT_RETENTION_DAYS=<integer >= 1>              # default: 30
+JOB_RETENTION_MAX_BYTES=<integer >= 1>              # default: 107374182400
+JOB_RECOVERY_SLO_SECONDS=<integer >= 1>              # default: 300
+JOB_QUEUE_AGE_ALERT_SECONDS=<integer >= 1>           # default: 60
+JOB_PROJECTION_LAG_ALERT_SECONDS=<integer >= 1>      # default: 300
+```
+
+```python
+await JobService(session).get_runtime_metrics(
+    now: datetime | None = None,
+    queue_age_alert_after_seconds: int | None = None,
+    retention_max_bytes: int | None = None,
+) -> JobRuntimeMetrics
+```
+
+The worker `metrics` command emits a `production_readiness` object with the nine
+configured values and emits runtime `queue_depth`, `oldest_queued_age_seconds`,
+`event_lag`, `oldest_event_lag_seconds`, `retained_event_bytes`, and stable `alerts`.
+
+#### 3. Contracts
+
+- Enqueue accepts a JSON object only. The canonical JSON representation is UTF-8
+  encoded and must be no larger than `JOB_PAYLOAD_MAX_BYTES`; the exact boundary is
+  accepted and the first byte above it is rejected.
+- `JOB_LOAD_TEST_CONCURRENCY` is rejected at settings construction when it is below
+  twice `JOB_PEAK_CONCURRENCY`.
+- Queue-age, expired-lease, dead-letter, event-lag, and retention-budget conditions
+  produce stable alert codes. Chapter projection metrics use the same configured
+  lag threshold instead of a hard-coded duration.
+- `retained_event_bytes` is the sum of PostgreSQL `pg_column_size(JobEvent.payload)`
+  for retained events. It is a payload-storage budget signal, not a full relation
+  plus index-size accounting.
+- `JOB_MAX_DURATION_SECONDS` and `JOB_RECOVERY_SLO_SECONDS` are declared readiness
+  profile/SLO values and are emitted by metrics; they are not an implicit provider
+  timeout or automatic retry policy.
+
+#### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|-----------|-----------------|
+| Payload is not a JSON object | Reject enqueue with `ValueError` |
+| Payload is not JSON serializable | Reject enqueue with `ValueError` |
+| Canonical payload exceeds the configured byte limit | Reject enqueue with `ValueError` |
+| Load-test concurrency is below `2 * peak` | Reject settings construction |
+| Queue age exceeds its threshold | Add `job_queue_age` alert |
+| Expired lease or dead-letter exists | Add `job_expired_lease` or `job_dead_letter` |
+| Oldest unprojected event exceeds projection lag threshold | Add `job_event_lag` |
+| Retained payload bytes exceed budget | Add `job_retention_budget` |
+
+#### 5. Good / Base / Bad Cases
+
+- Good: a payload exactly at 1 MiB is admitted, its duplicate idempotency key returns
+  the same job, and metrics report a bounded retention/lag snapshot.
+- Base: Redis is disabled; PostgreSQL metrics and worker scanning still expose the
+  same alert codes, with no correctness dependency on wake-up notifications.
+- Bad: accept a list payload, silently truncate canonical JSON, or infer a production
+  SLO from a synthetic job test that called a real LLM provider.
+
+#### 6. Tests Required
+
+- Settings tests assert the nine defaults and reject a load-test value below twice the
+  configured peak.
+- Enqueue tests assert object-only payloads, JSON serialization failures, exact-limit
+  acceptance, and over-limit rejection.
+- PostgreSQL metrics tests assert queue age, expired lease, dead-letter, event lag,
+  retention bytes, and all stable alert codes.
+- Worker CLI tests assert `production_readiness` and runtime metrics are JSON-safe;
+  deployment tests run `docker compose -f deploy/docker-compose.yml config --quiet`.
+- Readiness evidence records a 2x control-plane rehearsal and recovery P95 separately
+  from any future real-provider load test.
+
+#### 7. Wrong vs Correct
+
+```python
+# Wrong: a payload limit based on character count can undercount UTF-8 bytes.
+if len(json.dumps(payload)) > limit:
+    raise ValueError("payload too large")
+```
+
+```python
+# Correct: canonical JSON and UTF-8 bytes are the admission contract.
+payload_size = len(_canonical_json(payload).encode("utf-8"))
+if payload_size > settings.job_payload_max_bytes:
+    raise ValueError("payload too large")
+```
+
 ### External side-effect contract
 
 - `transactional`: the outcome writer executes inside the fenced PostgreSQL success transaction.

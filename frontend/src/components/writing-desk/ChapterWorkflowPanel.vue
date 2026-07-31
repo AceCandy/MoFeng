@@ -99,6 +99,7 @@
             :aria-label="`候选版本 ${index + 1}`"
             :tabindex="selectedCandidateId === candidate.id ? 0 : -1"
             @click="selectedCandidateId = candidate.id"
+            @keydown="onCandidateKeydown(index, $event)"
           >
             <span class="chapter-workflow__candidate-label">
               {{ candidate.version_label || `版本 ${index + 1}` }}
@@ -233,6 +234,31 @@ const preview = (content: string) => {
 const selectCandidate = () => {
   if (!canSelect.value || props.pending || selectedCandidateId.value === null) return
   emit('selectVersion', selectedCandidateId.value)
+}
+
+const onCandidateKeydown = (index: number, event: KeyboardEvent) => {
+  const lastIndex = props.candidates.length - 1
+  let nextIndex: number | null = null
+
+  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+    nextIndex = index === lastIndex ? 0 : index + 1
+  } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+    nextIndex = index === 0 ? lastIndex : index - 1
+  } else if (event.key === 'Home') {
+    nextIndex = 0
+  } else if (event.key === 'End') {
+    nextIndex = lastIndex
+  }
+
+  if (nextIndex === null) return
+  event.preventDefault()
+  if (nextIndex === index) return
+  selectedCandidateId.value = props.candidates[nextIndex].id
+  const currentRadio = event.currentTarget
+  if (!(currentRadio instanceof HTMLButtonElement)) return
+  currentRadio.parentElement
+    ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')[nextIndex]
+    ?.focus()
 }
 
 const confirmExternalRetry = async () => {

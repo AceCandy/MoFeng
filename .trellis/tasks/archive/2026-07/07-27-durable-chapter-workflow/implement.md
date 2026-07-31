@@ -67,7 +67,7 @@
 - [x] 新 start默认关闭；隔离数据库shadow、真实进程kill/restart、Redis-off与rolling-worker本地演练已通过，入口保持关闭。
 - [x] 本地切换 executor generation，旧 queued job安全reassign、旧 running lease受fence保护；数据库断言同章active run与有效root lease均为1，stale outcome未写入。
 - [ ] 一个发布窗口后删除新路径不再使用的router编排和trace recovery；保留仍有active run的Graph V1及legacy payload handler。
-- [ ] 冻结 OpenAPI/JobEvent shape，作为 generated transport contracts子任务输入。
+- [x] 冻结 OpenAPI/JobEvent shape，作为 generated transport contracts子任务输入。
 
 ## Validation
 
@@ -92,11 +92,12 @@ npm run build
 npm run check:bundle-budget
 ```
 
-本地质量证据（2026-07-30）：backend 全量 `579 passed`，仅有 8 条既有
-弃用 warning；provider 透传链 `20 passed`；AC8 与 PostgreSQL 隔离组合
-`8 passed`；真实进程 kill/restart、Redis-off 与 executor generation rolling
-测试 `1 passed`。Frontend ESLint、TypeScript、production build 和 bundle budget
-通过，Vitest `168 passed`；bundle 仅有既有体积预警。
+最终集成复验（2026-07-31）：隔离 PostgreSQL schema 的 backend 全量
+`603 passed`，本任务聚焦回归 `15 passed`；provider 透传、AC8、真实进程
+kill/restart、Redis-off 与 executor generation rolling 均包含在全量结果中。
+Frontend ESLint、TypeScript、production build 和 bundle budget 通过，Vitest
+`30 files / 263 tests`，Playwright desktop/mobile `20 passed`；仅保留 64 条既有
+Pydantic/passlib 弃用 warning。
 
 Mypy 配置范围 20 个文件、dirty Python Ruff、compileall 和
 `git diff --check` 均通过。dirty Python Black 共检查 71 个文件，继续
@@ -113,7 +114,7 @@ churn。最终 PostgreSQL 只读审计确认：临时数据库 0、`test_*` sche
 - [x] 独立实现审查：事实源、transaction ownership、锁序、activity ambiguity、command handshake、migration/runtime DDL边界。
 - [x] 独立测试审查：每条 AC有非同义反复的行为测试；kill/restart与deadlock证据来自真实连接/进程。
 - [x] Spec更新后执行全量 backend/frontend门禁；只记录既有弃用warning，不顺手处理。
-- [ ] 按 Trellis Phase 3.4单独展示提交计划并取得用户批准；禁止 push。
+- [x] 按 Trellis Phase 3.4单独展示提交计划并取得用户批准；禁止 push。
 
 ## Rollback
 

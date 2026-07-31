@@ -2,8 +2,8 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 import pytest
-from sqlalchemy import select
 
+from app.core.config import settings
 from app.models.background_task import BackgroundTask
 from app.models.chapter_projection import (
     ChapterOutboxEvent,
@@ -384,6 +384,7 @@ async def test_complete_cutover_then_rollback_restores_exact_legacy_state(
 @pytest.mark.asyncio(loop_scope="session")
 async def test_runtime_metrics_separate_current_history_legacy_and_shadow(
     db_session_factory,
+    monkeypatch,
 ) -> None:
     checked_at = datetime(2026, 7, 28, 12, 0, tzinfo=timezone.utc)
     project_id = "projection-metrics-integration"
@@ -886,3 +887,10 @@ async def test_runtime_metrics_separate_current_history_legacy_and_shadow(
             "chapter_projection_cost_unknown",
             "chapter_projection_usage_incomplete",
         }
+
+        monkeypatch.setattr(settings, "job_projection_lag_alert_seconds", 700)
+        relaxed_metrics = await ChapterProjectionService(session).get_runtime_metrics(
+            now=checked_at
+        )
+        assert "chapter_outbox_stuck" not in relaxed_metrics["alerts"]
+        assert "chapter_projection_retry_stuck" not in relaxed_metrics["alerts"]

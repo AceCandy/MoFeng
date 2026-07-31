@@ -1,7 +1,7 @@
 """assert_production_security 对默认管理员密码的校验测试（H3）。"""
 import pytest
 
-from app.core.config import assert_production_security, settings
+from app.core.config import Settings, assert_production_security, settings
 
 _STRONG_SECRET = "a" * 32  # 满足 SECRET_KEY 长度 >=32 且非弱值
 
@@ -60,3 +60,24 @@ def test_production_allows_empty_admin_password_when_admin_bootstrap_is_disabled
     )
 
     assert_production_security(config)
+
+
+def test_durable_runtime_readiness_defaults_and_two_x_guard() -> None:
+    config = Settings(_env_file=None, secret_key=_STRONG_SECRET)
+    assert config.job_peak_concurrency == 20
+    assert config.job_load_test_concurrency == 40
+    assert config.job_payload_max_bytes == 1024 * 1024
+    assert config.job_max_duration_seconds == 1800
+    assert config.job_event_retention_days == 30
+    assert config.job_retention_max_bytes == 100 * 1024 * 1024 * 1024
+    assert config.job_recovery_slo_seconds == 300
+    assert config.job_queue_age_alert_seconds == 60
+    assert config.job_projection_lag_alert_seconds == 300
+
+    with pytest.raises(ValueError, match="至少是.*2 倍"):
+        Settings(
+            _env_file=None,
+            secret_key=_STRONG_SECRET,
+            job_peak_concurrency=20,
+            job_load_test_concurrency=39,
+        )

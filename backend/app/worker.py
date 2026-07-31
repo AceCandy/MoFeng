@@ -243,10 +243,23 @@ async def _run_metrics() -> int:
             checkpoint_reader=PostgresChapterWorkflowCheckpointReader(
                 settings.sqlalchemy_database_uri
             ),
-        ).get_runtime_metrics()
+        ).get_runtime_metrics(
+            projection_alert_after_seconds=settings.job_projection_lag_alert_seconds,
+        )
     _emit(
         {
             "command": "metrics",
+            "production_readiness": {
+                "peak_concurrency": settings.job_peak_concurrency,
+                "load_test_concurrency": settings.job_load_test_concurrency,
+                "payload_max_bytes": settings.job_payload_max_bytes,
+                "max_duration_seconds": settings.job_max_duration_seconds,
+                "retention_days": settings.job_event_retention_days,
+                "retention_max_bytes": settings.job_retention_max_bytes,
+                "recovery_slo_seconds": settings.job_recovery_slo_seconds,
+                "queue_age_alert_seconds": settings.job_queue_age_alert_seconds,
+                "projection_lag_alert_seconds": settings.job_projection_lag_alert_seconds,
+            },
             **asdict(metrics),
             "chapter_projections": chapter_projections,
             "chapter_workflows": asdict(chapter_workflows),

@@ -567,13 +567,30 @@ class JobRepository(BaseRepository[BackgroundTask]):
         latest_event_cursor = await self.session.scalar(
             select(func.coalesce(func.max(JobEvent.cursor), 0))
         )
+        projected_event_cursor = await self.session.scalar(
+            select(func.coalesce(ChapterGenerationTraceProjectionCheckpoint.last_event_cursor, 0))
+            .where(
+                ChapterGenerationTraceProjectionCheckpoint.projector_name
+                == CHAPTER_GENERATION_TRACE_PROJECTOR_NAME
+            )
+        )
+        projected_cursor = int(projected_event_cursor or 0)
+        oldest_unprojected_event_at = await self.session.scalar(
+            select(func.min(JobEvent.created_at)).where(JobEvent.cursor > projected_cursor)
+        )
         retained_event_count = await self.session.scalar(select(func.count(JobEvent.cursor)))
+        retained_event_bytes = await self.session.scalar(
+            select(func.coalesce(func.sum(func.pg_column_size(JobEvent.payload)), 0))
+        )
         retention_users = await self.session.scalar(select(func.count(JobEventRetention.user_id)))
         return {
             "status_counts": status_counts,
             "oldest_queued_at": oldest_queued_at,
             "expired_leases": int(expired_leases or 0),
             "latest_event_cursor": int(latest_event_cursor or 0),
+            "projected_event_cursor": projected_cursor,
+            "oldest_unprojected_event_at": oldest_unprojected_event_at,
             "retained_event_count": int(retained_event_count or 0),
+            "retained_event_bytes": int(retained_event_bytes or 0),
             "retention_users": int(retention_users or 0),
         }

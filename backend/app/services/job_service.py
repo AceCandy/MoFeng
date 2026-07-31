@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..core.config import settings
 from ..models.background_task import BackgroundTask
 from ..models.chapter_projection import ChapterProjectionRun, ChapterRevision
 from ..models.chapter_workflow import ChapterWorkflowCommand, ChapterWorkflowRun
@@ -213,6 +214,11 @@ class JobRuntimeMetrics:
     latest_event_cursor: int
     retained_event_count: int
     retention_users: int
+    event_lag: int = 0
+    oldest_event_lag_seconds: Optional[float] = None
+    retained_event_bytes: int = 0
+    retention_budget_bytes: int = 0
+    alerts: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -420,7 +426,15 @@ class JobService:
             raise ValueError("项目不存在")
 
         normalized_key = idempotency_key.strip() if idempotency_key is not None else None
-        canonical_payload = payload or {}
+        canonical_payload = payload if payload is not None else {}
+        if not isinstance(canonical_payload, dict):
+            raise ValueError("payload 必须是 JSON 对象")
+        try:
+            payload_size_bytes = len(_canonical_json(canonical_payload).encode("utf-8"))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("payload 必须是 JSON 可序列化对象") from exc
+        if payload_size_bytes > settings.job_payload_max_bytes:
+            raise ValueError("payload 大小不能超过 " f"{settings.job_payload_max_bytes} 字节")
         if normalized_key is not None:
             existing = await self.repo.get_by_idempotency_key(
                 user_id=user_id,
@@ -3332,7 +3346,21 @@ class JobService:
         self,
         *,
         now: Optional[datetime] = None,
+        queue_age_alert_after_seconds: Optional[int] = None,
+        retention_max_bytes: Optional[int] = None,
     ) -> JobRuntimeMetrics:
+        queue_alert_after = (
+            settings.job_queue_age_alert_seconds
+            if queue_age_alert_after_seconds is None
+            else queue_age_alert_after_seconds
+        )
+        retention_budget = (
+            settings.job_retention_max_bytes if retention_max_bytes is None else retention_max_bytes
+        )
+        if queue_alert_after < 1:
+            raise ValueError("queue_age_alert_after_seconds 必须大于 0")
+        if retention_budget < 1:
+            raise ValueError("retention_max_bytes 必须大于 0")
         checked_at = now or _utc_now()
         values = await self.repo.get_runtime_metric_values(now=checked_at)
         status_counts = values["status_counts"]
@@ -3342,18 +3370,45 @@ class JobService:
         oldest_age = None
         if isinstance(oldest_queued_at, datetime):
             oldest_age = max(0.0, (checked_at - oldest_queued_at).total_seconds())
+        oldest_unprojected_event_at = values["oldest_unprojected_event_at"]
+        oldest_event_lag = None
+        if isinstance(oldest_unprojected_event_at, datetime):
+            oldest_event_lag = max(
+                0.0,
+                (checked_at - oldest_unprojected_event_at).total_seconds(),
+            )
         normalized_counts = {str(status): int(count) for status, count in status_counts.items()}
         integer_metrics: dict[str, int] = {}
         for key in (
             "expired_leases",
             "latest_event_cursor",
+            "projected_event_cursor",
             "retained_event_count",
             "retention_users",
+            "retained_event_bytes",
         ):
             value = values[key]
             if isinstance(value, bool) or not isinstance(value, int):
                 raise RuntimeError(f"job runtime metric {key} 无效")
             integer_metrics[key] = value
+        event_lag = max(
+            0,
+            integer_metrics["latest_event_cursor"] - integer_metrics["projected_event_cursor"],
+        )
+        alerts: list[str] = []
+        if oldest_age is not None and oldest_age > queue_alert_after:
+            alerts.append("job_queue_age")
+        if integer_metrics["expired_leases"] > 0:
+            alerts.append("job_expired_lease")
+        if normalized_counts.get("dead_letter", 0) > 0:
+            alerts.append("job_dead_letter")
+        if (
+            oldest_event_lag is not None
+            and oldest_event_lag > settings.job_projection_lag_alert_seconds
+        ):
+            alerts.append("job_event_lag")
+        if integer_metrics["retained_event_bytes"] > retention_budget:
+            alerts.append("job_retention_budget")
         return JobRuntimeMetrics(
             status_counts=normalized_counts,
             queue_depth=normalized_counts.get("queued", 0) + normalized_counts.get("retry_wait", 0),
@@ -3362,6 +3417,11 @@ class JobService:
             latest_event_cursor=integer_metrics["latest_event_cursor"],
             retained_event_count=integer_metrics["retained_event_count"],
             retention_users=integer_metrics["retention_users"],
+            event_lag=event_lag,
+            oldest_event_lag_seconds=oldest_event_lag,
+            retained_event_bytes=integer_metrics["retained_event_bytes"],
+            retention_budget_bytes=retention_budget,
+            alerts=tuple(sorted(alerts)),
         )
 
     async def _reap_expired_job(

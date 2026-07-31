@@ -28,6 +28,7 @@ const mountPanel = (
   listeners: Record<string, (...args: unknown[]) => void> = {},
 ) => {
   const host = document.createElement('div')
+  document.body.append(host)
   const app = createApp({
     render: () => h(ChapterWorkflowPanel, {
       phase: 'waitingForSelection',
@@ -73,6 +74,48 @@ describe('ChapterWorkflowPanel', () => {
     host.querySelector<HTMLButtonElement>('[data-action="select"]')?.click()
 
     expect(radios[1]?.getAttribute('aria-checked')).toBe('true')
+    expect(onSelectVersion).toHaveBeenCalledWith(42)
+  })
+
+  it('候选支持方向键循环、Home/End 和焦点同步', async () => {
+    const onSelectVersion = vi.fn()
+    const host = mountPanel({}, { onSelectVersion })
+    const radios = [...host.querySelectorAll<HTMLButtonElement>('[role="radio"]')]
+
+    const expectSelected = (index: number) => {
+      expect(radios.map((radio) => radio.getAttribute('aria-checked')))
+        .toEqual(index === 0 ? ['true', 'false'] : ['false', 'true'])
+      expect(radios.map((radio) => radio.tabIndex))
+        .toEqual(index === 0 ? [0, -1] : [-1, 0])
+      expect(document.activeElement).toBe(radios[index])
+    }
+    const press = async (index: number, key: string) => {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+      radios[index]?.dispatchEvent(event)
+      await nextTick()
+      expect(event.defaultPrevented).toBe(true)
+    }
+
+    radios[0]?.focus()
+    expectSelected(0)
+    await press(0, 'Home')
+    expectSelected(0)
+    await press(0, 'ArrowRight')
+    expectSelected(1)
+    await press(1, 'ArrowDown')
+    expectSelected(0)
+    await press(0, 'ArrowUp')
+    expectSelected(1)
+    await press(1, 'ArrowLeft')
+    expectSelected(0)
+    await press(0, 'End')
+    expectSelected(1)
+    await press(1, 'End')
+    expectSelected(1)
+    await press(1, 'Home')
+    expectSelected(0)
+    await press(0, 'ArrowRight')
+    host.querySelector<HTMLButtonElement>('[data-action="select"]')?.click()
     expect(onSelectVersion).toHaveBeenCalledWith(42)
   })
 

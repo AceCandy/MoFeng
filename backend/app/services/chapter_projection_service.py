@@ -1220,7 +1220,10 @@ class ChapterProjectionService:
         alerts: list[str] = []
         if int(backlog_count or 0) > 0:
             alerts.append("chapter_outbox_backlog")
-        if oldest_backlog_age is not None and oldest_backlog_age > 300:
+        if (
+            oldest_backlog_age is not None
+            and oldest_backlog_age > settings.job_projection_lag_alert_seconds
+        ):
             alerts.append("chapter_outbox_stuck")
         if projection_job_status_counts.get("needs_attention", 0) > 0 or ambiguous_external > 0:
             alerts.append("chapter_projection_needs_attention")
@@ -1228,7 +1231,10 @@ class ChapterProjectionService:
             alerts.append("chapter_projection_dead_letter")
         if int(expired_lease_count or 0) > 0:
             alerts.append("chapter_projection_expired_lease")
-        if projection_job_oldest_age_seconds.get("retry_wait", 0) > 300:
+        if (
+            projection_job_oldest_age_seconds.get("retry_wait", 0)
+            > settings.job_projection_lag_alert_seconds
+        ):
             alerts.append("chapter_projection_retry_stuck")
         if int(shadow_failed_rollout_count or 0) > 0:
             alerts.append("chapter_projection_shadow_failed")
