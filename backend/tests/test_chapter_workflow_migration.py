@@ -6,6 +6,7 @@ import asyncio
 import multiprocessing
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
+from io import StringIO
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -18,6 +19,7 @@ from test_chapter_workflow_start import _seed_project
 
 from alembic import command
 from app.core.config import settings
+from app.db.base import Base
 from app.db.chapter_workflow_checkpointer import open_chapter_workflow_checkpointer
 from app.db.migration import build_alembic_config, run_migrations
 from app.db.readiness import (
@@ -29,6 +31,7 @@ from app.models import (
     BackgroundTask,
     Chapter,
     ChapterGenerationTrace,
+    ChapterGenerationTraceProjectionCheckpoint,
     ChapterOutboxEvent,
     ChapterProjectionRollout,
     ChapterProjectionRun,
@@ -504,6 +507,125 @@ async def _terminate_worker_process(process) -> None:
 
 
 @pytest.mark.asyncio(loop_scope="session")
+async def test_workflow_migration_adopts_matching_precreated_trace_checkpoint_table() -> None:
+    source_engine = create_async_engine(settings.sqlalchemy_database_uri)
+    try:
+        async with _temporary_database(source_engine) as database_url:
+            engine = create_async_engine(database_url)
+            try:
+                async with engine.begin() as connection:
+
+                    def upgrade_to_b7(sync_connection) -> None:
+                        config = build_alembic_config(database_url)
+                        config.attributes["connection"] = sync_connection
+                        command.upgrade(config, "b7d4e2f1a9c3")
+
+                    await connection.run_sync(upgrade_to_b7)
+                    await connection.run_sync(Base.metadata.create_all)
+                    await connection.execute(
+                        sa.insert(ChapterGenerationTraceProjectionCheckpoint).values(
+                            projector_name="chapter_generation_trace_v1",
+                            last_event_cursor=17,
+                        )
+                    )
+
+                await run_migrations(database_url)
+                with pytest.raises(RuntimeError, match="binary rollback floor"):
+                    async with engine.begin() as connection:
+
+                        def downgrade_to_b7(sync_connection) -> None:
+                            config = build_alembic_config(database_url)
+                            config.attributes["connection"] = sync_connection
+                            command.downgrade(config, "b7d4e2f1a9c3")
+
+                        await connection.run_sync(downgrade_to_b7)
+
+                state = await inspect_database_state(engine)
+                async with engine.connect() as connection:
+                    cursor = await connection.scalar(
+                        sa.text(
+                            "SELECT last_event_cursor FROM "
+                            "chapter_generation_trace_projection_checkpoints "
+                            "WHERE projector_name = 'chapter_generation_trace_v1'"
+                        )
+                    )
+            finally:
+                await engine.dispose()
+
+            assert state.database_revisions == ("c8e5f2a1d4b6",)
+            assert cursor == 17
+    finally:
+        await source_engine.dispose()
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_workflow_migration_rejects_incompatible_precreated_trace_checkpoint_table() -> None:
+    source_engine = create_async_engine(settings.sqlalchemy_database_uri)
+    try:
+        async with _temporary_database(source_engine) as database_url:
+            engine = create_async_engine(database_url)
+            try:
+                async with engine.begin() as connection:
+
+                    def upgrade_to_b7(sync_connection) -> None:
+                        config = build_alembic_config(database_url)
+                        config.attributes["connection"] = sync_connection
+                        command.upgrade(config, "b7d4e2f1a9c3")
+
+                    await connection.run_sync(upgrade_to_b7)
+                    await connection.run_sync(Base.metadata.create_all)
+                    await connection.execute(
+                        sa.text(
+                            "ALTER TABLE chapter_generation_trace_projection_checkpoints "
+                            "ADD COLUMN unexpected INTEGER"
+                        )
+                    )
+
+                with pytest.raises(
+                    RuntimeError,
+                    match="incompatible_preexisting_generation_trace_projection_checkpoint_schema",
+                ):
+                    await run_migrations(database_url)
+
+                async with engine.connect() as connection:
+                    revision = await connection.scalar(
+                        sa.text("SELECT version_num FROM alembic_version")
+                    )
+                    trace_columns = await connection.run_sync(
+                        lambda sync: {
+                            item["name"]
+                            for item in sa.inspect(sync).get_columns("chapter_generation_traces")
+                        }
+                    )
+            finally:
+                await engine.dispose()
+
+            assert revision == "b7d4e2f1a9c3"
+            assert "source_run_id" not in trace_columns
+            assert "source_event_cursor" not in trace_columns
+    finally:
+        await source_engine.dispose()
+
+
+def test_workflow_migration_rejects_offline_sql_generation() -> None:
+    config = build_alembic_config(settings.sqlalchemy_database_uri)
+    output = StringIO()
+    config.output_buffer = output
+
+    with pytest.raises(RuntimeError, match="requires an online migration"):
+        command.upgrade(
+            config,
+            "b7d4e2f1a9c3:c8e5f2a1d4b6",
+            sql=True,
+        )
+
+    generated_sql = output.getvalue().upper()
+    assert "ALTER TABLE" not in generated_sql
+    assert "CREATE TABLE" not in generated_sql
+    assert "INSERT INTO" not in generated_sql
+
+
+@pytest.mark.asyncio(loop_scope="session")
 async def test_workflow_migration_installs_pinned_checkpoint_schema() -> None:
     source_engine = create_async_engine(settings.sqlalchemy_database_uri)
     try:
@@ -511,6 +633,15 @@ async def test_workflow_migration_installs_pinned_checkpoint_schema() -> None:
             await run_migrations(database_url)
             engine = create_async_engine(database_url)
             try:
+                async with engine.begin() as connection:
+
+                    def check_schema(sync_connection) -> None:
+                        config = build_alembic_config(database_url)
+                        config.attributes["connection"] = sync_connection
+                        command.check(config)
+
+                    await connection.run_sync(check_schema)
+
                 state = await inspect_database_state(engine)
                 assert state.database_revisions == ("c8e5f2a1d4b6",)
                 assert state.checkpoint_tables == CHECKPOINT_TABLES

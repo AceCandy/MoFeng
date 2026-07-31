@@ -87,7 +87,8 @@
 - Python: 本轮受影响文件 Ruff 通过，mypy 配置范围 `20 source files` 通过；Black 对这些文件仍报告仓库原有格式差异，未运行全文件格式化以避免无关 diff。
 - Readiness 参数已确认并写入 `backend/app/core/config.py`、`backend/env.example`、`deploy/.env.example` 与 Compose：峰值并发 `20`、双倍演练并发 `40`、payload `1 MiB`、最长任务 `1800 s`、事件 retention `30 天/100 GiB`、恢复 SLO `300 s`、队列告警 `60 s`、event/projection lag 告警 `300 s`。
 - Durable runtime 控制面演练（隔离 PostgreSQL，40 个 durable jobs/40 个 worker）：`40/40` 成功，总耗时约 `0.6968 s`，完成 P95 约 `0.6714 s`；`40/40` 过期 lease 接管成功，恢复 P95 约 `0.6868 s`，低于 `300 s` SLO。该演练验证 durable control plane，不等同于真实 LLM/provider 吞吐演练。
-- Retention、payload 上限、queue/event/projection lag、expired lease、dead-letter 和 retention budget 告警均有定向测试与 worker metrics 输出；未修改或迁移用户现有数据库。
+- Retention、payload 上限、queue/event/projection lag、expired lease、dead-letter 和 retention budget 告警均有定向测试与 worker metrics 输出；相关测试使用隔离数据库。
+- 启动回归修复：目标库停在 `b7d4e2f1a9c3` 时已存在旧测试/ORM `create_all` 提前创建的 trace projection checkpoint 表，导致 c8 重复建表失败。c8 现仅在线接管完整契约匹配的预建表并保留 cursor，不匹配结构 fail closed；offline SQL 与会删除 checkpoint/lineage 的 downgrade 同样 fail closed。真实 `create_all` 接管、进度保留、漂移拒绝/事务回滚、破坏性 downgrade 拒绝、offline 拒绝、`alembic check` 及标准空库升级测试通过。当前本地数据库已完成 `db-migrate -> db-bootstrap -> db-check`，结果为 c8 head、bootstrap 无新增版本、readiness `ready`；真实 `./dev.sh` 启动后 `/ready` 返回 ready、前端返回 HTTP 200，随后测试进程已关闭且 6100/6101 无残留监听。
 - 既有非阻断项：全量测试报告 `73` 条 Pydantic v1 兼容/passlib `crypt` 弃用 warning。
 
 ## Residual Risks / Rollout Preconditions
