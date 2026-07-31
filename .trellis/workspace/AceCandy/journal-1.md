@@ -939,3 +939,36 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Next Steps
 
 - None - task complete
+
+
+## Session 28: 收敛数据库启动回归并完成架构任务收尾
+
+**Date**: 2026-07-31
+**Task**: 收敛数据库启动回归并完成架构任务收尾
+**Branch**: `main`
+
+### Summary
+
+修复 c8 generation trace projection migration 对 ORM create_all 预建表的精确接管，保留 cursor；结构漂移、offline SQL 和破坏性 downgrade 均 fail closed。补齐 PostgreSQL 回归测试、alembic check 与数据库规范，验证 db-check ready。AC11 的真实 provider/生产发布窗口验收仍为后续风险。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b4c9e8d` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
