@@ -105,6 +105,7 @@ from ..schemas.novel import (
     ChapterGenerationTrace as ChapterGenerationTraceSchema,
     ChapterGenerationStatus,
     ChapterOutline as ChapterOutlineSchema,
+    ChapterVersionSelection as ChapterVersionSelectionSchema,
     NovelProject as NovelProjectSchema,
     NovelProjectSummary,
     NovelSectionResponse,
@@ -1127,6 +1128,7 @@ class NovelService:
         real_summary = chapter.real_summary if chapter else None
         content = None
         versions: Optional[List[str]] = None
+        version_selections: Optional[List[ChapterVersionSelectionSchema]] = None
         evaluation_text: Optional[str] = None
         status_value = ChapterGenerationStatus.NOT_GENERATED.value
         word_count = 0
@@ -1184,9 +1186,19 @@ class NovelService:
                 if selected_version:
                     content = selected_version.content
                 if loaded_versions:
-                    versions = [
-                        v.content
-                        for v in sorted(loaded_versions, key=lambda item: item.created_at)
+                    ordered_versions = sorted(
+                        loaded_versions,
+                        key=lambda item: (item.created_at, item.id),
+                    )
+                    versions = [version.content for version in ordered_versions]
+                    version_selections = [
+                        ChapterVersionSelectionSchema(
+                            id=version.id,
+                            content=version.content,
+                            version_label=version.version_label,
+                            workflow_run_id=self._version_workflow_run_id(version),
+                        )
+                        for version in ordered_versions
                     ]
                 if loaded_evaluations:
                     latest = sorted(loaded_evaluations, key=lambda item: item.created_at)[-1]
@@ -1202,6 +1214,7 @@ class NovelService:
             real_summary=real_summary,
             content=content,
             versions=versions,
+            version_selections=version_selections,
             evaluation=evaluation_text,
             generation_status=ChapterGenerationStatus(status_value),
             generation_progress=chapter.generation_progress if chapter else 0,
@@ -1215,6 +1228,15 @@ class NovelService:
             word_count=word_count,
             generation_traces=generation_traces,
         )
+
+    @staticmethod
+    def _version_workflow_run_id(version: ChapterVersion) -> Optional[str]:
+        metadata = version.metadata if isinstance(version.metadata, dict) else {}
+        workflow = metadata.get("_chapter_workflow")
+        if not isinstance(workflow, dict):
+            return None
+        run_id = workflow.get("run_id")
+        return run_id if isinstance(run_id, str) and len(run_id) == 36 else None
 
     @staticmethod
     def _trace_uses_llm(trace: Any) -> bool:

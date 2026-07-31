@@ -56,6 +56,41 @@ class ChapterWorkflowRepository(BaseRepository[ChapterWorkflowRun]):
         )
         return result.scalars().first()
 
+    async def get_current_user_run(
+        self,
+        *,
+        user_id: int,
+        project_id: str,
+        chapter_number: int,
+    ) -> Optional[ChapterWorkflowRun]:
+        """返回 owner scope 内可恢复的当前 run，不暴露 successor predecessor。"""
+
+        result = await self.session.execute(
+            select(ChapterWorkflowRun)
+            .where(
+                ChapterWorkflowRun.user_id == user_id,
+                ChapterWorkflowRun.project_id == project_id,
+                ChapterWorkflowRun.chapter_number == chapter_number,
+                or_(
+                    ChapterWorkflowRun.is_active.is_(True),
+                    and_(
+                        ChapterWorkflowRun.is_active.is_(False),
+                        ChapterWorkflowRun.status.in_(("successful", "failed", "cancelled")),
+                        ChapterWorkflowRun.successor_run_id.is_(None),
+                    ),
+                ),
+            )
+            .order_by(
+                ChapterWorkflowRun.is_active.desc(),
+                ChapterWorkflowRun.base_revision.desc(),
+                ChapterWorkflowRun.updated_at.desc(),
+                ChapterWorkflowRun.created_at.desc(),
+                ChapterWorkflowRun.id.desc(),
+            )
+            .limit(1)
+        )
+        return result.scalars().first()
+
     async def get_active_run(
         self,
         *,

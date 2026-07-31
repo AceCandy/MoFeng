@@ -624,6 +624,10 @@ class JobService:
             raise ValueError("workflow run 缺少事件流")
         _, resume_cursor, _ = stream_snapshot
         run = workflow_context.run
+        retry_activity_key = self._retryable_external_activity_key(
+            ambiguous_activities=ambiguous_activities,
+            workflow_context=workflow_context,
+        )
         snapshot = ChapterWorkflowSnapshot(
             run_id=run.id,
             root_job_id=job.id,
@@ -653,10 +657,53 @@ class JobService:
                 ambiguous_activities=ambiguous_activities,
                 projection_retry_available=projection_retry_available,
             ),
+            retry_activity_key=retry_activity_key,
             resume_cursor=resume_cursor,
         )
         await self.session.commit()
         return snapshot
+
+    async def get_current_chapter_workflow_snapshot(
+        self,
+        *,
+        user_id: int,
+        project_id: str,
+        chapter_number: int,
+    ) -> Optional[ChapterWorkflowSnapshot]:
+        """按 owner scope 恢复当前 workflow，并有界追随并发产生的 successor。"""
+
+        run_ref = await self.workflow_repo.get_current_user_run(
+            user_id=user_id,
+            project_id=project_id,
+            chapter_number=chapter_number,
+        )
+        if run_ref is None:
+            await self.session.rollback()
+            return None
+
+        snapshot = await self.get_chapter_workflow_snapshot(run_ref.id, user_id=user_id)
+        if snapshot.successor_run_id is None:
+            return snapshot
+
+        successor = await self.workflow_repo.get_user_run(
+            snapshot.successor_run_id,
+            user_id=user_id,
+        )
+        if (
+            successor is None
+            or successor.project_id != project_id
+            or successor.chapter_number != chapter_number
+        ):
+            await self.session.rollback()
+            raise ValueError("workflow run 后继不可用")
+
+        successor_snapshot = await self.get_chapter_workflow_snapshot(
+            successor.id,
+            user_id=user_id,
+        )
+        if successor_snapshot.successor_run_id is not None:
+            raise ValueError("workflow current lineage 已再次变更")
+        return successor_snapshot
 
     async def reconcile_chapter_workflow(
         self,
@@ -2081,6 +2128,24 @@ class JobService:
         }:
             allowed.append("cancel")
         return allowed
+
+    @staticmethod
+    def _retryable_external_activity_key(
+        *,
+        ambiguous_activities: list[JobActivity],
+        workflow_context: LockedChapterWorkflowTransition,
+    ) -> Optional[str]:
+        return next(
+            (
+                activity.activity_key
+                for activity in ambiguous_activities
+                if JobService._is_canonical_workflow_provider_request(
+                    activity.request_payload,
+                    workflow_context=workflow_context,
+                )
+            ),
+            None,
+        )
 
     async def _has_retryable_workflow_projection(
         self,

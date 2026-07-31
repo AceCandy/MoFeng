@@ -18,7 +18,7 @@ import re
 from datetime import datetime
 from typing import NoReturn, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -32,6 +32,7 @@ from ...schemas.chapter_workflow import (
     ChapterWorkflowCommandConflictResponse,
     ChapterWorkflowCommandEnvelope,
     ChapterWorkflowCommandResponse,
+    ChapterWorkflowConnection,
     ChapterWorkflowSnapshot,
     ChapterWorkflowStartRequest,
     ChapterWorkflowStartResponse,
@@ -221,6 +222,10 @@ def _raise_workflow_lookup_error(exc: ValueError) -> NoReturn:
     raise HTTPException(status_code=409, detail="章节工作流当前不可用") from exc
 
 
+def _chapter_workflow_events_url(run_id: str) -> str:
+    return f"/api/tasks/events?stream_type=workflow&stream_id={run_id}"
+
+
 @router.post(
     "/chapter-workflows",
     response_model=ChapterWorkflowStartResponse,
@@ -255,10 +260,35 @@ async def start_chapter_workflow(
     return ChapterWorkflowStartResponse(
         created=result.created,
         snapshot=snapshot,
-        events_url=(
-            "/api/tasks/events?stream_type=workflow"
-            f"&stream_id={snapshot.run_id}"
-        ),
+        events_url=_chapter_workflow_events_url(snapshot.run_id),
+    )
+
+
+@router.get(
+    "/chapter-workflows/current",
+    response_model=Optional[ChapterWorkflowConnection],
+)
+async def get_current_chapter_workflow(
+    project_id: str = Query(min_length=1, max_length=36),
+    chapter_number: int = Query(ge=1),
+    job_service: JobService = Depends(get_job_service),
+    current_user: UserInDB = Depends(get_current_user),
+) -> Optional[ChapterWorkflowConnection]:
+    """恢复 owner scope 内可连接的当前 workflow；无可见 run 时返回 null。"""
+
+    try:
+        snapshot = await job_service.get_current_chapter_workflow_snapshot(
+            user_id=current_user.id,
+            project_id=project_id,
+            chapter_number=chapter_number,
+        )
+    except ValueError as exc:
+        _raise_workflow_lookup_error(exc)
+    if snapshot is None:
+        return None
+    return ChapterWorkflowConnection(
+        snapshot=snapshot,
+        events_url=_chapter_workflow_events_url(snapshot.run_id),
     )
 
 

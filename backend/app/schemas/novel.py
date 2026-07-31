@@ -3,7 +3,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ChoiceOption(BaseModel):
@@ -78,10 +78,22 @@ class ChapterGenerationTrace(BaseModel):
     created_at: Optional[datetime] = None
 
 
+class ChapterVersionSelection(BaseModel):
+    """章节候选的公开选版投影，不暴露 provider payload 或内部结果 hash。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: int = Field(ge=1)
+    content: str
+    version_label: Optional[str] = Field(default=None, max_length=64)
+    workflow_run_id: Optional[str] = Field(default=None, min_length=36, max_length=36)
+
+
 class Chapter(ChapterOutline):
     real_summary: Optional[str] = None
     content: Optional[str] = None
     versions: Optional[List[str]] = None
+    version_selections: Optional[List[ChapterVersionSelection]] = None
     evaluation: Optional[str] = None
     generation_status: ChapterGenerationStatus = ChapterGenerationStatus.NOT_GENERATED
     generation_progress: Optional[int] = None

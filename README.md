@@ -258,7 +258,12 @@ Docker 部署：使用 `deploy/.env.example` 作为 `deploy/.env` 模板。
 最低可启动配置：
 
 - `SECRET_KEY`
+- `CHAPTER_WORKFLOW_START_ENABLED=true`（WritingDesk statechart 发布）
 - `POSTGRES_HOST` / `POSTGRES_PORT` / `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DATABASE`
+
+WritingDesk statechart 与该开关属于同一发布单元。上线时先部署兼容后端，再显式启用
+`CHAPTER_WORKFLOW_START_ENABLED=true`，最后部署新前端。回滚必须同时部署上一版前端并把
+该开关设为 `false`；不能让仅支持 statechart 的新前端继续连接关闭了 workflow start 的后端。
 
 建议补齐（确保创作能力完整可用）：
 

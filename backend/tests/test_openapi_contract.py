@@ -13,10 +13,10 @@ import pytest
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 
-BASELINE_PATH_COUNT = 86
-BASELINE_OPERATION_COUNT = 110
+BASELINE_PATH_COUNT = 87
+BASELINE_OPERATION_COUNT = 111
 BASELINE_SCHEMA_COUNT = 92
-BASELINE_OPERATION_ID_SHA256 = "18f9fcb2944270ab91d2fdbf3e4e552b891e4e56d7925cb9079484ef12c60aa2"
+BASELINE_OPERATION_ID_SHA256 = "9f3ce62d0ebf49d91bb99c89d7dfaf35d7bbb035ca5dd2cfdd3669a612e0fdd2"
 HTTP_METHODS = {"delete", "get", "head", "options", "patch", "post", "put", "trace"}
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 EXPECTED_RESPONSE_SCHEMAS = {

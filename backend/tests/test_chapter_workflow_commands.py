@@ -1128,7 +1128,7 @@ async def test_workflow_snapshot_exposes_only_fact_backed_commands(isolated_pg):
     assert waiting_snapshot.resume_cursor > 0
 
     async with session_factory() as session:
-        _, ambiguous_run, _ = await _create_ambiguous_workflow(
+        _, ambiguous_run, ambiguous_activity = await _create_ambiguous_workflow(
             session,
             user_id=1718,
             project_id="command-snapshot-ambiguous-project",
@@ -1140,6 +1140,7 @@ async def test_workflow_snapshot_exposes_only_fact_backed_commands(isolated_pg):
         )
 
     assert ambiguous_snapshot.allowed_commands == ["retry_external", "cancel"]
+    assert ambiguous_snapshot.retry_activity_key == ambiguous_activity.activity_key
     assert ambiguous_snapshot.status == "needs_attention"
 
 

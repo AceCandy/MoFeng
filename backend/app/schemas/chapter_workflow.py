@@ -26,6 +26,38 @@ ChapterWorkflowNodeKeyV1 = Literal[
     "observe_projection",
     "successful",
 ]
+ChapterWorkflowSnapshotNodeKeyV1 = (
+    ChapterWorkflowNodeKeyV1
+    | Literal[
+        "failed",
+        "cancelled",
+        "superseded",
+    ]
+)
+ChapterWorkflowRunStatus = Literal[
+    "queued",
+    "running",
+    "retry_wait",
+    "waiting_for_selection",
+    "finalizing",
+    "projection_pending",
+    "needs_attention",
+    "successful",
+    "failed",
+    "cancelled",
+    "superseded",
+]
+ChapterWorkflowRootJobStatus = Literal[
+    "queued",
+    "running",
+    "retry_wait",
+    "waiting",
+    "succeeded",
+    "failed",
+    "dead_letter",
+    "needs_attention",
+    "cancelled",
+]
 CHAPTER_WORKFLOW_NODE_KEYS_V1: tuple[ChapterWorkflowNodeKeyV1, ...] = (
     "freeze_context",
     "plan_and_direct",
@@ -49,6 +81,7 @@ ChapterWorkflowCommandType = Literal[
     "retry_projection",
     "cancel",
 ]
+ChapterWorkflowCommandStatus = Literal["pending", "applied", "rejected"]
 
 
 def validate_chapter_workflow_run_id(value: str) -> str:
@@ -171,12 +204,12 @@ class ChapterWorkflowSnapshot(BaseModel):
     chapter_number: int = Field(ge=1)
     base_revision: int = Field(ge=0)
     current_chapter_revision: int = Field(ge=0)
-    workflow_version: int = Field(ge=1)
-    state_schema_version: int = Field(ge=1)
-    context_schema_version: int = Field(ge=1)
-    status: str = Field(min_length=1, max_length=32)
-    root_job_status: str = Field(min_length=1, max_length=32)
-    node_key: str = Field(min_length=1, max_length=64)
+    workflow_version: Literal[1]
+    state_schema_version: Literal[1]
+    context_schema_version: Literal[1]
+    status: ChapterWorkflowRunStatus
+    root_job_status: ChapterWorkflowRootJobStatus
+    node_key: ChapterWorkflowSnapshotNodeKeyV1
     checkpoint_id: Optional[str] = Field(default=None, max_length=512)
     progress: int = Field(ge=0, le=100)
     row_revision: int = Field(ge=0)
@@ -185,6 +218,7 @@ class ChapterWorkflowSnapshot(BaseModel):
     error_category: Optional[str] = Field(default=None, max_length=64)
     public_error: Optional[str] = Field(default=None, max_length=512)
     allowed_commands: list[ChapterWorkflowCommandType]
+    retry_activity_key: Optional[str] = Field(max_length=128)
     resume_cursor: int = Field(ge=0)
 
 
@@ -199,14 +233,19 @@ class ChapterWorkflowStartRequest(BaseModel):
     flow_config: FlowConfig = Field(default_factory=FlowConfig)
 
 
-class ChapterWorkflowStartResponse(BaseModel):
-    """start 结果只暴露公开快照与 durable event stream 地址。"""
+class ChapterWorkflowConnection(BaseModel):
+    """可恢复的公开 workflow 快照与 opaque durable event stream 地址。"""
 
     model_config = ConfigDict(extra="forbid")
 
-    created: bool
     snapshot: ChapterWorkflowSnapshot
     events_url: str = Field(min_length=1, max_length=2_048)
+
+
+class ChapterWorkflowStartResponse(ChapterWorkflowConnection):
+    """start 结果在可恢复连接之外标识本次是否创建 run。"""
+
+    created: bool
 
 
 class ChapterWorkflowCommandResponse(BaseModel):
@@ -216,7 +255,7 @@ class ChapterWorkflowCommandResponse(BaseModel):
 
     command_id: ChapterWorkflowRunId
     type: ChapterWorkflowCommandType
-    status: str = Field(min_length=1, max_length=32)
+    status: ChapterWorkflowCommandStatus
     snapshot: ChapterWorkflowSnapshot
 
 

@@ -839,6 +839,20 @@
             "title": "Title",
             "type": "string"
           },
+          "version_selections": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChapterVersionSelection"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Selections"
+          },
           "versions": {
             "anyOf": [
               {
@@ -1529,6 +1543,52 @@
         "title": "ChapterProjectionRolloutResponse",
         "type": "object"
       },
+      "ChapterVersionSelection": {
+        "additionalProperties": false,
+        "description": "章节候选的公开选版投影，不暴露 provider payload 或内部结果 hash。",
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "id": {
+            "minimum": 1.0,
+            "title": "Id",
+            "type": "integer"
+          },
+          "version_label": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version Label"
+          },
+          "workflow_run_id": {
+            "anyOf": [
+              {
+                "maxLength": 36,
+                "minLength": 36,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Run Id"
+          }
+        },
+        "required": [
+          "id",
+          "content"
+        ],
+        "title": "ChapterVersionSelection",
+        "type": "object"
+      },
       "ChapterWorkflowCommandConflictDetail": {
         "additionalProperties": false,
         "description": "409 冲突携带稳定原因和同事务事实之后读取的当前快照。",
@@ -1638,8 +1698,11 @@
             "$ref": "#/components/schemas/ChapterWorkflowSnapshot"
           },
           "status": {
-            "maxLength": 32,
-            "minLength": 1,
+            "enum": [
+              "pending",
+              "applied",
+              "rejected"
+            ],
             "title": "Status",
             "type": "string"
           },
@@ -1662,6 +1725,27 @@
           "snapshot"
         ],
         "title": "ChapterWorkflowCommandResponse",
+        "type": "object"
+      },
+      "ChapterWorkflowConnection": {
+        "additionalProperties": false,
+        "description": "可恢复的公开 workflow 快照与 opaque durable event stream 地址。",
+        "properties": {
+          "events_url": {
+            "maxLength": 2048,
+            "minLength": 1,
+            "title": "Events Url",
+            "type": "string"
+          },
+          "snapshot": {
+            "$ref": "#/components/schemas/ChapterWorkflowSnapshot"
+          }
+        },
+        "required": [
+          "snapshot",
+          "events_url"
+        ],
+        "title": "ChapterWorkflowConnection",
         "type": "object"
       },
       "ChapterWorkflowSnapshot": {
@@ -1710,7 +1794,7 @@
             "title": "Checkpoint Id"
           },
           "context_schema_version": {
-            "minimum": 1.0,
+            "const": 1,
             "title": "Context Schema Version",
             "type": "integer"
           },
@@ -1736,10 +1820,32 @@
             "type": "boolean"
           },
           "node_key": {
-            "maxLength": 64,
-            "minLength": 1,
-            "title": "Node Key",
-            "type": "string"
+            "anyOf": [
+              {
+                "enum": [
+                  "freeze_context",
+                  "plan_and_direct",
+                  "generate_candidates",
+                  "review_candidates",
+                  "persist_candidates",
+                  "waiting_for_selection",
+                  "finalize_revision",
+                  "projection_pending",
+                  "observe_projection",
+                  "successful"
+                ],
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "failed",
+                  "cancelled",
+                  "superseded"
+                ],
+                "type": "string"
+              }
+            ],
+            "title": "Node Key"
           },
           "progress": {
             "maximum": 100.0,
@@ -1770,6 +1876,18 @@
             "title": "Resume Cursor",
             "type": "integer"
           },
+          "retry_activity_key": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry Activity Key"
+          },
           "root_job_id": {
             "maxLength": 36,
             "minLength": 36,
@@ -1777,8 +1895,17 @@
             "type": "string"
           },
           "root_job_status": {
-            "maxLength": 32,
-            "minLength": 1,
+            "enum": [
+              "queued",
+              "running",
+              "retry_wait",
+              "waiting",
+              "succeeded",
+              "failed",
+              "dead_letter",
+              "needs_attention",
+              "cancelled"
+            ],
             "title": "Root Job Status",
             "type": "string"
           },
@@ -1794,13 +1921,24 @@
             "type": "string"
           },
           "state_schema_version": {
-            "minimum": 1.0,
+            "const": 1,
             "title": "State Schema Version",
             "type": "integer"
           },
           "status": {
-            "maxLength": 32,
-            "minLength": 1,
+            "enum": [
+              "queued",
+              "running",
+              "retry_wait",
+              "waiting_for_selection",
+              "finalizing",
+              "projection_pending",
+              "needs_attention",
+              "successful",
+              "failed",
+              "cancelled",
+              "superseded"
+            ],
             "title": "Status",
             "type": "string"
           },
@@ -1818,7 +1956,7 @@
             "title": "Successor Run Id"
           },
           "workflow_version": {
-            "minimum": 1.0,
+            "const": 1,
             "title": "Workflow Version",
             "type": "integer"
           }
@@ -1841,6 +1979,7 @@
           "row_revision",
           "is_active",
           "allowed_commands",
+          "retry_activity_key",
           "resume_cursor"
         ],
         "title": "ChapterWorkflowSnapshot",
@@ -1885,7 +2024,7 @@
       },
       "ChapterWorkflowStartResponse": {
         "additionalProperties": false,
-        "description": "start 结果只暴露公开快照与 durable event stream 地址。",
+        "description": "start 结果在可恢复连接之外标识本次是否创建 run。",
         "properties": {
           "created": {
             "title": "Created",
@@ -1902,9 +2041,9 @@
           }
         },
         "required": [
-          "created",
           "snapshot",
-          "events_url"
+          "events_url",
+          "created"
         ],
         "title": "ChapterWorkflowStartResponse",
         "type": "object"
@@ -9737,6 +9876,74 @@
           }
         ],
         "summary": "Start Chapter Workflow",
+        "tags": [
+          "Writer"
+        ]
+      }
+    },
+    "/api/writer/chapter-workflows/current": {
+      "get": {
+        "description": "恢复 owner scope 内可连接的当前 workflow；无可见 run 时返回 null。",
+        "operationId": "get_current_chapter_workflow_api_writer_chapter_workflows_current_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "maxLength": 36,
+              "minLength": 1,
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "chapter_number",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Chapter Number",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ChapterWorkflowConnection"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Current Chapter Workflow Api Writer Chapter Workflows Current Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Current Chapter Workflow",
         "tags": [
           "Writer"
         ]

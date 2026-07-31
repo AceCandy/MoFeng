@@ -121,6 +121,7 @@ OPENAI_API_KEY=sk-placeholder-please-replace-with-real-key
 OPENAI_API_BASE_URL=https://api.openai.com/v1
 OPENAI_MODEL_NAME=gpt-4
 WRITER_CHAPTER_VERSION_COUNT=2
+CHAPTER_WORKFLOW_START_ENABLED=true
 
 # 向量检索配置（pgvector，与主库共用 PostgreSQL）
 VECTOR_STORE_ENABLED=true

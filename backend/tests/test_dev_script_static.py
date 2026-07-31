@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 
-
 ROOT = Path(__file__).resolve().parents[2]
 DEV_SCRIPT = ROOT / "dev.sh"
 DEV_SERVERS = ROOT / "dev_servers.py"
@@ -137,7 +136,8 @@ def test_deploy_compose_resolves_durable_worker_structure(tmp_path):
     env_file.write_text(
         "SECRET_KEY=test-only-secret-key-at-least-32-characters\n"
         "POSTGRES_PASSWORD=test-only-password\n"
-        "BOOTSTRAP_CREATE_DEFAULT_ADMIN=false\n",
+        "BOOTSTRAP_CREATE_DEFAULT_ADMIN=false\n"
+        "CHAPTER_WORKFLOW_START_ENABLED=true\n",
         encoding="utf-8",
     )
     result = subprocess.run(
@@ -185,7 +185,8 @@ def test_deploy_compose_accepts_database_url_without_postgres_password(tmp_path)
     env_file.write_text(
         "SECRET_KEY=test-only-secret-key-at-least-32-characters\n"
         "DATABASE_URL=postgresql+asyncpg://test:test@database.example/mofeng\n"
-        "BOOTSTRAP_CREATE_DEFAULT_ADMIN=false\n",
+        "BOOTSTRAP_CREATE_DEFAULT_ADMIN=false\n"
+        "CHAPTER_WORKFLOW_START_ENABLED=true\n",
         encoding="utf-8",
     )
     result = subprocess.run(
