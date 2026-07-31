@@ -127,6 +127,9 @@ Rule for new tasks: reuse `app.db.session.AsyncSessionLocal` and `settings.sqlal
 - Route/schema changes under generated transport ownership run the hermetic OpenAPI
   contract tests plus `npm run api:check`. Byte drift and semantic compatibility are
   separate gates; passing one is not evidence for the other.
+- Deterministic ordering tests that tie an `onupdate` timestamp must explicitly write
+  every compared timestamp in the same SQL update. Reassigning the same ORM value may
+  not mark it dirty, allowing `onupdate=func.now()` to replace the intended tie.
 
 ---
 

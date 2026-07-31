@@ -1,5 +1,18 @@
-{"file":".trellis/spec/frontend/index.md","reason":"WritingDesk 分层与前端总规则"}
-{"file":".trellis/spec/frontend/state-management.md","reason":"XState、Vue Query 与本地 UI state ownership"}
-{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"query/mutation/SSE actor 边界"}
-{"file":".trellis/spec/frontend/type-safety.md","reason":"generated event/snapshot 类型与 unknown narrowing"}
-{"file":".trellis/spec/frontend/task-reminders.md","reason":"保持全局任务提醒契约"}
+{"file":".trellis/spec/backend/index.md","reason":"后端分层、DI、测试与跨层前置清单"}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"current lookup 的 router-service-repository 边界"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"owner scope、null 与 HTTP 错误翻译"}
+{"file":".trellis/spec/backend/security-guidelines.md","reason":"workflow 查询和事件流的用户隔离"}
+{"file":".trellis/spec/backend/transport-contracts.md","reason":"OpenAPI、生成类型、runtime decoder 与发布单元"}
+{"file":".trellis/spec/backend/durable-job-guidelines.md","reason":"workflow snapshot、allowed commands、SSE cursor 与恢复契约"}
+{"file":".trellis/spec/frontend/index.md","reason":"WritingDesk 前端分层与总规则"}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"API、queries、composables 的落位约束"}
+{"file":".trellis/spec/frontend/state-management.md","reason":"Vue Query、XState 与本地 UI state ownership"}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"query/mutation、SSE、cursor reset 与 polling 边界"}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"generated alias、unknown decoder 与 machine 类型"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"WritingDesk 控件、props/emits 与 ARIA 组件约束"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Vitest、Playwright、lint、type-check 与 bundle 门禁"}
+{"file":".trellis/spec/frontend/task-reminders.md","reason":"保持 AppShell durable task reminder 行为"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"lookup 到 statechart 的完整数据流和 release unit"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"复用 HTTP、query key、generated alias 与共享 decoder"}
+{"file":".trellis/tasks/07-27-writing-desk-statechart/research/xstate-vue-runtime.md","reason":"精确 XState/Vue/Playwright 版本、actor 生命周期与 bundle 结论"}
+{"file":".trellis/tasks/07-27-writing-desk-statechart/research/writing-desk-transition-inventory.md","reason":"旧 lifecycle owner、迁移矩阵与状态事件清单"}

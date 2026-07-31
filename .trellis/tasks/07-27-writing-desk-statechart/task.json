@@ -3,7 +3,7 @@
   "name": "writing-desk-statechart",
   "title": "重构 WritingDesk 为 statechart",
   "description": "集中章节 UI 状态转换、重试、SSE 与 Query effects",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

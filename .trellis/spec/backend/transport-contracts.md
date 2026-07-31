@@ -78,6 +78,10 @@ skip semantic comparison; an unreadable existing baseline fails closed.
 - A dynamic JSON field typed as `unknown` stays unknown at the wire boundary. Narrow it
   once in a domain utility/decoder before UI use; do not weaken the generated alias or
   reintroduce a hand-written transport mirror.
+- Identity fields whose backend validator is stricter than generated TypeScript's
+  `string` must repeat that format check at the runtime boundary. For example, a
+  canonical UUID validator must reject a same-length non-UUID before the payload enters
+  Vue Query or an actor; a length check alone does not preserve the Pydantic contract.
 - Task HTTP snapshot and SSE snapshot use the same decoder. Snapshot/task/reset
   validate `schema_version`, reducer-critical cursor/task fields, and required shapes
   before invoking handlers. A scoped snapshot must echo the requested
@@ -107,6 +111,7 @@ skip semantic comparison; an unreadable existing baseline fails closed.
 | Task payload is not an object or lacks an integer version | Decoder returns `malformed`; no handler/state mutation |
 | Task payload version is not `1` | Decoder returns `unsupported_version`; no handler/state mutation |
 | Snapshot scope differs from the requested scope | Decoder returns `malformed`; no handler/state mutation |
+| Identity has the expected length but is not a canonical UUID | Decoder returns `malformed`; no cache/actor mutation |
 | Aborted or superseded connection delivers a late callback | Ignore it without changing snapshot or cursor |
 | Unknown outer task SSE event | Ignore it without changing state or cursor |
 | First malformed/unsupported task stream payload | Fetch one snapshot for the same authenticated scope |
@@ -121,12 +126,16 @@ skip semantic comparison; an unreadable existing baseline fails closed.
   existing domain alias, and pass byte plus semantic gates.
 - Good: a task event with valid version and cursor is decoded once and then reaches the
   reducer; an old cursor is still ignored by the reducer.
+- Good: workflow run, root job, successor, and command identities are checked as
+  canonical UUIDs before reconciliation.
 - Base: a new outer task event kind arrives. Older clients ignore it and continue from
   their current cursor.
 - Base: a backend dynamic dictionary remains `Record<string, unknown>` in generated
   TypeScript and a focused domain utility narrows only the fields the UI consumes.
 - Bad: edit `schema.d.ts`, duplicate `Chapter` fields in `admin.ts`, cast
   `message.data as BackgroundTaskEvent`, or disable a drift gate during a tool outage.
+- Bad: accept an identity because it contains 36 characters when the backend requires a
+  canonical UUID.
 - Bad: claim an SSE text frame is a JSON response body in OpenAPI, or generate a fake
   Pydantic model for a dynamic/file endpoint merely to increase coverage.
 
@@ -142,6 +151,8 @@ skip semantic comparison; an unreadable existing baseline fails closed.
 - Ownership tests prove interfaces and nested object-literal aliases fail while indexed
   generated aliases, canonical re-exports, and derived `Omit<generated, ...>` aliases pass.
 - Frontend type-check and lint run after each alias domain cutover.
+- Frontend decoder tests include same-length non-canonical values for every UUID
+  identity used to address a stream, run, root job, successor, or command.
 - CI compares a PR base artifact with the current artifact using the pinned binary.
   Fixtures or a controlled local check prove response-field removal and required request
   addition are blocking changes.
@@ -165,11 +176,17 @@ runtime validation.
 ### Correct
 
 ```ts
-export type Chapter = components['schemas']['Chapter']
+export type ChapterWorkflowSnapshot =
+  components['schemas']['ChapterWorkflowSnapshot']
 
-const decoded = decodeBackgroundTaskStreamMessage(message.event, message.data)
-if (decoded.kind === 'ok' && decoded.event === 'task') {
-  handlers.onTask(decoded.value)
+const canonicalUuid =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+
+const decodeRunId = (value: unknown): string => {
+  if (typeof value !== 'string' || !canonicalUuid.test(value)) {
+    throw new ChapterWorkflowContractError('malformed', 'run_id')
+  }
+  return value
 }
 ```
 

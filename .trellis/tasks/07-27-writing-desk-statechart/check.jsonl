@@ -1,5 +1,18 @@
-{"file":".trellis/spec/frontend/state-management.md","reason":"检查没有复制 server cache 或双状态源"}
-{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"检查所有 effects 仍走 query/mutation 边界"}
-{"file":".trellis/spec/frontend/type-safety.md","reason":"检查 event decoder、props 和 machine types"}
-{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Vitest、type-check、lint 与可访问性复核"}
-{"file":".trellis/spec/frontend/task-reminders.md","reason":"检查 AppShell reminder 行为未被破坏"}
+{"file":".trellis/spec/backend/index.md","reason":"复核后端分层和完整 Quality Check"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"复核 current lookup null/owner/error 语义"}
+{"file":".trellis/spec/backend/security-guidelines.md","reason":"复核 workflow 与 SSE owner isolation"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"复核 async、Pydantic、测试与静态门禁"}
+{"file":".trellis/spec/backend/transport-contracts.md","reason":"复核 OpenAPI/generated/decoder/semantic drift"}
+{"file":".trellis/spec/backend/durable-job-guidelines.md","reason":"复核 snapshot/cursor/command/recovery 契约"}
+{"file":".trellis/spec/frontend/index.md","reason":"复核前端总质量清单"}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"复核新模块没有越过既有目录边界"}
+{"file":".trellis/spec/frontend/state-management.md","reason":"复核无 server cache 复制或双状态源"}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"复核 effects、SSE reset 与 polling 经 query 边界"}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"复核 decoder、events、props 与 generated aliases"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"复核控件语义、ARIA 和 props/emits"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"复核 lint、type-check、Vitest、浏览器与 bundle"}
+{"file":".trellis/spec/frontend/task-reminders.md","reason":"复核全局任务提醒未回归"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"复核 backend-to-frontend 数据流与发布单元"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"复核没有重复 HTTP、schema、decoder 或 query key"}
+{"file":".trellis/tasks/07-27-writing-desk-statechart/research/xstate-vue-runtime.md","reason":"复核版本、actor 生命周期、Playwright 与 bundle 证据"}
+{"file":".trellis/tasks/07-27-writing-desk-statechart/research/writing-desk-transition-inventory.md","reason":"逐项复核 legacy lifecycle 删除与 presentation 保留"}
