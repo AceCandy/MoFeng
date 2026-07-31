@@ -904,3 +904,38 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Next Steps
 
 - None - task complete
+
+
+## Session 27: 完成 WritingDesk statechart 收敛
+
+**Date**: 2026-07-31
+**Task**: 完成 WritingDesk statechart 收敛
+**Branch**: `main`
+
+### Summary
+
+建立章节工作流 current/release 契约，将 WritingDesk 切换到 fail-closed statechart，补齐前后端回归、E2E、发布回滚和 bundle 预算证据，并同步可执行规范。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `49963ba` | (see git log) |
+| `b429ac9` | (see git log) |
+| `6e39d24` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

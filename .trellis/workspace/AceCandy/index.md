@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 26
-- **Last Active**: 2026-07-30
+- **Total Sessions**: 27
+- **Last Active**: 2026-07-31
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~906 | Active |
+| `journal-1.md` | ~941 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 27 | 2026-07-31 | 完成 WritingDesk statechart 收敛 | `49963ba`, `b429ac9`, `6e39d24` | `main` |
 | 26 | 2026-07-30 | 生成 Transport Contracts | `529490e`, `cc28aad` | `main` |
 | 25 | 2026-07-30 | 完成持久化章节工作流 | `e82423c`, `794c9bc` | `main` |
 | 24 | 2026-07-29 | 完成可重放章节投影 | `b28be70`, `3a7f203` | `main` |
