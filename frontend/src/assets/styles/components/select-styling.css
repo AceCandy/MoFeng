@@ -12,6 +12,13 @@ select.md-text-field-input {
   background-position: right 16px center !important;
   background-size: 16px !important;
   padding-right: 40px !important; /* 预留出小箭头的展示空间 */
+  /* 长选项文本（如 模型名 · 供应商）不再撑爆网格轨道与卡片：
+     允许收缩到轨道宽度并以省略号截断 */
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 暗色模式下更换为浅色小箭头 */

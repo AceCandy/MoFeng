@@ -24,14 +24,8 @@
 
 .app-shell__user-tag.is-trigger:hover,
 .app-shell__user-tag.is-trigger.is-active {
-  background-color: var(--md-surface-variant) !important;
+  background-color: var(--md-surface-container-high) !important;
   border-color: var(--md-outline-variant) !important;
-}
-
-:root[data-theme='dark'] .app-shell__user-tag.is-trigger:hover,
-:root[data-theme='dark'] .app-shell__user-tag.is-trigger.is-active {
-  background-color: rgba(229, 222, 201, 0.06) !important;
-  border-color: rgba(229, 222, 201, 0.12) !important;
 }
 
 /* 2. 用户下拉箭头 SVG 样式 */
@@ -61,13 +55,13 @@
   z-index: 50 !important;
   background-color: var(--md-surface-bright) !important;
   /* 文人熟宣噪点背景 */
-  background-image: radial-gradient(rgba(28, 32, 34, 0.03) 1px, transparent 0) !important;
-  background-size: 6px 6px !important;
+  background-image: radial-gradient(color-mix(in srgb, var(--md-on-surface) 3%, transparent) 1px, transparent 0) !important;
+  background-size: 8px 8px !important;
   /* 宣纸古籍粗细双边线 */
   border: 2px solid var(--md-primary-dark) !important;
-  outline: 1px solid rgba(28, 32, 34, 0.1) !important;
+  outline: 1px solid color-mix(in srgb, var(--md-on-surface) 10%, transparent) !important;
   border-radius: var(--md-radius-xs) !important;
-  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15) !important;
+  box-shadow: 3px 3px 0px var(--md-outline-variant) !important;
   padding: var(--md-spacing-3) 0 !important;
   text-align: left !important;
   animation: inkLetterFadeIn var(--md-duration-short) var(--md-easing-standard) !important;
@@ -123,7 +117,7 @@
 
 /* Hover 时的松烟朱砂墨晕 */
 .app-shell__user-dropdown-item:hover {
-  background-color: rgba(184, 60, 50, 0.04) !important;
+  background-color: color-mix(in srgb, var(--md-secondary) 4%, transparent) !important;
 }
 
 .app-shell__user-dropdown-item .app-shell__action-badge {
@@ -167,13 +161,13 @@
 
 /* 退出项 hover 时为极柔焦墨底色 */
 .app-shell__user-dropdown-item.is-logout-action:hover {
-  background-color: rgba(28, 32, 34, 0.04) !important;
+  background-color: var(--md-state-layer-hover) !important;
 }
 
 /* 金石印章的盖章物理下压 Hover 联动 */
 .app-shell__user-dropdown-item:hover .app-shell__action-badge {
   transform: translateY(1px) scale(0.97) !important;
-  box-shadow: 0.5px 0.5px 0px rgba(28, 32, 34, 0.1) !important;
+  box-shadow: 0.5px 0.5px 0px color-mix(in srgb, var(--md-on-surface) 10%, transparent) !important;
 }
 
 /* 6. 暗色模式 (深夜书房) 超精细化适配 */
@@ -181,18 +175,17 @@
   background-color: var(--md-surface-bright) !important;
   /* 黛青宣纸噪点 */
   background-image: radial-gradient(rgba(229, 222, 201, 0.015) 1px, transparent 0) !important;
-  border-color: #9c332b !important; /* 朱泥色围框 */
+  border-color: var(--md-secondary) !important; /* 朱泥色围框 */
   outline-color: rgba(229, 222, 201, 0.08) !important;
-  box-shadow: 4px 4px 0px rgba(13, 16, 17, 0.5) !important;
 }
 
 :root[data-theme='dark'] .app-shell__user-dropdown-header {
-  color: #e5dec9 !important;
+  color: var(--md-on-surface) !important;
   border-bottom-color: rgba(229, 222, 201, 0.12) !important;
 }
 
 :root[data-theme='dark'] .app-shell__user-dropdown-item:hover {
-  background-color: rgba(156, 51, 43, 0.08) !important; /* 暗色朱砂墨晕 */
+  background-color: color-mix(in srgb, var(--md-secondary) 8%, transparent) !important; /* 暗色朱砂墨晕 */
 }
 
 :root[data-theme='dark'] .app-shell__user-dropdown-item.is-logout-action:hover {
@@ -208,5 +201,9 @@
   /* 窄屏恢复展示 user-tag 及其下拉功能 */
   body .app-shell__user-tag {
     display: flex !important;
+  }
+  /* 但隐藏名签文字，仅留身份圆点与箭头作触发，给书卷胶囊让位 */
+  body .app-shell__user-tag .app-shell__user-name {
+    display: none !important;
   }
 }

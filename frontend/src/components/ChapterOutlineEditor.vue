@@ -1,7 +1,7 @@
 <!-- AIMETA P=章节大纲编辑_大纲编辑器|R=大纲编辑|NR=不含章节内容|E=component:ChapterOutlineEditor|X=internal|A=编辑器|D=vue|S=dom|RD=./README.ai -->
 <template>
   <div class="space-y-4 max-h-96 overflow-y-auto p-1">
-    <div v-for="(chapter, index) in localOutline" :key="index" class="p-4 border border-[var(--md-outline-variant)] rounded-lg bg-[var(--md-surface-container-low)]">
+    <div v-for="(chapter, index) in localOutline" :key="index" class="p-4 border border-[var(--md-outline-variant)] rounded bg-[var(--md-surface-container-low)]">
       <div class="flex items-center mb-2">
         <span class="font-bold text-[var(--md-primary)] mr-2">第 {{ chapter.chapter_number }} 章</span>
         <input
@@ -15,7 +15,7 @@
         <button
           type="button"
           @click="removeChapter(index)"
-          class="blueprint-editor__delete-button ml-2 text-[var(--md-error)] hover:text-[var(--md-error)] transition-colors"
+          class="blueprint-editor__delete-button ml-2 text-[var(--md-error)] hover:text-[var(--md-error-strong)] hover:bg-[var(--md-error-container)] transition-colors"
           :aria-label="`删除第 ${chapter.chapter_number} 章`"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -30,6 +30,12 @@
           class="w-full h-24 p-2 mt-2 border border-[var(--md-outline-variant)] rounded-md focus:ring-1 focus:ring-[var(--md-primary-light)] focus:border-[var(--md-primary)] transition text-sm"
           placeholder="章节摘要"
         ></textarea>
+    </div>
+    <div v-if="localOutline.length === 0" class="blueprint-empty">
+      <div>
+        <p class="blueprint-empty__title">暂无章节</p>
+        <p class="blueprint-empty__desc">重新生成蓝图可补全章节大纲</p>
+      </div>
     </div>
   </div>
 </template>

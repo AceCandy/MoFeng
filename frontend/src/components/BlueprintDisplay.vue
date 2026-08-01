@@ -1,7 +1,7 @@
 <!-- AIMETA P=蓝图展示_蓝图详细信息|R=蓝图详情展示|NR=不含编辑功能|E=component:BlueprintDisplay|X=internal|A=展示组件|D=vue|S=dom|RD=./README.ai -->
 <template>
   <div class="blueprint-display fade-in">
-    <h2 class="blueprint-display__heading">你的故事蓝图已生成！</h2>
+    <p class="blueprint-display__heading">你的故事蓝图已生成！</p>
 
     <!-- AI消息 -->
     <div v-if="aiMessage" class="blueprint-display__ai-msg">
@@ -406,7 +406,7 @@ const parsedRelationships = computed(() => {
   background-color: var(--md-surface);
   border-radius: var(--md-radius-sm) !important; /* 中式木刻微直角 */
   border: 3px double var(--md-outline) !important; /* 古籍双线框线 */
-  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15) !important;
+  box-shadow: 4px 4px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
   /* 弹性布局一屏内高度完美收敛，彻底根治大纲超长溢出看不全灾难 */
   height: 100%;
   max-height: calc(var(--app-viewport-unit) - 120px) !important;
@@ -419,6 +419,7 @@ const parsedRelationships = computed(() => {
   font-family: var(--md-font-serif);
   font-size: var(--md-headline-small);
   font-weight: 700;
+  letter-spacing: 0.05em; /* 碑拓骨力：大标题拉开字距 */
   text-align: center;
   color: var(--md-primary-dark);
   margin-bottom: var(--md-spacing-4);
@@ -437,17 +438,17 @@ const parsedRelationships = computed(() => {
 
 .blueprint-display__content {
   padding: var(--md-spacing-5) var(--md-spacing-6);
-  background-color: var(--md-surface-container-lowest);
+  background-color: var(--md-surface); /* 宣纸温润：长文正文只用熟宣，不用近白 */
   border-radius: var(--md-radius-xs) !important;
   border: 1px solid var(--md-outline-variant);
   margin-bottom: var(--md-spacing-4);
   flex: 1; /* 弹性占据剩余高度，容纳超长大纲 */
   overflow-y: auto; /* 允许纵向平滑滚动 */
   min-height: 0; /* flex 内部 overflow 滚动必须 */
-  
+
   /* 优雅的水墨轻盈极细滚动条，替代暴力隐藏，全面解决不可滚动交互灾难 */
   scrollbar-width: thin;
-  scrollbar-color: rgba(60, 80, 70, 0.25) transparent;
+  scrollbar-color: color-mix(in srgb, var(--md-on-surface) 25%, transparent) transparent;
 }
 
 .blueprint-display__content::-webkit-scrollbar {
@@ -460,12 +461,12 @@ const parsedRelationships = computed(() => {
 }
 
 .blueprint-display__content::-webkit-scrollbar-thumb {
-  background-color: rgba(60, 80, 70, 0.2);
-  border-radius: var(--md-radius-full);
+  background-color: color-mix(in srgb, var(--md-on-surface) 20%, transparent) !important; /* 需压过全局透明 thumb */
+  border-radius: var(--md-radius-xs);
 }
 
 .blueprint-display__content::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(60, 80, 70, 0.45);
+  background-color: color-mix(in srgb, var(--md-on-surface) 45%, transparent) !important;
 }
 
 .blueprint-display__saving {
@@ -546,7 +547,7 @@ const parsedRelationships = computed(() => {
   border-bottom: 3px double var(--md-outline); /* 古籍特有双线分割 */
   border-radius: 4px;
   position: relative;
-  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.05);
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 5%, transparent);
 }
 
 .bp__header::before {
@@ -573,20 +574,20 @@ const parsedRelationships = computed(() => {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: var(--md-spacing-2.5);
+  gap: var(--md-spacing-2);
 }
 
-/* 微方折木刻朱砂戳印标签 */
+/* 微方折木刻细框墨字标签（朱砂罕用：只留牌匾竖批与筹牌红珠） */
 .bp__badge {
   background-color: transparent;
-  border: 1px solid var(--md-secondary-light); /* 朱色细边框 */
-  color: var(--md-secondary); /* 朱红色 */
+  border: 1px solid var(--md-outline); /* 竹青细边框 */
+  color: var(--md-primary-light); /* 松烟墨字 */
   padding: 3px var(--md-spacing-3);
   border-radius: 2px !important; /* 木刻小微直角 */
   font-family: var(--md-font-serif);
   font-size: var(--md-label-medium);
   font-weight: 600;
-  box-shadow: 1px 1px 0px rgba(180, 50, 50, 0.1);
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 10%, transparent);
   letter-spacing: 0.05em;
   display: inline-block;
   line-height: 1.3;
@@ -599,7 +600,7 @@ const parsedRelationships = computed(() => {
   border-radius: 4px !important; /* 微直角 */
   border: 2px double var(--md-outline) !important; /* 雅致双线黑边框 */
   padding: var(--md-spacing-5) clamp(var(--md-spacing-4), 4vw, var(--md-spacing-6));
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.08) !important; /* 碑拓偏置硬投影 */
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important; /* 碑拓偏置硬投影 */
 }
 
 .bp__section-header {
@@ -607,7 +608,7 @@ const parsedRelationships = computed(() => {
   align-items: center;
   margin-bottom: var(--md-spacing-5);
   border-bottom: 1px solid var(--md-outline-variant); /* 墨晕细横线 */
-  padding-bottom: var(--md-spacing-2.5);
+  padding-bottom: var(--md-spacing-3);
 }
 
 .bp__section-icon {
@@ -653,7 +654,7 @@ const parsedRelationships = computed(() => {
   top: 0;
   bottom: 0;
   width: 3.5px;
-  background-color: var(--md-secondary); /* 朱砂细描红 */
+  background-color: var(--md-primary-light); /* 松烟细描 */
 }
 
 .bp__summary-label {
@@ -683,12 +684,12 @@ const parsedRelationships = computed(() => {
   text-indent: 2em; /* 首行缩进 */
 }
 
-/* 世界设定：分栏挂轴与朱印 */
+/* 世界设定：分栏挂轴与松烟引示 */
 .bp__world-rules {
   background-color: var(--md-surface-container-low);
   border: 1.5px solid var(--md-outline);
   border-radius: 2px;
-  padding: var(--md-spacing-4.5);
+  padding: var(--md-spacing-5);
   margin-bottom: var(--md-spacing-5);
 }
 
@@ -709,7 +710,7 @@ const parsedRelationships = computed(() => {
 }
 
 .bp__world-indicator {
-  color: var(--md-secondary);
+  color: var(--md-primary-light); /* 松烟菱花引示 */
   font-weight: bold;
   margin-right: 6px;
   font-size: 10px;
@@ -723,17 +724,17 @@ const parsedRelationships = computed(() => {
   font-family: var(--md-font-serif);
   font-weight: 700;
   color: var(--md-primary-dark);
-  margin-bottom: var(--md-spacing-3.5);
+  margin-bottom: var(--md-spacing-3);
   display: flex;
   align-items: center;
   border-bottom: 1.5px solid var(--md-outline-variant);
-  padding-bottom: var(--md-spacing-1.5);
+  padding-bottom: var(--md-spacing-2);
   font-size: var(--md-title-small);
 }
 
 .bp__world-items {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: var(--md-spacing-4);
 }
 
@@ -742,14 +743,14 @@ const parsedRelationships = computed(() => {
   border: 1px solid var(--md-outline-variant);
   border-radius: 2px;
   padding: var(--md-spacing-4);
-  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.03);
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 3%, transparent);
 }
 
 .bp__world-item-name {
   font-family: var(--md-font-serif);
   font-weight: 700;
   color: var(--md-primary-dark);
-  margin-bottom: var(--md-spacing-1.5);
+  margin-bottom: var(--md-spacing-1);
   font-size: 15px;
 }
 
@@ -771,8 +772,8 @@ const parsedRelationships = computed(() => {
   background-color: var(--md-surface-container-low); /* 竹纸底衬 */
   border: 1px solid var(--md-outline-variant);
   border-radius: 2px;
-  padding: var(--md-spacing-5.5) var(--md-spacing-5);
-  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.04);
+  padding: var(--md-spacing-6) var(--md-spacing-5);
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 4%, transparent);
   transition:
     background-color 0.25s ease,
     border-color 0.25s ease,
@@ -784,7 +785,7 @@ const parsedRelationships = computed(() => {
 .bp__char-card:hover {
   background-color: var(--md-surface);
   border-color: var(--md-outline);
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.08);
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent);
 }
 
 .bp__char-card-header {
@@ -801,34 +802,34 @@ const parsedRelationships = computed(() => {
   font-size: 17px;
   font-weight: 700;
   color: var(--md-primary-dark);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
 }
 
 .bp__char-role {
   background-color: transparent;
-  border: 1px solid var(--md-secondary-light); /* 朱色印泥边框 */
-  color: var(--md-secondary);
-  padding: 2px var(--md-spacing-2.5);
+  border: 1px solid var(--md-outline); /* 竹青细框印记 */
+  color: var(--md-primary-light);
+  padding: 2px var(--md-spacing-3);
   border-radius: 1px; /* 方正印记 */
   font-size: var(--md-label-small);
   font-family: var(--md-font-serif);
   font-weight: 600;
   line-height: 1.1;
-  box-shadow: 0.5px 0.5px 0px rgba(180, 50, 50, 0.08);
+  box-shadow: 0.5px 0.5px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent);
 }
 
 .bp__char-fields {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); /* 自适应分栏 */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); /* 自适应分栏 */
   gap: var(--md-spacing-3);
   margin-bottom: var(--md-spacing-3);
 }
 
 .bp__char-field {
-  background-color: var(--md-surface); /* 纯白生宣底托 */
+  background-color: var(--md-surface); /* 熟宣底托 */
   border: 1px solid var(--md-outline-variant);
   border-radius: 2px;
-  padding: var(--md-spacing-2.5) var(--md-spacing-3.5);
+  padding: var(--md-spacing-3) var(--md-spacing-4);
   font-size: 13.5px;
   line-height: 1.6;
   display: flex;
@@ -867,8 +868,8 @@ const parsedRelationships = computed(() => {
 /* 关系：并蒂双生墨藤/青玉细墨线 */
 .bp__rel-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: var(--md-spacing-4.5);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: var(--md-spacing-4);
 }
 
 .bp__rel-card {
@@ -876,7 +877,7 @@ const parsedRelationships = computed(() => {
   border: 1px solid var(--md-outline-variant);
   border-radius: 2px;
   padding: var(--md-spacing-5);
-  box-shadow: 1.5px 1.5px 0px rgba(28, 32, 34, 0.04);
+  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-on-surface) 4%, transparent);
 }
 
 .bp__rel-pair {
@@ -897,7 +898,7 @@ const parsedRelationships = computed(() => {
   border-radius: 2px;
   font-size: 14px;
   border: 1px solid var(--md-outline);
-  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.08);
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent);
   letter-spacing: 0.02em;
 }
 
@@ -919,7 +920,7 @@ const parsedRelationships = computed(() => {
 }
 
 .bp__rel-leaf {
-  color: var(--md-secondary); /* 朱砂细印徽志 */
+  color: var(--md-primary-light); /* 松烟细叶徽志 */
   font-size: 8px;
   line-height: 1;
   z-index: 5;
@@ -941,7 +942,7 @@ const parsedRelationships = computed(() => {
   color: var(--md-primary-light);
   background-color: var(--md-surface);
   border-radius: 2px;
-  padding: var(--md-spacing-2.5) var(--md-spacing-3.5);
+  padding: var(--md-spacing-3) var(--md-spacing-4);
   border: 1px solid var(--md-outline-variant);
   line-height: 1.6;
 }
@@ -966,7 +967,7 @@ const parsedRelationships = computed(() => {
   background-color: var(--md-surface-container-low);
   border: 1px solid var(--md-outline-variant);
   border-radius: 2px;
-  padding: var(--md-spacing-5) var(--md-spacing-5.5);
+  padding: var(--md-spacing-5) var(--md-spacing-6);
   transition:
     background-color 0.25s cubic-bezier(0.2, 0, 0, 1),
     border-color 0.25s cubic-bezier(0.2, 0, 0, 1),
@@ -978,7 +979,7 @@ const parsedRelationships = computed(() => {
 .bp__chapter-item:hover {
   background-color: var(--md-surface);
   border-color: var(--md-outline);
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.08);
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent);
 }
 
 .bp__chapter-num {
@@ -995,7 +996,7 @@ const parsedRelationships = computed(() => {
   font-family: var(--md-font-serif);
   font-weight: 700;
   font-size: var(--md-label-large);
-  box-shadow: 1.5px 1.5px 0px rgba(28, 32, 34, 0.1);
+  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-on-surface) 10%, transparent);
   position: relative;
   box-sizing: border-box;
 }
@@ -1004,9 +1005,11 @@ const parsedRelationships = computed(() => {
   content: "";
   position: absolute;
   top: 4px;
+  left: 50%;
+  transform: translateX(-50%); /* 朱砂挂筹红珠水平居中 */
   width: 4px;
   height: 4px;
-  background-color: var(--md-secondary); /* 朱砂挂筹红绳印 */
+  background-color: var(--md-secondary); /* 朱砂挂筹红绳印（全页唯一朱印落款） */
   border-radius: 50%;
 }
 
@@ -1016,7 +1019,7 @@ const parsedRelationships = computed(() => {
   line-height: 1;
   font-size: 11px;
   margin-top: 5px;
-  letter-spacing: -2px;
+  letter-spacing: 0; /* 竖排回目不再负字距挤压 */
 }
 
 .bp__chapter-body {
@@ -1030,7 +1033,7 @@ const parsedRelationships = computed(() => {
   font-weight: 700;
   color: var(--md-primary-dark);
   margin-bottom: var(--md-spacing-2);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
 }
 
 .bp__chapter-summary {
@@ -1039,6 +1042,34 @@ const parsedRelationships = computed(() => {
   line-height: 1.8;
   font-size: 14.5px;
   text-indent: 2em; /* 首行缩进 */
+}
+
+/* 窄屏案头：小屏留白收敛，卡片防溢出 */
+@media (max-width: 640px) {
+  .blueprint-display {
+    padding: var(--md-spacing-4);
+  }
+
+  .blueprint-display__content {
+    padding: var(--md-spacing-4);
+  }
+
+  .bp__header {
+    padding: var(--md-spacing-4) var(--md-spacing-3);
+  }
+
+  .bp__section {
+    padding: var(--md-spacing-4);
+  }
+
+  .bp__char-card,
+  .bp__rel-card {
+    padding: var(--md-spacing-4);
+  }
+
+  .blueprint-display__actions {
+    gap: var(--md-spacing-3);
+  }
 }
 </style>
 

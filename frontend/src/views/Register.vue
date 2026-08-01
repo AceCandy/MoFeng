@@ -2,21 +2,7 @@
 <template>
   <main class="register-page">
     <section class="register-scroll" aria-labelledby="register-title">
-      <aside class="register-intro" aria-label="墨风">
-        <span class="register-intro__spine" aria-hidden="true">墨风</span>
-
-        <div class="register-intro__brand">
-          <h1>墨风</h1>
-          <span class="register-intro__seal" aria-hidden="true">墨</span>
-          <p class="register-intro__kind">AI<br />长篇创作</p>
-          <p class="register-intro__slogan">让每一次落笔，<br />都续写昨日的世界。</p>
-        </div>
-
-        <div class="register-intro__footmark" aria-hidden="true">
-          <span class="register-intro__stamp">墨</span>
-          <span>一案 · 一砚 · 一方长卷</span>
-        </div>
-      </aside>
+      <AuthIntro variant="register" />
 
       <section class="register-panel" aria-label="注册表单">
         <span class="register-panel__corner" aria-hidden="true"></span>
@@ -162,12 +148,14 @@
 
             <Transition name="ink-fade">
               <div v-if="error" id="register-error" class="register-feedback is-error" role="alert">
-                {{ error }}
+                <span class="register-feedback__stamp" aria-hidden="true">误</span>
+                <span>{{ error }}</span>
               </div>
             </Transition>
             <Transition name="ink-fade">
               <div v-if="success" class="register-feedback is-success" role="status">
-                {{ success }}
+                <span class="register-feedback__stamp" aria-hidden="true">成</span>
+                <span>{{ success }}</span>
               </div>
             </Transition>
 
@@ -176,7 +164,11 @@
               class="md-btn md-btn-filled md-ripple register-submit"
               :disabled="isRegistering"
             >
-              {{ isRegistering ? '正在开卷...' : '开卷写意' }}
+              <svg v-if="isRegistering" class="register-spinner" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="3" opacity="0.25" />
+                <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
+              </svg>
+              <span>{{ isRegistering ? '正在开卷...' : '开卷写意' }}</span>
             </button>
           </form>
 
@@ -206,15 +198,7 @@
       </div>
     </section>
 
-    <ul class="register-feature-rail" aria-label="墨风创作流程">
-      <li v-for="item in featureRail" :key="item.title">
-        <span class="register-feature-rail__icon" aria-hidden="true" v-html="item.icon"></span>
-        <span class="register-feature-rail__copy">
-          <strong>{{ item.title }}</strong>
-          <small>{{ item.desc }}</small>
-        </span>
-      </li>
-    </ul>
+    <AuthFeatureRail />
   </main>
 </template>
 
@@ -226,6 +210,8 @@ import {
   useRegisterMutation,
   useSendVerificationCodeMutation,
 } from '@/queries/auth'
+import AuthIntro from '@/components/auth/AuthIntro.vue'
+import AuthFeatureRail from '@/components/auth/AuthFeatureRail.vue'
 
 const username = ref('')
 const email = ref('')
@@ -243,34 +229,6 @@ const sending = computed(() => sendCodeMutation.isPending.value)
 const isRegistering = computed(() => registerMutation.isPending.value)
 const allowRegistration = computed(() => authOptionsQuery.data.value?.allow_registration ?? true)
 let countdownTimer: number | null = null
-
-const featureRail = [
-  {
-    title: '谋篇',
-    desc: '构建世界与大纲',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M18 3 4 17l-1 4 4-1L21 6l-3-3Z" stroke-linecap="round" stroke-linejoin="round"/><path d="m14 7 3 3M4 20c.8-.5 1.4-1.1 2-2" stroke-linecap="round"/></svg>',
-  },
-  {
-    title: '塑魂',
-    desc: '刻画人物与成长',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="7" r="3"/><path d="M5 20c0-4 3-6 7-6s7 2 7 6" stroke-linecap="round"/></svg>',
-  },
-  {
-    title: '织线',
-    desc: '伏笔线索与结构',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 9c-3 0-5 3.5-5 7.5S9.5 21 12 21s5-1 5-4.5S15 9 12 9Z" stroke-linejoin="round"/><path d="M12 9V3M10 5h4M11.5 9v11M12.5 9v11" stroke-linecap="round"/></svg>',
-  },
-  {
-    title: '润色',
-    desc: '文风润色与优化',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="6" width="16" height="12" rx="2" stroke-linejoin="round"/><ellipse cx="12" cy="12" rx="5" ry="3"/><path d="M12 10c.6-.6 1-1.4 1-2s-.4-1-1-1-1 .4-1 1 1 1.4 1 2Z" fill="currentColor"/></svg>',
-  },
-  {
-    title: '校牍',
-    desc: '一致性与纠错',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 4h14v16H5V4Z" stroke-linejoin="round"/><path d="M7 4v16M7 6h2M7 10h2M7 14h2M12 6h3v6h-3V6Z" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  },
-]
 
 // 注册开关由 Query 缓存托管；关闭时只保留页面提示状态。
 watch(
@@ -417,15 +375,15 @@ onUnmounted(() => {
 
 <style scoped>
 .register-page {
-  --auth-ink: #1c2022;
-  --auth-ink-soft: #556265;
+  --auth-ink: var(--md-on-surface);
+  --auth-ink-soft: var(--md-on-surface-variant);
   --auth-paper: #f8f2e4;
   --auth-paper-deep: #eadfc8;
   --auth-paper-light: #fbf7ec;
-  --auth-line: #c4b99f;
-  --auth-line-soft: #ded3bd;
-  --auth-shadow: rgba(28, 32, 34, 0.18);
-  --auth-vermilion: #8c241c;
+  --auth-line: var(--md-outline);
+  --auth-line-soft: var(--md-outline-variant);
+  --auth-shadow: color-mix(in srgb, var(--md-on-surface) 18%, transparent);
+  --auth-vermilion: var(--md-secondary-dark);
 
   min-height: var(--app-viewport-unit);
   position: relative;
@@ -466,11 +424,10 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: minmax(360px, 0.9fr) minmax(420px, 1.1fr);
   background: var(--auth-paper);
-  border: 1px solid rgba(148, 132, 105, 0.48);
-  border-radius: 5px;
+  border: 1px solid var(--md-outline);
+  border-radius: var(--md-radius-sm);
   box-shadow:
-    0 24px 44px var(--auth-shadow),
-    0 4px 0 rgba(104, 86, 58, 0.08),
+    6px 6px 0 var(--auth-shadow),
     inset 0 0 0 1px rgba(255, 251, 240, 0.72);
 }
 
@@ -485,142 +442,9 @@ onUnmounted(() => {
   z-index: 2;
 }
 
-.register-intro,
 .register-panel {
   min-width: 0;
   position: relative;
-}
-
-.register-intro {
-  overflow: hidden;
-  border-radius: 5px 0 0 5px;
-  background-color: #eadfca;
-  background-image:
-    linear-gradient(rgba(236, 225, 205, 0.12), rgba(236, 225, 205, 0.12)),
-    url('../assets/mofeng_scroll_left_v2.webp');
-  background-position: center;
-  background-size: cover;
-}
-
-.register-intro::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 62% 18%, rgba(251, 246, 232, 0.5), transparent 25%),
-    linear-gradient(180deg, rgba(246, 238, 219, 0.42), rgba(236, 225, 202, 0.16));
-}
-
-.register-intro__spine {
-  position: absolute;
-  top: 72px;
-  left: 56px;
-  z-index: 1;
-  color: rgba(58, 70, 72, 0.56);
-  font-family: var(--md-font-serif);
-  font-size: 15px;
-  letter-spacing: 0.18em;
-  writing-mode: vertical-rl;
-}
-
-.register-intro__brand {
-  position: absolute;
-  top: 104px;
-  left: 186px;
-  z-index: 1;
-  width: 290px;
-  height: 420px;
-}
-
-.register-intro__brand h1 {
-  position: absolute;
-  top: 0;
-  left: 0;
-  margin: 0;
-  color: rgba(28, 32, 34, 0.96);
-  font-family: var(--md-font-serif);
-  font-size: clamp(64px, 5.3vw, 86px);
-  font-weight: 600;
-  line-height: 1.02;
-  letter-spacing: 0.06em;
-  writing-mode: vertical-rl;
-  text-shadow: 0 0 10px rgba(247, 239, 220, 0.86);
-}
-
-.register-intro__seal {
-  position: absolute;
-  top: 182px;
-  left: 116px;
-  width: 30px;
-  height: 30px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--auth-vermilion);
-  background: rgba(239, 226, 201, 0.42);
-  color: var(--auth-vermilion);
-  font-family: var(--md-font-serif);
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1;
-}
-
-.register-intro__kind,
-.register-intro__slogan {
-  margin: 0;
-  color: rgba(28, 32, 34, 0.9);
-  font-family: var(--md-font-serif);
-  writing-mode: vertical-rl;
-  text-shadow: 0 0 10px rgba(247, 239, 220, 0.86);
-}
-
-.register-intro__kind {
-  position: absolute;
-  top: 96px;
-  left: 154px;
-  color: rgba(58, 70, 72, 0.86);
-  font-size: 17px;
-  font-weight: 600;
-  line-height: 1.7;
-  letter-spacing: 0.18em;
-}
-
-.register-intro__slogan {
-  position: absolute;
-  top: 250px;
-  left: 134px;
-  font-size: clamp(18px, 1.45vw, 22px);
-  font-weight: 600;
-  line-height: 1.82;
-  letter-spacing: 0.17em;
-}
-
-.register-intro__footmark {
-  position: absolute;
-  left: 56px;
-  bottom: 48px;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 14px;
-  color: rgba(28, 32, 34, 0.78);
-  font-family: var(--md-font-serif);
-  font-size: 14px;
-  letter-spacing: 0.08em;
-}
-
-.register-intro__stamp {
-  width: 38px;
-  height: 38px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--auth-vermilion);
-  color: var(--auth-vermilion);
-  font-size: 21px;
-  font-weight: 600;
-  line-height: 1;
 }
 
 .register-panel {
@@ -628,7 +452,7 @@ onUnmounted(() => {
   flex-direction: column;
   justify-content: center;
   padding: 50px clamp(64px, 6vw, 96px);
-  border-radius: 0 5px 5px 0;
+  border-radius: 0 var(--md-radius-sm) var(--md-radius-sm) 0;
   background:
     radial-gradient(circle at 91% 94%, rgba(86, 92, 83, 0.12), transparent 25%),
     linear-gradient(180deg, rgba(255, 252, 244, 0.7), rgba(249, 242, 228, 0.94)),
@@ -738,7 +562,7 @@ onUnmounted(() => {
   height: 50px;
   padding: 0 50px 0 16px;
   border: 1px solid var(--auth-line);
-  border-radius: 2px;
+  border-radius: var(--md-radius-xs);
   background-color: rgba(253, 251, 245, 0.62);
   color: var(--auth-ink);
   font-family: var(--md-font-serif);
@@ -753,15 +577,21 @@ onUnmounted(() => {
 
 .md-text-field-input:focus {
   outline: none;
-  border-color: var(--auth-vermilion);
+  border-color: var(--auth-ink);
   background-color: rgba(253, 251, 245, 0.9);
   box-shadow:
     inset 0 0 0 1px rgba(255, 251, 241, 0.75),
-    2px 2px 0 rgba(140, 36, 28, 0.12);
+    2px 2px 0 color-mix(in srgb, var(--auth-ink) 18%, transparent);
+}
+
+/* 键盘焦点可见环（≥3:1），鼠标 focus 不重复显示 */
+.md-text-field-input:focus-visible {
+  outline: 2px solid var(--auth-ink);
+  outline-offset: 2px;
 }
 
 .md-text-field-input::placeholder {
-  color: rgba(85, 98, 101, 0.52);
+  color: color-mix(in srgb, var(--auth-ink-soft) 52%, transparent);
 }
 
 .md-text-field-icon {
@@ -773,7 +603,7 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: rgba(85, 98, 101, 0.65);
+  color: color-mix(in srgb, var(--auth-ink-soft) 65%, transparent);
   transform: translateY(-50%);
 }
 
@@ -805,7 +635,7 @@ onUnmounted(() => {
   height: 50px;
   padding: 0 14px;
   border: 1px solid var(--auth-line);
-  border-radius: 2px;
+  border-radius: var(--md-radius-xs);
   background: rgba(253, 251, 245, 0.62);
   color: var(--auth-ink);
   font-family: var(--md-font-serif);
@@ -813,7 +643,7 @@ onUnmounted(() => {
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
-  box-shadow: 1px 1px 0 rgba(28, 32, 34, 0.1);
+  box-shadow: 1px 1px 0 color-mix(in srgb, var(--auth-ink) 10%, transparent);
   transition:
     background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
     border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -821,9 +651,9 @@ onUnmounted(() => {
 }
 
 .register-code-button:hover:not(:disabled) {
-  border-color: var(--auth-vermilion);
+  border-color: var(--auth-ink);
   background-color: rgba(253, 251, 245, 0.9);
-  box-shadow: 2px 2px 0 rgba(140, 36, 28, 0.12);
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--auth-ink) 14%, transparent);
 }
 
 .register-code-button:disabled {
@@ -832,39 +662,57 @@ onUnmounted(() => {
 }
 
 .register-feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
   padding: 10px 12px;
-  border-radius: 3px;
+  border-radius: var(--md-radius-xs);
   font-size: 13px;
   line-height: 1.5;
-  text-align: center;
+}
+
+.register-feedback__stamp {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  font-family: var(--md-font-serif);
+  font-size: 12px;
 }
 
 .register-feedback.is-error {
-  border: 1px dashed rgba(140, 36, 28, 0.52);
-  background: rgba(251, 235, 234, 0.84);
-  color: #6f1d16;
+  border: 1px dashed color-mix(in srgb, var(--auth-vermilion) 52%, transparent);
+  background: var(--md-error-container);
+  color: var(--md-error-text);
 }
 
 .register-feedback.is-success {
-  border: 1px dashed rgba(43, 108, 63, 0.48);
-  background: rgba(234, 246, 238, 0.84);
-  color: #1f5231;
+  border: 1px dashed color-mix(in srgb, var(--md-success) 48%, transparent);
+  background: var(--md-success-container);
+  color: var(--md-success-text);
 }
 
 .register-submit {
   width: 100%;
   min-height: 52px;
-  border: 1px solid rgba(28, 32, 34, 0.75);
-  border-radius: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 1px solid color-mix(in srgb, var(--auth-ink) 75%, transparent);
+  border-radius: var(--md-radius-xs);
   background:
     linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)),
-    #1c2022;
-  color: #f4ecda;
+    var(--auth-ink);
+  color: var(--auth-paper-light);
   font-family: var(--md-font-serif);
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.14em;
-  box-shadow: 2px 2px 0 rgba(28, 32, 34, 0.2);
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--auth-ink) 20%, transparent);
   transition:
     background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -872,18 +720,24 @@ onUnmounted(() => {
 }
 
 .register-submit:hover:not(:disabled) {
-  background-color: #262d2f;
-  box-shadow: 3px 3px 0 rgba(28, 32, 34, 0.24);
+  background-color: var(--md-primary-light);
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--auth-ink) 24%, transparent);
 }
 
 .register-submit:active:not(:disabled) {
   transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0 rgba(28, 32, 34, 0.22);
+  box-shadow: 1px 1px 0 color-mix(in srgb, var(--auth-ink) 22%, transparent);
 }
 
 .register-submit:disabled {
   opacity: 0.68;
   cursor: not-allowed;
+}
+
+.register-spinner {
+  width: 19px;
+  height: 19px;
+  animation: md-spin 900ms linear infinite;
 }
 
 .register-divider {
@@ -944,7 +798,7 @@ onUnmounted(() => {
 .register-closed-btn {
   min-height: 44px;
   margin-top: 24px;
-  border-radius: 2px;
+  border-radius: var(--md-radius-xs);
 }
 
 .register-scroll__roller {
@@ -956,7 +810,7 @@ onUnmounted(() => {
   width: 32px;
   display: flex;
   justify-content: center;
-  filter: drop-shadow(8px 6px 10px rgba(28, 32, 34, 0.24));
+  filter: drop-shadow(4px 3px 0 color-mix(in srgb, var(--md-on-surface) 22%, transparent));
 }
 
 .register-scroll__roller::before,
@@ -991,63 +845,6 @@ onUnmounted(() => {
     linear-gradient(90deg, #aa9a7f, #fbf0db 42%, #d5c2a4 78%, #8f8068);
 }
 
-.register-feature-rail {
-  width: min(88vw, 1040px);
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: clamp(18px, 3vw, 38px);
-  padding: 0;
-  margin: 0;
-  list-style: none;
-  color: rgba(28, 32, 34, 0.76);
-}
-
-.register-feature-rail li {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-}
-
-.register-feature-rail__icon {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  color: rgba(28, 32, 34, 0.76);
-  filter: drop-shadow(0 2px 3px rgba(28, 32, 34, 0.16));
-}
-
-.register-feature-rail__icon :deep(svg) {
-  width: 27px;
-  height: 27px;
-}
-
-.register-feature-rail__copy {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.register-feature-rail strong {
-  font-family: var(--md-font-serif);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-}
-
-.register-feature-rail small {
-  color: rgba(85, 98, 101, 0.78);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
 @media (max-width: 1024px) {
   .register-scroll {
     grid-template-columns: minmax(300px, 0.9fr) minmax(380px, 1.1fr);
@@ -1055,10 +852,6 @@ onUnmounted(() => {
 
   .register-panel {
     padding: 44px 46px;
-  }
-
-  .register-feature-rail {
-    grid-template-columns: repeat(3, minmax(180px, 1fr));
   }
 }
 
@@ -1075,7 +868,7 @@ onUnmounted(() => {
     min-height: auto;
     display: block;
     overflow: hidden;
-    border-radius: 10px;
+    border-radius: var(--md-radius-md);
   }
 
   .register-scroll::before {
@@ -1084,79 +877,9 @@ onUnmounted(() => {
       repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.016) 0 1px, transparent 1px 14px);
   }
 
-  .register-intro {
-    min-height: 276px;
-    border-radius: 10px 10px 0 0;
-    background-position: 42% center;
-  }
-
-  .register-intro__spine {
-    top: 28px;
-    left: 24px;
-    font-size: 13px;
-  }
-
-  .register-intro__brand {
-    top: 54px;
-    left: 58px;
-    width: 250px;
-    height: 178px;
-  }
-
-  .register-intro__brand h1 {
-    font-size: 50px;
-  }
-
-  .register-intro__seal {
-    width: 28px;
-    height: 28px;
-    top: 118px;
-    left: 86px;
-    font-size: 16px;
-  }
-
-  .register-intro__kind {
-    position: absolute;
-    top: 2px;
-    left: 126px;
-    margin: 0;
-    font-size: 12px;
-    line-height: 1.5;
-    letter-spacing: 0.14em;
-  }
-
-  .register-intro__slogan {
-    top: 128px;
-    left: 0;
-    width: 126px;
-    writing-mode: horizontal-tb;
-    font-size: 15px;
-    line-height: 1.55;
-    letter-spacing: 0.08em;
-  }
-
-  .register-intro__footmark {
-    right: 18px;
-    left: auto;
-    bottom: 30px;
-    width: 166px;
-    box-sizing: border-box;
-    gap: 8px;
-    padding: 8px 9px;
-    background: rgba(240, 231, 211, 0.42);
-    font-size: 11px;
-    letter-spacing: 0.04em;
-  }
-
-  .register-intro__stamp {
-    width: 30px;
-    height: 30px;
-    font-size: 16px;
-  }
-
   .register-panel {
     padding: 32px 24px 30px;
-    border-radius: 0 0 10px 10px;
+    border-radius: 0 0 var(--md-radius-md) var(--md-radius-md);
   }
 
   .register-panel__corner {
@@ -1188,30 +911,12 @@ onUnmounted(() => {
     flex-wrap: wrap;
   }
 
-  .register-scroll__roller,
-  .register-feature-rail {
+  .register-scroll__roller {
     display: none;
   }
 }
 
 @media (max-width: 390px) {
-  .register-intro__brand {
-    left: 52px;
-  }
-
-  .register-intro__kind {
-    left: 120px;
-  }
-
-  .register-intro__slogan {
-    left: 0;
-  }
-
-  .register-intro__footmark {
-    right: 18px;
-    max-width: 230px;
-  }
-
   .register-panel {
     padding-left: 18px;
     padding-right: 18px;

@@ -251,7 +251,7 @@ const goToWorkspace = () => {
   padding: clamp(var(--md-spacing-4), 3vw, var(--md-spacing-8));
   /* 采用平铺温暖熟宣纸与干燥木骨网格 */
   background-color: var(--md-background) !important;
-  background-image: radial-gradient(var(--md-outline-variant) 1px, transparent 1px) !important;
+  background-image: radial-gradient(color-mix(in srgb, var(--md-outline-variant) 60%, transparent) 1px, transparent 1px) !important;
   background-size: 24px 24px !important;
 }
 
@@ -280,7 +280,7 @@ const goToWorkspace = () => {
 }
 
 .workspace-entry__actions-top .md-btn:hover {
-  color: var(--md-secondary) !important; /* Hover 时变为朱砂红 */
+  color: var(--md-primary) !important;
 }
 
 /* 右上角朱砂小落款印章字标样式 */
@@ -303,7 +303,7 @@ const goToWorkspace = () => {
   border-radius: var(--md-radius-sm) !important;
   border: 3px double var(--md-outline) !important;
   background: var(--md-surface) !important;
-  box-shadow: 5px 5px 0px rgba(28, 32, 34, 0.15) !important;
+  box-shadow: 5px 5px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
   position: relative;
   overflow: hidden;
 }
@@ -334,7 +334,7 @@ const goToWorkspace = () => {
   background-color: var(--md-surface) !important;
   border-radius: var(--md-radius-sm) !important;
   border: 3px double var(--md-outline) !important;
-  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.18) !important;
+  box-shadow: 4px 4px 0px color-mix(in srgb, var(--md-on-surface) 18%, transparent) !important;
   padding: 2px !important;
 }
 
@@ -365,7 +365,7 @@ const goToWorkspace = () => {
   font-family: var(--md-font-serif) !important;
   font-weight: 600 !important;
   letter-spacing: 0.05em;
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.15) !important;
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
   transition:
     background-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
     border-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
@@ -402,12 +402,12 @@ const goToWorkspace = () => {
 
 .entry-actions__primary:hover:not(:disabled) {
   background-color: var(--md-primary-light) !important;
-  box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.25) !important; /* 获得朱砂压章硬投影 */
+  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-secondary) 25%, transparent) !important; /* 获得朱砂压章硬投影 */
 }
 
 .entry-actions__primary:active:not(:disabled) {
   transform: translate(1.5px, 1.5px) !important;
-  box-shadow: 0.5px 0.5px 0px rgba(184, 60, 50, 0.25) !important; /* 点击下陷，缩回阴影 */
+  box-shadow: 0.5px 0.5px 0px color-mix(in srgb, var(--md-secondary) 25%, transparent) !important; /* 点击下陷，缩回阴影 */
 }
 
 /* 辅动作用虚线竹青钮 */
@@ -421,7 +421,7 @@ const goToWorkspace = () => {
   color: var(--md-on-surface-variant) !important;
   font-family: var(--md-font-serif) !important;
   font-weight: 600 !important;
-  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.05) !important;
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 5%, transparent) !important;
   transition:
     background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
     border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
@@ -434,14 +434,14 @@ const goToWorkspace = () => {
 
 .entry-actions__secondary:hover {
   background-color: var(--md-surface-container-low) !important;
-  color: var(--md-secondary) !important; /* 变为朱砂红 */
-  border-color: var(--md-secondary) !important;
-  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.15) !important;
+  color: var(--md-primary) !important;
+  border-color: var(--md-primary-light) !important;
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
 }
 
 .entry-actions__secondary:active {
   transform: translate(1px, 1px) !important;
-  box-shadow: 0.5px 0.5px 0px rgba(184, 60, 50, 0.15) !important;
+  box-shadow: 0.5px 0.5px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
 }
 
 /* Modal 样式国风微调 */
@@ -458,7 +458,7 @@ const goToWorkspace = () => {
 
 .updates-community-box {
   background-color: var(--md-surface-container-high) !important;
-  border: 1px dashed var(--md-secondary) !important;
+  border: 1px dashed var(--md-outline) !important;
   border-radius: var(--md-radius-xs) !important;
 }
 
@@ -474,7 +474,7 @@ const goToWorkspace = () => {
 .updates-timeline-dot {
   width: 10px;
   height: 10px;
-  background-color: var(--md-secondary) !important; /* 朱砂方点 */
+  background-color: var(--md-primary) !important; /* 焦墨方点 */
   border-radius: var(--md-radius-xs) !important;
   transform: rotate(45deg);
   margin-top: 6px;
@@ -482,7 +482,7 @@ const goToWorkspace = () => {
 }
 
 .updates-timeline-time {
-  color: var(--md-secondary) !important;
+  color: var(--md-on-surface-variant) !important;
   font-family: var(--md-font-serif) !important;
   font-weight: 600;
 }

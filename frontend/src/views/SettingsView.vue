@@ -357,7 +357,7 @@ const handleLLMConfigSaved = async () => {
   border: 3px double var(--md-outline) !important;
   border-radius: var(--md-radius-xs) !important;
   background-color: var(--md-surface) !important;
-  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15) !important;
+  box-shadow: 4px 4px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
 }
 
 .settings-eyebrow {
@@ -383,7 +383,7 @@ const handleLLMConfigSaved = async () => {
   font-size: clamp(1.4rem, 2vw, 1.95rem);
   font-family: var(--md-font-serif) !important;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
 
 .settings-hero p {
@@ -411,7 +411,7 @@ const handleLLMConfigSaved = async () => {
   font-size: var(--md-label-medium);
   font-weight: 700;
   border: 1px solid currentColor !important;
-  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.05) !important;
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
 }
 
 .settings-status-chip.is-warning {
@@ -453,7 +453,7 @@ const handleLLMConfigSaved = async () => {
   border: 1px solid var(--md-outline-variant) !important;
   border-radius: var(--md-radius-xs) !important;
   background-color: var(--md-surface) !important;
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.06) !important;
+  box-shadow: var(--md-shadow-primary-1) !important;
   transition:
     border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
@@ -462,8 +462,8 @@ const handleLLMConfigSaved = async () => {
 
 .settings-summary__card:hover {
   transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.15) !important;
-  border-color: var(--md-secondary) !important;
+  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-on-surface) 18%, transparent) !important;
+  border-color: var(--md-outline) !important;
 }
 
 .settings-summary__card p,
@@ -484,7 +484,7 @@ const handleLLMConfigSaved = async () => {
   border: 1px solid var(--md-outline-variant) !important;
   border-radius: var(--md-radius-xs) !important;
   background-color: var(--md-surface) !important;
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.06) !important;
+  box-shadow: var(--md-shadow-primary-1) !important;
 }
 
 .settings-metrics summary {
@@ -524,8 +524,8 @@ const handleLLMConfigSaved = async () => {
 }
 
 .settings-metrics summary:hover {
-  color: var(--md-secondary) !important;
-  background-color: rgba(184, 60, 50, 0.04) !important;
+  color: var(--md-on-surface) !important;
+  background-color: var(--md-state-layer-hover) !important;
 }
 
 .settings-metrics summary:active {
@@ -557,10 +557,10 @@ const handleLLMConfigSaved = async () => {
 .settings-notice {
   border-radius: var(--md-radius-xs) !important;
   padding: var(--md-spacing-4);
-  border: 1px dashed var(--md-secondary) !important;
-  background-color: rgba(184, 60, 50, 0.04) !important;
-  color: var(--md-secondary) !important;
-  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.1) !important;
+  border: 1px dashed var(--md-warning) !important;
+  background-color: var(--md-warning-container) !important;
+  color: var(--md-warning-text) !important;
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-warning) 20%, transparent) !important;
 }
 
 .settings-center {
@@ -575,7 +575,7 @@ const handleLLMConfigSaved = async () => {
   border: 3px double var(--md-outline) !important;
   border-radius: var(--md-radius-sm) !important;
   background-color: var(--md-surface) !important;
-  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.12) !important;
+  box-shadow: 4px 4px 0px color-mix(in srgb, var(--md-on-surface) 12%, transparent) !important;
 }
 
 .settings-center__nav {
@@ -596,6 +596,7 @@ const handleLLMConfigSaved = async () => {
   min-height: 64px;
   padding: 12px var(--md-spacing-4) !important;
   border: 1px solid transparent;
+  border-left: 3px solid transparent; /* 固定 3px 左框，激活态只换色不改宽，消除抖动 */
   border-radius: var(--md-radius-xs) !important;
   background-color: transparent;
   color: var(--md-on-surface);
@@ -619,8 +620,8 @@ const handleLLMConfigSaved = async () => {
 
 .settings-center__nav-item:hover {
   border-color: var(--md-outline-variant);
-  background-color: rgba(184, 60, 50, 0.04) !important;
-  color: var(--md-secondary) !important;
+  background-color: var(--md-state-layer-hover) !important;
+  color: var(--md-on-surface) !important;
 }
 
 .settings-center__nav-item:focus-visible {
@@ -630,10 +631,10 @@ const handleLLMConfigSaved = async () => {
 
 .settings-center__nav-item.is-active,
 .settings-center__nav-item[aria-selected='true'] {
-  border: 1px solid var(--md-secondary) !important;
-  border-left: 1.5px solid var(--md-secondary) !important; /* 金石纤细起落描边，告别AI粗条 */
-  background-color: rgba(184, 60, 50, 0.06) !important;
-  color: var(--md-secondary) !important;
+  border-color: var(--md-outline-variant) !important;
+  border-left-color: var(--md-secondary) !important; /* 左侧 3px 朱砂竖描作活动指示，禁整框实底 */
+  background-color: var(--md-state-layer-hover) !important;
+  color: var(--md-on-surface) !important;
   font-weight: 700 !important;
 }
 
@@ -673,9 +674,9 @@ const handleLLMConfigSaved = async () => {
 .settings-center__nav-item.is-active::after,
 .settings-center__nav-item[aria-selected='true']::after {
   color: var(--md-secondary) !important;
-  background-color: rgba(184, 60, 50, 0.12) !important;
+  background-color: color-mix(in srgb, var(--md-secondary) 12%, transparent) !important;
   border: 1px solid var(--md-secondary) !important;
-  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15) !important;
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-secondary) 18%, transparent) !important;
   opacity: 1;
   transform: scale(1) translateY(0); /* 盖章印入熟宣 */
 }
@@ -687,6 +688,10 @@ const handleLLMConfigSaved = async () => {
 
 .settings-center__nav-item.nav-item-embedding::after {
   content: '憶' !important;
+}
+
+.settings-center__nav-item.nav-item-tts::after {
+  content: '讀' !important;
 }
 
 .settings-center__nav-item.nav-item-routes::after {
@@ -716,7 +721,7 @@ const handleLLMConfigSaved = async () => {
 
   .settings-center__nav {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 

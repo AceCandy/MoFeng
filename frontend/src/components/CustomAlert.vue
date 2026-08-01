@@ -175,10 +175,10 @@ useDialogA11y({
 .md-dialog {
   border-radius: 0 !important;
   border: 3px double var(--md-outline) !important;
-  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15) !important;
+  box-shadow: 4px 4px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
   background-color: var(--md-surface) !important;
   /* 熟宣帘纹背景 */
-  background-image: repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.005) 0px, rgba(28, 32, 34, 0.005) 1px, transparent 1px, transparent 20px);
+  background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--md-on-surface) 0.5%, transparent) 0px, color-mix(in srgb, var(--md-on-surface) 0.5%, transparent) 1px, transparent 1px, transparent 20px);
 }
 
 /* 朱砂/金石印章本体 */
@@ -195,34 +195,34 @@ useDialogA11y({
 
 /* 印章配色体系 */
 .custom-alert-seal--success {
-  border-color: rgba(63, 108, 93, 0.8) !important;
-  color: #3f6c5d !important;
-  background-color: rgba(63, 108, 93, 0.05);
+  border-color: color-mix(in srgb, var(--md-success) 80%, transparent) !important;
+  color: var(--md-success) !important;
+  background-color: color-mix(in srgb, var(--md-success) 5%, transparent);
 }
 
 .custom-alert-seal--error,
 .custom-alert-seal--warning {
-  border-color: rgba(184, 60, 50, 0.8) !important;
-  color: #c94036 !important;
-  background-color: rgba(184, 60, 50, 0.05);
+  border-color: color-mix(in srgb, var(--md-secondary) 80%, transparent) !important;
+  color: var(--md-secondary) !important;
+  background-color: color-mix(in srgb, var(--md-secondary) 5%, transparent);
 }
 
 .custom-alert-seal--confirmation {
-  border-color: rgba(200, 123, 46, 0.8) !important;
-  color: #c87b2e !important;
-  background-color: rgba(200, 123, 46, 0.05);
+  border-color: color-mix(in srgb, var(--md-warning) 80%, transparent) !important;
+  color: var(--md-warning) !important;
+  background-color: color-mix(in srgb, var(--md-warning) 5%, transparent);
 }
 
 .custom-alert-seal--info {
-  border-color: rgba(28, 32, 34, 0.6) !important;
-  color: #5c6265 !important;
-  background-color: rgba(28, 32, 34, 0.03);
+  border-color: color-mix(in srgb, var(--md-on-surface) 60%, transparent) !important;
+  color: var(--md-on-surface-variant) !important;
+  background-color: color-mix(in srgb, var(--md-on-surface) 3%, transparent);
 }
 
 /* 红丝栏分割线 */
 .custom-alert-divider {
   height: 1px;
-  background-image: linear-gradient(to right, rgba(184, 60, 50, 0.25) 0%, rgba(184, 60, 50, 0.25) 80%, transparent 100%);
+  background-image: linear-gradient(to right, color-mix(in srgb, var(--md-secondary) 25%, transparent) 0%, color-mix(in srgb, var(--md-secondary) 25%, transparent) 80%, transparent 100%);
   margin: 12px 24px 0;
 }
 
@@ -275,7 +275,7 @@ useDialogA11y({
 
 .custom-alert-btn-cancel:hover {
   color: var(--md-secondary) !important;
-  background-color: rgba(184, 60, 50, 0.03) !important;
+  background-color: color-mix(in srgb, var(--md-secondary) 3%, transparent) !important;
 }
 
 .custom-alert-btn-confirm {
@@ -310,7 +310,7 @@ useDialogA11y({
 
 .custom-alert-btn-confirm--error:hover,
 .custom-alert-btn-confirm--warning:hover {
-  background-color: rgba(184, 60, 50, 0.05) !important;
+  background-color: color-mix(in srgb, var(--md-secondary) 5%, transparent) !important;
   box-shadow: 2.5px 2.5px 0px var(--md-secondary);
 }
 
@@ -320,17 +320,17 @@ useDialogA11y({
 }
 
 .custom-alert-btn-confirm--success {
-  border-color: #3f6c5d !important;
-  color: #3f6c5d !important;
-  box-shadow: 1.5px 1.5px 0px #3f6c5d;
+  border-color: var(--md-success) !important;
+  color: var(--md-success) !important;
+  box-shadow: 1.5px 1.5px 0px var(--md-success);
 }
 
 .custom-alert-btn-confirm--success:hover {
-  background-color: rgba(63, 108, 93, 0.05) !important;
-  box-shadow: 2.5px 2.5px 0px #3f6c5d;
+  background-color: color-mix(in srgb, var(--md-success) 5%, transparent) !important;
+  box-shadow: 2.5px 2.5px 0px var(--md-success);
 }
 
 .custom-alert-btn-confirm--success:active {
-  box-shadow: 0px 0px 0px #3f6c5d !important;
+  box-shadow: 0px 0px 0px var(--md-success) !important;
 }
 </style>

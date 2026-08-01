@@ -134,15 +134,8 @@ const onCheck = (field: keyof ProviderForm, event: Event) => {
 </script>
 
 <style scoped>
-/* create 独立面板外观（复制自父 .model-routing__panel；primary-panel 仍消费父规则） */
-.model-routing__panel {
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-sm);
-  padding: var(--md-spacing-4);
-  background: var(--md-surface);
-}
-
-/* edit 根容器：复刻原 provider-card 的 grid 间距，保证 head 与表单间距不因外包一层而收窄 */
+/* .model-routing__panel 与 .model-routing__link 已收口至
+   styles/components/model-routing.css，组件内不再重复定义 */
 .model-routing__provider-form-edit {
   display: grid;
   gap: var(--md-spacing-3);
@@ -163,17 +156,6 @@ const onCheck = (field: keyof ProviderForm, event: Event) => {
 .model-routing__form-head h3 {
   margin: 0;
   color: var(--md-on-surface);
-}
-
-/* create 取消按钮（复制自父 .model-routing__link；picker 关闭按钮仍消费父规则） */
-.model-routing__link {
-  border: none;
-  background: transparent;
-  color: var(--md-primary-dark);
-  cursor: pointer;
-  font-weight: 600;
-  min-height: 44px;
-  padding: 0 var(--md-spacing-2);
 }
 
 .model-routing__check {
@@ -220,7 +202,7 @@ const onCheck = (field: keyof ProviderForm, event: Event) => {
 }
 
 .model-routing__inline-cancel:hover {
-  color: var(--md-secondary);
+  color: var(--md-primary); /* hover 用焦墨字，不用朱砂 */
 }
 
 .model-routing__inline-form {

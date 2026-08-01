@@ -57,7 +57,7 @@
 .md-btn-filled:hover:not(:disabled) {
   background-color: var(--md-primary-dark);
   border-color: var(--md-primary);
-  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.25);
+  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-on-surface) 25%, transparent);
 }
 
 .md-btn-filled:active:not(:disabled) {
@@ -104,7 +104,7 @@
 }
 
 .md-btn-tonal:hover:not(:disabled) {
-  background-color: #244b73; /* 稍深石青 */
+  background-color: color-mix(in srgb, var(--md-primary-container) 82%, black); /* 稍深石青 */
   box-shadow: 3px 3px 0px rgba(46, 92, 138, 0.3);
 }
 
@@ -170,7 +170,7 @@
 
 .md-fab:hover:not(:disabled) {
   background-color: var(--md-secondary-light);
-  box-shadow: 4px 4px 0px rgba(184, 60, 50, 0.35);
+  box-shadow: 4px 4px 0px color-mix(in srgb, var(--md-secondary) 35%, transparent);
   transform: translate(-1px, -1px);
 }
 

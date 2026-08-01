@@ -4,12 +4,12 @@
     <div
       v-for="(character, index) in localCharacters"
       :key="index"
-      class="p-4 border border-[var(--md-outline-variant)] rounded-lg bg-[var(--md-surface-container-low)] relative"
+      class="p-4 border border-[var(--md-outline-variant)] rounded bg-[var(--md-surface-container-low)] relative"
     >
       <button
         type="button"
         @click="removeCharacter(index)"
-        class="absolute top-2 right-2 text-[var(--md-error)] hover:text-[var(--md-error)] transition-colors p-1"
+        class="blueprint-editor__delete-button absolute top-2 right-2 text-[var(--md-error)] hover:text-[var(--md-error-strong)] hover:bg-[var(--md-error-container)] transition-colors p-1"
         :aria-label="`删除角色 ${character.name || index + 1}`"
       >
         <svg
@@ -89,7 +89,7 @@
         <button
           type="button"
           @click="toggleDNA(index)"
-          class="flex items-center gap-2 text-sm font-medium text-[var(--md-primary)] hover:text-[var(--md-primary)] transition-colors"
+          class="flex items-center gap-2 text-sm font-medium text-[var(--md-primary)] hover:text-[var(--md-primary-light)] transition-colors"
           :aria-expanded="expandedDNA[index] ? 'true' : 'false'"
           :aria-label="`切换角色 ${character.name || index + 1} DNA 档案`"
         >
@@ -117,14 +117,14 @@
       <transition name="slide">
         <div
           v-if="expandedDNA[index]"
-          class="mt-3 p-4 bg-[var(--md-primary-container)] rounded-lg border border-[var(--md-primary-container)]"
+          class="mt-3 p-4 bg-[var(--md-primary-container)] rounded border border-[var(--md-primary-container)]"
         >
           <div class="grid grid-cols-1 gap-4">
             <!-- 童年经历 -->
             <div>
-              <label class="block text-sm font-medium text-[var(--md-primary)] mb-1">
+              <label class="block text-sm font-medium text-[var(--md-on-primary-container)] mb-1">
                 童年经历/创伤
-                <span class="text-xs text-[var(--md-on-surface-variant)] font-normal ml-1"
+                <span class="text-xs text-[var(--md-on-primary-container)] opacity-80 font-normal ml-1"
                   >影响角色的防御机制和情感触发点</span
                 >
               </label>
@@ -146,9 +146,9 @@
 
             <!-- 核心恐惧 -->
             <div>
-              <label class="block text-sm font-medium text-[var(--md-primary)] mb-1">
+              <label class="block text-sm font-medium text-[var(--md-on-primary-container)] mb-1">
                 核心恐惧
-                <span class="text-xs text-[var(--md-on-surface-variant)] font-normal ml-1">驱动角色行为的深层恐惧</span>
+                <span class="text-xs text-[var(--md-on-primary-container)] opacity-80 font-normal ml-1">驱动角色行为的深层恐惧</span>
               </label>
               <input
                 type="text"
@@ -164,9 +164,9 @@
 
             <!-- 内心渴望 -->
             <div>
-              <label class="block text-sm font-medium text-[var(--md-primary)] mb-1">
+              <label class="block text-sm font-medium text-[var(--md-on-primary-container)] mb-1">
                 内心渴望
-                <span class="text-xs text-[var(--md-on-surface-variant)] font-normal ml-1"
+                <span class="text-xs text-[var(--md-on-primary-container)] opacity-80 font-normal ml-1"
                   >角色真正想要的，可能连自己都不清楚</span
                 >
               </label>
@@ -184,9 +184,9 @@
 
             <!-- 说话习惯 -->
             <div>
-              <label class="block text-sm font-medium text-[var(--md-primary)] mb-1">
+              <label class="block text-sm font-medium text-[var(--md-on-primary-container)] mb-1">
                 说话习惯
-                <span class="text-xs text-[var(--md-on-surface-variant)] font-normal ml-1"
+                <span class="text-xs text-[var(--md-on-primary-container)] opacity-80 font-normal ml-1"
                   >口头禅、语气词、紧张时的变化</span
                 >
               </label>
@@ -208,9 +208,9 @@
 
             <!-- 身体语言 -->
             <div>
-              <label class="block text-sm font-medium text-[var(--md-primary)] mb-1">
+              <label class="block text-sm font-medium text-[var(--md-on-primary-container)] mb-1">
                 身体语言
-                <span class="text-xs text-[var(--md-on-surface-variant)] font-normal ml-1"
+                <span class="text-xs text-[var(--md-on-primary-container)] opacity-80 font-normal ml-1"
                   >紧张时的小动作、特有的姿态</span
                 >
               </label>
@@ -232,9 +232,9 @@
 
             <!-- 思维模式 -->
             <div>
-              <label class="block text-sm font-medium text-[var(--md-primary)] mb-1">
+              <label class="block text-sm font-medium text-[var(--md-on-primary-container)] mb-1">
                 思维模式
-                <span class="text-xs text-[var(--md-on-surface-variant)] font-normal ml-1">理性/感性、乐观/悲观</span>
+                <span class="text-xs text-[var(--md-on-primary-container)] opacity-80 font-normal ml-1">理性/感性、乐观/悲观</span>
               </label>
               <select
                 v-model="getDNAProfile(character).thinking_pattern"
@@ -260,9 +260,9 @@
 
             <!-- 决策方式 -->
             <div>
-              <label class="block text-sm font-medium text-[var(--md-primary)] mb-1">
+              <label class="block text-sm font-medium text-[var(--md-on-primary-container)] mb-1">
                 决策方式
-                <span class="text-xs text-[var(--md-on-surface-variant)] font-normal ml-1">如何做出选择</span>
+                <span class="text-xs text-[var(--md-on-primary-container)] opacity-80 font-normal ml-1">如何做出选择</span>
               </label>
               <select
                 v-model="getDNAProfile(character).decision_style"
@@ -284,9 +284,9 @@
 
             <!-- 隐藏的秘密 -->
             <div>
-              <label class="block text-sm font-medium text-[var(--md-primary)] mb-1">
+              <label class="block text-sm font-medium text-[var(--md-on-primary-container)] mb-1">
                 隐藏的秘密
-                <span class="text-xs text-[var(--md-on-surface-variant)] font-normal ml-1">不愿让人知道的事</span>
+                <span class="text-xs text-[var(--md-on-primary-container)] opacity-80 font-normal ml-1">不愿让人知道的事</span>
               </label>
               <textarea
                 v-model="getDNAProfile(character).hidden_secret"
@@ -307,25 +307,32 @@
 
           <!-- DNA完成度提示 -->
           <div class="mt-4 flex items-center gap-2">
-            <div class="flex-1 bg-[var(--md-surface-container-high)] rounded-full h-2">
+            <div class="flex-1 bg-[var(--md-surface-container-high)] rounded-[var(--md-radius-xs)] h-2 overflow-hidden">
               <div
-                class="bg-[var(--md-primary)] h-2 w-full origin-left rounded-full transition-transform duration-300"
+                class="bg-[var(--md-primary)] h-2 w-full origin-left rounded-[var(--md-radius-xs)] transition-transform duration-300"
                 :style="{ transform: `scaleX(${getDNACompleteness(character) / 100})` }"
               ></div>
             </div>
-            <span class="text-xs text-[var(--md-on-surface-variant)]">{{ getDNACompleteness(character) }}% 完成</span>
+            <span class="text-xs text-[var(--md-on-primary-container)] opacity-80">{{ getDNACompleteness(character) }}% 完成</span>
           </div>
-          <p class="mt-2 text-xs text-[var(--md-on-surface-variant)]">
+          <p class="mt-2 text-xs text-[var(--md-on-primary-container)] opacity-80">
             💡 提示：DNA档案越完整，AI生成的角色行为和对话就越真实立体
           </p>
         </div>
       </transition>
     </div>
 
+    <div v-if="localCharacters.length === 0" class="blueprint-empty">
+      <div>
+        <p class="blueprint-empty__title">暂无角色</p>
+        <p class="blueprint-empty__desc">点击下方按钮添加第一位角色</p>
+      </div>
+    </div>
+
     <button
       type="button"
       @click="addCharacter"
-      class="w-full mt-4 min-h-[44px] px-4 py-2 text-sm font-medium text-[var(--md-on-primary-container)] bg-[var(--md-primary-container)] border border-[var(--md-primary-container)] rounded-md hover:bg-[var(--md-tint-focus)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--md-primary-light)]"
+      class="w-full mt-4 min-h-[44px] px-4 py-2 text-sm font-medium text-[var(--md-on-primary-container)] bg-[var(--md-primary-container)] border border-[var(--md-primary-container)] rounded-md hover:bg-[color-mix(in_srgb,var(--md-primary-container)_85%,var(--md-primary-dark))] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--md-primary-light)]"
     >
       + 添加新角色
     </button>

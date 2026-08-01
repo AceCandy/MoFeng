@@ -220,7 +220,7 @@ const emit = defineEmits<{
     90deg,
     var(--md-success) 0%,
     var(--md-primary) 30%,
-    rgba(255, 255, 255, 0.95) 50%,
+    color-mix(in srgb, var(--md-surface) 92%, transparent) 50%,
     var(--md-primary) 70%,
     var(--md-outline-variant) 100%
   );
@@ -290,7 +290,7 @@ const emit = defineEmits<{
   color: var(--md-on-secondary);
   background-color: var(--md-secondary);
   border: 1px solid var(--md-secondary-dark);
-  box-shadow: 1px 1px 0 rgba(28, 32, 34, 0.18);
+  box-shadow: 1px 1px 0 color-mix(in srgb, var(--md-on-surface) 18%, transparent);
   font-family: var(--md-font-serif);
   letter-spacing: 0.04em;
 }
@@ -375,28 +375,6 @@ const emit = defineEmits<{
 .chapter-console__pipeline-card.is-read-only .chapter-console__pipeline-title {
   font-size: var(--md-label-medium);
   font-weight: 600;
-}
-
-.chapter-console__pipeline-retry {
-  margin-left: auto;
-  padding: 2px 10px;
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--md-sys-color-primary, #2563eb);
-  background: transparent;
-  border: 1px solid var(--md-sys-color-primary, #2563eb);
-  border-radius: 999px;
-  cursor: pointer;
-  transition: opacity 0.15s ease;
-}
-
-.chapter-console__pipeline-retry:hover:not(:disabled) {
-  opacity: 0.8;
-}
-
-.chapter-console__pipeline-retry:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .chapter-console__pipeline-item.is-clickable {
@@ -506,7 +484,7 @@ const emit = defineEmits<{
       180deg,
       var(--md-success) 0%,
       var(--md-primary) 30%,
-      rgba(255, 255, 255, 0.95) 50%,
+      color-mix(in srgb, var(--md-surface) 92%, transparent) 50%,
       var(--md-primary) 70%,
       var(--md-outline-variant) 100%
     );

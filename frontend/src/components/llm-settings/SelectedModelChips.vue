@@ -228,14 +228,16 @@ const savePricing = async (model: UserAIModel) => {
   gap: var(--md-spacing-3);
 }
 
-.model-routing__model-list-title,
+.model-routing__model-list-title {
+  margin: 0;
+  color: var(--md-on-surface-variant);
+  letter-spacing: 0.03em; /* 碑拓骨力：宋体小标题拉开字距 */
+}
+
+/* 空提示紧跟标题，覆盖全局 model-routing.css 的 4px 上间距 */
 .model-routing__empty {
   margin: 0;
   color: var(--md-on-surface-variant);
-}
-
-.model-routing__empty {
-  font-size: var(--md-body-small);
 }
 
 .model-routing__model-list {
@@ -291,12 +293,12 @@ const savePricing = async (model: UserAIModel) => {
   min-width: 20px;
   height: 20px;
   border: 1px solid var(--md-secondary);
-  border-radius: 1px;
+  border-radius: var(--md-radius-xs); /* 印章微直角 */
   color: var(--md-secondary);
   font-family: var(--md-font-display);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0;
+  letter-spacing: 0.03em;
 }
 
 .model-routing__text-action {
@@ -342,7 +344,7 @@ const savePricing = async (model: UserAIModel) => {
 
 .model-routing__pricing-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(104px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: var(--md-spacing-3);
 }
 
@@ -381,12 +383,6 @@ const savePricing = async (model: UserAIModel) => {
   justify-content: flex-end;
 }
 
-@media (max-width: 900px) {
-  .model-routing__pricing-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 560px) {
   .model-routing__model-row {
     grid-template-columns: minmax(0, 1fr);
@@ -394,10 +390,6 @@ const savePricing = async (model: UserAIModel) => {
 
   .model-routing__model-actions {
     justify-content: flex-start;
-  }
-
-  .model-routing__pricing-grid {
-    grid-template-columns: minmax(0, 1fr);
   }
 }
 </style>

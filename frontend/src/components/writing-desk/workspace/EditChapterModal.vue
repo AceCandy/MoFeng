@@ -168,7 +168,7 @@ defineExpose({ openEditModal })
 
 .md-textarea:focus {
   border-color: var(--md-secondary) !important;
-  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.2) !important;
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-secondary) 20%, transparent) !important;
   outline: none;
 }
 </style>

@@ -204,7 +204,7 @@ watch(isManualInput, async (newValue) => {
   font-weight: 500;
   font-size: 13px !important; /* 字号缩小 */
   border: 1px solid var(--md-outline-variant) !important; /* 初始墨晕细线 */
-  background-color: var(--md-surface-container-lowest) !important;
+  background-color: var(--md-surface) !important; /* 熟宣温润，弃用近白 lowest */
   color: var(--md-on-surface-variant) !important;
   transition:
     background-color var(--md-duration-short) var(--md-easing-standard),
@@ -214,7 +214,7 @@ watch(isManualInput, async (newValue) => {
     opacity var(--md-duration-short) var(--md-easing-standard),
     transform var(--md-duration-short) var(--md-easing-standard) !important;
   cursor: pointer;
-  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.03) !important;
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 3%, transparent) !important;
 }
 
 .conv-input__option--primary {
@@ -224,10 +224,10 @@ watch(isManualInput, async (newValue) => {
 }
 
 .conv-input__option--primary:hover {
-  background-color: rgba(184, 60, 50, 0.05) !important; /* 润以朱砂红泥 */
-  border-color: var(--md-secondary) !important; /* 朱砂红 */
-  color: var(--md-secondary) !important;
-  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.12) !important;
+  background-color: var(--md-surface-container) !important; /* 中性墨晕浅灰底，不落朱砂 */
+  border-color: var(--md-outline) !important; /* 竹青框 */
+  color: var(--md-primary) !important; /* 焦墨字 */
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 10%, transparent) !important;
 }
 
 .conv-input__option--neutral {
@@ -237,10 +237,10 @@ watch(isManualInput, async (newValue) => {
 }
 
 .conv-input__option--neutral:hover {
-  background-color: rgba(28, 32, 34, 0.04) !important;
+  background-color: color-mix(in srgb, var(--md-on-surface) 4%, transparent) !important;
   border-color: var(--md-primary) !important;
   color: var(--md-primary) !important;
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.08) !important;
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
 }
 
 /* 选项滚动条 */
@@ -266,7 +266,7 @@ watch(isManualInput, async (newValue) => {
   flex: 1;
   padding: var(--md-spacing-3) var(--md-spacing-4);
   border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-md);
+  border-radius: var(--md-radius-xs); /* DESIGN input 规范：极微圆角 2px */
   background-color: var(--md-surface);
   color: var(--md-on-surface);
   font-size: var(--md-body-medium);
@@ -276,8 +276,9 @@ watch(isManualInput, async (newValue) => {
 
 .conv-input__textarea:focus {
   outline: none;
-  border-color: var(--md-primary);
-  box-shadow: 0 0 0 2px color-mix(in oklch, var(--md-primary) 20%, transparent);
+  border-color: var(--md-primary); /* 焦墨框线 */
+  /* DESIGN input focus：右下拓片硬投影，弃零偏移发光环 */
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 20%, transparent);
 }
 
 .conv-input__textarea:disabled {
@@ -288,10 +289,10 @@ watch(isManualInput, async (newValue) => {
 .conv-input__send {
   width: 44px;
   height: 44px;
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs); /* DESIGN 按钮形制：2px 微直角，弃正圆 */
   background-color: var(--md-primary);
   color: var(--md-on-primary);
-  border: none;
+  border: 1px solid var(--md-outline); /* 竹青单像素极细描边 */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -357,7 +358,7 @@ watch(isManualInput, async (newValue) => {
   color: var(--md-on-surface-variant) !important;
   letter-spacing: 0.05em !important;
   animation: ink-text-breath 2.2s ease-in-out infinite alternate !important;
-  text-shadow: 0.5px 0.5px 0px rgba(28, 32, 34, 0.04) !important;
+  text-shadow: 0.5px 0.5px 0px color-mix(in srgb, var(--md-on-surface) 4%, transparent) !important;
 }
 
 @keyframes ink-spread-black {

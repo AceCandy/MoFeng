@@ -7,7 +7,7 @@ body,
   /* 空灵山水重雾与飞洒墨迹风竹矢量 (内联轻量 SVG 1.4% 白天超轻柔透明度，极具风骨) */
   background-image:
     /* 左上角与右下角：水墨远山云雾的径向渐变模糊 */
-    radial-gradient(circle at 5% 10%, rgba(28, 32, 34, 0.05), transparent 45%),
+    radial-gradient(circle at 5% 10%, color-mix(in srgb, var(--md-on-surface) 5%, transparent), transparent 45%),
     radial-gradient(circle at 95% 85%, rgba(46, 92, 138, 0.035), transparent 50%),
     /* 狂飙飞洒的风竹叶影与墨迹矢量 */
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><g fill='%231c2022' fill-opacity='0.014'><path d='M10,25 Q30,10 50,8 C35,20 22,25 15,30 Z M25,45 Q50,22 65,30 C45,35 35,42 30,50 Z M90,75 C75,55 95,35 105,40 C85,55 92,68 95,80 Z'/><path d='M5,95 C40,75 80,85 110,65 C75,70 35,62 10,85 Z' fill-opacity='0.01'/></g></svg>"),

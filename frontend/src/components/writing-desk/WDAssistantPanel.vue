@@ -332,18 +332,18 @@ const risks = computed(() => {
   margin: 0;
 }
 
-/* 小标题升级为“常驻朱砂题签”：左侧朱批细线，微红浅玉沙笺底色，醒目优雅 */
+/* 小标题题签：竹青细框 + 熟宣底 + 焦墨宋体，克制素雅 */
 .wd-ai__head p {
   color: var(--md-primary); /* 焦墨 */
-  font-family: var(--md-font-kai); /* 古雅楷体 */
+  font-family: var(--md-font-serif); /* 碑拓宋体 */
   font-size: var(--md-label-large);
   font-weight: 700 !important;
   letter-spacing: 0.06em;
   display: flex;
   align-items: center;
   padding: var(--md-spacing-2) var(--md-spacing-3);
-  background-color: color-mix(in srgb, var(--md-secondary) 6%, var(--md-surface-dim)); /* 微红题签底色 */
-  border: 1px solid color-mix(in srgb, var(--md-secondary) 36%, var(--md-outline)); /* 全边框题签，避免侧边色条 */
+  background-color: var(--md-surface-container-low); /* 竹纸熟宣底 */
+  border: 1px solid var(--md-outline); /* 竹青细框 */
   border-radius: var(--md-radius-xs);
   margin-bottom: var(--md-spacing-3);
 }
@@ -427,20 +427,20 @@ const risks = computed(() => {
   padding-bottom: 0;
 }
 
-/* 模块标题升级为“常驻朱砂题签”：带极淡红玉沙底色与朱砂红左侧题签线，极度明显且国风韵味十足 */
+/* 模块标题题签：竹青细框 + 熟宣底 + 焦墨宋体，克制素雅 */
 .wd-ai__real-summary-card h3 {
   margin: 0 0 var(--md-spacing-4) 0;
   padding: var(--md-spacing-2) var(--md-spacing-3);
   color: var(--md-primary); /* 焦墨 */
-  font-family: var(--md-font-kai); /* 古雅楷体 */
+  font-family: var(--md-font-serif); /* 碑拓宋体 */
   font-size: var(--md-title-medium);
   line-height: 1.5;
   letter-spacing: 0.06em;
   font-weight: 700 !important;
   display: flex;
   align-items: center;
-  background-color: color-mix(in srgb, var(--md-secondary) 6%, var(--md-surface-dim)); /* 题签微红浅底 */
-  border: 1px solid color-mix(in srgb, var(--md-secondary) 36%, var(--md-outline)); /* 全边框题签，避免侧边色条 */
+  background-color: var(--md-surface-container-low); /* 竹纸熟宣底 */
+  border: 1px solid var(--md-outline); /* 竹青细框 */
   border-radius: var(--md-radius-xs);
 }
 
@@ -460,9 +460,9 @@ const risks = computed(() => {
   margin-bottom: 0;
 }
 
-/* 朱砂双色套印手抄朱批：正文加粗 strong 常驻朱砂红楷书，视觉特色拉满 */
+/* 梳理正文加粗 strong：焦墨粗体楷书（朱批语感留给全局 chat-bubble 朱线，面板内不常驻朱砂） */
 .wd-ai__real-summary-body :deep(strong) {
-  color: var(--md-secondary) !important;
+  color: var(--md-primary) !important;
   font-family: var(--md-font-kai) !important;
   font-weight: 700 !important;
   letter-spacing: 0.02em;

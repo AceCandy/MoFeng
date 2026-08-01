@@ -73,9 +73,9 @@ defineEmits<{
   overflow: hidden;
   /* 侧边栏升级为老宣纸底色与纸帘帘纹 */
   background-color: var(--md-surface-dim);
-  background-image: repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.005) 0px, rgba(28, 32, 34, 0.005) 1px, transparent 1px, transparent 24px);
+  background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--md-on-surface) 0.5%, transparent) 0px, color-mix(in srgb, var(--md-on-surface) 0.5%, transparent) 1px, transparent 1px, transparent 24px);
   border-right: 1.5px solid var(--md-outline-variant) !important; /* 单根墨晕细线分割 */
-  box-shadow: 1px 0 4px rgba(28, 32, 34, 0.02);
+  box-shadow: 1px 0 4px color-mix(in srgb, var(--md-on-surface) 2%, transparent);
   transform: translateX(-100%);
   transition:
     transform 300ms cubic-bezier(0.2, 0, 0, 1),
@@ -112,9 +112,9 @@ defineEmits<{
   /* 古籍目录式扁平书签感 */
   border-radius: 0 !important;
   border: none !important;
-  border-bottom: 1.5px solid rgba(28, 32, 34, 0.04) !important; /* 浅墨细线底分隔 */
+  border-bottom: 1.5px solid color-mix(in srgb, var(--md-on-surface) 4%, transparent) !important; /* 浅墨细线底分隔 */
   background-color: transparent !important;
-  color: #8A7C6E !important; /* 浅灰棕文字 */
+  color: var(--md-on-surface-variant) !important; /* 松烟灰辅助文字 */
   font-family: var(--md-font-serif);
   font-size: 15px;
   font-weight: 500;
@@ -151,8 +151,8 @@ defineEmits<{
 
 /* 激活选中的朱砂方印笺条 */
 .detail-shell__nav-item.is-active {
-  border: 1px dashed rgba(184, 60, 50, 0.15) !important;
-  background-color: rgba(184, 60, 50, 0.03) !important; /* 轻微淡红背景 */
+  border: 1px dashed color-mix(in srgb, var(--md-secondary) 15%, transparent) !important;
+  background-color: color-mix(in srgb, var(--md-secondary) 3%, transparent) !important; /* 轻微淡红背景 */
   color: var(--md-secondary) !important; /* 朱红色 */
   font-weight: 700 !important; /* 文字加粗 */
   box-shadow: none !important; /* 取消厚重投影 */

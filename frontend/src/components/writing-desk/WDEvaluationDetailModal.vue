@@ -194,7 +194,7 @@ useDialogA11y({
   border-radius: var(--md-radius-md);
   border: 3px double var(--md-outline);
   background-color: var(--md-surface);
-  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.15);
+  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent);
 }
 
 .m3-eval-dialog__header {
@@ -214,7 +214,7 @@ useDialogA11y({
   border-radius: var(--md-radius-sm) !important;
   border: 1px solid var(--md-secondary) !important;
   background-color: var(--md-surface-container-lowest) !important;
-  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.08) !important;
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-secondary) 8%, transparent) !important;
 }
 
 .m3-eval-best-choice-title {

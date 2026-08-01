@@ -134,7 +134,7 @@ const handleDelete = () => {
   gap: var(--md-spacing-5);
   padding: var(--md-spacing-5);
   border-radius: var(--md-radius-xs) !important; /* 去 SaaS 大圆角，木刻方直微圆角 */
-  border: 1px solid var(--md-outline-variant) !important;
+  border: 3px double var(--md-outline) !important; /* 古籍线装双边，书架书本仪式感 */
   background-color: var(--md-surface) !important;
   box-shadow: none;
   touch-action: manipulation;
@@ -162,7 +162,7 @@ const handleDelete = () => {
   display: grid !important;
   place-items: center !important;
   line-height: 1 !important;
-  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15) !important;
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-secondary) 15%, transparent) !important;
   opacity: 0;
   transform: scale(0.7) rotate(-8deg);
   transition:
@@ -184,7 +184,7 @@ const handleDelete = () => {
 .project-card:focus-within {
   border-color: color-mix(in srgb, var(--md-primary) 50%, var(--md-outline-variant)) !important;
   /* 拓片偏置硬影 */
-  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.1) !important;
+  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-on-surface) 10%, transparent) !important;
   background-color: var(--md-surface-dim) !important; /* 宣纸微暖色 */
 }
 
@@ -214,6 +214,7 @@ const handleDelete = () => {
   font-size: var(--md-title-medium);
   font-weight: 700;
   line-height: 1.35;
+  letter-spacing: 0.03em; /* 碑拓骨力：宋体标题拉开字距 */
   text-align: left;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -221,7 +222,9 @@ const handleDelete = () => {
 }
 
 .project-card__title-button:hover {
-  color: var(--md-secondary) !important; /* 朱砂红 */
+  color: var(--md-primary) !important;
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 
 .project-card__title-button:focus-visible {
@@ -301,6 +304,11 @@ const handleDelete = () => {
     color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.project-card__delete:hover {
+  color: var(--md-error-strong) !important;
+  background-color: var(--md-error-container) !important;
 }
 
 /* 删除按钮 active 钤印微沉 */

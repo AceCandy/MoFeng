@@ -313,17 +313,17 @@ const parseMarkdown = (text: string | null | undefined): string => {
   width: 38px;
   height: 38px;
   border: 1.5px solid var(--md-secondary);
-  border-radius: 50%;
+  border-radius: var(--md-radius-xs);
   display: grid;
   place-items: center;
   color: var(--md-secondary);
   font-family: var(--md-font-serif);
   font-size: 16px;
   font-weight: bold;
-  background-color: rgba(184, 60, 50, 0.05);
+  background-color: color-mix(in srgb, var(--md-secondary) 5%, transparent);
   flex-shrink: 0;
   transform: rotate(-10deg);
-  box-shadow: inset 1px 1px 0px rgba(184, 60, 50, 0.2);
+  box-shadow: inset 1px 1px 0px color-mix(in srgb, var(--md-secondary) 20%, transparent);
 }
 
 .writing-workspace__evaluation-hero .hero-text {

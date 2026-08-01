@@ -7,7 +7,7 @@
 :root,
 :root[data-theme='light'] {
   --scrollbar-thumb-color: rgba(58, 70, 72, 0.25); /* 松烟灰半透明，淡墨感 */
-  --scrollbar-thumb-hover-color: rgba(28, 32, 34, 0.6); /* 焦墨半透明，浓墨感 */
+  --scrollbar-thumb-hover-color: color-mix(in srgb, var(--md-on-surface) 60%, transparent); /* 焦墨半透明，浓墨感 */
 }
 
 :root[data-theme='dark'] {

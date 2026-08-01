@@ -1032,53 +1032,6 @@ onMounted(() => {
   width: 100%;
 }
 
-.overview-card {
-  background-color: var(--md-surface-container-low);
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-lg);
-}
-
-.overview-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.overview-copy {
-  max-width: 720px;
-}
-
-.overview-title {
-  margin: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--md-on-surface);
-}
-
-.overview-subtitle {
-  margin: 8px 0 0;
-  color: var(--md-on-surface-variant);
-  font-size: 0.95rem;
-  line-height: 1.6;
-}
-
-.meta-grid {
-  display: grid;
-  gap: 16px;
-  grid-template-columns: 1fr;
-}
-
-.meta-card {
-  height: 100%;
-  min-width: 0;
-  overflow: hidden;
-  background-color: var(--md-surface-container);
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-lg);
-}
-
 .health-grid {
   display: grid;
   gap: 10px;
@@ -1142,8 +1095,10 @@ onMounted(() => {
 }
 
 .card-title {
+  font-family: var(--md-font-serif);
   font-size: 1.25rem;
   font-weight: 600;
+  letter-spacing: 0.03em;
   color: var(--md-on-surface);
 }
 
@@ -1325,19 +1280,11 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 
-  .meta-grid {
-    grid-template-columns: 1fr;
-  }
-
   .top-settings-grid {
     grid-template-columns: 1fr;
   }
 
   .card-title {
-    font-size: 1.125rem;
-  }
-
-  .overview-title {
     font-size: 1.125rem;
   }
 

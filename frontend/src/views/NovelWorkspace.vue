@@ -234,7 +234,7 @@
             :aria-labelledby="deleteDialogTitleId"
           >
             <div class="md-dialog-header flex items-center gap-4">
-              <div class="w-12 h-12 rounded-full flex items-center justify-center delete-alert-icon-container">
+              <div class="w-12 h-12 flex items-center justify-center delete-alert-icon-container">
                 <svg
                   class="w-6 h-6 delete-alert-icon"
                   viewBox="0 0 24 24"
@@ -309,17 +309,13 @@ import ProjectCard from '@/components/ProjectCard.vue'
 import type { NovelProjectSummary } from '@/api/novel'
 import {
   useDeleteNovelsMutation,
-  useImportNovelMutation,
   useNovelProjectsQuery,
 } from '@/queries/novel'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 
 const router = useRouter()
 const projectsQuery = useNovelProjectsQuery()
-const importNovelMutation = useImportNovelMutation()
 const deleteNovelsMutation = useDeleteNovelsMutation()
-
-const fileInput = ref<HTMLInputElement | null>(null)
 
 const showDeleteDialog = ref(false)
 const deleteDialogRef = ref<HTMLElement | null>(null)
@@ -344,7 +340,6 @@ const projectsError = computed(() => {
   const error = projectsQuery.error.value
   return error instanceof Error ? error.message : error ? '加载项目失败' : null
 })
-const isImporting = computed(() => importNovelMutation.isPending.value)
 const isDeleting = computed(() => deleteNovelsMutation.isPending.value)
 
 // 最近编辑的项目作为工作台第一优先级，帮助作者快速恢复写作上下文。
@@ -399,59 +394,6 @@ const todayGoal = computed(() => {
   }
 })
 
-const aiSuggestions = computed(() => {
-  const suggestions: Array<{
-    title: string
-    description: string
-    tag: string
-    tone: 'focus' | 'warning' | 'calm'
-  }> = []
-
-  if (continueProject.value) {
-    if (continueProgress.value < 35) {
-      suggestions.push({
-        title: '补全章节骨架',
-        description: '先确保前三章节奏递进清晰，再让 AI 生成正文会更稳定。',
-        tag: '节奏偏慢',
-        tone: 'warning',
-      })
-    } else {
-      suggestions.push({
-        title: '开始正文冲刺',
-        description: '你的蓝图已具备连贯性，可以把 AI 主要用于出初稿与局部润色。',
-        tag: '创作中',
-        tone: 'focus',
-      })
-    }
-  }
-
-  suggestions.push({
-    title: '检查伏笔回收路径',
-    description: '在章节交界处补一轮伏笔追踪，避免后期出现剧情断层。',
-    tag: '伏笔待回收',
-    tone: 'calm',
-  })
-
-  suggestions.push({
-    title: '做一次语气统一',
-    description: '选两章相邻正文做风格比对，统一叙述视角与句式密度。',
-    tag: '待润色',
-    tone: 'focus',
-  })
-
-  return suggestions.slice(0, 3)
-})
-
-const formatProjectDate = (value: string) => {
-  if (!value) return '暂无更新时间'
-  return new Date(value).toLocaleString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
 const goToInspiration = () => {
   router.push('/inspiration')
 }
@@ -468,41 +410,8 @@ const enterProject = (project: NovelProjectSummary) => {
   }
 }
 
-const openProjectFromActivity = (project: NovelProjectSummary) => {
-  enterProject(project)
-}
-
 const loadProjects = async () => {
   await projectsQuery.refetch()
-}
-
-const triggerImport = () => {
-  if (isImporting.value) return
-  fileInput.value?.click()
-}
-
-const handleFileImport = async (event: Event) => {
-  const target = event.target as HTMLInputElement
-  if (!target.files || target.files.length === 0) return
-
-  const file = target.files[0]
-  if (!file.name.endsWith('.txt')) {
-    showWorkspaceMessage({ type: 'error', text: '请上传 .txt 格式的文件' })
-    target.value = ''
-    return
-  }
-
-  // 导入成功后直接进入写作台，避免作者再从列表中寻找新项目。
-  try {
-    const response = await importNovelMutation.mutateAsync(file)
-    router.push(`/projects/${response.id}/write`)
-  } catch (error) {
-    // 【强类型守卫】：杜绝 any 逃逸，通过安全分支守卫访问 message 属性
-    const text = error instanceof Error ? error.message : '导入失败，请重试'
-    showWorkspaceMessage({ type: 'error', text })
-  } finally {
-    target.value = ''
-  }
 }
 
 const handleDeleteProject = (projectId: string) => {
@@ -564,8 +473,8 @@ onUnmounted(() => {
   border-radius: 0 !important; /* 彻底去除 SaaS 圆角，呈现国风直角 */
   background-color: var(--md-surface-dim); /* 徽墨老宣底色 */
   background-image:
-    radial-gradient(circle at 10% 10%, rgba(46, 92, 138, 0.03), transparent 45%),
-    radial-gradient(circle at 90% 80%, rgba(184, 60, 50, 0.02), transparent 45%);
+    radial-gradient(circle at 10% 10%, var(--md-tint-cool), transparent 45%),
+    radial-gradient(circle at 90% 80%, color-mix(in srgb, var(--md-secondary) 2%, transparent), transparent 45%);
   box-shadow: 4px 4px 0px var(--md-outline-variant); /* 拓片硬偏置投影 */
   position: relative;
 }
@@ -589,6 +498,7 @@ onUnmounted(() => {
   color: var(--md-on-surface);
   font-size: clamp(1.45rem, 2vw, 2rem);
   line-height: 1.35;
+  letter-spacing: 0.05em;
 }
 
 .workspace-hero__summary {
@@ -610,7 +520,7 @@ onUnmounted(() => {
   align-items: center;
   height: 30px;
   padding: 0 11px;
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs);
   border: 1px solid var(--md-outline-variant);
   background-color: color-mix(in srgb, var(--md-surface-container-low) 70%, transparent);
   color: var(--md-on-surface-variant);
@@ -736,29 +646,29 @@ onUnmounted(() => {
   border-radius: 0 !important; /* 彻底直角化 */
   background-color: var(--md-surface-container-low); /* 熟宣/竹纸质感 */
   background-image: 
-    repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.015) 0px, rgba(28, 32, 34, 0.015) 1px, transparent 1px, transparent 40px), /* 仿手工宣纸帘纹 */
-    radial-gradient(circle at 80% 20%, rgba(28, 32, 34, 0.02) 0%, transparent 60%); /* 淡淡松烟墨晕 */
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--md-on-surface) 1.5%, transparent) 0px, color-mix(in srgb, var(--md-on-surface) 1.5%, transparent) 1px, transparent 1px, transparent 40px), /* 仿手工宣纸帘纹 */
+    radial-gradient(circle at 80% 20%, color-mix(in srgb, var(--md-on-surface) 2%, transparent) 0%, transparent 60%); /* 淡淡松烟墨晕 */
   padding: var(--md-spacing-5);
   display: flex;
   flex-direction: column;
   gap: var(--md-spacing-4);
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.05);
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 5%, transparent);
   transition: 
     border-color 0.28s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
-/* Hover 时：双线框优雅加深为朱砂红 */
+/* Hover 时：双线框优雅加深为焦墨色 */
 .workspace-hero__panel:hover {
-  border-color: var(--md-secondary) !important;
-  box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.12) !important;
+  border-color: var(--md-primary) !important;
+  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-on-surface) 12%, transparent) !important;
 }
 
 /* Active 时：钤印微沉 */
 .workspace-hero__panel:active {
   transform: translate(1px, 1px) !important;
-  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15) !important;
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
 }
 
 .workspace-hero__panel-head {
@@ -816,227 +726,11 @@ onUnmounted(() => {
   font-size: var(--md-title-small);
 }
 
-.workspace-canvas {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--md-spacing-4);
-}
-
-.workspace-module,
 .workspace-archive {
   border: 1px solid var(--md-outline);
   border-radius: 0 !important; /* 彻底直角化 */
   background-color: var(--md-surface); /* 熟宣 */
   box-shadow: 3px 3px 0px var(--md-outline-variant); /* 拓片偏置硬影 */
-}
-
-.workspace-module {
-  padding: var(--md-spacing-5);
-}
-
-.workspace-module--tools {
-  grid-column: span 2;
-}
-
-.workspace-module__head h3 {
-  margin: 0;
-  color: var(--md-on-surface);
-  font-size: var(--md-title-large);
-}
-
-.workspace-module__head p {
-  margin: 8px 0 0;
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
-}
-
-.workspace-activity {
-  list-style: none;
-  margin: var(--md-spacing-4) 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--md-spacing-2);
-}
-
-.workspace-activity__item {
-  width: 100%;
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-xs) !important; /* 极微直角 */
-  background-color: var(--md-surface-container-low);
-  padding: var(--md-spacing-3);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--md-spacing-3);
-  text-align: left;
-  cursor: pointer;
-}
-
-.workspace-activity__item:hover {
-  border-color: color-mix(in srgb, var(--md-primary) 28%, var(--md-outline-variant));
-}
-
-.workspace-activity__item strong,
-.workspace-activity__item span,
-.workspace-activity__item em {
-  display: block;
-}
-
-.workspace-activity__item strong {
-  color: var(--md-on-surface);
-  font-size: var(--md-label-large);
-  font-style: normal;
-}
-
-.workspace-activity__item span {
-  margin-top: 3px;
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
-}
-
-.workspace-activity__item em {
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-label-small);
-  font-style: normal;
-  white-space: nowrap;
-}
-
-.workspace-ai-list {
-  list-style: none;
-  margin: var(--md-spacing-3) 0 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--md-spacing-3);
-}
-
-.workspace-insights[open] {
-  display: block;
-}
-
-.workspace-insights__summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--md-spacing-2);
-  min-height: 44px;
-  padding: var(--md-spacing-2) 0;
-  cursor: pointer;
-  list-style: none;
-  color: var(--md-on-surface);
-  font-size: var(--md-title-medium);
-  font-weight: 600;
-  transition:
-    color var(--md-duration-short) var(--md-easing-standard),
-    opacity var(--md-duration-short) var(--md-easing-standard);
-}
-
-.workspace-insights__summary::-webkit-details-marker {
-  display: none;
-}
-
-.workspace-insights__summary::after {
-  content: '';
-  width: 9px;
-  height: 9px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  transform: rotate(45deg);
-  transform-origin: center;
-  transition: transform var(--md-duration-short) var(--md-easing-standard);
-}
-
-.workspace-insights[open] .workspace-insights__summary::after {
-  transform: rotate(-135deg) translate(-1px, -1px);
-}
-
-.workspace-insights__summary:hover {
-  color: var(--md-primary-dark);
-}
-
-.workspace-insights__summary:active {
-  opacity: 0.78;
-}
-
-.workspace-insights__summary:focus-visible {
-  outline: 2px solid var(--md-primary);
-  outline-offset: 2px;
-  border-radius: var(--md-radius-xs);
-}
-
-.workspace-insights__summary em {
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-label-medium);
-  font-style: normal;
-  font-weight: 500;
-}
-
-.workspace-insights[open] .workspace-ai-list {
-  padding-top: var(--md-spacing-3);
-  border-top: 1px solid var(--md-outline-variant);
-}
-
-.workspace-ai-list li {
-  padding: var(--md-spacing-3);
-  border-radius: var(--md-radius-xs) !important; /* 极微直角 */
-  border: 1px solid var(--md-outline-variant);
-  background-color: var(--md-surface-container-low);
-}
-
-.workspace-ai-list__title {
-  margin: 0;
-  color: var(--md-on-surface);
-  font-weight: 600;
-}
-
-.workspace-ai-list__desc {
-  margin: 6px 0 0;
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
-  line-height: 1.6;
-}
-
-.workspace-ai-list__tag {
-  margin-top: var(--md-spacing-2);
-  display: inline-flex;
-  align-items: center;
-  height: 26px;
-  padding: 0 10px;
-  border-radius: var(--md-radius-xs) !important; /* 胶囊标签重塑为方直小签 */
-  font-size: var(--md-label-small);
-  font-weight: 600;
-}
-
-.workspace-ai-list__tag.is-focus {
-  background-color: var(--md-primary-container);
-  color: var(--md-on-primary-container);
-}
-
-.workspace-ai-list__tag.is-warning {
-  background-color: var(--md-warning-container);
-  color: var(--md-on-warning-container);
-}
-
-.workspace-ai-list__tag.is-calm {
-  background-color: var(--md-success-container);
-  color: var(--md-on-success-container);
-}
-
-.workspace-tools {
-  margin-top: var(--md-spacing-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--md-spacing-3);
-}
-
-.workspace-empty-hint {
-  margin: var(--md-spacing-5) 0 0;
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
-}
-
-.workspace-archive {
   padding: clamp(var(--md-spacing-5), 4vw, var(--md-spacing-8));
 }
 
@@ -1053,6 +747,7 @@ onUnmounted(() => {
   margin: 8px 0 0;
   color: var(--md-on-surface);
   font-size: var(--md-title-large);
+  letter-spacing: 0.03em;
 }
 
 .workspace-grid {
@@ -1142,7 +837,7 @@ onUnmounted(() => {
   height: 64px;
   display: grid;
   place-items: center;
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs); /* 方形印鉴造型 */
   background-color: var(--md-primary-container);
   color: var(--md-on-primary-container);
 }
@@ -1260,28 +955,28 @@ onUnmounted(() => {
 }
 
 .delete-alert-icon-container {
-  border-radius: var(--md-radius-xs) !important; /* 方直朱印 */
-  border: 1px solid var(--md-secondary) !important; /* 朱砂细边 */
-  background-color: rgba(184, 60, 50, 0.06) !important;
+  border-radius: var(--md-radius-xs) !important; /* 方直印鉴 */
+  border: 1px solid var(--md-error) !important; /* 丹砂警示细边 */
+  background-color: var(--md-error-container) !important;
 }
 
 .delete-alert-icon {
-  color: var(--md-secondary);
+  color: var(--md-error);
 }
 
 .delete-dialog-subtitle {
-  color: var(--md-secondary-dark);
+  color: var(--md-error-text);
 }
 
 .delete-dialog-content-text strong {
-  color: var(--md-secondary);
+  color: var(--md-error-text);
 }
 
 .delete-confirm-btn {
-  background-color: var(--md-primary) !important; /* 焦墨背景 */
-  color: var(--md-secondary) !important; /* 朱砂红字 */
-  border: 1px solid var(--md-secondary) !important; /* 朱砂红细线框 */
-  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.2) !important; /* 朱印硬影 */
+  background-color: var(--md-error) !important; /* 丹砂警示底 */
+  color: var(--md-on-error) !important; /* 高对比宣白字 */
+  border: 1px solid var(--md-error-strong) !important;
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-error) 20%, transparent) !important; /* 硬投影 */
   transition:
     background-color var(--md-duration-short) var(--md-easing-standard),
     box-shadow var(--md-duration-short) var(--md-easing-standard),
@@ -1290,9 +985,9 @@ onUnmounted(() => {
 }
 
 .delete-confirm-btn:hover {
-  background-color: rgba(184, 60, 50, 0.08) !important; /* 朱砂印泥微融 */
-  color: var(--md-secondary) !important;
-  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.2) !important;
+  background-color: var(--md-error-strong) !important; /* 丹砂加深 */
+  color: var(--md-on-error) !important;
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-error) 20%, transparent) !important;
   transform: translate(1px, 1px); /* 钤印按压微沉交互 */
 }
 

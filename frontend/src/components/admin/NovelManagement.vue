@@ -402,9 +402,10 @@ watch(
   display: inline-flex;
   align-items: center;
   min-height: 24px;
-  border-radius: var(--md-radius-full);
-  background-color: var(--md-primary-container);
-  color: var(--md-primary);
+  border: 1px solid var(--md-outline-variant); /* 全局 chip 浅底细框语言 */
+  border-radius: var(--md-radius-xs); /* 微直角 2px */
+  background-color: var(--md-surface-container);
+  color: var(--md-on-surface-variant);
   font-size: var(--md-label-medium);
   font-weight: 600;
   line-height: 1.2;
@@ -428,7 +429,7 @@ watch(
   flex-direction: column;
   gap: var(--md-spacing-3);
   padding: var(--md-spacing-4);
-  border-radius: 16px;
+  border-radius: var(--md-radius-md); /* 微直角 6px */
   background-color: var(--md-surface-container-low);
   border: 1px solid var(--md-outline-variant);
 }

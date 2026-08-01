@@ -508,7 +508,7 @@ const createPrompt = async () => {
   flex-direction: column;
   background-color: var(--md-surface-container-low);
   border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-lg);
+  border-radius: var(--md-radius-md);
   padding: 12px;
 }
 
@@ -571,8 +571,9 @@ const createPrompt = async () => {
 }
 
 .prompt-list-item.active {
-  border-color: var(--md-primary);
-  background-color: var(--md-primary-container);
+  border-color: var(--md-outline);
+  box-shadow: inset 2px 0 0 var(--md-secondary); /* 左侧朱砂竖描起笔，替代整块石青色块（inset 影实现） */
+  background-color: var(--md-surface-container); /* 中性底 */
 }
 
 .prompt-item-main {

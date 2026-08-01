@@ -18,7 +18,7 @@
       <div v-if="editable" class="blueprint-action-row">
         <button
           type="button"
-          class="blueprint-button blueprint-button--primary"
+          class="md-btn md-btn-filled md-ripple"
           @click="$emit('add')"
         >
           <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -28,7 +28,7 @@
         </button>
         <button
           type="button"
-          class="blueprint-button"
+          class="md-btn md-btn-outlined md-ripple"
           @click="emitEdit('chapter_outline', '章节大纲', outline)"
         >
           <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -128,7 +128,7 @@ export default defineComponent({
   color: var(--md-on-primary);
   font-family: var(--md-font-display);
   font-weight: 700;
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.12);
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 12%, transparent);
 }
 
 .chapter-outline-section__content {

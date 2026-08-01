@@ -161,7 +161,7 @@ const assistantButtonLabel = computed(() => {
   height: 4px;
   margin-top: var(--md-spacing-2);
   overflow: hidden;
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs);
   background-color: var(--md-surface-container);
 }
 

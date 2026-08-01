@@ -82,8 +82,8 @@
   --md-scrim-soft: rgba(28, 32, 34, 0.25);
   --md-state-layer-hover: rgba(28, 32, 34, 0.05);
   --md-state-layer-pressed: rgba(28, 32, 34, 0.1);
-  --md-shadow-primary-1: 2px 2px 0px rgba(28, 32, 34, 0.15); /* 拓片偏置硬投影 */
-  --md-shadow-primary-2: 3px 3px 0px rgba(184, 60, 50, 0.2); /* 朱印深拓 */
+  --md-shadow-primary-1: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent); /* 拓片偏置硬投影（明暗主题自适应） */
+  --md-shadow-primary-2: 3px 3px 0px color-mix(in srgb, var(--md-secondary) 22%, transparent); /* 朱印深拓（明暗主题自适应） */
   --md-secondary-container-hover: #fbebea;
   --md-info: #2e5c8a;
   --md-info-container: #eef5fc;
@@ -164,6 +164,7 @@
   /* Layout */
   --app-shell-width: 260px;
   --app-shell-mobile-tab-height: 64px;
+  --app-topbar-height: 72px;
   --app-content-max: 1360px;
   --app-viewport-unit: 100vh;
 }

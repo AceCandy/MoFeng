@@ -234,9 +234,10 @@ const onMainClick = () => {
   padding: 8px 14px 8px 12px;
   background-color: var(--md-surface);
   border: 1.5px solid var(--md-outline);
-  border-left: 3px solid #9c2720; /* 朱砂引首竖线 */
   border-radius: 2px;
-  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.85); /* 硬偏移水墨阴影 */
+  box-shadow:
+    inset 3px 0 0 var(--md-secondary), /* 朱砂引首竖线 */
+    3px 3px 0 color-mix(in srgb, var(--md-on-surface) 85%, transparent); /* 硬偏移水墨阴影 */
   font-family: var(--md-font-serif);
 }
 
@@ -322,7 +323,7 @@ const onMainClick = () => {
 .reader-float__checkbox {
   width: 14px;
   height: 14px;
-  accent-color: #9c2720; /* 朱砂，呼应引首竖线 */
+  accent-color: var(--md-secondary); /* 朱砂，呼应引首竖线 */
   cursor: pointer;
 }
 

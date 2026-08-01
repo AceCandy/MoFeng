@@ -138,6 +138,6 @@ useDialogA11y({
 .m3-result-dialog {
   max-width: min(900px, calc(100vw - 32px));
   max-height: calc(var(--app-viewport-unit) - 32px);
-  border-radius: var(--md-radius-xl);
+  border-radius: var(--md-radius-md);
 }
 </style>

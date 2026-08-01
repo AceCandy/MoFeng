@@ -2,8 +2,10 @@
 <template>
   <div class="inspiration-loading">
     <div class="inspiration-loading__icon">
-      <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707"></path>
+      <!-- 国风毛笔意象（与全站 stroke 风格一致） -->
+      <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+        <path d="M18.5 2.5l3 3" />
+        <path d="M16 5l2.5 2.5L9 17c-1.5 1.5-4 2.7-5.5 3 .3-1.5 1.5-4 3-5.5L16 5z" />
       </svg>
     </div>
     <h2 class="inspiration-loading__title">正在为你准备灵感空间...</h2>
@@ -34,9 +36,10 @@
 .inspiration-loading__icon {
   width: 5rem;
   height: 5rem;
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs); /* 微直角方函，弃正圆 */
   background-color: var(--md-primary-container);
   color: var(--md-on-primary-container);
+  border: 3px double var(--md-outline); /* 古籍双边 */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -45,8 +48,10 @@
 }
 
 .inspiration-loading__title {
+  font-family: var(--md-font-display); /* 碑拓宋体 */
   font-size: var(--md-title-large);
   font-weight: 600;
+  letter-spacing: 0.03em; /* 碑拓骨力：小标题字距 */
   color: var(--md-on-surface);
   margin-bottom: var(--md-spacing-4);
 }
@@ -56,7 +61,9 @@
   flex-direction: column;
   gap: var(--md-spacing-2);
   color: var(--md-on-surface-variant);
+  font-family: var(--md-font-kai); /* 灵感絮语用楷体 */
   font-size: var(--md-body-medium);
+  letter-spacing: 0.04em;
 }
 
 .inspiration-loading__steps p {

@@ -15,7 +15,7 @@
   content: '' !important;
   position: absolute !important;
   inset: 0 !important;
-  background: radial-gradient(circle, rgba(28, 32, 34, 0.12) 0%, transparent 70%) !important;
+  background: radial-gradient(circle, color-mix(in srgb, var(--md-on-surface) 12%, transparent) 0%, transparent 70%) !important;
   transform: scale(0) !important;
   opacity: 0 !important;
   transition: transform 0s, opacity 0s !important;
@@ -60,7 +60,7 @@ body .md-spinner {
   color: var(--md-on-secondary) !important;
   background-color: var(--md-secondary) !important;
   border: 2px solid var(--md-secondary) !important;
-  box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.3) !important;
+  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-secondary) 30%, transparent) !important;
   padding: 5px 6px 3px 8px !important;
   line-height: 1 !important;
   border-radius: 2px !important;
@@ -71,8 +71,8 @@ body .md-spinner {
 
 /* 暗色模式 LOGO 印章自适应变暗 */
 :root[data-theme='dark'] .writing-header__project::before {
-  background-color: #9c332b !important;
-  border-color: #9c332b !important;
-  color: #e5dec9 !important;
-  box-shadow: 3px 3px 0px rgba(156, 51, 43, 0.4) !important;
+  background-color: var(--md-secondary) !important;
+  border-color: var(--md-secondary) !important;
+  color: var(--md-on-secondary) !important;
+  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-secondary) 40%, transparent) !important;
 }

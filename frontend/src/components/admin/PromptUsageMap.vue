@@ -8,10 +8,10 @@
         <p>按实际调用点整理 AI 阶段、Prompt 名称、用途和当前数据库状态；点击 Prompt 名称可展开正文预览。</p>
       </div>
       <div class="prompt-usage__actions">
-        <button type="button" class="prompt-usage__button" @click="refetchPrompts">
+        <button type="button" class="prompt-usage__button md-btn md-btn-outlined" @click="refetchPrompts">
           刷新
         </button>
-        <button type="button" class="prompt-usage__button is-primary" @click="emit('openPromptEditor')">
+        <button type="button" class="prompt-usage__button md-btn md-btn-filled" @click="emit('openPromptEditor')">
           编辑模板
         </button>
       </div>
@@ -274,7 +274,7 @@ const refetchPrompts = () => {
   color: var(--md-on-surface-variant);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
@@ -474,7 +474,7 @@ const refetchPrompts = () => {
   color: var(--md-on-primary);
   font-size: 13px;
   font-weight: 800;
-  box-shadow: 2px 2px 0 rgba(28, 32, 34, 0.14);
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--md-on-surface) 14%, transparent);
 }
 
 .prompt-usage__stage h5 {

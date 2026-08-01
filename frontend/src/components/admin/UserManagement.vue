@@ -12,10 +12,15 @@
           <div class="admin-metrics-grid">
             <!-- 用户总数 -->
             <!-- 用户总数 -->
-            <article 
+            <article
               class="metric-card clickable-card"
               :class="{ 'is-active-all': activeFilter === 'all' }"
+              role="button"
+              tabindex="0"
+              :aria-pressed="activeFilter === 'all'"
               @click="clearCardFilter"
+              @keydown.enter="clearCardFilter"
+              @keydown.space.prevent="clearCardFilter"
             >
               <p class="metric-card-title">用户总数</p>
               <strong class="metric-card-number">{{ users.length }}</strong>
@@ -29,18 +34,28 @@
                 <p>快速确认后台权限是否集中。</p>
               </header>
               <ul class="admin-insight-list user-status-list">
-                <li 
+                <li
                   class="filterable-item"
                   :class="{ 'is-active': activeFilter === 'admin' }"
+                  role="button"
+                  tabindex="0"
+                  :aria-pressed="activeFilter === 'admin'"
                   @click="handleFilterToggle('admin')"
+                  @keydown.enter="handleFilterToggle('admin')"
+                  @keydown.space.prevent="handleFilterToggle('admin')"
                 >
                   <strong>{{ adminUsers.length }} 个管理员</strong>
                   <span>管理员账号不能在列表中直接删除。</span>
                 </li>
-                <li 
+                <li
                   class="filterable-item"
                   :class="{ 'is-active': activeFilter === 'regular' }"
+                  role="button"
+                  tabindex="0"
+                  :aria-pressed="activeFilter === 'regular'"
                   @click="handleFilterToggle('regular')"
+                  @keydown.enter="handleFilterToggle('regular')"
+                  @keydown.space.prevent="handleFilterToggle('regular')"
                 >
                   <strong>{{ users.length - adminUsers.length }} 个普通用户</strong>
                   <span>普通用户可按需编辑或停用。</span>
@@ -55,18 +70,28 @@
                 <p>删除前先确认停用账号是否仍需保留材料。</p>
               </header>
               <ul class="admin-insight-list user-status-list">
-                <li 
+                <li
                   class="filterable-item"
                   :class="{ 'is-active': activeFilter === 'active' }"
+                  role="button"
+                  tabindex="0"
+                  :aria-pressed="activeFilter === 'active'"
                   @click="handleFilterToggle('active')"
+                  @keydown.enter="handleFilterToggle('active')"
+                  @keydown.space.prevent="handleFilterToggle('active')"
                 >
                   <strong>{{ activeUsers.length }} 个启用账号</strong>
                   <span>可正常进入写作工作台。</span>
                 </li>
-                <li 
+                <li
                   class="filterable-item"
                   :class="{ 'is-active': activeFilter === 'disabled' }"
+                  role="button"
+                  tabindex="0"
+                  :aria-pressed="activeFilter === 'disabled'"
                   @click="handleFilterToggle('disabled')"
+                  @keydown.enter="handleFilterToggle('disabled')"
+                  @keydown.space.prevent="handleFilterToggle('disabled')"
                 >
                   <strong>{{ disabledUsers.length }} 个禁用账号</strong>
                   <span>登录受限，历史项目仍保留。</span>
@@ -81,6 +106,7 @@
               <div class="table-card-title-group">
                 <h3>账号清册</h3>
                 <p>表格与移动卡片共用同一批账号数据。</p>
+                <span class="table-edit-hint">双击表格行可快速编辑账号</span>
               </div>
               <div class="table-card-actions">
                 <n-input
@@ -561,79 +587,27 @@ const handleSubmit = () => {
 
 .table-card {
   margin-top: 0;
-  border: none !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-}
-
-/* 国风单细线指标卡片样式 */
-.metric-card {
   padding: var(--md-spacing-4);
-  border-radius: var(--md-radius-xs) !important; /* 极窄 2px 直角 */
-  border: 1px solid var(--md-outline) !important; /* 竹青细线 */
-  background-color: var(--md-surface-container-low) !important; /* 熟宣暖灰 */
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.05) !important;
-  transition:
-    background-color var(--md-duration-medium) var(--md-easing-standard),
-    border-color var(--md-duration-medium) var(--md-easing-standard),
-    box-shadow var(--md-duration-medium) var(--md-easing-standard),
-    transform var(--md-duration-medium) var(--md-easing-standard) !important;
+  border: 1px solid var(--md-outline-variant); /* 与 admin-table-shell 一致的框线 */
+  border-radius: var(--md-radius-md);
+  background-color: var(--md-surface);
 }
 
-.metric-card:hover {
-  transform: translate(-1px, -1px);
-  border-color: var(--md-secondary) !important;
-  box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.15) !important; /* 朱砂压影 */
-}
-
-/* 激活状态 */
+/* 指标卡骨相（.metric-card 及其内部排版）已统一由 admin-panels.css 提供，hover 为中性底+拓片硬影 */
 .clickable-card {
   cursor: pointer;
 }
 
 .clickable-card.is-active-all {
-  border-color: var(--md-primary) !important;
-  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.15) !important;
-  background-color: var(--md-surface-container) !important;
+  border-color: var(--md-primary);
+  box-shadow: var(--md-shadow-primary-1); /* 拓片硬影，明暗主题自适应 */
+  background-color: var(--md-surface-container);
 }
 
-.metric-card-title {
-  margin: 0;
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
-  font-family: var(--md-font-serif) !important;
-}
-
-.metric-card-number {
-  margin: var(--md-spacing-2) 0 5px;
-  display: block;
-  color: var(--md-primary);
-  font-family: var(--md-font-mono) !important;
-  font-size: var(--md-display-small) !important;
-  font-weight: 600 !important;
-}
-
-.metric-card-desc {
-  margin: 0;
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
-  font-family: var(--md-font-kai) !important;
-}
-
-.metric-card-header-simple h3 {
-  margin: 0;
-  color: var(--md-on-surface);
-  font-family: var(--md-font-display) !important;
-  font-size: var(--md-title-medium) !important;
-  letter-spacing: 0.05em !important;
-}
-
-.metric-card-header-simple p {
-  margin: 4px 0 0;
-  color: var(--md-on-surface-variant);
-  font-family: var(--md-font-kai) !important;
-  font-size: var(--md-body-small);
+.clickable-card:focus-visible,
+.filterable-item:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
 }
 
 .filterable-item {
@@ -650,9 +624,9 @@ const handleSubmit = () => {
 }
 
 .filterable-item.is-active {
-  border-color: var(--md-secondary) !important;
-  background-color: var(--md-secondary-container) !important;
-  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.15);
+  border-color: var(--md-outline);
+  box-shadow: inset 2px 0 0 var(--md-secondary); /* 左侧朱砂竖描起笔，禁整框实底色块（inset 影实现，规避边框宽度禁令） */
+  background-color: var(--md-surface-container); /* 中性底，不占朱砂配额 */
 }
 
 /* 朱印管理员印章 */
@@ -674,8 +648,8 @@ const handleSubmit = () => {
   font-size: 11px;
   font-family: var(--md-font-display);
   font-weight: bold;
-  border-radius: 2px; /* 小方章微圆角 */
-  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.3); /* 印章印泥压印感 */
+  border-radius: var(--md-radius-xs); /* 小方章微直角 */
+  box-shadow: 1px 1px 0 color-mix(in srgb, var(--md-secondary) 30%, transparent); /* 印章印泥压印感 */
   user-select: none;
   flex-shrink: 0;
 }
@@ -725,7 +699,7 @@ const handleSubmit = () => {
   gap: var(--md-spacing-4);
   flex-wrap: wrap;
   padding-bottom: var(--md-spacing-4);
-  border-bottom: 1px dashed var(--md-outline-variant);
+  border-bottom: 1px solid var(--md-outline-variant);
   margin-bottom: var(--md-spacing-4);
 }
 
@@ -739,6 +713,15 @@ const handleSubmit = () => {
 
 .table-card-title-group p {
   margin: 6px 0 0;
+  color: var(--md-on-surface-variant);
+  font-family: var(--md-font-kai);
+  font-size: var(--md-body-small);
+}
+
+/* 双击行编辑的楷体提示（纯视觉 affordance） */
+.table-edit-hint {
+  display: block;
+  margin-top: var(--md-spacing-1);
   color: var(--md-on-surface-variant);
   font-family: var(--md-font-kai);
   font-size: var(--md-body-small);
@@ -784,7 +767,7 @@ const handleSubmit = () => {
   gap: var(--md-spacing-3);
   padding: var(--md-spacing-4);
   border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-lg);
+  border-radius: var(--md-radius-md);
   background-color: var(--md-surface-container-low);
 }
 

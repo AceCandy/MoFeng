@@ -136,7 +136,7 @@ export default defineComponent({
   font-family: var(--md-font-display);
   font-size: 1.1rem;
   font-weight: 700;
-  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.08);
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent);
 }
 
 .characters-section__identity {

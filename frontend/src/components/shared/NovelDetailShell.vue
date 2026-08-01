@@ -341,34 +341,6 @@ watch(
   overflow: hidden; /* 绝不产生全局溢出滚动 */
 }
 
-/* 提至右上角的方正金石按钮 */
-.detail-shell__action-btn {
-  flex: 0 0 auto;
-  border-radius: 2px !important;
-  border: 1px solid var(--md-outline) !important;
-  background-color: var(--md-primary) !important;
-  color: var(--md-on-primary) !important;
-  font-family: var(--md-font-serif);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  padding: 0 16px;
-  height: 36px;
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.2);
-  transition:
-    background-color 0.2s cubic-bezier(0.2, 0, 0, 1),
-    box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1),
-    transform 0.2s cubic-bezier(0.2, 0, 0, 1);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.detail-shell__action-btn:hover {
-  background-color: var(--md-primary-dark) !important;
-  box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.2) !important; /* 朱印深拓 */
-  transform: translate(-1px, -1px);
-}
-
 @media (min-width: 1200px) {
   .detail-shell--drawer-collapsed .detail-shell__drawer {
     flex-basis: 0;

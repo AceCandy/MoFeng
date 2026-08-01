@@ -354,13 +354,6 @@ defineExpose({
 }
 
 .model-routing__topbar {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--md-spacing-3);
-}
-
-.model-routing__topbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
@@ -379,6 +372,7 @@ defineExpose({
 .model-routing__section-copy h3 {
   margin: 0;
   color: var(--md-on-surface);
+  letter-spacing: 0.03em; /* 碑拓骨力：宋体小标题拉开字距 */
 }
 
 .model-routing__topbar-actions {
@@ -399,24 +393,8 @@ defineExpose({
   position: relative;
   display: grid;
   gap: var(--md-spacing-3);
-  overflow: hidden;
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.08);
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent);
   transition: box-shadow var(--md-duration-short) var(--md-easing-standard);
-}
-
-.model-routing__provider-card::after {
-  content: '';
-  position: absolute;
-  right: -10px;
-  bottom: -10px;
-  width: 140px;
-  height: 160px;
-  pointer-events: none;
-  z-index: 1;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 120' fill='none' stroke='%231C2022' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M70,120 Q65,80 62,40 M62,39 Q60,20 59,0 M63,50 Q45,45 35,55 M61,30 Q80,25 90,32' stroke-width='1.2' opacity='0.035'/%3E%3Cpath d='M35,55 Q20,62 10,68 Q25,60 33,56 Z' fill='%231C2022' opacity='0.025' stroke='none'/%3E%3Cpath d='M33,56 Q15,55 5,50 Q18,53 30,55 Z' fill='%231C2022' opacity='0.025' stroke='none'/%3E%3Cpath d='M90,32 Q105,30 115,35 Q100,33 88,32 Z' fill='%231C2022' opacity='0.025' stroke='none'/%3E%3Cpath d='M88,32 Q102,24 110,18 Q96,25 87,31 Z' fill='%231C2022' opacity='0.025' stroke='none'/%3E%3C/svg%3E");
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: right bottom;
 }
 
 .model-routing__provider-grid {
@@ -425,46 +403,18 @@ defineExpose({
   gap: var(--md-spacing-3);
 }
 
-.model-routing__hint,
-.model-routing__empty {
-  margin: 4px 0 0;
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
+.model-routing__provider-grid > .model-routing__provider-card:only-child {
+  grid-column: 1 / -1;
 }
 
-.model-routing__empty-state {
-  display: grid;
-  justify-items: start;
-  gap: var(--md-spacing-2);
-  padding: var(--md-spacing-5);
-  border: 1px dashed var(--md-outline);
-  border-radius: var(--md-radius-sm);
-  background: var(--md-surface);
-}
-
-.model-routing__empty-state p {
-  margin: 0;
-}
-
-@media (min-width: 768px) {
-  .model-routing__provider-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  }
-
-  .model-routing__provider-grid > .model-routing__provider-card:only-child {
-    grid-column: 1 / -1;
-  }
-
-  /* 无论是否为 only-child，只要处于编辑态，就强制跨列，100% 全宽铺满弹窗 */
-  .model-routing__provider-grid > .model-routing__provider-card.is-editing {
-    grid-column: 1 / -1 !important;
-  }
+/* 处于编辑态的卡片强制跨列，100% 全宽铺满 */
+.model-routing__provider-grid > .model-routing__provider-card.is-editing {
+  grid-column: 1 / -1;
 }
 
 @media (max-width: 640px) {
   .model-routing__topbar {
-    flex-direction: column;
-    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .model-routing__topbar-actions {
@@ -474,10 +424,6 @@ defineExpose({
   .model-routing__topbar-actions .md-btn {
     flex: 1 1 140px;
   }
-
-  .model-routing__topbar {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 /* 正在编辑中的卡片视觉增强 */
@@ -486,10 +432,6 @@ defineExpose({
   border-width: 2px !important;
   border-color: var(--md-primary) !important;
   background: color-mix(in srgb, var(--md-surface) 96%, var(--md-primary)) !important;
-  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.12) !important;
-}
-
-.model-routing__provider-card.is-editing::after {
-  opacity: 0.01 !important; /* 极度淡化背景竹影 */
+  box-shadow: 4px 4px 0px color-mix(in srgb, var(--md-on-surface) 12%, transparent) !important;
 }
 </style>

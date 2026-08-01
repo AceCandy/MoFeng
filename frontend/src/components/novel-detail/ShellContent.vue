@@ -139,7 +139,7 @@ defineEmits<{
 
   /* 水墨微晕极细滚动条美化，保持纯净宣纸质感并引导高品质滚动 */
   scrollbar-width: thin;
-  scrollbar-color: rgba(60, 80, 70, 0.25) transparent;
+  scrollbar-color: color-mix(in srgb, var(--md-on-surface) 25%, transparent) transparent;
 }
 
 .detail-shell__content-surface::-webkit-scrollbar {
@@ -152,22 +152,22 @@ defineEmits<{
 }
 
 .detail-shell__content-surface::-webkit-scrollbar-thumb {
-  background-color: rgba(60, 80, 70, 0.2);
+  background-color: color-mix(in srgb, var(--md-on-surface) 20%, transparent);
   border-radius: var(--md-radius-xs);
 }
 
 .detail-shell__content-surface::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(60, 80, 70, 0.45);
+  background-color: color-mix(in srgb, var(--md-on-surface) 45%, transparent);
 }
 
 /* 其它设定分区的双线古籍装订框大卡片 */
 .detail-shell__content-surface--classical {
   border: 3px double var(--md-outline) !important; /* 双线装订框 */
   border-radius: 4px !important; /* 方折风骨 */
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.15) !important; /* 拓片硬投影 */
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important; /* 拓片硬投影 */
   background-color: var(--md-surface) !important; /* 熟宣 */
   /* 宣纸帘纹理 */
-  background-image: repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.005) 0px, rgba(28, 32, 34, 0.005) 1px, transparent 1px, transparent 32px);
+  background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--md-on-surface) 0.5%, transparent) 0px, color-mix(in srgb, var(--md-on-surface) 0.5%, transparent) 1px, transparent 1px, transparent 32px);
 }
 
 .detail-shell__content-surface--fill {
@@ -201,20 +201,6 @@ defineEmits<{
   border: 1.5px solid var(--md-outline-variant) !important;
   border-radius: 4px !important; /* 统一碑拓方直 */
   background-color: var(--md-surface-container-low) !important; /* 竹纸淡黄底，产生层叠景深 */
-  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.08) !important;
-}
-
-/* 统一统摄深度子卡片的现代圆角，回归方正骨力 */
-.detail-shell__content-surface--classical :deep(.rounded-2xl) {
-  border-radius: 4px !important;
-}
-.detail-shell__content-surface--classical :deep(.rounded-xl) {
-  border-radius: 2px !important;
-}
-.detail-shell__content-surface--classical :deep(.rounded-lg) {
-  border-radius: 2px !important;
-}
-.detail-shell__content-surface--classical :deep(.shadow-sm) {
-  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.08) !important;
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
 }
 </style>

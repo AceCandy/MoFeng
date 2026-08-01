@@ -5,14 +5,14 @@
 
 /* 1. 更替密契（修改密码）昼夜黛绿印 */
 .app-shell__action-badge.is-password {
-  background-color: var(--md-success, #3b7a57) !important;
+  background-color: var(--md-success) !important;
   color: var(--md-on-success) !important;
-  border: 1px solid #234d35 !important;
-  box-shadow: 1.5px 1.5px 0px rgba(59, 122, 87, 0.25) !important;
+  border: 1px solid color-mix(in srgb, var(--md-success) 60%, black) !important;
+  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-success) 25%, transparent) !important;
   transform: rotate(1.5deg) !important;
 }
 :root[data-theme='dark'] .app-shell__action-badge.is-password {
-  background-color: #27523a !important;
-  border-color: #173324 !important;
-  box-shadow: 1.5px 1.5px 0px rgba(39, 82, 58, 0.4) !important;
+  background-color: color-mix(in srgb, var(--md-success) 70%, black) !important;
+  border-color: color-mix(in srgb, var(--md-success) 45%, black) !important;
+  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-success) 40%, transparent) !important;
 }

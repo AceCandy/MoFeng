@@ -84,8 +84,8 @@ button.md-chip,
   border: 1.5px solid var(--md-secondary);
   border-radius: var(--md-radius-xs); /* 2px */
   letter-spacing: 0.08em;
-  text-shadow: 0.5px 0.5px 0px rgba(184, 60, 50, 0.1);
-  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15);
+  text-shadow: 0.5px 0.5px 0px color-mix(in srgb, var(--md-secondary) 10%, transparent);
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-secondary) 15%, transparent);
   position: relative;
 }
 
@@ -103,7 +103,7 @@ button.md-chip,
   border: 1.5px solid var(--md-secondary);
   border-radius: var(--md-radius-xs);
   letter-spacing: 0.08em;
-  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.2);
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-secondary) 20%, transparent);
 }
 
 /* 触控防范热区 (Touch Target Expansion)

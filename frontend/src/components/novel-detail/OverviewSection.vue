@@ -206,29 +206,6 @@ const metadataCompletenessPercent = computed(() =>
     : 0,
 )
 
-const metricItems = computed(() => [
-  {
-    label: '类型',
-    value: props.data?.genre || '未定',
-    note: '决定题材预期',
-  },
-  {
-    label: '角色',
-    value: props.data?.character_count ?? '-',
-    note: '核心人物数量',
-  },
-  {
-    label: '章节',
-    value: props.data?.chapter_count ?? '-',
-    note: '大纲规模',
-  },
-  {
-    label: '基调',
-    value: props.data?.tone || '未定',
-    note: '叙事气质',
-  },
-])
-
 const readinessItems = computed(() => [
   {
     kicker: '定位',
@@ -554,7 +531,6 @@ export default defineComponent({
 
 .archive-overview__empty-text {
   color: var(--md-on-surface-variant) !important;
-  font-style: italic;
 }
 
 @media (max-width: 640px) {

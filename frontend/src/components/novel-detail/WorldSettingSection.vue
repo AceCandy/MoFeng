@@ -207,7 +207,6 @@ export default defineComponent({
 
 .world-setting-section__empty {
   color: var(--md-on-surface-variant);
-  font-style: italic;
 }
 
 @media (max-width: 640px) {

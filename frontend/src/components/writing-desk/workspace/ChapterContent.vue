@@ -732,25 +732,9 @@ defineExpose({
 </script>
 
 <style scoped>
+/* 稿纸古籍双线框与朱砂竖界格已由全局 chapter-paper.css 收口（DESIGN 点名主写作容器），
+   scoped 仅保留铺满高度这一布局诉求，视觉层不再另起炉灶 */
 .chapter-paper {
-  padding: var(--md-spacing-6) var(--md-spacing-8) var(--md-spacing-10); /* 四周大气的国风内缩留白，字不贴边 */
-  border: none !important; /* 彻底去除边框，在顶格拉满时浑然一体 */
-  border-radius: 0 !important; /* 去除圆角以自然铺满红框 */
-  background-color: var(--md-surface) !important; /* 宣纸乳黄质感底色 */
-  /* 极致国风脑洞：正文区融入古典竹青淡墨横线信笺格与空灵祥云水墨底纹双重背景 */
-  background-image:
-    linear-gradient(
-      180deg,
-      transparent 0px,
-      transparent calc(1.85em - 1px),
-      rgba(63, 108, 93, 0.09) calc(1.85em - 1px),
-      rgba(63, 108, 93, 0.09) 1.85em
-    ),
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cpath d='M40 25 c-2-5-8-5-10-2 c-4-2-8 1-7 5 c-3 0-5 3-4 6 c1 3 4 3 6 3 h10 c3 0 5-2 5-5 c0-3-2-5-5-5 z' fill='none' stroke='%231c2022' stroke-width='0.7' stroke-opacity='0.018'/%3E%3Cpath d='M15 55 c-1-3-5-3-6-1 c-2-1-5 0-4 3 c-2 0-3 2-2 4 c1 2 2 2 4 2 h6 c2 0 3-1 3-3 c0-2-1-3-3-3 z' fill='none' stroke='%231c2022' stroke-width='0.7' stroke-opacity='0.012'/%3E%3Cpath d='M65 50 c-1-3-5-3-6-1 c-2-1-5 0-4 3 c-2 0-3 2-2 4 c1 2 2 2 4 2 h6 c2 0 3-1 3-3 c0-2-1-3-3-3 z' fill='none' stroke='%231c2022' stroke-width='0.7' stroke-opacity='0.012'/%3E%3C/svg%3E") !important;
-  background-size: 100% 1.85em, 80px 80px !important;
-  background-repeat: repeat, repeat !important;
-  line-height: 1.85em !important;
-  box-shadow: none !important; /* 去除影子，与主工作区合体 */
   min-height: 100%; /* 纵向和高度完全铺满红框 */
 }
 
@@ -792,7 +776,7 @@ defineExpose({
   border-radius: var(--md-radius-md) !important;
   border: 3px double var(--md-outline) !important;
   background-color: var(--md-surface) !important;
-  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.15) !important;
+  box-shadow: var(--md-shadow-primary-1) !important;
   animation: optimizer-pop-in 0.24s ease-out both;
 }
 
@@ -802,7 +786,7 @@ defineExpose({
   border-radius: var(--md-radius-md) !important;
   border: 3px double var(--md-outline) !important;
   background-color: var(--md-surface) !important;
-  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.15) !important;
+  box-shadow: var(--md-shadow-primary-1) !important;
 }
 
 .m3-result-dialog__header {
@@ -833,7 +817,7 @@ defineExpose({
   position: relative;
   width: 100%;
   height: 6px;
-  border-radius: 999px;
+  border-radius: var(--md-radius-xs);
   overflow: hidden;
   background-color: color-mix(in srgb, var(--md-primary) 16%, var(--md-surface));
 }
@@ -860,7 +844,7 @@ defineExpose({
 .m3-optimizing-dots i {
   width: 5px;
   height: 5px;
-  border-radius: 999px;
+  border-radius: var(--md-radius-xs);
   background: var(--md-primary);
   display: inline-block;
   animation: optimizer-dot-breath 0.9s ease-in-out infinite;
@@ -890,7 +874,7 @@ defineExpose({
   height: 28px;
   align-items: center;
   justify-content: center;
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs);
   background-color: var(--md-surface-container);
   color: var(--md-on-surface-variant);
   font-size: var(--md-label-medium);
@@ -920,13 +904,19 @@ defineExpose({
   margin-bottom: 0;
 }
 
-/* 朗读当前段：石青变色 + 蓝色波浪线高亮（国风石青 #2e5c8a，宣纸底上醒目） */
+/* 朗读当前段：石青变色 + 波浪线高亮（石青 primary-container，明暗主题自适应） */
 .chapter-prose p.chapter-prose__p--active {
   font-weight: 700;
-  color: #2e5c8a;
-  text-decoration: underline wavy #2e5c8a;
+  color: var(--md-primary-container);
+  text-decoration: underline wavy var(--md-primary-container);
   text-decoration-thickness: 2px;
   text-underline-offset: 0.16em;
+}
+
+/* 暗色下石青容器色过深，混入素骨黄提亮保持可读 */
+:root[data-theme='dark'] .chapter-prose p.chapter-prose__p--active {
+  color: color-mix(in srgb, var(--md-on-surface) 65%, var(--md-info));
+  text-decoration-color: color-mix(in srgb, var(--md-on-surface) 65%, var(--md-info));
 }
 
 @keyframes optimizer-pop-in {

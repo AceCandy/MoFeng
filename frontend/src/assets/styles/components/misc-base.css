@@ -104,19 +104,8 @@
 }
 
 /* ============================================
-   Chat Bubble Styles (Material 3)
+   Chat Bubble 样式已收口至 ChatBubble.vue scoped（唯一真相源），全局不再覆写
    ============================================ */
-.chat-bubble-ai {
-  background-color: var(--md-surface-container);
-  color: var(--md-on-surface);
-  border-radius: var(--md-radius-lg) var(--md-radius-lg) var(--md-radius-lg) var(--md-radius-xs);
-}
-
-.chat-bubble-user {
-  background-color: var(--md-primary);
-  color: var(--md-on-primary);
-  border-radius: var(--md-radius-lg) var(--md-radius-lg) var(--md-radius-xs) var(--md-radius-lg);
-}
 
 /* ============================================
    Legacy Compatibility

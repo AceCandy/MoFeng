@@ -83,7 +83,7 @@ defineProps<{
   border: 3px double var(--md-outline); /* 古籍特有双线边框 */
   border-radius: 4px; /* 极微方折圆角 */
   background-color: var(--md-surface); /* 熟宣底色 */
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.15); /* 拓片硬投影 */
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent); /* 拓片硬投影 */
   overflow: hidden;
   height: var(--detail-shell-overview-height);
   min-height: 0;
@@ -159,7 +159,7 @@ defineProps<{
   font-weight: 600;
   letter-spacing: 0.1em;
   border-radius: 2px;
-  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15);
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-secondary) 15%, transparent);
 }
 
 .detail-shell__status-pill::before {

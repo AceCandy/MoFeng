@@ -16,13 +16,13 @@ body .app-shell__topbar {
   align-items: center !important;
   justify-content: flex-start !important;
   gap: var(--md-spacing-6) !important; /* 拉开间距 */
-  min-height: 60px !important; /* 顶部高度控制在60px */
+  min-height: var(--app-topbar-height) !important; /* 顶栏高度统一走全局 token（72px） */
   padding: 0 clamp(var(--md-spacing-4), 3vw, var(--md-spacing-8)) !important;
   background:
     radial-gradient(circle at 50% 0%, rgba(46, 92, 138, 0.02), transparent 50%),
     linear-gradient(180deg, var(--md-surface) 60%, var(--md-background) 100%) !important;
   border-bottom: 1px solid var(--md-outline-variant) !important;
-  box-shadow: 0 1px 0px rgba(28, 32, 34, 0.05) !important;
+  box-shadow: 0 1px 0px color-mix(in srgb, var(--md-on-surface) 5%, transparent) !important;
 }
 
 
@@ -58,7 +58,7 @@ body .app-shell__topbar {
   display: flex !important;
   align-items: center !important;
   min-height: 44px !important;
-  height: 38px !important; /* 适度缩减高度以配合60px的顶栏 */
+  height: 38px !important; /* 适度缩减高度以配合顶栏统一高度 */
   padding: 0 var(--md-spacing-4) !important;
   border-radius: var(--md-radius-sm) !important;
   font-family: var(--md-font-display) !important;
@@ -73,7 +73,7 @@ body .app-shell__topbar {
   border: 1px solid var(--md-outline) !important; /* 边框使用浅金棕 */
   background-color: var(--md-surface-dim) !important; /* 背景使用老宣纸色 */
   /* 带有熟宣噪点背景 */
-  background-image: radial-gradient(rgba(28, 32, 34, 0.015) 1px, transparent 0) !important;
+  background-image: radial-gradient(color-mix(in srgb, var(--md-on-surface) 1.5%, transparent) 1px, transparent 0) !important;
   background-size: 8px 8px !important;
 }
 
@@ -89,7 +89,7 @@ body .app-shell__topbar {
 .app-shell__project-capsule.is-select.is-active {
   background-color: var(--md-surface-bright) !important;
   border-color: var(--md-secondary) !important;
-  box-shadow: 2px 2.5px 0px rgba(184, 60, 50, 0.15) !important;
+  box-shadow: 2px 2.5px 0px color-mix(in srgb, var(--md-secondary) 15%, transparent) !important;
   transform: rotate(-0.5deg) translateY(-0.5px) !important;
 }
 
@@ -127,26 +127,26 @@ body .app-shell__topbar {
   transform: rotate(180deg) !important;
 }
 
-/* 胶囊二：作品状态与成就多维胶囊 */
+/* 胶囊二：作品状态与成就多维胶囊（与 topbar.css 重复定义合并于此，明暗自适应） */
 .app-shell__project-capsule.is-status {
   cursor: default !important;
-  background-color: rgba(28, 32, 34, 0.02) !important;
-  border-color: var(--md-outline-variant) !important;
+  background-color: var(--md-state-layer-hover) !important; /* 熟宣微黄半透 */
+  border: 1px dashed color-mix(in srgb, var(--md-secondary) 30%, transparent) !important; /* 朱砂红细虚线边框，显金石拓印底蕴 */
   color: var(--md-on-surface) !important;
+  gap: var(--md-spacing-3) !important;
+  padding: 0 var(--md-spacing-4) !important;
+  font-family: var(--md-font-display) !important;
   font-size: 0.85rem !important;
-  box-shadow: inset 1px 1px 2px rgba(28, 32, 34, 0.02) !important;
-  gap: 14px !important;
-  padding: 0 var(--md-spacing-5) !important;
 }
 
 .app-shell__project-tag-info {
-  color: #8A7C6E !important; /* 细字灰棕色 */
+  color: var(--md-on-surface-variant) !important; /* 细字松烟灰 */
   font-weight: 400 !important; /* 细字 */
   letter-spacing: 0.05em !important;
   padding: 2px 8px !important;
-  border: 1px solid rgba(138, 124, 110, 0.15) !important; /* 卷轴题签 */
-  border-radius: 4px !important;
-  background-color: rgba(138, 124, 110, 0.04) !important;
+  border: 1px solid color-mix(in srgb, var(--md-on-surface-variant) 18%, transparent) !important; /* 卷轴题签 */
+  border-radius: var(--md-radius-sm) !important;
+  background-color: color-mix(in srgb, var(--md-on-surface-variant) 6%, transparent) !important;
   font-family: var(--md-font-serif) !important;
 }
 
@@ -175,16 +175,13 @@ body .app-shell__topbar {
   background-color: var(--md-surface) !important;
   border: 1px solid var(--md-outline) !important;
   border-radius: var(--md-radius-sm) !important;
-  box-shadow:
-    0 10px 25px -5px rgba(28, 32, 34, 0.1),
-    0 8px 10px -6px rgba(28, 32, 34, 0.05),
-    3px 3px 0px var(--md-outline-variant) !important;
+  box-shadow: 3px 3px 0px var(--md-outline-variant) !important; /* 拓片硬影，与 user-dropdown 对齐 */
   z-index: 100 !important;
   padding: 14px 0 !important;
   text-align: left !important;
   /* 宣纸纸底 */
-  background-image: radial-gradient(rgba(28, 32, 34, 0.02) 1px, transparent 0) !important;
-  background-size: 6px 6px !important;
+  background-image: radial-gradient(color-mix(in srgb, var(--md-on-surface) 2%, transparent) 1px, transparent 0) !important;
+  background-size: 8px 8px !important;
 }
 
 .app-shell__dropdown-header {
@@ -193,7 +190,7 @@ body .app-shell__topbar {
   font-weight: 600 !important;
   color: var(--md-secondary) !important;
   padding: 0 var(--md-spacing-4) var(--md-spacing-2) var(--md-spacing-4) !important;
-  border-bottom: 1px dashed rgba(184, 60, 50, 0.15) !important;
+  border-bottom: 1px dashed color-mix(in srgb, var(--md-secondary) 15%, transparent) !important;
   margin-bottom: var(--md-spacing-2) !important;
   letter-spacing: 0.05em !important;
 }
@@ -244,7 +241,7 @@ body .app-shell__topbar {
 
 .app-shell__dropdown-item .item-tag {
   font-size: 10px !important;
-  background-color: rgba(28, 32, 34, 0.04) !important;
+  background-color: color-mix(in srgb, var(--md-on-surface) 4%, transparent) !important;
   border: 1px solid var(--md-outline-variant) !important;
   padding: 1px 5px !important;
   border-radius: 2px !important;
@@ -255,7 +252,7 @@ body .app-shell__topbar {
 /* 项 Hover：扫墨枯笔飞白墨迹 */
 .app-shell__dropdown-item:hover {
   color: var(--md-secondary) !important;
-  background-color: rgba(184, 60, 50, 0.03) !important;
+  background-color: color-mix(in srgb, var(--md-secondary) 3%, transparent) !important;
   background-size: 100% 100% !important;
   background-repeat: no-repeat !important;
   transform: translateX(2px) !important;
@@ -264,8 +261,8 @@ body .app-shell__topbar {
 .app-shell__dropdown-item.is-active {
   color: var(--md-secondary) !important;
   font-weight: 600 !important;
-  background-color: rgba(184, 60, 50, 0.05) !important;
-  border: 1px solid rgba(184, 60, 50, 0.2) !important;
+  background-color: color-mix(in srgb, var(--md-secondary) 5%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--md-secondary) 20%, transparent) !important;
 }
 
 .app-shell__dropdown-empty {
@@ -311,12 +308,12 @@ body .app-shell__topbar {
 
 .app-shell__dropdown-action:hover {
   color: var(--md-primary) !important;
-  background-color: rgba(28, 32, 34, 0.03) !important;
+  background-color: color-mix(in srgb, var(--md-on-surface) 3%, transparent) !important;
 }
 
 .app-shell__dropdown-action:first-child:hover {
   color: var(--md-secondary) !important;
-  background-color: rgba(184, 60, 50, 0.03) !important;
+  background-color: color-mix(in srgb, var(--md-secondary) 3%, transparent) !important;
 }
 
 /* 空白状态：山水泼墨励志寄语样式 */
@@ -326,7 +323,7 @@ body .app-shell__topbar {
   gap: var(--md-spacing-2) !important;
   padding: 0 var(--md-spacing-4) !important;
   height: 42px !important;
-  color: #0d1011 !important;
+  color: var(--md-on-surface) !important;
   font-family: var(--md-font-label) !important;
   font-size: 0.92rem !important;
   font-weight: 600 !important;
@@ -379,7 +376,7 @@ body .app-shell__topbar {
 }
 
 :root[data-theme='dark'] .app-shell__project-welcome-message {
-  color: #f2ebd9 !important;
+  color: var(--md-on-surface) !important;
 }
 
 /* 过渡动画 */
@@ -418,10 +415,10 @@ body .app-shell__topbar {
   align-items: center !important;
   gap: var(--md-spacing-2) !important;
   padding: 4px 10px !important;
-  background-color: rgba(28, 32, 34, 0.03) !important;
+  background-color: color-mix(in srgb, var(--md-on-surface) 3%, transparent) !important;
   border: 1px solid var(--md-outline-variant) !important;
   border-radius: 1px !important;
-  box-shadow: inset 1px 1px 2px rgba(28, 32, 34, 0.02) !important;
+  box-shadow: inset 1px 1px 2px color-mix(in srgb, var(--md-on-surface) 2%, transparent) !important;
 }
 
 .app-shell__user-role-dot {
@@ -480,7 +477,7 @@ body .app-shell__topbar {
   background-color: var(--md-secondary) !important;
   color: var(--md-on-secondary) !important;
   border: 1px solid var(--md-secondary-dark) !important;
-  box-shadow: 1.5px 1.5px 0px rgba(184, 60, 50, 0.25) !important;
+  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-secondary) 25%, transparent) !important;
   transform: rotate(-3deg) !important;
 }
 
@@ -488,7 +485,7 @@ body .app-shell__topbar {
 .app-shell__action-badge.is-admin {
   background-color: var(--md-info) !important;
   color: var(--md-on-primary) !important;
-  border: 1px solid #1c3d5e !important;
+  border: 1px solid color-mix(in srgb, var(--md-info) 55%, var(--md-on-surface)) !important;
   box-shadow: 1.5px 1.5px 0px rgba(46, 92, 138, 0.25) !important;
   transform: rotate(2.5deg) !important;
 }
@@ -497,7 +494,7 @@ body .app-shell__topbar {
 .app-shell__action-badge.is-prompt {
   background-color: var(--md-warning) !important;
   color: var(--md-primary-dark) !important;
-  border: 1px solid #9f6b1f !important;
+  border: 1px solid color-mix(in srgb, var(--md-warning) 55%, var(--md-on-surface)) !important;
   box-shadow: 1.5px 1.5px 0px rgba(230, 162, 60, 0.25) !important;
   transform: rotate(-2deg) !important;
 }
@@ -507,7 +504,7 @@ body .app-shell__topbar {
   background-color: var(--md-primary) !important;
   color: var(--md-on-primary) !important;
   border: 1px solid var(--md-primary-dark) !important;
-  box-shadow: 1.5px 1.5px 0px rgba(28, 32, 34, 0.25) !important;
+  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-on-surface) 25%, transparent) !important;
   transform: rotate(-1.5deg) !important;
 }
 
@@ -522,7 +519,7 @@ body .app-shell__topbar {
 /* 盖印下压物理交互：Hover 时印章像盖印一样下压、挤压并淡化阴影 */
 .app-shell__action-btn:hover .app-shell__action-badge {
   transform: translateY(1px) scale(0.97) !important; /* 手动下压盖章 */
-  box-shadow: 0.5px 0.5px 0px rgba(28, 32, 34, 0.1) !important; /* 阴影扁平聚拢 */
+  box-shadow: 0.5px 0.5px 0px color-mix(in srgb, var(--md-on-surface) 10%, transparent) !important; /* 阴影扁平聚拢 */
 }
 
 .app-shell__action-btn:hover .app-shell__action-text {
@@ -535,26 +532,26 @@ body .app-shell__topbar {
 }
 
 :root[data-theme='dark'] .app-shell__action-badge.is-settings {
-  background-color: #9c332b !important;
-  border-color: #73221c !important;
-  box-shadow: 1.5px 1.5px 0px rgba(156, 51, 43, 0.4) !important;
+  background-color: var(--md-secondary) !important;
+  border-color: var(--md-secondary-dark) !important;
+  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-secondary) 40%, transparent) !important;
 }
 
 :root[data-theme='dark'] .app-shell__action-badge.is-admin {
-  background-color: #2e4033 !important; /* 澄泥暗石绿 */
-  border-color: #1b2e21 !important;
-  box-shadow: 1.5px 1.5px 0px rgba(46, 64, 51, 0.4) !important;
+  background-color: var(--md-primary-container) !important; /* 澄泥暗石绿 */
+  border-color: var(--md-success-container) !important;
+  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-primary-container) 40%, transparent) !important;
 }
 
 :root[data-theme='dark'] .app-shell__action-badge.is-prompt {
-  background-color: #a8752a !important;
-  border-color: #684516 !important;
-  color: #f8eed8 !important;
-  box-shadow: 1.5px 1.5px 0px rgba(168, 117, 42, 0.4) !important;
+  background-color: var(--md-warning) !important;
+  border-color: color-mix(in srgb, var(--md-warning) 55%, black) !important;
+  color: var(--md-on-surface) !important;
+  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-warning) 40%, transparent) !important;
 }
 
 :root[data-theme='dark'] .app-shell__action-badge.is-logout {
-  background-color: #333d42 !important;
-  border-color: #1d2224 !important;
-  box-shadow: 1.5px 1.5px 0px rgba(13, 16, 17, 0.5) !important;
+  background-color: var(--md-surface-container-highest) !important;
+  border-color: var(--md-surface-container-low) !important;
+  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-surface-container-lowest) 50%, transparent) !important;
 }

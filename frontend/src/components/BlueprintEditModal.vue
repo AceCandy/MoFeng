@@ -44,10 +44,9 @@
             <RelationshipsEditor v-else-if="props.field === 'relationships'" v-model="editableContent" />
             <FactionsEditor v-else-if="props.field === 'world_setting.factions'" v-model="editableContent" />
             <div v-else class="md-text-field">
-              <textarea 
-                v-model="editableContent" 
-                class="md-textarea w-full"
-                style="min-height: 256px;"
+              <textarea
+                v-model="editableContent"
+                class="md-textarea w-full blueprint-edit-modal__textarea"
                 placeholder="请输入内容..."
                 :aria-label="`编辑${title ? ` ${title}` : '内容'}`"
               ></textarea>
@@ -55,7 +54,7 @@
           </div>
 
           <!-- Material 3 Dialog Actions -->
-          <div class="md-dialog-actions" style="border-top: 1px solid var(--md-outline-variant);">
+          <div class="md-dialog-actions blueprint-edit-modal__actions">
             <button 
               @click="handleClose" 
               class="md-btn md-btn-text md-ripple"
@@ -134,3 +133,13 @@ useDialogA11y({
   initialFocusRef: closeButtonRef,
 })
 </script>
+
+<style scoped>
+.blueprint-edit-modal__textarea {
+  min-height: 256px;
+}
+
+.blueprint-edit-modal__actions {
+  border-top: 1px solid var(--md-outline-variant);
+}
+</style>

@@ -34,7 +34,7 @@ defineProps<{ summary: ReadinessSummary }>()
 }
 
 .model-routing__readiness.is-warning .model-routing__readiness-value {
-  color: var(--md-on-warning-container);
+  color: var(--md-warning-text); /* 直接写在 surface 底上的文字色，非 container 配套色 */
 }
 
 .model-routing__readiness-label {

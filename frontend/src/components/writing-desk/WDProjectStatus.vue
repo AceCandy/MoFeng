@@ -10,7 +10,7 @@
   <div v-else class="text-center py-20">
     <div
       class="md-card md-card-outlined p-8 max-w-md mx-auto"
-      style="border-radius: var(--md-radius-xl)"
+      style="border-radius: var(--md-radius-md)"
     >
       <div
         class="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center"

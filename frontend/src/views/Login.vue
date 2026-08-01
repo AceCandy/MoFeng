@@ -2,25 +2,9 @@
 <template>
   <main class="login-page">
     <section class="login-scroll" aria-labelledby="login-title">
-      <aside class="login-intro" aria-label="墨风">
-        <span class="login-intro__spine" aria-hidden="true">墨风</span>
-
-        <div class="login-intro__brand">
-          <h1>墨风</h1>
-          <span class="login-intro__seal" aria-hidden="true">墨</span>
-          <p class="login-intro__kind">AI<br />长篇创作</p>
-          <p class="login-intro__slogan">让每一次落笔，<br />都续写昨日的世界。</p>
-        </div>
-
-        <div class="login-intro__footmark" aria-hidden="true">
-          <span class="login-intro__stamp">墨</span>
-          <span>一案 · 一砚 · 一方长卷</span>
-        </div>
-      </aside>
+      <AuthIntro variant="login" />
 
       <section class="login-panel" aria-label="登录表单">
-        <span class="login-panel__corner" aria-hidden="true"></span>
-
         <div class="login-card__header">
           <h2 id="login-title">
             归来续笔
@@ -101,7 +85,6 @@
               <span aria-hidden="true"></span>
               记住我
             </label>
-            <a class="login-forgot" href="#" @click.prevent="() => {}">忘记口令？</a>
           </div>
 
           <Transition name="ink-fade">
@@ -149,15 +132,7 @@
         </div>
       </section>
 
-      <ul class="login-feature-rail" aria-label="墨风创作流程">
-        <li v-for="item in featureRail" :key="item.title">
-          <span class="login-feature-rail__icon" aria-hidden="true" v-html="item.icon"></span>
-          <span class="login-feature-rail__copy">
-            <strong>{{ item.title }}</strong>
-            <small>{{ item.desc }}</small>
-          </span>
-        </li>
-      </ul>
+      <AuthFeatureRail />
     </section>
   </main>
 </template>
@@ -166,6 +141,8 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthOptionsQuery, useLoginMutation } from '@/queries/auth'
+import AuthIntro from '@/components/auth/AuthIntro.vue'
+import AuthFeatureRail from '@/components/auth/AuthFeatureRail.vue'
 
 const username = ref('')
 const password = ref('')
@@ -180,34 +157,6 @@ const allowRegistration = computed(() => authOptionsQuery.data.value?.allow_regi
 const enableLinuxdoLogin = computed(
   () => authOptionsQuery.data.value?.enable_linuxdo_login ?? false,
 )
-
-const featureRail = [
-  {
-    title: '谋篇',
-    desc: '构建世界与大纲',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M18 3 4 17l-1 4 4-1L21 6l-3-3Z" stroke-linecap="round" stroke-linejoin="round"/><path d="m14 7 3 3M4 20c.8-.5 1.4-1.1 2-2" stroke-linecap="round"/></svg>',
-  },
-  {
-    title: '塑魂',
-    desc: '刻画人物与成长',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="7" r="3"/><path d="M5 20c0-4 3-6 7-6s7 2 7 6" stroke-linecap="round"/></svg>',
-  },
-  {
-    title: '织线',
-    desc: '伏笔线索与结构',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 9c-3 0-5 3.5-5 7.5S9.5 21 12 21s5-1 5-4.5S15 9 12 9Z" stroke-linejoin="round"/><path d="M12 9V3M10 5h4M11.5 9v11M12.5 9v11" stroke-linecap="round"/></svg>',
-  },
-  {
-    title: '润色',
-    desc: '文风润色与优化',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="6" width="16" height="12" rx="2" stroke-linejoin="round"/><ellipse cx="12" cy="12" rx="5" ry="3"/><path d="M12 10c.6-.6 1-1.4 1-2s-.4-1-1-1-1 .4-1 1 1 1.4 1 2Z" fill="currentColor"/></svg>',
-  },
-  {
-    title: '校牍',
-    desc: '一致性与纠错',
-    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 4h14v16H5V4Z" stroke-linejoin="round"/><path d="M7 4v16M7 6h2M7 10h2M7 14h2M12 6h3v6h-3V6Z" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  },
-]
 
 // 登录流程只做输入规整和失败反馈，页面改版不改变认证接口语义。
 const handleLogin = async () => {
@@ -243,13 +192,15 @@ const handleLogin = async () => {
 
 <style scoped>
 .login-page {
-  --auth-ink: #1c2022;
-  --auth-ink-soft: #556265;
-  --auth-line: #c4b99f;
-  --auth-line-soft: #ded3bd;
-  --auth-vermilion: #8c241c;
+  --auth-ink: var(--md-on-surface);
+  --auth-ink-soft: var(--md-on-surface-variant);
+  --auth-line: var(--md-outline);
+  --auth-line-soft: var(--md-outline-variant);
+  --auth-vermilion: var(--md-secondary-dark);
+  --auth-paper: #faf6ed;
+  --auth-paper-light: #fbf7ec;
   --auth-paper-field: rgba(253, 250, 240, 0.52);
-  --md-secondary-readable: #8c241c;
+  --md-secondary-readable: var(--md-secondary-dark);
 
   min-height: var(--app-viewport-unit);
   position: relative;
@@ -267,15 +218,22 @@ const handleLogin = async () => {
 }
 
 .login-scroll {
-  width: min(96vw, 1600px);
-  max-height: calc(100vh - 24px);
-  aspect-ratio: 16 / 9;
+  width: min(96vw, 1440px);
+  min-height: min(760px, calc(100vh - 24px));
   position: relative;
+  z-index: 1;
   flex: 0 1 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 430px);
+  grid-template-rows: 1fr auto;
+  gap: clamp(20px, 3vw, 48px);
+  padding: clamp(14px, 2vw, 32px);
   overflow: hidden;
-  background-image: url('../assets/mofeng_login_composite_v4.webp');
-  background-position: center;
-  background-size: cover;
+  border-radius: var(--md-radius-sm);
+  background:
+    linear-gradient(180deg, rgba(45, 39, 29, 0.04), rgba(45, 39, 29, 0.08)),
+    repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.014) 0 1px, transparent 1px 24px),
+    var(--auth-paper-light);
   color: var(--auth-ink);
 }
 
@@ -290,139 +248,20 @@ const handleLogin = async () => {
   z-index: 0;
 }
 
-.login-intro,
-.login-panel,
-.login-feature-rail {
-  z-index: 1;
-  position: absolute;
-}
-
-.login-intro {
-  top: 8.2%;
-  left: 11.55%;
-  width: 35.35%;
-  height: 77.8%;
-  pointer-events: none;
-}
-
-.login-intro__spine {
-  position: absolute;
-  top: 9.6%;
-  left: 8.8%;
-  color: rgba(58, 70, 72, 0.56);
-  font-family: var(--md-font-serif);
-  font-size: clamp(11px, 0.96vw, 15px);
-  letter-spacing: 0.18em;
-  writing-mode: vertical-rl;
-}
-
-.login-intro__brand {
-  position: absolute;
-  top: 11.4%;
-  left: 34%;
-  width: 45%;
-  height: 64%;
-}
-
-.login-intro__brand h1 {
-  position: absolute;
-  top: 0;
-  left: 0;
-  margin: 0;
-  color: rgba(28, 32, 34, 0.96);
-  font-family: var(--md-font-serif);
-  font-size: clamp(56px, 5.1vw, 88px);
-  font-weight: 600;
-  line-height: 1.02;
-  letter-spacing: 0.06em;
-  writing-mode: vertical-rl;
-  text-shadow: 0 0 10px rgba(247, 239, 220, 0.92);
-}
-
-.login-intro__seal {
-  position: absolute;
-  top: 45%;
-  left: 49%;
-  width: clamp(22px, 1.9vw, 30px);
-  height: clamp(22px, 1.9vw, 30px);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--auth-vermilion);
-  background: rgba(239, 226, 201, 0.42);
-  color: var(--auth-vermilion);
-  font-family: var(--md-font-serif);
-  font-size: clamp(13px, 1.1vw, 18px);
-  font-weight: 600;
-  line-height: 1;
-}
-
-.login-intro__kind,
-.login-intro__slogan {
-  margin: 0;
-  color: rgba(28, 32, 34, 0.9);
-  font-family: var(--md-font-serif);
-  writing-mode: vertical-rl;
-  text-shadow: 0 0 10px rgba(247, 239, 220, 0.86);
-}
-
-.login-intro__kind {
-  position: absolute;
-  top: 23.5%;
-  left: 65.5%;
-  color: rgba(58, 70, 72, 0.86);
-  font-size: clamp(12px, 1vw, 17px);
-  font-weight: 600;
-  line-height: 1.7;
-  letter-spacing: 0.18em;
-}
-
-.login-intro__slogan {
-  position: absolute;
-  top: 54%;
-  left: 51%;
-  font-size: clamp(14px, 1.32vw, 22px);
-  font-weight: 600;
-  line-height: 1.82;
-  letter-spacing: 0.17em;
-}
-
-.login-intro__footmark {
-  position: absolute;
-  left: 8.2%;
-  bottom: 3.6%;
-  display: inline-flex;
-  align-items: center;
-  gap: clamp(8px, 0.9vw, 14px);
-  color: rgba(28, 32, 34, 0.78);
-  font-family: var(--md-font-serif);
-  font-size: clamp(11px, 0.9vw, 14px);
-  letter-spacing: 0.08em;
-}
-
-.login-intro__stamp {
-  width: clamp(29px, 2.4vw, 38px);
-  height: clamp(29px, 2.4vw, 38px);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--auth-vermilion);
-  color: var(--auth-vermilion);
-  font-size: clamp(15px, 1.35vw, 21px);
-  font-weight: 600;
-  line-height: 1;
-}
-
 .login-panel {
-  top: 18.3%;
-  left: 53.15%;
-  width: 28.7%;
+  position: relative;
+  z-index: 1;
+  align-self: center;
+  width: 100%;
   box-sizing: border-box;
+  padding: clamp(20px, 2.2vw, 32px);
+  border: 3px double var(--md-outline);
+  border-radius: var(--md-radius-xs);
+  background:
+    repeating-linear-gradient(90deg, transparent, transparent 38px, color-mix(in srgb, var(--md-on-surface) 3%, transparent) 38px, color-mix(in srgb, var(--md-on-surface) 4%, transparent) 40px),
+    linear-gradient(var(--auth-paper-light), var(--auth-paper));
+  box-shadow: 4px 4px 0 color-mix(in srgb, var(--md-on-surface) 14%, transparent);
   color: var(--auth-ink);
-}
-
-.login-panel__corner {
-  display: none;
 }
 
 .login-card__header,
@@ -506,7 +345,7 @@ const handleLogin = async () => {
   height: clamp(46px, 3.35vw, 54px);
   padding: 0 clamp(44px, 3.2vw, 52px) 0 clamp(14px, 1.15vw, 18px);
   border: 1px solid var(--auth-line);
-  border-radius: 2px;
+  border-radius: var(--md-radius-xs);
   background-color: var(--auth-paper-field);
   color: var(--auth-ink);
   font-family: var(--md-font-serif);
@@ -521,21 +360,21 @@ const handleLogin = async () => {
 
 .md-text-field-input:focus {
   outline: none;
-  border-color: var(--auth-vermilion);
+  border-color: var(--auth-ink);
   background-color: rgba(253, 251, 245, 0.9);
   box-shadow:
     inset 0 0 0 1px rgba(255, 251, 241, 0.75),
-    2px 2px 0 rgba(140, 36, 28, 0.12);
+    2px 2px 0 color-mix(in srgb, var(--auth-ink) 18%, transparent);
 }
 
 /* 键盘焦点可见环（≥3:1），鼠标 focus 不重复显示 */
 .md-text-field-input:focus-visible {
-  outline: 2px solid var(--auth-vermilion);
+  outline: 2px solid var(--auth-ink);
   outline-offset: 2px;
 }
 
 .md-text-field-input::placeholder {
-  color: rgba(85, 98, 101, 0.52);
+  color: color-mix(in srgb, var(--auth-ink-soft) 52%, transparent);
 }
 
 .md-text-field-icon {
@@ -547,7 +386,7 @@ const handleLogin = async () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: rgba(85, 98, 101, 0.65);
+  color: color-mix(in srgb, var(--auth-ink-soft) 65%, transparent);
   transform: translateY(-50%);
 }
 
@@ -599,8 +438,8 @@ const handleLogin = async () => {
 }
 
 .login-remember input:checked + span {
-  background: var(--auth-vermilion);
-  border-color: var(--auth-vermilion);
+  background: var(--md-secondary);
+  border-color: var(--md-secondary);
 }
 
 .login-remember input:focus-visible + span {
@@ -608,25 +447,15 @@ const handleLogin = async () => {
   outline-offset: 2px;
 }
 
-.login-forgot {
-  color: var(--auth-ink-soft);
-  text-decoration: none;
-  transition: color 150ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.login-forgot:hover {
-  color: var(--md-secondary-readable);
-}
-
 .login-feedback {
   display: flex;
   align-items: flex-start;
   gap: 10px;
   padding: 10px 12px;
-  border: 1px dashed rgba(140, 36, 28, 0.52);
-  border-radius: 3px;
-  background: rgba(251, 235, 234, 0.84);
-  color: #6f1d16;
+  border: 1px dashed color-mix(in srgb, var(--auth-vermilion) 52%, transparent);
+  border-radius: var(--md-radius-xs);
+  background: var(--md-error-container);
+  color: var(--md-error-text);
   font-size: 13px;
   line-height: 1.55;
 }
@@ -650,17 +479,17 @@ const handleLogin = async () => {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  border: 1px solid rgba(28, 32, 34, 0.75);
-  border-radius: 2px;
+  border: 1px solid color-mix(in srgb, var(--auth-ink) 75%, transparent);
+  border-radius: var(--md-radius-xs);
   background:
     linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)),
-    #1c2022;
-  color: #f4ecda;
+    var(--auth-ink);
+  color: var(--auth-paper-light);
   font-family: var(--md-font-serif);
   font-size: clamp(14px, 1vw, 16px);
   font-weight: 600;
   letter-spacing: 0.14em;
-  box-shadow: 2px 2px 0 rgba(28, 32, 34, 0.2);
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--auth-ink) 20%, transparent);
   transition:
     background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -668,13 +497,13 @@ const handleLogin = async () => {
 }
 
 .login-submit:hover:not(:disabled) {
-  background-color: #262d2f;
-  box-shadow: 3px 3px 0 rgba(28, 32, 34, 0.24);
+  background-color: var(--md-primary-light);
+  box-shadow: 3px 3px 0 color-mix(in srgb, var(--auth-ink) 24%, transparent);
 }
 
 .login-submit:active:not(:disabled) {
   transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0 rgba(28, 32, 34, 0.22);
+  box-shadow: 1px 1px 0 color-mix(in srgb, var(--auth-ink) 22%, transparent);
 }
 
 .login-submit:disabled {
@@ -685,7 +514,7 @@ const handleLogin = async () => {
 .login-submit__mark {
   width: 18px;
   height: 18px;
-  color: #c9ad7a;
+  color: var(--md-outline);
 }
 
 .login-spinner {
@@ -732,7 +561,7 @@ const handleLogin = async () => {
   min-height: 46px;
   margin-top: 10px;
   border-color: var(--auth-line);
-  border-radius: 2px;
+  border-radius: var(--md-radius-xs);
   color: var(--auth-ink);
   font-family: var(--md-font-serif);
 }
@@ -760,77 +589,21 @@ const handleLogin = async () => {
   font-weight: 600;
 }
 
-.login-feature-rail {
-  left: 15.2%;
-  right: 12.8%;
-  bottom: 4.6%;
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: clamp(10px, 1.9vw, 34px);
-  padding: 0;
-  margin: 0;
-  list-style: none;
-  color: rgba(28, 32, 34, 0.76);
+@media (min-width: 834px) {
+  .auth-intro {
+    min-height: 420px;
+  }
 }
 
-.login-feature-rail li {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: clamp(7px, 0.75vw, 12px);
-}
-
-.login-feature-rail__icon {
-  width: clamp(24px, 2.1vw, 34px);
-  height: clamp(24px, 2.1vw, 34px);
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  color: rgba(28, 32, 34, 0.76);
-  filter: drop-shadow(0 2px 3px rgba(28, 32, 34, 0.16));
-}
-
-.login-feature-rail__icon :deep(svg) {
-  width: clamp(20px, 1.7vw, 27px);
-  height: clamp(20px, 1.7vw, 27px);
-}
-
-.login-feature-rail__copy {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.login-feature-rail strong {
-  font-family: var(--md-font-serif);
-  font-size: clamp(12px, 0.94vw, 15px);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-}
-
-.login-feature-rail small {
-  color: rgba(85, 98, 101, 0.78);
-  font-size: clamp(10px, 0.75vw, 12px);
-  white-space: nowrap;
+.auth-feature-rail {
+  grid-column: 1 / -1;
+  justify-self: center;
 }
 
 @media (max-width: 1024px) {
   .login-scroll {
-    width: min(98vw, 1600px);
-  }
-
-  .login-panel {
-    top: 17%;
-    left: 52.9%;
-    width: 30.2%;
-  }
-
-  .login-feature-rail {
-    left: 14.5%;
-    right: 13.8%;
+    width: min(98vw, 1440px);
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
   }
 }
 
@@ -846,101 +619,17 @@ const handleLogin = async () => {
 
   .login-scroll {
     width: min(calc(100vw - 12px), 520px);
-    max-height: none;
-    min-height: max(980px, calc(100vh + 120px));
-    aspect-ratio: auto;
-    background-image: url('../assets/mofeng_login_scene_v3.webp');
-    background-position: center -96px;
-    background-repeat: no-repeat;
-    background-size: 100% auto;
-    border-radius: 8px;
-  }
-
-  .login-intro {
-    top: clamp(84px, calc((100vw - 12px) * 0.24), 130px);
-    left: 4.2%;
-    width: 88.4%;
-    height: clamp(250px, calc((100vw - 12px) * 0.68), 340px);
-  }
-
-  .login-intro__spine {
-    top: 6%;
-    left: 3%;
-    font-size: 13px;
-  }
-
-  .login-intro__brand {
-    top: 8%;
-    left: 9%;
-    width: 46%;
-    height: 72%;
-  }
-
-  .login-intro__brand h1 {
-    font-size: 52px;
-  }
-
-  .login-intro__seal {
-    width: 28px;
-    height: 28px;
-    top: 58%;
-    left: 47%;
-    font-size: 16px;
-  }
-
-  .login-intro__kind {
-    top: 1%;
-    left: 62%;
-    font-size: 12px;
-    line-height: 1.5;
-    letter-spacing: 0.14em;
-  }
-
-  .login-intro__slogan {
-    top: 63%;
-    left: 0;
-    width: 126px;
-    writing-mode: horizontal-tb;
-    font-size: 15px;
-    line-height: 1.55;
-    letter-spacing: 0.08em;
-  }
-
-  .login-intro__footmark {
-    top: 48%;
-    right: 6%;
-    left: auto;
-    bottom: auto;
-    width: clamp(158px, 38vw, 188px);
-    box-sizing: border-box;
-    gap: 8px;
-    padding: 6px 0;
-    background: transparent;
-    font-size: 11.5px;
-    letter-spacing: 0.04em;
-    text-shadow: 0 0 8px rgba(250, 244, 229, 0.95);
-  }
-
-  .login-intro__stamp {
-    width: 30px;
-    height: 30px;
-    font-size: 16px;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    gap: 12px;
+    padding: 10px;
   }
 
   .login-panel {
-    top: clamp(372px, calc((100vw - 12px) * 1.04), 440px);
-    left: 6.8%;
-    right: 6.8%;
-    width: auto;
+    align-self: stretch;
     padding: 22px 18px 24px;
-    border: 1px solid rgba(176, 159, 128, 0.62);
-    border-radius: 4px;
-    background:
-      linear-gradient(180deg, rgba(253, 250, 241, 0.9), rgba(247, 239, 222, 0.94)),
-      rgba(250, 246, 237, 0.9);
-    box-shadow:
-      0 12px 22px rgba(42, 35, 25, 0.18),
-      inset 0 0 0 1px rgba(255, 251, 242, 0.7);
+    box-shadow: 3px 3px 0 color-mix(in srgb, var(--md-on-surface) 12%, transparent);
   }
 
   .login-card__header {
@@ -967,45 +656,12 @@ const handleLogin = async () => {
   .login-link {
     flex-wrap: wrap;
   }
-
-  .login-feature-rail {
-    display: none;
-  }
 }
 
 @media (max-width: 390px) {
-  .login-intro__brand {
-    left: 40px;
-  }
-
-  .login-intro__kind {
-    left: 116px;
-  }
-
-  .login-intro__slogan {
-    left: 0;
-  }
-
-  .login-intro__footmark {
-    top: 148px;
-    right: 16px;
-    width: 156px;
-  }
-
   .login-panel {
-    left: 5.2%;
-    right: 5.2%;
     padding-left: 16px;
     padding-right: 16px;
-  }
-}
-
-@keyframes md-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
   }
 }
 

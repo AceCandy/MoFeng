@@ -34,7 +34,7 @@ defineEmits(['toggle'])
   width: 38px; /* 默认正方形印章尺寸 */
   padding: 0;
   cursor: pointer;
-  border: 1px solid #9c2720;
+  border: 1px solid var(--md-secondary);
   border-right: none; /* 右侧贴合分界线，呈无缝盖印状态 */
 
   /* 运用左圆角、右直角设计，完美模拟盖在纸张右边缘的引首章印记 */
@@ -50,7 +50,7 @@ defineEmits(['toggle'])
 
   /* 盖印后的轻微纸张受压凹凸质感与边缘斑驳微影 */
   box-shadow:
-    -1px 2px 4px rgba(107, 21, 16, 0.25),
+    -1px 2px 4px color-mix(in srgb, var(--md-secondary-dark) 25%, transparent),
     inset 1px 1px 1px rgba(255, 255, 255, 0.15),
     inset -1px -1px 2px rgba(0, 0, 0, 0.15);
 
@@ -70,7 +70,7 @@ defineEmits(['toggle'])
   inset: -12px;
   border-radius: 50%;
   /* 极轻微向外渐隐的水墨晕染渐变 */
-  background: radial-gradient(circle, rgba(28, 32, 34, 0.25) 0%, rgba(28, 32, 34, 0.08) 50%, rgba(28, 32, 34, 0) 70%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--md-on-surface) 25%, transparent) 0%, color-mix(in srgb, var(--md-on-surface) 8%, transparent) 50%, transparent 70%);
   transform: scale(0.4);
   opacity: 0;
   z-index: -1;
@@ -86,7 +86,7 @@ defineEmits(['toggle'])
   opacity: 0.98;
   background: linear-gradient(135deg, #d4433b 0%, #b83c32 50%, #b02c25 100%);
   box-shadow:
-    -2px 3px 8px rgba(107, 21, 16, 0.35),
+    -2px 3px 8px color-mix(in srgb, var(--md-secondary-dark) 35%, transparent),
     inset 1px 1px 1px rgba(255, 255, 255, 0.2);
 }
 
@@ -106,14 +106,14 @@ defineEmits(['toggle'])
   border-radius: var(--md-radius-xs);
 
   /* 白文阴刻金石托底，使文字如同在章体上镂空透出底部的宣纸暖白 */
-  background-color: rgba(28, 32, 34, 0.15);
+  background-color: color-mix(in srgb, var(--md-on-surface) 15%, transparent);
   color: #faf6ed !important; /* 古香古色的泥金白文 */
   font-family: var(--md-font-serif);
   font-size: 13px;
   font-weight: 800;
-  text-shadow: 1px 1px 1px rgba(107, 21, 16, 0.5);
-  border: 1px dashed rgba(250, 246, 237, 0.18);
-  box-shadow: inset 1px 1px 0px rgba(28, 32, 34, 0.18);
+  text-shadow: 1px 1px 1px color-mix(in srgb, var(--md-secondary-dark) 50%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--md-surface) 18%, transparent);
+  box-shadow: inset 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 18%, transparent);
   transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
 }
 
@@ -130,7 +130,7 @@ defineEmits(['toggle'])
     width: 38px;
     height: 38px;
     border-radius: 6px 0 0 6px / 8px 0 0 8px;
-    box-shadow: -2px 2px 6px rgba(107, 21, 16, 0.3);
+    box-shadow: -2px 2px 6px color-mix(in srgb, var(--md-secondary-dark) 30%, transparent);
   }
 
   .writing-desk-seal-stamp:hover {
@@ -138,5 +138,10 @@ defineEmits(['toggle'])
     border-radius: 6px 0 0 6px / 8px 0 0 8px;
     transform: scale(1.05); /* 仅做轻微点击缩放提示 */
   }
+}
+
+/* 暗色主题：相乘混合会令朱砂章体沉入深色纸底，退回普通混合以保印色 */
+[data-theme='dark'] .writing-desk-seal-stamp {
+  mix-blend-mode: normal;
 }
 </style>

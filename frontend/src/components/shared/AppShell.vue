@@ -374,7 +374,7 @@ onUnmounted(() => {
     <div class="app-shell__main">
       <header class="app-shell__topbar">
         <!-- 左侧项目名 -->
-        <RouterLink to="/" class="app-shell__brand-top" style="text-decoration: none;">
+        <RouterLink to="/" class="app-shell__brand-top">
           <p class="app-shell__brand-title">墨風</p>
         </RouterLink>
 
@@ -392,7 +392,6 @@ onUnmounted(() => {
               :aria-expanded="isDropdownOpen"
               aria-controls="app-shell-project-menu"
               @click="toggleDropdown"
-              style="display: flex; align-items: center; background: none; border: none; padding: 0; color: inherit; font: inherit; cursor: pointer; width: 100%; height: 100%; outline: none;"
             >
               <span class="app-shell__project-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -426,7 +425,7 @@ onUnmounted(() => {
                      :class="{ 'is-active': proj.id === currentProjectId }"
                      @click="selectProject(proj)"
                    >
-                     <span class="item-mark">📖</span>
+                     <span class="item-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg></span>
                      <span class="item-title">{{ proj.title || '未命名书卷' }}</span>
                    </div>
                    <div v-if="projects.length === 0" class="app-shell__dropdown-empty">
@@ -440,7 +439,7 @@ onUnmounted(() => {
                     class="app-shell__dropdown-action"
                     @click="selectInspiration"
                   >
-                    <span class="action-icon">💡</span>
+                    <span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6" /><path d="M10 22h4" /><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5.76.76 1.23 1.52 1.41 2.5z" /></svg></span>
                     <span>灵感启航</span>
                   </button>
                   <button
@@ -448,7 +447,7 @@ onUnmounted(() => {
                     class="app-shell__dropdown-action"
                     @click="triggerImport"
                   >
-                    <span class="action-icon">📥</span>
+                    <span class="action-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12" /><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" /></svg></span>
                     <span>导入卷轴</span>
                   </button>
                  </div>
@@ -521,7 +520,7 @@ onUnmounted(() => {
 
           <!-- 空白状态：山水泼墨励志寄语 (仅在未选定工作空间前渲染) -->
           <div v-if="!currentProjectId" class="app-shell__project-welcome-message">
-            <span class="welcome-spark">✍️</span>
+            <span class="welcome-spark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg></span>
             <span class="welcome-text">笔底生墨，风动砚海。阁主，吾静待汝执笔。</span>
           </div>
 
@@ -857,26 +856,26 @@ onUnmounted(() => {
 
 /* 昼模式印章：翠玉竹青色，彰显清新白昼 */
 .app-shell__action-badge.is-theme-light {
-  background-color: var(--md-success, #3b7a57) !important;
+  background-color: var(--md-success) !important;
   color: var(--md-on-success) !important;
   border: 1px solid var(--md-outline) !important;
-  box-shadow: 1.5px 1.5px 0px rgba(59, 122, 87, 0.25) !important;
+  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-success) 25%, transparent) !important;
   transform: rotate(2deg) !important;
 }
 
 /* 夜模式印章：深沉朱砂红，代表静谧深夜 */
 .app-shell__action-badge.is-theme-dark {
-  background-color: var(--md-secondary, #b83c32) !important;
+  background-color: var(--md-secondary) !important;
   color: var(--md-on-secondary) !important;
   border: 1px solid var(--md-outline) !important;
-  box-shadow: 1.5px 1.5px 0px rgba(184, 60, 50, 0.25) !important;
+  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-secondary) 25%, transparent) !important;
   transform: rotate(-1.5deg) !important;
 }
 
 /* 悬浮微升，产生毛笔书写的弹跳动感 */
 .theme-toggle-btn:hover .app-shell__action-badge {
   transform: scale(1.08) rotate(5deg) !important;
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.2) !important;
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 20%, transparent) !important;
 }
 
 /* 顶栏继续创作方正金石按钮样式 */
@@ -902,7 +901,7 @@ onUnmounted(() => {
   font-weight: 600;
   letter-spacing: 0.08em;
   cursor: pointer;
-  box-shadow: 1.5px 1.5px 0px rgba(28, 32, 34, 0.2);
+  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-on-surface) 20%, transparent);
   transition:
     background-color 0.2s cubic-bezier(0.2, 0, 0, 1),
     box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1),
@@ -911,7 +910,7 @@ onUnmounted(() => {
 
 .app-shell__top-action-btn:hover {
   background-color: var(--md-primary-dark) !important;
-  box-shadow: 2.5px 2.5px 0px rgba(184, 60, 50, 0.25) !important; /* 朱批红印重影 */
+  box-shadow: 2.5px 2.5px 0px color-mix(in srgb, var(--md-secondary) 25%, transparent) !important; /* 朱批红印重影 */
   transform: translate(-1px, -1px);
 }
 
@@ -935,5 +934,40 @@ onUnmounted(() => {
 
 :root[data-theme='dark'] .app-shell__project-welcome-message {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 20' opacity='0.03'><path d='M0,10 C40,0 100,18 160,2 C180,6 190,2 200,10 Z' fill='%23e5dec9'/></svg>") !important;
+}
+
+/* 品牌链接与胶囊触发器样式（自模板内联样式收编） */
+.app-shell__brand-top {
+  text-decoration: none;
+}
+
+.app-shell__project-trigger {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  outline: none;
+}
+
+/* 下拉条目与寄语的 SVG 图标尺寸（替代原 emoji） */
+.item-mark,
+.action-icon,
+.welcome-spark {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.item-mark svg,
+.action-icon svg,
+.welcome-spark svg {
+  width: 15px;
+  height: 15px;
 }
 </style>

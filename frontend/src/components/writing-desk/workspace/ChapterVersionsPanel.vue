@@ -149,7 +149,7 @@ const isCurrentVersion = (index: number) => {
   padding: var(--md-spacing-3);
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-radius-xs);
-  background-color: rgba(28, 32, 34, 0.01);
+  background-color: color-mix(in srgb, var(--md-on-surface) 1%, transparent);
   cursor: pointer;
   transition:
     border-color 0.2s ease,
@@ -165,7 +165,7 @@ const isCurrentVersion = (index: number) => {
 
 .writing-workspace__version-tab-card.is-active {
   border-color: var(--md-secondary);
-  background-color: rgba(184, 60, 50, 0.02);
+  background-color: color-mix(in srgb, var(--md-secondary) 2%, transparent);
   box-shadow: inset 2px 0 0 var(--md-secondary);
 }
 

@@ -754,8 +754,8 @@ onUnmounted(() => {
   display: flex;
   align-items: flex-start !important; /* 向上靠，贴合顶栏导航 */
   justify-content: center;
-  /* 精准扣除系统顶栏真实的 92px 占位，使内容与浏览器视口完美等高 */
-  height: calc(var(--app-viewport-unit) - 92px) !important;
+  /* 精准扣除系统顶栏真实占位，使内容与浏览器视口完美等高 */
+  height: calc(var(--app-viewport-unit) - var(--app-topbar-height)) !important;
   padding: var(--md-spacing-3) var(--md-spacing-5) var(--md-spacing-4) !important; /* 顶部收缩，紧贴导航 */
   /* 采用平铺温暖熟宣纸与干燥木骨网格 */
   background-color: var(--md-background) !important;
@@ -766,7 +766,7 @@ onUnmounted(() => {
 
 .inspiration-page__container {
   width: 100%;
-  max-width: 1420px !important; /* 撑宽至 1420px，极度贴合屏幕宽度 */
+  max-width: var(--app-content-max) !important; /* 全站统一内容最大宽度（宽屏自适应拓宽） */
   height: 100%; /* 高度占满视口 */
   margin: 0 auto;
   display: flex;
@@ -775,15 +775,14 @@ onUnmounted(() => {
 }
 
 .inspiration-chat {
-  height: 100%; /* 精准占满容器 */
-  max-height: 800px !important; /* 增高至 800px，舒展大气 */
+  height: 100%; /* 精准占满容器，不再叠加 max-height 上限避免自相矛盾 */
   display: flex;
   flex-direction: row !important; /* 核心：改为横向双栏结构 */
   background-color: var(--md-surface);
   /* 誓死捍卫木刻微直角，配合右下拓片偏置硬投影 */
   border-radius: var(--md-radius-sm) !important;
   border: 3px double var(--md-outline) !important;
-  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15) !important;
+  box-shadow: 4px 4px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
   overflow: hidden;
 }
 
@@ -807,7 +806,7 @@ onUnmounted(() => {
 .inspiration-chat__status-dot {
   width: 10px;
   height: 10px;
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs); /* 方点起笔印，微直角统一 */
   background-color: var(--md-primary);
 }
 
@@ -844,28 +843,6 @@ onUnmounted(() => {
   border-top: 1px solid var(--md-outline-variant);
   background-color: var(--md-surface-container-low);
   flex-shrink: 0;
-}
-
-.inspiration-chat__typing-dots {
-  display: flex;
-  gap: 4px;
-}
-
-.inspiration-chat__typing-dots span {
-  width: 6px;
-  height: 6px;
-  border-radius: var(--md-radius-full);
-  background-color: var(--md-primary-light);
-  /* 墨色干湿呼吸：模拟笔墨起落 */
-  animation: ink-dot-breath 1.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
-}
-
-.inspiration-chat__typing-dots span:nth-child(2) {
-  animation-delay: 0.25s;
-}
-
-.inspiration-chat__typing-dots span:nth-child(3) {
-  animation-delay: 0.5s;
 }
 
 /* 右侧：文思灵感词笺画轴 */
@@ -952,7 +929,7 @@ onUnmounted(() => {
   opacity: 1;
   background-color: var(--md-surface) !important; /* 变熟宣白 */
   border: 1px dashed var(--md-outline) !important; /* 竹青细线 */
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.04) !important;
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 4%, transparent) !important;
   transform: scale(1);
 }
 
@@ -980,10 +957,10 @@ onUnmounted(() => {
 }
 
 .ledger-item.is-active .ledger-item__seal {
-  background-color: rgba(184, 60, 50, 0.08) !important; /* 红泥朱砂半透 */
+  background-color: color-mix(in srgb, var(--md-secondary) 8%, transparent) !important; /* 红泥朱砂半透 */
   color: var(--md-secondary) !important;
   border-color: var(--md-secondary) !important;
-  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15) !important;
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-secondary) 15%, transparent) !important;
   animation: ink-seal-press 0.45s cubic-bezier(0.19, 1, 0.22, 1) both;
 }
 
@@ -1034,6 +1011,10 @@ onUnmounted(() => {
     display: none !important; /* 移动端/小屏隐藏词笺画轴，保留纯净聊天 */
   }
 
+  .inspiration-chat__timeline {
+    display: none !important; /* 小屏同步收起 36px 进度轴，避免留白占位 */
+  }
+
   .inspiration-chat__main {
     flex: 1;
     border-right: none;
@@ -1053,41 +1034,20 @@ onUnmounted(() => {
   .inspiration-chat__input {
     padding: var(--md-spacing-3);
   }
-}
 
-@media (prefers-reduced-motion: reduce) {
-  .inspiration-chat__typing-dots span {
-    animation: none;
-    opacity: 0.6;
+  /* 移动端头部拥挤时允许按钮行折行下沉，避免标题与操作挤压 */
+  .inspiration-chat__header > div {
+    flex-wrap: wrap;
+    row-gap: var(--md-spacing-2);
   }
 }
 
 .inspiration-chat__title {
+  font-family: var(--md-font-display); /* 碑拓宋体 */
+  font-size: var(--md-title-large); /* 页面主标题升级 title 级 */
+  font-weight: 600;
+  letter-spacing: 0.03em; /* 碑拓骨力：小标题字距 */
   color: var(--md-primary);
-}
-
-.inspiration-loading-text {
-  color: var(--md-on-surface-variant);
-}
-
-
-
-.inspiration-ai-bubble-loading {
-  background-color: var(--md-surface) !important;
-  color: var(--md-on-surface) !important;
-  /* 精细的多边形剪裁模拟参差不齐的手撕宣纸毛边 */
-  clip-path: polygon(
-    0% 2%, 8% 0.5%, 19% 1.5%, 31% 0.5%, 44% 1.8%, 56% 0.8%, 69% 1.5%, 81% 0.5%, 93% 1.8%, 100% 2%, 
-    99.2% 15%, 100% 32%, 98.8% 48%, 99.5% 65%, 98.5% 82%, 99.2% 98%, 
-    91% 99.2%, 79% 98.2%, 66% 99.2%, 54% 98.5%, 41% 99.2%, 29% 98.2%, 16% 99.2%, 0% 98%,
-    0.8% 81%, 0% 63%, 1.2% 46%, 0% 28%, 0.8% 12%
-  ) !important;
-  padding: 1rem 1.6rem !important;
-  border: none !important;
-  box-shadow: none !important;
-  /* 搭配 drop-shadow 滤镜产生不规则毛边投影 */
-  filter: drop-shadow(3px 3px 0px rgba(28, 32, 34, 0.12)) !important;
-  animation: ink-fade-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
 }
 
 /* 阶段视图水墨慢晕视差过渡 */
@@ -1108,7 +1068,7 @@ onUnmounted(() => {
   transform: translateY(-8px) scale(0.995);
 }
 
-/* 头部操作按钮金石朱砂小方字标及 active 钤印微沉 */
+/* 头部操作按钮：常态松烟灰字标，hover 中性底 + 单枚朱砂落款，active 钤印微沉 */
 .inspiration-header-btn {
   min-width: 0 !important;
   padding: 0 8px !important;
@@ -1133,7 +1093,8 @@ onUnmounted(() => {
 }
 
 .inspiration-header-btn:hover {
-  color: var(--md-secondary) !important;
+  background-color: var(--md-state-layer-hover) !important; /* 中性底 */
+  color: var(--md-primary) !important; /* 焦墨文字，不落朱砂 */
 }
 
 .inspiration-header-btn:active {
@@ -1141,10 +1102,21 @@ onUnmounted(() => {
   opacity: 0.8 !important;
 }
 
+.inspiration-header-btn:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
 .inspiration-header-btn__label {
-  color: var(--md-secondary) !important;
+  color: var(--md-on-surface-variant) !important; /* 常态松烟灰，与按钮文字同调 */
   font-weight: 900 !important;
   font-size: 14px !important;
+  transition: color 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+/* 悬浮时单枚朱砂落款，印章感收口于一处 */
+.inspiration-header-btn:hover .inspiration-header-btn__label {
+  color: var(--md-secondary) !important;
 }
 
 /* ============================================
@@ -1164,14 +1136,14 @@ onUnmounted(() => {
   z-index: 10;
 }
 
-/* 贯穿全高的朱砂丝绳细线 */
+/* 贯穿全高的墨晕丝绳细线 */
 .timeline-line {
   position: absolute;
   top: 0;
   bottom: 0;
   left: 50%;
   width: 1px;
-  background-color: rgba(184, 60, 50, 0.18) !important; /* 极细朱砂红线，代表思路脉络 */
+  background-color: var(--md-outline-variant) !important; /* 极细墨晕线，代表思路脉络 */
   transform: translateX(-50%);
   z-index: 1;
 }
@@ -1195,12 +1167,12 @@ onUnmounted(() => {
   display: none !important;
 }
 
-/* 进度节点圆章按钮 */
+/* 进度节点方章按钮（与词笺方印统一微直角） */
 .timeline-node-btn {
   width: 22px;
   height: 22px;
-  border-radius: var(--md-radius-full) !important;
-  border: 1px solid rgba(184, 60, 50, 0.28) !important;
+  border-radius: var(--md-radius-xs) !important; /* 方形节点章 */
+  border: 1px solid var(--md-outline-variant) !important; /* 常态墨晕描边 */
   background-color: var(--md-surface) !important;
   color: var(--md-primary-dark) !important;
   display: grid;
@@ -1214,7 +1186,7 @@ onUnmounted(() => {
     color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
-  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.08) !important;
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
 }
 
 .timeline-node-seal {
@@ -1224,14 +1196,19 @@ onUnmounted(() => {
   line-height: 1 !important;
 }
 
-/* 激活或悬浮状态，变为朱砂红泥印泥色 */
+/* 激活或悬浮状态：方形朱砂描边小印 + 右下朱砂硬影，弃实心色块与零偏移发光 */
 .timeline-node-btn:hover,
 .timeline-node-btn.is-active {
-  background-color: var(--md-secondary) !important; /* 朱砂红 */
-  border-color: var(--md-secondary) !important;
-  color: var(--md-on-primary) !important; /* 暖白文字 */
+  background-color: color-mix(in srgb, var(--md-secondary) 8%, transparent) !important; /* 朱砂淡染 */
+  border-color: var(--md-secondary) !important; /* 朱砂描边 */
+  color: var(--md-secondary) !important;
   transform: scale(1.15);
-  box-shadow: 0px 0px 5px rgba(184, 60, 50, 0.45) !important;
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-secondary) 20%, transparent) !important;
+}
+
+.timeline-node-btn:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
 }
 
 /* 极致精美的 Tooltip 悬浮标签 */
@@ -1243,7 +1220,7 @@ onUnmounted(() => {
   background-color: var(--md-surface) !important;
   color: var(--md-on-surface) !important;
   border: 1px solid var(--md-outline) !important;
-  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.12) !important;
+  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-on-surface) 12%, transparent) !important;
   padding: 6px 12px !important;
   border-radius: var(--md-radius-xs) !important;
   font-family: var(--md-font-kai) !important;
@@ -1261,74 +1238,11 @@ onUnmounted(() => {
   z-index: 100;
 }
 
-/* 悬停展示 Tooltip，略带优雅的从右往左滑入效果 */
-.timeline-node-btn:hover .timeline-node-tooltip {
+/* 悬停或键盘聚焦时展示 Tooltip，略带优雅的从右往左滑入效果 */
+.timeline-node-btn:hover .timeline-node-tooltip,
+.timeline-node-btn:focus-visible .timeline-node-tooltip {
   opacity: 1;
   transform: translateY(-50%) translateX(0);
-}
-
-/* ============================================
-   极致国风水墨洇染 Loading 动效
-   ============================================ */
-.inspiration-ai-bubble-loading {
-  background-color: var(--md-surface) !important;
-  /* 宣纸淡雅微影 */
-  filter: drop-shadow(2px 2px 0px rgba(28, 32, 34, 0.08)) !important;
-  padding: 1.25rem 2rem !important;
-}
-
-.ink-bloom-loader {
-  width: 24px;
-  height: 24px;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-/* 核心洇墨黑红双点，模拟松烟入墨与朱砂落印的晕染 */
-.ink-bloom-dot {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  border-radius: var(--md-radius-full) !important;
-  mix-blend-mode: multiply; /* 极佳的颜色重叠水墨交融质感 */
-}
-
-/* 焦墨松烟 */
-.ink-bloom-dot--black {
-  background-color: var(--md-primary) !important;
-  animation: ink-spread-black 2.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
-}
-
-/* 润以朱砂 */
-.ink-bloom-dot--red {
-  background-color: var(--md-secondary) !important;
-  animation: ink-spread-red 2.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
-  animation-delay: 1.1s;
-}
-
-/* 古风文字运墨状态呼吸 */
-.inspiration-loading-text {
-  font-family: var(--md-font-serif) !important;
-  font-size: 14px !important;
-  font-weight: 600 !important;
-  color: var(--md-on-surface-variant) !important;
-  letter-spacing: 0.06em !important;
-  animation: ink-text-breath 2.2s ease-in-out infinite alternate !important;
-  text-shadow: 0.5px 0.5px 0px rgba(28, 32, 34, 0.05) !important;
-}
-
-@keyframes ink-dot-breath {
-  0%, 100% {
-    opacity: 0.2;
-    transform: scale(0.8);
-  }
-  40% {
-    opacity: 0.9;
-    transform: scale(1.15);
-  }
 }
 
 @keyframes ink-seal-press {
@@ -1343,56 +1257,6 @@ onUnmounted(() => {
   100% {
     opacity: 1;
     transform: scale(1) translateY(0);
-  }
-}
-
-@keyframes ink-fade-in {
-  0% {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes ink-spread-black {
-  0% {
-    transform: scale(0.2) translate(0, 0);
-    opacity: 0.9;
-  }
-  50% {
-    transform: scale(1.8) translate(-2px, -1px);
-    opacity: 0.35;
-  }
-  100% {
-    transform: scale(2.8) translate(-4px, -2px);
-    opacity: 0;
-  }
-}
-
-@keyframes ink-spread-red {
-  0% {
-    transform: scale(0.2) translate(0, 0);
-    opacity: 0.8;
-  }
-  50% {
-    transform: scale(1.6) translate(2px, 1px);
-    opacity: 0.3;
-  }
-  100% {
-    transform: scale(2.5) translate(4px, 2px);
-    opacity: 0;
-  }
-}
-
-@keyframes ink-text-breath {
-  0% {
-    opacity: 0.45;
-  }
-  100% {
-    opacity: 0.95;
   }
 }
 </style>

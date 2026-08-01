@@ -156,7 +156,7 @@ const emit = defineEmits<{
   font-family: var(--md-font-serif);
   font-size: 36px;
   font-weight: 600;
-  letter-spacing: 0;
+  letter-spacing: 0.05em;
   line-height: 1.25;
 }
 
@@ -167,7 +167,7 @@ const emit = defineEmits<{
   font-size: var(--md-title-medium);
   font-weight: 500;
   line-height: 1.8;
-  letter-spacing: 0;
+  letter-spacing: 0.03em;
 }
 
 .chapter-locked__action {
@@ -186,7 +186,7 @@ const emit = defineEmits<{
   font-family: var(--md-font-serif);
   font-size: var(--md-title-medium);
   font-weight: 600;
-  letter-spacing: 0;
+  letter-spacing: 0.03em;
   box-shadow: 2px 2px 0 var(--chapter-locked-action-shadow);
   cursor: pointer;
   transition:

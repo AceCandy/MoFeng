@@ -7,7 +7,7 @@
 body,
 .writing-desk-page {
   background-image:
-    radial-gradient(circle at 5% 10%, rgba(28, 32, 34, 0.06), transparent 45%),
+    radial-gradient(circle at 5% 10%, color-mix(in srgb, var(--md-on-surface) 6%, transparent), transparent 45%),
     radial-gradient(circle at 95% 85%, rgba(46, 92, 138, 0.04), transparent 50%),
     /* 狂草“墨風”大水印、飞洒墨滴与写意风暴气流 SVG */
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><g fill='%231c2022' fill-opacity='0.016'><path d='M10,25 Q30,10 50,8 C35,20 22,25 15,30 Z M25,45 Q50,22 65,30 C45,35 35,42 30,50 Z'/><text x='12' y='98' font-family='Georgia, serif' font-size='22' font-weight='bold' fill-opacity='0.024'>墨風</text><text x='12' y='111' font-family='serif' font-size='6.5' fill-opacity='0.018'>笔落惊风雨  诗成泣鬼神</text><path d='M5,95 C40,75 80,85 110,65 C75,70 35,62 10,85 Z' fill-opacity='0.012'/></g></svg>"),
@@ -28,16 +28,16 @@ body,
 body .project-card {
   background:
     /* 极致国风脑洞：用背景渐变优雅重绘14px石青书脊和1px分界线，完美清除粗边框AI反模式 */
-    linear-gradient(to right, #2e5c8a 0px, #2e5c8a 14px, var(--md-outline) 14px, var(--md-outline) 15px, transparent 15px),
+    linear-gradient(to right, var(--md-primary-container) 0px, var(--md-primary-container) 14px, var(--md-outline) 14px, var(--md-outline) 15px, transparent 15px),
     /* 宣纸微噪底纹 */
-    radial-gradient(circle at 50% 50%, rgba(28, 32, 34, 0.005) 1px, transparent 1px),
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--md-on-surface) 0.5%, transparent) 1px, transparent 1px),
     linear-gradient(var(--md-surface), var(--md-surface)) !important;
   background-size: 100% 100%, 8px 8px, 100% 100% !important;
   border: 1px solid var(--md-outline) !important;
   padding-left: 36px !important; /* 腾出书脊的物理位置 */
   border-radius: 2px !important;
   position: relative !important;
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.05) !important;
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 5%, transparent) !important;
   transition:
     background-color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
     border-color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
@@ -72,9 +72,9 @@ body .project-card::after {
   font-family: var(--md-font-label) !important;
   font-size: 11px !important;
   font-weight: 800 !important;
-  color: rgba(184, 60, 50, 0.85) !important;
-  border: 1px solid rgba(184, 60, 50, 0.85) !important;
-  background-color: rgba(184, 60, 50, 0.05) !important;
+  color: color-mix(in srgb, var(--md-secondary) 85%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--md-secondary) 85%, transparent) !important;
+  background-color: color-mix(in srgb, var(--md-secondary) 5%, transparent) !important;
   padding: 2px 3px !important;
   line-height: 1 !important;
   border-radius: 1px !important;
@@ -93,26 +93,26 @@ body .project-card:hover {
 }
 
 :root[data-theme='dark'] body .project-card {
-  border-left-color: #1a3324 !important; /* 暗绿松针色书脊 */
+  border-left-color: var(--md-success-container) !important; /* 暗绿松针色书脊 */
   border-color: var(--md-outline-variant) !important;
-  box-shadow: 2px 2px 0px rgba(13, 16, 17, 0.4) !important;
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-surface-container-lowest) 40%, transparent) !important;
   background: linear-gradient(var(--md-surface), var(--md-surface)) !important;
 }
 
 :root[data-theme='dark'] body .project-card::before {
-  color: #9c332b !important;
+  color: var(--md-secondary) !important;
 }
 
 :root[data-theme='dark'] body .project-card::after {
-  color: #ff7b6e !important;
-  border-color: #ff7b6e !important;
-  background-color: rgba(255, 110, 94, 0.12) !important;
+  color: var(--md-secondary-readable) !important;
+  border-color: var(--md-secondary-readable) !important;
+  background-color: color-mix(in srgb, var(--md-secondary-readable) 12%, transparent) !important;
 }
 
 :root[data-theme='dark'] body .project-card:hover {
   box-shadow:
     4px 4px 0px var(--md-outline-variant),
-    1px 1px 0px rgba(13, 16, 17, 0.5) !important;
+    1px 1px 0px color-mix(in srgb, var(--md-surface-container-lowest) 50%, transparent) !important;
 }
 
 /* 4. 侧边栏大改造：背景融入“檀木冰裂纹格格窗棂”底图，菜单项 Hover 覆写为“毛笔横扫枯笔飞白墨痕” */
@@ -134,8 +134,8 @@ body .app-shell__nav-item:hover {
   background:
     /* 毛笔扫过宣纸带有微飞白散边墨痕的 SVG (5% 极低透明度，防止花哨) */
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' opacity='0.05'><path d='M0,10 C15,3 40,17 75,4 C90,8 95,2 100,10 C85,12 55,2 0,10 Z' fill='%231c2022'/></svg>"),
-    linear-gradient(135deg, rgba(28, 32, 34, 0.03), rgba(28, 32, 34, 0.01)) !important;
-  border-color: rgba(28, 32, 34, 0.12) !important;
+    linear-gradient(135deg, color-mix(in srgb, var(--md-on-surface) 3%, transparent), color-mix(in srgb, var(--md-on-surface) 1%, transparent)) !important;
+  border-color: color-mix(in srgb, var(--md-on-surface) 12%, transparent) !important;
   color: var(--md-primary-dark) !important;
 }
 
@@ -146,14 +146,14 @@ body .app-shell__nav-item.is-active {
     linear-gradient(135deg, var(--md-primary-light), var(--md-primary)) !important;
   border-color: var(--md-primary-dark) !important;
   color: var(--md-on-primary) !important;
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.1) !important;
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 10%, transparent) !important;
 }
 
 :root[data-theme='dark'] body .app-shell__nav-item:hover {
   background:
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' opacity='0.04'><path d='M0,10 C15,3 40,17 75,4 C90,8 95,2 100,10 C85,12 55,2 0,10 Z' fill='%23e5dec9'/></svg>"),
-    linear-gradient(135deg, rgba(229, 222, 201, 0.04), rgba(229, 222, 201, 0.01)) !important;
-  border-color: rgba(229, 222, 201, 0.1) !important;
+    linear-gradient(135deg, color-mix(in srgb, var(--md-on-surface) 4%, transparent), color-mix(in srgb, var(--md-on-surface) 1%, transparent)) !important;
+  border-color: color-mix(in srgb, var(--md-on-surface) 10%, transparent) !important;
   color: var(--md-primary-light) !important;
 }
 
@@ -174,70 +174,15 @@ body .chapter-paper::after {
   font-family: var(--md-font-display) !important;
   font-size: 13.5px !important;
   font-weight: 600 !important;
-  color: rgba(28, 32, 34, 0.05) !important;
+  color: color-mix(in srgb, var(--md-on-surface) 5%, transparent) !important;
   letter-spacing: 0.15em !important;
   pointer-events: none !important;
   z-index: 10 !important;
 }
 
 :root[data-theme='dark'] body .chapter-paper::after {
-  color: rgba(229, 222, 201, 0.04) !important;
+  color: color-mix(in srgb, var(--md-on-surface) 4%, transparent) !important;
 }
 
-/* 6. AI 评审助手对话框重塑：AI 对话泡泡覆写为朱红细描“宣纸信笺”；用户对话泡泡覆写为“焦墨拓片”风格（手撕毛边） */
-body .chat-bubble-ai {
-  background-color: var(--md-surface) !important;
-  border: 1px dashed rgba(184, 60, 50, 0.28) !important;
-  border-radius: 2px !important;
-  box-shadow: inset 0 0 0 1px rgba(184, 60, 50, 0.04) !important;
-  position: relative !important;
-}
-
-/* 夹批朱印 */
-body .chat-bubble-ai::before {
-  content: '批' !important;
-  position: absolute !important;
-  right: 12px !important;
-  top: 10px !important;
-  font-family: var(--md-font-display) !important;
-  font-size: 10px !important;
-  font-weight: bold !important;
-  color: rgba(184, 60, 50, 0.2) !important;
-  border: 1px solid rgba(184, 60, 50, 0.2) !important;
-  border-radius: 50% !important;
-  width: 16px !important;
-  height: 16px !important;
-  display: grid !important;
-  place-items: center !important;
-}
-
-body .chat-bubble-user {
-  background-color: var(--md-primary-light) !important;
-  color: var(--md-on-primary) !important;
-  /* 手撕拓片毛边：使用更温和保守的不规则残碑剪裁，结合扩大 padding 确保文字绝对安全，决不截边 */
-  clip-path: polygon(
-    0% 1.5%, 12% 0.5%, 25% 1%, 37% 0.5%, 50% 1.5%, 62% 0.5%, 75% 1%, 87% 0.5%, 100% 1.5%,
-    99.5% 25%, 100% 50%, 99% 75%, 99.5% 98.5%,
-    88% 99.5%, 75% 99%, 62% 99.5%, 50% 98.5%, 38% 99.5%, 25% 99%, 12% 99.5%, 0% 98.5%,
-    0.5% 75%, 0% 50%, 0.8% 25%
-  ) !important;
-  border-radius: var(--md-radius-xs) !important;
-  box-shadow: var(--md-elevation-1) !important;
-  padding: 1.15rem 1.5rem !important;
-}
-
-:root[data-theme='dark'] body .chat-bubble-ai {
-  border-color: rgba(156, 51, 43, 0.45) !important;
-  background-color: var(--md-surface-dim) !important;
-}
-
-:root[data-theme='dark'] body .chat-bubble-ai::before {
-  color: rgba(156, 51, 43, 0.35) !important;
-  border-color: rgba(156, 51, 43, 0.35) !important;
-}
-
-:root[data-theme='dark'] body .chat-bubble-user {
-  background-color: var(--md-surface-bright) !important;
-  color: var(--md-on-surface) !important;
-  box-shadow: 2px 2px 0px rgba(13, 16, 17, 0.5) !important;
-}
+/* 6. 聊天气泡样式已收口至 ChatBubble.vue scoped（手撕毛边宣纸方案为唯一真相源），
+   该组件仅被灵感模式 InspirationMode 消费，此处不再保留全局覆写。 */

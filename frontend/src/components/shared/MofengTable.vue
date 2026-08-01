@@ -129,7 +129,7 @@ defineOptions({
   background-color: var(--md-secondary) !important; /* 朱砂红 */
   color: var(--md-on-primary) !important;
   border-color: var(--md-secondary) !important;
-  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.25) !important;
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-secondary) 25%, transparent) !important;
 }
 
 /* 页码切换箭头项 */

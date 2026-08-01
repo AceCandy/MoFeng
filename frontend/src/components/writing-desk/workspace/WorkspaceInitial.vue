@@ -22,7 +22,7 @@
   border-radius: var(--md-radius-sm) !important;
   border: 3px double var(--md-outline) !important;
   background-color: var(--md-surface-dim) !important;
-  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.15) !important;
+  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
 }
 
 .m3-initial-icon-wrapper {

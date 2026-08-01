@@ -318,7 +318,7 @@ watch(
 .chapter-workflow__copy h3,
 .chapter-workflow__copy p {
   margin: 0;
-  letter-spacing: 0;
+  letter-spacing: 0.03em;
 }
 
 .chapter-workflow__eyebrow {
@@ -405,7 +405,7 @@ watch(
 .chapter-workflow__candidate-label,
 .chapter-workflow__candidate-preview {
   display: block;
-  letter-spacing: 0;
+  letter-spacing: 0.03em;
 }
 
 .chapter-workflow__candidate-label {

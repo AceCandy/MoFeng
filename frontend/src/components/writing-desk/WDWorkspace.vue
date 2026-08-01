@@ -393,7 +393,7 @@ watch(
   border-radius: 0 !important; /* 方直古籍 */
   background: var(--md-surface);
   /* 极致国风脑洞：工作区熟宣纹理 */
-  background-image: repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.006) 0px, rgba(28, 32, 34, 0.006) 1px, transparent 1px, transparent 36px);
+  background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--md-on-surface) 0.6%, transparent) 0px, color-mix(in srgb, var(--md-on-surface) 0.6%, transparent) 1px, transparent 1px, transparent 36px);
   border: 3px double var(--md-outline) !important;
   box-shadow: 3px 3px 0px var(--md-outline);
 }

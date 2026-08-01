@@ -90,13 +90,6 @@
         </span>
       </button>
     </div>
-    <p
-      v-if="isAutoAnalyzing && !isLoading"
-      class="mb-4 md-body-small foreshadowing-auto-analyze-text"
-    >
-      正在后台自动识别伏笔，不影响当前页面操作...
-    </p>
-
     <!-- Loading State -->
     <div
       v-if="isLoading"
@@ -126,7 +119,7 @@
         <p class="blueprint-state__title">伏笔数据加载失败</p>
         <p class="blueprint-state__desc">{{ error }}</p>
         <div class="blueprint-state__actions">
-          <button type="button" @click="refreshData" class="blueprint-button">重试</button>
+          <button type="button" @click="refreshData" class="md-btn md-btn-outlined">重试</button>
         </div>
       </div>
     </div>
@@ -259,7 +252,6 @@ const foreshadowingQuery = useForeshadowingQuery(() => projectId)
 const isLoading = computed(
   () => foreshadowingQuery.isLoading.value || foreshadowingQuery.isFetching.value,
 )
-const isAutoAnalyzing = computed(() => false)
 const error = computed(() => {
   const queryError = foreshadowingQuery.error.value
   return queryError instanceof Error ? queryError.message : queryError ? String(queryError) : null
@@ -350,22 +342,6 @@ const refreshData = () => {
 </script>
 
 <style scoped>
-.foreshadowing-header-icon-container {
-  background-color: var(--md-warning-container);
-}
-
-.foreshadowing-header-icon {
-  color: var(--md-on-warning-container);
-}
-
-.foreshadowing-title {
-  color: var(--md-on-surface);
-}
-
-.foreshadowing-subtitle {
-  color: var(--md-on-surface-variant);
-}
-
 .foreshadowing-stat-card {
   text-align: left;
 }
@@ -414,10 +390,6 @@ const refreshData = () => {
   color: var(--md-error-text);
 }
 
-.foreshadowing-auto-analyze-text {
-  color: var(--md-on-surface-variant);
-}
-
 .foreshadowing-list-card {
   border-radius: var(--md-radius-sm) !important;
 }
@@ -427,7 +399,7 @@ const refreshData = () => {
 }
 
 .foreshadowing-refresh-icon.is-spinning {
-  animation: blueprint-refresh-spin 1s linear infinite;
+  animation: md-spin 1s linear infinite;
 }
 
 .foreshadowing-list {
@@ -493,12 +465,6 @@ const refreshData = () => {
     min-width: 0;
     flex: initial;
     justify-content: center;
-  }
-}
-
-@keyframes blueprint-refresh-spin {
-  to {
-    transform: rotate(360deg);
   }
 }
 </style>

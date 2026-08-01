@@ -24,7 +24,7 @@
         </div>
       </div>
       <div class="blueprint-action-row">
-        <button @click="useAIAnalysis" class="blueprint-button blueprint-button--primary" :disabled="isLoading">
+        <button @click="useAIAnalysis" class="md-btn md-btn-filled" :disabled="isLoading">
           <svg
             class="w-5 h-5"
             viewBox="0 0 24 24"
@@ -42,7 +42,7 @@
         </button>
         <button
           @click="refreshData"
-          class="blueprint-button refresh-btn"
+          class="md-btn md-btn-outlined refresh-btn"
           :disabled="isLoading"
         >
           <svg
@@ -93,7 +93,7 @@
         <p class="blueprint-state__title">情感数据加载失败</p>
         <p class="blueprint-state__desc">{{ error }}</p>
         <div class="blueprint-state__actions">
-          <button type="button" @click="refreshData" class="blueprint-button">重试</button>
+          <button type="button" @click="refreshData" class="md-btn md-btn-outlined">重试</button>
         </div>
       </div>
     </div>
@@ -153,7 +153,7 @@
           :style="
             selectedEmotions.includes(emotion.key)
               ? {
-                  backgroundColor: emotion.color + '20',
+                  backgroundColor: `color-mix(in srgb, ${emotion.color} 12%, transparent)`,
                   color: emotion.color,
                   borderColor: emotion.color,
                 }
@@ -186,7 +186,7 @@
             :y="0"
             :width="CHART_VIEWBOX_WIDTH"
             :height="CHART_VIEWBOX_HEIGHT"
-            rx="18"
+            rx="4"
             fill="var(--md-surface-container-low)"
           />
 
@@ -279,7 +279,7 @@
         >
           <div
             class="w-10 h-10 rounded-xs border border-[var(--md-outline-variant)] flex items-center justify-center flex-shrink-0"
-            :style="{ backgroundColor: getEmotionColor(point.emotion_type) + '20' }"
+            :style="{ backgroundColor: `color-mix(in srgb, ${getEmotionColor(point.emotion_type)} 12%, transparent)` }"
           >
             <span class="md-label-large" :style="{ color: getEmotionColor(point.emotion_type) }">{{
               point.chapter_number
@@ -297,7 +297,7 @@
             <span
               class="md-chip md-chip-filter selected px-2 py-1"
               :style="{
-                backgroundColor: getEmotionColor(point.emotion_type) + '20',
+                backgroundColor: `color-mix(in srgb, ${getEmotionColor(point.emotion_type)} 12%, transparent)`,
                 color: getEmotionColor(point.emotion_type),
               }"
             >
@@ -360,23 +360,15 @@ const EMOTION_COLOR_TOKEN_MAP: Record<string, string> = {
   joy: '--md-success',
   sadness: '--md-primary',
   anger: '--md-error',
-  fear: '--md-secondary',
+  fear: '--md-primary-light', /* 松烟系，替代横贯图表的朱砂 */
   surprise: '--md-warning',
   calm: '--md-on-surface-variant',
 }
 
-const DEFAULT_EMOTION_COLOR_FALLBACK = 'currentColor'
-
-const resolveCssVarColor = (tokenName: string, fallback: string) => {
-  if (typeof window === 'undefined') return fallback
-  const value = window.getComputedStyle(document.documentElement).getPropertyValue(tokenName).trim()
-  return value || fallback
-}
-
+// SVG 与内联样式可直接消费 var(--md-*) 字符串，主题切换时随 token 自动更新
 const getEmotionColorByKey = (emotionKey: string) => {
   const tokenName = EMOTION_COLOR_TOKEN_MAP[emotionKey] || '--md-on-surface-variant'
-  const fallback = resolveCssVarColor('--md-on-surface-variant', DEFAULT_EMOTION_COLOR_FALLBACK)
-  return resolveCssVarColor(tokenName, fallback)
+  return `var(${tokenName})`
 }
 
 const getEmotionKeyByType = (emotionType: string) => {
@@ -578,28 +570,11 @@ const chartLegendColor = (emotionLabel: string) => {
 }
 
 .emotion-refresh-icon.is-spinning {
-  animation: blueprint-refresh-spin 1s linear infinite;
+  animation: md-spin 1s linear infinite;
 }
 
 .md-chip-filter .w-2.h-2 {
   margin-right: 8px;
-}
-
-/* 墨风重构样式 */
-.emotion-header-icon-container {
-  background-color: var(--md-primary-container);
-}
-
-.emotion-header-icon {
-  color: var(--md-on-primary-container);
-}
-
-.emotion-title {
-  color: var(--md-on-surface);
-}
-
-.emotion-subtitle {
-  color: var(--md-on-surface-variant);
 }
 
 .stat-card {
@@ -651,12 +626,6 @@ const chartLegendColor = (emotionLabel: string) => {
   .emotion-refresh-icon.is-spinning,
   .md-spinner {
     animation: none;
-  }
-}
-
-@keyframes blueprint-refresh-spin {
-  to {
-    transform: rotate(360deg);
   }
 }
 </style>

@@ -173,7 +173,7 @@
   border-color: var(--md-outline);
   background-color: var(--md-surface);
   color: var(--md-primary-dark);
-  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.08);
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent);
 }
 
 .md-tab:focus-visible {
@@ -191,7 +191,7 @@
   border-color: var(--md-outline);
   background-color: var(--md-surface);
   color: var(--md-primary-dark);
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.12);
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 12%, transparent);
 }
 
 .md-tab.active::after {

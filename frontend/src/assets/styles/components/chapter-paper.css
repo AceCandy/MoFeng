@@ -12,7 +12,7 @@ body .chapter-paper {
   padding: var(--md-spacing-8) !important;
   background:
     /* 纵向朱砂红信笺界格（38px 循环，高雅轻透明度，护眼润字） */
-    repeating-linear-gradient(90deg, transparent, transparent 38px, rgba(184, 60, 50, 0.04) 38px, rgba(184, 60, 50, 0.05) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 38px, color-mix(in srgb, var(--md-secondary) 4%, transparent) 38px, color-mix(in srgb, var(--md-secondary) 5%, transparent) 40px),
     /* 熟宣色温润底色 */
     linear-gradient(var(--md-surface), var(--md-surface)) !important;
   background-attachment: local !important;
@@ -28,15 +28,15 @@ body .chapter-paper {
 :root[data-theme='dark'] body .chapter-paper {
   background:
     /* 暗砂红格线 */
-    repeating-linear-gradient(90deg, transparent, transparent 38px, rgba(140, 36, 28, 0.16) 38px, rgba(140, 36, 28, 0.22) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 38px, color-mix(in srgb, var(--md-secondary-dark) 16%, transparent) 38px, color-mix(in srgb, var(--md-secondary-dark) 22%, transparent) 40px),
     /* 焦墨深夜底色 */
     linear-gradient(var(--md-surface), var(--md-surface)) !important;
 }
 
-/* 章节正文古宋体碑拓骨力展现 */
+/* 章节正文古宋体碑拓骨力展现（字号交由组件/类控制，全局不再锁死） */
 body .chapter-prose {
   font-family: var(--md-font-display) !important;
-  font-size: 18px !important;
+  font-size: 17px;
   letter-spacing: 0.035em !important;
   font-weight: 600 !important; /* 稿纸正文使用稳重清晰的 600 SemiBold */
   color: var(--md-on-surface) !important;
@@ -69,11 +69,11 @@ body .md-textarea {
   font-family: var(--md-font-family) !important;
   font-weight: 500 !important; /* 写字板输入框使用 500 Medium，笔迹温润饱满 */
   padding: 1.5rem !important;
-  box-shadow: inset 1px 1px 3px rgba(28, 32, 34, 0.03) !important;
+  box-shadow: inset 1px 1px 3px color-mix(in srgb, var(--md-on-surface) 3%, transparent) !important;
   /* 笺纸横向书写红线 */
   background-image: repeating-linear-gradient(
-    rgba(184, 60, 50, 0.03) 0px,
-    rgba(184, 60, 50, 0.03) 1px,
+    color-mix(in srgb, var(--md-secondary) 3%, transparent) 0px,
+    color-mix(in srgb, var(--md-secondary) 3%, transparent) 1px,
     transparent 1px,
     transparent 2rem
   ) !important;
@@ -91,8 +91,8 @@ body .md-textarea:focus {
 /* 暗色模式下写字格线自适应变暗 */
 :root[data-theme='dark'] body .md-textarea {
   background-image: repeating-linear-gradient(
-    rgba(140, 36, 28, 0.1) 0px,
-    rgba(140, 36, 28, 0.1) 1px,
+    color-mix(in srgb, var(--md-secondary-dark) 10%, transparent) 0px,
+    color-mix(in srgb, var(--md-secondary-dark) 10%, transparent) 1px,
     transparent 1px,
     transparent 2rem
   ) !important;

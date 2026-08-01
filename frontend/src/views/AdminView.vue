@@ -250,7 +250,7 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
   border: 3px double var(--md-outline) !important;
   border-radius: var(--md-radius-sm) !important; /* 微直角 4px */
   background-color: var(--md-surface) !important; /* 熟宣白 */
-  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.12) !important;
+  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-on-surface) 12%, transparent) !important;
   display: flex; /* 改为 flex 页签左右铺开，更具折页感 */
   flex-wrap: nowrap;
   gap: 0;
@@ -284,8 +284,8 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
 
 .admin-console__nav-item:hover {
   border-color: var(--md-outline-variant) !important;
-  background-color: rgba(184, 60, 50, 0.04) !important;
-  color: var(--md-secondary) !important;
+  background-color: color-mix(in srgb, var(--md-on-surface) 4%, transparent) !important;
+  color: var(--md-primary) !important;
 }
 
 .admin-console__nav-item:focus-visible {
@@ -295,9 +295,9 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
 
 .admin-console__nav-item.is-active,
 .admin-console__nav-item[aria-selected='true'] {
-  border: 1px dashed rgba(184, 60, 50, 0.15) !important;
+  border: 1px dashed color-mix(in srgb, var(--md-secondary) 15%, transparent) !important;
   border-left: 1.5px solid var(--md-secondary) !important; /* 纤细朱砂竖描起笔，干掉AI粗条 */
-  background-color: rgba(184, 60, 50, 0.08) !important; /* 晕染熟宣红 */
+  background-color: color-mix(in srgb, var(--md-secondary) 8%, transparent) !important; /* 晕染熟宣红 */
   color: var(--md-secondary) !important;
 }
 
@@ -333,9 +333,9 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
 .admin-console__nav-item.is-active::after,
 .admin-console__nav-item[aria-selected='true']::after {
   color: var(--md-secondary) !important;
-  background-color: rgba(184, 60, 50, 0.12) !important;
+  background-color: color-mix(in srgb, var(--md-secondary) 12%, transparent) !important;
   border: 1px solid var(--md-secondary) !important;
-  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15) !important;
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-secondary) 15%, transparent) !important;
   opacity: 1;
   transform: scale(1) translateY(0); /* 盖章 */
   animation: ink-seal-press 0.4s cubic-bezier(0.19, 1, 0.22, 1) both;
@@ -387,9 +387,6 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
 
 .admin-console__content {
   min-width: 0;
-}
-
-@media (max-width: 1199px) {
 }
 
 @media (max-width: 833px) {

@@ -148,11 +148,12 @@ const providerKeyLabel = (provider: UserModelProvider): string =>
 .model-routing__provider-head h3 {
   margin: 0;
   color: var(--md-on-surface);
+  letter-spacing: 0.03em; /* 碑拓骨力：宋体小标题拉开字距 */
 }
 
-/* provider-head p / hint 共享排版（从父 provider-head p/hint/empty 混合拆出；empty 仍留父） */
-.model-routing__provider-head p,
-.model-routing__hint {
+/* provider-head p 排版；.model-routing__hint 基础样式已收口至
+   styles/components/model-routing.css（is-error 变体仍留本组件） */
+.model-routing__provider-head p {
   margin: 4px 0 0;
   color: var(--md-on-surface-variant);
   font-size: var(--md-body-small);
@@ -233,7 +234,7 @@ const providerKeyLabel = (provider: UserModelProvider): string =>
   font-size: var(--md-label-small);
   font-weight: 600;
   white-space: nowrap;
-  opacity: 0.35;
+  opacity: 0.75; /* 常态可见但克制，hover/focus 全显 */
   transition:
     background-color var(--md-duration-short) var(--md-easing-standard),
     border-color var(--md-duration-short) var(--md-easing-standard),
@@ -277,7 +278,7 @@ const providerKeyLabel = (provider: UserModelProvider): string =>
   border-color: var(--md-primary);
   background: var(--md-primary);
   color: var(--md-on-primary);
-  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.15);
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent);
 }
 
 .model-routing__provider-delete {
@@ -293,7 +294,7 @@ const providerKeyLabel = (provider: UserModelProvider): string =>
   font-size: var(--md-label-small);
   font-weight: 600;
   white-space: nowrap;
-  opacity: 0.25;
+  opacity: 0.75; /* 常态可见但克制，hover/focus 全显 */
   transition:
     background-color var(--md-duration-short) var(--md-easing-standard),
     border-color var(--md-duration-short) var(--md-easing-standard),
@@ -313,16 +314,18 @@ const providerKeyLabel = (provider: UserModelProvider): string =>
   right: -4px;
 }
 
+/* 删除为破坏性操作，hover 用 --md-error 系（不用朱砂） */
 .model-routing__provider-delete:hover:not(:disabled) {
   opacity: 1;
-  background: var(--md-secondary);
-  color: var(--md-on-primary);
-  border-color: rgba(184, 60, 50, 0.3);
-  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.2);
+  background: var(--md-error);
+  color: var(--md-on-error);
+  border-color: color-mix(in srgb, var(--md-error) 30%, transparent);
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-error) 20%, transparent);
 }
 
 .model-routing__toggle:focus-visible,
 .model-routing__provider-delete:focus-visible {
+  opacity: 1;
   outline: 2px solid var(--md-primary);
   outline-offset: 2px;
 }
@@ -345,20 +348,20 @@ const providerKeyLabel = (provider: UserModelProvider): string =>
   z-index: 2;
 }
 
-/* 拉取模型：朱砂印章主按钮 */
+/* 拉取模型：石青 tonal 辅助按钮（tonal 统一为石青，不用朱砂） */
 .model-routing__provider-actions .md-btn-tonal {
   position: relative;
-  border: 1px solid rgba(184, 60, 50, 0.35);
+  border: 1px solid color-mix(in srgb, var(--md-primary-container) 55%, transparent);
   border-radius: var(--md-radius-xs) !important;
-  background: var(--md-secondary) !important;
-  color: var(--md-on-primary) !important;
+  background: var(--md-primary-container) !important;
+  color: var(--md-on-primary-container) !important;
   font-family: var(--md-font-label);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.05em;
   height: 34px;
   padding: 0 16px;
-  box-shadow: 2px 2px 0px rgba(184, 60, 50, 0.25);
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-primary-container) 30%, transparent);
   transition:
     background-color var(--md-duration-short) var(--md-easing-standard),
     border-color var(--md-duration-short) var(--md-easing-standard),
@@ -382,13 +385,13 @@ const providerKeyLabel = (provider: UserModelProvider): string =>
 }
 
 .model-routing__provider-actions .md-btn-tonal:hover:not(:disabled) {
-  background: var(--md-error-strong) !important;
-  box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.35);
+  background: color-mix(in srgb, var(--md-primary-container) 88%, var(--md-on-surface)) !important;
+  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-primary-container) 38%, transparent);
 }
 
 .model-routing__provider-actions .md-btn-tonal:active:not(:disabled) {
   transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15);
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-primary-container) 20%, transparent);
 }
 
 .model-routing__provider-actions .md-btn-tonal:disabled {

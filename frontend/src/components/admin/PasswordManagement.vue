@@ -197,20 +197,21 @@ defineExpose({
   letter-spacing: 0.06em !important;
 }
 
-/* 移除输入框原有的现代直角/圆角封闭外框，阴影和背景色填充 */
+/* 输入框：竹青细框、微直角，聚焦时焦墨框线加拓片硬影 */
 :deep(.n-input) {
   background-color: transparent !important;
   box-shadow: none !important;
   --n-box-shadow-focus: none !important;
-  /* 强制清除其他三边边框，仅保留底部乌丝栏下划线 */
-  border: none !important;
-  border-bottom: 1.5px solid var(--md-outline) !important;
-  border-radius: 0 !important;
-  transition: border-bottom-color var(--md-duration-short, 140ms) var(--md-easing-standard, ease-in-out) !important;
+  border: 1px solid var(--md-outline) !important;
+  border-radius: var(--md-radius-xs) !important;
+  transition:
+    border-color var(--md-duration-short, 140ms) var(--md-easing-standard, ease-in-out),
+    box-shadow var(--md-duration-short, 140ms) var(--md-easing-standard, ease-in-out) !important;
 }
 
 :deep(.n-input.n-input--focus) {
-  border-bottom-color: var(--md-secondary) !important;
+  border-color: var(--md-primary) !important;
+  box-shadow: var(--md-shadow-primary-1) !important;
 }
 
 :deep(.n-input .n-input__border),
@@ -228,14 +229,14 @@ defineExpose({
   color: var(--md-primary) !important;
 }
 
-/* 校验失败（error）状态的底线 */
+/* 校验失败（error）状态的框线 */
 :deep(.n-input.n-input--error-status) {
-  border-bottom-color: var(--md-error) !important;
+  border-color: var(--md-error) !important;
 }
 
 /* 禁用（disabled）状态的样式 */
 :deep(.n-input.n-input--disabled) {
-  border-bottom-color: var(--md-outline-variant) !important;
+  border-color: var(--md-outline-variant) !important;
   opacity: 0.5 !important;
   cursor: not-allowed !important;
 }
@@ -258,13 +259,13 @@ defineExpose({
   justify-content: center;
   width: 22px;
   height: 22px;
-  background-color: var(--md-secondary, #b83c32) !important;
-  color: var(--md-on-secondary, #faf6ed) !important;
+  background-color: var(--md-secondary) !important;
+  color: var(--md-on-secondary) !important;
   font-family: var(--md-font-serif) !important;
   font-size: 11px !important;
   font-weight: 900 !important;
   border: 1px solid var(--md-outline) !important;
-  box-shadow: 1.5px 1.5px 0px rgba(184, 60, 50, 0.25) !important;
+  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-secondary) 25%, transparent) !important;
   transform: rotate(-4deg);
   margin-bottom: 12px;
   margin-left: 4px;

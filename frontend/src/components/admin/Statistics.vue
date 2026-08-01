@@ -230,180 +230,11 @@ watch(
 </script>
 
 <style scoped>
-.admin-panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--md-spacing-4);
-}
-
-.admin-ops__toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: calc(-1 * var(--md-spacing-2));
-}
-
 .admin-ops__refresh-btn {
   flex-shrink: 0;
 }
 
-.admin-ops {
-  padding: clamp(var(--md-spacing-5), 4vw, var(--md-spacing-8));
-  /* 经典的线装本古籍双线边框 */
-  border: 3px double var(--md-outline) !important;
-  border-radius: var(--md-radius-sm) !important; /* 微直角 4px */
-  background-color: var(--md-surface) !important; /* 熟宣暖白 */
-  /* 硬朗偏置的拓片阴影 */
-  box-shadow: 4px 4px 0px rgba(28, 32, 34, 0.15) !important;
-  display: flex;
-  flex-direction: column;
-  gap: var(--md-spacing-5);
-}
-
-/* 深色模式适配 */
-:global([data-theme='dark']) .admin-ops,
-:global(.dark) .admin-ops {
-  border-color: var(--md-outline) !important;
-  box-shadow: 4px 4px 0px rgba(13, 16, 17, 0.5) !important;
-}
-
-.admin-ops__metrics {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--md-spacing-4);
-}
-
-.admin-ops__metric {
-  padding: var(--md-spacing-4);
-  border-radius: var(--md-radius-xs) !important; /* 极窄 2px 直角 */
-  border: 1px solid var(--md-outline) !important; /* 竹青细线 */
-  background-color: var(--md-surface-container-low) !important; /* 熟宣暖灰 */
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.05) !important;
-  transition:
-    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
-}
-
-.admin-ops__metric:hover {
-  transform: translate(-1px, -1px);
-  border-color: var(--md-secondary) !important;
-  box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.15) !important; /* 获得轻微朱砂压影 */
-}
-
-.admin-ops__metric p {
-  margin: 0;
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
-  font-family: var(--md-font-serif) !important;
-}
-
-.admin-ops__metric span {
-  margin: 0;
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
-  font-family: var(--md-font-kai) !important;
-}
-
-.admin-ops__metric strong {
-  margin: var(--md-spacing-2) 0 5px;
-  display: block;
-  color: var(--md-primary);
-  font-family: var(--md-font-mono) !important; /* 指标数字用 Mono 保证整齐 */
-  font-size: var(--md-display-small) !important;
-  font-weight: 600 !important;
-}
-
-.admin-ops__grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--md-spacing-4);
-}
-
-.admin-panel-card {
-  border: 3px double var(--md-outline) !important; /* 双线古书籍边框 */
-  border-radius: var(--md-radius-sm) !important; /* 微直角 4px */
-  background-color: var(--md-surface) !important; /* 熟宣底面 */
-  padding: var(--md-spacing-4);
-  box-shadow: 3px 3px 0px rgba(28, 32, 34, 0.08) !important;
-}
-
-.admin-panel-card h3 {
-  margin: 0;
-  color: var(--md-on-surface);
-  /* 碑拓宋体，字间距舒展 */
-  font-family: var(--md-font-display) !important;
-  font-size: var(--md-title-medium) !important;
-  letter-spacing: 0.05em !important;
-}
-
-.admin-panel-card header p {
-  margin: 6px 0 0;
-  color: var(--md-on-surface-variant);
-  font-family: var(--md-font-kai) !important;
-  font-size: var(--md-body-small);
-}
-
-.admin-log-list,
-.admin-project-list {
-  margin: var(--md-spacing-4) 0 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: var(--md-spacing-2);
-}
-
-.admin-log-list li,
-.admin-project-list li {
-  padding: var(--md-spacing-3);
-  border-radius: var(--md-radius-xs) !important; /* 微直角 2px */
-  border: 1px solid var(--md-outline-variant) !important;
-  background-color: var(--md-surface-container-lowest) !important;
-  transition:
-    background-color var(--md-duration-short) var(--md-easing-standard),
-    border-color var(--md-duration-short) var(--md-easing-standard),
-    box-shadow var(--md-duration-short) var(--md-easing-standard);
-}
-
-.admin-log-list li:hover,
-.admin-project-list li:hover {
-  border-color: var(--md-outline) !important;
-  background-color: var(--md-surface-container-low) !important;
-  box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.05) !important;
-}
-
-.admin-log-list p {
-  margin: 0;
-  color: var(--md-on-surface);
-  font-size: var(--md-body-small);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.admin-log-list span,
-.admin-project-list em,
-.admin-project-list span {
-  margin-top: 6px;
-  display: block;
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-label-small);
-  font-style: normal;
-}
-
-.admin-project-list strong {
-  color: var(--md-on-surface);
-  font-size: var(--md-label-large);
-}
-
-.admin-empty-hint {
-  margin: var(--md-spacing-5) 0 0;
-  color: var(--md-on-surface-variant);
-  font-family: var(--md-font-kai) !important;
-  font-size: var(--md-body-small);
-}
+/* 日志/项目清单与空态提示样式已统一下沉至 admin-panels.css */
 
 .admin-panel-card--trend {
   display: flex;
@@ -414,9 +245,9 @@ watch(
   margin-top: var(--md-spacing-4);
   padding: var(--md-spacing-3);
   height: 176px;
-  border-radius: var(--md-radius-xs) !important; /* 微直角 2px */
-  border: 1px solid var(--md-outline) !important;
-  background-color: var(--md-surface-container-lowest) !important;
+  border-radius: var(--md-radius-xs); /* 微直角 2px */
+  border: 1px solid var(--md-outline);
+  background-color: var(--md-surface-container-low); /* 竹纸暖黄 */
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   align-items: end;
@@ -425,12 +256,8 @@ watch(
 
 .admin-trend__bar {
   position: relative;
-  border-radius: 2px 2px 0 0 !important; /* 驱逐大圆角，改为 2px 直角 */
-  background: linear-gradient(
-    180deg,
-    var(--md-primary-light) 0%,
-    var(--md-primary) 100%
-  ) !important; /* 水墨浓淡过渡 */
+  border-radius: var(--md-radius-xs) var(--md-radius-xs) 0 0; /* 微直角，底部贴合轴线 */
+  background-color: var(--md-primary); /* 焦墨单色实条 */
   min-height: 22px;
 }
 
@@ -458,7 +285,8 @@ watch(
   font-family: var(--md-font-mono);
 }
 
-@media (max-width: 960px) {
+/* 仅在中等宽度切两列；≤833px 时由 admin-panels.css 统一塌为单列，避免 span 2 撑出隐式列 */
+@media (min-width: 834px) and (max-width: 960px) {
   .admin-ops__metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -469,22 +297,6 @@ watch(
 
   .admin-panel-card--trend {
     grid-column: span 2;
-  }
-}
-
-@media (max-width: 600px) {
-  .admin-ops {
-    padding: var(--md-spacing-4);
-    border-radius: var(--md-radius-sm) !important;
-  }
-
-  .admin-ops__metrics,
-  .admin-ops__grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .admin-panel-card--trend {
-    grid-column: span 1;
   }
 }
 </style>

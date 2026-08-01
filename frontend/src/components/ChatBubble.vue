@@ -74,111 +74,118 @@ const wrapperClass = computed(() => {
 
 const bubbleClass = computed(() => {
   const isAI = props.type === 'ai'
-  // AI 对话直接铺满（w-full max-w-none）以饱满展示长卷大纲，用户对话保持 max-w-[75%] 以便于靠右对齐
-  const baseClass = `${isAI ? 'w-full max-w-none' : 'max-w-[75%]'} p-4 fade-in`
+  // AI 长卷限宽约 70ch 行长（DESIGN 正文行长 65–75ch），用户对话保持 max-w-[75%] 靠右对齐
+  const baseClass = `${isAI ? 'w-full max-w-[70ch]' : 'max-w-[75%]'} p-4 fade-in`
   const typeClass = isAI ? 'chat-bubble-ai' : 'chat-bubble-user'
   return `${baseClass} ${typeClass}`
 })
 </script>
 
 <style scoped>
-.chat-bubble__option-marker {
+/* 「手撕毛边宣纸」聊天气泡：灵感模式气泡样式的唯一真相源，
+   全局 brand-visuals.css / misc-base.css 的覆写段落已删除，故不再需要 !important 互搏。
+   仅 font-family 保留 !important，以抵御全局 annotation.css 对 .chat-bubble-ai 的楷体覆写。 */
+
+/* 选项字头朱砂小方章（由 v-html 注入，须经 :deep 方能命中 scoped 样式） */
+:deep(.chat-bubble__option-marker) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 1.5rem;
   height: 1.5rem;
-  background-color: rgba(184, 60, 50, 0.08) !important; /* 朱砂淡染 */
-  color: var(--md-secondary) !important; /* 朱砂红 */
-  border: 1px solid var(--md-secondary) !important; /* 朱砂红细框 */
-  border-radius: var(--md-radius-xs) !important; /* 金石方直印章 */
+  background-color: color-mix(in srgb, var(--md-secondary) 8%, transparent); /* 朱砂淡染 */
+  color: var(--md-secondary);
+  border: 1px solid var(--md-secondary);
+  border-radius: var(--md-radius-xs); /* 金石方直印章 */
   font-size: var(--md-label-small);
   font-weight: 700;
   margin-right: 0.5rem;
-  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15) !important; /* 微印章硬影 */
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-secondary) 15%, transparent); /* 微印章硬影 */
 }
 
-/* 「手撕毛边宣纸」 AI 气泡重构 */
+/* 「手撕毛边宣纸」 AI 气泡 */
 .chat-bubble-ai {
-  background-color: var(--md-surface) !important;
-  color: var(--md-on-surface) !important;
+  background-color: var(--md-surface);
+  color: var(--md-on-surface);
   /* 精细的多边形剪裁模拟参差不齐的手撕宣纸毛边 */
   clip-path: polygon(
     0% 2%, 8% 0.5%, 19% 1.5%, 31% 0.5%, 44% 1.8%, 56% 0.8%, 69% 1.5%, 81% 0.5%, 93% 1.8%, 100% 2%, 
     99.2% 15%, 100% 32%, 98.8% 48%, 99.5% 65%, 98.5% 82%, 99.2% 98%, 
     91% 99.2%, 79% 98.2%, 66% 99.2%, 54% 98.5%, 41% 99.2%, 29% 98.2%, 16% 99.2%, 0% 98%,
     0.8% 81%, 0% 63%, 1.2% 46%, 0% 28%, 0.8% 12%
-  ) !important;
-  padding: 1.25rem 2rem 1.25rem 1.5rem !important;
-  border: none !important;
-  box-shadow: none !important;
-  /* 搭配 drop-shadow 滤镜产生形状完美的硬偏置拓片影 */
-  filter: drop-shadow(3px 3px 0px rgba(28, 32, 34, 0.12)) !important;
-  /* 显式声明will-change，提前提升图层防止高频重绘卡顿 */
-  will-change: filter, transform !important;
-  /* 字体使用清隽宋体 */
+  );
+  padding: 1.25rem 2rem 1.25rem 1.5rem;
+  border: none;
+  box-shadow: none;
+  /* 搭配 drop-shadow 滤镜产生形状完美的硬偏置拓片影（明暗主题自适应） */
+  filter: drop-shadow(3px 3px 0px color-mix(in srgb, var(--md-on-surface) 12%, transparent));
+  /* 显式声明 will-change，提前提升图层防止高频重绘卡顿 */
+  will-change: filter, transform;
+  /* 字体使用清隽宋体（保留 !important 抵御全局 annotation.css 的楷体覆写） */
   font-family: var(--md-font-serif) !important;
-  font-size: 15px !important;
-  line-height: 1.6 !important;
-  letter-spacing: 0.03em !important;
-  position: relative !important;
-  animation: ink-fade-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+  font-size: 15px;
+  line-height: 1.6;
+  letter-spacing: 0.03em;
+  position: relative;
+  animation: ink-fade-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-/* 段落内超链接（Inline Link）古典竹青色手绘下划线微动效 */
+/* 段落内超链接：焦墨虚线下划线，hover 焦墨化实（不落朱砂） */
 :deep(.prose a) {
-  color: var(--md-primary-dark) !important;
-  text-decoration: none !important;
-  border-bottom: 1px dashed var(--md-primary) !important;
+  color: var(--md-primary-dark);
+  text-decoration: none;
+  border-bottom: 1px dashed var(--md-primary);
   transition:
-    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
     color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
-  padding-bottom: 1px !important;
+    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  padding-bottom: 1px;
 }
 
 :deep(.prose a:hover) {
-  color: var(--md-secondary) !important;
-  border-bottom: 1px solid var(--md-secondary) !important;
-  text-shadow: 0.5px 0.5px 0px rgba(184, 60, 50, 0.1) !important;
+  color: var(--md-primary);
+  border-bottom: 1px solid var(--md-primary);
 }
 
-/* 夹批朱印方章，金石点睛 */
+/* 夹批朱印方章，金石点睛（适度内缩，避让 clip-path 毛边剪裁区） */
 .chat-bubble-ai::before {
-  content: '文' !important;
-  position: absolute !important;
-  right: 18px !important;
-  top: 14px !important;
-  font-family: var(--md-font-serif) !important;
-  font-size: 9px !important;
-  font-weight: bold !important;
-  color: rgba(184, 60, 50, 0.28) !important;
-  border: 1px solid rgba(184, 60, 50, 0.28) !important;
-  border-radius: 2px !important; /* 方形朱砂微印章 */
-  width: 14px !important;
-  height: 14px !important;
-  display: grid !important;
-  place-items: center !important;
-  line-height: 1 !important;
-  box-shadow: 0.5px 0.5px 0px rgba(184, 60, 50, 0.15) !important;
+  content: '文';
+  position: absolute;
+  right: 24px;
+  top: 16px;
+  font-family: var(--md-font-serif);
+  font-size: 9px;
+  font-weight: bold;
+  color: color-mix(in srgb, var(--md-secondary) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--md-secondary) 30%, transparent);
+  border-radius: 2px; /* 方形朱砂微印章 */
+  width: 14px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+  line-height: 1;
+  box-shadow: 0.5px 0.5px 0px color-mix(in srgb, var(--md-secondary) 15%, transparent);
 }
 
-/* 焦墨手书用户气泡重构 */
+/* 焦墨手书用户气泡 */
 .chat-bubble-user {
-  background-color: var(--md-primary) !important; /* 焦墨底色 */
-  color: var(--md-on-primary) !important;
-  border-radius: var(--md-radius-xs) !important; /* 方直微圆角 */
-  padding: 0.85rem 1.25rem !important;
-  border: 1px solid var(--md-outline) !important;
-  /* 朱砂小落款右下硬影 */
-  box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.22) !important;
-  font-family: var(--md-font-kai) !important;
-  font-size: 15px !important;
-  letter-spacing: 0.02em !important;
-  animation: ink-fade-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards !important;
+  background-color: var(--md-primary); /* 焦墨底色 */
+  color: var(--md-on-primary);
+  border-radius: var(--md-radius-xs); /* 方直微圆角 */
+  padding: 0.85rem 1.25rem;
+  border: 1px solid var(--md-outline);
+  /* 朱砂小落款右下硬影（明暗主题自适应） */
+  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-secondary) 22%, transparent);
+  font-family: var(--md-font-kai);
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  animation: ink-fade-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* 发送失败态：丹砂虚线框 + 丹砂文字，语义与朱砂落款区分（供父级标记失败消息时启用） */
+.chat-bubble--failed {
+  border: 1px dashed var(--md-error);
+  box-shadow: none;
+  color: var(--md-error-text);
 }
 
 /* 模拟熟宣水墨渐显：从模糊、淡色到清晰凝重 */

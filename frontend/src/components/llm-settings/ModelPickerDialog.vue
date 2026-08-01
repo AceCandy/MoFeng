@@ -7,7 +7,6 @@
       :ref="setModelPickerDialogRef"
       class="model-routing__model-picker"
       role="dialog"
-      aria-modal="false"
       :style="modelPickerStyle"
       :aria-labelledby="`model-picker-title-${provider.id}`"
       @keydown.esc.stop.prevent="!isSavingPicker && emit('close')"
@@ -170,13 +169,14 @@ const onSearchInput = (event: Event) => {
   position: fixed;
   z-index: 1050;
   width: min(420px, calc(100vw - 16px));
-  max-height: 420px;
+  /* 高度随视口收边，配合 useModelPicker 的坐标 clamp，保证移动端不出屏 */
+  max-height: min(420px, calc(var(--app-viewport-unit) - 32px));
   overflow: auto;
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-radius-sm);
   padding: var(--md-spacing-3);
   background: var(--md-surface);
-  box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.15);
+  box-shadow: var(--md-shadow-primary-1);
 }
 
 .model-routing__picker-head,
@@ -255,34 +255,11 @@ const onSearchInput = (event: Event) => {
   flex: 0 0 auto;
 }
 
-/* 关闭链接按钮（原父 .model-routing__link 随弹窗迁入；父已无 .link 消费） */
-.model-routing__link {
-  border: none;
-  background: transparent;
-  color: var(--md-primary-dark);
-  cursor: pointer;
-  font-weight: 600;
-  min-height: 44px;
-  padding: 0 var(--md-spacing-2);
-}
-
+/* .model-routing__link 基础样式与 .model-routing__hint/__empty 已收口至
+   styles/components/model-routing.css，此处仅保留弹窗专属的 focus 规则 */
 .model-routing__link:focus-visible,
 .model-routing__picker-row:focus-within {
   outline: 2px solid var(--md-primary);
   outline-offset: 2px;
-}
-
-/* hint/empty 共用样式（复制自父 .provider-head p,.hint,.empty 混合规则；父多处仍消费） */
-.model-routing__hint,
-.model-routing__empty {
-  margin: 4px 0 0;
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
-}
-
-@media (max-width: 640px) {
-  .model-routing__model-picker {
-    max-height: 360px;
-  }
 }
 </style>

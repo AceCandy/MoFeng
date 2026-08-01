@@ -38,14 +38,8 @@ const emit = defineEmits<{
 </script>
 
 <style scoped>
-/* 面板外观（原父 .model-routing__panel 随本子组件迁入；父已无 .panel 消费） */
-.model-routing__panel {
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-sm);
-  padding: var(--md-spacing-4);
-  background: var(--md-surface);
-}
-
+/* .model-routing__panel 与 .model-routing__hint 已收口至
+   styles/components/model-routing.css，组件内不再重复定义 */
 .model-routing__primary-panel {
   display: grid;
   grid-template-columns: minmax(180px, 0.65fr) minmax(260px, 1fr);
@@ -57,17 +51,11 @@ const emit = defineEmits<{
 .model-routing__primary-copy h3 {
   margin: 0;
   color: var(--md-on-surface);
+  letter-spacing: 0.03em; /* 碑拓骨力：宋体小标题拉开字距 */
 }
 
 .model-routing__primary-field {
   margin: 0;
-}
-
-/* hint 共用样式（复制自父；父多处仍消费） */
-.model-routing__hint {
-  margin: 4px 0 0;
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
 }
 
 @media (max-width: 860px) {

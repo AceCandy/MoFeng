@@ -295,7 +295,7 @@ watch(
 .writing-workspace__tool-btn--ghost:hover:not(:disabled) {
   color: var(--md-secondary);
   border-color: var(--md-secondary);
-  background-color: rgba(184, 60, 50, 0.02);
+  background-color: color-mix(in srgb, var(--md-secondary) 2%, transparent);
   box-shadow: 1.5px 1.5px 0px var(--md-secondary);
 }
 
@@ -311,13 +311,13 @@ watch(
 
 .writing-workspace__tool-btn--primary {
   border-color: var(--md-secondary) !important;
-  background-color: rgba(184, 60, 50, 0.05);
+  background-color: color-mix(in srgb, var(--md-secondary) 5%, transparent);
   color: var(--md-secondary);
   box-shadow: 2px 2px 0px var(--md-secondary);
 }
 
 .writing-workspace__tool-btn--primary:hover:not(:disabled) {
-  background-color: rgba(184, 60, 50, 0.09);
+  background-color: color-mix(in srgb, var(--md-secondary) 9%, transparent);
   box-shadow: 3px 3px 0px var(--md-secondary);
   border-color: var(--md-secondary) !important;
 }
@@ -364,21 +364,21 @@ watch(
 }
 
 .writing-workspace__ai-menu-item:hover:not(:disabled) {
-  background-color: rgba(184, 60, 50, 0.08) !important; /* 朱砂慢晕淡染 */
+  background-color: color-mix(in srgb, var(--md-secondary) 8%, transparent) !important; /* 朱砂慢晕淡染 */
   color: var(--md-secondary);
 }
 
 .writing-workspace__ai-menu-item:focus-visible {
   outline: 1.5px solid var(--md-secondary);
-  background-color: rgba(184, 60, 50, 0.04);
+  background-color: color-mix(in srgb, var(--md-secondary) 4%, transparent);
 }
 
 .writing-workspace__ai-menu-item--danger {
-  color: #b83c32;
+  color: var(--md-secondary);
 }
 
 .writing-workspace__ai-menu-item--danger:hover:not(:disabled) {
-  background-color: rgba(184, 60, 50, 0.12) !important;
+  background-color: color-mix(in srgb, var(--md-secondary) 12%, transparent) !important;
 }
 
 /* 极致国风脑洞：折页折扇徐徐挂下、模糊渐变清晰的宣纸舒展 */

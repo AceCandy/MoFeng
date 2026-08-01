@@ -173,7 +173,7 @@ const { activeStepDetails } = useChapterGenerationTrace(props, {
   align-items: center;
   height: 30px;
   padding: 0 12px;
-  border-radius: var(--md-radius-full);
+  border-radius: var(--md-radius-xs);
   background: var(--md-primary-container);
   color: var(--md-on-primary-container);
   font-size: var(--md-label-medium);

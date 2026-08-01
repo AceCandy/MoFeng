@@ -90,13 +90,11 @@ const onSelectStage = (stageKey: string, event: Event) => {
 .model-routing__stage-group h4 {
   margin: 0;
   color: var(--md-on-surface);
+  letter-spacing: 0.03em; /* 碑拓骨力：宋体小标题拉开字距 */
 }
 
-.model-routing__empty {
-  margin: 4px 0 0;
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
-}
+/* .model-routing__empty / __empty-state 已收口至
+   styles/components/model-routing.css，组件内不再重复定义 */
 
 .model-routing__stage-row strong {
   display: block;
@@ -108,20 +106,6 @@ const onSelectStage = (stageKey: string, event: Event) => {
   margin-top: 2px;
   color: var(--md-on-surface-variant);
   font-size: var(--md-body-small);
-}
-
-.model-routing__empty-state {
-  display: grid;
-  justify-items: start;
-  gap: var(--md-spacing-2);
-  padding: var(--md-spacing-5);
-  border: 1px dashed var(--md-outline);
-  border-radius: var(--md-radius-sm);
-  background: var(--md-surface);
-}
-
-.model-routing__empty-state p {
-  margin: 0;
 }
 
 .model-routing__stage-group {
@@ -140,15 +124,6 @@ const onSelectStage = (stageKey: string, event: Event) => {
   background: var(--md-surface);
 }
 
-@media (min-width: 960px) {
-  .model-routing__stage-row {
-    grid-template-columns: minmax(220px, 0.8fr) minmax(240px, 1fr);
-  }
-}
-
-@media (min-width: 768px) {
-  .model-routing__stage-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  }
-}
+/* 卡片由 auto-fit 决定宽度（约 280-400px），标签与选择框始终纵向堆叠；
+   选择框占满卡片宽度，长模型名由全局 select 规则以省略号截断，不再溢出 */
 </style>

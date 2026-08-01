@@ -485,7 +485,7 @@ watch(
   overflow: hidden;
   background-color: var(--md-surface);
   /* 极致国风脑洞：目录侧边栏独立的手工宣纸帘纹背景 */
-  background-image: repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.008) 0px, rgba(28, 32, 34, 0.008) 1px, transparent 1px, transparent 24px);
+  background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--md-on-surface) 0.8%, transparent) 0px, color-mix(in srgb, var(--md-on-surface) 0.8%, transparent) 1px, transparent 1px, transparent 24px);
   border: 3px double var(--md-outline) !important;
   border-radius: 0 !important;
   box-shadow: 3px 3px 0px var(--md-outline);
@@ -572,7 +572,7 @@ watch(
 .writing-sidebar__outline-action:hover:not(:disabled) {
   border-color: var(--md-secondary);
   color: var(--md-secondary);
-  background-color: rgba(184, 60, 50, 0.04);
+  background-color: color-mix(in srgb, var(--md-secondary) 4%, transparent);
 }
 
 .writing-sidebar__outline-action:active:not(:disabled) {
@@ -595,29 +595,7 @@ watch(
   padding-left: 10px;
 }
 
-.writing-sidebar__tree-item::before {
-  content: '';
-  position: absolute;
-  left: 4px;
-  top: 0;
-  bottom: -4px;
-  width: 1px;
-  background-color: var(--md-outline-variant);
-}
-
-.writing-sidebar__tree-item:last-child::before {
-  bottom: 50%;
-}
-
-.writing-sidebar__tree-item::after {
-  content: '';
-  position: absolute;
-  left: 4px;
-  top: 20px;
-  width: 6px;
-  height: 1px;
-  background-color: var(--md-outline-variant);
-}
+/* 目录穿线（2px 朱砂线装书 motif）已由全局 chapter-binding.css 收口，此处不再重复定义 */
 
 /* 极致国风脑洞：木刻竹简签条样式章节行 */
 .writing-sidebar__chapter-row {
@@ -626,10 +604,10 @@ watch(
   text-align: left;
   appearance: none;
   -webkit-appearance: none;
-  padding: 8px 8px 8px 8px;
+  padding: 8px;
   border-radius: 0 !important;
   border: 1px solid var(--md-outline-variant);
-  background-color: rgba(28, 32, 34, 0.015);
+  background-color: color-mix(in srgb, var(--md-on-surface) 1.5%, transparent);
   color: inherit;
   font: inherit;
   outline: none;
@@ -654,7 +632,7 @@ watch(
 /* 选中章节签条 */
 .writing-sidebar__chapter-row--compact-selected {
   border: 1.5px solid var(--md-secondary) !important;
-  background-color: rgba(184, 60, 50, 0.04) !important;
+  background-color: color-mix(in srgb, var(--md-secondary) 4%, transparent) !important;
   margin-left: -10px !important; /* 向左平移 10px，使其恰好压在竖红线上 */
   width: calc(100% + 14px) !important; /* 显式拓宽卡片（向左超出 10px，向右超出 4px），使其绝对宽于普通卡片 */
   padding-left: 18px !important; /* 增加左侧内边距，精确对齐文字内容与状态点 */
@@ -673,98 +651,80 @@ watch(
   color: var(--md-secondary) !important;
 }
 
-/* 极致国风脑洞：在选中时在右下角轻微旋转渐显出朱砂阳刻方印 [ 閱 ] */
-.writing-sidebar__chapter-row--compact-selected::after {
-  content: '閱';
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%) rotate(-6deg);
-  font-family: var(--md-font-serif);
-  font-size: 11px;
-  font-weight: bold;
-  color: rgba(184, 60, 50, 0.82);
-  border: 1.5px solid rgba(184, 60, 50, 0.82);
-  padding: 1px 3px;
-  line-height: 1;
-  background-color: rgba(184, 60, 50, 0.05);
-  animation: seal-stamp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
-  pointer-events: none;
-  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
+/* 选中行尾朱砂方印「著」已由全局 chapter-binding.css 收口，此处不再重复定义 */
 
-/* 已完成状态的签条样式 (绿色主题) */
+/* 已完成状态的签条样式 (石绿主题，明暗随 token 自适应) */
 .writing-sidebar__chapter-row--completed {
-  border-color: rgba(63, 108, 93, 0.35) !important;
-  background-color: rgba(63, 108, 93, 0.015) !important;
+  border-color: color-mix(in srgb, var(--md-success) 35%, transparent) !important;
+  background-color: color-mix(in srgb, var(--md-success) 1.5%, transparent) !important;
 }
 .writing-sidebar__chapter-row--completed:hover {
-  border-color: #3f6c5d !important;
-  background-color: rgba(63, 108, 93, 0.05) !important;
+  border-color: var(--md-success) !important;
+  background-color: color-mix(in srgb, var(--md-success) 5%, transparent) !important;
 }
 .writing-sidebar__chapter-row--completed.writing-sidebar__chapter-row--compact-selected {
-  border: 1.5px solid #3f6c5d !important;
-  background-color: rgba(63, 108, 93, 0.06) !important;
-  box-shadow: 2px 2px 0px #3f6c5d !important;
+  border: 1.5px solid var(--md-success) !important;
+  background-color: color-mix(in srgb, var(--md-success) 6%, transparent) !important;
+  box-shadow: 2px 2px 0px var(--md-success) !important;
 }
 .writing-sidebar__chapter-row--completed.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-title,
 .writing-sidebar__chapter-row--completed.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-no {
-  color: #3f6c5d !important;
+  color: var(--md-success) !important;
 }
 .writing-sidebar__chapter-row--completed.writing-sidebar__chapter-row--compact-selected::after {
-  color: rgba(63, 108, 93, 0.85) !important;
-  border-color: rgba(63, 108, 93, 0.85) !important;
-  background-color: rgba(63, 108, 93, 0.05) !important;
+  color: color-mix(in srgb, var(--md-success) 85%, transparent) !important;
+  border-color: color-mix(in srgb, var(--md-success) 85%, transparent) !important;
+  background-color: color-mix(in srgb, var(--md-success) 5%, transparent) !important;
 }
 
-/* 待完成状态的签条样式 (橙色主题) */
+/* 待完成状态的签条样式 (藤黄主题) */
 .writing-sidebar__chapter-row--pending {
-  border-color: rgba(200, 123, 46, 0.45) !important;
-  background-color: rgba(200, 123, 46, 0.015) !important;
+  border-color: color-mix(in srgb, var(--md-warning) 45%, transparent) !important;
+  background-color: color-mix(in srgb, var(--md-warning) 1.5%, transparent) !important;
 }
 .writing-sidebar__chapter-row--pending:hover {
-  border-color: #c87b2e !important;
-  background-color: rgba(200, 123, 46, 0.05) !important;
+  border-color: var(--md-warning) !important;
+  background-color: color-mix(in srgb, var(--md-warning) 5%, transparent) !important;
 }
 .writing-sidebar__chapter-row--pending.writing-sidebar__chapter-row--compact-selected {
-  border: 1.5px solid #c87b2e !important;
-  background-color: rgba(200, 123, 46, 0.06) !important;
-  box-shadow: 2px 2px 0px #c87b2e !important;
+  border: 1.5px solid var(--md-warning) !important;
+  background-color: color-mix(in srgb, var(--md-warning) 6%, transparent) !important;
+  box-shadow: 2px 2px 0px var(--md-warning) !important;
 }
 .writing-sidebar__chapter-row--pending.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-title,
 .writing-sidebar__chapter-row--pending.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-no {
-  color: #c87b2e !important;
+  color: color-mix(in srgb, var(--md-warning) 80%, var(--md-on-surface)) !important;
 }
 .writing-sidebar__chapter-row--pending.writing-sidebar__chapter-row--compact-selected::after {
-  color: rgba(200, 123, 46, 0.85) !important;
-  border-color: rgba(200, 123, 46, 0.85) !important;
-  background-color: rgba(200, 123, 46, 0.05) !important;
+  color: color-mix(in srgb, var(--md-warning) 85%, transparent) !important;
+  border-color: color-mix(in srgb, var(--md-warning) 85%, transparent) !important;
+  background-color: color-mix(in srgb, var(--md-warning) 5%, transparent) !important;
 }
 
-/* 未解锁状态的签条样式 (灰色主题) */
+/* 未解锁状态的签条样式 (松烟灰主题) */
 .writing-sidebar__chapter-row--locked {
   opacity: 0.65;
-  border-color: rgba(140, 140, 140, 0.25) !important;
-  background-color: rgba(140, 140, 140, 0.02) !important;
+  border-color: color-mix(in srgb, var(--md-on-surface-variant) 25%, transparent) !important;
+  background-color: color-mix(in srgb, var(--md-on-surface-variant) 2%, transparent) !important;
 }
 .writing-sidebar__chapter-row--locked:hover {
-  border-color: rgba(140, 140, 140, 0.5) !important;
-  background-color: rgba(140, 140, 140, 0.06) !important;
+  border-color: color-mix(in srgb, var(--md-on-surface-variant) 50%, transparent) !important;
+  background-color: color-mix(in srgb, var(--md-on-surface-variant) 6%, transparent) !important;
   opacity: 0.85;
 }
 .writing-sidebar__chapter-row--locked.writing-sidebar__chapter-row--compact-selected {
-  border: 1.5px solid rgba(140, 140, 140, 0.6) !important;
-  background-color: rgba(140, 140, 140, 0.06) !important;
-  box-shadow: 2px 2px 0px rgba(140, 140, 140, 0.5) !important;
+  border: 1.5px solid color-mix(in srgb, var(--md-on-surface-variant) 60%, transparent) !important;
+  background-color: color-mix(in srgb, var(--md-on-surface-variant) 6%, transparent) !important;
+  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface-variant) 50%, transparent) !important;
 }
 .writing-sidebar__chapter-row--locked.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-title,
 .writing-sidebar__chapter-row--locked.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-no {
-  color: #5c6265 !important;
+  color: var(--md-on-surface-variant) !important;
 }
 .writing-sidebar__chapter-row--locked.writing-sidebar__chapter-row--compact-selected::after {
-  color: rgba(140, 140, 140, 0.85) !important;
-  border-color: rgba(140, 140, 140, 0.85) !important;
-  background-color: rgba(140, 140, 140, 0.05) !important;
+  color: color-mix(in srgb, var(--md-on-surface-variant) 85%, transparent) !important;
+  border-color: color-mix(in srgb, var(--md-on-surface-variant) 85%, transparent) !important;
+  background-color: color-mix(in srgb, var(--md-on-surface-variant) 5%, transparent) !important;
 }
 
 /* 锁定章节的锁图标样式 (右侧) */
@@ -774,7 +734,7 @@ watch(
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #5c6265;
+  color: var(--md-on-surface-variant);
   width: 20px;
   height: 20px;
   transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -788,9 +748,9 @@ watch(
   line-height: 1.2;
   font-weight: 600;
   padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--md-surface-variant, #e7e2d6);
-  color: var(--md-on-surface-variant, #6b6357) !important;
+  border-radius: var(--md-radius-sm);
+  background: var(--md-surface-container-high);
+  color: var(--md-on-surface-variant) !important;
   transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -807,10 +767,10 @@ watch(
   min-width: 28px;
   min-height: 28px;
   border: 1px solid var(--md-outline-variant);
-  border-radius: 4px !important;
+  border-radius: var(--md-radius-sm) !important;
   background-color: var(--md-surface-container-low);
   color: var(--md-on-surface-variant);
-  opacity: 0;
+  opacity: 0.4; /* 常态半透可见，触屏可达；hover/focus 时全显 */
   transform: translateY(-50%) translateX(10px);
   transition:
     opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
@@ -827,6 +787,7 @@ watch(
 }
 
 .writing-sidebar__tree-item:hover .writing-sidebar__chapter-delete,
+.writing-sidebar__tree-item:focus-within .writing-sidebar__chapter-delete,
 .writing-sidebar__chapter-delete:focus-visible {
   opacity: 1;
   transform: translateY(-50%) translateX(0);
@@ -834,9 +795,9 @@ watch(
 
 .writing-sidebar__chapter-delete:hover,
 .writing-sidebar__chapter-delete:focus-visible {
-  border-color: #9c2720;
-  background-color: rgba(184, 60, 50, 0.08);
-  color: #c94036;
+  border-color: var(--md-error-strong);
+  background-color: color-mix(in srgb, var(--md-error) 8%, transparent);
+  color: var(--md-error);
 }
 
 /* 当有删除按钮的章节被 hover，或删除按钮获得焦点时，隐藏章节行的各种状态和印章，以进行无缝替换 */
@@ -879,28 +840,28 @@ watch(
   border: 1px solid transparent;
 }
 
-/* 已完成使用“竹青”中式绿 */
+/* 已完成使用“石绿”中式绿 */
 .writing-sidebar__status-dot.is-completed {
-  background-color: #3f6c5d !important; /* 古典竹青 */
-  border-color: #2b5043;
+  background-color: var(--md-success) !important; /* 石绿 */
+  border-color: color-mix(in srgb, var(--md-success) 70%, var(--md-on-surface));
 }
 
 /* 进行中使用“朱砂”中式红 */
 .writing-sidebar__status-dot.is-progress {
   background-color: var(--md-secondary) !important; /* 古典朱砂 */
-  border-color: #92221b;
+  border-color: color-mix(in srgb, var(--md-secondary) 70%, var(--md-on-surface));
 }
 
-/* 失败使用“赤赭” */
+/* 失败使用“丹砂”错误语义色 */
 .writing-sidebar__status-dot.is-failed {
-  background-color: #b83c32 !important;
-  border-color: #8c2820;
+  background-color: var(--md-error) !important;
+  border-color: color-mix(in srgb, var(--md-error) 70%, var(--md-on-surface));
 }
 
-/* 黛灰兜底 */
+/* 松烟灰兜底 */
 .writing-sidebar__status-dot.is-idle {
-  background-color: #5c6265 !important; /* 古典黛灰 */
-  border-color: #43484a;
+  background-color: var(--md-on-surface-variant) !important; /* 松烟灰 */
+  border-color: color-mix(in srgb, var(--md-on-surface-variant) 75%, var(--md-on-surface));
 }
 
 .writing-sidebar__chapter-no {

@@ -26,8 +26,8 @@ body {
   color: var(--md-on-background);
   /* 国风柔和纸质微弱墨晕背景 */
   background:
-    radial-gradient(circle at 5% 5%, rgba(46, 92, 138, 0.035), transparent 40%),
-    radial-gradient(circle at 95% 15%, rgba(184, 60, 50, 0.02), transparent 40%),
+    radial-gradient(circle at 5% 5%, color-mix(in srgb, var(--md-info) 3.5%, transparent), transparent 40%),
+    radial-gradient(circle at 95% 15%, color-mix(in srgb, var(--md-secondary) 2%, transparent), transparent 40%),
     linear-gradient(
       180deg,
       var(--md-surface) 0%,

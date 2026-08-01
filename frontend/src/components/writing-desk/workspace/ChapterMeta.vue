@@ -93,7 +93,7 @@ defineEmits(['copyTitle', 'resetTitleTooltip'])
   color: var(--md-on-primary);
   background-color: var(--md-success);
   border-color: var(--md-success-text);
-  box-shadow: 1px 1px 0px rgba(63, 108, 93, 0.25);
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-tertiary) 25%, transparent);
 }
 
 /* 赭红阴刻 */
@@ -101,20 +101,20 @@ defineEmits(['copyTitle', 'resetTitleTooltip'])
   color: var(--md-on-primary);
   background-color: var(--md-error);
   border-color: var(--md-error-text);
-  box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.25);
+  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-secondary) 25%, transparent);
 }
 
 /* 朱砂阳刻（红底白字或红边红字） */
 .writing-workspace__status-tag--progress {
   color: var(--md-secondary);
-  background-color: rgba(184, 60, 50, 0.05);
+  background-color: color-mix(in srgb, var(--md-secondary) 5%, transparent);
   border-color: var(--md-secondary);
-  box-shadow: 1.5px 1.5px 0px rgba(184, 60, 50, 0.15);
+  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-secondary) 15%, transparent);
 }
 
 .writing-workspace__status-tag--pending {
   color: var(--md-secondary);
-  background-color: rgba(184, 60, 50, 0.03);
+  background-color: color-mix(in srgb, var(--md-secondary) 3%, transparent);
   border-color: var(--md-secondary);
 }
 
@@ -164,6 +164,8 @@ defineEmits(['copyTitle', 'resetTitleTooltip'])
 
 .writing-workspace__summary {
   max-width: 88ch;
+  margin: var(--md-spacing-2) 0 0;
+  padding: 0;
   font-size: 15px;
   line-height: 1.75;
   letter-spacing: 0.02em;
@@ -192,20 +194,5 @@ defineEmits(['copyTitle', 'resetTitleTooltip'])
   .writing-workspace__chapter-inline-meta {
     width: 100%;
   }
-}
-
-/* 大纲计划概要卡片优化 */
-.writing-workspace__summary {
-  margin: var(--md-spacing-2) 0 0;
-  padding: 0;
-  border: none;
-  background-color: transparent;
-  font-family: var(--md-font-family);
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 1.75;
-  letter-spacing: 0.02em;
-  color: var(--md-on-surface-variant);
-  font-style: normal;
 }
 </style>

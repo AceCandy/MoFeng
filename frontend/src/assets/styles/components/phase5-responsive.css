@@ -64,4 +64,18 @@ body .app-shell__topbar {
   .app-shell__actions-right {
     gap: var(--md-spacing-2) !important;
   }
+  /* 顶栏金石按钮（继续创作/蓝图概览）防竖排折行：收缩为图标钮，保留44px触控面 */
+  .app-shell__top-action-wrap {
+    margin-left: var(--md-spacing-1) !important;
+    flex-shrink: 0 !important;
+  }
+  .app-shell__top-action-btn {
+    width: 44px !important;
+    min-width: 44px !important;
+    padding: 0 !important;
+    flex-shrink: 0 !important;
+  }
+  .app-shell__top-action-btn span {
+    display: none !important;
+  }
 }
