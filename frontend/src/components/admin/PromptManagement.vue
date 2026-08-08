@@ -572,7 +572,7 @@ const createPrompt = async () => {
 
 .prompt-list-item.active {
   border-color: var(--md-outline);
-  box-shadow: inset 2px 0 0 var(--md-secondary); /* 左侧朱砂竖描起笔，替代整块石青色块（inset 影实现） */
+  box-shadow: var(--md-elevation-paper-1); /* 轻微浮起标识当前卷 */
   background-color: var(--md-surface-container); /* 中性底 */
 }
 

@@ -1,26 +1,63 @@
 <!-- AIMETA P=章节内容_章节文本展示编辑|R=内容展示_编辑|NR=不含版本管理|E=component:ChapterContent|X=internal|A=内容组件|D=vue|S=dom|RD=./README.ai -->
 <template>
   <div class="space-y-6 w-full">
-    <article class="chapter-paper">
-
+    <!-- 落墨签名快照：描红候选被选定后旧稿在此原地朱转墨，优先于同栏渲染 -->
+    <article v-if="hasLuomoSnapshot" class="chapter-paper" data-provenance="ink">
       <div class="prose max-w-none">
-        <div class="chapter-prose">
-          <p
-            v-for="(paragraph, idx) in chapterDisplayParagraphs"
-            :key="`chapter-${idx}`"
-            :ref="(el) => setParagraphRef(el, idx)"
-            :class="{ 'chapter-prose__p--active': isParagraphActive(idx) }"
-          >
-            <template v-if="idx === 0 && paragraph && paragraph.trim().length > 0">
-              <span class="first-stamp-char">{{ paragraph.trim()[0] }}</span>{{ paragraph.trim().slice(1) }}
-            </template>
-            <template v-else>
-              {{ paragraph }}
-            </template>
+        <div class="chapter-prose chapter-prose--luomo-snapshot">
+          <p v-for="(paragraph, idx) in luomoSnapshotParagraphs" :key="`luomo-${idx}`">
+            {{ paragraph }}
           </p>
         </div>
       </div>
     </article>
+
+    <template v-else>
+      <!-- 落墨正文：有正文时始终渲染，描红候选在场则同栏对照 -->
+      <article v-if="hasChapterContent" class="chapter-paper" data-provenance="ink">
+
+        <div class="prose max-w-none">
+          <div class="chapter-prose">
+            <p
+              v-for="(paragraph, idx) in chapterDisplayParagraphs"
+              :key="`chapter-${idx}`"
+              :ref="(el) => setParagraphRef(el, idx)"
+              :class="{ 'chapter-prose__p--active': isParagraphActive(idx) }"
+            >
+              <template v-if="idx === 0 && paragraph && paragraph.trim().length > 0">
+                <span class="first-stamp-char">{{ paragraph.trim()[0] }}</span>{{ paragraph.trim().slice(1) }}
+              </template>
+              <template v-else>
+                {{ paragraph }}
+              </template>
+            </p>
+          </div>
+        </div>
+      </article>
+
+      <!-- 同栏界格题签：落墨与描红同时在场时的分界 -->
+      <p v-if="hasMiaohongContent && hasChapterContent" class="chapter-jiege-divider">候选描红稿</p>
+
+      <!-- 描红预览：AI 候选稿以淡朱楷体呈现，待作家审定落墨 -->
+      <article v-if="hasMiaohongContent" class="chapter-paper" data-provenance="ai">
+        <div class="prose max-w-none">
+          <div class="chapter-prose chapter-prose--miaohong">
+            <p v-if="!hasChapterContent" class="chapter-miaohong__label">描红稿 · 待落墨</p>
+            <p
+              v-for="(paragraph, idx) in miaohongDisplayParagraphs"
+              :key="`miaohong-${idx}`"
+            >
+              <template v-if="idx === 0 && paragraph && paragraph.trim().length > 0">
+                <span class="first-stamp-char">{{ paragraph.trim()[0] }}</span>{{ paragraph.trim().slice(1) }}
+              </template>
+              <template v-else>
+                {{ paragraph }}
+              </template>
+            </p>
+          </div>
+        </div>
+      </article>
+    </template>
 
     <!-- 分层优化弹窗 -->
     <Teleport to="body">
@@ -269,6 +306,10 @@ interface Props {
   activeParagraphIndex?: number
   /** 朗读高亮的正文段落区间终点（短段合并时与起点共同覆盖多段），缺省时取起点 */
   activeParagraphEnd?: number
+  /** 候选版本描红预览文本：非空时以描红模式渲染该 AI 草稿，替代落墨正文 */
+  miaohongContent?: string | null
+  /** 落墨签名快照文本：描红候选被选定落墨后由父级短暂注入，原地朱转墨后清空 */
+  luomoSnapshotContent?: string | null
 }
 
 const props = defineProps<Props>()
@@ -395,6 +436,18 @@ const splitChapterParagraphs = (content: string): string[] => {
 const chapterDisplayParagraphs = computed(() =>
   splitChapterParagraphs(cleanVersionContent(props.selectedChapter.content || '')),
 )
+
+// 描红预览：与正文共用同一套分段逻辑，仅替换文本来源
+const miaohongPreviewText = computed(() => cleanVersionContent(props.miaohongContent || ''))
+const hasMiaohongContent = computed(() => Boolean(miaohongPreviewText.value.trim()))
+const miaohongDisplayParagraphs = computed(() =>
+  splitChapterParagraphs(miaohongPreviewText.value),
+)
+
+// 落墨签名快照：父级在选定落墨瞬间把旧描红稿文本短暂注入，原地朱转墨后清空
+const luomoSnapshotText = computed(() => cleanVersionContent(props.luomoSnapshotContent || ''))
+const luomoSnapshotParagraphs = computed(() => splitChapterParagraphs(luomoSnapshotText.value))
+const hasLuomoSnapshot = computed(() => luomoSnapshotParagraphs.value.length > 0)
 
 // 朗读高亮：收集每段 DOM，当前段变化时滚动居中
 const paragraphEls: HTMLElement[] = []
@@ -776,7 +829,7 @@ defineExpose({
   border-radius: var(--md-radius-md) !important;
   border: 3px double var(--md-outline) !important;
   background-color: var(--md-surface) !important;
-  box-shadow: var(--md-shadow-primary-1) !important;
+  box-shadow: var(--md-elevation-paper-2) !important;
   animation: optimizer-pop-in 0.24s ease-out both;
 }
 
@@ -786,7 +839,7 @@ defineExpose({
   border-radius: var(--md-radius-md) !important;
   border: 3px double var(--md-outline) !important;
   background-color: var(--md-surface) !important;
-  box-shadow: var(--md-shadow-primary-1) !important;
+  box-shadow: var(--md-elevation-paper-2) !important;
 }
 
 .m3-result-dialog__header {
@@ -865,7 +918,7 @@ defineExpose({
 .m3-option-selected {
   border-color: var(--md-primary);
   background-color: var(--md-primary-container);
-  box-shadow: var(--md-elevation-1);
+  box-shadow: var(--md-elevation-paper-1);
 }
 
 .m3-option-marker {
@@ -891,6 +944,84 @@ defineExpose({
   margin: 0 auto;
   color: var(--md-on-surface);
   font-size: var(--md-body-large);
+}
+
+/* 稿纸行线与本组件正文节奏对齐（15px × 行高 2 = 30px），防行线与文字相位漂移 */
+.chapter-paper {
+  --paper-line: 30px;
+}
+
+/* 描红稿三信号（spec §4）：淡朱色 + 真楷体 + wash 底与左缘 1px 界栏，缺一不可 */
+.chapter-prose--miaohong {
+  color: var(--md-miaohong) !important;
+  font-family: var(--md-font-kai) !important;
+  background-color: var(--md-miaohong-wash);
+  border-left: 1px solid var(--md-miaohong-line-strong);
+  padding: var(--md-spacing-3) var(--md-spacing-4);
+}
+
+/* 落墨签名快照：静止态即落墨终态（焦墨宋体、无 wash 无界栏），动画只负责由朱转墨的 260ms */
+.chapter-prose--luomo-snapshot {
+  color: var(--md-on-surface);
+  font-family: var(--md-font-serif);
+  background-color: transparent;
+  border-left: 1px solid transparent;
+  padding: var(--md-spacing-3) var(--md-spacing-4);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .chapter-prose--luomo-snapshot {
+    animation: chapter-luomo 260ms var(--md-easing-standard) both;
+  }
+}
+
+/* 朱→墨连续过渡；楷→宋为离散属性，在动画中点翻转 */
+@keyframes chapter-luomo {
+  from {
+    color: var(--md-miaohong);
+    font-family: var(--md-font-kai);
+    background-color: var(--md-miaohong-wash);
+    border-left-color: var(--md-miaohong-line-strong);
+  }
+  to {
+    color: var(--md-on-surface);
+    font-family: var(--md-font-serif);
+    background-color: transparent;
+    border-left-color: transparent;
+  }
+}
+
+/* 同栏界格题签：落墨与描红同在场时的分界（12px 淡朱楷体，不用 eyebrow 式小字眉） */
+.chapter-jiege-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-3);
+  margin: 0;
+  color: var(--md-miaohong);
+  font-family: var(--md-font-kai);
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: 0.35em;
+  text-indent: 0;
+}
+
+.chapter-jiege-divider::before,
+.chapter-jiege-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background-color: var(--md-miaohong-line-strong);
+}
+
+/* 描红区首段前小字签 */
+.chapter-miaohong__label {
+  margin: 0 0 var(--md-spacing-2) !important;
+  color: var(--md-miaohong) !important;
+  font-family: var(--md-font-kai);
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+  letter-spacing: 0.08em;
+  text-indent: 0 !important;
 }
 
 .chapter-prose p {

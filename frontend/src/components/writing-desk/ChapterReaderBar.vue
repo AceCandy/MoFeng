@@ -1,5 +1,5 @@
 <template>
-    <div class="reader-float" role="region" aria-label="章节朗读">
+    <div class="reader-float" :class="{ 'reader-float--playing': status === 'playing' }" role="region" aria-label="章节朗读">
       <button
         type="button"
         class="md-btn md-btn-text md-ripple reader-float__btn reader-float__btn--main"
@@ -233,12 +233,19 @@ const onMainClick = () => {
   gap: 8px;
   padding: 8px 14px 8px 12px;
   background-color: var(--md-surface);
-  border: 1.5px solid var(--md-outline);
-  border-radius: 2px;
-  box-shadow:
-    inset 3px 0 0 var(--md-secondary), /* 朱砂引首竖线 */
-    3px 3px 0 color-mix(in srgb, var(--md-on-surface) 85%, transparent); /* 硬偏移水墨阴影 */
+  border: 1px solid var(--md-jiege); /* 界格发线 */
+  border-radius: var(--md-radius-xs);
+  box-shadow: var(--md-elevation-paper-1); /* 熟宣浮起，不用硬影 */
   font-family: var(--md-font-serif);
+}
+
+/* 播放中以石青小签标记（替代旧朱砂引首竖线，石青为朗读专用色） */
+.reader-float--playing::before {
+  content: '';
+  align-self: stretch;
+  width: 3px;
+  border-radius: var(--md-radius-xs);
+  background: var(--md-primary-container);
 }
 
 .reader-float__btn {
@@ -251,7 +258,7 @@ const onMainClick = () => {
   justify-content: center;
   border-radius: 0;
   border: 1px solid var(--md-outline);
-  box-shadow: 1.5px 1.5px 0px var(--md-outline);
+  box-shadow: none;
   color: var(--md-on-surface-variant);
   background-color: var(--md-surface);
   transition:
@@ -323,7 +330,7 @@ const onMainClick = () => {
 .reader-float__checkbox {
   width: 14px;
   height: 14px;
-  accent-color: var(--md-secondary); /* 朱砂，呼应引首竖线 */
+  accent-color: var(--md-secondary); /* 朱砂，状态印级用法 */
   cursor: pointer;
 }
 
@@ -346,8 +353,17 @@ const onMainClick = () => {
 }
 
 @media (max-width: 640px) {
+  /* 移动端归入文档流：悬浮定位会遮挡工作流状态标题 */
+  .reader-float {
+    position: static;
+    align-self: stretch;
+    margin: 8px 12px 0;
+    flex-wrap: wrap;
+    row-gap: 6px;
+  }
+
   .reader-float__status {
-    max-width: 10ch;
+    max-width: none;
   }
 }
 </style>

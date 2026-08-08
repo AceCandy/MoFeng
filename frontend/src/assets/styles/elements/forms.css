@@ -17,11 +17,11 @@
 }
 
 .md-card-elevated {
-  box-shadow: var(--md-elevation-1);
+  box-shadow: var(--md-elevation-paper-1); /* 浮起纸影 */
 }
 
 .md-card-elevated:hover {
-  box-shadow: var(--md-elevation-2);
+  box-shadow: var(--md-elevation-paper-2); /* hover 上浮 */
   border-color: var(--md-primary-light);
   transform: translateY(-1px);
 }
@@ -95,8 +95,8 @@
 .md-text-field-input:focus,
 .md-text-field-input:focus-visible {
   border-color: var(--md-primary);
-  /* 拓片压印右下硬阴影 */
-  box-shadow: 2px 2px 0px var(--md-outline);
+  /* 聚焦浮起纸影 */
+  box-shadow: var(--md-elevation-paper-1);
 }
 
 .md-text-field-input::placeholder {
@@ -151,5 +151,5 @@
 .md-textarea:focus,
 .md-textarea:focus-visible {
   border-color: var(--md-primary);
-  box-shadow: 2px 2px 0px var(--md-outline);
+  box-shadow: var(--md-elevation-paper-1); /* 聚焦浮起纸影 */
 }

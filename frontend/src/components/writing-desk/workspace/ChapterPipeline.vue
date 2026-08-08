@@ -92,7 +92,7 @@ const emit = defineEmits<{
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-radius-sm);
   background: color-mix(in srgb, var(--md-surface) 96%, transparent);
-  box-shadow: var(--md-elevation-1);
+  box-shadow: var(--md-elevation-paper-1); /* 浮起纸影 */
   padding: var(--md-spacing-4);
   position: relative;
   z-index: 5;
@@ -290,7 +290,7 @@ const emit = defineEmits<{
   color: var(--md-on-secondary);
   background-color: var(--md-secondary);
   border: 1px solid var(--md-secondary-dark);
-  box-shadow: 1px 1px 0 color-mix(in srgb, var(--md-on-surface) 18%, transparent);
+  box-shadow: none;
   font-family: var(--md-font-serif);
   letter-spacing: 0.04em;
 }

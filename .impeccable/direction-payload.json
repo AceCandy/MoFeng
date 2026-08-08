@@ -1,0 +1,68 @@
+{
+  "title": "选择墨风的下一个视觉世界",
+  "question": "抽签指派了「描红界格」。接受它、改选挑战者，或重掷。",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "描红界格",
+      "kicker": "THE ROLL",
+      "lineage": "书法字课传统：米字格·朱丝栏·描红簿",
+      "thesis": "AI 生成是淡朱描红稿，作家落墨才算数——人机权责写进每一行字的颜色里。",
+      "palette": ["#FAF6ED", "#CE5A47", "#1C2022", "#7A8B80", "#B83C32"],
+      "materials": ["米字格发线", "朱丝栏界格", "双钩描红字", "熟宣地", "朱砂印"],
+      "viewport": "工作台是一整张熟宣九宫格：每格一卷书；当前书的章节沿朱丝栏排开，AI 写就的是淡朱描红，作家审定的是焦墨落墨——哪些是你的、哪些等你把关，一眼可辨。",
+      "risk": "界格发线密度失控会伤长文阅读；淡朱描红若守不住对比度，AI 稿将不可读。"
+    },
+    {
+      "id": "challenger-desk-instrument",
+      "label": "案头仪器",
+      "lineage": "创作者硬件：键帽矩阵·滚花旋钮·琥珀状态屏",
+      "thesis": "写作台是一台有触觉的仪器：章节是键位阵列，旋钮巡扫参数，一枚朱键落印。",
+      "case": "融合最顺——码字本就是作家的肌肉记忆；但骨灰/枪灰/橙的材质语言会卸掉国风内核，与今日所定方向相左。",
+      "palette": ["#E8E4DA", "#6B6F72", "#2E3236", "#E8621C"],
+      "materials": ["键帽矩阵", "滚花旋钮", "琥珀单色屏", "金属机箱"],
+      "viewport": "写作台三栏变成仪器面板：左侧章节键阵，中央稿纸，右下角一枚琥珀小屏一次只报一个数；唯一的橙色「落印」键独占视觉顶点。",
+      "risk": "仪器语言与书卷气质相冲，选定即意味着改弦易辙，告别熟宣朱砂。",
+      "hero": "https://impeccable.style/worlds/cards/design-canon-creator-hardware-bench-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/design-canon-creator-hardware-bench.webp"
+    },
+    {
+      "id": "challenger-wayfinding",
+      "label": "航站导视",
+      "lineage": "国际机场导视系统：明黄挂牌·黑体人文字·白色象形符",
+      "thesis": "创作流水线是一条登机廊：每个节点只挂「下一步该去哪」的牌子，其余一概不说。",
+      "case": "对流水线的导航语法极清晰，但明黄牌面与熟宣朱砂是两个世界；它服务过客，阁主却是常驻。",
+      "palette": ["#F5C400", "#111111", "#FFFFFF", "#3A3A3A"],
+      "materials": ["悬挂导视带", "巨型编号", "象形符号", "翻牌式状态更新"],
+      "viewport": "顶栏一条导视带：「书卷《剑来》→ 第三章 待落墨 → 另有 2 章待评审」；页面其余全部退场，只留当前这一个决策。",
+      "risk": "导视是「路过」的语言，用在常驻案头像在驱赶使用者；且彻底告别国风。",
+      "hero": "https://impeccable.style/worlds/cards/wayfinding-cartography-signage-terminal-yellow-wayfinding-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/wayfinding-cartography-signage-terminal-yellow-wayfinding.webp"
+    },
+    {
+      "id": "challenger-night-flight",
+      "label": "夜航仪表",
+      "lineage": "夜间飞行仪表六联：哑光黑面板·荧光刻度·阻尼指针",
+      "thesis": "漆黑的舱里六枚发光仪表各管一个真相：进度、情绪、伏笔、字数、模型、任务。",
+      "case": "全局健康度一瞥即得，但仪表读不出四千字的章节；作家认同的是书案，不是座舱。",
+      "palette": ["#0B0D0E", "#1A1E20", "#C9F2D0", "#E8B23C", "#C0392B"],
+      "materials": ["哑光黑面板", "荧光白刻度", "镭绿指针", "琥珀警示灯"],
+      "viewport": "工作台首屏是六联仪表盘：完稿进度、情绪曲线、伏笔账、今日字数、模型健康、任务队列，全部暗场荧光；写作本身退到第二层。",
+      "risk": "仪表适合监控不适合写作；长文编辑在暗场荧光里撑不过一个下午。",
+      "hero": "https://impeccable.style/worlds/cards/signals-instruments-night-flight-six-pack-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/signals-instruments-night-flight-six-pack.webp"
+    }
+  ],
+  "reroll": true,
+  "steer": true,
+  "canon": true,
+  "canonCard": {
+    "label": "当代极简写作工具",
+    "lineage": "Notion / iA Writer 一线水准",
+    "thesis": "白底、灰阶、一枚蓝色主按钮、居中的编辑器——这个品类闭着眼都画得出的样子，做到一线工艺。",
+    "palette": ["#FFFFFF", "#F5F5F4", "#1F2937", "#2563EB"],
+    "materials": ["文档树", "干净编辑器", "面包屑", "单一主按钮"],
+    "viewport": "左侧文档树，中间干净编辑器，右上面包屑与一枚主按钮；全部熟悉，零意外。",
+    "risk": "零意外也意味着零记忆——墨风与任何 AI 写作工具在一秒内无法区分。"
+  }
+}

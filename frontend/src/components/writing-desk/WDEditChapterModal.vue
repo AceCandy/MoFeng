@@ -8,13 +8,14 @@
     @close="handleClose"
   >
     <template #header-actions>
-      <!-- 右上角朱砂方印保存按钮 -->
+      <!-- 右上角朱砂方印保存按钮(落印主按钮,规格 §5) -->
       <button
         ref="closeButtonRef"
         data-dialog-initial-focus
         type="button"
-        class="m3-ink-modal-save-badge-btn"
+        class="mofeng-seal-btn"
         :disabled="!isChanged"
+        aria-label="保存章节大纲修改"
         @click="saveChanges"
       >
         存
@@ -34,15 +35,15 @@
         />
       </div>
       <div>
-        <label for="chapter-summary" class="md-text-field-label mb-2">章节摘要</label>
-        <!-- 直角墨描边 textarea -->
-        <textarea
-          id="chapter-summary"
+        <span class="md-text-field-label mb-2 block">章节摘要</span>
+        <!-- 方格稿纸编辑器(作家正文,provenance=ink 落墨态) -->
+        <MofengEditor
           v-model="editableChapter.summary"
-          rows="5"
-          class="m3-textarea-ink w-full"
           placeholder="请输入章节摘要"
-        ></textarea>
+        />
+        <div class="md-body-small md-on-surface-variant mt-2">
+          字数统计: {{ summaryWordCount }}
+        </div>
       </div>
     </div>
   </GlobalModalContainer>
@@ -52,6 +53,8 @@
 import { ref, watch, computed } from 'vue'
 import type { ChapterOutline } from '@/api/novel'
 import GlobalModalContainer from '@/components/shared/GlobalModalContainer.vue'
+import MofengEditor from '@/components/writing-desk/editor/MofengEditor.vue'
+import { countNonWhitespaceChars } from '@/utils/text'
 
 interface Props {
   show: boolean
@@ -83,6 +86,8 @@ const isChanged = computed(() => {
   return props.chapter.title !== editableChapter.value.title || props.chapter.summary !== editableChapter.value.summary
 })
 
+const summaryWordCount = computed(() => countNonWhitespaceChars(editableChapter.value?.summary))
+
 const saveChanges = () => {
   if (editableChapter.value && isChanged.value) {
     emit('save', editableChapter.value)
@@ -109,31 +114,47 @@ const saveChanges = () => {
   border-bottom-color: var(--md-secondary);
 }
 
-/* 直角墨线 textarea */
-.m3-textarea-ink {
-  width: 100%;
-  min-height: 120px;
-  resize: vertical;
-  padding: 12px;
-  border: 1.5px solid var(--md-outline-variant);
-  border-radius: 0 !important;
-  background-color: transparent;
-  color: var(--md-on-surface);
-  font-family: var(--md-font-serif);
-  font-size: var(--md-body-large);
-  line-height: 1.8;
-  outline: none;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
-}
-
-.m3-textarea-ink:focus {
-  border-color: var(--md-outline);
-  box-shadow: 2px 2px 0px var(--md-outline);
-}
-
 .md-text-field-label {
   font-family: var(--md-font-serif);
   font-weight: 600;
   color: var(--md-on-surface-variant);
+}
+
+/* 朱砂落印主按钮(规格 §5):方章微圆角 2px、朱砂底、熟宣字,
+   hover 转 --md-miaohong-strong,按下 translateY(1px) */
+.mofeng-seal-btn {
+  min-width: 44px;
+  height: 44px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 2px;
+  background-color: var(--md-miaohong, #b8402f);
+  color: var(--md-surface);
+  font-family: var(--md-font-serif);
+  font-size: var(--md-title-small);
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color 140ms var(--md-easing-standard),
+    transform 140ms var(--md-easing-standard),
+    opacity 140ms var(--md-easing-standard);
+}
+
+.mofeng-seal-btn:hover:not(:disabled) {
+  background-color: var(--md-miaohong-strong, #9c3323);
+}
+
+.mofeng-seal-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.mofeng-seal-btn:focus-visible {
+  outline: 1px solid var(--md-luomo, var(--md-on-surface));
+  outline-offset: 2px;
+}
+
+.mofeng-seal-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

@@ -5,8 +5,6 @@
       <AuthIntro variant="register" />
 
       <section class="register-panel" aria-label="注册表单">
-        <span class="register-panel__corner" aria-hidden="true"></span>
-
         <div v-if="allowRegistration" class="register-panel__content">
           <div class="register-card__header">
             <h2 id="register-title">
@@ -192,10 +190,6 @@
           </router-link>
         </div>
       </section>
-
-      <div class="register-scroll__roller" aria-hidden="true">
-        <span></span>
-      </div>
     </section>
 
     <AuthFeatureRail />
@@ -375,16 +369,6 @@ onUnmounted(() => {
 
 <style scoped>
 .register-page {
-  --auth-ink: var(--md-on-surface);
-  --auth-ink-soft: var(--md-on-surface-variant);
-  --auth-paper: #f8f2e4;
-  --auth-paper-deep: #eadfc8;
-  --auth-paper-light: #fbf7ec;
-  --auth-line: var(--md-outline);
-  --auth-line-soft: var(--md-outline-variant);
-  --auth-shadow: color-mix(in srgb, var(--md-on-surface) 18%, transparent);
-  --auth-vermilion: var(--md-secondary-dark);
-
   min-height: var(--app-viewport-unit);
   position: relative;
   display: flex;
@@ -398,88 +382,41 @@ onUnmounted(() => {
     max(44px, env(safe-area-inset-right))
     max(30px, env(safe-area-inset-bottom))
     max(44px, env(safe-area-inset-left));
-  background-color: #d9cebc;
-  background-image: url('../assets/mofeng_login_bg_v2.webp');
-  background-position: center;
-  background-size: cover;
-  color: var(--auth-ink);
-}
-
-.register-page::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 50% 48%, rgba(252, 246, 231, 0.32), transparent 38%),
-    linear-gradient(180deg, rgba(45, 39, 29, 0.08), rgba(45, 39, 29, 0.14));
-  z-index: 0;
+  /* 描红界格：熟宣底 + 青灰界格发线方目（非文本装饰），明暗场随令牌自适应 */
+  background-color: var(--md-background);
+  background-image:
+    repeating-linear-gradient(0deg, var(--md-jiege) 0 1px, transparent 1px 72px),
+    repeating-linear-gradient(90deg, var(--md-jiege) 0 1px, transparent 1px 72px);
+  color: var(--md-on-surface);
 }
 
 .register-scroll {
-  width: min(88vw, 1180px);
+  width: min(96vw, 1180px);
   min-height: clamp(580px, 72vh, 720px);
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(360px, 0.9fr) minmax(420px, 1.1fr);
-  background: var(--auth-paper);
-  border: 1px solid var(--md-outline);
-  border-radius: var(--md-radius-sm);
-  box-shadow:
-    6px 6px 0 var(--auth-shadow),
-    inset 0 0 0 1px rgba(255, 251, 240, 0.72);
-}
-
-.register-scroll::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(90deg, transparent 0 48.3%, rgba(42, 36, 28, 0.14) 49.5%, rgba(255, 255, 255, 0.18) 50.2%, transparent 52%),
-    repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.018) 0 1px, transparent 1px 14px);
-  z-index: 2;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 470px);
+  gap: clamp(20px, 3vw, 48px);
+  color: var(--md-on-surface);
 }
 
 .register-panel {
   min-width: 0;
   position: relative;
-}
-
-.register-panel {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 50px clamp(64px, 6vw, 96px);
-  border-radius: 0 var(--md-radius-sm) var(--md-radius-sm) 0;
+  align-self: center;
+  padding: clamp(28px, 3vw, 44px) clamp(24px, 3vw, 48px);
+  /* 稿纸容器：3px double 唯一合法居所 + 淡朱竖行线 */
+  border: 3px double var(--md-outline);
+  border-radius: var(--md-radius-xs);
   background:
-    radial-gradient(circle at 91% 94%, rgba(86, 92, 83, 0.12), transparent 25%),
-    linear-gradient(180deg, rgba(255, 252, 244, 0.7), rgba(249, 242, 228, 0.94)),
-    var(--auth-paper-light);
-}
-
-.register-panel::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.016) 0 1px, transparent 1px 15px);
-  mix-blend-mode: multiply;
-}
-
-.register-panel__corner {
-  position: absolute;
-  top: 24px;
-  right: 24px;
-  width: 48px;
-  height: 48px;
-  color: rgba(141, 128, 105, 0.35);
-  background:
-    linear-gradient(currentColor, currentColor) left top / 100% 1px no-repeat,
-    linear-gradient(currentColor, currentColor) right top / 1px 100% no-repeat,
-    linear-gradient(currentColor, currentColor) 11px 11px / calc(100% - 11px) 1px no-repeat,
-    linear-gradient(currentColor, currentColor) right 11px top 11px / 1px calc(100% - 11px) no-repeat;
+    repeating-linear-gradient(90deg, transparent 0 39px, var(--md-miaohong-line) 39px 40px),
+    linear-gradient(var(--md-surface), var(--md-surface));
+  box-shadow: var(--md-elevation-paper-2); /* 稿纸上浮弹层纸影 */
+  color: var(--md-on-surface);
 }
 
 .register-panel__content,
@@ -505,7 +442,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 14px;
   margin: 0;
-  color: var(--auth-ink);
+  color: var(--md-on-surface);
   font-family: var(--md-font-serif);
   font-size: 35px;
   font-weight: 600;
@@ -513,22 +450,26 @@ onUnmounted(() => {
   letter-spacing: 0.08em;
 }
 
+/* 题字旁落印：朱砂实底钤章，印章无影 */
 .register-card__header h2 span {
   width: 22px;
   height: 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1.5px solid var(--auth-vermilion);
-  color: var(--auth-vermilion);
+  border: 1px solid var(--md-secondary-dark);
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-secondary);
+  color: var(--md-on-secondary);
   font-size: 12px;
   letter-spacing: 0;
+  transform: rotate(-4deg);
 }
 
 .register-card__header p,
 .register-closed-panel p {
   margin: 10px 0 0;
-  color: var(--auth-ink-soft);
+  color: var(--md-on-surface-variant);
   font-size: 14px;
   letter-spacing: 0.04em;
 }
@@ -546,7 +487,7 @@ onUnmounted(() => {
 }
 
 .md-text-field-label {
-  color: var(--auth-ink);
+  color: var(--md-on-surface);
   font-family: var(--md-font-serif);
   font-size: 13.5px;
   font-weight: 600;
@@ -561,14 +502,13 @@ onUnmounted(() => {
   width: 100%;
   height: 50px;
   padding: 0 50px 0 16px;
-  border: 1px solid var(--auth-line);
+  border: 1px solid var(--md-outline);
   border-radius: var(--md-radius-xs);
-  background-color: rgba(253, 251, 245, 0.62);
-  color: var(--auth-ink);
+  background-color: var(--md-surface-container-low);
+  color: var(--md-on-surface);
   font-family: var(--md-font-serif);
   font-size: 14.5px;
   letter-spacing: 0.03em;
-  box-shadow: inset 0 0 0 1px rgba(255, 251, 241, 0.55);
   transition:
     background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
     border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -577,21 +517,19 @@ onUnmounted(() => {
 
 .md-text-field-input:focus {
   outline: none;
-  border-color: var(--auth-ink);
-  background-color: rgba(253, 251, 245, 0.9);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 251, 241, 0.75),
-    2px 2px 0 color-mix(in srgb, var(--auth-ink) 18%, transparent);
+  border-color: var(--md-primary);
+  background-color: var(--md-surface);
+  box-shadow: var(--md-elevation-paper-1); /* 落笔浮起 */
 }
 
 /* 键盘焦点可见环（≥3:1），鼠标 focus 不重复显示 */
 .md-text-field-input:focus-visible {
-  outline: 2px solid var(--auth-ink);
+  outline: 2px solid var(--md-primary);
   outline-offset: 2px;
 }
 
 .md-text-field-input::placeholder {
-  color: color-mix(in srgb, var(--auth-ink-soft) 52%, transparent);
+  color: color-mix(in srgb, var(--md-on-surface-variant) 52%, transparent);
 }
 
 .md-text-field-icon {
@@ -603,7 +541,7 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: color-mix(in srgb, var(--auth-ink-soft) 65%, transparent);
+  color: color-mix(in srgb, var(--md-on-surface-variant) 65%, transparent);
   transform: translateY(-50%);
 }
 
@@ -616,7 +554,7 @@ onUnmounted(() => {
 }
 
 .md-text-field-icon--button:hover {
-  color: var(--auth-ink);
+  color: var(--md-on-surface);
 }
 
 .register-code-row {
@@ -634,16 +572,16 @@ onUnmounted(() => {
   min-width: 118px;
   height: 50px;
   padding: 0 14px;
-  border: 1px solid var(--auth-line);
+  border: 1px solid var(--md-outline);
   border-radius: var(--md-radius-xs);
-  background: rgba(253, 251, 245, 0.62);
-  color: var(--auth-ink);
+  background: var(--md-surface-container-low);
+  color: var(--md-on-surface);
   font-family: var(--md-font-serif);
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
-  box-shadow: 1px 1px 0 color-mix(in srgb, var(--auth-ink) 10%, transparent);
+  box-shadow: none; /* 静无影 */
   transition:
     background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
     border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -651,9 +589,9 @@ onUnmounted(() => {
 }
 
 .register-code-button:hover:not(:disabled) {
-  border-color: var(--auth-ink);
-  background-color: rgba(253, 251, 245, 0.9);
-  box-shadow: 2px 2px 0 color-mix(in srgb, var(--auth-ink) 14%, transparent);
+  border-color: var(--md-primary);
+  background-color: var(--md-surface);
+  box-shadow: var(--md-elevation-paper-1); /* hover 浮起 */
 }
 
 .register-code-button:disabled {
@@ -684,7 +622,7 @@ onUnmounted(() => {
 }
 
 .register-feedback.is-error {
-  border: 1px dashed color-mix(in srgb, var(--auth-vermilion) 52%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--md-secondary) 52%, transparent);
   background: var(--md-error-container);
   color: var(--md-error-text);
 }
@@ -695,6 +633,7 @@ onUnmounted(() => {
   color: var(--md-success-text);
 }
 
+/* 落印钮：提交即钤章——朱砂实底 + 深朱 1px 边 + 宣白字，静无影 */
 .register-submit {
   width: 100%;
   min-height: 52px;
@@ -702,17 +641,15 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  border: 1px solid color-mix(in srgb, var(--auth-ink) 75%, transparent);
+  border: 1px solid var(--md-secondary-dark);
   border-radius: var(--md-radius-xs);
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)),
-    var(--auth-ink);
-  color: var(--auth-paper-light);
+  background-color: var(--md-secondary);
+  color: var(--md-on-secondary);
   font-family: var(--md-font-serif);
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.14em;
-  box-shadow: 2px 2px 0 color-mix(in srgb, var(--auth-ink) 20%, transparent);
+  box-shadow: none; /* 静无影 */
   transition:
     background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -720,13 +657,13 @@ onUnmounted(() => {
 }
 
 .register-submit:hover:not(:disabled) {
-  background-color: var(--md-primary-light);
-  box-shadow: 3px 3px 0 color-mix(in srgb, var(--auth-ink) 24%, transparent);
+  background-color: var(--md-secondary-dark);
+  box-shadow: var(--md-elevation-paper-1); /* hover 浮起 */
 }
 
 .register-submit:active:not(:disabled) {
   transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0 color-mix(in srgb, var(--auth-ink) 22%, transparent);
+  box-shadow: none; /* 按压清零 */
 }
 
 .register-submit:disabled {
@@ -746,7 +683,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   margin-top: 14px;
-  color: var(--auth-line);
+  color: var(--md-outline);
 }
 
 .register-divider::before,
@@ -754,7 +691,7 @@ onUnmounted(() => {
   content: '';
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--auth-line-soft), transparent);
+  background: linear-gradient(90deg, transparent, var(--md-outline-variant), transparent);
 }
 
 .register-divider span {
@@ -771,7 +708,7 @@ onUnmounted(() => {
   justify-content: center;
   gap: 10px;
   margin-top: 10px;
-  color: var(--auth-ink-soft);
+  color: var(--md-on-surface-variant);
   font-family: var(--md-font-serif);
   font-size: 14px;
 }
@@ -779,7 +716,7 @@ onUnmounted(() => {
 .register-link__cta {
   min-height: 44px;
   padding: 0 10px;
-  color: var(--auth-vermilion);
+  color: var(--md-secondary-readable);
   font-weight: 600;
 }
 
@@ -801,57 +738,9 @@ onUnmounted(() => {
   border-radius: var(--md-radius-xs);
 }
 
-.register-scroll__roller {
-  position: absolute;
-  top: -18px;
-  right: -32px;
-  bottom: -18px;
-  z-index: 3;
-  width: 32px;
-  display: flex;
-  justify-content: center;
-  filter: drop-shadow(4px 3px 0 color-mix(in srgb, var(--md-on-surface) 22%, transparent));
-}
-
-.register-scroll__roller::before,
-.register-scroll__roller::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  width: 32px;
-  height: 19px;
-  border-radius: 5px;
-  background: linear-gradient(90deg, #3c2c1d, #9a7856 34%, #d7bd8f 52%, #7e6043 74%, #2f2318);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    inset 0 -2px 1px rgba(0, 0, 0, 0.28);
-}
-
-.register-scroll__roller::before {
-  top: 0;
-}
-
-.register-scroll__roller::after {
-  bottom: 0;
-}
-
-.register-scroll__roller span {
-  width: 20px;
-  min-height: 100%;
-  border-left: 1px solid rgba(255, 255, 255, 0.32);
-  border-right: 1px solid rgba(66, 45, 27, 0.36);
-  background:
-    linear-gradient(90deg, rgba(79, 58, 36, 0.42), transparent 22%, transparent 74%, rgba(68, 49, 30, 0.34)),
-    linear-gradient(90deg, #aa9a7f, #fbf0db 42%, #d5c2a4 78%, #8f8068);
-}
-
 @media (max-width: 1024px) {
   .register-scroll {
-    grid-template-columns: minmax(300px, 0.9fr) minmax(380px, 1.1fr);
-  }
-
-  .register-panel {
-    padding: 44px 46px;
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
   }
 }
 
@@ -860,30 +749,17 @@ onUnmounted(() => {
     justify-content: flex-start;
     gap: 22px;
     padding: max(18px, env(safe-area-inset-top)) 10px max(18px, env(safe-area-inset-bottom));
-    background-position: 46% center;
   }
 
   .register-scroll {
     width: min(100%, 500px);
     min-height: auto;
     display: block;
-    overflow: hidden;
-    border-radius: var(--md-radius-md);
-  }
-
-  .register-scroll::before {
-    background:
-      linear-gradient(180deg, transparent 0 31%, rgba(42, 36, 28, 0.1) 32%, rgba(255, 255, 255, 0.18) 33%, transparent 34%),
-      repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.016) 0 1px, transparent 1px 14px);
   }
 
   .register-panel {
+    margin-top: 12px;
     padding: 32px 24px 30px;
-    border-radius: 0 0 var(--md-radius-md) var(--md-radius-md);
-  }
-
-  .register-panel__corner {
-    display: none;
   }
 
   .register-card__header {
@@ -909,10 +785,6 @@ onUnmounted(() => {
 
   .register-link {
     flex-wrap: wrap;
-  }
-
-  .register-scroll__roller {
-    display: none;
   }
 }
 

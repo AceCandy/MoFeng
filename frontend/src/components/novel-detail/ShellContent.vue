@@ -160,14 +160,12 @@ defineEmits<{
   background-color: color-mix(in srgb, var(--md-on-surface) 45%, transparent);
 }
 
-/* 其它设定分区的双线古籍装订框大卡片 */
+/* 其它设定分区的界格发线大卡片（classical 类名被测试钉住，只换代样式） */
 .detail-shell__content-surface--classical {
-  border: 3px double var(--md-outline) !important; /* 双线装订框 */
-  border-radius: 4px !important; /* 方折风骨 */
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important; /* 拓片硬投影 */
+  border: 1px solid var(--md-jiege) !important; /* 1px 界格发线 */
+  border-radius: var(--md-radius-xs) !important; /* 界格微直角 */
+  box-shadow: var(--md-elevation-paper-1) !important; /* 稿纸容器浮起 */
   background-color: var(--md-surface) !important; /* 熟宣 */
-  /* 宣纸帘纹理 */
-  background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--md-on-surface) 0.5%, transparent) 0px, color-mix(in srgb, var(--md-on-surface) 0.5%, transparent) 1px, transparent 1px, transparent 32px);
 }
 
 .detail-shell__content-surface--fill {
@@ -195,12 +193,11 @@ defineEmits<{
 }
 
 /* ==========================================================================
-   统摄并修正蓝图内部所有子卡片的现代扁平圆角，升级为古风竹纸笺条与碑拓小卡片
+   统摄并修正蓝图内部所有子卡片：界格发线小笺片，静息无影
    ========================================================================== */
 .detail-shell__content-surface--classical :deep(.bg-\[var\(--md-surface\)\]) {
-  border: 1.5px solid var(--md-outline-variant) !important;
-  border-radius: 4px !important; /* 统一碑拓方直 */
+  border: 1px solid var(--md-jiege) !important;
+  border-radius: var(--md-radius-xs) !important; /* 统一界格微直角 */
   background-color: var(--md-surface-container-low) !important; /* 竹纸淡黄底，产生层叠景深 */
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
 }
 </style>

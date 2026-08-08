@@ -71,11 +71,9 @@ defineEmits<{
   z-index: 30;
   width: 14.5rem; /* 侧边栏宽度优化至230px左右 */
   overflow: hidden;
-  /* 侧边栏升级为老宣纸底色与纸帘帘纹 */
+  /* 侧边栏：熟宣淡底，1px 界格发线分割，静息无影 */
   background-color: var(--md-surface-dim);
-  background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--md-on-surface) 0.5%, transparent) 0px, color-mix(in srgb, var(--md-on-surface) 0.5%, transparent) 1px, transparent 1px, transparent 24px);
-  border-right: 1.5px solid var(--md-outline-variant) !important; /* 单根墨晕细线分割 */
-  box-shadow: 1px 0 4px color-mix(in srgb, var(--md-on-surface) 2%, transparent);
+  border-right: 1px solid var(--md-jiege) !important;
   transform: translateX(-100%);
   transition:
     transform 300ms cubic-bezier(0.2, 0, 0, 1),
@@ -134,12 +132,12 @@ defineEmits<{
   margin-top: var(--md-spacing-2);
 }
 
-/* 笺条抽出金石颤抖 */
+/* 笺条抽出：hover 浮起 paper-1，不再染朱 */
 .detail-shell__nav-item:hover,
 .detail-shell__nav-item:focus-visible {
   border-color: var(--md-outline) !important;
-  background-color: color-mix(in srgb, var(--md-secondary) 4%, var(--md-surface)) !important;
-  box-shadow: 2px 2px 0px var(--md-outline) !important;
+  background-color: var(--md-surface) !important;
+  box-shadow: var(--md-elevation-paper-1) !important;
   transform: translateX(4px);
   color: var(--md-primary-dark) !important;
 }
@@ -149,13 +147,13 @@ defineEmits<{
   outline-offset: 2px;
 }
 
-/* 激活选中的朱砂方印笺条 */
+/* 激活选中：焦墨题签笺片（已定 UI 不见红，激活=作家选定位置） */
 .detail-shell__nav-item.is-active {
-  border: 1px dashed color-mix(in srgb, var(--md-secondary) 15%, transparent) !important;
-  background-color: color-mix(in srgb, var(--md-secondary) 3%, transparent) !important; /* 轻微淡红背景 */
-  color: var(--md-secondary) !important; /* 朱红色 */
+  border: 1px solid var(--md-jiege) !important;
+  background-color: var(--md-surface) !important;
+  color: var(--md-primary-dark) !important; /* 焦墨 */
   font-weight: 700 !important; /* 文字加粗 */
-  box-shadow: none !important; /* 取消厚重投影 */
+  box-shadow: var(--md-elevation-paper-1) !important; /* 轻微浮起标识当前卷 */
 }
 
 .detail-shell__nav-item.is-active::before {
@@ -165,13 +163,13 @@ defineEmits<{
   top: 50%;
   width: 6px;
   height: 6px;
-  border: 1px solid var(--md-secondary);
-  background-color: var(--md-secondary-container);
+  border: 1px solid var(--md-primary);
+  background-color: var(--md-surface-container);
   transform: translateY(-50%) rotate(45deg);
   pointer-events: none;
 }
 
-/* 激活时在右下角轻微旋转渐显出朱砂阳刻方印 [ 卷 ] */
+/* 导航图标：无底色，随激活态染焦墨 */
 .detail-shell__nav-icon {
   width: 2rem;
   height: 2rem;
@@ -188,7 +186,7 @@ defineEmits<{
 
 .detail-shell__nav-item.is-active .detail-shell__nav-icon {
   background-color: transparent;
-  color: var(--md-secondary) !important; /* 激活图标也是朱红色 */
+  color: var(--md-primary-dark) !important; /* 激活图标同为焦墨 */
 }
 
 .detail-shell__nav-label {

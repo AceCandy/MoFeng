@@ -3,40 +3,37 @@
    3. 稿纸三折物理折页、“墨底风徽”水印与“紫檀纸镇”
    ============================================ */
 
-/* 物理三折线效果：利用稿纸底纹，在两侧和中央加入极其幽微的宣纸折叠纸张凹凸阴影，顶部叠加紫檀木压纸镇尺包边 */
+/* 物理三折线效果：横向描红行线为纸、左右朱丝栏为栏，顶部叠加紫檀木压纸镇尺与幽微折痕（描红界格世界重构，纵向朱砂笺格退场） */
 body .chapter-paper {
   width: 100% !important;
   box-sizing: border-box !important;
   position: relative !important;
   background:
     /* 顶部紫檀木压纸镇尺 (8px 深褐木色压条) */
-    linear-gradient(180deg, #2b211a 0px, #2b211a 8px, transparent 8px),
-    /* 左右两道朱红信笺笺边线 */
-    linear-gradient(90deg, color-mix(in srgb, var(--md-secondary) 12%, transparent) 0px, color-mix(in srgb, var(--md-secondary) 12%, transparent) 2px, transparent 2px, transparent calc(100% - 2px), color-mix(in srgb, var(--md-secondary) 12%, transparent) calc(100% - 2px)),
+    linear-gradient(180deg, #2b211a 0px, #2b211a 8px, transparent 8px) left top / 100% 100% no-repeat local,
     /* 三折物理折痕棱线光影 (1/3 与 2/3 处微妙白光与暗影) */
-    linear-gradient(90deg, transparent 33%, color-mix(in srgb, var(--md-on-surface) 1.5%, transparent) 33.3%, rgba(255, 255, 255, 0.08) 33.5%, transparent 35%, transparent 65%, color-mix(in srgb, var(--md-on-surface) 1.5%, transparent) 65.3%, rgba(255, 255, 255, 0.08) 65.5%, transparent 67%),
+    linear-gradient(90deg, transparent 33%, color-mix(in srgb, var(--md-on-surface) 1.5%, transparent) 33.3%, rgba(255, 255, 255, 0.08) 33.5%, transparent 35%, transparent 65%, color-mix(in srgb, var(--md-on-surface) 1.5%, transparent) 65.3%, rgba(255, 255, 255, 0.08) 65.5%, transparent 67%) left top / 100% 100% no-repeat local,
     /* 写意扫墨风竹底图水印 (0.8% 极其微透，绝不夺目，高阶文人墨香) */
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' opacity='0.008'><path d='M5,50 C40,30 60,70 95,50 C60,55 30,45 5,70 Z' fill='%231c2022'/></svg>"),
-    /* 纵向朱砂笺纸红格 */
-    repeating-linear-gradient(90deg, transparent, transparent 38px, color-mix(in srgb, var(--md-secondary) 4%, transparent) 38px, color-mix(in srgb, var(--md-secondary) 5%, transparent) 40px),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' opacity='0.008'><path d='M5,50 C40,30 60,70 95,50 C60,55 30,45 5,70 Z' fill='%231c2022'/></svg>") center / 100% 100% no-repeat local,
+    /* 左右朱丝栏竖线（各 1px 描红边栏，贴容器左右缘） */
+    linear-gradient(to bottom, var(--md-miaohong-line-strong), var(--md-miaohong-line-strong)) left top / 1px 100% no-repeat local,
+    linear-gradient(to bottom, var(--md-miaohong-line-strong), var(--md-miaohong-line-strong)) right top / 1px 100% no-repeat local,
+    /* 方格稿纸横向描红行线，--paper-line 循环（组件可按正文节奏覆写） */
+    repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--paper-line) - 1px), var(--md-miaohong-line) calc(var(--paper-line) - 1px), var(--md-miaohong-line) var(--paper-line)) left top / 100% 100% local,
     /* 宣纸底色 */
-    linear-gradient(var(--md-surface), var(--md-surface)) !important;
-  background-size: 100% 100%, calc(100% - 40px) 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100% !important;
-  background-position: top center, center, center, center, center, center !important;
-  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat !important;
+    linear-gradient(var(--md-surface), var(--md-surface)) left top / 100% 100% no-repeat local !important;
   padding-top: calc(var(--md-spacing-8) + 12px) !important; /* 留出木镇高度与呼吸空档 */
 }
 
 :root[data-theme='dark'] body .chapter-paper {
   background:
-    linear-gradient(180deg, #1b1612 0px, #1b1612 8px, transparent 8px),
-    linear-gradient(90deg, color-mix(in srgb, var(--md-secondary-dark) 20%, transparent) 0px, color-mix(in srgb, var(--md-secondary-dark) 20%, transparent) 2px, transparent 2px, transparent calc(100% - 2px), color-mix(in srgb, var(--md-secondary-dark) 20%, transparent) calc(100% - 2px)),
-    linear-gradient(90deg, transparent 33%, rgba(13, 16, 17, 0.18) 33.3%, rgba(255, 255, 255, 0.02) 33.5%, transparent 35%, transparent 65%, rgba(13, 16, 17, 0.18) 65.3%, rgba(255, 255, 255, 0.02) 65.5%, transparent 67%),
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' opacity='0.005'><path d='M5,50 C40,30 60,70 95,50 C60,55 30,45 5,70 Z' fill='%23e5dec9'/></svg>"),
-    repeating-linear-gradient(90deg, transparent, transparent 38px, color-mix(in srgb, var(--md-secondary-dark) 16%, transparent) 38px, color-mix(in srgb, var(--md-secondary-dark) 22%, transparent) 40px),
-    linear-gradient(var(--md-surface), var(--md-surface)) !important;
-  background-size: 100% 100%, calc(100% - 40px) 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100% !important;
-  background-position: top center, center, center, center, center, center !important;
+    linear-gradient(180deg, #1b1612 0px, #1b1612 8px, transparent 8px) left top / 100% 100% no-repeat local,
+    linear-gradient(90deg, transparent 33%, rgba(13, 16, 17, 0.18) 33.3%, rgba(255, 255, 255, 0.02) 33.5%, transparent 35%, transparent 65%, rgba(13, 16, 17, 0.18) 65.3%, rgba(255, 255, 255, 0.02) 65.5%, transparent 67%) left top / 100% 100% no-repeat local,
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' opacity='0.005'><path d='M5,50 C40,30 60,70 95,50 C60,55 30,45 5,70 Z' fill='%23e5dec9'/></svg>") center / 100% 100% no-repeat local,
+    linear-gradient(to bottom, var(--md-miaohong-line-strong), var(--md-miaohong-line-strong)) left top / 1px 100% no-repeat local,
+    linear-gradient(to bottom, var(--md-miaohong-line-strong), var(--md-miaohong-line-strong)) right top / 1px 100% no-repeat local,
+    repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--paper-line) - 1px), var(--md-miaohong-line) calc(var(--paper-line) - 1px), var(--md-miaohong-line) var(--paper-line)) left top / 100% 100% local,
+    linear-gradient(var(--md-surface), var(--md-surface)) left top / 100% 100% no-repeat local !important;
 }
 
 /* 稿纸起笔：强制首段首行缩进为0，完美缝合下沉首字闲章间隙 */
@@ -44,7 +41,8 @@ body .chapter-prose p:first-of-type {
   text-indent: 0 !important;
 }
 
-/* 稿纸起笔：朱砂钤印首字下沉（inline-block 底部对齐方案，首行与印章底边齐平，后续行正常全宽排列） */
+/* 稿纸起笔：钤印首字下沉（inline-block 底部对齐方案，首行与印章底边齐平，后续行正常全宽排列）。
+   描红界格权责法则：落墨正文首字 = 焦墨印（已定稿，不得用红）；仅描红稿（AI 待审）用朱砂印。 */
 body .chapter-prose .first-stamp-char {
   font-family: var(--md-font-display) !important;
   font-size: 2.85rem !important;
@@ -55,28 +53,49 @@ body .chapter-prose .first-stamp-char {
   margin-right: 10px !important;
   margin-top: 0 !important;
   margin-bottom: 0 !important;
-  color: var(--md-secondary) !important;
+  color: var(--md-luomo, var(--md-on-surface)) !important; /* 落墨正文 = 焦墨印 */
   font-weight: 700 !important;
-  /* 钤印朱泥磨砂背景：径向磨砂杂质效果 */
+  /* 墨泥磨砂背景：径向磨砂杂质效果 */
   background:
     radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.35) 2%, transparent 8%),
     radial-gradient(circle at 75% 65%, rgba(255, 255, 255, 0.25) 3%, transparent 10%),
-    linear-gradient(135deg, color-mix(in srgb, var(--md-secondary) 9%, transparent) 0%, color-mix(in srgb, var(--md-secondary) 4%, transparent) 100%),
-    color-mix(in srgb, var(--md-secondary) 5%, transparent) !important;
+    linear-gradient(135deg, color-mix(in srgb, var(--md-on-surface) 9%, transparent) 0%, color-mix(in srgb, var(--md-on-surface) 4%, transparent) 100%),
+    color-mix(in srgb, var(--md-on-surface) 5%, transparent) !important;
   /* 古风斑驳雕刻边界框 */
-  border: 2px dashed color-mix(in srgb, var(--md-secondary) 45%, transparent) !important;
+  border: 2px dashed color-mix(in srgb, var(--md-on-surface) 40%, transparent) !important;
   border-radius: 2px !important;
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-secondary) 15%, transparent) !important;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--md-on-surface) 18%, transparent), 0 2px 8px color-mix(in srgb, var(--md-on-surface) 10%, transparent) !important;
   /* 天然错位斜印 */
   transform: rotate(-3deg) !important;
 }
 
-/* 暗色模式首字钤印适配 */
-:root[data-theme='dark'] body .chapter-prose .first-stamp-char {
-  color: var(--md-primary) !important;
+/* 描红稿首字 = 朱砂引首章（AI 待审的朱色权责信号） */
+body .chapter-paper[data-provenance='ai'] .chapter-prose .first-stamp-char {
+  color: var(--md-miaohong) !important;
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--md-secondary) 28%, transparent) 0%, color-mix(in srgb, var(--md-secondary) 15%, transparent) 100%),
-    color-mix(in srgb, var(--md-secondary) 10%, transparent) !important;
-  border-color: color-mix(in srgb, var(--md-secondary) 60%, transparent) !important;
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-secondary) 30%, transparent) !important;
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.35) 2%, transparent 8%),
+    radial-gradient(circle at 75% 65%, rgba(255, 255, 255, 0.25) 3%, transparent 10%),
+    linear-gradient(135deg, color-mix(in srgb, var(--md-miaohong) 9%, transparent) 0%, color-mix(in srgb, var(--md-miaohong) 4%, transparent) 100%),
+    color-mix(in srgb, var(--md-miaohong) 5%, transparent) !important;
+  border-color: color-mix(in srgb, var(--md-miaohong) 45%, transparent) !important;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--md-miaohong) 22%, transparent), 0 2px 8px color-mix(in srgb, var(--md-miaohong) 14%, transparent) !important;
+}
+
+/* 暗色模式首字钤印适配（同法则二分） */
+:root[data-theme='dark'] body .chapter-prose .first-stamp-char {
+  color: var(--md-luomo, var(--md-on-surface)) !important;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--md-on-surface) 22%, transparent) 0%, color-mix(in srgb, var(--md-on-surface) 12%, transparent) 100%),
+    color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
+  border-color: color-mix(in srgb, var(--md-on-surface) 50%, transparent) !important;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--md-on-surface) 26%, transparent), 0 2px 8px color-mix(in srgb, var(--md-on-surface) 16%, transparent) !important;
+}
+
+:root[data-theme='dark'] body .chapter-paper[data-provenance='ai'] .chapter-prose .first-stamp-char {
+  color: var(--md-miaohong) !important;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--md-miaohong) 26%, transparent) 0%, color-mix(in srgb, var(--md-miaohong) 14%, transparent) 100%),
+    color-mix(in srgb, var(--md-miaohong) 9%, transparent) !important;
+  border-color: color-mix(in srgb, var(--md-miaohong) 55%, transparent) !important;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--md-miaohong) 30%, transparent), 0 2px 8px color-mix(in srgb, var(--md-miaohong) 18%, transparent) !important;
 }

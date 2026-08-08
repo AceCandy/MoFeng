@@ -235,7 +235,7 @@ watch(
   font-family: var(--md-font-serif);
   font-weight: 600;
   border: 1px solid var(--md-outline);
-  box-shadow: 1.5px 1.5px 0px var(--md-outline);
+  box-shadow: none;
   transition:
     background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
     border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
@@ -247,7 +247,7 @@ watch(
 /* Hover 状态 */
 .writing-workspace__tool-btn:hover:not(:disabled) {
   transform: translate(-0.5px, -0.5px);
-  box-shadow: 2px 2px 0px var(--md-outline);
+  box-shadow: var(--md-elevation-paper-1);
   background-color: var(--md-surface-container-low);
 }
 
@@ -264,12 +264,12 @@ watch(
   font-size: var(--md-title-small);
   font-weight: bold;
   border: 1.5px solid var(--md-outline) !important;
-  box-shadow: 2px 2px 0px var(--md-outline);
+  box-shadow: var(--md-elevation-paper-1);
 }
 
 .writing-workspace__tool-btn--hero:hover:not(:disabled) {
   transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0px var(--md-outline);
+  box-shadow: var(--md-elevation-paper-2);
 }
 
 .writing-workspace__tool-btn--hero:active:not(:disabled) {
@@ -289,14 +289,14 @@ watch(
   border-color: var(--md-outline);
   color: var(--md-on-surface-variant);
   background-color: transparent;
-  box-shadow: 1px 1px 0px var(--md-outline);
+  box-shadow: none;
 }
 
 .writing-workspace__tool-btn--ghost:hover:not(:disabled) {
   color: var(--md-secondary);
   border-color: var(--md-secondary);
   background-color: color-mix(in srgb, var(--md-secondary) 2%, transparent);
-  box-shadow: 1.5px 1.5px 0px var(--md-secondary);
+  box-shadow: var(--md-elevation-paper-1);
 }
 
 .writing-workspace__tool-btn--ghost:active:not(:disabled) {
@@ -313,12 +313,12 @@ watch(
   border-color: var(--md-secondary) !important;
   background-color: color-mix(in srgb, var(--md-secondary) 5%, transparent);
   color: var(--md-secondary);
-  box-shadow: 2px 2px 0px var(--md-secondary);
+  box-shadow: var(--md-elevation-paper-1);
 }
 
 .writing-workspace__tool-btn--primary:hover:not(:disabled) {
   background-color: color-mix(in srgb, var(--md-secondary) 9%, transparent);
-  box-shadow: 3px 3px 0px var(--md-secondary);
+  box-shadow: var(--md-elevation-paper-2);
   border-color: var(--md-secondary) !important;
 }
 
@@ -337,7 +337,7 @@ watch(
   border-radius: 0 !important; /* 强制直角 */
   border: 2px solid var(--md-outline) !important;
   background: var(--md-surface);
-  box-shadow: 3px 3px 0px var(--md-outline);
+  box-shadow: var(--md-elevation-paper-2);
   animation: ink-menu-slide 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 

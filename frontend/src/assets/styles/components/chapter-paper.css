@@ -1,22 +1,34 @@
-/* AIMETA P=章节纸张_宣纸信笺八行笺|R=chapter-paper 章节阅读编辑区+dark覆写|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* AIMETA P=章节纸张_描红界格方格稿纸|R=chapter-paper 章节阅读编辑区（描红界格重构）|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
 /* ============================================
-   1. 章节阅读与编辑区（宣纸信笺八行笺）
+   1. 章节阅读与编辑区（方格稿纸行笺 · 描红界格）
+   行线 = 横向描红行线，左右缘 = 朱丝栏竖线，
+   底 = 熟宣 var(--md-surface)，古籍双线框保留。
    ============================================ */
 
-/* 章节阅读纸张：微直角、古籍双粗细线框、纵向朱砂红信笺界格底纹 */
+/* 章节阅读纸张：微直角、古籍双粗细线框、横向描红行线 + 左右朱丝栏 */
 body .chapter-paper {
-  width: 100% !important;
-  box-sizing: border-box !important;
-  border-radius: var(--md-radius-xs) !important;
-  border: 3px double var(--md-outline) !important;
-  padding: var(--md-spacing-8) !important;
+  --paper-line: 27px; /* 稿纸行线间距 = 正文行高（15px × 1.8），组件可覆写 */
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: var(--md-radius-xs);
+  border: 3px double var(--md-outline); /* 古籍双粗细线框，国风内核保留 */
+  padding: var(--md-spacing-8); /* 32px，朱丝栏内缩留白（左右 ≥32px） */
   background:
-    /* 纵向朱砂红信笺界格（38px 循环，高雅轻透明度，护眼润字） */
-    repeating-linear-gradient(90deg, transparent, transparent 38px, color-mix(in srgb, var(--md-secondary) 4%, transparent) 38px, color-mix(in srgb, var(--md-secondary) 5%, transparent) 40px),
-    /* 熟宣色温润底色 */
-    linear-gradient(var(--md-surface), var(--md-surface)) !important;
-  background-attachment: local !important;
-  box-shadow: var(--md-elevation-1) !important;
+    /* 左右朱丝栏竖线（各 1px 描红边栏，贴容器左右缘） */
+    linear-gradient(to bottom, var(--md-miaohong-line-strong), var(--md-miaohong-line-strong)) left top / 1px 100% no-repeat local,
+    linear-gradient(to bottom, var(--md-miaohong-line-strong), var(--md-miaohong-line-strong)) right top / 1px 100% no-repeat local,
+    /* 方格稿纸行笺：横向描红行线，--paper-line 循环 */
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--paper-line) - 1px),
+      var(--md-miaohong-line) calc(var(--paper-line) - 1px),
+      var(--md-miaohong-line) var(--paper-line)
+    ) local,
+    /* 熟宣色温润底色，不用纯白 */
+    linear-gradient(var(--md-surface), var(--md-surface));
+  background-attachment: local;
+  box-shadow: var(--md-elevation-paper-1); /* 浮起纸页柔和投影，替代拓片偏置硬投影 */
   transition:
     background-color var(--md-duration-medium) var(--md-easing-standard),
     border-color var(--md-duration-medium) var(--md-easing-standard),
@@ -24,76 +36,62 @@ body .chapter-paper {
     color var(--md-duration-medium) var(--md-easing-standard);
 }
 
-/* 深夜书房暗色模式自适应朱红暗化 */
-:root[data-theme='dark'] body .chapter-paper {
-  background:
-    /* 暗砂红格线 */
-    repeating-linear-gradient(90deg, transparent, transparent 38px, color-mix(in srgb, var(--md-secondary-dark) 16%, transparent) 38px, color-mix(in srgb, var(--md-secondary-dark) 22%, transparent) 40px),
-    /* 焦墨深夜底色 */
-    linear-gradient(var(--md-surface), var(--md-surface)) !important;
-}
+/* 暗场无需覆写：行线/朱丝栏由 --md-miaohong-line(-strong) 以 color-mix 自引用
+   --md-miaohong 生成，暗色 token 切换后自动暗化，保持可见且柔和 */
 
 /* 章节正文古宋体碑拓骨力展现（字号交由组件/类控制，全局不再锁死） */
 body .chapter-prose {
-  font-family: var(--md-font-display) !important;
+  font-family: var(--md-font-display);
   font-size: 17px;
-  letter-spacing: 0.035em !important;
-  font-weight: 600 !important; /* 稿纸正文使用稳重清晰的 600 SemiBold */
-  color: var(--md-on-surface) !important;
-  max-width: 72ch !important;
-  line-height: 2 !important;
+  letter-spacing: 0.035em;
+  font-weight: 600; /* 稿纸正文使用稳重清晰的 600 SemiBold */
+  color: var(--md-on-surface);
+  max-width: 72ch;
+  line-height: 2;
 }
 
 body .chapter-prose p {
-  line-height: 2 !important;
-  text-indent: 2em !important;
-  margin-bottom: 1.25em !important;
+  line-height: 2;
+  text-indent: 2em;
+  margin-bottom: 1.25em;
 }
 
 /* 章节正文标题 */
 body .chapter-paper__title {
-  font-family: var(--md-font-display) !important;
-  letter-spacing: 0.06em !important;
-  font-weight: 600 !important;
-  color: var(--md-primary) !important;
+  font-family: var(--md-font-display);
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  color: var(--md-primary);
 }
 
-/* 编辑章节文本域（笺格写字板）：带横向红色格线底纹，还原落笔书笺的意境 */
+/* 编辑章节文本域（笺格写字板）：横向描红行线底纹，还原落笔书笺的意境 */
 body .md-textarea {
-  border-radius: var(--md-radius-xs) !important;
-  border: 1px solid var(--md-outline) !important;
-  background-color: var(--md-surface) !important;
-  color: var(--md-on-surface) !important;
-  line-height: 2 !important;
-  font-size: var(--md-body-large) !important;
-  font-family: var(--md-font-family) !important;
-  font-weight: 500 !important; /* 写字板输入框使用 500 Medium，笔迹温润饱满 */
-  padding: 1.5rem !important;
-  box-shadow: inset 1px 1px 3px color-mix(in srgb, var(--md-on-surface) 3%, transparent) !important;
-  /* 笺纸横向书写红线 */
+  border-radius: var(--md-radius-xs);
+  border: 1px solid var(--md-outline);
+  background-color: var(--md-surface);
+  color: var(--md-on-surface);
+  line-height: 2;
+  font-size: var(--md-body-large);
+  font-family: var(--md-font-family);
+  font-weight: 500; /* 写字板输入框使用 500 Medium，笔迹温润饱满 */
+  padding: 1.5rem;
+  box-shadow: inset 1px 1px 3px color-mix(in srgb, var(--md-on-surface) 3%, transparent); /* 内凹纸质肌理，非投影 */
+  /* 笺纸横向书写行线（描红淡线） */
   background-image: repeating-linear-gradient(
-    color-mix(in srgb, var(--md-secondary) 3%, transparent) 0px,
-    color-mix(in srgb, var(--md-secondary) 3%, transparent) 1px,
+    var(--md-miaohong-line) 0px,
+    var(--md-miaohong-line) 1px,
     transparent 1px,
     transparent 2rem
-  ) !important;
-  background-size: 100% 2rem !important;
-  background-attachment: local !important;
-  transition: border-color var(--md-duration-short) var(--md-easing-standard), box-shadow var(--md-duration-short) !important;
+  );
+  background-size: 100% 2rem;
+  background-attachment: local;
+  transition: border-color var(--md-duration-short) var(--md-easing-standard), box-shadow var(--md-duration-short);
 }
 
 body .md-textarea:focus {
-  outline: none !important;
-  border-color: var(--md-primary) !important;
-  box-shadow: var(--md-shadow-primary-1) !important;
+  outline: none;
+  border-color: var(--md-primary);
+  box-shadow: var(--md-elevation-paper-1); /* 聚焦时稿纸微浮，替代拓片硬投影 */
 }
 
-/* 暗色模式下写字格线自适应变暗 */
-:root[data-theme='dark'] body .md-textarea {
-  background-image: repeating-linear-gradient(
-    color-mix(in srgb, var(--md-secondary-dark) 10%, transparent) 0px,
-    color-mix(in srgb, var(--md-secondary-dark) 10%, transparent) 1px,
-    transparent 1px,
-    transparent 2rem
-  ) !important;
-}
+/* 暗场无需覆写：写字格行线同样自引用 --md-miaohong，暗色下自动调柔 */

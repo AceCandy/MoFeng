@@ -37,6 +37,9 @@ const vendorChunks: Array<[string, string[]]> = [
   ['vue-core', ['vue', 'vue-router', 'pinia', '@vue']],
   ['naive-ui-support', ['@css-render', 'css-render', 'vueuc', 'vdirs', 'vooks', 'evtd', 'seemly', 'treemate', 'date-fns', 'async-validator']],
   ['markdown-tools', ['marked', 'dompurify']],
+  // 描红界格编辑器内核（TipTap + ProseMirror）：独立分包，仅写作台路由的异步弹窗引用时加载，
+  // 登录/工作台/灵感等首屏不为编辑器付费。预算基线已经 build:budget 环境变量同步上调。
+  ['tiptap-editor', ['@tiptap', 'prosemirror']],
 ]
 
 const resolveVendorChunk = (id: string): string | undefined => {

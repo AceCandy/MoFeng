@@ -162,7 +162,7 @@ const handleDelete = () => {
   display: grid !important;
   place-items: center !important;
   line-height: 1 !important;
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-secondary) 15%, transparent) !important;
+  box-shadow: none !important; /* 印面压纸不浮起 */
   opacity: 0;
   transform: scale(0.7) rotate(-8deg);
   transition:
@@ -183,8 +183,8 @@ const handleDelete = () => {
 .project-card:hover,
 .project-card:focus-within {
   border-color: color-mix(in srgb, var(--md-primary) 50%, var(--md-outline-variant)) !important;
-  /* 拓片偏置硬影 */
-  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-on-surface) 10%, transparent) !important;
+  /* 熟宣柔影微浮 */
+  box-shadow: var(--md-elevation-paper-1) !important;
   background-color: var(--md-surface-dim) !important; /* 宣纸微暖色 */
 }
 

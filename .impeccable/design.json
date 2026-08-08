@@ -1,163 +1,213 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-05-21T17:39:00Z",
+  "generatedAt": "2026-08-01T07:00:00Z",
   "title": "Design System: MoFeng (墨风)",
   "extensions": {
     "colorMeta": {
       "primary": {
         "role": "primary",
-        "displayName": "焦墨",
-        "canonical": "#4d6b97",
-        "tonalRamp": ["#111415", "#1C2022", "#2B3134", "#3A4648", "#556265", "#778588", "#C2B69D", "#FAF6ED"]
+        "displayName": "描红（淡朱）",
+        "canonical": "#B8402F",
+        "tonalRamp": ["#5C1A10", "#7C2418", "#9C3323", "#B8402F", "#CE5A47", "#E8836F", "#F4B2A4", "#FBEBEA"]
       },
       "secondary": {
         "role": "secondary",
-        "displayName": "朱砂红",
-        "canonical": "oklch(45% 0.18 30)",
-        "tonalRamp": ["#5C120C", "#8C2219", "#B83C32", "#CD5C52", "#DE857D", "#ECAFAB", "#FBEBEA", "#FDF6F5"]
+        "displayName": "朱砂（落印钤章）",
+        "canonical": "#B83C32",
+        "tonalRamp": ["#5C120C", "#73221C", "#8C241C", "#B83C32", "#CD5C52", "#DE857D", "#FBEBEA", "#FDF6F5"]
+      },
+      "tertiary": {
+        "role": "tertiary",
+        "displayName": "石青（朗读专用）",
+        "canonical": "#2E5C8A",
+        "tonalRamp": ["#122C4A", "#1D4166", "#2E5C8A", "#3A72AA", "#6E97C4", "#A9C3DD", "#EEF5FC", "#F7FBFE"]
+      },
+      "luomo": {
+        "role": "neutral",
+        "displayName": "落墨（焦墨）",
+        "canonical": "#1C2224",
+        "tonalRamp": ["#111415", "#1C2224", "#3A4648", "#556265", "#778588", "#C2B69D", "#DCD2BE", "#FAF6ED"]
+      },
+      "jiege": {
+        "role": "neutral",
+        "displayName": "界格发线（青灰）",
+        "canonical": "color-mix(in srgb, #3A4648 26%, transparent)",
+        "tonalRamp": ["#3A4648", "#556265", "#778588", "#9AA5A7", "#C2B69D"]
       },
       "surface": {
         "role": "surface",
-        "displayName": "熟宣纸白",
-        "canonical": "#fbfaf7",
-        "tonalRamp": ["#F6F0E0", "#FAF6ED", "#FAF7E8", "#FDFDFB", "#FBFAF7"]
-      },
-      "background": {
-        "role": "background",
-        "displayName": "安静纸底",
-        "canonical": "#f4f0e9",
-        "tonalRamp": ["#ECE4D6", "#F4F0E9", "#FBFAF7"]
-      },
-      "on-surface": {
-        "role": "on-surface",
-        "displayName": "案头墨色",
-        "canonical": "#1f2530",
-        "tonalRamp": ["#111415", "#1F2530", "#556265"]
+        "displayName": "熟宣",
+        "canonical": "#FAF6ED",
+        "tonalRamp": ["#DCD2BE", "#EDE4D0", "#F0EAD8", "#F2ECE0", "#F6F0E0", "#FAF6ED", "#FAF7E8", "#FDFDFB"]
       },
       "error": {
         "role": "error",
         "displayName": "温丹砂",
-        "canonical": "#b85c58",
-        "tonalRamp": ["#7F2F2B", "#B85C58", "#F8E8E6"]
+        "canonical": "#B85C58",
+        "tonalRamp": ["#643431", "#7F2F2B", "#9E4A47", "#B85C58", "#D08B88", "#E8BDBB", "#FBEBEA", "#FDF6F5"]
       }
     },
-    "northStar": "安静写作台",
     "typographyMeta": {
-      "display": {
-        "displayName": "碑拓大字",
-        "purpose": "用于大字留白或书架欢迎页，呈现石刻风骨。"
-      },
-      "headline": {
-        "displayName": "古典宋体标题",
-        "purpose": "用于小说章节名和大字标题，字间距宽展大气。"
-      },
-      "body": {
-        "displayName": "人文正文黑体",
-        "purpose": "正文 drafting 专用，大段行高 1.8 极速扫描护眼。"
-      }
+      "display": { "displayName": "碑拓大字", "purpose": "极少使用，仅空状态大字留白或书架欢迎页。" },
+      "headline": { "displayName": "古典宋体标题", "purpose": "章节大字标题与页面主标题，字间距宽展。" },
+      "body": { "displayName": "落墨正文宋体", "purpose": "作家审定正文字族；稿纸正文 17px/600/行高 2。" },
+      "miaohong": { "displayName": "描红真楷体", "purpose": "AI 待审描红稿专用字族，与落墨宋体形成字形对比，色盲可辨。" },
+      "label": { "displayName": "小字签", "purpose": "状态印、题签与按钮文字。" }
     },
     "shadows": [
       {
-        "name": "ambient-low",
-        "value": "2px 2px 0px rgba(28, 32, 34, 0.15)",
-        "purpose": "硬朗的拓片边缘暗影，杜绝模糊高斯投影。"
+        "name": "paper-1",
+        "value": "0 1px 2px rgba(28,32,34,.08), 0 2px 8px rgba(28,32,34,.06)",
+        "purpose": "浮起纸页：稿纸静息、按钮 hover、输入框聚焦。"
       },
       {
-        "name": "seal-stamp",
-        "value": "1px 1px 0px rgba(184, 60, 50, 0.15)",
-        "purpose": "朱砂压章后轻微深深刻印的边缘金石感。"
+        "name": "paper-2",
+        "value": "0 2px 4px rgba(28,32,34,.10), 0 8px 24px rgba(28,32,34,.10)",
+        "purpose": "弹层/稿纸上浮：弹窗、下拉、focus 态稿纸。"
+      },
+      {
+        "name": "legacy-rub",
+        "value": "2px 2px 0px rgba(28,32,34,.15)",
+        "purpose": "旧拓片偏置硬影，仅残留在未改造表面（存量缺陷），新表面不得继承。"
       }
     ],
     "motion": [
       {
-        "name": "ease-ink",
+        "name": "ease-standard",
         "value": "cubic-bezier(0.22, 1, 0.36, 1)",
-        "purpose": "如墨滴入熟宣水中徐徐晕开的柔和淡入淡出缓动。"
+        "purpose": "全局标准缓动（墨晕染开）。"
+      },
+      {
+        "name": "chapter-luomo",
+        "value": "260ms",
+        "purpose": "落墨签名：描红由朱转墨（色连续过渡，楷→宋离散翻转，界栏淡出）；reduced-motion 直落终态。"
+      },
+      {
+        "name": "luomo-seal",
+        "value": "1.35s",
+        "purpose": "「定」字朱砂印单帧落印：rotate(-4deg) scale(1.3)→1，钤下即走；reduced-motion 直落终态。"
       }
     ],
     "breakpoints": [
-      { "name": "mobile", "value": "640px" },
-      { "name": "desktop", "value": "1280px" }
+      { "name": "narrow", "value": "833px" },
+      { "name": "wide", "value": "1200px" }
     ]
   },
   "components": [
     {
-      "name": "古籍双栏卡片",
+      "name": "落印主按钮 (Seal Primary)",
+      "kind": "button",
+      "refersTo": "button-seal",
+      "description": "提交/选定/保存成稿类主动作的朱砂印纽：静止无影，hover 浮起纸页影，active 压下清零——钤印重力反馈。",
+      "html": "<button class=\"ds-btn-seal\">选定并继续</button>",
+      "css": ".ds-btn-seal { background: #B8402F; color: #FAF6ED; border: none; border-radius: 2px; padding: 0 24px; height: 44px; font-family: 'Noto Serif SC', 'STSong', serif; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; box-shadow: none; transition: background-color 0.14s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.14s cubic-bezier(0.22, 1, 0.36, 1), transform 0.14s cubic-bezier(0.22, 1, 0.36, 1); } .ds-btn-seal:hover { background: #9C3323; box-shadow: 0 1px 2px rgba(28,32,34,.08), 0 2px 8px rgba(28,32,34,.06); } .ds-btn-seal:focus-visible { outline: 1px solid #1C2224; outline-offset: 2px; } .ds-btn-seal:active { transform: translateY(1px); box-shadow: none; }"
+    },
+    {
+      "name": "方格稿纸 (Chapter Paper)",
       "kind": "card",
-      "refersTo": "card",
-      "description": "模拟古典线装古籍特有的粗细双边线与宣纸微黄底面，呈现极其大气的人文仪式感。",
-      "html": "<div class=\"ds-card-book\"><div class=\"ds-card-book-content\"><h3>第一章 问剑</h3><p>风止，雨歇。少年按剑立于古碑之前，碑上苔痕斑驳，隐现雷文。AI 辅助已就绪，随时可泼墨挥毫...</p></div></div>",
-      "css": ".ds-card-book { background: #FAF6ED; color: #1C2224; border: 3px double #C2B69D; border-radius: 4px; padding: 24px; font-family: 'STSong', 'Songti SC', serif; box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.15); transition: border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1); } .ds-card-book:hover { border-color: #B83C32; box-shadow: 3px 3px 0px rgba(184, 60, 50, 0.2); } .ds-card-book h3 { font-size: 20px; font-weight: 600; margin-top: 0; margin-bottom: 12px; letter-spacing: 0.05em; color: #1C2022; } .ds-card-book p { font-size: 14px; line-height: 1.8; color: #556265; margin: 0; }"
+      "refersTo": "paper",
+      "description": "章节阅读/编辑签名容器：熟宣底、横向描红行线、左右朱丝栏、古籍双线框、纸页柔影。",
+      "html": "<article class=\"ds-paper\"><p>风止，雨歇。少年按剑立于古碑之前，碑上苔痕斑驳，隐现雷文。</p><p>他抬手，指尖落在碑面第一道裂纹上。</p></article>",
+      "css": ".ds-paper { --paper-line: 27px; background: linear-gradient(to bottom, rgba(184,64,47,.38), rgba(184,64,47,.38)) left top / 1px 100% no-repeat local, linear-gradient(to bottom, rgba(184,64,47,.38), rgba(184,64,47,.38)) right top / 1px 100% no-repeat local, repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--paper-line) - 1px), rgba(184,64,47,.22) calc(var(--paper-line) - 1px), rgba(184,64,47,.22) var(--paper-line)) local, linear-gradient(#FAF6ED, #FAF6ED); border: 3px double #C2B69D; border-radius: 2px; padding: 32px; box-shadow: 0 1px 2px rgba(28,32,34,.08), 0 2px 8px rgba(28,32,34,.06); color: #1C2224; font-family: 'Noto Serif SC', 'STSong', serif; font-size: 17px; font-weight: 600; line-height: 2; letter-spacing: 0.035em; max-width: 72ch; } .ds-paper p { margin: 0 0 1.25em; text-indent: 2em; }"
     },
     {
-      "name": "朱砂金石印鉴 Badge",
+      "name": "描红段落 (Miaohong Prose)",
+      "kind": "custom",
+      "description": "AI 待审稿三信号：淡朱色 + 真楷体 + wash 底/左缘 1px 界栏，容器标 data-provenance=\"ai\"，首段前小字签。",
+      "html": "<div class=\"ds-miaohong\" data-provenance=\"ai\"><p class=\"ds-miaohong-label\">描红稿 · 待落墨</p><p class=\"ds-miaohong-p\"><span>碑中忽有剑鸣，如故人隔世相唤。少年闭目，听那声音一寸寸漫过苔痕。</span></p></div>",
+      "css": ".ds-miaohong-label { margin: 0 0 8px; color: #B8402F; font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', serif; font-size: 12px; letter-spacing: 0.04em; } .ds-miaohong-p { margin: 0; padding: 12px 16px; background: rgba(184,64,47,.05); border-left: 1px solid rgba(184,64,47,.38); } .ds-miaohong-p span { color: #B8402F; font-family: 'Kaiti SC', 'STKaiti', 'KaiTi', 'AR PL UKai CN', serif; font-size: 17px; font-weight: 600; line-height: 2; letter-spacing: 0.035em; }"
+    },
+    {
+      "name": "状态印三态 (Status Seals)",
       "kind": "chip",
-      "refersTo": "chip",
-      "description": "摒弃现代 SaaS 扁平圆角 Tag，以四周斑驳 dashed 配合朱砂描红打造的‘完成/已成稿’中式落款印章。",
-      "html": "<span class=\"ds-seal\">成稿</span>",
-      "css": ".ds-seal { display: inline-flex; align-items: center; justify-content: center; padding: 4px 10px; font-size: 12px; font-weight: 600; font-family: 'STKaiti', 'Kaiti SC', serif; border: 1px dashed #B83C32; color: #B83C32; background: #FBEBEA; border-radius: 2px; box-shadow: 1px 1px 0px rgba(184, 60, 50, 0.15); position: relative; text-transform: uppercase; letter-spacing: 0.05em; } .ds-seal::after { content: ''; position: absolute; top: 1px; left: 1px; right: 1px; bottom: 1px; border: 1px solid #B83C32; opacity: 0.3; pointer-events: none; }"
+      "refersTo": "seal-sealed",
+      "description": "章节状态方印：描红中（淡朱描边）、已落墨（焦墨描边）、已钤印（朱砂实底）；印面压纸不浮起。",
+      "html": "<span class=\"ds-seal ds-seal--tracing\">描红</span> <span class=\"ds-seal ds-seal--inked\">落墨</span> <span class=\"ds-seal ds-seal--sealed\">钤印</span>",
+      "css": ".ds-seal { display: inline-flex; align-items: center; justify-content: center; padding: 4px 10px; border-radius: 2px; font-family: 'Noto Serif SC', 'STSong', serif; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; box-shadow: none; } .ds-seal--tracing { border: 1px solid #B8402F; background: rgba(184,64,47,.05); color: #B8402F; } .ds-seal--inked { border: 1px solid #1C2224; color: #1C2224; } .ds-seal--sealed { background: #B83C32; color: #FAF6ED; }"
     },
     {
-      "name": "焦墨按钮 (Primary)",
-      "kind": "button",
-      "refersTo": "button-primary",
-      "description": "墨风沉稳的主动作按钮。微窄直角，带微弱竹青极细描边，点击如焦墨落纸般笃定。",
-      "html": "<button class=\"ds-btn-primary\">保存书卷</button>",
-      "css": ".ds-btn-primary { background: #1C2022; color: #FAF6ED; border: 1px solid #C2B69D; border-radius: 2px; padding: 10px 24px; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; cursor: pointer; transition: background-color 0.24s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.24s cubic-bezier(0.22, 1, 0.36, 1); box-shadow: 1px 1px 0px rgba(28, 32, 34, 0.15); } .ds-btn-primary:hover { background: #3A4648; box-shadow: 2px 2px 0px rgba(28, 32, 34, 0.2); }"
+      "name": "笺片 Tab (连卷)",
+      "kind": "nav",
+      "refersTo": "tab-active",
+      "description": "笺片式上圆角签条，激活朱砂笺压住底线，与内容面连卷成一体。",
+      "html": "<nav class=\"ds-tabs\"><button class=\"ds-tab is-active\">章节正文</button><button class=\"ds-tab\">版本对比</button><button class=\"ds-tab\">评审反馈</button></nav>",
+      "css": ".ds-tabs { display: flex; gap: 4px; border-bottom: 1.5px solid rgba(58,70,72,.26); } .ds-tab { min-height: 38px; padding: 0 16px; border: 1px solid rgba(58,70,72,.26); border-bottom: none; border-radius: 4px 4px 0 0; background: rgba(28,34,36,.015); color: #556265; font-family: 'Noto Serif SC', 'STSong', serif; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; } .ds-tab:hover { background: #FAF7E8; color: #111415; } .ds-tab.is-active { border: 1.5px solid #B83C32; border-bottom: 1.5px solid #FAF6ED; background: #FAF6ED; color: #B83C32; margin-bottom: -1.5px; }"
     },
     {
-      "name": "石青按钮 (Tonal)",
-      "kind": "button",
-      "refersTo": "button-tonal",
-      "description": "石青辅按钮，专用于 AI 分层优化、智能大纲等激发灵感的协作性高亮操作。",
-      "html": "<button class=\"ds-btn-ai\">AI分层优化</button>",
-      "css": ".ds-btn-ai { background: #2E5C8A; color: #FAF6ED; border: 1px solid #1C2022; border-radius: 2px; padding: 10px 24px; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; cursor: pointer; transition: background-color 0.24s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.24s cubic-bezier(0.22, 1, 0.36, 1); box-shadow: 1px 1px 0px rgba(46, 92, 138, 0.25); } .ds-btn-ai:hover { background: #3A72AA; box-shadow: 2px 2px 0px rgba(46, 92, 138, 0.35); }"
+      "name": "朗读小签 (Reader Chip)",
+      "kind": "chip",
+      "description": "朗读专用石青小签：播放中标记与激活控件，与朱砂权责严格分离。",
+      "html": "<span class=\"ds-reader\">▶ 朗读中 · 第三段</span>",
+      "css": ".ds-reader { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #2E5C8A; border-radius: 2px; background: #FAF6ED; color: #2E5C8A; font-family: 'Noto Serif SC', 'STSong', serif; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; box-shadow: 0 1px 2px rgba(28,32,34,.08), 0 2px 8px rgba(28,32,34,.06); }"
     }
   ],
   "narrative": {
-    "northStar": "墨砚书香，方圆风骨",
-    "overview": "墨风 (MoFeng) 是一套专为长篇虚构小说创作者打造的沉浸式 AI 写作控制中心。本设计系统旨在跳出喧嚣泛滥的现代 SaaS 扁平范式，将视觉语言迁移为强烈、大气且极具风骨的古典中国风。它不仅是创作的工具，更是创作者桌案前一案、一砚、一纸、一墨的文人精神投射。我们追求的国风不是肤浅的古风插画堆砌，也不是喧宾夺主的戏曲脸谱装饰，而是提取古典书斋中的核心哲学——宣纸的润、徽墨的骨、朱砂的醒、留白的意。系统在保持极低视觉疲劳度的安静写作氛围之余，在关键的骨架、排版、细节上展现出坚毅挺拔的大气格局。",
+    "northStar": "描红界格 · 颜色即权责",
+    "overview": "墨风 (MoFeng) 是专为长篇虚构小说创作者打造的 AI 写作台。新视觉世界取自书法字课传统——米字格、朱丝栏、描红簿：AI 写的是淡朱楷体的描红稿，作家审定落墨（焦墨宋体）才算正文，朱砂只作落印钤章。人机权责不靠图标、不靠标签，而是由颜色与字族双信号写进每一行字——阁主回到书案，一眼辨出哪些章节是己出、哪些是待审的描红。界格不是装饰，是书写的规尺：阅读/书写面是方格稿纸行笺（横向描红行线 + 左右朱丝栏竖线），结构面是青灰界格发线（侧栏章节列表、面板分隔）。旧世界\"徽墨熟宣/拓片硬影\"在写作台域已完成换代：拓片偏置硬投影清零，改为纸页柔影（paper 系）；熟宣底、古籍双线框、微直角风骨作为国风内核保留。",
     "keyCharacteristics": [
-      "古籍风骨的双栏规架：卡片、输入框与布局边缘采用利落微小的直圆角，并辅以古籍线装本特有的粗细双线（双边）来划分版面，极具碑拓与刻本的骨力。",
-      "熟宣玉版的温润底色：大面积的阅读区和主背景选用模拟老宣纸、竹纸的微黄暖色，全面隔绝蓝光刺眼，提供持久专注的生理基础。",
-      "徽墨五色的色彩层次：文字与基础架构由黑至灰均带有一丝古朴的青蓝色相（松烟），展现出水墨晕染的丰富细节。",
-      "朱印朱批的黄金点缀：所有完成状态、高亮警示与核心动作，均被重塑为苍劲有力的“传统朱砂篆刻印章”和“朱批”，作为古典的烙印跃然纸上。"
+      "颜色即权责：描红（淡朱 #B8402F + 真楷体 + wash 底/1px 界栏三信号，data-provenance=\"ai\"）= AI 待审稿；落墨（焦墨 #1C2224 + 宋体，data-provenance=\"ink\"）= 作家审定正文；朱砂（#B83C32）只作落印钤章与状态印，已定正文不得见红。",
+      "方格稿纸行笺：章节阅读/编辑容器是横向描红行线稿纸（--paper-line 27px），左右缘各一道朱丝栏竖线，熟宣地，古籍双线框。",
+      "青灰界格发线：结构面（侧栏、面板、笺片 tab）用 1px --md-jiege 发线分割，不用卡片堆卡片。",
+      "落墨签名交互：候选描红稿被选定后，文字 260ms 由朱转墨（chapter-luomo），标题旁钤「定」字朱砂印 1.35s 单帧落印，随即退场。"
     ],
     "rules": [
       {
-        "name": "The Rare Vermilion Rule",
-        "body": "朱砂红 (#B83C32) 是墨风的视觉灵魂。它只被允许出现在方形印章、成功态的印记落款或极致强调的单一按钮上，大面积页面中朱砂红的使用面积绝对不可超过 3%。",
+        "name": "The Three-Signal Rule",
+        "body": "描红稿的渲染三个信号缺一不可：色（--md-miaohong）、字族（--md-font-kai 真楷体，与落墨宋体形成字形对比，色盲可辨）、面（段落底色 --md-miaohong-wash + 左缘 1px --md-miaohong-line-strong 界栏）。只改颜色不算描红，落墨后三信号同步撤去。",
         "section": "colors"
       },
       {
-        "name": "The Xuan Paper Warmth Rule",
-        "body": "所有章节长正文、段落优化器和 AI 评审生成内容，其底色必须为熟宣纸色 (#FAF6ED) 或竹纸暖黄 (#FAF7E8)。严禁使用纯白或高饱和度的彩色背景承载文字，以此守护作家的生理阅读疲劳极限。",
+        "name": "The Settled-Ink-Never-Red Rule",
+        "body": "朱砂 #B83C32 只出现在落印钤章（「定」字印、状态实底方印）与激活指示上。已定稿的正文、已落墨的段落、首字引首章一律焦墨——正文中出现红色，只有一种合法身份：待审的描红。",
         "section": "colors"
       },
       {
-        "name": "The Editorial Spine Rule",
-        "body": "凡是使用宋体（Display、Headline、Title）的段落，必须显式拉开字间距 (letter-spacing)。小字标题拉开 0.03em，大字标题拉开 0.05em 以上。字与字之间的适度留白，能极大增强古典石刻拓片的大气格局。",
+        "name": "The Shiqing-Is-Reading Rule",
+        "body": "石青 #2E5C8A 是朗读功能的专属色（高亮、播放中小签），不得挪用于成功态、选定态或任何\"钤印\"语义，以免与朱砂的权责混淆。",
+        "section": "colors"
+      },
+      {
+        "name": "The Kaishu-Means-Draft Rule",
+        "body": "真楷体栈只服务描红稿与批注朱批；任何落定正文、标题、按钮、状态印一律宋体。落墨动效中楷→宋是离散属性，在 260ms 过渡的中点翻转，不允许渐变插值。",
         "section": "typography"
       },
       {
-        "name": "The Border Over Shadow Rule",
-        "body": "严禁使用大于 8px 模糊半径 (blur-radius) 的模糊阴影。所有界面的卡片、面板划分必须优先使用 1px 的竹青框线 (#C2B69D) 或墨晕细线 (#DCD2BE) 配合背景色差进行分割。",
+        "name": "The Editorial Spine Rule",
+        "body": "凡宋体标题（Display/Headline/Title）必须显式拉开字间距：小字标题 ≥0.03em，大字标题 ≥0.05em。稿纸正文 letterSpacing 0.035em 不缩。",
+        "section": "typography"
+      },
+      {
+        "name": "The Lines-Stay-On-Paper Rule",
+        "body": "描红行线、朱丝栏、米字格都是\"纸上的规矩\"，只能长在稿纸容器里；结构面只有青灰发线一种线。",
+        "section": "layout"
+      },
+      {
+        "name": "The Pressed-Seal Rule",
+        "body": "按钮的影是其重力的回声：静止无影 → hover 浮起 Paper 1 → active translateY(1px) 压下且影清零，如印章落纸。反向（静止带影、按下浮起）一律错误。",
+        "section": "elevation"
+      },
+      {
+        "name": "The Seals-Don't-Float Rule",
+        "body": "状态小签与落印用印（「定」字印、三态方印）压纸不浮：不带外投影，只有描边或实底。深度只授予\"纸\"与\"层\"，不授予\"印\"。",
         "section": "elevation"
       }
     ],
     "dos": [
-      "Do 使用熟宣色 (#FAF6ED) 和竹纸黄 (#FAF7E8) 作为长篇文字的主要承载背景。",
-      "Do 在 Display 与 Headline 标题中强制使用古典宋体，且字间距必须拉开至少 0.05em。",
-      "Do 使用 1px 竹青框线 (#C2B69D) 或古籍双线框 (border: 3px double) 来划分板块，而不是依靠模糊阴影。",
-      "Do 将关键状态 Badge 封装为“朱砂红仿古方印”的印鉴样式，为现代界面点睛。",
-      "Do 在按钮和输入框上使用微小的 2px - 4px 极窄圆角，维持方正古朴的木刻竹简风骨。"
+      "Do 用三信号渲染描红稿：淡朱 #B8402F + 真楷体 --md-font-kai + wash 底/1px 界栏，并标 data-provenance=\"ai\"。",
+      "Do 让落墨正文回到焦墨 #1C2224 + 宋体，撤去 wash 与界栏，标 data-provenance=\"ink\"。",
+      "Do 在写作台域使用 Paper 1/2 纸页柔影，按钮遵循\"静止无影 → hover 浮起 → active 压下清零\"的钤印重力。",
+      "Do 用 1px 青灰界格发线（--md-jiege）划分侧栏与面板结构，用横向行线 + 朱丝栏构建稿纸。",
+      "Do 让状态印三态（描红中/已落墨/已钤印）以方印呈现，印不浮起。",
+      "Do 把石青 #2E5C8A 留给朗读，把朱砂 #B83C32 留给落印。",
+      "Do 为明暗双主题同时覆盖 token（暗场描红 #E8836F、暗场落墨 #E5DEC9，wash/line 由 color-mix 自动换算）。"
     ],
     "donts": [
-      "Don't 使用任何现代 SaaS 软件特有的紫蓝色 AI 渐变背景（Purple-blue AI Gradients）或霓虹发光文字。",
-      "Don't 使用玻璃拟态（Glassmorphism）、毛玻璃背景模糊和现代卡片高斯模糊投影。",
-      "Don't 在按钮、卡片、输入框上使用现代大圆角（Pill/Capsule layout）或完全圆滑的边角。",
-      "Don't 在中式设计中堆砌大面积毫无功能意义的“古风山水插画”或“戏曲脸谱小插画”，这会沦为廉价的装饰性设计。",
-      "Don't 允许朱砂红 (#B83C32) 的大面积滥用，它的存在必须像画龙点睛的墨宝印鉴一样稀少而尊贵（小于 3% 面积）。"
+      "Don't 让已定稿正文出现任何红色——落墨不见红；描红之外的红色只有朱砂钤印一种合法身份。",
+      "Don't 把楷体用于落定正文、标题、按钮或状态印——楷体即草稿。",
+      "Don't 在写作台域新增拓片偏置硬投影或 >8px 模糊的高斯弥散影；纸页柔影是唯一的影。",
+      "Don't 把稿纸行线、朱丝栏、米字格铺到稿纸容器以外的表面；阅读面禁用米字格全覆盖底纹。",
+      "Don't 用卡片堆卡片、eyebrow/kicker 小字眉、渐变文字、玻璃拟态、unicode/emoji 当图标、>1px 彩色 border-left（描红界栏是 1px，合规）。",
+      "Don't 改旧 token 变量值导致未改造表面变色——token 演进必须加法式。"
     ]
   }
 }

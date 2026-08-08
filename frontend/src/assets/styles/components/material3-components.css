@@ -15,7 +15,7 @@
 .md-dialog {
   background-color: var(--md-surface);
   border-radius: var(--md-radius-sm);
-  box-shadow: var(--md-elevation-3);
+  box-shadow: var(--md-elevation-paper-2); /* 弹层纸影 */
   min-width: 280px;
   max-width: 560px;
   max-height: calc(var(--app-viewport-unit) - 96px);
@@ -208,7 +208,7 @@
   background-color: var(--md-on-surface);
   color: var(--md-surface);
   border-radius: var(--md-radius-xs);
-  box-shadow: var(--md-elevation-3);
+  box-shadow: var(--md-elevation-paper-2); /* 弹层纸影 */
   display: flex;
   align-items: center;
   gap: 8px;

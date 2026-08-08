@@ -470,12 +470,12 @@ onUnmounted(() => {
   gap: var(--md-spacing-5);
   padding: clamp(var(--md-spacing-5), 4vw, var(--md-spacing-8));
   border: 3px double var(--md-outline);
-  border-radius: 0 !important; /* 彻底去除 SaaS 圆角，呈现国风直角 */
-  background-color: var(--md-surface-dim); /* 徽墨老宣底色 */
+  border-radius: var(--md-radius-xs) !important; /* 微直角方章 */
+  background-color: var(--md-surface-dim); /* 熟宣底色 */
   background-image:
     radial-gradient(circle at 10% 10%, var(--md-tint-cool), transparent 45%),
     radial-gradient(circle at 90% 80%, color-mix(in srgb, var(--md-secondary) 2%, transparent), transparent 45%);
-  box-shadow: 4px 4px 0px var(--md-outline-variant); /* 拓片硬偏置投影 */
+  box-shadow: var(--md-elevation-paper-1); /* 熟宣柔影，不用拓片硬影 */
   position: relative;
 }
 
@@ -484,13 +484,13 @@ onUnmounted(() => {
   min-height: 244px;
 }
 
+/* 题签：宋体小签，不用 eyebrow 式 uppercase 小字眉 */
 .workspace-eyebrow {
   margin: 0;
-  color: var(--md-primary);
-  font-size: var(--md-label-medium);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  color: var(--md-on-surface-variant);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 .workspace-hero h2 {
@@ -642,33 +642,30 @@ onUnmounted(() => {
 }
 
 .workspace-hero__panel {
-  border: 3px double var(--md-outline) !important; /* 双线装订框，代替AI 4px粗条 */
-  border-radius: 0 !important; /* 彻底直角化 */
-  background-color: var(--md-surface-container-low); /* 熟宣/竹纸质感 */
-  background-image: 
-    repeating-linear-gradient(90deg, color-mix(in srgb, var(--md-on-surface) 1.5%, transparent) 0px, color-mix(in srgb, var(--md-on-surface) 1.5%, transparent) 1px, transparent 1px, transparent 40px), /* 仿手工宣纸帘纹 */
-    radial-gradient(circle at 80% 20%, color-mix(in srgb, var(--md-on-surface) 2%, transparent) 0%, transparent 60%); /* 淡淡松烟墨晕 */
+  border: 3px double var(--md-outline) !important; /* 双线框保留给卷首纸容器 */
+  border-radius: var(--md-radius-xs) !important; /* 微直角方章 */
+  background-color: var(--md-surface-container-low); /* 熟宣/竹纸质感，不铺帘纹 */
   padding: var(--md-spacing-5);
   display: flex;
   flex-direction: column;
   gap: var(--md-spacing-4);
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 5%, transparent);
+  box-shadow: none; /* 静息无影 */
   transition: 
     border-color 0.28s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
-/* Hover 时：双线框优雅加深为焦墨色 */
+/* Hover 时：双线框加深为焦墨色，纸面微浮 */
 .workspace-hero__panel:hover {
   border-color: var(--md-primary) !important;
-  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-on-surface) 12%, transparent) !important;
+  box-shadow: var(--md-elevation-paper-1) !important;
 }
 
-/* Active 时：钤印微沉 */
+/* Active 时：钤印微沉，影清零 */
 .workspace-hero__panel:active {
   transform: translate(1px, 1px) !important;
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
+  box-shadow: none !important;
 }
 
 .workspace-hero__panel-head {
@@ -727,10 +724,10 @@ onUnmounted(() => {
 }
 
 .workspace-archive {
-  border: 1px solid var(--md-outline);
-  border-radius: 0 !important; /* 彻底直角化 */
+  border: 1px solid var(--md-jiege); /* 界格发线 */
+  border-radius: var(--md-radius-xs) !important; /* 微直角方章 */
   background-color: var(--md-surface); /* 熟宣 */
-  box-shadow: 3px 3px 0px var(--md-outline-variant); /* 拓片偏置硬影 */
+  box-shadow: var(--md-elevation-paper-1); /* 熟宣柔影 */
   padding: clamp(var(--md-spacing-5), 4vw, var(--md-spacing-8));
 }
 
@@ -760,7 +757,7 @@ onUnmounted(() => {
   min-height: 216px;
   padding: var(--md-spacing-5);
   border: 1px solid var(--md-outline-variant);
-  border-radius: 0 !important; /* 骨架屏亦需有直角骨气 */
+  border-radius: var(--md-radius-xs) !important; /* 骨架屏同为微直角 */
   background-color: var(--md-surface);
 }
 
@@ -872,7 +869,7 @@ onUnmounted(() => {
   .workspace-hero,
   .workspace-archive {
     padding: var(--md-spacing-5);
-    border-radius: 0 !important; /* 矢志不渝的直角坚持 */
+    border-radius: var(--md-radius-xs) !important; /* 微直角方章 */
   }
 
   .workspace-hero__snapshot {
@@ -976,7 +973,7 @@ onUnmounted(() => {
   background-color: var(--md-error) !important; /* 丹砂警示底 */
   color: var(--md-on-error) !important; /* 高对比宣白字 */
   border: 1px solid var(--md-error-strong) !important;
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-error) 20%, transparent) !important; /* 硬投影 */
+  box-shadow: none !important; /* 静息无影 */
   transition:
     background-color var(--md-duration-short) var(--md-easing-standard),
     box-shadow var(--md-duration-short) var(--md-easing-standard),
@@ -987,16 +984,20 @@ onUnmounted(() => {
 .delete-confirm-btn:hover {
   background-color: var(--md-error-strong) !important; /* 丹砂加深 */
   color: var(--md-on-error) !important;
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-error) 20%, transparent) !important;
-  transform: translate(1px, 1px); /* 钤印按压微沉交互 */
+  box-shadow: var(--md-elevation-paper-1) !important; /* 纸影微浮 */
 }
 
-/* 墨风国风对话框与遮罩层极致打磨（直接作用于本组件直属 DOM，去除冗余穿透） */
+.delete-confirm-btn:active {
+  transform: translate(1px, 1px); /* 钤印按压微沉 */
+  box-shadow: none !important;
+}
+
+/* 删除确认对话框：双线框 + 熟宣柔影（弹层 paper-2） */
 .md-dialog {
   border: 3px double var(--md-outline) !important;
-  border-radius: 0 !important; /* 彻底直角化 */
+  border-radius: var(--md-radius-xs) !important; /* 微直角方章 */
   background-color: var(--md-surface-bright) !important; /* 熟宣竹纸 */
-  box-shadow: 8px 8px 0px var(--md-primary) !important; /* 焦墨拓片超硬投影 */
+  box-shadow: var(--md-elevation-paper-2) !important;
 }
 
 .md-dialog-overlay {

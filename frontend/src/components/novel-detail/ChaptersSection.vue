@@ -13,7 +13,7 @@
 
       <!-- 章节列表侧边栏 -->
       <aside
-        class="chapters-section__sidebar fixed lg:static inset-y-0 left-0 z-50 w-72 lg:w-72 bg-[var(--md-surface)] lg:bg-[var(--md-surface-container-low)] border-r border-[var(--md-outline-variant)] flex flex-col h-full min-h-0 max-h-full overflow-hidden transition-transform duration-300 lg:translate-x-0 shadow-[var(--md-shadow-primary-1)] lg:shadow-none"
+        class="chapters-section__sidebar fixed lg:static inset-y-0 left-0 z-50 w-72 lg:w-72 bg-[var(--md-surface)] lg:bg-[var(--md-surface-container-low)] border-r border-[var(--md-outline-variant)] flex flex-col h-full min-h-0 max-h-full overflow-hidden transition-transform duration-300 lg:translate-x-0 shadow-[var(--md-elevation-paper-2)] lg:shadow-none"
         :class="showChapterList ? 'translate-x-0' : '-translate-x-full'"
         :aria-hidden="isChapterSidebarVisible ? undefined : 'true'"
         :inert="!isChapterSidebarVisible"
@@ -27,7 +27,7 @@
             <button
               :ref="(el) => setChapterRef(chapter.chapter_number, el)"
               class="chapters-section__chapter-btn w-full text-left px-5 py-3 transition-colors duration-200"
-              :class="selectedChapter?.chapter_number === chapter.chapter_number ? 'bg-[var(--md-surface-container)] text-[var(--md-on-surface)] font-semibold shadow-[inset_3px_0_0_var(--md-secondary)]' : 'hover:bg-[var(--md-surface-container-low)] lg:hover:bg-[var(--md-surface)] text-[var(--md-on-surface)]'"
+              :class="selectedChapter?.chapter_number === chapter.chapter_number ? 'bg-[var(--md-surface-container)] text-[var(--md-on-surface)] font-semibold shadow-[inset_1px_0_0_var(--md-miaohong-line-strong)]' : 'hover:bg-[var(--md-surface-container-low)] lg:hover:bg-[var(--md-surface)] text-[var(--md-on-surface)]'"
               :aria-current="selectedChapter?.chapter_number === chapter.chapter_number ? 'page' : undefined"
               @click="selectChapter(chapter.chapter_number)"
             >
@@ -60,7 +60,7 @@
           type="button"
           v-if="!showChapterList"
           @click="showChapterList = true"
-          class="lg:hidden fixed bottom-6 left-6 z-30 w-14 h-14 bg-[var(--md-primary)] text-[var(--md-on-primary)] rounded-xs shadow-[4px_4px_0px_color-mix(in_srgb,var(--md-on-surface)_15%,transparent)] flex items-center justify-center hover:bg-[var(--md-primary-dark)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--md-primary)] focus-visible:outline-offset-2"
+          class="lg:hidden fixed bottom-6 left-6 z-30 w-14 h-14 bg-[var(--md-primary)] text-[var(--md-on-primary)] rounded-xs shadow-[var(--md-elevation-paper-2)] flex items-center justify-center hover:bg-[var(--md-primary-dark)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--md-primary)] focus-visible:outline-offset-2"
           aria-label="打开章节列表"
           title="打开章节列表"
         >
@@ -114,7 +114,7 @@
               <div class="flex items-center gap-2 flex-wrap justify-end">
                 <button
                   class="chapters-section__export-btn inline-flex items-center gap-1 min-h-[44px] px-3.5 py-2 text-sm font-medium rounded-xs border transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-[var(--md-primary)] focus-visible:outline-offset-2"
-                  :class="selectedChapter?.content ? 'border-[var(--md-primary-container)] text-[var(--md-on-primary-container)] hover:bg-[var(--md-primary-container)]' : 'border-[var(--md-outline-variant)] text-[var(--md-on-surface-variant)] cursor-not-allowed'"
+                  :class="selectedChapter?.content ? 'border-[var(--md-outline)] text-[var(--md-primary)] hover:bg-[var(--md-surface)] hover:shadow-[var(--md-elevation-paper-1)]' : 'border-[var(--md-outline-variant)] text-[var(--md-on-surface-variant)] cursor-not-allowed'"
                   :disabled="!selectedChapter?.content"
                   @click="exportChapterAsTxt"
                 >
@@ -146,13 +146,13 @@
                 @keydown="onChapterTabKeydown(tab.key, $event)"
                 class="chapters-section__tab px-4 py-2 min-h-[44px] text-sm font-medium rounded-xs border border-transparent transition-[background-color,box-shadow,color] duration-200 focus-visible:outline-2 focus-visible:outline-[var(--md-primary)] focus-visible:outline-offset-2"
                 :class="activeTab === tab.key
-                  ? 'bg-[var(--md-surface)] text-[var(--md-primary)] border-[var(--md-outline)] shadow-[2px_2px_0px_color-mix(in_srgb,var(--md-on-surface)_15%,transparent)]'
+                  ? 'bg-[var(--md-surface)] text-[var(--md-primary)] border-[var(--md-outline)] shadow-[var(--md-elevation-paper-1)]'
                   : 'text-[var(--md-on-surface-variant)] hover:text-[var(--md-on-surface)] hover:bg-[var(--md-surface-container-lowest)]'"
               >
                 {{ tab.label }}
                 <span v-if="tab.badge && getTabBadgeCount(tab.key)"
                   class="ml-1.5 px-1.5 py-0.5 text-xs rounded-xs border border-[var(--md-outline-variant)]"
-                  :class="activeTab === tab.key ? 'bg-[var(--md-primary-container)] text-[var(--md-primary)]' : 'bg-[var(--md-surface-container-high)] text-[var(--md-on-surface-variant)]'">
+                  :class="activeTab === tab.key ? 'bg-[var(--md-primary)] text-[var(--md-on-primary)]' : 'bg-[var(--md-surface-container-high)] text-[var(--md-on-surface-variant)]'">
                   {{ getTabBadgeCount(tab.key) }}
                 </span>
               </button>
@@ -193,8 +193,8 @@
                   </div>
                 </div>
 
-                <!-- Main Content -->
-                <div class="chapters-section__prose-card prose max-w-none p-4 sm:p-6 rounded-sm bg-[var(--md-surface-container-low)]">
+                <!-- Main Content：作家审定正文，焦墨宋体 ink -->
+                <div class="chapters-section__prose-card prose max-w-none p-4 sm:p-6 rounded-sm bg-[var(--md-surface-container-low)]" data-provenance="ink">
                   <div class="text-base text-[var(--md-on-surface)] leading-8 whitespace-pre-wrap font-serif">
                     {{ selectedChapter.content || '暂无内容' }}
                   </div>
@@ -202,7 +202,7 @@
               </div>
             </div>
 
-            <!-- 版本 Tab -->
+            <!-- 版本 Tab：AI 候选稿 -->
             <div
               v-show="activeTab === 'versions'"
               class="px-2 py-3"
@@ -210,12 +210,14 @@
               :id="chapterTabPanelId('versions')"
               :aria-labelledby="chapterTabId('versions')"
               tabindex="0"
+              data-provenance="ai"
             >
               <div class="max-w-full">
                 <div v-if="selectedChapter.versions && selectedChapter.versions.length > 0" class="chapters-section__panel-stack">
                   <button v-for="(version, index) in selectedChapter.versions" :key="index"
                     type="button"
                     class="chapter-version-card group"
+                    data-provenance="ai"
                     :aria-label="`查看版本 ${index + 1} 全文，${calculateWordCount(version)} 字`"
                     @click="openVersionModal(version, index)">
                     <span class="chapter-version-card__head">
@@ -246,7 +248,7 @@
               </div>
             </div>
 
-            <!-- 评审 Tab -->
+            <!-- 评审 Tab：AI 评审记录 -->
             <div
               v-show="activeTab === 'evaluation'"
               class="px-2 py-3"
@@ -254,25 +256,26 @@
               :id="chapterTabPanelId('evaluation')"
               :aria-labelledby="chapterTabId('evaluation')"
               tabindex="0"
+              data-provenance="ai"
             >
               <div class="max-w-full">
                 <div v-if="evaluationData" class="chapters-section__panel-stack">
-                  <!-- 最佳选择 -->
-                  <div v-if="evaluationData.best_choice" class="bg-[var(--md-primary-container)] border border-[var(--md-primary-container)] rounded-sm p-4">
+                  <!-- 最佳选择：AI 评审结论，描红稿信号 -->
+                  <div v-if="evaluationData.best_choice" class="bg-[var(--md-miaohong-wash)] border border-[var(--md-miaohong-line)] rounded-sm p-4">
                     <div class="flex items-start gap-4">
-                      <div class="w-12 h-12 bg-[var(--md-primary)] rounded-xs flex items-center justify-center flex-shrink-0">
-                        <svg class="w-7 h-7 text-[var(--md-on-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div class="w-12 h-12 bg-[var(--md-miaohong-wash)] border border-[var(--md-miaohong-line-strong)] rounded-xs flex items-center justify-center flex-shrink-0">
+                        <svg class="w-7 h-7 text-[var(--md-miaohong)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                         </svg>
                       </div>
                       <div class="flex-1">
-                        <h5 class="text-lg font-bold text-[var(--md-on-primary-container)] mb-2">最佳版本选择</h5>
+                        <h5 class="text-lg font-bold text-[var(--md-miaohong-strong)] mb-2">最佳版本选择</h5>
                         <div class="flex items-center gap-2 mb-3">
-                          <span class="px-3 py-1 bg-[var(--md-primary)] text-[var(--md-on-primary)] text-sm font-bold rounded-xs">
+                          <span class="px-3 py-1 border border-[var(--md-secondary)] text-[var(--md-secondary)] text-sm font-bold rounded-xs">
                             版本 {{ evaluationData.best_choice }}
                           </span>
                         </div>
-                        <p v-if="evaluationData.reason_for_choice" class="text-sm text-[var(--md-on-primary-container)] leading-relaxed">
+                        <p v-if="evaluationData.reason_for_choice" class="text-sm text-[var(--md-miaohong)] leading-relaxed">
                           {{ evaluationData.reason_for_choice }}
                         </p>
                       </div>
@@ -293,7 +296,7 @@
                           {{ getVersionLabel(item.key) }}
                         </h6>
                         <span v-if="isSelectedVersion(item.key, evaluationData.best_choice)"
-                          class="px-2.5 py-1 bg-[var(--md-primary-container)] text-[var(--md-primary-dark)] text-xs font-semibold rounded-xs">
+                          class="px-2.5 py-1 border border-[var(--md-secondary)] text-[var(--md-secondary)] text-xs font-semibold rounded-xs">
                           最佳
                         </span>
                       </div>
@@ -347,17 +350,17 @@
 
                   <!-- 简单格式兼容 -->
                   <div v-else-if="evaluationData.decision || evaluationData.feedback" class="chapters-section__panel-stack">
-                    <!-- 评审决策 -->
-                    <div v-if="evaluationData.decision" class="bg-[var(--md-primary-container)] border border-[var(--md-primary-container)] rounded-sm p-4">
+                    <!-- 评审决策：AI 结论，描红稿信号 -->
+                    <div v-if="evaluationData.decision" class="bg-[var(--md-miaohong-wash)] border border-[var(--md-miaohong-line)] rounded-sm p-4">
                       <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 bg-[var(--md-primary)] rounded-xs flex items-center justify-center">
-                          <svg class="w-6 h-6 text-[var(--md-on-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-10 h-10 bg-[var(--md-miaohong-wash)] border border-[var(--md-miaohong-line-strong)] rounded-xs flex items-center justify-center">
+                          <svg class="w-6 h-6 text-[var(--md-miaohong)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                         </div>
                         <div>
-                          <h5 class="text-sm font-bold text-[var(--md-on-primary-container)]">评审决策</h5>
-                          <p class="text-xs text-[var(--md-primary-dark)]">{{ evaluationData.decision }}</p>
+                          <h5 class="text-sm font-bold text-[var(--md-miaohong-strong)]">评审决策</h5>
+                          <p class="text-xs text-[var(--md-miaohong)]">{{ evaluationData.decision }}</p>
                         </div>
                       </div>
                     </div>
@@ -365,7 +368,7 @@
                     <!-- 评分卡片 -->
                     <div v-if="evaluationData.scores" class="grid grid-cols-2 md:grid-cols-3 gap-4">
                       <div v-for="(score, key) in evaluationData.scores" :key="key"
-                        class="bg-[var(--md-surface)] border border-[var(--md-outline-variant)] rounded-sm p-4 hover:shadow-[2px_2px_0px_color-mix(in_srgb,var(--md-on-surface)_15%,transparent)] transition-shadow">
+                        class="bg-[var(--md-surface)] border border-[var(--md-outline-variant)] rounded-sm p-4 hover:shadow-[var(--md-elevation-paper-1)] transition-shadow">
                         <div class="flex items-center justify-between mb-2">
                           <span class="text-xs font-medium text-[var(--md-on-surface-variant)]">{{ getScoreLabel(key) }}</span>
                           <span class="text-lg font-bold" :class="getScoreColor(score)">{{ score }}</span>
@@ -421,10 +424,11 @@
         @click.self="closeVersionModal">
         <div
           ref="versionDialogRef"
-          class="bg-[var(--md-surface)] rounded-md border-3 border-double border-[var(--md-outline)] shadow-[4px_4px_0px_color-mix(in_srgb,var(--md-on-surface)_15%,transparent)] max-w-4xl w-full max-h-[85vh] overflow-hidden"
+          class="bg-[var(--md-surface)] rounded-xs border border-solid border-[var(--md-jiege)] shadow-[var(--md-elevation-paper-2)] max-w-4xl w-full max-h-[85vh] overflow-hidden"
           role="dialog"
           aria-modal="true"
           :aria-labelledby="versionModalTitleId"
+          data-provenance="ai"
         >
           <!-- Modal Header -->
           <div class="flex items-center justify-between px-6 py-4 border-b border-[var(--md-outline-variant)] bg-[var(--md-surface-container-low)]">
@@ -607,17 +611,17 @@ const getStatusLabel = (status: string): string => {
   return statusMap[status] || status
 }
 
-// 获取状态颜色
+// 获取状态颜色（三态印：生成/评审=淡朱描红描边，待确认=焦墨描边，已完成=朱砂实底落印）
 const getStatusColor = (status: string): string => {
   const colorMap: Record<string, string> = {
     'not_generated': 'border-[var(--md-outline-variant)] bg-[var(--md-surface-container)] text-[var(--md-on-surface-variant)]',
-    'generating': 'border-[var(--md-primary)] bg-[var(--md-surface-container-low)] text-[var(--md-primary)]',
-    'evaluating': 'border-[var(--md-primary-container)] bg-[var(--md-primary-container)] text-[var(--md-on-primary-container)]',
+    'generating': 'border-[var(--md-miaohong-line-strong)] bg-[var(--md-miaohong-wash)] text-[var(--md-miaohong)]',
+    'evaluating': 'border-[var(--md-miaohong-line-strong)] bg-[var(--md-miaohong-wash)] text-[var(--md-miaohong)]',
     'selecting': 'border-[var(--md-warning)] bg-[var(--md-warning-container)] text-[var(--md-warning-text)]',
     'failed': 'border-[var(--md-error)] bg-[var(--md-error-container)] text-[var(--md-error-text)]',
     'evaluation_failed': 'border-[var(--md-error)] bg-[var(--md-error-container)] text-[var(--md-error-text)]',
-    'waiting_for_confirm': 'border-[var(--md-warning)] bg-[var(--md-warning-container)] text-[var(--md-warning-text)]',
-    'successful': 'border-[var(--md-secondary)] bg-[var(--md-secondary-container)] text-[var(--md-on-secondary-container)]'
+    'waiting_for_confirm': 'border-[var(--md-primary)] bg-[var(--md-surface)] text-[var(--md-primary)]',
+    'successful': 'border-[var(--md-secondary-dark)] bg-[var(--md-secondary)] text-[var(--md-on-secondary)]'
   }
   return colorMap[status] || 'border-[var(--md-outline-variant)] bg-[var(--md-surface-container)] text-[var(--md-on-surface-variant)]'
 }
@@ -853,16 +857,8 @@ defineExpose({
 }
 
 .chapters-section__sidebar {
-  border-right-color: var(--md-outline-variant) !important;
-  background:
-    repeating-linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--md-on-surface) 0.6%, transparent) 0,
-      color-mix(in srgb, var(--md-on-surface) 0.6%, transparent) 1px,
-      transparent 1px,
-      transparent 24px
-    ),
-    var(--md-surface-container-low) !important;
+  border-right-color: var(--md-jiege) !important;
+  background: var(--md-surface-container-low) !important;
 }
 
 .chapters-section__chapter-btn {
@@ -879,15 +875,7 @@ defineExpose({
 }
 
 .chapters-section__header {
-  background:
-    repeating-linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--md-on-surface) 0.6%, transparent) 0,
-      color-mix(in srgb, var(--md-on-surface) 0.6%, transparent) 1px,
-      transparent 1px,
-      transparent 28px
-    ),
-    var(--md-surface-container-low) !important;
+  background: var(--md-surface-container-low) !important;
 }
 
 .chapters-section__export-btn {
@@ -913,11 +901,11 @@ defineExpose({
 
 .chapter-summary-card,
 .chapters-section__prose-card {
-  border-radius: var(--md-radius-sm) !important;
+  border-radius: var(--md-radius-xs) !important;
 }
 
 .chapters-section__prose-card {
-  border: 1px solid var(--md-outline-variant);
+  border: 1px solid var(--md-jiege);
   background-color: var(--md-surface-container-low) !important;
 }
 
@@ -953,9 +941,9 @@ defineExpose({
   width: 100%;
   display: block;
   padding: 1.25rem;
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-sm, 4px);
-  background-color: var(--md-surface-container-low);
+  border: 1px solid var(--md-miaohong-line); /* AI 候选稿：1px 描红界栏 */
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-miaohong-wash); /* 描红 wash 底 */
   color: inherit;
   text-align: left;
   cursor: pointer;
@@ -966,9 +954,9 @@ defineExpose({
 }
 
 .chapter-version-card:hover {
-  border-color: var(--md-primary);
+  border-color: var(--md-miaohong-line-strong);
   background-color: var(--md-surface);
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent);
+  box-shadow: var(--md-elevation-paper-1);
 }
 
 .chapter-version-card:focus-visible {
@@ -1036,9 +1024,7 @@ defineExpose({
   border-width: 1px;
   border-radius: var(--md-radius-xs, 2px);
   position: relative;
-  /* 增加仿古驳杂底纹 */
-  background-image: linear-gradient(45deg, rgba(255,255,255,0.05) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.05) 75%, transparent 75%, transparent);
-  background-size: 8px 8px;
+  /* 状态印一律无影无纹，颜色语义由 getStatusColor 三态给出 */
 }
 
 .chapter-version-card__excerpt {

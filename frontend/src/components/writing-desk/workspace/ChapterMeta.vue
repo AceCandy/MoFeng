@@ -88,12 +88,12 @@ defineEmits(['copyTitle', 'resetTitleTooltip'])
   white-space: nowrap;
 }
 
-/* 竹青阴刻 */
+/* 竹青阴刻（印面压纸，不浮起） */
 .writing-workspace__status-tag--success {
   color: var(--md-on-primary);
   background-color: var(--md-success);
   border-color: var(--md-success-text);
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-tertiary) 25%, transparent);
+  box-shadow: none;
 }
 
 /* 赭红阴刻 */
@@ -101,15 +101,15 @@ defineEmits(['copyTitle', 'resetTitleTooltip'])
   color: var(--md-on-primary);
   background-color: var(--md-error);
   border-color: var(--md-error-text);
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-secondary) 25%, transparent);
+  box-shadow: none;
 }
 
-/* 朱砂阳刻（红底白字或红边红字） */
+/* 朱砂阳刻（红底白字或红边红字，印面压纸不浮起） */
 .writing-workspace__status-tag--progress {
   color: var(--md-secondary);
   background-color: color-mix(in srgb, var(--md-secondary) 5%, transparent);
   border-color: var(--md-secondary);
-  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-secondary) 15%, transparent);
+  box-shadow: none;
 }
 
 .writing-workspace__status-tag--pending {

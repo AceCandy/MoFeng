@@ -79,8 +79,6 @@ const emit = defineEmits<{
   --chapter-locked-action-bg: color-mix(in srgb, var(--md-surface) 76%, transparent);
   --chapter-locked-action-hover-bg: color-mix(in srgb, var(--md-warning-container) 28%, var(--md-surface));
   --chapter-locked-action-border: color-mix(in srgb, var(--chapter-locked-accent) 76%, var(--md-outline));
-  --chapter-locked-action-shadow: color-mix(in srgb, var(--chapter-locked-accent) 38%, transparent);
-  --chapter-locked-action-hover-shadow: color-mix(in srgb, var(--chapter-locked-accent) 44%, transparent);
   width: min(520px, 100%);
   margin: auto;
   text-align: center;
@@ -97,8 +95,6 @@ const emit = defineEmits<{
   --chapter-locked-action-bg: rgba(250, 246, 237, 0.64);
   --chapter-locked-action-hover-bg: rgba(253, 246, 236, 0.92);
   --chapter-locked-action-border: #cdbb9c;
-  --chapter-locked-action-shadow: rgba(200, 168, 117, 0.3);
-  --chapter-locked-action-hover-shadow: rgba(200, 168, 117, 0.4);
 }
 
 .chapter-locked__ornament {
@@ -187,7 +183,7 @@ const emit = defineEmits<{
   font-size: var(--md-title-medium);
   font-weight: 600;
   letter-spacing: 0.03em;
-  box-shadow: 2px 2px 0 var(--chapter-locked-action-shadow);
+  box-shadow: var(--md-elevation-paper-1);
   cursor: pointer;
   transition:
     background-color var(--md-duration-short) var(--md-easing-standard),
@@ -201,12 +197,12 @@ const emit = defineEmits<{
   border-color: var(--chapter-locked-accent);
   color: var(--chapter-locked-accent);
   background-color: var(--chapter-locked-action-hover-bg);
-  box-shadow: 3px 3px 0 var(--chapter-locked-action-hover-shadow);
+  box-shadow: var(--md-elevation-paper-2);
   transform: translate(-1px, -1px);
 }
 
 .chapter-locked__action:active {
-  box-shadow: 0 0 0 var(--chapter-locked-action-shadow);
+  box-shadow: none;
   transform: translate(1px, 1px);
 }
 

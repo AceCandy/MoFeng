@@ -42,14 +42,14 @@
           </div>
         </div>
         <div class="flex-1 overflow-y-auto p-6">
-          <div class="whitespace-pre-wrap leading-relaxed" style="color: var(--md-on-surface)">
-            <p
-              v-for="(paragraph, index) in optimizedParagraphs"
-              :key="`recommended-optimized-${index}`"
-              class="mb-4 last:mb-0"
-            >
-              {{ paragraph }}
-            </p>
+          <!-- 优化稿 = AI 描红稿:只读呈现,三信号由编辑器内核渲染(规格 §4) -->
+          <div class="mofeng-miaohong-review" data-provenance="ai">
+            <p class="mofeng-miaohong-review__label">描红稿 · 待落墨</p>
+            <MofengEditor
+              :model-value="optimizedContent"
+              provenance="ai"
+              readonly
+            />
           </div>
         </div>
         <div
@@ -74,8 +74,7 @@
             type="button"
             @click="$emit('apply')"
             :disabled="isApplying"
-            class="md-btn md-btn-filled md-ripple disabled:opacity-50 flex items-center gap-2"
-            style="background-color: var(--md-success); color: var(--md-on-success)"
+            class="md-btn md-btn-primary mofeng-seal-btn md-ripple disabled:opacity-50 flex items-center gap-2"
           >
             <svg
               v-if="isApplying"
@@ -85,11 +84,11 @@
             >
               <path
                 fill-rule="evenodd"
-                d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 01-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
                 clip-rule="evenodd"
               ></path>
             </svg>
-            {{ isApplying ? '应用中...' : '应用优化' }}
+            {{ isApplying ? '应用中...' : '落墨成稿' }}
           </button>
         </div>
       </div>
@@ -101,6 +100,7 @@
 import { computed, ref, toRef } from 'vue'
 import { useDialogA11y } from '@/composables/useDialogA11y'
 import { countNonWhitespaceChars } from '@/utils/text'
+import MofengEditor from '@/components/writing-desk/editor/MofengEditor.vue'
 
 interface Props {
   show: boolean
@@ -115,14 +115,6 @@ const emit = defineEmits(['close', 'apply'])
 const dialogRef = ref<HTMLElement | null>(null)
 const closeButtonRef = ref<HTMLElement | null>(null)
 const dialogTitleId = 'writing-desk-recommended-optimize-title'
-
-const optimizedParagraphs = computed(() => {
-  if (!props.optimizedContent.trim()) return []
-  return props.optimizedContent
-    .split(/\n{2,}/)
-    .map((paragraph) => paragraph.trim())
-    .filter(Boolean)
-})
 
 const optimizedWordCount = computed(() => countNonWhitespaceChars(props.optimizedContent))
 
@@ -139,5 +131,51 @@ useDialogA11y({
   max-width: min(900px, calc(100vw - 32px));
   max-height: calc(var(--app-viewport-unit) - 32px);
   border-radius: var(--md-radius-md);
+}
+
+/* 描红审阅容器:语义钩子 data-provenance="ai"(规格 §4) */
+.mofeng-miaohong-review {
+  /* 同 MofengEditor:全局 --md-font-kai 暂为宋体别名,描红域内局部落地真楷体栈 */
+  --md-font-kai: 'Kaiti SC', 'STKaiti', 'KaiTi', 'AR PL UKai CN', 'AR PL KaitiM GB', 'TW-Kai', serif;
+}
+
+.mofeng-miaohong-review__label {
+  margin: 0 0 8px;
+  font-family: var(--md-font-kai);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--md-miaohong, #b8402f);
+}
+
+/* 落印主按钮(规格 §5):朱砂印纽,方章微圆角 2px、朱砂底、熟宣字 */
+.mofeng-seal-btn {
+  border: none;
+  border-radius: 2px;
+  background-color: var(--md-miaohong, #b8402f);
+  color: var(--md-surface);
+  font-family: var(--md-font-serif);
+  letter-spacing: 0.08em;
+  text-indent: 0.08em;
+  transition:
+    background-color 140ms var(--md-easing-standard),
+    transform 140ms var(--md-easing-standard),
+    opacity 140ms var(--md-easing-standard);
+}
+
+.mofeng-seal-btn:hover:not(:disabled) {
+  background-color: var(--md-miaohong-strong, #9c3323);
+}
+
+.mofeng-seal-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.mofeng-seal-btn:focus-visible {
+  outline: 1px solid var(--md-luomo, var(--md-on-surface));
+  outline-offset: 2px;
+}
+
+.mofeng-seal-btn:disabled {
+  cursor: not-allowed;
 }
 </style>

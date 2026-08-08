@@ -1,7 +1,7 @@
 <!-- AIMETA P=聊天气泡_对话消息展示|R=消息气泡|NR=不含输入功能|E=component:ChatBubble|X=internal|A=气泡组件|D=vue|S=dom|RD=./README.ai -->
 <template>
   <div :class="wrapperClass">
-    <div :class="bubbleClass">
+    <div :class="bubbleClass" :data-provenance="type === 'ai' ? 'ai' : 'ink'">
       <!-- AI 消息支持 markdown 渲染 -->
       <div 
         v-if="type === 'ai'" 
@@ -82,9 +82,10 @@ const bubbleClass = computed(() => {
 </script>
 
 <style scoped>
-/* 「手撕毛边宣纸」聊天气泡：灵感模式气泡样式的唯一真相源，
+/* 描红界格气泡：AI=淡朱真楷+wash底+左缘界栏三信号（data-provenance="ai"），
+   作家=焦墨宋体落墨（data-provenance="ink"）。灵感模式气泡样式的唯一真相源，
    全局 brand-visuals.css / misc-base.css 的覆写段落已删除，故不再需要 !important 互搏。
-   仅 font-family 保留 !important，以抵御全局 annotation.css 对 .chat-bubble-ai 的楷体覆写。 */
+   仅 font-family 保留 !important，以抵御全局 annotation.css 对 .chat-bubble-ai 的覆写。 */
 
 /* 选项字头朱砂小方章（由 v-html 注入，须经 :deep 方能命中 scoped 样式） */
 :deep(.chat-bubble__option-marker) {
@@ -100,29 +101,20 @@ const bubbleClass = computed(() => {
   font-size: var(--md-label-small);
   font-weight: 700;
   margin-right: 0.5rem;
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-secondary) 15%, transparent); /* 微印章硬影 */
+  box-shadow: none; /* 印面压纸不浮起 */
 }
 
-/* 「手撕毛边宣纸」 AI 气泡 */
+/* 描红稿 AI 气泡：直边稿纸 + 淡朱真楷 + wash 底 + 左缘 1px 界栏（三信号） */
 .chat-bubble-ai {
-  background-color: var(--md-surface);
-  color: var(--md-on-surface);
-  /* 精细的多边形剪裁模拟参差不齐的手撕宣纸毛边 */
-  clip-path: polygon(
-    0% 2%, 8% 0.5%, 19% 1.5%, 31% 0.5%, 44% 1.8%, 56% 0.8%, 69% 1.5%, 81% 0.5%, 93% 1.8%, 100% 2%, 
-    99.2% 15%, 100% 32%, 98.8% 48%, 99.5% 65%, 98.5% 82%, 99.2% 98%, 
-    91% 99.2%, 79% 98.2%, 66% 99.2%, 54% 98.5%, 41% 99.2%, 29% 98.2%, 16% 99.2%, 0% 98%,
-    0.8% 81%, 0% 63%, 1.2% 46%, 0% 28%, 0.8% 12%
-  );
-  padding: 1.25rem 2rem 1.25rem 1.5rem;
+  background-color: var(--md-miaohong-wash);
+  color: var(--md-miaohong);
   border: none;
-  box-shadow: none;
-  /* 搭配 drop-shadow 滤镜产生形状完美的硬偏置拓片影（明暗主题自适应） */
-  filter: drop-shadow(3px 3px 0px color-mix(in srgb, var(--md-on-surface) 12%, transparent));
-  /* 显式声明 will-change，提前提升图层防止高频重绘卡顿 */
-  will-change: filter, transform;
-  /* 字体使用清隽宋体（保留 !important 抵御全局 annotation.css 的楷体覆写） */
-  font-family: var(--md-font-serif) !important;
+  border-left: 1px solid var(--md-miaohong-line-strong);
+  border-radius: var(--md-radius-xs);
+  padding: 1.25rem 2rem 1.25rem 1.5rem;
+  box-shadow: none; /* 稿面静息无影 */
+  /* 字体使用真楷（保留 !important 抵御全局 annotation.css 的覆写；AI 文本即草稿） */
+  font-family: var(--md-font-kai) !important;
   font-size: 15px;
   line-height: 1.6;
   letter-spacing: 0.03em;
@@ -130,11 +122,11 @@ const bubbleClass = computed(() => {
   animation: ink-fade-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-/* 段落内超链接：焦墨虚线下划线，hover 焦墨化实（不落朱砂） */
+/* 段落内超链接：描红系虚线下划线，hover 加深（AI 文本不出权责色之外） */
 :deep(.prose a) {
-  color: var(--md-primary-dark);
+  color: var(--md-miaohong-strong);
   text-decoration: none;
-  border-bottom: 1px dashed var(--md-primary);
+  border-bottom: 1px dashed var(--md-miaohong-line-strong);
   transition:
     color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
     border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1);
@@ -142,11 +134,11 @@ const bubbleClass = computed(() => {
 }
 
 :deep(.prose a:hover) {
-  color: var(--md-primary);
-  border-bottom: 1px solid var(--md-primary);
+  color: var(--md-miaohong-strong);
+  border-bottom: 1px solid var(--md-miaohong-strong);
 }
 
-/* 夹批朱印方章，金石点睛（适度内缩，避让 clip-path 毛边剪裁区） */
+/* 夹批朱印方章，金石点睛 */
 .chat-bubble-ai::before {
   content: '文';
   position: absolute;
@@ -163,19 +155,18 @@ const bubbleClass = computed(() => {
   display: grid;
   place-items: center;
   line-height: 1;
-  box-shadow: 0.5px 0.5px 0px color-mix(in srgb, var(--md-secondary) 15%, transparent);
+  box-shadow: none; /* 印面压纸不浮起 */
 }
 
-/* 焦墨手书用户气泡 */
+/* 焦墨落墨用户气泡：作家文本=焦墨宋体（data-provenance="ink"） */
 .chat-bubble-user {
   background-color: var(--md-primary); /* 焦墨底色 */
   color: var(--md-on-primary);
   border-radius: var(--md-radius-xs); /* 方直微圆角 */
   padding: 0.85rem 1.25rem;
   border: 1px solid var(--md-outline);
-  /* 朱砂小落款右下硬影（明暗主题自适应） */
-  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-secondary) 22%, transparent);
-  font-family: var(--md-font-kai);
+  box-shadow: none; /* 落墨静息无影 */
+  font-family: var(--md-font-serif);
   font-size: 15px;
   letter-spacing: 0.02em;
   animation: ink-fade-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;

@@ -14,6 +14,7 @@
             @copy-title="copySelectedChapterTitle"
             @reset-title-tooltip="resetChapterTitleTooltip"
           />
+          <span v-if="luomoSealVisible" class="writing-workspace__luomo-seal" aria-hidden="true">定</span>
           <ChapterToolbar
             v-if="shouldShowChapterToolbar"
             :chapter-number="selectedChapterNumber"
@@ -87,6 +88,7 @@
               @retry-projection="emit('workflowRetryProjection')"
               @cancel="emit('workflowCancel')"
               @resync="emit('workflowResync')"
+              @preview-candidate="onCandidatePreview"
             />
 
             <ChapterGenerating
@@ -96,12 +98,14 @@
             />
 
             <ChapterContent
-              v-if="activeTab === 'content' && selectedChapterForDisplay && hasSelectedChapterContent"
+              v-if="activeTab === 'content' && chapterContentChapter && (hasSelectedChapterContent || hasMiaohongPreview || hasLuomoSnapshot)"
               ref="bodyComponentRef"
-              :selected-chapter="selectedChapterForDisplay"
+              :selected-chapter="chapterContentChapter"
               :project-id="project?.id"
               :active-paragraph-index="readerCurrentParagraphIndex"
               :active-paragraph-end="readerCurrentParagraphEnd"
+              :miaohong-content="miaohongPreviewContent"
+              :luomo-snapshot-content="luomoSnapshotContent"
             />
 
             <ChapterVersionsPanel
@@ -135,7 +139,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useChapterReaderBar } from '@/composables/useChapterReaderBar'
 import { useVersionResolver } from '@/composables/useVersionResolver'
 import { useChapterClipboard } from '@/composables/useChapterClipboard'
@@ -345,6 +349,73 @@ const { chapterInlineMeta } = useChapterInlineMeta({
   hasSelectedChapterContent,
 })
 
+// 候选版本描红预览：工作流面板选中候选时把正文接到 ChapterContent
+const miaohongPreviewContent = ref<string | null>(null)
+const hasMiaohongPreview = computed(() => Boolean(miaohongPreviewContent.value?.trim()))
+
+const onCandidatePreview = (content: string | null) => {
+  miaohongPreviewContent.value = content
+}
+
+// 落印签名：候选描红稿被选定提交（waitingForSelection → submitting/finalizing/succeeded）时，
+// 旧稿转快照原地朱转墨（ChapterContent 渲染 260ms 过渡），标题旁钤「定」字朱砂印一瞬
+const luomoSnapshotContent = ref<string | null>(null)
+const hasLuomoSnapshot = computed(() => Boolean(luomoSnapshotContent.value?.trim()))
+const luomoSealVisible = ref(false)
+let luomoSnapshotTimer: number | null = null
+let luomoSealTimer: number | null = null
+
+const clearLuomoSignature = () => {
+  if (luomoSnapshotTimer !== null) {
+    window.clearTimeout(luomoSnapshotTimer)
+    luomoSnapshotTimer = null
+  }
+  if (luomoSealTimer !== null) {
+    window.clearTimeout(luomoSealTimer)
+    luomoSealTimer = null
+  }
+  luomoSnapshotContent.value = null
+  luomoSealVisible.value = false
+}
+
+watch(
+  () => props.workflowPhase,
+  (phase, prevPhase) => {
+    const isLuomoMoment = prevPhase === 'waitingForSelection'
+      && (phase === 'submitting' || phase === 'finalizing' || phase === 'succeeded')
+    if (!isLuomoMoment) return
+    if (miaohongPreviewContent.value?.trim()) {
+      luomoSnapshotContent.value = miaohongPreviewContent.value
+      miaohongPreviewContent.value = null
+      if (luomoSnapshotTimer !== null) window.clearTimeout(luomoSnapshotTimer)
+      luomoSnapshotTimer = window.setTimeout(() => {
+        luomoSnapshotContent.value = null
+        luomoSnapshotTimer = null
+      }, 520)
+    }
+    luomoSealVisible.value = true
+    if (luomoSealTimer !== null) window.clearTimeout(luomoSealTimer)
+    luomoSealTimer = window.setTimeout(() => {
+      luomoSealVisible.value = false
+      luomoSealTimer = null
+    }, 1400)
+  },
+)
+
+// 章节记录尚未落库（生成中）时，为描红预览合成最小章节壳
+const chapterContentChapter = computed<Chapter | null>(() => {
+  if (selectedChapterForDisplay.value) return selectedChapterForDisplay.value
+  if ((!hasMiaohongPreview.value && !hasLuomoSnapshot.value) || props.selectedChapterNumber === null) return null
+  return {
+    chapter_number: props.selectedChapterNumber,
+    generation_status: 'generating',
+    goals: '',
+    summary: '',
+    title: '',
+    content: '',
+  }
+})
+
 const shouldShowTraceReplay = computed(() => {
   const traces = selectedChapter.value?.generation_traces ?? []
   return traces.length > 0
@@ -374,8 +445,13 @@ watch(
   () => props.selectedChapterNumber,
   () => {
     activeTab.value = 'content'
+    // 切换章节时清空上一章的描红预览与落印签名残留
+    miaohongPreviewContent.value = null
+    clearLuomoSignature()
   },
 )
+
+onUnmounted(clearLuomoSignature)
 </script>
 
 <style scoped>
@@ -395,13 +471,13 @@ watch(
   /* 极致国风脑洞：工作区熟宣纹理 */
   background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--md-on-surface) 0.6%, transparent) 0px, color-mix(in srgb, var(--md-on-surface) 0.6%, transparent) 1px, transparent 1px, transparent 36px);
   border: 3px double var(--md-outline) !important;
-  box-shadow: 3px 3px 0px var(--md-outline);
+  box-shadow: var(--md-elevation-paper-1);
 }
 
 .writing-workspace__header {
   flex-shrink: 0;
   padding: var(--md-spacing-4) var(--md-spacing-5);
-  border-bottom: 1px dashed var(--md-outline);
+  border-bottom: 1px solid var(--md-jiege);
   background-color: var(--md-surface-container-low);
 }
 
@@ -410,6 +486,53 @@ watch(
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--md-spacing-4);
+}
+
+/* 落印签名：候选描红稿被选定落墨的一瞬，标题旁钤「定」字朱砂印，钤下即走 */
+.writing-workspace__luomo-seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  width: 34px;
+  height: 34px;
+  margin-right: auto; /* 吸收剩余空间：印贴标题侧，工具栏保持居右 */
+  border-radius: var(--md-radius-xs);
+  background: var(--md-secondary);
+  color: var(--md-on-secondary);
+  font-family: var(--md-font-serif);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .writing-workspace__luomo-seal {
+    animation: workspace-luomo-seal 1.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
+@keyframes workspace-luomo-seal {
+  0% {
+    opacity: 0;
+    transform: rotate(-4deg) scale(1.3);
+  }
+  22% {
+    opacity: 1;
+    transform: rotate(-4deg) scale(0.96);
+  }
+  32% {
+    transform: rotate(-4deg) scale(1);
+  }
+  76% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(-4deg) scale(1);
+  }
 }
 
 /* 极致国风脑洞：正文区融入古典竹青淡墨横线信笺格背景 */
@@ -462,7 +585,7 @@ watch(
   justify-content: flex-start;
   margin-top: var(--md-spacing-3);
   padding: 0 var(--md-spacing-4);
-  border-bottom: 1.5px solid var(--md-outline-variant);
+  border-bottom: 1.5px solid var(--md-jiege);
   padding-bottom: 1px;
 }
 

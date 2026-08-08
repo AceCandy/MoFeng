@@ -10,7 +10,6 @@
   >
     <header class="chapter-workflow__header">
       <div class="chapter-workflow__copy">
-        <p class="chapter-workflow__eyebrow">章节工作流</p>
         <h3>{{ stateCopy.title }}</h3>
         <p>{{ error || stateCopy.description }}</p>
         <p v-if="transportCopy" class="chapter-workflow__transport">
@@ -75,7 +74,7 @@
           class="md-btn md-btn-outlined md-ripple"
           data-action="cancel"
           :disabled="pending"
-          @click="emit('cancel')"
+          @click="onCancel"
         >
           取消本轮
         </button>
@@ -158,6 +157,8 @@ const emit = defineEmits<{
   (event: 'retryProjection'): void
   (event: 'cancel'): void
   (event: 'resync'): void
+  /** 选中候选且其携带正文时向工作区发出描红预览文本；清空时传 null */
+  (event: 'preview-candidate', content: string | null): void
 }>()
 
 const selectedCandidateId = ref<number | null>(null)
@@ -234,6 +235,27 @@ const preview = (content: string) => {
 const selectCandidate = () => {
   if (!canSelect.value || props.pending || selectedCandidateId.value === null) return
   emit('selectVersion', selectedCandidateId.value)
+  // 选定后草稿进入落墨流程，描红预览随即收起
+  emit('preview-candidate', null)
+}
+
+const onCancel = () => {
+  emit('cancel')
+  emit('preview-candidate', null)
+}
+
+const resolveSelectedCandidateContent = (): string | null => {
+  const candidate = props.candidates.find((item) => item.id === selectedCandidateId.value)
+  if (!candidate || !candidate.content?.trim()) return null
+  return candidate.content
+}
+
+const emitCandidatePreview = () => {
+  if (props.phase !== 'waitingForSelection') {
+    emit('preview-candidate', null)
+    return
+  }
+  emit('preview-candidate', resolveSelectedCandidateContent())
 }
 
 const onCandidateKeydown = (index: number, event: KeyboardEvent) => {
@@ -278,6 +300,21 @@ watch(
   },
   { immediate: true },
 )
+
+// 描红预览：选中候选变化（含默认选中与候选集合切换）时同步预览文本给工作区
+watch(
+  () => [selectedCandidateId.value, props.candidates] as const,
+  emitCandidatePreview,
+  { immediate: true },
+)
+
+// 离开选版阶段（落墨提交/完成/失败等）确保预览清空
+watch(
+  () => props.phase,
+  (phase) => {
+    if (phase !== 'waitingForSelection') emit('preview-candidate', null)
+  },
+)
 </script>
 
 <style scoped>
@@ -285,7 +322,7 @@ watch(
   display: grid;
   gap: var(--md-spacing-4);
   padding: var(--md-spacing-5);
-  border-bottom: 1px solid var(--md-outline-variant);
+  border-bottom: 1px solid var(--md-jiege);
   background: var(--md-surface-container-low);
   color: var(--md-on-surface);
 }
@@ -314,21 +351,13 @@ watch(
   max-width: 72ch;
 }
 
-.chapter-workflow__eyebrow,
 .chapter-workflow__copy h3,
 .chapter-workflow__copy p {
   margin: 0;
   letter-spacing: 0.03em;
 }
 
-.chapter-workflow__eyebrow {
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-label-small);
-  font-weight: 600;
-}
-
 .chapter-workflow__copy h3 {
-  margin-top: var(--md-spacing-1);
   font-family: var(--md-font-serif);
   font-size: var(--md-title-large);
 }
@@ -375,31 +404,38 @@ watch(
   gap: var(--md-spacing-3);
 }
 
+/* 候选版本 = 一张描红笺：界格发线边框 + 描红小字签 + 朱砂描边印表选定态 */
 .chapter-workflow__candidate {
   min-width: 0;
   min-height: 112px;
   padding: var(--md-spacing-4);
-  border: 1px solid var(--md-outline);
-  border-radius: var(--md-radius-sm);
+  border: 1px solid var(--md-jiege);
+  border-radius: 2px;
   background: var(--md-surface);
   color: inherit;
   text-align: left;
   cursor: pointer;
+  transition:
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard);
 }
 
 .chapter-workflow__candidate:hover,
 .chapter-workflow__candidate:focus-visible {
-  border-color: var(--md-primary);
+  border-color: var(--md-miaohong);
 }
 
 .chapter-workflow__candidate:focus-visible {
-  outline: 2px solid var(--md-primary);
+  outline: 2px solid var(--md-miaohong);
   outline-offset: 2px;
 }
 
+/* 选定态：朱砂描边印 + 淡朱 wash 笺面，停用旧拓片硬影 */
 .chapter-workflow__candidate.is-selected {
-  border-color: var(--md-primary);
-  box-shadow: 2px 2px 0 var(--md-outline);
+  border-color: var(--md-miaohong);
+  background: var(--md-miaohong-wash);
+  box-shadow: var(--md-elevation-paper-1);
 }
 
 .chapter-workflow__candidate-label,
@@ -408,19 +444,63 @@ watch(
   letter-spacing: 0.03em;
 }
 
+/* 描红小字签：楷体淡朱 */
 .chapter-workflow__candidate-label {
+  font-family: var(--md-font-kai);
   font-weight: 700;
+  color: var(--md-miaohong);
+}
+
+/* 选定笺上的小字签收成一方淡朱描边印 */
+.chapter-workflow__candidate.is-selected .chapter-workflow__candidate-label {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid var(--md-miaohong);
+  border-radius: 2px;
+  background: var(--md-surface);
 }
 
 .chapter-workflow__candidate-preview {
   margin-top: var(--md-spacing-2);
   overflow-wrap: anywhere;
-  color: var(--md-on-surface-variant);
+  color: var(--md-miaohong);
+  font-family: var(--md-font-kai);
   line-height: 1.6;
 }
 
 .chapter-workflow__select {
   justify-self: end;
+}
+
+/* 落印主按钮（spec §5）：朱砂方章印纽，「选定并继续」是本轮的落墨钤章时刻 */
+.chapter-workflow__select.md-btn-filled {
+  background-color: var(--md-secondary);
+  color: var(--md-on-secondary);
+  border: 1px solid var(--md-secondary-dark);
+  border-radius: var(--md-radius-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  box-shadow: var(--md-elevation-paper-1);
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    transform var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard);
+}
+
+.chapter-workflow__select.md-btn-filled:hover:not(:disabled) {
+  background-color: var(--md-miaohong-strong);
+  border-color: var(--md-secondary-dark);
+  box-shadow: var(--md-elevation-paper-2);
+}
+
+.chapter-workflow__select.md-btn-filled:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.chapter-workflow__select.md-btn-filled:focus-visible {
+  outline: 1px solid var(--md-primary);
+  outline-offset: 2px;
 }
 
 @media (max-width: 700px) {

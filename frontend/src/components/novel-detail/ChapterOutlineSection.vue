@@ -128,14 +128,13 @@ export default defineComponent({
   color: var(--md-on-primary);
   font-family: var(--md-font-display);
   font-weight: 700;
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 12%, transparent);
 }
 
 .chapter-outline-section__content {
   min-width: 0;
   padding: var(--md-spacing-5);
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-sm);
+  border: 1px solid var(--md-jiege);
+  border-radius: var(--md-radius-xs);
   background-color: var(--md-surface-container-low);
 }
 

@@ -172,11 +172,11 @@ const onSearchInput = (event: Event) => {
   /* 高度随视口收边，配合 useModelPicker 的坐标 clamp，保证移动端不出屏 */
   max-height: min(420px, calc(var(--app-viewport-unit) - 32px));
   overflow: auto;
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-sm);
+  border: 1px solid var(--md-jiege);
+  border-radius: var(--md-radius-xs);
   padding: var(--md-spacing-3);
   background: var(--md-surface);
-  box-shadow: var(--md-shadow-primary-1);
+  box-shadow: var(--md-elevation-paper-2); /* 弹层上浮 */
 }
 
 .model-routing__picker-head,
@@ -218,9 +218,9 @@ const onSearchInput = (event: Event) => {
 }
 
 .model-routing__picker-row.is-selected {
-  border-color: var(--md-primary);
-  background: var(--md-primary-container);
-  color: var(--md-on-primary-container);
+  border-color: var(--md-primary); /* 焦墨描边 + 中性底，不用石青 */
+  background: var(--md-surface-container);
+  color: var(--md-on-surface);
 }
 
 .model-routing__picker-model-name {

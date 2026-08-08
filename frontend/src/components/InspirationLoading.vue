@@ -37,9 +37,9 @@
   width: 5rem;
   height: 5rem;
   border-radius: var(--md-radius-xs); /* 微直角方函，弃正圆 */
-  background-color: var(--md-primary-container);
-  color: var(--md-on-primary-container);
-  border: 3px double var(--md-outline); /* 古籍双边 */
+  background-color: var(--md-surface); /* 熟宣函底（石青归朗读域，不挪用） */
+  color: var(--md-on-surface);
+  border: 1px solid var(--md-jiege); /* 界格发线 */
   display: flex;
   align-items: center;
   justify-content: center;

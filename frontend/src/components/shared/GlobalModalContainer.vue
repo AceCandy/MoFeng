@@ -118,11 +118,9 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   background-color: var(--md-surface-bright);
-  background-image: radial-gradient(color-mix(in srgb, var(--md-primary) 3%, transparent) 1px, transparent 0);
-  background-size: 4px 4px; /* 模拟宣纸极细砂感 */
-  border: 3px double var(--md-primary); /* 古籍经典焦墨双线 */
-  border-radius: var(--md-radius-md);
-  box-shadow: var(--md-shadow-primary-1);
+  border: 1px solid var(--md-jiege); /* 1px 界格发线 */
+  border-radius: var(--md-radius-xs);
+  box-shadow: var(--md-elevation-paper-2); /* 弹层上浮 */
   outline: none;
   animation: scrollFoldOpen 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
@@ -131,9 +129,8 @@ onUnmounted(() => {
 :global([data-theme='dark']) .m3-ink-modal-box,
 :global(.dark) .m3-ink-modal-box {
   background-color: var(--md-surface);
-  background-image: radial-gradient(color-mix(in srgb, var(--md-on-surface) 2%, transparent) 1px, transparent 0);
-  border-color: var(--md-outline);
-  box-shadow: var(--md-elevation-3);
+  border-color: var(--md-jiege);
+  box-shadow: var(--md-elevation-paper-2);
 }
 
 /* 四角古黄铜包角扣 */
@@ -305,7 +302,7 @@ onUnmounted(() => {
   transform: rotate(-10deg) scale(1.05);
   background-color: var(--md-secondary);
   color: var(--md-on-secondary);
-  box-shadow: var(--md-shadow-primary-2);
+  /* 印章无影 */
 }
 
 /* 按钮物理按压交互 */

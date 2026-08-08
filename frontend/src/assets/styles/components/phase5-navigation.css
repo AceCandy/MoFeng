@@ -175,7 +175,7 @@ body .app-shell__topbar {
   background-color: var(--md-surface) !important;
   border: 1px solid var(--md-outline) !important;
   border-radius: var(--md-radius-sm) !important;
-  box-shadow: 3px 3px 0px var(--md-outline-variant) !important; /* 拓片硬影，与 user-dropdown 对齐 */
+  box-shadow: var(--md-elevation-paper-2) !important; /* 弹层纸影，与 user-dropdown 对齐 */
   z-index: 100 !important;
   padding: 14px 0 !important;
   text-align: left !important;

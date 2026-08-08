@@ -37,21 +37,22 @@
   color: var(--md-success-text);
 }
 
+/* 新纸影映射：浮起 → paper-1，弹层/高浮 → paper-2（旧拓片硬影已退役） */
 .md-elevation-0 {
   box-shadow: var(--md-elevation-0);
 }
 .md-elevation-1 {
-  box-shadow: var(--md-elevation-1);
+  box-shadow: var(--md-elevation-paper-1);
 }
 .md-elevation-2 {
-  box-shadow: var(--md-elevation-2);
+  box-shadow: var(--md-elevation-paper-2);
 }
 .md-elevation-3 {
-  box-shadow: var(--md-elevation-3);
+  box-shadow: var(--md-elevation-paper-2);
 }
 .md-elevation-4 {
-  box-shadow: var(--md-elevation-4);
+  box-shadow: var(--md-elevation-paper-2);
 }
 .md-elevation-5 {
-  box-shadow: var(--md-elevation-5);
+  box-shadow: var(--md-elevation-paper-2);
 }

@@ -588,19 +588,19 @@ const handleSubmit = () => {
 .table-card {
   margin-top: 0;
   padding: var(--md-spacing-4);
-  border: 1px solid var(--md-outline-variant); /* 与 admin-table-shell 一致的框线 */
-  border-radius: var(--md-radius-md);
+  border: 1px solid var(--md-jiege); /* 与 admin-table-shell 一致的界格发线 */
+  border-radius: var(--md-radius-xs);
   background-color: var(--md-surface);
 }
 
-/* 指标卡骨相（.metric-card 及其内部排版）已统一由 admin-panels.css 提供，hover 为中性底+拓片硬影 */
+/* 指标卡骨相（.metric-card 及其内部排版）已统一由 admin-panels.css 提供，hover 为中性底+浮起纸页影 */
 .clickable-card {
   cursor: pointer;
 }
 
 .clickable-card.is-active-all {
   border-color: var(--md-primary);
-  box-shadow: var(--md-shadow-primary-1); /* 拓片硬影，明暗主题自适应 */
+  box-shadow: var(--md-elevation-paper-1);
   background-color: var(--md-surface-container);
 }
 
@@ -625,8 +625,8 @@ const handleSubmit = () => {
 
 .filterable-item.is-active {
   border-color: var(--md-outline);
-  box-shadow: inset 2px 0 0 var(--md-secondary); /* 左侧朱砂竖描起笔，禁整框实底色块（inset 影实现，规避边框宽度禁令） */
-  background-color: var(--md-surface-container); /* 中性底，不占朱砂配额 */
+  box-shadow: var(--md-elevation-paper-1); /* 轻微浮起标识当前卷，禁整框实底色块 */
+  background-color: var(--md-surface-container);
 }
 
 /* 朱印管理员印章 */
@@ -649,7 +649,7 @@ const handleSubmit = () => {
   font-family: var(--md-font-display);
   font-weight: bold;
   border-radius: var(--md-radius-xs); /* 小方章微直角 */
-  box-shadow: 1px 1px 0 color-mix(in srgb, var(--md-secondary) 30%, transparent); /* 印章印泥压印感 */
+  /* 印章一律无影 */
   user-select: none;
   flex-shrink: 0;
 }
@@ -714,16 +714,16 @@ const handleSubmit = () => {
 .table-card-title-group p {
   margin: 6px 0 0;
   color: var(--md-on-surface-variant);
-  font-family: var(--md-font-kai);
+  font-family: var(--md-font-family); /* 落定 UI 文案一律宋体 */
   font-size: var(--md-body-small);
 }
 
-/* 双击行编辑的楷体提示（纯视觉 affordance） */
+/* 双击行编辑提示（纯视觉 affordance） */
 .table-edit-hint {
   display: block;
   margin-top: var(--md-spacing-1);
   color: var(--md-on-surface-variant);
-  font-family: var(--md-font-kai);
+  font-family: var(--md-font-family);
   font-size: var(--md-body-small);
 }
 

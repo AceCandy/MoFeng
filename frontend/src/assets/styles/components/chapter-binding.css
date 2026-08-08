@@ -38,7 +38,7 @@
     linear-gradient(135deg, color-mix(in srgb, var(--md-on-surface) 6.5%, transparent) 0%, color-mix(in srgb, var(--md-on-surface) 1.5%, transparent) 100%),
     repeating-linear-gradient(45deg, color-mix(in srgb, var(--md-on-surface) 1%, transparent) 0px, color-mix(in srgb, var(--md-on-surface) 1%, transparent) 1px, transparent 1px, transparent 4px),
     var(--md-surface) !important;
-  box-shadow: var(--md-elevation-1) !important;
+  box-shadow: var(--md-elevation-paper-1) !important; /* 选中行浮起纸影 */
   position: relative !important;
   transform: translateX(2px) !important;
 }
@@ -67,7 +67,7 @@
   color: var(--md-on-secondary);
   border: 1px solid var(--md-secondary);
   border-radius: var(--md-radius-xs);
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent);
+  /* 印章无影：闲章自重落款 */
   letter-spacing: 0;
   animation: seal-stamp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
   pointer-events: none;

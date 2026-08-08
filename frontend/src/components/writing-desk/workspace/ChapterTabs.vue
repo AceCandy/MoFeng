@@ -49,6 +49,9 @@ defineEmits<{
 .writing-workspace__tabs {
   display: flex;
   gap: 4px;
+  overflow-x: auto; /* nowrap 后窄屏允许横向滚动，防「AI 评审反馈」被视口裁切 */
+  padding-bottom: 1.5px; /* 与负外边距相抵：激活签的连卷缝留在滚动盒内不被裁断 */
+  margin-bottom: -1.5px;
 }
 
 .writing-workspace__tab-btn {
@@ -57,7 +60,7 @@ defineEmits<{
   gap: 6px;
   min-height: 38px;
   padding: 0 16px;
-  border: 1px solid var(--md-outline-variant) !important;
+  border: 1px solid var(--md-jiege) !important;
   border-bottom: none !important;
   border-radius: 4px 4px 0 0 !important; /* 笺片式上圆角 */
   background-color: color-mix(in srgb, var(--md-on-surface) 1.5%, transparent) !important;
@@ -65,6 +68,7 @@ defineEmits<{
   font-family: var(--md-font-serif);
   font-size: 13.5px;
   font-weight: 600;
+  white-space: nowrap; /* 移动端不换行：防止「章节正 文」被拦腰折断 */
   cursor: pointer;
   transition:
     background-color 0.2s ease,

@@ -3,7 +3,6 @@
   <section class="prompt-usage" aria-label="提示词阶段关系">
     <header class="prompt-usage__toolbar">
       <div>
-        <p class="prompt-usage__eyebrow">Prompt Usage Map</p>
         <h3>阶段与提示词关系</h3>
         <p>按实际调用点整理 AI 阶段、Prompt 名称、用途和当前数据库状态；点击 Prompt 名称可展开正文预览。</p>
       </div>
@@ -269,15 +268,6 @@ const refetchPrompts = () => {
   align-items: flex-start;
 }
 
-.prompt-usage__eyebrow {
-  margin: 0 0 4px;
-  color: var(--md-on-surface-variant);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-}
-
 .prompt-usage__toolbar h3 {
   margin: 0;
   font-size: 22px;
@@ -298,10 +288,10 @@ const refetchPrompts = () => {
 }
 
 .prompt-usage__button {
-  min-height: 36px;
+  min-height: 44px; /* 触控安全尺寸，交给 md-btn 骨相 */
   padding: 0 14px;
   border: 1px solid var(--md-outline);
-  border-radius: 4px;
+  border-radius: var(--md-radius-xs);
   background: var(--md-surface-container-low);
   color: var(--md-on-surface);
   font-weight: 700;
@@ -469,12 +459,12 @@ const refetchPrompts = () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: var(--md-radius-xs);
   background: var(--md-primary);
   color: var(--md-on-primary);
   font-size: 13px;
   font-weight: 800;
-  box-shadow: 2px 2px 0 color-mix(in srgb, var(--md-on-surface) 14%, transparent);
+  /* 印章一律无影 */
 }
 
 .prompt-usage__stage h5 {

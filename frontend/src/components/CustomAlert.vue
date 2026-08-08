@@ -175,7 +175,7 @@ useDialogA11y({
 .md-dialog {
   border-radius: 0 !important;
   border: 3px double var(--md-outline) !important;
-  box-shadow: 4px 4px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
+  box-shadow: var(--md-elevation-paper-2) !important; /* 弹层纸影 */
   background-color: var(--md-surface) !important;
   /* 熟宣帘纹背景 */
   background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--md-on-surface) 0.5%, transparent) 0px, color-mix(in srgb, var(--md-on-surface) 0.5%, transparent) 1px, transparent 1px, transparent 20px);
@@ -285,19 +285,19 @@ useDialogA11y({
   border: 1px solid var(--md-outline);
   background-color: transparent !important;
   color: var(--md-on-surface) !important;
-  box-shadow: 1.5px 1.5px 0px var(--md-outline);
+  box-shadow: none; /* 静无影 */
   transition: border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .custom-alert-btn-confirm:hover {
   transform: translate(-0.5px, -0.5px);
-  box-shadow: 2px 2px 0px var(--md-outline);
+  box-shadow: var(--md-elevation-paper-1); /* hover 浮起 */
   background-color: var(--md-surface-container-low) !important;
 }
 
 .custom-alert-btn-confirm:active {
   transform: translate(1px, 1px) !important;
-  box-shadow: 0px 0px 0px var(--md-outline) !important;
+  box-shadow: none !important; /* 按压清零 */
 }
 
 /* 确认按钮中式色彩映射 */
@@ -305,32 +305,30 @@ useDialogA11y({
 .custom-alert-btn-confirm--warning {
   border-color: var(--md-secondary) !important;
   color: var(--md-secondary) !important;
-  box-shadow: 1.5px 1.5px 0px var(--md-secondary);
 }
 
 .custom-alert-btn-confirm--error:hover,
 .custom-alert-btn-confirm--warning:hover {
   background-color: color-mix(in srgb, var(--md-secondary) 5%, transparent) !important;
-  box-shadow: 2.5px 2.5px 0px var(--md-secondary);
+  box-shadow: var(--md-elevation-paper-1);
 }
 
 .custom-alert-btn-confirm--error:active,
 .custom-alert-btn-confirm--warning:active {
-  box-shadow: 0px 0px 0px var(--md-secondary) !important;
+  box-shadow: none !important;
 }
 
 .custom-alert-btn-confirm--success {
   border-color: var(--md-success) !important;
   color: var(--md-success) !important;
-  box-shadow: 1.5px 1.5px 0px var(--md-success);
 }
 
 .custom-alert-btn-confirm--success:hover {
   background-color: color-mix(in srgb, var(--md-success) 5%, transparent) !important;
-  box-shadow: 2.5px 2.5px 0px var(--md-success);
+  box-shadow: var(--md-elevation-paper-1);
 }
 
 .custom-alert-btn-confirm--success:active {
-  box-shadow: 0px 0px 0px var(--md-success) !important;
+  box-shadow: none !important;
 }
 </style>

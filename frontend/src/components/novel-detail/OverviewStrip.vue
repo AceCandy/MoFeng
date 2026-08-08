@@ -76,14 +76,14 @@ defineProps<{
   box-sizing: border-box;
 }
 
-/* 一体化古典长卷大容器 */
+/* 一体化界格长卷大容器 */
 .detail-shell__overview-scroll {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
-  border: 3px double var(--md-outline); /* 古籍特有双线边框 */
-  border-radius: 4px; /* 极微方折圆角 */
+  border: 1px solid var(--md-jiege); /* 1px 界格发线 */
+  border-radius: var(--md-radius-xs); /* 界格微直角 */
   background-color: var(--md-surface); /* 熟宣底色 */
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent); /* 拓片硬投影 */
+  box-shadow: var(--md-elevation-paper-1); /* 稿纸容器浮起 */
   overflow: hidden;
   height: var(--detail-shell-overview-height);
   min-height: 0;
@@ -110,10 +110,10 @@ defineProps<{
   margin: 0;
   color: var(--md-primary-light);
   font-family: var(--md-font-serif);
-  font-size: var(--md-label-medium);
+  font-size: 12px; /* 宋体题签 */
   font-weight: 600;
-  letter-spacing: 0.15em;
-  border-bottom: 1.5px solid var(--md-outline-variant);
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--md-jiege);
   padding-bottom: 2px;
   display: inline-block;
 }
@@ -158,8 +158,8 @@ defineProps<{
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.1em;
-  border-radius: 2px;
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-secondary) 15%, transparent);
+  border-radius: var(--md-radius-xs);
+  /* 状态印一律无影 */
 }
 
 .detail-shell__status-pill::before {
@@ -288,14 +288,14 @@ defineProps<{
   line-height: 1.25;
 }
 
-/* 警示性指标（待回收伏笔） */
+/* 警示性指标（待回收伏笔）：错误语义色，不挪用朱砂 */
 .detail-shell__scroll-metric.is-alert::before {
-  border-color: var(--md-secondary);
-  background-color: var(--md-secondary-container);
+  border-color: var(--md-error-text);
+  background-color: var(--md-error-container);
 }
 
 .detail-shell__scroll-metric.is-alert strong {
-  color: var(--md-secondary); /* 数字朱批色 */
+  color: var(--md-error-text);
 }
 
 @media (min-width: 1200px) {

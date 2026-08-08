@@ -16,7 +16,7 @@
   font-family: "STXinwei", "华文新魏", "STLiti", "华文隶书", "LiSu", "隶书", var(--md-font-serif), serif !important;
   font-weight: 800; /* 魏碑粗体 */
   font-size: 15px; /* 更饱满的炸裂字形 */
-  box-shadow: var(--md-shadow-primary-2) !important;
+  /* 印章无影：钤章自重落款，不施投影 */
   cursor: pointer;
   transition:
     background-color var(--md-duration-short) var(--md-easing-standard),
@@ -28,7 +28,6 @@
 .m3-ink-modal-save-badge-btn:hover:not(:disabled) {
   background-color: var(--md-secondary-light) !important;
   transform: rotate(-10deg) scale(1.08) !important;
-  box-shadow: var(--md-shadow-primary-2) !important;
 }
 
 .m3-ink-modal-save-badge-btn:active:not(:disabled) {

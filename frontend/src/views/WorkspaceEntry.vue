@@ -83,11 +83,9 @@
     <!-- Top Right Actions -->
     <div class="workspace-entry__actions-top">
       <router-link to="/settings" class="md-btn md-btn-text md-ripple">
-        <span class="workspace-entry__icon-txt">[ 設 ]</span>
         设置
       </router-link>
       <button @click="handleLogout" class="md-btn md-btn-text md-ripple">
-        <span class="workspace-entry__icon-txt">[ 歸 ]</span>
         退出登录
       </button>
     </div>
@@ -108,7 +106,6 @@
             @click="goToWorkspace"
             class="md-btn md-btn-filled md-ripple entry-actions__primary"
           >
-            <span class="entry-actions__stamp">[ 啟 ]</span>
             进入小说工作台
           </button>
           <button
@@ -249,10 +246,8 @@ const goToWorkspace = () => {
   align-items: center;
   justify-content: center;
   padding: clamp(var(--md-spacing-4), 3vw, var(--md-spacing-8));
-  /* 采用平铺温暖熟宣纸与干燥木骨网格 */
+  /* 平铺熟宣素底，不铺点阵肌理 */
   background-color: var(--md-background) !important;
-  background-image: radial-gradient(color-mix(in srgb, var(--md-outline-variant) 60%, transparent) 1px, transparent 1px) !important;
-  background-size: 24px 24px !important;
 }
 
 .workspace-entry__actions-top {
@@ -283,14 +278,6 @@ const goToWorkspace = () => {
   color: var(--md-primary) !important;
 }
 
-/* 右上角朱砂小落款印章字标样式 */
-.workspace-entry__icon-txt {
-  font-family: var(--md-font-serif) !important;
-  font-weight: 600;
-  color: var(--md-secondary) !important; /* 朱砂红，像一枚落款小印章点醒页面 */
-  margin-right: 4px;
-}
-
 .workspace-entry__main {
   width: min(100%, 720px); /* 适度收窄，更具书卷聚拢感 */
   margin: 0 auto;
@@ -300,10 +287,10 @@ const goToWorkspace = () => {
 .workspace-entry__hero {
   text-align: center;
   padding: clamp(var(--md-spacing-8), 6vw, var(--md-spacing-12)) !important;
-  border-radius: var(--md-radius-sm) !important;
+  border-radius: var(--md-radius-xs) !important;
   border: 3px double var(--md-outline) !important;
   background: var(--md-surface) !important;
-  box-shadow: 5px 5px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
+  box-shadow: var(--md-elevation-paper-1) !important; /* 熟宣柔影 */
   position: relative;
   overflow: hidden;
 }
@@ -320,7 +307,7 @@ const goToWorkspace = () => {
 
 .hero-subtitle {
   color: var(--md-on-surface-variant) !important;
-  font-family: var(--md-font-kai) !important;
+  font-family: var(--md-font-serif) !important; /* 落定文案用宋体，楷体即草稿 */
   font-size: 16px !important;
   letter-spacing: 0.03em !important;
 }
@@ -332,9 +319,9 @@ const goToWorkspace = () => {
   display: flex;
   flex-direction: column;
   background-color: var(--md-surface) !important;
-  border-radius: var(--md-radius-sm) !important;
+  border-radius: var(--md-radius-xs) !important;
   border: 3px double var(--md-outline) !important;
-  box-shadow: 4px 4px 0px color-mix(in srgb, var(--md-on-surface) 18%, transparent) !important;
+  box-shadow: var(--md-elevation-paper-2) !important; /* 弹层柔影 */
   padding: 2px !important;
 }
 
@@ -351,7 +338,7 @@ const goToWorkspace = () => {
   gap: var(--md-spacing-5);
 }
 
-/* 焦墨动作大按钮，钤印下沉微动效 */
+/* 朱砂落印主按钮：静息无影，hover 纸影微浮，active 压下影清零 */
 .entry-actions__primary {
   min-height: 52px;
   min-width: min(100%, 320px);
@@ -359,13 +346,13 @@ const goToWorkspace = () => {
   font-size: var(--md-body-large) !important;
   gap: var(--md-spacing-3);
   border-radius: var(--md-radius-xs) !important;
-  border: 1px solid var(--md-outline) !important;
-  background-color: var(--md-primary) !important;
-  color: var(--md-on-primary) !important;
+  border: 1px solid var(--md-secondary-dark) !important;
+  background-color: var(--md-secondary) !important; /* 朱砂实底落印 */
+  color: var(--md-on-secondary) !important; /* 熟宣字 */
   font-family: var(--md-font-serif) !important;
   font-weight: 600 !important;
   letter-spacing: 0.05em;
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
+  box-shadow: none !important;
   transition:
     background-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
     border-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
@@ -378,39 +365,18 @@ const goToWorkspace = () => {
   overflow: hidden;
 }
 
-.entry-actions__primary::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 250px;
-  height: 250px;
-  background: radial-gradient(circle, var(--md-primary-light) 0%, transparent 70%);
-  border-radius: 50%;
-  transform: translate(-50%, -50%) scale(0);
-  transition: 
-    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1), 
-    opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1) !important;
-  pointer-events: none;
-  opacity: 0;
-}
-
-.entry-actions__primary:hover:not(:disabled)::before {
-  transform: translate(-50%, -50%) scale(1.5);
-  opacity: 0.3;
-}
-
 .entry-actions__primary:hover:not(:disabled) {
-  background-color: var(--md-primary-light) !important;
-  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-secondary) 25%, transparent) !important; /* 获得朱砂压章硬投影 */
+  background-color: var(--md-secondary-dark) !important;
+  box-shadow: var(--md-elevation-paper-1) !important;
+  transform: translate(-1px, -1px) !important;
 }
 
 .entry-actions__primary:active:not(:disabled) {
-  transform: translate(1.5px, 1.5px) !important;
-  box-shadow: 0.5px 0.5px 0px color-mix(in srgb, var(--md-secondary) 25%, transparent) !important; /* 点击下陷，缩回阴影 */
+  transform: translate(1px, 1px) !important;
+  box-shadow: none !important; /* 钤印压下，影清零 */
 }
 
-/* 辅动作用虚线竹青钮 */
+/* 辅动作用虚线竹青钮：静息无影，hover 纸影微浮 */
 .entry-actions__secondary {
   min-height: 48px;
   padding: 0 var(--md-spacing-6);
@@ -421,7 +387,7 @@ const goToWorkspace = () => {
   color: var(--md-on-surface-variant) !important;
   font-family: var(--md-font-serif) !important;
   font-weight: 600 !important;
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 5%, transparent) !important;
+  box-shadow: none !important;
   transition:
     background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
     border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
@@ -436,12 +402,12 @@ const goToWorkspace = () => {
   background-color: var(--md-surface-container-low) !important;
   color: var(--md-primary) !important;
   border-color: var(--md-primary-light) !important;
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
+  box-shadow: var(--md-elevation-paper-1) !important;
 }
 
 .entry-actions__secondary:active {
   transform: translate(1px, 1px) !important;
-  box-shadow: 0.5px 0.5px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
+  box-shadow: none !important;
 }
 
 /* Modal 样式国风微调 */
@@ -464,7 +430,7 @@ const goToWorkspace = () => {
 
 .updates-community-text {
   color: var(--md-on-surface) !important;
-  font-family: var(--md-font-kai) !important;
+  font-family: var(--md-font-serif) !important; /* 公告为落定文案，用宋体 */
 }
 
 .updates-timeline-connector {
@@ -516,15 +482,6 @@ const goToWorkspace = () => {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-/* 主动作按钮朱砂印章样式 */
-.entry-actions__stamp {
-  font-family: var(--md-font-serif) !important;
-  font-weight: 600;
-  color: var(--md-secondary) !important;
-  margin-right: var(--md-spacing-2);
-  user-select: none;
 }
 
 @media (max-width: 833px) {

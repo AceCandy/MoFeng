@@ -7,7 +7,7 @@
 .writing-desk-assistant-shell {
   background-color: var(--md-surface-dim) !important;
   border-left: 1px solid var(--md-outline-variant) !important;
-  box-shadow: var(--md-elevation-drawer-left) !important;
+  box-shadow: var(--md-elevation-paper-1) !important; /* 屏风浮起纸影 */
 }
 
 /* 夹注化排版覆写 */

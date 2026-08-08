@@ -22,13 +22,12 @@ defineOptions({
 </script>
 
 <style scoped>
-/* 墨风国风表格容器：双线古籍框，方圆风骨微直角 */
+/* 墨风国风表格容器：界格发线，微直角，静息无影 */
 .mofeng-table-shell {
   background-color: var(--md-surface);
-  border: 3px double var(--md-outline);
+  border: 1px solid var(--md-jiege);
   padding: 4px;
-  border-radius: var(--md-radius-xs); /* 2px 极窄直角 */
-  box-shadow: var(--md-shadow-primary-1); /* 拓片硬投影 */
+  border-radius: var(--md-radius-xs);
   position: relative;
   overflow: hidden;
   transition: border-color var(--md-duration-medium) var(--md-easing-standard),
@@ -124,12 +123,11 @@ defineOptions({
   color: var(--md-primary) !important;
 }
 
-/* 当前激活页：显示为醒目的红色小方章印拓 */
+/* 当前激活页：显示为醒目的红色小方章印拓（印章无影） */
 :deep(.n-pagination-item--active) {
   background-color: var(--md-secondary) !important; /* 朱砂红 */
   color: var(--md-on-primary) !important;
   border-color: var(--md-secondary) !important;
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-secondary) 25%, transparent) !important;
 }
 
 /* 页码切换箭头项 */
@@ -145,6 +143,6 @@ defineOptions({
 /* 自适应及阴影过渡效果 */
 .mofeng-table-shell:hover {
   border-color: var(--md-primary-light);
-  box-shadow: var(--md-elevation-2);
+  box-shadow: var(--md-elevation-paper-1); /* hover 浮起纸影 */
 }
 </style>

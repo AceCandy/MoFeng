@@ -197,7 +197,7 @@ defineExpose({
   letter-spacing: 0.06em !important;
 }
 
-/* 输入框：竹青细框、微直角，聚焦时焦墨框线加拓片硬影 */
+/* 输入框：竹青细框、微直角，聚焦时焦墨框线加浮起纸页影 */
 :deep(.n-input) {
   background-color: transparent !important;
   box-shadow: none !important;
@@ -211,7 +211,7 @@ defineExpose({
 
 :deep(.n-input.n-input--focus) {
   border-color: var(--md-primary) !important;
-  box-shadow: var(--md-shadow-primary-1) !important;
+  box-shadow: var(--md-elevation-paper-1) !important;
 }
 
 :deep(.n-input .n-input__border),
@@ -252,7 +252,7 @@ defineExpose({
   border-left: 1px dashed var(--md-outline) !important;
 }
 
-/* 朱印阳刻金石微方章 */
+/* 朱印阳刻金石微方章（印章一律无影） */
 .password-sidebar-note .note-seal {
   display: inline-flex;
   align-items: center;
@@ -265,7 +265,6 @@ defineExpose({
   font-size: 11px !important;
   font-weight: 900 !important;
   border: 1px solid var(--md-outline) !important;
-  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-secondary) 25%, transparent) !important;
   transform: rotate(-4deg);
   margin-bottom: 12px;
   margin-left: 4px;

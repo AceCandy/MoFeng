@@ -3,7 +3,7 @@
   <div :class="{ 'app-page': !props.isModal, 'settings-page': true, 'is-in-modal': props.isModal }">
     <section v-if="!props.isModal" class="settings-hero" aria-label="AI 能力中心总览">
       <div class="settings-hero__copy">
-        <p class="settings-eyebrow">AI 能力中心 <span class="settings-hero__stamp">[ 設 ]</span></p>
+        <p class="settings-eyebrow">AI 能力中心</p>
         <h2>模型、供应商与创作阶段路由</h2>
         <p>
           统一维护你的文本生成、记忆检索和阶段路由策略，让每个创作环节都调用到合适的 AI
@@ -354,27 +354,18 @@ const handleLLMConfigSaved = async () => {
   justify-content: space-between;
   gap: var(--md-spacing-4);
   padding: clamp(var(--md-spacing-5), 4vw, var(--md-spacing-8));
-  border: 3px double var(--md-outline) !important;
+  border: 1px solid var(--md-jiege) !important; /* 1px 界格发线 */
   border-radius: var(--md-radius-xs) !important;
   background-color: var(--md-surface) !important;
-  box-shadow: 4px 4px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
+  box-shadow: var(--md-elevation-paper-1) !important;
 }
 
 .settings-eyebrow {
   margin: 0;
-  color: var(--md-primary-dark);
-  font-size: var(--md-label-medium);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.settings-hero__stamp {
-  font-family: var(--md-font-serif) !important;
-  font-weight: 900;
-  color: var(--md-secondary) !important;
-  margin-left: 6px;
-  user-select: none;
+  color: var(--md-on-surface-variant);
+  font-size: 12px; /* 宋体题签：小字重签条 */
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
 
 .settings-hero h2 {
@@ -391,7 +382,7 @@ const handleLLMConfigSaved = async () => {
   max-width: 72ch;
   color: var(--md-on-surface-variant);
   line-height: 1.7;
-  font-family: var(--md-font-kai) !important;
+  font-family: var(--md-font-serif) !important; /* 落定 UI 文案一律宋体 */
 }
 
 .settings-hero__status {
@@ -411,7 +402,7 @@ const handleLLMConfigSaved = async () => {
   font-size: var(--md-label-medium);
   font-weight: 700;
   border: 1px solid currentColor !important;
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
+  /* 状态印一律无影 */
 }
 
 .settings-status-chip.is-warning {
@@ -420,8 +411,8 @@ const handleLLMConfigSaved = async () => {
 }
 
 .settings-status-chip.is-focus {
-  color: var(--md-on-primary-container);
-  background-color: var(--md-primary-container);
+  color: var(--md-on-surface);
+  background-color: var(--md-surface-container);
 }
 
 .settings-status-chip.is-success {
@@ -450,10 +441,9 @@ const handleLLMConfigSaved = async () => {
 
 .settings-summary__card {
   padding: var(--md-spacing-4);
-  border: 1px solid var(--md-outline-variant) !important;
+  border: 1px solid var(--md-jiege) !important;
   border-radius: var(--md-radius-xs) !important;
   background-color: var(--md-surface) !important;
-  box-shadow: var(--md-shadow-primary-1) !important;
   transition:
     border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
@@ -461,8 +451,7 @@ const handleLLMConfigSaved = async () => {
 }
 
 .settings-summary__card:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-on-surface) 18%, transparent) !important;
+  box-shadow: var(--md-elevation-paper-1) !important;
   border-color: var(--md-outline) !important;
 }
 
@@ -481,10 +470,9 @@ const handleLLMConfigSaved = async () => {
 }
 
 .settings-metrics {
-  border: 1px solid var(--md-outline-variant) !important;
+  border: 1px solid var(--md-jiege) !important;
   border-radius: var(--md-radius-xs) !important;
   background-color: var(--md-surface) !important;
-  box-shadow: var(--md-shadow-primary-1) !important;
 }
 
 .settings-metrics summary {
@@ -560,7 +548,6 @@ const handleLLMConfigSaved = async () => {
   border: 1px dashed var(--md-warning) !important;
   background-color: var(--md-warning-container) !important;
   color: var(--md-warning-text) !important;
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-warning) 20%, transparent) !important;
 }
 
 .settings-center {
@@ -572,10 +559,10 @@ const handleLLMConfigSaved = async () => {
 
 .settings-center__nav,
 .settings-center__panel {
-  border: 3px double var(--md-outline) !important;
-  border-radius: var(--md-radius-sm) !important;
+  border: 1px solid var(--md-jiege) !important; /* 1px 界格发线 */
+  border-radius: var(--md-radius-xs) !important;
   background-color: var(--md-surface) !important;
-  box-shadow: 4px 4px 0px color-mix(in srgb, var(--md-on-surface) 12%, transparent) !important;
+  box-shadow: var(--md-elevation-paper-1) !important;
 }
 
 .settings-center__nav {
@@ -595,8 +582,7 @@ const handleLLMConfigSaved = async () => {
   min-width: 0;
   min-height: 64px;
   padding: 12px var(--md-spacing-4) !important;
-  border: 1px solid transparent;
-  border-left: 3px solid transparent; /* 固定 3px 左框，激活态只换色不改宽，消除抖动 */
+  border: 1px solid transparent; /* 等宽透明描边，激活态只换色不改宽，消除抖动 */
   border-radius: var(--md-radius-xs) !important;
   background-color: transparent;
   color: var(--md-on-surface);
@@ -631,11 +617,11 @@ const handleLLMConfigSaved = async () => {
 
 .settings-center__nav-item.is-active,
 .settings-center__nav-item[aria-selected='true'] {
-  border-color: var(--md-outline-variant) !important;
-  border-left-color: var(--md-secondary) !important; /* 左侧 3px 朱砂竖描作活动指示，禁整框实底 */
-  background-color: var(--md-state-layer-hover) !important;
-  color: var(--md-on-surface) !important;
+  border-color: var(--md-jiege) !important; /* 激活=界格发线笺片，轻微浮起标识当前卷 */
+  background-color: var(--md-surface) !important;
+  color: var(--md-primary-dark) !important;
   font-weight: 700 !important;
+  box-shadow: var(--md-elevation-paper-1) !important;
 }
 
 .settings-center__nav-item:active {
@@ -670,13 +656,12 @@ const handleLLMConfigSaved = async () => {
     transform 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
-/* 激活时，红泥落地，徐徐印下 */
+/* 激活时，红泥落地，徐徐印下（印章一律无影） */
 .settings-center__nav-item.is-active::after,
 .settings-center__nav-item[aria-selected='true']::after {
   color: var(--md-secondary) !important;
   background-color: color-mix(in srgb, var(--md-secondary) 12%, transparent) !important;
   border: 1px solid var(--md-secondary) !important;
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-secondary) 18%, transparent) !important;
   opacity: 1;
   transform: scale(1) translateY(0); /* 盖章印入熟宣 */
 }

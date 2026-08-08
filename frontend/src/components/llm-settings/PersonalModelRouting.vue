@@ -366,7 +366,7 @@ defineExpose({
 
 .model-routing__eyebrow {
   margin: 0 0 var(--md-spacing-1);
-  color: var(--md-primary-dark);
+  color: var(--md-on-surface-variant); /* 宋体题签 */
 }
 
 .model-routing__section-copy h3 {
@@ -386,14 +386,13 @@ defineExpose({
 
 
 .model-routing__provider-card {
-  border: 3px double var(--md-outline);
+  border: 1px solid var(--md-jiege); /* 1px 界格发线 */
   border-radius: var(--md-radius-xs);
   padding: var(--md-spacing-4);
   background: var(--md-surface);
   position: relative;
   display: grid;
   gap: var(--md-spacing-3);
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent);
   transition: box-shadow var(--md-duration-short) var(--md-easing-standard);
 }
 
@@ -426,12 +425,12 @@ defineExpose({
   }
 }
 
-/* 正在编辑中的卡片视觉增强 */
+/* 正在编辑中的卡片视觉增强：焦墨发线 + 浮起纸页 */
 .model-routing__provider-card.is-editing {
   border-style: solid !important;
-  border-width: 2px !important;
+  border-width: 1px !important;
   border-color: var(--md-primary) !important;
   background: color-mix(in srgb, var(--md-surface) 96%, var(--md-primary)) !important;
-  box-shadow: 4px 4px 0px color-mix(in srgb, var(--md-on-surface) 12%, transparent) !important;
+  box-shadow: var(--md-elevation-paper-1) !important;
 }
 </style>

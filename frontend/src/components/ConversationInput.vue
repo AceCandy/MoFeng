@@ -214,7 +214,7 @@ watch(isManualInput, async (newValue) => {
     opacity var(--md-duration-short) var(--md-easing-standard),
     transform var(--md-duration-short) var(--md-easing-standard) !important;
   cursor: pointer;
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 3%, transparent) !important;
+  box-shadow: none !important; /* 静息无影 */
 }
 
 .conv-input__option--primary {
@@ -227,7 +227,7 @@ watch(isManualInput, async (newValue) => {
   background-color: var(--md-surface-container) !important; /* 中性墨晕浅灰底，不落朱砂 */
   border-color: var(--md-outline) !important; /* 竹青框 */
   color: var(--md-primary) !important; /* 焦墨字 */
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 10%, transparent) !important;
+  box-shadow: var(--md-elevation-paper-1) !important; /* 熟宣柔影 */
 }
 
 .conv-input__option--neutral {
@@ -240,7 +240,7 @@ watch(isManualInput, async (newValue) => {
   background-color: color-mix(in srgb, var(--md-on-surface) 4%, transparent) !important;
   border-color: var(--md-primary) !important;
   color: var(--md-primary) !important;
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
+  box-shadow: var(--md-elevation-paper-1) !important; /* 熟宣柔影 */
 }
 
 /* 选项滚动条 */
@@ -277,8 +277,8 @@ watch(isManualInput, async (newValue) => {
 .conv-input__textarea:focus {
   outline: none;
   border-color: var(--md-primary); /* 焦墨框线 */
-  /* DESIGN input focus：右下拓片硬投影，弃零偏移发光环 */
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 20%, transparent);
+  /* focus：熟宣柔影，弃拓片硬投影 */
+  box-shadow: var(--md-elevation-paper-1);
 }
 
 .conv-input__textarea:disabled {
@@ -289,10 +289,10 @@ watch(isManualInput, async (newValue) => {
 .conv-input__send {
   width: 44px;
   height: 44px;
-  border-radius: var(--md-radius-xs); /* DESIGN 按钮形制：2px 微直角，弃正圆 */
-  background-color: var(--md-primary);
-  color: var(--md-on-primary);
-  border: 1px solid var(--md-outline); /* 竹青单像素极细描边 */
+  border-radius: var(--md-radius-xs); /* 微直角方印 */
+  background-color: var(--md-secondary); /* 朱砂实底落印钮（提交类主动作） */
+  color: var(--md-on-secondary); /* 熟宣字 */
+  border: 1px solid var(--md-secondary-dark);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -302,7 +302,7 @@ watch(isManualInput, async (newValue) => {
 }
 
 .conv-input__send:hover {
-  background-color: color-mix(in oklch, var(--md-primary) 82%, var(--md-primary-dark));
+  background-color: var(--md-secondary-dark);
 }
 
 .conv-input__send:focus-visible {

@@ -70,7 +70,7 @@ const featureRail = [
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  color: color-mix(in srgb, var(--md-on-surface) 76%, transparent);
+  color: var(--md-miaohong); /* AI 流程描红 */
 }
 
 .auth-feature-rail__icon :deep(svg) {

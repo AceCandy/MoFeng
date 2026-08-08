@@ -46,18 +46,18 @@
   box-shadow: none !important;
 }
 
-/* Filled Button (焦墨主按钮) */
+/* Filled Button (焦墨主按钮，重力链：静无影 → hover 浮起纸影 → 按压清零) */
 .md-btn-filled {
   background-color: var(--md-primary);
   color: var(--md-on-primary);
   border: 1px solid var(--md-outline);
-  box-shadow: var(--md-shadow-primary-1);
+  box-shadow: none;
 }
 
 .md-btn-filled:hover:not(:disabled) {
   background-color: var(--md-primary-dark);
   border-color: var(--md-primary);
-  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-on-surface) 25%, transparent);
+  box-shadow: var(--md-elevation-paper-1);
 }
 
 .md-btn-filled:active:not(:disabled) {
@@ -95,29 +95,29 @@
   color: var(--md-primary);
 }
 
-/* Tonal Button (石青创意/AI主按钮) */
+/* Tonal Button (石青创意/AI主按钮，同 filled 重力链) */
 .md-btn-tonal {
   background-color: var(--md-primary-container);
   color: var(--md-on-primary-container);
   border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 2px 2px 0px rgba(46, 92, 138, 0.2);
+  box-shadow: none;
 }
 
 .md-btn-tonal:hover:not(:disabled) {
   background-color: color-mix(in srgb, var(--md-primary-container) 82%, black); /* 稍深石青 */
-  box-shadow: 3px 3px 0px rgba(46, 92, 138, 0.3);
+  box-shadow: var(--md-elevation-paper-1);
 }
 
-/* Elevated Button (拓片轻悬浮按钮) */
+/* Elevated Button (浮起纸页按钮) */
 .md-btn-elevated {
   background-color: var(--md-surface-bright);
   color: var(--md-primary);
   border: 1px solid var(--md-outline-variant);
-  box-shadow: var(--md-elevation-1);
+  box-shadow: var(--md-elevation-paper-1);
 }
 
 .md-btn-elevated:hover:not(:disabled) {
-  box-shadow: var(--md-elevation-2);
+  box-shadow: var(--md-elevation-paper-2);
   background-color: var(--md-surface);
 }
 
@@ -158,7 +158,7 @@
   border-radius: var(--md-radius-md); /* 6px 直角 */
   background-color: var(--md-secondary); /* 朱砂红，稀有罕用规则下的画龙点睛 */
   color: var(--md-on-primary);
-  box-shadow: var(--md-shadow-primary-2);
+  box-shadow: var(--md-elevation-paper-1);
   cursor: pointer;
   transition:
     background-color var(--md-duration-medium) var(--md-easing-standard),
@@ -170,7 +170,7 @@
 
 .md-fab:hover:not(:disabled) {
   background-color: var(--md-secondary-light);
-  box-shadow: 4px 4px 0px color-mix(in srgb, var(--md-secondary) 35%, transparent);
+  box-shadow: var(--md-elevation-paper-2);
   transform: translate(-1px, -1px);
 }
 

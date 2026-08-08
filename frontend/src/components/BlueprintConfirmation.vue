@@ -1,6 +1,6 @@
 <!-- AIMETA P=蓝图确认_蓝图确认对话框|R=确认操作|NR=不含编辑功能|E=component:BlueprintConfirmation|X=internal|A=确认对话框|D=vue|S=dom|RD=./README.ai -->
 <template>
-  <div class="blueprint-confirm fade-in">
+  <div class="blueprint-confirm fade-in" data-provenance="ai">
     <h2 class="blueprint-confirm__title">信息收集完成！</h2>
 
     <div class="blueprint-confirm__body">
@@ -350,9 +350,9 @@ onUnmounted(() => {
 .blueprint-confirm {
   padding: var(--md-spacing-6) var(--md-spacing-8);
   background-color: var(--md-surface);
-  border-radius: var(--md-radius-sm) !important; /* 中式木刻微直角 */
-  border: 3px double var(--md-outline) !important; /* 古籍双线框线，与左侧浑然一体 */
-  box-shadow: 4px 4px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
+  border-radius: var(--md-radius-xs) !important; /* 界格微直角 */
+  border: 1px solid var(--md-jiege) !important; /* 1px 界格发线，与稿纸同构 */
+  box-shadow: var(--md-elevation-paper-1) !important;
   /* 弹性布局一屏内高贴合收敛，绝不发生视口下溢，击杀看不全 Bug */
   height: 100%;
   max-height: calc(var(--app-viewport-unit) - 120px) !important;
@@ -400,9 +400,8 @@ onUnmounted(() => {
   padding: var(--md-spacing-2) var(--md-spacing-4);
 }
 
-/* 宣纸手撕卡片外壳，用于沿着手撕边缘承载水墨拓片偏置投影 */
+/* 卡片外壳：硬影清零，hover 仅保留轻微上浮 */
 .blueprint-confirm__card-wrapper {
-  filter: drop-shadow(3px 3px 0px color-mix(in srgb, var(--md-on-surface) 12%, transparent));
   transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
 }
@@ -411,32 +410,23 @@ onUnmounted(() => {
   transform: translateY(-2px);
 }
 
-/* 极致手撕毛边宣纸卡片本体 */
+/* AI 蓝图稿卡片：描红三信号之 wash 底 + 1px 描红界栏，直边取代手撕毛边 */
 .blueprint-confirm__card {
-  background-color: var(--md-surface); /* 宣纸温润：长文正文只用熟宣，不用近白 */
-  border: none; /* clip-path 裁切，不需要粗硬的扁平外边框 */
+  background-color: var(--md-miaohong-wash);
+  border: 1px solid var(--md-miaohong-line);
+  border-radius: var(--md-radius-xs);
   padding: var(--md-spacing-6) var(--md-spacing-8);
   text-align: left;
   position: relative;
-  /* 极致参差不齐的手撕宣纸边缘 polygon */
-  clip-path: polygon(
-    0% 1.5%, 10% 0.8%, 23% 1.5%, 35% 0.7%, 48% 1.4%, 60% 0.6%, 72% 1.3%, 85% 0.5%, 98% 1.2%, 100% 2%,
-    99.2% 12%, 100% 25%, 99.4% 38%, 99.8% 50%, 99.1% 63%, 99.7% 76%, 99.3% 88%, 99.9% 98.5%,
-    88% 99.3%, 76% 99.8%, 63% 99.2%, 50% 99.6%, 38% 99.1%, 25% 99.7%, 13% 99.3%, 0% 98.8%,
-    0.6% 88%, 0.2% 76%, 0.7% 63%, 0.3% 50%, 0.8% 38%, 0.2% 25%, 0.7% 12%
-  );
-  /* 用硬边内描线保留宣纸层次，避免大半径模糊阴影造成电子化观感。 */
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--md-secondary) 4%, transparent);
 }
 
-/* 引言卡片专属：淡砂晕染，错落雅致 */
+/* 引言卡片专属：洗色略深的晕染，错落雅致 */
 .blueprint-confirm__card--intro {
   background: linear-gradient(
     135deg,
-    var(--md-surface) 70%,
-    color-mix(in srgb, var(--md-secondary) 2%, transparent) 100%
+    var(--md-miaohong-wash) 70%,
+    var(--md-miaohong-line) 100%
   );
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--md-secondary) 8%, transparent);
 }
 
 /* 右上角钤印金石闲章（微倾斜阳刻） */
@@ -458,11 +448,10 @@ onUnmounted(() => {
   transform: rotate(-8deg);
   user-select: none;
   background-color: color-mix(in srgb, var(--md-secondary) 2%, transparent);
-  box-shadow: inset 0 0 4px color-mix(in srgb, var(--md-secondary) 8%, transparent);
+  /* 印章一律无影 */
   transition:
     background-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
     border-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
     color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
@@ -470,42 +459,41 @@ onUnmounted(() => {
 }
 
 .blueprint-confirm__card-wrapper:hover .blueprint-confirm__card-seal {
-  transform: rotate(-4deg) scale(1.08);
+  transform: rotate(-4deg);
   color: var(--md-secondary);
   border-color: var(--md-secondary);
-  box-shadow:
-    inset 0 0 6px color-mix(in srgb, var(--md-secondary) 12%, transparent),
-    0 2px 4px color-mix(in srgb, var(--md-secondary) 10%, transparent);
 }
 
-/* 卡片古典标题 */
+/* 卡片标题：AI 草稿挂描红 + 真楷 */
 .blueprint-confirm__card-title {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-family: var(--md-font-display);
+  font-family: var(--md-font-kai);
   font-size: 17px;
   font-weight: 700;
-  letter-spacing: 0.03em; /* 碑拓骨力：小标题拉开字距 */
-  color: var(--md-primary);
+  letter-spacing: 0.03em;
+  color: var(--md-miaohong-strong);
   margin-bottom: var(--md-spacing-4);
-  border-bottom: 1px dashed color-mix(in srgb, var(--md-secondary) 15%, transparent);
+  border-bottom: 1px dashed var(--md-miaohong-line);
   padding-bottom: var(--md-spacing-2);
   margin-top: 0;
   padding-right: 50px; /* 留出印章的安全区域 */
 }
 
-/* 卡片内部正文：朱丝栏信笺底纹与行高精准锁定 */
+/* 卡片正文：描红界格行线与行高精准锁定，AI 稿正文同挂描红 + 真楷 */
 .blueprint-confirm__card-content {
   text-align: justify;
   text-justify: inter-ideograph;
-  /* 朱砂红横格底纹底图 */
+  font-family: var(--md-font-kai);
+  color: var(--md-miaohong);
+  /* 淡朱横格底纹底图 */
   background-image: repeating-linear-gradient(
     to bottom,
     transparent,
     transparent 27px,
-    color-mix(in srgb, var(--md-secondary) 4%, transparent) 27px,
-    color-mix(in srgb, var(--md-secondary) 5%, transparent) 28px
+    var(--md-miaohong-line) 27px,
+    var(--md-miaohong-line-strong) 28px
   );
   background-size: 100% 28px;
   padding: 14px 0; /* 精密微调内边距确保首行刚好落于红格线上 */
@@ -537,9 +525,9 @@ onUnmounted(() => {
 }
 
 .blueprint-confirm__card-content :deep(blockquote) {
-  border: 1px dashed color-mix(in srgb, var(--md-secondary) 15%, transparent);
-  border-left: 1.5px solid var(--md-secondary);
-  background-color: color-mix(in srgb, var(--md-secondary) 2%, transparent);
+  border: 1px dashed var(--md-miaohong-line);
+  border-left: 1px solid var(--md-miaohong-line-strong);
+  background-color: var(--md-miaohong-wash);
   padding: 14px 18px;
   margin: 14px 0;
   border-radius: var(--md-radius-xs);
@@ -608,7 +596,6 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent);
 }
 
 .blueprint-confirm__spinner-center--done {
@@ -677,25 +664,38 @@ onUnmounted(() => {
 .blueprint-confirm__generate-btn {
   padding: var(--md-spacing-3) var(--md-spacing-8);
   font-weight: 600;
+  border-radius: var(--md-radius-xs); /* 微直角方印 */
+  background-color: var(--md-secondary); /* 朱砂实底落印钮（提交类主动作） */
+  color: var(--md-on-secondary); /* 熟宣字 */
+  border: 1px solid var(--md-secondary-dark);
+  box-shadow: none; /* 落印钮静息无影 */
+  transition: background-color 0.15s, box-shadow 0.15s;
+}
+
+.blueprint-confirm__generate-btn:hover:not(:disabled) {
+  background-color: var(--md-secondary-dark);
+  box-shadow: var(--md-elevation-paper-1);
+}
+
+.blueprint-confirm__generate-btn:active:not(:disabled) {
+  box-shadow: none; /* 按下影清零，印落纸面 */
 }
 
 /* ============================================
    深夜案头自适应（暗色模式）
-   说明：凡 color-mix + 主题变量的描线/阴影/染色均已明暗自适应，
+   说明：描红洗色与界栏均为明暗自适应 token，
    此处只保留暗色下刻意加深卡面的设计决策。
    ============================================ */
 :root[data-theme='dark'] .blueprint-confirm__card {
   background-color: var(--md-surface-dim);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--md-on-surface) 8%, transparent);
 }
 
 :root[data-theme='dark'] .blueprint-confirm__card--intro {
   background: linear-gradient(
     135deg,
     var(--md-surface-dim) 70%,
-    color-mix(in srgb, var(--md-secondary) 3%, transparent) 100%
+    var(--md-miaohong-line) 100%
   );
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--md-secondary) 16%, transparent);
 }
 
 /* 传统太极流转动画与飞旋气流 */

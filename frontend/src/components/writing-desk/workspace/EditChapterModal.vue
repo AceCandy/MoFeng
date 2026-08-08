@@ -1,4 +1,4 @@
-<!-- AIMETA P=章节编辑模态框_正文编辑|R=编辑_保存|NR=不含章节生成_版本选择|E=component:EditChapterModal|X=internal|A=编辑模态框|D=vue|S=dom|RD=./README.ai -->
+<!-- AIMETA P=章节编辑模态框_正文编辑|R=MofengEditor编辑_保存|NR=不含章节生成_版本选择|E=component:EditChapterModal|X=internal|A=编辑模态框|D=vue|S=dom|RD=./README.ai -->
 <template>
   <div v-if="showEditModal" class="md-dialog-overlay" @click.self="closeEditModal">
     <div
@@ -33,17 +33,17 @@
         </button>
       </div>
 
-      <!-- 模态框内容 -->
+      <!-- 模态框内容：MofengEditor 方格稿纸编辑器（替换旧纯文本 textarea） -->
       <div class="flex-1 p-6 overflow-hidden">
         <div class="flex flex-col h-full">
-          <label :for="editingContentInputId" class="md-text-field-label mb-2"> 章节内容 </label>
-          <textarea
-            :id="editingContentInputId"
-            v-model="editingContent"
-            class="md-textarea flex-1 w-full resize-none"
-            placeholder="请输入章节内容..."
-            :disabled="isSaving"
-          ></textarea>
+          <span class="md-text-field-label mb-2">章节内容</span>
+          <div class="m3-editor-dialog__editor-host flex-1">
+            <MofengEditor
+              v-model="editingContent"
+              placeholder="请输入章节内容..."
+              :readonly="isSaving"
+            />
+          </div>
           <div class="md-body-small md-on-surface-variant mt-2">
             字数统计: {{ editingWordCount }}
           </div>
@@ -66,7 +66,7 @@
           type="button"
           @click="saveEditedContent"
           :disabled="isSaving || !editingContent.trim()"
-          class="md-btn md-btn-filled md-ripple disabled:opacity-50 flex items-center gap-2"
+          class="md-btn md-btn-filled md-ripple m3-editor-dialog__save disabled:opacity-50 flex items-center gap-2"
         >
           <svg
             v-if="isSaving"
@@ -80,7 +80,7 @@
               clip-rule="evenodd"
             ></path>
           </svg>
-          {{ isSaving ? '保存中...' : '保存' }}
+          {{ isSaving ? '保存中...' : '落墨保存' }}
         </button>
       </div>
     </div>
@@ -90,6 +90,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useEditChapterModal } from '@/composables/useEditChapterModal'
+import MofengEditor from '@/components/writing-desk/editor/MofengEditor.vue'
 
 interface Props {
   /** 当前选中章节是否有正文（决定能否打开编辑） */
@@ -113,7 +114,6 @@ const {
   editDialogRef,
   editCloseButtonRef,
   editDialogTitleId,
-  editingContentInputId,
   editingContent,
   isSaving,
   editingWordCount,
@@ -134,10 +134,10 @@ defineExpose({ openEditModal })
 .m3-editor-dialog {
   max-width: min(1200px, calc(100vw - 32px));
   max-height: calc(var(--app-viewport-unit) - 32px);
-  border-radius: 0 !important; /* 强制方直 */
-  border: 3px double var(--md-outline) !important;
+  border-radius: var(--md-radius-xs) !important;
+  border: 3px double var(--md-outline) !important; /* 古籍双粗细线框 */
   background-color: var(--md-surface) !important;
-  box-shadow: 4px 4px 0px var(--md-outline) !important;
+  box-shadow: var(--md-elevation-paper-2) !important; /* 纸页软影，替代旧拓片硬影 */
 }
 
 .m3-editor-dialog__header {
@@ -151,24 +151,48 @@ defineExpose({ openEditModal })
   letter-spacing: 0.05em;
 }
 
+.m3-editor-dialog__editor-host {
+  min-height: 0;
+  overflow: auto;
+}
+
+.m3-editor-dialog__editor-host :deep(.mofeng-editor) {
+  height: 100%;
+}
+
 .m3-editor-dialog__footer {
   border-top: 1px dashed var(--md-outline) !important;
   background-color: var(--md-surface-container-low) !important;
 }
 
-.md-textarea {
-  border-radius: 0 !important;
-  border: 1px solid var(--md-outline) !important;
-  background-color: var(--md-surface) !important;
-  font-family: var(--md-font-family);
-  font-size: var(--md-body-large);
-  line-height: 1.7;
-  padding: 12px;
+/* 落印主按钮：朱砂方章印纽，「落墨保存」是本章的钤章时刻 */
+.m3-editor-dialog__save.md-btn-filled {
+  background-color: var(--md-secondary);
+  color: var(--md-on-secondary);
+  border: 1px solid var(--md-secondary-dark);
+  border-radius: var(--md-radius-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  box-shadow: var(--md-elevation-paper-1);
+  transition:
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    transform var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard);
 }
 
-.md-textarea:focus {
-  border-color: var(--md-secondary) !important;
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-secondary) 20%, transparent) !important;
-  outline: none;
+.m3-editor-dialog__save.md-btn-filled:hover:not(:disabled) {
+  background-color: var(--md-miaohong-strong);
+  border-color: var(--md-secondary-dark);
+  box-shadow: var(--md-elevation-paper-2);
+}
+
+.m3-editor-dialog__save.md-btn-filled:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.m3-editor-dialog__save.md-btn-filled:focus-visible {
+  outline: 1px solid var(--md-primary);
+  outline-offset: 2px;
 }
 </style>

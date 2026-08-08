@@ -119,8 +119,8 @@ const onSelectStage = (stageKey: string, event: Event) => {
   gap: var(--md-spacing-2);
   align-items: center;
   padding: var(--md-spacing-3);
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-md);
+  border: 1px solid var(--md-jiege);
+  border-radius: var(--md-radius-xs);
   background: var(--md-surface);
 }
 

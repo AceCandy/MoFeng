@@ -1,6 +1,6 @@
-/* AIMETA P=模型设置弹窗_朱印落宣折扇开合|R=settings-modal 模型设置弹窗中国风重绘+折扇开合|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* AIMETA P=模型设置弹窗_界格发线弹层|R=settings-modal 模型设置弹窗描红界格世界重绘|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
 /* ============================================
-   模型设置弹窗「朱印落宣，折扇开合」高画质中国风重绘
+   模型设置弹窗：界格发线 + 笺片激活（描红界格世界）
    ============================================ */
 
 /* 1. 根容器自适应极简案头 */
@@ -33,9 +33,9 @@
   padding: 2px !important;
   gap: 0 !important;
   background-color: var(--md-surface-container-low) !important;
-  border: 1px solid var(--md-outline-variant) !important;
-  border-radius: var(--md-radius-sm) !important; /* 严整方折直角风格 */
-  box-shadow: var(--md-elevation-1) !important; /* 拓片硬影，明暗主题自适应 */
+  border: 1px solid var(--md-jiege) !important;
+  border-radius: var(--md-radius-xs) !important; /* 界格微直角 */
+  box-shadow: var(--md-elevation-paper-1) !important; /* 浮起纸页影 */
   overflow: hidden !important;
 }
 
@@ -75,14 +75,14 @@
   display: none !important;
 }
 
-/* 5. 激活态：中性底 + 焦墨字 + 底部 2px 朱砂竖描（横向 tab 的竖描等价物），
+/* 5. 激活态：熟宣底 + 焦墨字 + 底部 1px 焦墨发线（与 SettingsView 笺片式激活同构），
    印章字由 SettingsView scoped 的 ::after 小方印承担，禁整条实底朱砂 */
 .settings-page.is-in-modal .settings-center__nav-item.is-active,
 .settings-page.is-in-modal .settings-center__nav-item[aria-selected='true'] {
-  background-color: var(--md-state-layer-hover) !important;
-  color: var(--md-on-surface) !important;
+  background-color: var(--md-surface) !important;
+  color: var(--md-primary-dark) !important;
   font-weight: 700 !important;
-  box-shadow: inset 0 -2px 0 0 var(--md-secondary) !important;
+  box-shadow: inset 0 -1px 0 0 var(--md-primary) !important;
 }
 
 /* 6. Hover 触觉交互：中性底 + 焦墨字（朱砂罕用规则） */
@@ -97,11 +97,11 @@
   transition-duration: 0.05s !important; /* 瞬时按压回馈 */
 }
 
-/* 7. 配置面板容器水墨感融合 */
+/* 7. 配置面板容器：界格发线 + 微直角 */
 .settings-page.is-in-modal .settings-center__panel {
   width: 100% !important; /* 确保横向彻底铺满 */
-  border: 1px solid var(--md-outline-variant) !important;
-  border-radius: var(--md-radius-md) !important;
+  border: 1px solid var(--md-jiege) !important;
+  border-radius: var(--md-radius-xs) !important;
   background-color: color-mix(in srgb, var(--md-surface) 98%, transparent) !important;
   padding: var(--md-spacing-5) !important;
 }

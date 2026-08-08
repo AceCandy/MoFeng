@@ -278,7 +278,7 @@ const providerKeyLabel = (provider: UserModelProvider): string =>
   border-color: var(--md-primary);
   background: var(--md-primary);
   color: var(--md-on-primary);
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent);
+  box-shadow: var(--md-elevation-paper-1);
 }
 
 .model-routing__provider-delete {
@@ -320,7 +320,7 @@ const providerKeyLabel = (provider: UserModelProvider): string =>
   background: var(--md-error);
   color: var(--md-on-error);
   border-color: color-mix(in srgb, var(--md-error) 30%, transparent);
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-error) 20%, transparent);
+  box-shadow: var(--md-elevation-paper-1);
 }
 
 .model-routing__toggle:focus-visible,
@@ -348,20 +348,20 @@ const providerKeyLabel = (provider: UserModelProvider): string =>
   z-index: 2;
 }
 
-/* 拉取模型：石青 tonal 辅助按钮（tonal 统一为石青，不用朱砂） */
+/* 拉取模型：中性墨系辅助按钮（落印重力：静无影 → hover paper-1 → active 影清零） */
 .model-routing__provider-actions .md-btn-tonal {
   position: relative;
-  border: 1px solid color-mix(in srgb, var(--md-primary-container) 55%, transparent);
+  border: 1px solid var(--md-outline);
   border-radius: var(--md-radius-xs) !important;
-  background: var(--md-primary-container) !important;
-  color: var(--md-on-primary-container) !important;
+  background: var(--md-surface-container) !important;
+  color: var(--md-primary-dark) !important;
   font-family: var(--md-font-label);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.05em;
   height: 34px;
   padding: 0 16px;
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-primary-container) 30%, transparent);
+  box-shadow: none;
   transition:
     background-color var(--md-duration-short) var(--md-easing-standard),
     border-color var(--md-duration-short) var(--md-easing-standard),
@@ -385,13 +385,13 @@ const providerKeyLabel = (provider: UserModelProvider): string =>
 }
 
 .model-routing__provider-actions .md-btn-tonal:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--md-primary-container) 88%, var(--md-on-surface)) !important;
-  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-primary-container) 38%, transparent);
+  background: var(--md-surface) !important;
+  box-shadow: var(--md-elevation-paper-1);
 }
 
 .model-routing__provider-actions .md-btn-tonal:active:not(:disabled) {
   transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-primary-container) 20%, transparent);
+  box-shadow: none;
 }
 
 .model-routing__provider-actions .md-btn-tonal:disabled {

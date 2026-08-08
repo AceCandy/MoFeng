@@ -14,7 +14,7 @@
   font-size: var(--md-label-large);
   font-weight: 600;
   text-decoration: none;
-  box-shadow: var(--md-elevation-2);
+  box-shadow: var(--md-elevation-paper-1); /* 浮起纸影 */
   transform: translateY(calc(-100% - var(--md-spacing-6)));
   transition: transform var(--md-duration-short) var(--md-easing-standard);
 }

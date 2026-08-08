@@ -92,7 +92,7 @@ useDialogA11y({
   border-radius: var(--md-radius-md);
   border: 3px double var(--md-outline);
   background-color: var(--md-surface);
-  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent);
+  box-shadow: var(--md-elevation-paper-2);
 }
 
 .m3-detail-dialog__header {
@@ -118,6 +118,6 @@ useDialogA11y({
   font-weight: bold;
   letter-spacing: 0.05em;
   padding: 2px 6px;
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
+  box-shadow: none !important;
 }
 </style>

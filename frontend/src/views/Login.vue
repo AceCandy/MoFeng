@@ -192,16 +192,6 @@ const handleLogin = async () => {
 
 <style scoped>
 .login-page {
-  --auth-ink: var(--md-on-surface);
-  --auth-ink-soft: var(--md-on-surface-variant);
-  --auth-line: var(--md-outline);
-  --auth-line-soft: var(--md-outline-variant);
-  --auth-vermilion: var(--md-secondary-dark);
-  --auth-paper: #faf6ed;
-  --auth-paper-light: #fbf7ec;
-  --auth-paper-field: rgba(253, 250, 240, 0.52);
-  --md-secondary-readable: var(--md-secondary-dark);
-
   min-height: var(--app-viewport-unit);
   position: relative;
   display: flex;
@@ -210,11 +200,12 @@ const handleLogin = async () => {
   overflow: hidden;
   padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
     max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
-  background:
-    linear-gradient(180deg, rgba(45, 39, 29, 0.08), rgba(45, 39, 29, 0.16)),
-    url('../assets/mofeng_login_bg_v2.webp') center / cover,
-    #d8cbb7;
-  color: var(--auth-ink);
+  /* 描红界格：熟宣底 + 青灰界格发线方目（非文本装饰），明暗场随令牌自适应 */
+  background-color: var(--md-background);
+  background-image:
+    repeating-linear-gradient(0deg, var(--md-jiege) 0 1px, transparent 1px 72px),
+    repeating-linear-gradient(90deg, var(--md-jiege) 0 1px, transparent 1px 72px);
+  color: var(--md-on-surface);
 }
 
 .login-scroll {
@@ -230,22 +221,7 @@ const handleLogin = async () => {
   padding: clamp(14px, 2vw, 32px);
   overflow: hidden;
   border-radius: var(--md-radius-sm);
-  background:
-    linear-gradient(180deg, rgba(45, 39, 29, 0.04), rgba(45, 39, 29, 0.08)),
-    repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.014) 0 1px, transparent 1px 24px),
-    var(--auth-paper-light);
-  color: var(--auth-ink);
-}
-
-.login-page::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 50% 40%, rgba(252, 246, 231, 0.28), transparent 38%),
-    linear-gradient(180deg, rgba(45, 39, 29, 0.02), rgba(45, 39, 29, 0.1));
-  z-index: 0;
+  color: var(--md-on-surface);
 }
 
 .login-panel {
@@ -255,13 +231,14 @@ const handleLogin = async () => {
   width: 100%;
   box-sizing: border-box;
   padding: clamp(20px, 2.2vw, 32px);
+  /* 稿纸容器：3px double 唯一合法居所 + 淡朱竖行线 */
   border: 3px double var(--md-outline);
   border-radius: var(--md-radius-xs);
   background:
-    repeating-linear-gradient(90deg, transparent, transparent 38px, color-mix(in srgb, var(--md-on-surface) 3%, transparent) 38px, color-mix(in srgb, var(--md-on-surface) 4%, transparent) 40px),
-    linear-gradient(var(--auth-paper-light), var(--auth-paper));
-  box-shadow: 4px 4px 0 color-mix(in srgb, var(--md-on-surface) 14%, transparent);
-  color: var(--auth-ink);
+    repeating-linear-gradient(90deg, transparent 0 39px, var(--md-miaohong-line) 39px 40px),
+    linear-gradient(var(--md-surface), var(--md-surface));
+  box-shadow: var(--md-elevation-paper-2); /* 稿纸上浮弹层纸影 */
+  color: var(--md-on-surface);
 }
 
 .login-card__header,
@@ -289,7 +266,7 @@ const handleLogin = async () => {
   align-items: center;
   gap: clamp(8px, 0.85vw, 14px);
   margin: 0;
-  color: var(--auth-ink);
+  color: var(--md-on-surface);
   font-family: var(--md-font-serif);
   font-size: clamp(28px, 2.25vw, 38px);
   font-weight: 600;
@@ -297,21 +274,25 @@ const handleLogin = async () => {
   letter-spacing: 0.08em;
 }
 
+/* 题字旁落印：朱砂实底钤章，印章无影 */
 .login-card__header h2 span {
   width: clamp(18px, 1.4vw, 22px);
   height: clamp(18px, 1.4vw, 22px);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1.5px solid var(--auth-vermilion);
-  color: var(--auth-vermilion);
+  border: 1px solid var(--md-secondary-dark);
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-secondary);
+  color: var(--md-on-secondary);
   font-size: 12px;
   letter-spacing: 0;
+  transform: rotate(-4deg);
 }
 
 .login-card__header p {
   margin: clamp(8px, 0.8vw, 12px) 0 0;
-  color: var(--auth-ink-soft);
+  color: var(--md-on-surface-variant);
   font-size: clamp(12px, 0.9vw, 14px);
   letter-spacing: 0.04em;
 }
@@ -329,7 +310,7 @@ const handleLogin = async () => {
 }
 
 .md-text-field-label {
-  color: var(--auth-ink);
+  color: var(--md-on-surface);
   font-family: var(--md-font-serif);
   font-size: clamp(12px, 0.88vw, 14px);
   font-weight: 600;
@@ -344,14 +325,13 @@ const handleLogin = async () => {
   width: 100%;
   height: clamp(46px, 3.35vw, 54px);
   padding: 0 clamp(44px, 3.2vw, 52px) 0 clamp(14px, 1.15vw, 18px);
-  border: 1px solid var(--auth-line);
+  border: 1px solid var(--md-outline);
   border-radius: var(--md-radius-xs);
-  background-color: var(--auth-paper-field);
-  color: var(--auth-ink);
+  background-color: var(--md-surface-container-low);
+  color: var(--md-on-surface);
   font-family: var(--md-font-serif);
   font-size: clamp(13px, 0.96vw, 15px);
   letter-spacing: 0.03em;
-  box-shadow: inset 0 0 0 1px rgba(255, 251, 241, 0.55);
   transition:
     background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
     border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -360,21 +340,19 @@ const handleLogin = async () => {
 
 .md-text-field-input:focus {
   outline: none;
-  border-color: var(--auth-ink);
-  background-color: rgba(253, 251, 245, 0.9);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 251, 241, 0.75),
-    2px 2px 0 color-mix(in srgb, var(--auth-ink) 18%, transparent);
+  border-color: var(--md-primary);
+  background-color: var(--md-surface);
+  box-shadow: var(--md-elevation-paper-1); /* 落笔浮起 */
 }
 
 /* 键盘焦点可见环（≥3:1），鼠标 focus 不重复显示 */
 .md-text-field-input:focus-visible {
-  outline: 2px solid var(--auth-ink);
+  outline: 2px solid var(--md-primary);
   outline-offset: 2px;
 }
 
 .md-text-field-input::placeholder {
-  color: color-mix(in srgb, var(--auth-ink-soft) 52%, transparent);
+  color: color-mix(in srgb, var(--md-on-surface-variant) 52%, transparent);
 }
 
 .md-text-field-icon {
@@ -386,7 +364,7 @@ const handleLogin = async () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: color-mix(in srgb, var(--auth-ink-soft) 65%, transparent);
+  color: color-mix(in srgb, var(--md-on-surface-variant) 65%, transparent);
   transform: translateY(-50%);
 }
 
@@ -399,7 +377,7 @@ const handleLogin = async () => {
 }
 
 .md-text-field-icon--button:hover {
-  color: var(--auth-ink);
+  color: var(--md-on-surface);
 }
 
 .login-options {
@@ -407,7 +385,7 @@ const handleLogin = async () => {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  color: var(--auth-ink-soft);
+  color: var(--md-on-surface-variant);
   font-family: var(--md-font-serif);
   font-size: clamp(11px, 0.82vw, 13px);
 }
@@ -432,18 +410,17 @@ const handleLogin = async () => {
 .login-remember span {
   width: 14px;
   height: 14px;
-  border: 1px solid var(--auth-line);
-  background: rgba(253, 251, 245, 0.62);
-  box-shadow: inset 0 0 0 2px rgba(253, 251, 245, 0.8);
+  border: 1px solid var(--md-outline);
+  background: var(--md-surface);
 }
 
 .login-remember input:checked + span {
   background: var(--md-secondary);
-  border-color: var(--md-secondary);
+  border-color: var(--md-secondary-dark);
 }
 
 .login-remember input:focus-visible + span {
-  outline: 2px solid var(--auth-line);
+  outline: 2px solid var(--md-primary);
   outline-offset: 2px;
 }
 
@@ -452,7 +429,7 @@ const handleLogin = async () => {
   align-items: flex-start;
   gap: 10px;
   padding: 10px 12px;
-  border: 1px dashed color-mix(in srgb, var(--auth-vermilion) 52%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--md-secondary) 52%, transparent);
   border-radius: var(--md-radius-xs);
   background: var(--md-error-container);
   color: var(--md-error-text);
@@ -472,6 +449,7 @@ const handleLogin = async () => {
   font-size: 12px;
 }
 
+/* 落印钮：提交即钤章——朱砂实底 + 深朱 1px 边 + 宣白字，静无影 */
 .login-submit {
   width: 100%;
   min-height: clamp(48px, 3.55vw, 56px);
@@ -479,17 +457,15 @@ const handleLogin = async () => {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  border: 1px solid color-mix(in srgb, var(--auth-ink) 75%, transparent);
+  border: 1px solid var(--md-secondary-dark);
   border-radius: var(--md-radius-xs);
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0)),
-    var(--auth-ink);
-  color: var(--auth-paper-light);
+  background-color: var(--md-secondary);
+  color: var(--md-on-secondary);
   font-family: var(--md-font-serif);
   font-size: clamp(14px, 1vw, 16px);
   font-weight: 600;
   letter-spacing: 0.14em;
-  box-shadow: 2px 2px 0 color-mix(in srgb, var(--auth-ink) 20%, transparent);
+  box-shadow: none; /* 静无影 */
   transition:
     background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -497,13 +473,13 @@ const handleLogin = async () => {
 }
 
 .login-submit:hover:not(:disabled) {
-  background-color: var(--md-primary-light);
-  box-shadow: 3px 3px 0 color-mix(in srgb, var(--auth-ink) 24%, transparent);
+  background-color: var(--md-secondary-dark);
+  box-shadow: var(--md-elevation-paper-1); /* hover 浮起 */
 }
 
 .login-submit:active:not(:disabled) {
   transform: translate(1px, 1px);
-  box-shadow: 1px 1px 0 color-mix(in srgb, var(--auth-ink) 22%, transparent);
+  box-shadow: none; /* 按压清零 */
 }
 
 .login-submit:disabled {
@@ -514,7 +490,7 @@ const handleLogin = async () => {
 .login-submit__mark {
   width: 18px;
   height: 18px;
-  color: var(--md-outline);
+  color: color-mix(in srgb, var(--md-on-secondary) 72%, transparent);
 }
 
 .login-spinner {
@@ -529,7 +505,7 @@ const handleLogin = async () => {
   align-items: center;
   justify-content: center;
   margin-top: clamp(8px, 0.8vw, 12px);
-  color: var(--auth-line);
+  color: var(--md-outline);
 }
 
 .login-divider::before,
@@ -537,7 +513,7 @@ const handleLogin = async () => {
   content: '';
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--auth-line-soft), transparent);
+  background: linear-gradient(90deg, transparent, var(--md-outline-variant), transparent);
 }
 
 .login-divider span {
@@ -553,16 +529,16 @@ const handleLogin = async () => {
   align-items: center;
   justify-content: center;
   margin-top: 8px;
-  color: var(--auth-ink-soft);
+  color: var(--md-on-surface-variant);
   font-size: 12px;
 }
 
 .login-oauth {
   min-height: 46px;
   margin-top: 10px;
-  border-color: var(--auth-line);
+  border-color: var(--md-outline);
   border-radius: var(--md-radius-xs);
-  color: var(--auth-ink);
+  color: var(--md-on-surface);
   font-family: var(--md-font-serif);
 }
 
@@ -577,7 +553,7 @@ const handleLogin = async () => {
   justify-content: center;
   gap: 10px;
   margin-top: clamp(8px, 0.85vw, 14px);
-  color: var(--auth-ink-soft);
+  color: var(--md-on-surface-variant);
   font-family: var(--md-font-serif);
   font-size: clamp(12px, 0.9vw, 14px);
 }
@@ -612,9 +588,6 @@ const handleLogin = async () => {
     justify-content: flex-start;
     overflow-y: auto;
     padding: max(6px, env(safe-area-inset-top)) 6px max(12px, env(safe-area-inset-bottom));
-    background:
-      linear-gradient(180deg, rgba(45, 39, 29, 0.06), rgba(45, 39, 29, 0.14)),
-      #d8cbb7;
   }
 
   .login-scroll {
@@ -629,7 +602,7 @@ const handleLogin = async () => {
   .login-panel {
     align-self: stretch;
     padding: 22px 18px 24px;
-    box-shadow: 3px 3px 0 color-mix(in srgb, var(--md-on-surface) 12%, transparent);
+    box-shadow: var(--md-elevation-paper-2); /* 稿纸上浮弹层纸影 */
   }
 
   .login-card__header {

@@ -868,14 +868,13 @@ onUnmounted(() => {
   background-color: var(--md-secondary) !important;
   color: var(--md-on-secondary) !important;
   border: 1px solid var(--md-outline) !important;
-  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-secondary) 25%, transparent) !important;
+  /* 印章无影：落印徽章自重落款 */
   transform: rotate(-1.5deg) !important;
 }
 
 /* 悬浮微升，产生毛笔书写的弹跳动感 */
 .theme-toggle-btn:hover .app-shell__action-badge {
   transform: scale(1.08) rotate(5deg) !important;
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 20%, transparent) !important;
 }
 
 /* 顶栏继续创作方正金石按钮样式 */

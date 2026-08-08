@@ -11,7 +11,7 @@
     "build": "run-p type-check \"build-only {@}\" -- && npm run build:budget",
     "preview": "vite preview",
     "build-only": "vite build",
-    "build:budget": "node -e \"process.env.BUNDLE_BUDGET_WARN_JS_TOTAL_GZIP_KB=430; process.env.BUNDLE_BUDGET_WARN_CSS_GZIP_KB=24; process.env.BUNDLE_BUDGET_MAX_CSS_GZIP_KB=26; import('./scripts/check-bundle-budget.mjs')\"",
+    "build:budget": "node -e \"process.env.BUNDLE_BUDGET_WARN_JS_TOTAL_GZIP_KB=560; process.env.BUNDLE_BUDGET_MAX_JS_GZIP_KB=130; process.env.BUNDLE_BUDGET_MAX_JS_TOTAL_GZIP_KB=600; process.env.BUNDLE_BUDGET_WARN_CSS_GZIP_KB=24; process.env.BUNDLE_BUDGET_MAX_CSS_GZIP_KB=26; import('./scripts/check-bundle-budget.mjs')\"",
     "api:export": "cd ../backend && python3 -m app.openapi_export --output openapi.json",
     "api:generate:types": "openapi-typescript ../backend/openapi.json --alphabetize --output src/api/generated/schema.d.ts",
     "api:generate": "npm run api:export && npm run api:generate:types",
@@ -30,6 +30,9 @@
   "dependencies": {
     "@fontsource/noto-serif-sc": "^5.2.8",
     "@tanstack/vue-query": "^5.100.10",
+    "@tiptap/pm": "^3.29.2",
+    "@tiptap/starter-kit": "^3.29.2",
+    "@tiptap/vue-3": "^3.29.2",
     "@types/marked": "^5.0.2",
     "@xstate/vue": "5.0.1",
     "dompurify": "^3.4.5",

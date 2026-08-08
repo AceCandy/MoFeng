@@ -20,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-// variant 仅切换移动端装饰底图：login 用立轴案头场景，register 用横幅山水。
+// variant 保留以兼容 login/register 调用方；描红引子视觉已统一，不再按变体切换底图。
 withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'register' })
 </script>
 
@@ -29,35 +29,13 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   min-width: 0;
   position: relative;
   overflow: hidden;
-  border-radius: var(--md-radius-sm) 0 0 var(--md-radius-sm);
-  background-color: var(--md-surface-container-high);
+  /* 描红引子：淡朱 wash 底 + 界格行线（AI 侧描红稿），明暗场随令牌自适应 */
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-miaohong-wash);
   background-image:
-    linear-gradient(
-      color-mix(in srgb, var(--md-surface-container-high) 14%, transparent),
-      color-mix(in srgb, var(--md-surface-container-high) 14%, transparent)
-    ),
-    url('../../assets/mofeng_scroll_left_v2.webp');
-  background-position: center;
-  background-size: cover;
+    repeating-linear-gradient(0deg, var(--md-miaohong-line) 0 1px, transparent 1px 56px),
+    repeating-linear-gradient(90deg, var(--md-miaohong-line) 0 1px, transparent 1px 56px);
   color: var(--md-on-surface);
-}
-
-.auth-intro::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(
-      circle at 62% 18%,
-      color-mix(in srgb, var(--md-surface-container-low) 50%, transparent),
-      transparent 25%
-    ),
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--md-surface-container-low) 40%, transparent),
-      color-mix(in srgb, var(--md-surface-container-high) 16%, transparent)
-    );
 }
 
 .auth-intro__spine {
@@ -65,8 +43,8 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   top: clamp(40px, 12%, 72px);
   left: clamp(24px, 11%, 56px);
   z-index: 1;
-  color: color-mix(in srgb, var(--md-primary-light) 56%, transparent);
-  font-family: var(--md-font-serif);
+  color: var(--md-miaohong-strong);
+  font-family: var(--md-font-kai);
   font-size: clamp(13px, 1.1vw, 15px);
   letter-spacing: 0.18em;
   writing-mode: vertical-rl;
@@ -88,16 +66,16 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
 
 .auth-intro__brand h1 {
   margin: 0;
-  color: color-mix(in srgb, var(--md-on-surface) 96%, transparent);
+  color: var(--md-on-surface);
   font-family: var(--md-font-serif);
   font-size: clamp(54px, 5.3vw, 86px);
   font-weight: 600;
   line-height: 1.02;
   letter-spacing: 0.06em;
   writing-mode: vertical-rl;
-  text-shadow: 0 0 10px color-mix(in srgb, var(--md-surface-container-low) 88%, transparent);
 }
 
+/* 名章落印：朱砂实底 + 深朱 1px 边，印章无影 */
 .auth-intro__seal {
   align-self: center;
   width: 30px;
@@ -106,14 +84,15 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  border: 2px solid var(--md-secondary-dark);
-  border-radius: var(--md-radius-none);
-  background: color-mix(in srgb, var(--md-surface-container-high) 45%, transparent);
-  color: var(--md-secondary-dark);
+  border: 1px solid var(--md-secondary-dark);
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-secondary);
+  color: var(--md-on-secondary);
   font-family: var(--md-font-serif);
   font-size: 18px;
   font-weight: 600;
   line-height: 1;
+  transform: rotate(-3deg);
 }
 
 .auth-intro__meta {
@@ -123,16 +102,16 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   gap: clamp(12px, 1.5vw, 22px);
 }
 
+/* 引子文案：kind 作 AI 之声（真楷描红），slogan 作作家许诺（真楷落墨） */
 .auth-intro__kind,
 .auth-intro__slogan {
   margin: 0;
-  font-family: var(--md-font-serif);
+  font-family: var(--md-font-kai);
   writing-mode: vertical-rl;
-  text-shadow: 0 0 10px color-mix(in srgb, var(--md-surface-container-low) 84%, transparent);
 }
 
 .auth-intro__kind {
-  color: color-mix(in srgb, var(--md-primary-light) 86%, transparent);
+  color: var(--md-miaohong-strong);
   font-size: clamp(14px, 1.25vw, 17px);
   font-weight: 600;
   line-height: 1.7;
@@ -141,7 +120,7 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
 
 .auth-intro__slogan {
   margin-top: clamp(28px, 3.5vw, 48px);
-  color: color-mix(in srgb, var(--md-on-surface) 90%, transparent);
+  color: var(--md-on-surface);
   font-size: clamp(16px, 1.45vw, 22px);
   font-weight: 600;
   line-height: 1.82;
@@ -157,12 +136,13 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   align-items: center;
   gap: clamp(8px, 1vw, 14px);
   margin: 0;
-  color: color-mix(in srgb, var(--md-on-surface) 78%, transparent);
+  color: var(--md-on-surface-variant);
   font-family: var(--md-font-serif);
   font-size: clamp(12px, 1vw, 14px);
   letter-spacing: 0.08em;
 }
 
+/* 脚印小章：朱砂实底，印章无影 */
 .auth-intro__stamp {
   width: clamp(30px, 2.6vw, 38px);
   height: clamp(30px, 2.6vw, 38px);
@@ -170,30 +150,19 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  border: 2px solid var(--md-secondary-dark);
-  border-radius: var(--md-radius-none);
-  color: var(--md-secondary-dark);
+  border: 1px solid var(--md-secondary-dark);
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-secondary);
+  color: var(--md-on-secondary);
   font-size: clamp(15px, 1.35vw, 21px);
   font-weight: 600;
   line-height: 1;
+  transform: rotate(3deg);
 }
 
 @media (max-width: 833px) {
   .auth-intro {
     min-height: 276px;
-    border-radius: var(--md-radius-sm) var(--md-radius-sm) 0 0;
-    background-position: 42% center;
-  }
-
-  /* 登录页移动端沿用立轴案头场景（register 维持横幅山水） */
-  .auth-intro--login {
-    background-image:
-      linear-gradient(
-        color-mix(in srgb, var(--md-surface-container-high) 14%, transparent),
-        color-mix(in srgb, var(--md-surface-container-high) 14%, transparent)
-      ),
-      url('../../assets/mofeng_login_scene_v3.webp');
-    background-position: center 18%;
   }
 
   .auth-intro__spine {
@@ -243,8 +212,9 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
     bottom: 14px;
     gap: 8px;
     padding: 5px 8px;
+    border: 1px solid var(--md-miaohong-line);
     border-radius: var(--md-radius-xs);
-    background: color-mix(in srgb, var(--md-surface-container-high) 55%, transparent);
+    background: var(--md-surface);
     font-size: 11px;
     letter-spacing: 0.04em;
   }

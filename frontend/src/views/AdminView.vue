@@ -246,11 +246,11 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
 }
 
 .admin-console__nav {
-  /* 古典古籍线装双线栏 */
-  border: 3px double var(--md-outline) !important;
-  border-radius: var(--md-radius-sm) !important; /* 微直角 4px */
-  background-color: var(--md-surface) !important; /* 熟宣白 */
-  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-on-surface) 12%, transparent) !important;
+  /* 界格发线页签栏 */
+  border: 1px solid var(--md-jiege) !important;
+  border-radius: var(--md-radius-xs) !important;
+  background-color: var(--md-surface) !important; /* 熟宣 */
+  box-shadow: var(--md-elevation-paper-1) !important;
   display: flex; /* 改为 flex 页签左右铺开，更具折页感 */
   flex-wrap: nowrap;
   gap: 0;
@@ -295,10 +295,10 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
 
 .admin-console__nav-item.is-active,
 .admin-console__nav-item[aria-selected='true'] {
-  border: 1px dashed color-mix(in srgb, var(--md-secondary) 15%, transparent) !important;
-  border-left: 1.5px solid var(--md-secondary) !important; /* 纤细朱砂竖描起笔，干掉AI粗条 */
-  background-color: color-mix(in srgb, var(--md-secondary) 8%, transparent) !important; /* 晕染熟宣红 */
-  color: var(--md-secondary) !important;
+  border: 1px solid var(--md-jiege) !important; /* 界格发线笺片 */
+  background-color: var(--md-surface-container-low) !important;
+  color: var(--md-primary-dark) !important; /* 焦墨 */
+  box-shadow: var(--md-elevation-paper-1) !important; /* 轻微浮起标识当前卷 */
 }
 
 /* “盤、籍、令、卷、誌、樞、鑰” 终极金石印章 ::after - 初始悬空隐形，防止布局抖动 */
@@ -329,13 +329,12 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
     transform 0.35s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
-/* 激活时，红泥落地，徐徐印下 */
+/* 激活时，红泥落地，徐徐印下（印章一律无影） */
 .admin-console__nav-item.is-active::after,
 .admin-console__nav-item[aria-selected='true']::after {
   color: var(--md-secondary) !important;
   background-color: color-mix(in srgb, var(--md-secondary) 12%, transparent) !important;
   border: 1px solid var(--md-secondary) !important;
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-secondary) 15%, transparent) !important;
   opacity: 1;
   transform: scale(1) translateY(0); /* 盖章 */
   animation: ink-seal-press 0.4s cubic-bezier(0.19, 1, 0.22, 1) both;
@@ -398,7 +397,7 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
     display: grid !important; /* 窄屏改回网格 */
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     overflow-x: visible;
-    border-radius: var(--md-radius-sm) !important;
+    border-radius: var(--md-radius-xs) !important;
     padding: var(--md-spacing-2) !important;
   }
 

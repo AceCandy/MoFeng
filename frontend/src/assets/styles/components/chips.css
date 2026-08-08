@@ -51,7 +51,6 @@ button.md-chip,
   background-color: var(--md-primary-container); /* 石青 AI 容器 */
   border-color: var(--md-primary-container);
   color: var(--md-on-primary-container);
-  box-shadow: 1px 1px 0px rgba(46, 92, 138, 0.15);
 }
 
 .md-chip-input {
@@ -85,7 +84,7 @@ button.md-chip,
   border-radius: var(--md-radius-xs); /* 2px */
   letter-spacing: 0.08em;
   text-shadow: 0.5px 0.5px 0px color-mix(in srgb, var(--md-secondary) 10%, transparent);
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-secondary) 15%, transparent);
+  /* 印章无影：落款自重，不施投影 */
   position: relative;
 }
 
@@ -103,7 +102,7 @@ button.md-chip,
   border: 1.5px solid var(--md-secondary);
   border-radius: var(--md-radius-xs);
   letter-spacing: 0.08em;
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-secondary) 20%, transparent);
+  /* 印章无影 */
 }
 
 /* 触控防范热区 (Touch Target Expansion)

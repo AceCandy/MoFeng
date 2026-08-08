@@ -37,7 +37,7 @@
   --n-border: 1px solid var(--md-outline) !important;
   --n-border-hover: 1px solid var(--md-primary-light) !important;
   --n-border-focus: 1px solid var(--md-primary) !important;
-  --n-box-shadow-focus: var(--md-shadow-primary-1) !important;
+  --n-box-shadow-focus: var(--md-elevation-paper-1) !important;
   --n-color: var(--md-surface-container-low) !important;
   --n-color-focus: var(--md-surface) !important;
   --n-text-color: var(--md-on-surface) !important;
@@ -60,7 +60,7 @@
 .n-input:focus {
   border-color: var(--md-primary) !important;
   background-color: var(--md-surface) !important;
-  box-shadow: var(--md-shadow-primary-1) !important;
+  box-shadow: var(--md-elevation-paper-1) !important;
 }
 
 /* 2.3 下拉框与选择组件魔改 (n-select / n-base-selection) */
@@ -70,7 +70,7 @@
   --n-border-hover: 1px solid var(--md-primary-light) !important;
   --n-border-active: 1px solid var(--md-primary) !important;
   --n-border-focus: 1px solid var(--md-primary) !important;
-  --n-box-shadow-focus: var(--md-shadow-primary-1) !important;
+  --n-box-shadow-focus: var(--md-elevation-paper-1) !important;
   --n-color: var(--md-surface-container-low) !important;
   --n-color-active: var(--md-surface) !important;
   border-radius: var(--md-radius-xs) !important;
@@ -83,7 +83,7 @@
   border-radius: var(--md-radius-xs) !important;
   background-color: var(--md-surface) !important;
   border: 3px double var(--md-outline) !important;
-  box-shadow: var(--md-elevation-1) !important;
+  box-shadow: var(--md-elevation-paper-2) !important; /* 弹层纸影 */
   padding: 4px !important;
 }
 
@@ -106,14 +106,14 @@
   border-radius: var(--md-radius-xs) !important;
   border: 3px double var(--md-outline) !important;
   background-color: var(--md-surface) !important;
-  box-shadow: var(--md-elevation-2) !important;
+  box-shadow: var(--md-elevation-paper-2) !important; /* 弹层纸影 */
   padding: var(--md-spacing-2) !important;
 }
 
 .n-drawer {
   border-radius: 0 !important;
   background-color: var(--md-surface-dim) !important;
-  box-shadow: var(--md-elevation-drawer-right) !important;
+  box-shadow: var(--md-elevation-paper-2) !important; /* 抽屉弹层纸影 */
 }
 
 .n-drawer-content {
@@ -190,7 +190,7 @@
   --n-border-hover: 1px solid var(--md-primary) !important;
   --n-border-pressed: 1px solid var(--md-primary) !important;
   --n-border-focus: 1px solid var(--md-primary) !important;
-  box-shadow: var(--md-shadow-primary-1) !important;
+  box-shadow: var(--md-elevation-paper-1) !important;
 }
 .n-button.n-button--primary-type:active {
   box-shadow: none !important;

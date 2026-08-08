@@ -70,6 +70,11 @@
                           :class="['writing-sidebar__status-dot', chapterStatusDotClass(chapter.chapter_number)]"
                         ></span>
                       </Tooltip>
+                      <span
+                        class="writing-sidebar__status-seal"
+                        :class="chapterStatusSealClass(chapter.chapter_number)"
+                        aria-hidden="true"
+                      >{{ chapterStatusSealText(chapter.chapter_number) }}</span>
                       <Tooltip :text="getChapterTag(chapter.chapter_number)">
                         <span class="writing-sidebar__chapter-no">
                           第{{ chapter.chapter_number }}章
@@ -448,6 +453,55 @@ const chapterStatusDotClass = (chapterNumber: number) => {
   return 'is-idle'
 }
 
+// 状态印三态（spec §5）：已钤印（朱砂实底）/ 描红中（淡朱描边）/ 已落墨（焦墨描边）
+type ChapterSealState = 'sealed' | 'tracing' | 'inked'
+
+const chapterStatusSealState = (chapterNumber: number): ChapterSealState => {
+  // 已完成/已保存 = 已钤印
+  if (isChapterCompleted(chapterNumber)) return 'sealed'
+  if (props.selectedChapterNumber === chapterNumber) {
+    switch (props.workflowPhase) {
+      case 'succeeded':
+        return 'sealed'
+      case 'booting':
+      case 'submitting':
+      case 'running':
+      case 'waitingForSelection':
+      case 'finalizing':
+      case 'projectionPending':
+      case 'superseded':
+        // 生成中或已有候选待选 = 描红中
+        return 'tracing'
+      default:
+        break
+    }
+  }
+  if (
+    isChapterGeneratingLike(chapterNumber) ||
+    isChapterEvaluating(chapterNumber) ||
+    isChapterSelecting(chapterNumber) ||
+    hasChapterInProgress(chapterNumber)
+  ) {
+    return 'tracing'
+  }
+  // 其余 = 已落墨
+  return 'inked'
+}
+
+const chapterStatusSealClass = (chapterNumber: number) =>
+  `writing-sidebar__status-seal--${chapterStatusSealState(chapterNumber)}`
+
+const chapterStatusSealText = (chapterNumber: number): string => {
+  switch (chapterStatusSealState(chapterNumber)) {
+    case 'sealed':
+      return '钤'
+    case 'tracing':
+      return '描'
+    default:
+      return '墨'
+  }
+}
+
 // 为屏幕阅读器补充章节状态，避免仅依赖颜色或悬浮提示传达关键信息。
 const getChapterA11yLabel = (chapterNumber: number, title?: string | null): string => {
   const stateText = getChapterTag(chapterNumber)
@@ -488,7 +542,7 @@ watch(
   background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--md-on-surface) 0.8%, transparent) 0px, color-mix(in srgb, var(--md-on-surface) 0.8%, transparent) 1px, transparent 1px, transparent 24px);
   border: 3px double var(--md-outline) !important;
   border-radius: 0 !important;
-  box-shadow: 3px 3px 0px var(--md-outline);
+  box-shadow: var(--md-elevation-paper-1);
 }
 
 .writing-sidebar__link {
@@ -514,7 +568,7 @@ watch(
   z-index: 24;
   padding: var(--md-spacing-5) var(--md-spacing-6) var(--md-spacing-3);
   background-color: var(--md-surface);
-  border-bottom: 1px dashed var(--md-outline);
+  border-bottom: 1px solid var(--md-jiege);
 }
 
 .writing-sidebar__outline-header-row {
@@ -597,7 +651,7 @@ watch(
 
 /* 目录穿线（2px 朱砂线装书 motif）已由全局 chapter-binding.css 收口，此处不再重复定义 */
 
-/* 极致国风脑洞：木刻竹简签条样式章节行 */
+/* 极致国风脑洞：木刻竹简签条样式章节行（界格发线边框） */
 .writing-sidebar__chapter-row {
   display: block;
   width: 100%;
@@ -606,7 +660,7 @@ watch(
   -webkit-appearance: none;
   padding: 8px;
   border-radius: 0 !important;
-  border: 1px solid var(--md-outline-variant);
+  border: 1px solid var(--md-jiege);
   background-color: color-mix(in srgb, var(--md-on-surface) 1.5%, transparent);
   color: inherit;
   font: inherit;
@@ -616,6 +670,7 @@ watch(
   transition:
     background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
     border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -624,7 +679,7 @@ watch(
 .writing-sidebar__chapter-row:focus-visible {
   border-color: var(--md-outline);
   background-color: color-mix(in srgb, var(--md-secondary) 4%, var(--md-surface));
-  box-shadow: 2px 2px 0px var(--md-outline);
+  box-shadow: var(--md-elevation-paper-1);
   transform: translateX(4px);
   animation: stone-tremble 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -636,7 +691,7 @@ watch(
   margin-left: -10px !important; /* 向左平移 10px，使其恰好压在竖红线上 */
   width: calc(100% + 14px) !important; /* 显式拓宽卡片（向左超出 10px，向右超出 4px），使其绝对宽于普通卡片 */
   padding-left: 18px !important; /* 增加左侧内边距，精确对齐文字内容与状态点 */
-  box-shadow: 2px 2px 0px var(--md-secondary) !important;
+  box-shadow: var(--md-elevation-paper-1) !important;
   z-index: 10; /* 确保选中章节盖在连线上，显得更有层次 */
 }
 
@@ -665,7 +720,7 @@ watch(
 .writing-sidebar__chapter-row--completed.writing-sidebar__chapter-row--compact-selected {
   border: 1.5px solid var(--md-success) !important;
   background-color: color-mix(in srgb, var(--md-success) 6%, transparent) !important;
-  box-shadow: 2px 2px 0px var(--md-success) !important;
+  box-shadow: var(--md-elevation-paper-1) !important;
 }
 .writing-sidebar__chapter-row--completed.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-title,
 .writing-sidebar__chapter-row--completed.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-no {
@@ -689,7 +744,7 @@ watch(
 .writing-sidebar__chapter-row--pending.writing-sidebar__chapter-row--compact-selected {
   border: 1.5px solid var(--md-warning) !important;
   background-color: color-mix(in srgb, var(--md-warning) 6%, transparent) !important;
-  box-shadow: 2px 2px 0px var(--md-warning) !important;
+  box-shadow: var(--md-elevation-paper-1) !important;
 }
 .writing-sidebar__chapter-row--pending.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-title,
 .writing-sidebar__chapter-row--pending.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-no {
@@ -715,7 +770,7 @@ watch(
 .writing-sidebar__chapter-row--locked.writing-sidebar__chapter-row--compact-selected {
   border: 1.5px solid color-mix(in srgb, var(--md-on-surface-variant) 60%, transparent) !important;
   background-color: color-mix(in srgb, var(--md-on-surface-variant) 6%, transparent) !important;
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface-variant) 50%, transparent) !important;
+  box-shadow: var(--md-elevation-paper-1) !important;
 }
 .writing-sidebar__chapter-row--locked.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-title,
 .writing-sidebar__chapter-row--locked.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-no {
@@ -823,11 +878,46 @@ watch(
 }
 
 .writing-sidebar__chapter-index {
-  min-width: 72px;
+  min-width: 96px;
   display: flex;
   align-items: center;
   gap: 8px;
   padding-top: 0;
+}
+
+/* 状态印（spec §5）：章节状态三态方印，单字宋体 */
+.writing-sidebar__status-seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 2px;
+  font-family: var(--md-font-serif);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  user-select: none;
+}
+
+/* 已钤印：朱砂实底方印（已完成/已保存） */
+.writing-sidebar__status-seal--sealed {
+  background-color: var(--md-secondary);
+  color: var(--md-surface);
+}
+
+/* 描红中：淡朱描边方印（生成中或已有候选待选） */
+.writing-sidebar__status-seal--tracing {
+  border: 1px solid var(--md-miaohong);
+  background-color: var(--md-miaohong-wash);
+  color: var(--md-miaohong);
+}
+
+/* 已落墨：焦墨描边方印（其余） */
+.writing-sidebar__status-seal--inked {
+  border: 1px solid var(--md-luomo);
+  color: var(--md-luomo);
 }
 
 /* 极致国风脑洞：小圆点改造为微型“金石印章方印”，融入古典中式传统色 */

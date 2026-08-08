@@ -527,7 +527,7 @@ const { deleteChapter } = useWritingDeskChapterOps({
   .writing-desk-assistant-shell.is-drawer.is-open {
     transform: translateX(0);
     pointer-events: auto;
-    box-shadow: var(--md-elevation-drawer-right);
+    box-shadow: var(--md-elevation-paper-2); /* 抽屉弹层纸影 */
   }
 }
 
@@ -598,11 +598,11 @@ const { deleteChapter } = useWritingDeskChapterOps({
   }
 
   .writing-desk-sidebar-shell.is-drawer.is-open {
-    box-shadow: var(--md-elevation-drawer-left);
+    box-shadow: var(--md-elevation-paper-2); /* 抽屉弹层纸影 */
   }
 
   .writing-desk-assistant-shell.is-drawer.is-open {
-    box-shadow: var(--md-elevation-drawer-right);
+    box-shadow: var(--md-elevation-paper-2); /* 抽屉弹层纸影 */
   }
 }
 

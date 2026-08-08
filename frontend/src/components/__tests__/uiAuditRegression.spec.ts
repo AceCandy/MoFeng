@@ -402,7 +402,9 @@ describe('UI audit regressions', () => {
 
     expect(readLightThemeCustomProperty(css, '--md-font-serif')).toContain("'Noto Serif SC'")
     expect(readLightThemeCustomProperty(css, '--md-font-sans')).toBe('var(--md-font-serif)')
-    expect(readLightThemeCustomProperty(css, '--md-font-kai')).toBe('var(--md-font-serif)')
+    // 描红界格世界：楷体是真楷栈（描红稿/朱批字族信号），不再回退宋体别名
+    expect(readLightThemeCustomProperty(css, '--md-font-kai')).toContain("'Kaiti SC'")
+    expect(readLightThemeCustomProperty(css, '--md-font-kai')).not.toBe('var(--md-font-serif)')
     expect(readLightThemeCustomProperty(css, '--md-font-family')).toBe('var(--md-font-serif)')
     expect(readLightThemeCustomProperty(css, '--md-font-display')).toBe('var(--md-font-serif)')
     expect(readLightThemeCustomProperty(css, '--md-font-label')).toBe('var(--md-font-serif)')
@@ -457,12 +459,14 @@ describe('UI audit regressions', () => {
     expect(compareErrorBlock).not.toContain('var(--md-error);')
   })
 
-  it('uses the readable primary token for workspace eyebrow labels', () => {
+  it('uses quiet serif label styling for workspace eyebrow labels', () => {
     const source = readSource('src/views/NovelWorkspace.vue')
     const eyebrowBlock = source.match(/\.workspace-eyebrow\s*\{[\s\S]*?\}/)?.[0] ?? ''
 
-    expect(eyebrowBlock).toContain('color: var(--md-primary);')
-    expect(eyebrowBlock).not.toContain('color: var(--md-primary-dark);')
+    // 描红界格世界：题签为宋体小签（焦墨系 variant 色），禁用 eyebrow 式 uppercase 小字眉与描红权责色
+    expect(eyebrowBlock).toContain('color: var(--md-on-surface-variant);')
+    expect(eyebrowBlock).not.toContain('color: var(--md-primary);')
+    expect(eyebrowBlock).not.toContain('text-transform: uppercase')
   })
 
   it('keeps project title buttons touch-safe', () => {
@@ -537,7 +541,14 @@ describe('UI audit regressions', () => {
   it('keeps bundle budget below the warning threshold', () => {
     const packageJson = readJson<{ scripts: Record<string, string> }>('package.json')
 
-    expect(packageJson.scripts['build:budget']).toContain('BUNDLE_BUDGET_WARN_JS_TOTAL_GZIP_KB=430')
+    // 描红界格编辑器内核（TipTap/ProseMirror 独立分包 tiptap-editor，仅写作台异步加载）上调后的基线
+    expect(packageJson.scripts['build:budget']).toContain('BUNDLE_BUDGET_WARN_JS_TOTAL_GZIP_KB=560')
+    expect(packageJson.scripts['build:budget']).toContain('BUNDLE_BUDGET_MAX_JS_TOTAL_GZIP_KB=600')
+
+    // 编辑器内核必须保持独立分包，不得回流入首屏 vendor chunk
+    const viteConfigSource = readSource('vite.config.ts')
+    expect(viteConfigSource).toContain("'tiptap-editor'")
+    expect(viteConfigSource).toContain("'@tiptap', 'prosemirror'")
   })
 
   it('keeps emotion curve rendering off the Chart.js runtime path', () => {

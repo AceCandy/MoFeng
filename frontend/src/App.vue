@@ -125,20 +125,24 @@ const layoutComponent = computed(() => route.meta.layout === 'auth' ? AuthLayout
   align-items: center;
   gap: 10px;
   padding: 10px 20px;
-  border-radius: 6px;
+  border-radius: var(--md-radius-md);
   font-family: var(--md-font-serif), var(--md-font-family);
   font-size: var(--md-body-medium);
   font-weight: 500;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.02);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--md-elevation-paper-2); /* 弹层纸影 */
   border: 1.5px solid transparent;
-  /* 极致国风：宣纸帘纹背景 */
+  /* 极致国风：宣纸帘纹背景（恒为宣纸便签，不随暗场变色——纸永远是纸） */
   background-image:
     linear-gradient(to right, rgba(247, 245, 240, 0.95), rgba(247, 245, 240, 0.95)),
     repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.005) 0px, rgba(28, 32, 34, 0.005) 1px, transparent 1px, transparent 12px);
   background-blend-mode: overlay;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .global-toast-icon {
@@ -193,7 +197,9 @@ const layoutComponent = computed(() => route.meta.layout === 'auth' ? AuthLayout
 }
 .toast-fade-enter-active,
 .toast-fade-leave-active {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .toast-fade-leave-active {
   position: absolute;

@@ -241,7 +241,7 @@ const savePricing = async (model: UserAIModel) => {
 }
 
 .model-routing__model-list {
-  border-top: 1px solid var(--md-outline-variant);
+  border-top: 1px solid var(--md-jiege);
 }
 
 .model-routing__model-row {
@@ -250,7 +250,7 @@ const savePricing = async (model: UserAIModel) => {
   align-items: center;
   gap: var(--md-spacing-3);
   padding: var(--md-spacing-3) 0;
-  border-bottom: 1px solid var(--md-outline-variant);
+  border-bottom: 1px solid var(--md-jiege);
 }
 
 .model-routing__model-summary {

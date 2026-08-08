@@ -37,7 +37,7 @@ body .project-card {
   padding-left: 36px !important; /* 腾出书脊的物理位置 */
   border-radius: 2px !important;
   position: relative !important;
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 5%, transparent) !important;
+  box-shadow: var(--md-elevation-paper-1) !important; /* 浮起纸影 */
   transition:
     background-color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
     border-color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
@@ -85,17 +85,15 @@ body .project-card::after {
 body .project-card:hover {
   transform: translateY(-2px) translateZ(0) !important;
   border-color: var(--md-primary-light) !important;
-  /* 书脊与纸张阴影加深，产生实体书微微被拿起、翻开的视觉厚度 */
-  box-shadow:
-    4px 4px 0px var(--md-outline),
-    1px 1px 0px color-mix(in srgb, var(--md-primary) 14%, transparent) !important;
+  /* 上浮弹层纸影，产生实体书微微被拿起、翻开的视觉厚度 */
+  box-shadow: var(--md-elevation-paper-2) !important;
   background-color: var(--md-surface-bright) !important;
 }
 
 :root[data-theme='dark'] body .project-card {
   border-left-color: var(--md-success-container) !important; /* 暗绿松针色书脊 */
   border-color: var(--md-outline-variant) !important;
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-surface-container-lowest) 40%, transparent) !important;
+  box-shadow: var(--md-elevation-paper-1) !important; /* 浮起纸影 */
   background: linear-gradient(var(--md-surface), var(--md-surface)) !important;
 }
 
@@ -110,9 +108,7 @@ body .project-card:hover {
 }
 
 :root[data-theme='dark'] body .project-card:hover {
-  box-shadow:
-    4px 4px 0px var(--md-outline-variant),
-    1px 1px 0px color-mix(in srgb, var(--md-surface-container-lowest) 50%, transparent) !important;
+  box-shadow: var(--md-elevation-paper-2) !important;
 }
 
 /* 4. 侧边栏大改造：背景融入“檀木冰裂纹格格窗棂”底图，菜单项 Hover 覆写为“毛笔横扫枯笔飞白墨痕” */
@@ -146,7 +142,7 @@ body .app-shell__nav-item.is-active {
     linear-gradient(135deg, var(--md-primary-light), var(--md-primary)) !important;
   border-color: var(--md-primary-dark) !important;
   color: var(--md-on-primary) !important;
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 10%, transparent) !important;
+  /* 墨拓选中态由底色与边框承担，静无影 */
 }
 
 :root[data-theme='dark'] body .app-shell__nav-item:hover {

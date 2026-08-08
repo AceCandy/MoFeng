@@ -82,8 +82,6 @@
   --md-scrim-soft: rgba(28, 32, 34, 0.25);
   --md-state-layer-hover: rgba(28, 32, 34, 0.05);
   --md-state-layer-pressed: rgba(28, 32, 34, 0.1);
-  --md-shadow-primary-1: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent); /* 拓片偏置硬投影（明暗主题自适应） */
-  --md-shadow-primary-2: 3px 3px 0px color-mix(in srgb, var(--md-secondary) 22%, transparent); /* 朱印深拓（明暗主题自适应） */
   --md-secondary-container-hover: #fbebea;
   --md-info: #2e5c8a;
   --md-info-container: #eef5fc;
@@ -97,7 +95,7 @@
   /* Typography roles */
   --md-font-serif: 'Noto Serif SC', 'Source Han Serif SC', 'Noto Serif CJK SC', 'STSong', 'Songti SC', 'SimSun', serif;
   --md-font-sans: var(--md-font-serif);
-  --md-font-kai: var(--md-font-serif);
+  --md-font-kai: 'Kaiti SC', 'STKaiti', 'KaiTi', 'AR PL UKai CN', 'AR PL KaitiM GB', 'TW-Kai', 'Noto Serif SC', serif; /* 真楷体：描红稿与朱批批注专用字族（描红界格世界启用，不再回退宋体） */
   --md-font-family: var(--md-font-serif);
   --md-font-display: var(--md-font-serif);
   --md-font-label: var(--md-font-serif);
@@ -120,15 +118,8 @@
   --md-label-medium: 11.5px;
   --md-label-small: 10px;
 
-  /* Elevation (拓片硬压印偏置投影，抛弃现代高斯模糊投影) */
+  /* Elevation（拓片硬压印偏置投影已全站退役，统一改用下方 --md-elevation-paper-* 新纸页层级） */
   --md-elevation-0: none;
-  --md-elevation-1: 2px 2px 0px var(--md-outline);
-  --md-elevation-2: 3px 3px 0px var(--md-on-surface);
-  --md-elevation-3: 4px 4px 0px var(--md-on-surface);
-  --md-elevation-4: 5px 5px 0px var(--md-outline);
-  --md-elevation-5: 6px 6px 0px var(--md-on-surface);
-  --md-elevation-drawer-right: -4px 0 0px var(--md-outline);
-  --md-elevation-drawer-left: 4px 0 0px var(--md-outline);
 
   /* Radius (方圆风骨，微直角，2px / 4px / 6px) */
   --md-radius-none: 0;
@@ -167,6 +158,26 @@
   --app-topbar-height: 72px;
   --app-content-max: 1360px;
   --app-viewport-unit: 100vh;
+
+  /* ============================================
+     描红界格世界（旗舰新视觉，增法式追加）
+     AI 文本 = 淡朱楷体描红稿，作家审定 = 焦墨宋体落墨
+     ============================================ */
+  --md-miaohong: #b8402f; /* 描红正文（熟宣上对比度 4.7:1，AA 达标） */
+  --md-miaohong-strong: #9c3323; /* 描红 hover/强调 */
+  --md-miaohong-soft: #ce5a47; /* 双钩淡朱：大字标题/装饰/界格（仅 ≥24px 大字或非文本） */
+  --md-miaohong-wash: color-mix(in srgb, var(--md-miaohong) 5%, transparent); /* 描红块底色 */
+  --md-miaohong-line: color-mix(in srgb, var(--md-miaohong) 22%, transparent); /* 稿纸行线 */
+  --md-miaohong-line-strong: color-mix(in srgb, var(--md-miaohong) 38%, transparent); /* 稿纸边栏/米字主笔 */
+  --md-jiege: color-mix(in srgb, var(--md-primary-light) 26%, transparent); /* 青灰界格发线（结构面） */
+  --md-luomo: #1c2224; /* 落墨正文色（= --md-on-surface，语义别名） */
+  /* 注：规格 §2 的真楷体栈 --md-font-kai 已存在（上方仍为宋体别名）。
+     未改造表面（设置/灵感/admin/批注等）均引用它，且有回归测试锁定现值，
+     依 §6「token 演进必须加法式」此处不改值，楷体栈切换留给描红稿组件落地阶段。 */
+
+  /* 新纸页层级（全站统一投影法则：浮起 paper-1，弹层/稿纸上浮 paper-2；旧拓片硬影令牌已退役删除） */
+  --md-elevation-paper-1: 0 1px 2px rgba(28, 32, 34, 0.08), 0 2px 8px rgba(28, 32, 34, 0.06); /* 浮起纸页 */
+  --md-elevation-paper-2: 0 2px 4px rgba(28, 32, 34, 0.1), 0 8px 24px rgba(28, 32, 34, 0.1); /* 弹层/稿纸上浮 */
 }
 
 /* 超大宽屏设备下，自适应拓宽页面内容容量至 1520px，彰显国风舒展大气 */
@@ -249,6 +260,16 @@
   --md-scrim-soft: rgba(13, 16, 17, 0.45);
   --md-state-layer-hover: rgba(229, 222, 201, 0.08);
   --md-state-layer-pressed: rgba(229, 222, 201, 0.15);
+
+  /* 描红界格暗场（深夜书房，对 #1a1f21 对比度 ≥4.5） */
+  --md-miaohong: #e8836f; /* 暗场描红 */
+  --md-miaohong-strong: #f09b8a;
+  --md-miaohong-soft: #c96a58;
+  --md-luomo: #e5dec9; /* = 暗场 --md-on-surface */
+  /* wash/line/line-strong 以 color-mix 自引用 --md-miaohong，暗场随上方基准自动换算，无需另写 */
+  /* 暗场纸影重铸：焦墨深底上浅色纸影不可见，以更高浓度纯黑投影承担浮起/弹层层级 */
+  --md-elevation-paper-1: 0 1px 2px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.35);
+  --md-elevation-paper-2: 0 2px 4px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
 @supports (height: 100dvh) {

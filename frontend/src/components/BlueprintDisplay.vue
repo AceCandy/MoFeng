@@ -1,6 +1,6 @@
 <!-- AIMETA P=蓝图展示_蓝图详细信息|R=蓝图详情展示|NR=不含编辑功能|E=component:BlueprintDisplay|X=internal|A=展示组件|D=vue|S=dom|RD=./README.ai -->
 <template>
-  <div class="blueprint-display fade-in">
+  <div class="blueprint-display fade-in" data-provenance="ai">
     <p class="blueprint-display__heading">你的故事蓝图已生成！</p>
 
     <!-- AI消息 -->
@@ -204,7 +204,7 @@
       <button
         @click="confirmBlueprint"
         :disabled="isSaving"
-        class="md-btn md-btn-filled md-ripple"
+        class="md-btn md-btn-filled md-ripple blueprint-display__confirm-btn"
       >
         <span class="flex items-center justify-center">
           <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -404,9 +404,9 @@ const parsedRelationships = computed(() => {
 .blueprint-display {
   padding: var(--md-spacing-6) var(--md-spacing-8);
   background-color: var(--md-surface);
-  border-radius: var(--md-radius-sm) !important; /* 中式木刻微直角 */
-  border: 3px double var(--md-outline) !important; /* 古籍双线框线 */
-  box-shadow: 4px 4px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
+  border-radius: var(--md-radius-xs) !important; /* 界格微直角 */
+  border: 1px solid var(--md-jiege) !important; /* 1px 界格发线，与稿纸同构 */
+  box-shadow: var(--md-elevation-paper-1) !important;
   /* 弹性布局一屏内高度完美收敛，彻底根治大纲超长溢出看不全灾难 */
   height: 100%;
   max-height: calc(var(--app-viewport-unit) - 120px) !important;
@@ -504,6 +504,25 @@ const parsedRelationships = computed(() => {
   flex-shrink: 0; /* 按钮固定不缩窄 */
 }
 
+/* 提交类主动作：朱砂实底落印钮 */
+.blueprint-display__confirm-btn {
+  border-radius: var(--md-radius-xs); /* 微直角方印 */
+  background-color: var(--md-secondary);
+  color: var(--md-on-secondary); /* 熟宣字 */
+  border: 1px solid var(--md-secondary-dark);
+  box-shadow: none; /* 落印钮静息无影 */
+  transition: background-color 0.15s, box-shadow 0.15s;
+}
+
+.blueprint-display__confirm-btn:hover:not(:disabled) {
+  background-color: var(--md-secondary-dark);
+  box-shadow: var(--md-elevation-paper-1);
+}
+
+.blueprint-display__confirm-btn:active:not(:disabled) {
+  box-shadow: none; /* 按下影清零，印落纸面 */
+}
+
 @keyframes bp-spin {
   to { transform: rotate(360deg); }
 }
@@ -537,28 +556,15 @@ const parsedRelationships = computed(() => {
   opacity: 0.8;
 }
 
-/* 牌匾落款 Header */
+/* 牌匾落款 Header：界格发线，静息无影 */
 .bp__header {
   text-align: center;
   margin-bottom: var(--md-spacing-6);
   padding: var(--md-spacing-6) var(--md-spacing-4);
   background-color: var(--md-surface-container-low); /* 温润竹纸底色 */
-  border: 1px solid var(--md-outline-variant);
-  border-bottom: 3px double var(--md-outline); /* 古籍特有双线分割 */
-  border-radius: 4px;
+  border: 1px solid var(--md-jiege);
+  border-radius: var(--md-radius-xs);
   position: relative;
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 5%, transparent);
-}
-
-.bp__header::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 15%;
-  bottom: 15%;
-  width: 4px;
-  background-color: var(--md-secondary); /* 朱砂细竖批 */
-  border-radius: 1px;
 }
 
 .bp__header-title {
@@ -577,30 +583,28 @@ const parsedRelationships = computed(() => {
   gap: var(--md-spacing-2);
 }
 
-/* 微方折木刻细框墨字标签（朱砂罕用：只留牌匾竖批与筹牌红珠） */
+/* 微方折细框墨字标签（已定正文不见红：标签只用墨线） */
 .bp__badge {
   background-color: transparent;
   border: 1px solid var(--md-outline); /* 竹青细边框 */
   color: var(--md-primary-light); /* 松烟墨字 */
   padding: 3px var(--md-spacing-3);
-  border-radius: 2px !important; /* 木刻小微直角 */
+  border-radius: var(--md-radius-xs) !important;
   font-family: var(--md-font-serif);
   font-size: var(--md-label-medium);
   font-weight: 600;
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 10%, transparent);
   letter-spacing: 0.05em;
   display: inline-block;
   line-height: 1.3;
 }
 
-/* 双线木刻大板块 */
+/* 界格发线大板块：AI 蓝图稿静息无影 */
 .bp__section {
   margin-bottom: var(--md-spacing-6);
   background-color: var(--md-surface); /* 熟宣纸色 */
-  border-radius: 4px !important; /* 微直角 */
-  border: 2px double var(--md-outline) !important; /* 雅致双线黑边框 */
+  border-radius: var(--md-radius-xs) !important;
+  border: 1px solid var(--md-jiege) !important; /* 1px 界格发线 */
   padding: var(--md-spacing-5) clamp(var(--md-spacing-4), 4vw, var(--md-spacing-6));
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important; /* 碑拓偏置硬投影 */
 }
 
 .bp__section-header {
@@ -617,7 +621,7 @@ const parsedRelationships = computed(() => {
   background-color: var(--md-surface-container-low);
   color: var(--md-primary-dark);
   border: 1px solid var(--md-outline-variant);
-  border-radius: 2px; /* 木刻微直角 */
+  border-radius: var(--md-radius-xs); /* 界格微直角 */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -641,7 +645,7 @@ const parsedRelationships = computed(() => {
 .bp__summary-highlight {
   background-color: var(--md-surface-container-low); /* 温润竹纸色 */
   border: 1.5px solid var(--md-outline);
-  border-radius: 2px;
+  border-radius: var(--md-radius-xs);
   padding: var(--md-spacing-4);
   margin-bottom: var(--md-spacing-5);
   position: relative;
@@ -688,7 +692,7 @@ const parsedRelationships = computed(() => {
 .bp__world-rules {
   background-color: var(--md-surface-container-low);
   border: 1.5px solid var(--md-outline);
-  border-radius: 2px;
+  border-radius: var(--md-radius-xs);
   padding: var(--md-spacing-5);
   margin-bottom: var(--md-spacing-5);
 }
@@ -741,9 +745,8 @@ const parsedRelationships = computed(() => {
 .bp__world-item {
   background-color: var(--md-surface-container-low);
   border: 1px solid var(--md-outline-variant);
-  border-radius: 2px;
+  border-radius: var(--md-radius-xs);
   padding: var(--md-spacing-4);
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 3%, transparent);
 }
 
 .bp__world-item-name {
@@ -771,9 +774,8 @@ const parsedRelationships = computed(() => {
 .bp__char-card {
   background-color: var(--md-surface-container-low); /* 竹纸底衬 */
   border: 1px solid var(--md-outline-variant);
-  border-radius: 2px;
+  border-radius: var(--md-radius-xs);
   padding: var(--md-spacing-6) var(--md-spacing-5);
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 4%, transparent);
   transition:
     background-color 0.25s ease,
     border-color 0.25s ease,
@@ -785,7 +787,7 @@ const parsedRelationships = computed(() => {
 .bp__char-card:hover {
   background-color: var(--md-surface);
   border-color: var(--md-outline);
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent);
+  box-shadow: var(--md-elevation-paper-1);
 }
 
 .bp__char-card-header {
@@ -810,12 +812,11 @@ const parsedRelationships = computed(() => {
   border: 1px solid var(--md-outline); /* 竹青细框印记 */
   color: var(--md-primary-light);
   padding: 2px var(--md-spacing-3);
-  border-radius: 1px; /* 方正印记 */
+  border-radius: var(--md-radius-xs);
   font-size: var(--md-label-small);
   font-family: var(--md-font-serif);
   font-weight: 600;
   line-height: 1.1;
-  box-shadow: 0.5px 0.5px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent);
 }
 
 .bp__char-fields {
@@ -828,7 +829,7 @@ const parsedRelationships = computed(() => {
 .bp__char-field {
   background-color: var(--md-surface); /* 熟宣底托 */
   border: 1px solid var(--md-outline-variant);
-  border-radius: 2px;
+  border-radius: var(--md-radius-xs);
   padding: var(--md-spacing-3) var(--md-spacing-4);
   font-size: 13.5px;
   line-height: 1.6;
@@ -859,7 +860,7 @@ const parsedRelationships = computed(() => {
   color: var(--md-primary-light);
   background-color: var(--md-surface);
   padding: var(--md-spacing-3);
-  border-radius: 2px;
+  border-radius: var(--md-radius-xs);
   border: 1px dashed var(--md-outline-variant);
   line-height: 1.65;
   margin-top: var(--md-spacing-2);
@@ -875,9 +876,8 @@ const parsedRelationships = computed(() => {
 .bp__rel-card {
   background-color: var(--md-surface-container-low);
   border: 1px solid var(--md-outline-variant);
-  border-radius: 2px;
+  border-radius: var(--md-radius-xs);
   padding: var(--md-spacing-5);
-  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-on-surface) 4%, transparent);
 }
 
 .bp__rel-pair {
@@ -895,10 +895,9 @@ const parsedRelationships = computed(() => {
   color: var(--md-primary-dark);
   background-color: var(--md-surface);
   padding: 3px var(--md-spacing-4);
-  border-radius: 2px;
+  border-radius: var(--md-radius-xs);
   font-size: 14px;
   border: 1px solid var(--md-outline);
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent);
   letter-spacing: 0.02em;
 }
 
@@ -941,7 +940,7 @@ const parsedRelationships = computed(() => {
   font-size: 13.5px;
   color: var(--md-primary-light);
   background-color: var(--md-surface);
-  border-radius: 2px;
+  border-radius: var(--md-radius-xs);
   padding: var(--md-spacing-3) var(--md-spacing-4);
   border: 1px solid var(--md-outline-variant);
   line-height: 1.6;
@@ -966,7 +965,7 @@ const parsedRelationships = computed(() => {
   gap: var(--md-spacing-4);
   background-color: var(--md-surface-container-low);
   border: 1px solid var(--md-outline-variant);
-  border-radius: 2px;
+  border-radius: var(--md-radius-xs);
   padding: var(--md-spacing-5) var(--md-spacing-6);
   transition:
     background-color 0.25s cubic-bezier(0.2, 0, 0, 1),
@@ -979,7 +978,7 @@ const parsedRelationships = computed(() => {
 .bp__chapter-item:hover {
   background-color: var(--md-surface);
   border-color: var(--md-outline);
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent);
+  box-shadow: var(--md-elevation-paper-1);
 }
 
 .bp__chapter-num {
@@ -989,28 +988,15 @@ const parsedRelationships = computed(() => {
   background-color: var(--md-surface);
   border: 1.5px solid var(--md-outline);
   color: var(--md-primary-dark);
-  border-radius: 2px;
+  border-radius: var(--md-radius-xs);
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--md-font-serif);
   font-weight: 700;
   font-size: var(--md-label-large);
-  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-on-surface) 10%, transparent);
   position: relative;
   box-sizing: border-box;
-}
-
-.bp__chapter-num::before {
-  content: "";
-  position: absolute;
-  top: 4px;
-  left: 50%;
-  transform: translateX(-50%); /* 朱砂挂筹红珠水平居中 */
-  width: 4px;
-  height: 4px;
-  background-color: var(--md-secondary); /* 朱砂挂筹红绳印（全页唯一朱印落款） */
-  border-radius: 50%;
 }
 
 .bp__chapter-num-text {

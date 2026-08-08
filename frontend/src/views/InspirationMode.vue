@@ -779,10 +779,10 @@ onUnmounted(() => {
   display: flex;
   flex-direction: row !important; /* 核心：改为横向双栏结构 */
   background-color: var(--md-surface);
-  /* 誓死捍卫木刻微直角，配合右下拓片偏置硬投影 */
-  border-radius: var(--md-radius-sm) !important;
-  border: 3px double var(--md-outline) !important;
-  box-shadow: 4px 4px 0px color-mix(in srgb, var(--md-on-surface) 15%, transparent) !important;
+  /* 结构面：界格发线 + 微直角 + 熟宣柔影（双线框只留稿纸容器） */
+  border-radius: var(--md-radius-xs) !important;
+  border: 1px solid var(--md-jiege) !important;
+  box-shadow: var(--md-elevation-paper-1) !important;
   overflow: hidden;
 }
 
@@ -861,7 +861,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px dashed var(--md-outline-variant) !important; /* 仿古虚线分隔 */
+  border-bottom: 1px solid var(--md-jiege) !important; /* 界格发线分隔 */
   flex-shrink: 0;
 }
 
@@ -928,8 +928,8 @@ onUnmounted(() => {
 .ledger-item.is-active {
   opacity: 1;
   background-color: var(--md-surface) !important; /* 变熟宣白 */
-  border: 1px dashed var(--md-outline) !important; /* 竹青细线 */
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-on-surface) 4%, transparent) !important;
+  border: 1px solid var(--md-jiege) !important; /* 界格发线 */
+  box-shadow: var(--md-elevation-paper-1) !important; /* 熟宣柔影 */
   transform: scale(1);
 }
 
@@ -960,7 +960,7 @@ onUnmounted(() => {
   background-color: color-mix(in srgb, var(--md-secondary) 8%, transparent) !important; /* 红泥朱砂半透 */
   color: var(--md-secondary) !important;
   border-color: var(--md-secondary) !important;
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-secondary) 15%, transparent) !important;
+  box-shadow: none !important; /* 印面压纸不浮起 */
   animation: ink-seal-press 0.45s cubic-bezier(0.19, 1, 0.22, 1) both;
 }
 
@@ -1186,7 +1186,7 @@ onUnmounted(() => {
     color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
     opacity 0.25s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
-  box-shadow: 1px 1px 0px color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
+  box-shadow: none !important; /* 静息无影 */
 }
 
 .timeline-node-seal {
@@ -1196,14 +1196,14 @@ onUnmounted(() => {
   line-height: 1 !important;
 }
 
-/* 激活或悬浮状态：方形朱砂描边小印 + 右下朱砂硬影，弃实心色块与零偏移发光 */
+/* 激活或悬浮状态：方形朱砂描边小印（激活指示），无影不浮起 */
 .timeline-node-btn:hover,
 .timeline-node-btn.is-active {
   background-color: color-mix(in srgb, var(--md-secondary) 8%, transparent) !important; /* 朱砂淡染 */
   border-color: var(--md-secondary) !important; /* 朱砂描边 */
   color: var(--md-secondary) !important;
   transform: scale(1.15);
-  box-shadow: 2px 2px 0px color-mix(in srgb, var(--md-secondary) 20%, transparent) !important;
+  box-shadow: none !important;
 }
 
 .timeline-node-btn:focus-visible {
@@ -1220,10 +1220,10 @@ onUnmounted(() => {
   background-color: var(--md-surface) !important;
   color: var(--md-on-surface) !important;
   border: 1px solid var(--md-outline) !important;
-  box-shadow: 3px 3px 0px color-mix(in srgb, var(--md-on-surface) 12%, transparent) !important;
+  box-shadow: var(--md-elevation-paper-2) !important; /* 悬浮层柔影 */
   padding: 6px 12px !important;
   border-radius: var(--md-radius-xs) !important;
-  font-family: var(--md-font-kai) !important;
+  font-family: var(--md-font-serif) !important; /* 落定标签用宋体 */
   font-size: 13px !important;
   white-space: nowrap;
   pointer-events: none;
