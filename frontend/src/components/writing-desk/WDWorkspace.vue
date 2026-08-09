@@ -38,7 +38,7 @@
 
       <div class="writing-workspace__content">
         <ChapterReaderBar
-          v-if="hasSelectedChapterContent"
+          v-if="hasFinalizedChapterContent"
           :status="readerStatus"
           :isBrowserFallback="readerIsBrowserFallback"
           :hasModelTTS="readerHasModelTTS"
@@ -150,7 +150,7 @@ import type {
   ChapterVersionSelection,
   NovelProject,
 } from '@/api/novel'
-import type { ChapterWorkflowCommand } from '@/api/chapterWorkflow'
+import type { ChapterWorkflowCommand, ChapterWorkflowNodeKey } from '@/api/chapterWorkflow'
 import type { ChapterWorkflowActorPhase } from '@/composables/useChapterWorkflowActor'
 import type { ChapterWorkflowTransportPhase } from '@/composables/chapterWorkflowMachine'
 import ChapterWorkflowPanel from './ChapterWorkflowPanel.vue'
@@ -173,6 +173,9 @@ interface Props {
   selectedVersionIndex: number
   availableVersions: ChapterVersion[]
   workflowPhase: ChapterWorkflowActorPhase
+  workflowRunId: string | null
+  workflowNodeKey: ChapterWorkflowNodeKey | null
+  workflowProgress: number | null
   workflowTransport: ChapterWorkflowTransportPhase
   workflowAllowedCommands: readonly ChapterWorkflowCommand[]
   workflowPending: boolean
@@ -206,6 +209,7 @@ interface ChapterContentExpose {
 const bodyComponentRef = ref<ChapterContentExpose | null>(null)
 
 const selectedChapter = computed(() => props.selectedChapter)
+const hasFinalizedChapterContent = computed(() => Boolean(props.selectedChapter?.content?.trim()))
 
 const selectedChapterOutline = computed(() => {
   if (!props.project?.blueprint?.chapter_outline || props.selectedChapterNumber === null)
@@ -404,7 +408,11 @@ watch(
 
 // 章节记录尚未落库（生成中）时，为描红预览合成最小章节壳
 const chapterContentChapter = computed<Chapter | null>(() => {
-  if (selectedChapterForDisplay.value) return selectedChapterForDisplay.value
+  if (selectedChapterForDisplay.value) {
+    return hasMiaohongPreview.value && !hasFinalizedChapterContent.value
+      ? { ...selectedChapterForDisplay.value, content: '' }
+      : selectedChapterForDisplay.value
+  }
   if ((!hasMiaohongPreview.value && !hasLuomoSnapshot.value) || props.selectedChapterNumber === null) return null
   return {
     chapter_number: props.selectedChapterNumber,
@@ -416,13 +424,41 @@ const chapterContentChapter = computed<Chapter | null>(() => {
   }
 })
 
-const shouldShowTraceReplay = computed(() => {
+const hasCurrentWorkflow = computed(
+  () => props.workflowPhase === 'submitting' || props.workflowRunId !== null,
+)
+
+const workflowGenerationTraces = computed(() => {
   const traces = selectedChapter.value?.generation_traces ?? []
-  return traces.length > 0
-    && props.workflowPhase !== 'idle'
-    && props.workflowPhase !== 'succeeded'
-    && props.workflowPhase !== 'cancelled'
-    && props.workflowPhase !== 'fatal'
+  if (!hasCurrentWorkflow.value) return traces
+  if (props.workflowRunId === null) return []
+  // 新 run 中只显示可确认归属的轨迹，避免无 run_id 的旧记录污染当前节点。
+  return traces.filter((trace) => trace.metadata?.run_id === props.workflowRunId)
+})
+
+const shouldShowTraceReplay = computed(() => {
+  const activePhase = props.workflowPhase === 'submitting'
+    || props.workflowPhase === 'running'
+    || props.workflowPhase === 'waitingForSelection'
+    || props.workflowPhase === 'finalizing'
+    || props.workflowPhase === 'projectionPending'
+    || props.workflowPhase === 'failed'
+  return activePhase
+    && (props.workflowPhase === 'submitting'
+      || props.workflowNodeKey !== null
+      || workflowGenerationTraces.value.length > 0)
+})
+
+const workflowGenerationStatus = computed<Chapter['generation_status'] | null>(() => {
+  if (!hasCurrentWorkflow.value) return selectedChapter.value?.generation_status ?? null
+  if (props.workflowPhase === 'running' || props.workflowPhase === 'submitting') return 'generating'
+  if (props.workflowPhase === 'waitingForSelection') return 'waiting_for_confirm'
+  if (props.workflowPhase === 'finalizing' || props.workflowPhase === 'projectionPending') {
+    return 'finalizing'
+  }
+  if (props.workflowPhase === 'failed') return 'failed'
+  if (props.workflowPhase === 'succeeded') return 'successful'
+  return selectedChapter.value?.generation_status ?? null
 })
 
 const traceReplayProps = computed(() => ({
@@ -430,14 +466,22 @@ const traceReplayProps = computed(() => ({
   chapterTitle: selectedChapterOutline.value?.title || '',
   chapterSummary: selectedChapterOutline.value?.summary || '',
   chapterContentPreview: selectedChapterResolvedContent.value,
-  status: selectedChapter.value?.generation_status ?? null,
-  generationProgress: selectedChapter.value?.generation_progress ?? null,
-  generationStep: selectedChapter.value?.generation_step ?? null,
-  generationStepIndex: selectedChapter.value?.generation_step_index ?? null,
-  generationStepTotal: selectedChapter.value?.generation_step_total ?? null,
+  status: workflowGenerationStatus.value,
+  generationProgress: !hasCurrentWorkflow.value
+    ? selectedChapter.value?.generation_progress ?? null
+    : props.workflowProgress,
+  generationStep: !hasCurrentWorkflow.value
+    ? selectedChapter.value?.generation_step ?? null
+    : props.workflowNodeKey,
+  generationStepIndex: !hasCurrentWorkflow.value
+    ? selectedChapter.value?.generation_step_index ?? null
+    : null,
+  generationStepTotal: !hasCurrentWorkflow.value
+    ? selectedChapter.value?.generation_step_total ?? null
+    : null,
   generationStartedAt: selectedChapter.value?.generation_started_at ?? null,
   statusUpdatedAt: selectedChapter.value?.status_updated_at ?? null,
-  generationTraces: selectedChapter.value?.generation_traces ?? [],
+  generationTraces: workflowGenerationTraces.value,
   readOnly: true,
 }))
 

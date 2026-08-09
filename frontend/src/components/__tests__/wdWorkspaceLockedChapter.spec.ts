@@ -6,7 +6,7 @@ import { resolve } from 'node:path'
 
 import WDWorkspace from '@/components/writing-desk/WDWorkspace.vue'
 import type { ChapterVersionSelection, NovelProject } from '@/api/novel'
-import type { ChapterWorkflowCommand } from '@/api/chapterWorkflow'
+import type { ChapterWorkflowCommand, ChapterWorkflowNodeKey } from '@/api/chapterWorkflow'
 import type { ChapterWorkflowActorPhase } from '@/composables/useChapterWorkflowActor'
 
 const readSource = (relativePath: string) =>
@@ -19,6 +19,9 @@ const mountWorkspace = async (
     selectedVersionIndex?: number
     availableVersions?: Array<{ content: string; style?: string; metadata?: Record<string, unknown> }>
     workflowPhase?: ChapterWorkflowActorPhase
+    workflowRunId?: string | null
+    workflowNodeKey?: ChapterWorkflowNodeKey | null
+    workflowProgress?: number | null
     workflowAllowedCommands?: ChapterWorkflowCommand[]
     workflowCandidates?: ChapterVersionSelection[]
     workflowPending?: boolean
@@ -46,6 +49,9 @@ const mountWorkspace = async (
     selectedVersionIndex: overrides.selectedVersionIndex ?? 0,
     availableVersions: overrides.availableVersions ?? [],
     workflowPhase: overrides.workflowPhase ?? 'idle',
+    workflowRunId: overrides.workflowRunId ?? null,
+    workflowNodeKey: overrides.workflowNodeKey ?? null,
+    workflowProgress: overrides.workflowProgress ?? null,
     workflowTransport: 'disconnected',
     workflowAllowedCommands: overrides.workflowAllowedCommands ?? [],
     workflowPending: overrides.workflowPending ?? false,
@@ -251,7 +257,7 @@ describe('WDWorkspace locked chapter state', () => {
       workflowCandidates: [
         {
           id: 301,
-          content: '退役冠军林拓站在商业直播表演赛的灯下。',
+          content: '退役冠军林拓站在商业直播表演赛的灯下。\n\n他看见对手穿着旧布鞋，却仍旧把拳架抬得很稳。',
           version_label: '版本一',
           workflow_run_id: 'run-1',
         },
@@ -270,6 +276,9 @@ describe('WDWorkspace locked chapter state', () => {
       expect(rendered.host.textContent).not.toContain('确认定稿')
       expect(rendered.host.textContent).toContain('退役冠军林拓站在商业直播表演赛的灯下')
       expect(rendered.host.querySelector('.chapter-paper')).not.toBeNull()
+      expect(rendered.host.querySelectorAll('[data-provenance="ai"]')).toHaveLength(1)
+      expect(rendered.host.querySelector('[data-provenance="ink"]')).toBeNull()
+      expect(rendered.host.querySelector('.chapter-jiege-divider')).toBeNull()
       expect(rendered.host.textContent).toContain('生成进度')
       expect(rendered.host.textContent).toContain('整理前文')
       expect(rendered.host.textContent).toContain('待人工确认')
@@ -294,6 +303,102 @@ describe('WDWorkspace locked chapter state', () => {
       expect(rendered.host.textContent).toContain('前文上下文整理完成')
     } finally {
       rendered.unmount()
+    }
+  })
+
+  it('shows the current workflow node instead of traces left by the previous run', async () => {
+    const project: NovelProject = {
+      id: 'novel-1',
+      title: '全网退役',
+      initial_prompt: '',
+      conversation_history: [],
+      blueprint: {
+        chapter_outline: [
+          { chapter_number: 1, title: '一招', summary: '林拓重新站上擂台。' },
+        ],
+      },
+      chapters: [
+        {
+          chapter_number: 1,
+          title: '一招',
+          summary: '林拓重新站上擂台。',
+          real_summary: null,
+          content: null,
+          versions: null,
+          evaluation: null,
+          generation_status: 'waiting_for_confirm',
+          generation_step: 'waiting_for_confirm',
+          generation_traces: [
+            {
+              id: 202,
+              node_key: 'waiting_for_selection',
+              node_label: '等待选择版本',
+              status: 'success',
+              uses_llm: false,
+              metadata: { run_id: 'previous-run' },
+            },
+            {
+              id: 203,
+              node_key: 'context_prep',
+              node_label: '整理前文',
+              status: 'success',
+              uses_llm: false,
+              metadata: {
+                output_payload: { summary: '这是无法确认归属的上一轮轨迹' },
+              },
+            },
+            {
+              id: 204,
+              node_key: 'freeze_context',
+              node_label: '冻结章节上下文',
+              status: 'running',
+              uses_llm: false,
+              metadata: {
+                run_id: 'current-run',
+                input_payload: { chapter_number: 1 },
+                actions: ['开始执行冻结章节上下文'],
+                output_payload: { status: '正在检索章节上下文' },
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    for (const workflow of [
+      {
+        workflowPhase: 'submitting',
+        workflowRunId: null,
+        workflowNodeKey: null,
+        workflowProgress: null,
+      },
+      {
+        workflowPhase: 'running',
+        workflowRunId: 'current-run',
+        workflowNodeKey: 'freeze_context',
+        workflowProgress: 0,
+      },
+    ] as const) {
+      const rendered = await mountWorkspace(project, 1, workflow)
+
+      try {
+        const contextStep = Array.from(
+          rendered.host.querySelectorAll('.chapter-console__pipeline-item'),
+        ).find((item) => item.textContent?.includes('整理前文'))
+
+        expect(contextStep?.classList.contains('is-in-progress')).toBe(true)
+        expect(rendered.host.textContent).not.toContain('待人工确认')
+        expect(rendered.host.textContent).not.toContain('这是无法确认归属的上一轮轨迹')
+        if (workflow.workflowRunId === null) {
+          expect(rendered.host.textContent).toContain('暂未收到 整理前文 的真实运行记录')
+        } else {
+          expect(rendered.host.textContent).toContain('开始执行冻结章节上下文')
+          expect(rendered.host.textContent).toContain('正在检索章节上下文')
+          expect(rendered.host.textContent).not.toContain('暂未收到 整理前文 的真实运行记录')
+        }
+      } finally {
+        rendered.unmount()
+      }
     }
   })
 
@@ -501,9 +606,57 @@ describe('WDWorkspace locked chapter state', () => {
       ],
     }
 
-    const rendered = await mountWorkspace(project, 1)
+    const rendered = await mountWorkspace(project, 1, {
+      workflowPhase: 'waitingForSelection',
+      workflowCandidates: [
+        {
+          id: 501,
+          content: '灯下的新候选正文。',
+          version_label: '版本一',
+          workflow_run_id: 'run-3',
+        },
+      ],
+    })
     try {
       expect(rendered.host.querySelector('[aria-label="朗读"]')).not.toBeNull()
+      expect(rendered.host.querySelector('[data-provenance="ink"]')).not.toBeNull()
+      expect(rendered.host.querySelector('[data-provenance="ai"]')).not.toBeNull()
+    } finally {
+      rendered.unmount()
+    }
+  })
+
+  it('hides the reading control while only candidate content exists', async () => {
+    const project: NovelProject = {
+      id: 'novel-1',
+      title: '全网退役',
+      initial_prompt: '',
+      conversation_history: [],
+      blueprint: {
+        chapter_outline: [{ chapter_number: 1, title: '一招', summary: '林拓重新站上擂台。' }],
+      },
+      chapters: [
+        {
+          chapter_number: 1,
+          title: '一招',
+          summary: '林拓重新站上擂台。',
+          real_summary: null,
+          content: null,
+          versions: null,
+          evaluation: null,
+          generation_status: 'waiting_for_confirm',
+        },
+      ],
+    }
+
+    const rendered = await mountWorkspace(project, 1, {
+      availableVersions: [{ content: '待确认候选正文' }],
+      workflowPhase: 'waitingForSelection',
+    })
+    try {
+      expect(rendered.host.querySelector('[aria-label="朗读"]')).toBeNull()
+      expect(rendered.host.querySelector('[data-provenance="ink"]')?.textContent)
+        .toContain('待确认候选正文')
     } finally {
       rendered.unmount()
     }
