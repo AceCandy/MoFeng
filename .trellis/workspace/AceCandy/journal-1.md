@@ -1015,3 +1015,24 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Status
 
 [OK] **Completed**
+
+
+## Session 31: 修复章节实时进度停滞
+
+**Date**: 2026-08-10
+**Task**: 修复章节实时进度停滞
+**Branch**: `main`
+
+### Summary
+
+串行化同 scope 的 SSE 唤醒查询，合并在途期间的新 cursor，并在旧快照完成后补查最新状态；补充回归测试和前端 SSE hook 规范。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `76f29e8` | (see git log) |
+
+### Status
+
+[OK] **Completed**
