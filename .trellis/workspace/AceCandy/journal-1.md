@@ -972,3 +972,24 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Next Steps
 
 - None - task complete
+
+
+## Session 29: 修复候选描红稿重复展示
+
+**Date**: 2026-08-09
+**Task**: 修复候选描红稿重复展示
+**Branch**: `main`
+
+### Summary
+
+首次生成且尚无正式正文时仅展示一份描红候选；保留已定稿正文对照与历史版本兜底，并补充回归测试。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `97a51c6` | (see git log) |
+
+### Status
+
+[OK] **Completed**

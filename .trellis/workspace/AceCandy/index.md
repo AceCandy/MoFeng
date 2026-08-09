@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 28
-- **Last Active**: 2026-07-31
+- **Total Sessions**: 29
+- **Last Active**: 2026-08-09
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~974 | Active |
+| `journal-1.md` | ~995 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 29 | 2026-08-09 | 修复候选描红稿重复展示 | `97a51c6` | `main` |
 | 28 | 2026-07-31 | 收敛数据库启动回归并完成架构任务收尾 | `b4c9e8d` | `main` |
 | 27 | 2026-07-31 | 完成 WritingDesk statechart 收敛 | `49963ba`, `b429ac9`, `6e39d24` | `main` |
 | 26 | 2026-07-30 | 生成 Transport Contracts | `529490e`, `cc28aad` | `main` |
