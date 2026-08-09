@@ -1,0 +1,8 @@
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"约束前端预览、工作流命令、持久化清理和配置冻结的跨层数据流"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"复用版本数解析与现有 query key/状态边界，避免复制契约"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"约束工作流面板与生成进度组件的 props、emits、样式和无障碍实现"}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"约束取消后的 Vue Query 缓存失效与服务端状态同步"}
+{"file":".trellis/spec/frontend/state-management.md","reason":"保持 workflow actor、本地预览和服务端缓存的状态所有权边界"}
+{"file":".trellis/spec/backend/durable-job-guidelines.md","reason":"约束取消终态的 fencing、锁顺序、事务原子性、trace 与审计保留"}
+{"file":".trellis/spec/backend/chapter-projection-contract.md","reason":"保护正式 revision/projection 和既有聚合锁顺序"}
+{"file":".trellis/tasks/08-09-fix-chapter-regeneration-versions/research/current-flow.md","reason":"已核验的三个根因、关键符号和当前工作树保护要求"}

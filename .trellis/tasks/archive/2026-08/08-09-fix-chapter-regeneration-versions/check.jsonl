@@ -1,0 +1,7 @@
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"复核前端类型、组件测试、样式 token 与 AIMETA 约定"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"复核异步事务、测试范围和服务层职责"}
+{"file":".trellis/spec/backend/logging-guidelines.md","reason":"复核后端新增日志不泄露正文、提示词或敏感信息"}
+{"file":".trellis/spec/backend/durable-job-guidelines.md","reason":"独立复核取消并发、fencing、事件原子性和审计保留"}
+{"file":".trellis/spec/backend/chapter-projection-contract.md","reason":"独立复核正式版本、修订和投影保护"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"复核设置到候选、取消到前端刷新两条完整链路"}
+{"file":".trellis/tasks/08-09-fix-chapter-regeneration-versions/research/current-flow.md","reason":"对照已核验根因和既有未提交改动，防止上下文漂移"}
