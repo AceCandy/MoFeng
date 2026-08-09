@@ -993,3 +993,25 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Status
 
 [OK] **Completed**
+
+
+## Session 30: 修复章节重生成与多版本生成
+
+**Date**: 2026-08-09
+**Task**: 修复章节重生成与多版本生成
+**Branch**: `main`
+
+### Summary
+
+修复生成界面重复状态与取消入口，统一清理取消轮次草稿和轨迹，贯通双版本配置；同时提交既有章节工作流进度、正文清洗、Trellis 工具与视觉检查产物。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d1c3350` | (see git log) |
+| `296c15f` | (see git log) |
+
+### Status
+
+[OK] **Completed**
