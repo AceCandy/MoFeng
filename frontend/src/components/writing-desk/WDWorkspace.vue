@@ -74,9 +74,10 @@
 
           <template v-else>
             <ChapterWorkflowPanel
+              v-if="shouldShowWorkflowPanel"
               :phase="workflowPhase"
               :transport="workflowTransport"
-              :allowed-commands="workflowAllowedCommands"
+              :allowed-commands="workflowPanelAllowedCommands"
               :pending="workflowPending"
               :error="workflowError"
               :retry-activity-key="workflowRetryActivityKey"
@@ -86,7 +87,7 @@
               @retry="emit('workflowRetry')"
               @retry-external="emit('workflowRetryExternal', $event)"
               @retry-projection="emit('workflowRetryProjection')"
-              @cancel="emit('workflowCancel')"
+              @cancel="onWorkflowCancel"
               @resync="emit('workflowResync')"
               @preview-candidate="onCandidatePreview"
             />
@@ -95,6 +96,9 @@
               v-if="activeTab === 'content' && shouldShowTraceReplay"
               class="writing-workspace__trace-replay"
               v-bind="traceReplayProps"
+              :can-cancel="workflowAllowedCommands.includes('cancel')"
+              :pending="workflowPending"
+              @cancel="onWorkflowCancel"
             />
 
             <ChapterContent
@@ -153,6 +157,7 @@ import type {
 import type { ChapterWorkflowCommand, ChapterWorkflowNodeKey } from '@/api/chapterWorkflow'
 import type { ChapterWorkflowActorPhase } from '@/composables/useChapterWorkflowActor'
 import type { ChapterWorkflowTransportPhase } from '@/composables/chapterWorkflowMachine'
+import { cleanVersionContent } from '@/utils/chapter'
 import ChapterWorkflowPanel from './ChapterWorkflowPanel.vue'
 import ChapterGenerating from './workspace/ChapterGenerating.vue'
 import ChapterContent from './workspace/ChapterContent.vue'
@@ -346,6 +351,15 @@ const workflowStatus = computed(() => {
 })
 const chapterStatusLabel = computed(() => workflowStatus.value.label)
 const chapterStatusTone = computed(() => workflowStatus.value.tone)
+const shouldShowWorkflowPanel = computed(() => {
+  const phase = props.workflowPhase
+  return phase === 'booting'
+    || phase === 'idle'
+    || phase === 'waitingForSelection'
+    || phase === 'failed'
+    || phase === 'cancelled'
+    || phase === 'fatal'
+})
 
 const { chapterInlineMeta } = useChapterInlineMeta({
   selectedChapter,
@@ -380,6 +394,12 @@ const clearLuomoSignature = () => {
   }
   luomoSnapshotContent.value = null
   luomoSealVisible.value = false
+}
+
+const onWorkflowCancel = () => {
+  miaohongPreviewContent.value = null
+  clearLuomoSignature()
+  emit('workflowCancel')
 }
 
 watch(
@@ -449,6 +469,12 @@ const shouldShowTraceReplay = computed(() => {
       || workflowGenerationTraces.value.length > 0)
 })
 
+const workflowPanelAllowedCommands = computed(() =>
+  shouldShowTraceReplay.value
+    ? props.workflowAllowedCommands.filter((command) => command !== 'cancel')
+    : props.workflowAllowedCommands,
+)
+
 const workflowGenerationStatus = computed<Chapter['generation_status'] | null>(() => {
   if (!hasCurrentWorkflow.value) return selectedChapter.value?.generation_status ?? null
   if (props.workflowPhase === 'running' || props.workflowPhase === 'submitting') return 'generating'
@@ -461,11 +487,18 @@ const workflowGenerationStatus = computed<Chapter['generation_status'] | null>((
   return selectedChapter.value?.generation_status ?? null
 })
 
+const workflowCandidatePreview = computed(() => {
+  const content = props.workflowCandidates[0]?.content
+  return content ? cleanVersionContent(content) : ''
+})
+
 const traceReplayProps = computed(() => ({
   chapterNumber: props.selectedChapterNumber,
   chapterTitle: selectedChapterOutline.value?.title || '',
   chapterSummary: selectedChapterOutline.value?.summary || '',
-  chapterContentPreview: selectedChapterResolvedContent.value,
+  chapterContentPreview: hasCurrentWorkflow.value
+    ? workflowCandidatePreview.value
+    : selectedChapterResolvedContent.value,
   status: workflowGenerationStatus.value,
   generationProgress: !hasCurrentWorkflow.value
     ? selectedChapter.value?.generation_progress ?? null

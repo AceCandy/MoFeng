@@ -75,6 +75,7 @@ export const TRACE_CALL_TYPE_LABELS: Record<string, string> = {
 }
 
 export const TRACE_STATUS_LABELS: Record<string, string> = {
+  running: '进行中',
   success: '成功',
   failed: '失败',
 }
@@ -211,6 +212,17 @@ export const parseBackendTimestampToMs = (raw?: string | null): number | null =>
 
 export const normalizePipelineStepKey = (key?: string | null) => {
   const normalized = (key || '').trim()
+  if (normalized === 'freeze_context') return 'context_prep'
+  if (normalized === 'plan_and_direct') return 'director_mission'
+  if (normalized === 'generate_candidates') return 'draft_generation'
+  if (normalized === 'review_candidates') return 'quality_review'
+  if (normalized === 'persist_candidates' || normalized === 'waiting_for_selection') {
+    return 'review_refinement'
+  }
+  if (normalized === 'finalize_revision') return 'real_summary'
+  if (normalized === 'projection_pending') return 'chapter_ingest'
+  if (normalized === 'observe_projection') return 'foreshadowing_sync'
+  if (normalized === 'successful') return 'finalized'
   if (normalized === 'persist_versions') return 'save_draft'
   if (normalized === 'evaluation_failed' || normalized === 'evaluating') return 'quality_review'
   if (normalized === 'auto_optimizing') return 'review_refinement'

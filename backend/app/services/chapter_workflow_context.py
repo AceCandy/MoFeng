@@ -122,6 +122,7 @@ class ChapterWorkflowContextService:
             "state_schema_version": payload.state_schema_version,
             "context_schema_version": payload.context_schema_version,
             "run_id": payload.run_id,
+            "node_key": "freeze_context",
             "base_context_hash": payload.context_hash,
             "retrieval_inputs": payload.runtime_inputs.retrieval_inputs.model_dump(mode="json"),
         }

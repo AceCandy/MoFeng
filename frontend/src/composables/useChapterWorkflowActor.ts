@@ -25,6 +25,7 @@ import {
 import {
   chapterWorkflowMachine,
   createChapterWorkflowCommandEnvelope,
+  createChapterWorkflowRequestId,
   getChapterWorkflowPhase,
   type ChapterWorkflowPhase,
   type ChapterWorkflowTransportPhase,
@@ -232,6 +233,7 @@ export function useChapterWorkflowActor(
   const invalidateForSnapshot = (
     value: ChapterWorkflowSnapshot,
     businessSnapshotAccepted: boolean,
+    workflowRevisionIncreased: boolean,
   ) => {
     if (!businessSnapshotAccepted) return
     const revisionIncreased = highestChapterRevision !== null
@@ -244,7 +246,7 @@ export function useChapterWorkflowActor(
     const boundaryKey = boundary ? `${value.run_id}:${boundary}` : null
     const enteredBoundary = boundaryKey !== null && !invalidatedBoundaries.has(boundaryKey)
     if (boundaryKey) invalidatedBoundaries.add(boundaryKey)
-    if (!revisionIncreased && !enteredBoundary) return
+    if (!revisionIncreased && !enteredBoundary && !workflowRevisionIncreased) return
 
     void Promise.resolve(ports.invalidateChapterAndProject({
       projectId: value.project_id,
@@ -264,13 +266,17 @@ export function useChapterWorkflowActor(
     const businessSnapshotAccepted = matchesSnapshot
       && context.rowRevision === value.row_revision
       && (beforeRunId !== context.runId || beforeRowRevision !== context.rowRevision)
+    const workflowRevisionIncreased = businessSnapshotAccepted
+      && beforeRunId === value.run_id
+      && beforeRowRevision !== null
+      && value.row_revision > beforeRowRevision
     if (businessSnapshotAccepted && beforeRunId !== null && beforeRunId !== context.runId) {
       abortActiveStream()
       cancelReconnect()
       cancelPolling()
       reconnectFailures = 0
     }
-    invalidateForSnapshot(value, businessSnapshotAccepted)
+    invalidateForSnapshot(value, businessSnapshotAccepted, workflowRevisionIncreased)
     return { businessSnapshotAccepted }
   }
 
@@ -631,11 +637,12 @@ export function useChapterWorkflowActor(
   ) => {
     const scope = currentScope()
     if (scope === null) return false
-    const requestId = globalThis.crypto.randomUUID()
+    const requestId = createChapterWorkflowRequestId()
     send({ type: 'START_REQUESTED', requestId })
     if (snapshot.value.context.pendingCommandId !== requestId) return false
 
     const scopeEpoch = snapshot.value.context.scopeEpoch
+    abortLookups()
     abortActiveStream()
     cancelReconnect()
     cancelPolling()

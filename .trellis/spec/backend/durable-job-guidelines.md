@@ -367,6 +367,185 @@ Apply these additional rules when a Chapter generation run uses LangGraph persis
 - Graph V1 uses stable node keys `freeze_context`, `plan_and_direct`, `generate_candidates`, `review_candidates`, `persist_candidates`, `waiting_for_selection`, `finalize_revision`, `projection_pending`, `observe_projection`, and `successful`. Existing trace keys and `from_node_key` remain legacy-drain adapters and are never checkpoint recovery inputs for a new run.
 - Finalize and every projection child job inherit the original workflow stream. The workflow may observe projection completion, but only the projection reconciler may move the current Chapter revision to `successful`.
 
+### Activity progress and live trace contract
+
+#### 1. Scope / Trigger
+
+Apply when a durable Chapter workflow activity must expose its current node, progress,
+or node-detail input/action/output before the root job reaches a wait or terminal state.
+
+#### 2. Signatures
+
+```python
+ChapterWorkflowTransitionAdapter.apply_activity_event(
+    *,
+    job: BackgroundTask,
+    context: LockedChapterWorkflowTransition,
+    source_event_type: str,
+    request_payload: dict[str, object],
+    now: datetime,
+) -> ChapterWorkflowEvent | None
+```
+
+The trace identity is `(source_run_id, source_event_cursor)`. The frontend accepts a
+snapshot only for the current run/project/chapter and refreshes Chapter data whenever
+that run's `row_revision` increases.
+
+#### 3. Contracts
+
+- A recognized activity request carries the canonical workflow `node_key`. Its
+  `activity.started|retried|succeeded|retryable_failed|failed` event keeps that exact
+  event type and adds only the public `workflow` snapshot.
+- The activity transition updates `ChapterWorkflowRun.node_key`, monotonic `progress`,
+  and `row_revision` before appending the event. The run update, JobEvent, and
+  `ChapterGenerationTrace` commit in the same fenced transaction.
+- The activity trace metadata contains the current `run_id`, canonical activity input,
+  bounded display action, optional public output, call type, and `uses_llm`. It never
+  adds the private activity request/result to the public JobEvent.
+- The UI filters traces by `metadata.run_id` and refreshes Chapter/project queries on
+  accepted same-run `row_revision` growth. SSE is a wake-up path; it does not invent
+  progress or display a timer-based fake node transition.
+
+#### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|-----------|-----------------|
+| Activity event type is unsupported | Raise before mutating the run |
+| Request has no recognized workflow `node_key` | Preserve the ordinary activity event; do not create a workflow trace |
+| Target progress is below current progress | Keep current progress; never move backward |
+| Lease/fence is stale, or trace/event flush fails | Roll back run, event, activity result, and trace together |
+| Snapshot belongs to an old run or older revision | Ignore it and do not refresh current-run details |
+
+#### 5. Good / Base / Bad Cases
+
+- Good: candidate generation starts, the run moves to `generate_candidates` with an
+  increased revision, and the UI can inspect a running trace before provider return.
+- Base: a non-workflow or compatibility activity lacks `node_key`; its existing event
+  behavior remains unchanged.
+- Bad: emit only `activity.started` without a workflow snapshot, defer trace projection
+  until the worker's next claim, or animate intermediate nodes without durable facts.
+
+#### 6. Tests Required
+
+- PostgreSQL integration asserts started and succeeded events retain their activity
+  types, carry updated workflow snapshots, advance progress monotonically, increment
+  row revision, and create current-run traces with input/action/output metadata.
+- Frontend tests assert same-run row-revision growth invalidates Chapter/project data,
+  current-run traces render details, and old/unattributed traces remain filtered out.
+- Failure/retry extensions must assert their activity event type, trace status, and
+  rollback behavior before changing those branches.
+
+#### 7. Wrong vs Correct
+
+```python
+# Wrong: the provider runs, but current workflow state remains on the first node.
+await append_event(job, "activity.started")
+```
+
+```python
+# Correct: one fenced transaction advances the public snapshot and records details.
+await self._append_activity_event(
+    job,
+    "activity.started",
+    activity=activity,
+    now=now,
+    workflow_context=workflow_context,
+)
+```
+
+### Cancelled Chapter workflow derived-result cleanup
+
+#### 1. Scope / Trigger
+
+Apply whenever a Chapter workflow root job reaches the durable `job.cancelled`
+terminal event. A cancel request alone is not sufficient: cleanup runs only inside the
+fenced terminal transition after the root job, workflow run, and Chapter are locked.
+
+#### 2. Signatures
+
+```python
+await JobService._cleanup_cancelled_chapter_workflow(
+    workflow_context: LockedChapterWorkflowTransition,
+) -> None
+```
+
+Candidate provenance is
+`ChapterVersion.metadata_["_chapter_workflow"]["run_id"]`; compatibility trace
+provenance is `ChapterGenerationTrace.source_run_id`. The frontend candidate boundary
+uses the same current workflow run id and must not fall back to Chapter cached content
+while that run has no candidate.
+
+#### 3. Contracts
+
+- Waiting-command cancel, ambiguous-activity cancel, worker `mark_cancelled`, and
+  expired-worker reaping all converge on the same `job.cancelled` event path. That path
+  runs cleanup before building the workflow terminal snapshot and event.
+- Lock ChapterVersion rows in ascending id order. Delete only versions whose provenance
+  matches the cancelled run and which are not referenced by
+  `Chapter.selected_version_id` or any `ChapterRevision.selected_version_id`.
+- Delete evaluations for the selected disposable version ids before deleting those
+  versions. Delete compatibility generation traces for the cancelled run, but preserve
+  JobEvent, command/activity audit, workflow identity, checkpoints, revisions, outbox,
+  and projection records.
+- Reset the Chapter to the existing ungenerated defaults only when it has no selected
+  version and `current_revision == 0`. A regeneration cancel must not change canonical
+  content, summary, revision, selected version, or projection lineage.
+- Cleanup, cancelled job/run state, heartbeat clearing, and the terminal event share the
+  service-owned transaction. Repeating the terminal cleanup is an empty operation once
+  disposable rows are gone; a stale worker remains unable to write through the lost
+  root fence.
+- The UI clears local candidate/ink previews when cancel is requested. On a following
+  run, live draft content comes only from candidates attributed to that run; until one
+  exists, the preview is empty.
+
+#### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|-----------|-----------------|
+| Cancel requested but root job is not terminal | Keep derived rows until the fenced terminal transition |
+| Candidate provenance does not match the cancelled run | Preserve it |
+| Candidate is selected by Chapter or any ChapterRevision | Preserve the version and its evaluation |
+| Chapter has a selected version or a positive current revision | Preserve all canonical Chapter fields |
+| Same cleanup executes more than once | Succeed without deleting additional facts |
+| Root lease/fence is stale before terminal persistence | Roll back and reject the stale outcome |
+
+#### 5. Good / Base / Bad Cases
+
+- Good: cancelling a waiting run deletes both unselected candidates, their evaluations,
+  and that run's traces, then a new run renders an empty preview until its own candidate
+  arrives.
+- Base: cancelling regeneration of a finalized Chapter removes only the new run's
+  disposable drafts and leaves canonical content plus every revision reference intact.
+- Bad: clear every ChapterVersion for the Chapter, hide old content only in Vue while
+  retaining cancelled drafts, or clean at `cancel_requested` before worker fencing is
+  resolved.
+
+#### 6. Tests Required
+
+- Cover waiting, running-worker, ambiguous-activity, and expired-worker cancellation;
+  assert the same candidate/evaluation/trace cleanup and cleared terminal heartbeat.
+- Repeat cancellation/cleanup and assert idempotence. Protect both the current selected
+  version and a version referenced only by ChapterRevision.
+- Assert an ungenerated Chapter returns to empty defaults while a finalized Chapter's
+  canonical fields and projection lineage remain unchanged.
+- Frontend tests must assert immediate local-preview clearing, no previous-run fallback,
+  current-run-only candidate display, and one allowed cancel control in the visible
+  progress area.
+
+#### 7. Wrong vs Correct
+
+```python
+# Wrong: terminal state changes but cancelled drafts remain canonical read candidates.
+job.status = "cancelled"
+await append_event(job, "job.cancelled")
+```
+
+```python
+# Correct: the shared fenced terminal event path cleans the current run atomically.
+job.status = "cancelled"
+await self._append_event(job, "job.cancelled", now=now)
+```
+
 ### Interrupt checkpoint and root wait handshake
 
 1. **Scope / Trigger**: apply whenever a graph node reaches `waiting_for_selection` or `projection_pending`, or a reclaimed worker observes one of those persisted interrupt checkpoints.

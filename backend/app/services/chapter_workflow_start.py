@@ -23,6 +23,7 @@ from ..schemas.chapter_workflow import (
 from ..schemas.job import ChapterWorkflowJobPayload, ChapterWorkflowRuntimeInputs
 from ..schemas.novel import FlowConfig
 from .chapter_context_resolver import ChapterContextResolver
+from .chapter_version_settings import resolve_chapter_version_count
 from .chapter_workflow_context import build_chapter_workflow_retrieval_inputs
 from .event_bus import publish_background_task
 from .job_service import JobService
@@ -114,6 +115,14 @@ class ChapterWorkflowStartService:
                 return result
 
             normalized_flow = FlowConfig.model_validate(flow_config or {})
+            normalized_flow = normalized_flow.model_copy(
+                update={
+                    "versions": await resolve_chapter_version_count(
+                        self.session,
+                        normalized_flow.versions,
+                    )
+                }
+            )
             # Base freeze 只读取 PostgreSQL canonical facts；RAG 由后续 typed
             # retrieval activity 按冻结配置执行并持久化，start 不做外部 I/O。
             resolver = ChapterContextResolver(
@@ -246,6 +255,10 @@ class ChapterWorkflowStartService:
             return None
         payload = ChapterWorkflowJobPayload.model_validate(existing_job.payload)
         requested_flow = FlowConfig.model_validate(flow_config or {})
+        if requested_flow.versions is None:
+            requested_flow = requested_flow.model_copy(
+                update={"versions": payload.runtime_inputs.flow_config.versions}
+            )
         if (
             existing_job.project_id != project_id
             or payload.project_id != project_id

@@ -10,7 +10,10 @@
       :step-tooltip-text="stepTooltipText"
       :should-show-manual-confirm-badge="shouldShowManualConfirmBadge"
       :active-step-key="activeStepKey"
+      :can-cancel="canCancel"
+      :pending="pending"
       @select="selectStep"
+      @cancel="emit('cancel')"
     />
 
     <ChapterDraftPreview
@@ -50,6 +53,8 @@ interface Props {
   statusUpdatedAt?: string | null
   generationTraces?: ChapterGenerationTrace[]
   readOnly?: boolean
+  canCancel?: boolean
+  pending?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -58,7 +63,13 @@ const props = withDefaults(defineProps<Props>(), {
   chapterContentPreview: '',
   generationTraces: () => [],
   readOnly: true,
+  canCancel: false,
+  pending: false,
 })
+
+const emit = defineEmits<{
+  cancel: []
+}>()
 
 const activeStepKey = ref<string | null>(null)
 

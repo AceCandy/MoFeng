@@ -4,6 +4,7 @@ import { assign, setup } from 'xstate'
 import type {
   ChapterWorkflowCommand,
   ChapterWorkflowCommandEnvelope,
+  ChapterWorkflowNodeKey,
   ChapterWorkflowSnapshot,
 } from '@/api/chapterWorkflow'
 
@@ -35,6 +36,8 @@ export interface ChapterWorkflowMachineContext extends ChapterWorkflowMachineInp
   scopeEpoch: number
   connectionEpoch: number
   runId: string | null
+  nodeKey: ChapterWorkflowNodeKey | null
+  progress: number | null
   rowRevision: number | null
   chapterRevision: number | null
   checkpointId: string | null
@@ -119,6 +122,17 @@ export const getChapterWorkflowPhase = (
   status: ChapterWorkflowSnapshot['status'],
 ): ChapterWorkflowPhase => STATUS_TO_PHASE[status]
 
+export const createChapterWorkflowRequestId = (): string => {
+  if (typeof globalThis.crypto.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID()
+  }
+  const bytes = globalThis.crypto.getRandomValues(new Uint8Array(16))
+  bytes[6] = (bytes[6] & 0x0f) | 0x40
+  bytes[8] = (bytes[8] & 0x3f) | 0x80
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
+
 const boundedMessage = (message: string) => message.trim().slice(0, 512) || null
 
 const isUuidLength = (value: string) => value.length === 36
@@ -166,6 +180,9 @@ const canApplySnapshot = (
     return false
   }
   if (event.source === 'command' && !isCorrelatedSnapshotResponse(context, event)) {
+    return false
+  }
+  if (context.pendingCommandId !== null && context.runId === null && event.source !== 'start') {
     return false
   }
   if (
@@ -295,6 +312,8 @@ const machineSetup = setup({
       const runChanged = context.runId !== null && context.runId !== event.snapshot.run_id
       return {
         runId: event.snapshot.run_id,
+        nodeKey: event.snapshot.node_key,
+        progress: event.snapshot.progress,
         rowRevision: event.snapshot.row_revision,
         chapterRevision: event.snapshot.current_chapter_revision,
         checkpointId: event.snapshot.checkpoint_id ?? null,
@@ -331,6 +350,8 @@ const machineSetup = setup({
     clearRun: assign(({ context }) => ({
       connectionEpoch: context.connectionEpoch + 1,
       runId: null,
+      nodeKey: null,
+      progress: null,
       rowRevision: null,
       chapterRevision: null,
       checkpointId: null,
@@ -348,6 +369,8 @@ const machineSetup = setup({
         scopeEpoch: context.scopeEpoch + 1,
         connectionEpoch: context.connectionEpoch + 1,
         runId: null,
+        nodeKey: null,
+        progress: null,
         rowRevision: null,
         chapterRevision: null,
         checkpointId: null,
@@ -363,6 +386,8 @@ const machineSetup = setup({
       scopeEpoch: context.scopeEpoch + 1,
       connectionEpoch: context.connectionEpoch + 1,
       runId: null,
+      nodeKey: null,
+      progress: null,
       rowRevision: null,
       chapterRevision: null,
       checkpointId: null,
@@ -377,7 +402,17 @@ const machineSetup = setup({
       pendingCommandId: null,
       lastContractError: event.type === 'FATAL' ? boundedMessage(event.message) : null,
     })),
-    beginStart: assign(({ event }) => ({
+    beginStart: assign(({ context, event }) => ({
+      connectionEpoch: context.connectionEpoch + 1,
+      runId: null,
+      nodeKey: null,
+      progress: null,
+      rowRevision: null,
+      chapterRevision: null,
+      checkpointId: null,
+      resumeCursor: null,
+      allowedCommands: [],
+      retryActivityKey: null,
       pendingCommandId: event.type === 'START_REQUESTED' ? event.requestId : null,
       lastCommandError: null,
     })),
@@ -476,6 +511,8 @@ export const chapterWorkflowMachine = machineSetup.createMachine({
     scopeEpoch: 0,
     connectionEpoch: 0,
     runId: null,
+    nodeKey: null,
+    progress: null,
     rowRevision: null,
     chapterRevision: null,
     checkpointId: null,
@@ -658,7 +695,7 @@ export const createChapterWorkflowCommandEnvelope = (
   context: ChapterWorkflowMachineContext,
   type: ChapterWorkflowCommand,
   payload: Record<string, unknown> = {},
-  commandId = globalThis.crypto.randomUUID(),
+  commandId = createChapterWorkflowRequestId(),
 ): ChapterWorkflowCommandEnvelope => {
   if (
     context.runId === null

@@ -1,12 +1,59 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  cleanVersionContent,
   findNearestIncompleteChapterNumber,
   formatChapterGenerationError,
   isChapterCompletedStatus,
   resolveChapterNumberForEntry,
   resolveChapterNumberForProjectEntry,
 } from '@/utils/chapter'
+
+describe('chapter version content cleaning', () => {
+  it('unwraps plain optimizer payloads', () => {
+    const raw = '{"optimized_content":"候选正文"}'
+
+    expect(cleanVersionContent(raw)).toBe('候选正文')
+  })
+
+  it('unwraps fenced optimizer payloads into plain chapter content', () => {
+    const raw = '```json\n{"optimized_content":"第一段\\n第二段"}\n```'
+
+    expect(cleanVersionContent(raw)).toBe('第一段\n第二段')
+  })
+
+  it('unwraps nested optimizer payloads', () => {
+    const nested = JSON.stringify({ optimized_content: '真正正文' })
+    const raw = JSON.stringify({ optimized_content: `\`\`\`json\n${nested}\n\`\`\`` })
+
+    expect(cleanVersionContent(raw)).toBe('真正正文')
+  })
+
+  it('unwraps escaped fenced optimizer payloads', () => {
+    const raw = '```json\\n{\\"optimized_content\\":\\"第一段\\\\n第二段\\"}\\n```'
+
+    expect(cleanVersionContent(raw)).toBe('第一段\n第二段')
+  })
+
+  it('unwraps optimizer payloads encoded as a JSON string', () => {
+    const raw = JSON.stringify('```json\n{"optimized_content":"外层正文"}\n```')
+
+    expect(cleanVersionContent(raw)).toBe('外层正文')
+  })
+
+  it('preserves literal escapes in plain text and parsed chapter content', () => {
+    const prose = String.raw`路径 C:\new\chapter，字面量 \n 与 \t`
+
+    expect(cleanVersionContent(prose)).toBe(prose)
+    expect(cleanVersionContent(JSON.stringify({ optimized_content: prose }))).toBe(prose)
+  })
+
+  it('keeps unrelated JSON text unchanged', () => {
+    const raw = '{"kind":"正文中的示例"}'
+
+    expect(cleanVersionContent(raw)).toBe(raw)
+  })
+})
 
 describe('chapter entry resolving', () => {
   const outlines = [

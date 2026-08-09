@@ -12,6 +12,7 @@ from ..models.job import JobEvent
 from ..repositories.chapter_generation_trace_projection_repository import (
     ChapterGenerationTraceProjectionRepository,
 )
+from .chapter_workflow_transition import CHAPTER_WORKFLOW_NODE_LABELS
 
 _PROJECTABLE_EVENT_TYPES = frozenset(
     {
@@ -26,23 +27,6 @@ _PROJECTABLE_EVENT_TYPES = frozenset(
         "workflow.completed",
     }
 )
-_NODE_LABELS = {
-    "freeze_context": "冻结章节上下文",
-    "plan_and_direct": "规划章节方向",
-    "generate_candidates": "生成候选版本",
-    "review_candidates": "评审候选版本",
-    "persist_candidates": "保存候选版本",
-    "waiting_for_selection": "等待选择版本",
-    "finalize_revision": "定稿章节版本",
-    "projection_pending": "等待章节投影",
-    "observe_projection": "确认章节投影",
-    "successful": "章节工作流完成",
-    "failed": "章节工作流失败",
-    "cancelled": "章节工作流取消",
-    "superseded": "章节工作流已被替代",
-    "needs_attention": "章节工作流需要处理",
-    "workflow": "章节工作流状态",
-}
 _FAILED_WORKFLOW_STATUSES = frozenset({"failed", "needs_attention"})
 
 
@@ -125,7 +109,7 @@ def _trace_row(
     raw_node_key = workflow.get("node_key")
     node_key = (
         raw_node_key
-        if isinstance(raw_node_key, str) and raw_node_key in _NODE_LABELS
+        if isinstance(raw_node_key, str) and raw_node_key in CHAPTER_WORKFLOW_NODE_LABELS
         else "workflow"
     )
     workflow_status = _bounded_string(workflow.get("status"), max_length=32)
@@ -139,7 +123,7 @@ def _trace_row(
         "project_id": run.project_id,
         "chapter_number": run.chapter_number,
         "node_key": node_key,
-        "node_label": _NODE_LABELS[node_key],
+        "node_label": CHAPTER_WORKFLOW_NODE_LABELS[node_key],
         "stage": "workflow_event",
         "status": "failed" if failed else "success",
         "system_prompt": None,

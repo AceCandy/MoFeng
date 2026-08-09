@@ -77,6 +77,23 @@ describe('ChapterWorkflowPanel', () => {
     expect(onSelectVersion).toHaveBeenCalledWith(42)
   })
 
+  it('候选预览剥离优化器 JSON 包装', async () => {
+    const onPreviewCandidate = vi.fn()
+    const wrappedCandidates: ChapterVersionSelection[] = [
+      {
+        ...candidates[0],
+        content: '```json\n{"optimized_content":"正常正文"}\n```',
+      },
+    ]
+    const host = mountPanel({ candidates: wrappedCandidates }, { onPreviewCandidate })
+    await nextTick()
+
+    const preview = host.querySelector('.chapter-workflow__candidate-preview')
+    expect(preview?.textContent).toContain('正常正文')
+    expect(preview?.textContent).not.toContain('optimized_content')
+    expect(onPreviewCandidate).toHaveBeenLastCalledWith('正常正文')
+  })
+
   it('候选支持方向键循环、Home/End 和焦点同步', async () => {
     const onSelectVersion = vi.fn()
     const host = mountPanel({}, { onSelectVersion })

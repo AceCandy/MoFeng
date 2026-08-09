@@ -391,6 +391,11 @@ async def test_persist_candidates_rejects_stale_fence_and_ignores_trace(isolated
     async with isolated_pg.session_factory() as session:
         job = await session.get(BackgroundTask, started.root_job.id)
         assert job is not None
+        trace_count_before = await session.scalar(
+            select(func.count(ChapterGenerationTrace.id)).where(
+                ChapterGenerationTrace.source_run_id == started.run.id
+            )
+        )
         job.fencing_token += 1
         await session.commit()
 
@@ -399,7 +404,13 @@ async def test_persist_candidates_rejects_stale_fence_and_ignores_trace(isolated
 
     async with isolated_pg.session_factory() as session:
         assert await session.scalar(select(func.count(ChapterVersion.id))) == 0
-        assert await session.scalar(select(func.count(ChapterGenerationTrace.id))) == 0
+        trace_count_after = await session.scalar(
+            select(func.count(ChapterGenerationTrace.id)).where(
+                ChapterGenerationTrace.source_run_id == started.run.id
+            )
+        )
+
+    assert trace_count_after == trace_count_before
 
     source = Path("app/services/chapter_workflow_persistence.py").read_text(encoding="utf-8")
     assert "clear_from_node" not in source

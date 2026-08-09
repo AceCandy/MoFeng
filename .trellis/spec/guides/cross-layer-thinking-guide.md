@@ -48,6 +48,7 @@ If you cannot name the type at every hop, you are not ready to write the code.
 | Celery task ↔ Async session | Task building its own engine / sync `sessionmaker` instead of reusing `AsyncSessionLocal` |
 | PostgreSQL event log ↔ Redis | Treating a wake-up notification as durable data instead of rereading by cursor |
 | SSE snapshot ↔ Client cursor | Reusing an expired cursor or changing stream scope without replacing the snapshot/cursor pair |
+| Model output ↔ Chapter content | Assuming one JSON encoding layer and persisting fenced or escaped wrapper fields as chapter prose |
 
 ---
 
@@ -115,6 +116,7 @@ Legacy Celery tasks must reuse `app.db.session.AsyncSessionLocal` and `settings.
 - **Every consumer re-parses the same payload** — multiple components casting the same untyped SSE/socket event. Put one decoder/type guard at the event boundary; see [code-reuse-thinking-guide](./code-reuse-thinking-guide.md) pattern 4.
 - **Flush as invisible I/O setup** — inserting an ORM aggregate, flushing it again to fill a derived field, then serializing an expired attribute. Allocate derived fields while transient or explicitly await a refresh.
 - **Wake-up as truth** — applying a Redis notification directly to UI state. Redis may duplicate or lose notifications; always reread the PostgreSQL event log from the durable cursor.
+- **Ideal-only model payload tests** — testing plain JSON while missing fenced JSON, nested payloads, or a whole response escaped one additional time. Normalize at the storage boundary and keep a shared read-side cleaner for already persisted data; regression tests must cover all four shapes and prove ordinary prose with literal escape sequences remains unchanged.
 
 ---
 
@@ -142,3 +144,4 @@ After implementation:
   have compatibility evidence in addition to byte-drift evidence.
 - [ ] A transient job/event receives its stream sequence before the job insert; public serialization does not depend on implicit async ORM I/O.
 - [ ] SSE reset and user/scope changes replace both snapshot and cursor before reconnecting.
+- [ ] AI-generated structured text tests cover plain JSON, fenced JSON, nested payloads, whole-response escaping, and ordinary-prose escape preservation at both the storage and compatibility-read boundaries.

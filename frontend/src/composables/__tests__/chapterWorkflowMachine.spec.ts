@@ -102,6 +102,8 @@ describe('chapterWorkflowMachine', () => {
       expect(actor.getSnapshot().value).toEqual(readyValue(phase, 'disconnected'))
       expect(actor.getSnapshot().context).toMatchObject({
         runId: RUN_ID,
+        nodeKey: 'generate_candidates',
+        progress: 40,
         rowRevision: 4,
         chapterRevision: 2,
         checkpointId: 'checkpoint-3',
@@ -202,6 +204,26 @@ describe('chapterWorkflowMachine', () => {
     expect(cancelledActor.getSnapshot().value).toEqual(
       readyValue('submitting', 'disconnected'),
     )
+    expect(cancelledActor.getSnapshot().context).toMatchObject({
+      runId: null,
+      nodeKey: null,
+      progress: null,
+      rowRevision: null,
+      pendingCommandId: COMMAND_ID,
+    })
+
+    cancelledActor.send({
+      type: 'SNAPSHOT_RECEIVED',
+      source: 'lookup',
+      scopeEpoch: 0,
+      snapshot: snapshot({
+        status: 'cancelled',
+        root_job_status: 'cancelled',
+        node_key: 'cancelled',
+        row_revision: 5,
+      }),
+    })
+    expect(cancelledActor.getSnapshot().context.runId).toBeNull()
 
     const runningActor = startActor()
     lookupSnapshot(runningActor, snapshot())
@@ -265,6 +287,28 @@ describe('chapterWorkflowMachine', () => {
     expect(actor.getSnapshot().value).toEqual(readyValue('failed', 'disconnected'))
   })
 
+  it('同一 run 的新快照同步更新当前节点与进度', () => {
+    const actor = startActor()
+    lookupSnapshot(actor, snapshot())
+
+    actor.send({
+      type: 'SNAPSHOT_RECEIVED',
+      source: 'refetch',
+      scopeEpoch: 0,
+      connectionEpoch: actor.getSnapshot().context.connectionEpoch,
+      snapshot: snapshot({
+        node_key: 'review_candidates',
+        progress: 50,
+        row_revision: 5,
+      }),
+    })
+
+    expect(actor.getSnapshot().context).toMatchObject({
+      nodeKey: 'review_candidates',
+      progress: 50,
+    })
+  })
+
   it('scope 切换清空关联数据，并拒绝旧 scope lookup', () => {
     const actor = startActor()
     lookupSnapshot(actor, snapshot())
@@ -277,6 +321,8 @@ describe('chapterWorkflowMachine', () => {
       chapterNumber: 4,
       scopeEpoch: 1,
       runId: null,
+      nodeKey: null,
+      progress: null,
       pendingCommandId: null,
     })
     actor.send({
@@ -362,6 +408,7 @@ describe('chapterWorkflowMachine', () => {
         status: 'waiting_for_selection',
         root_job_status: 'waiting',
         node_key: 'waiting_for_selection',
+        progress: 60,
         row_revision: 1,
       }),
     })
@@ -371,6 +418,8 @@ describe('chapterWorkflowMachine', () => {
     )
     expect(actor.getSnapshot().context).toMatchObject({
       runId: RUN_ID_2,
+      nodeKey: 'waiting_for_selection',
+      progress: 60,
       connectionEpoch: oldConnectionEpoch + 1,
     })
     actor.send({

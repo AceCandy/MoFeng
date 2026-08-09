@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createApp, nextTick } from 'vue'
 
 import ChapterGenerating from '@/components/writing-desk/workspace/ChapterGenerating.vue'
@@ -46,6 +46,51 @@ const clickPipelineStep = async (host: HTMLElement, label: string) => {
 }
 
 describe('ChapterGenerating timing inspector', () => {
+  it('keeps the allowed cancel action in the progress header and disables it while pending', async () => {
+    const onCancel = vi.fn()
+    const rendered = await mountChapterGenerating(
+      {
+        id: 99,
+        node_key: 'context_prep',
+        node_label: '整理前文',
+        status: 'running',
+        uses_llm: false,
+        metadata: {},
+      },
+      { canCancel: true, pending: false, onCancel },
+    )
+
+    try {
+      const cancelButton = rendered.host.querySelector<HTMLButtonElement>(
+        '.chapter-console__pipeline-header-main [data-action="cancel"]',
+      )
+      expect(cancelButton).not.toBeNull()
+      expect(cancelButton?.disabled).toBe(false)
+      cancelButton?.click()
+      expect(onCancel).toHaveBeenCalledTimes(1)
+    } finally {
+      rendered.unmount()
+    }
+
+    const pending = await mountChapterGenerating(
+      {
+        id: 100,
+        node_key: 'context_prep',
+        node_label: '整理前文',
+        status: 'running',
+        uses_llm: false,
+        metadata: {},
+      },
+      { canCancel: true, pending: true },
+    )
+    try {
+      expect(pending.host.querySelector<HTMLButtonElement>('[data-action="cancel"]')?.disabled)
+        .toBe(true)
+    } finally {
+      pending.unmount()
+    }
+  })
+
   it('keeps the displayed recommendation aligned with the structured winner', () => {
     const output = formatAiReviewOutputs({
       id: 0,

@@ -42,28 +42,41 @@ export function extractVersionContent(raw: unknown): string {
 }
 
 /**
- * 清理并规范化章节内容，剥离 JSON 嵌套与换行转义
+ * 清理并规范化章节内容，剥离结构化载荷中的 JSON 嵌套
  */
 export function cleanVersionContent(content: string): string {
   if (!content) return ''
 
   // 尝试解析JSON，看是否是完整的章节对象
   try {
-    const parsed = JSON.parse(content)
-    const extractContent = (value: any): string | null => {
-      if (!value) return null
-      if (typeof value === 'string') return value
+    const parsed = tryParseOptimizerPayload(content) ?? JSON.parse(content)
+    const extractContent = (value: unknown, depth = 0): string | null => {
+      if (!value || depth > 3) return null
+      if (typeof value === 'string') {
+        const nestedPayload = tryParseOptimizerPayload(value)
+        return nestedPayload ? (extractContent(nestedPayload, depth + 1) ?? value) : value
+      }
       if (Array.isArray(value)) {
         for (const item of value) {
-          const nested = extractContent(item)
+          const nested = extractContent(item, depth + 1)
           if (nested) return nested
         }
         return null
       }
       if (typeof value === 'object') {
-        for (const key of ['content', 'chapter_content', 'chapter_text', 'text', 'body', 'story']) {
-          if (value[key]) {
-            const nested = extractContent(value[key])
+        const record = value as Record<string, unknown>
+        for (const key of [
+          'content',
+          'optimized_content',
+          'revised_content',
+          'chapter_content',
+          'chapter_text',
+          'text',
+          'body',
+          'story',
+        ]) {
+          if (record[key]) {
+            const nested = extractContent(record[key], depth + 1)
             if (nested) return nested
           }
         }
@@ -75,26 +88,22 @@ export function cleanVersionContent(content: string): string {
       // 如果是章节对象/数组，提取正文
       content = extracted
     }
-  } catch (error) {
-    // 如果不是JSON，继续处理字符串
+  } catch {
+    // 普通正文保持原样
   }
 
-  // 去掉开头和结尾的引号
-  let cleaned = content.replace(/^"|"$/g, '')
-
-  // 处理转义字符
-  cleaned = cleaned.replace(/\\n/g, '\n') // 换行符
-  cleaned = cleaned.replace(/\\"/g, '"') // 引号
-  cleaned = cleaned.replace(/\\t/g, '\t') // 制表符
-  cleaned = cleaned.replace(/\\\\/g, '\\') // 反斜杠
-
-  return cleaned
+  return content
 }
 
 /**
  * 智能解析优化器返回的 Markdown 围栏或纯 JSON 负载
  */
 export function tryParseOptimizerPayload(rawText: string): Record<string, unknown> | null {
+  return parseOptimizerPayload(rawText, 0)
+}
+
+function parseOptimizerPayload(rawText: string, depth: number): Record<string, unknown> | null {
+  if (depth > 3) return null
   if (!rawText) return null
   const text = rawText.trim()
   if (!text) return null
@@ -105,12 +114,30 @@ export function tryParseOptimizerPayload(rawText: string): Record<string, unknow
     const fenced = fenceMatch[1].trim()
     if (fenced && fenced !== text) candidates.unshift(fenced)
   }
+  const escapedFenceMatch = text.match(
+    /^```(?:json|JSON)?(?:\\r)?\\n([\s\S]*?)(?:\\r)?\\n```$/,
+  )
+  if (escapedFenceMatch) {
+    try {
+      const decoded = JSON.parse(`"${text}"`)
+      if (typeof decoded === 'string') {
+        const nested = parseOptimizerPayload(decoded, depth + 1)
+        if (nested) return nested
+      }
+    } catch {
+      // 忽略无效的转义围栏
+    }
+  }
 
   for (const candidate of candidates) {
     try {
       const parsed = JSON.parse(candidate)
       if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
         return parsed as Record<string, unknown>
+      }
+      if (typeof parsed === 'string' && parsed !== candidate) {
+        const nested = parseOptimizerPayload(parsed, depth + 1)
+        if (nested) return nested
       }
     } catch {
       // 忽略

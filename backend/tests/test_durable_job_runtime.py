@@ -10,6 +10,7 @@ from app.models import (
     AIUsageRecord,
     BackgroundTask,
     Chapter,
+    ChapterGenerationTrace,
     ChapterGenerationTraceProjectionCheckpoint,
     ChapterWorkflowRun,
     JobActivity,
@@ -722,6 +723,7 @@ async def test_expired_cancelled_job_is_reaped_after_worker_crash(db_session_fac
         refreshed = await service.get_job(job.id)
         assert refreshed is not None
         assert refreshed.status == "cancelled"
+        assert refreshed.heartbeat_at is None
         events = await service.list_events(user_id=31, after_cursor=0)
         assert [event.event_type for event in events][-2:] == [
             "job.cancel_requested",
@@ -1256,8 +1258,10 @@ async def test_runtime_metrics_report_queue_age_statuses_and_expired_leases(
         waiting.status = "dead_letter"
         await session.commit()
         events = (
-            await session.execute(select(JobEvent).where(JobEvent.user_id == 1301))
-        ).scalars().all()
+            (await session.execute(select(JobEvent).where(JobEvent.user_id == 1301)))
+            .scalars()
+            .all()
+        )
         for event in events:
             event.created_at = checked_at - timedelta(seconds=400)
         await session.commit()
@@ -1311,12 +1315,14 @@ async def test_runtime_metrics_subtracts_trace_projector_checkpoint(db_session_f
             )
 
         events = (
-            await session.execute(
-                select(JobEvent)
-                .where(JobEvent.user_id == 1303)
-                .order_by(JobEvent.cursor)
+            (
+                await session.execute(
+                    select(JobEvent).where(JobEvent.user_id == 1303).order_by(JobEvent.cursor)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         for event in events:
             event.created_at = checked_at - timedelta(seconds=400)
         checkpoint_cursor = events[0].cursor
@@ -1531,6 +1537,108 @@ async def test_workflow_transition_adapter_syncs_wait_resume_retry_and_success(
         }
         assert event.payload["workflow"]["row_revision"] == revision
         assert event.payload["workflow"]["status"] == expected_status
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_workflow_activity_updates_snapshot_and_records_trace(isolated_pg):
+    session_factory = isolated_pg.session_factory
+
+    async with session_factory() as session:
+        job, _ = await _create_workflow_root(
+            session,
+            user_id=1404,
+            project_id="workflow-activity-progress",
+            chapter_number=1,
+            run_id="workflow-activity-progress",
+        )
+        started_at = datetime.now(timezone.utc)
+        service = JobService(session)
+        lease = await service.claim_next(
+            worker_id="workflow-activity-worker",
+            lease_seconds=30,
+            now=started_at,
+        )
+        assert lease is not None
+        activity = await service.begin_activity(
+            lease,
+            activity_key="wf:generate_candidates:test",
+            side_effect_class=SideEffectClass.AMBIGUOUS_EXTERNAL,
+            request_payload={
+                "run_id": "workflow-activity-progress",
+                "node_key": "generate_candidates",
+                "stage": "generate_candidate",
+            },
+            now=started_at + timedelta(seconds=1),
+        )
+
+        run = await session.get(ChapterWorkflowRun, "workflow-activity-progress")
+        started_event = (
+            await session.execute(
+                select(JobEvent).where(
+                    JobEvent.job_id == job.id,
+                    JobEvent.event_type == "activity.started",
+                )
+            )
+        ).scalar_one()
+        started_trace = (
+            await session.execute(
+                select(ChapterGenerationTrace).where(
+                    ChapterGenerationTrace.source_event_cursor == started_event.cursor
+                )
+            )
+        ).scalar_one()
+
+        assert run is not None
+        assert run.node_key == "generate_candidates"
+        assert run.progress == 30
+        assert run.row_revision == 2
+        assert started_event.payload["workflow"]["node_key"] == "generate_candidates"
+        assert started_event.payload["workflow"]["row_revision"] == 2
+        assert started_trace.status == "running"
+        assert started_trace.metadata["run_id"] == "workflow-activity-progress"
+        assert started_trace.metadata["input_payload"]["stage"] == "generate_candidate"
+
+        await service.complete_activity(
+            lease,
+            activity_key="wf:generate_candidates:test",
+            provider_request_key=activity.provider_request_key,
+            result={
+                "schema_version": 1,
+                "output": {
+                    "kind": "candidate",
+                    "ordinal": 1,
+                    "content": "这是正常正文。",
+                },
+            },
+            now=started_at + timedelta(seconds=3),
+        )
+
+        await session.refresh(run)
+        succeeded_event = (
+            await session.execute(
+                select(JobEvent).where(
+                    JobEvent.job_id == job.id,
+                    JobEvent.event_type == "activity.succeeded",
+                )
+            )
+        ).scalar_one()
+        succeeded_trace = (
+            await session.execute(
+                select(ChapterGenerationTrace).where(
+                    ChapterGenerationTrace.source_event_cursor == succeeded_event.cursor
+                )
+            )
+        ).scalar_one()
+
+        assert run.node_key == "generate_candidates"
+        assert run.progress == 45
+        assert run.row_revision == 3
+        assert succeeded_event.payload["workflow"]["progress"] == 45
+        assert succeeded_trace.status == "success"
+        assert succeeded_trace.metadata["run_id"] == "workflow-activity-progress"
+        assert succeeded_trace.metadata["output_payload"]["content"] == "这是正常正文。"
+        assert succeeded_trace.metadata["uses_llm"] is True
+        assert succeeded_trace.metadata["actions"] == ["完成生成候选版本"]
 
 
 @pytest.mark.asyncio(loop_scope="session")

@@ -183,6 +183,7 @@ afterEach(() => {
     mounted.app.unmount()
     mounted.host.remove()
   }
+  vi.unstubAllGlobals()
   vi.restoreAllMocks()
 })
 
@@ -498,7 +499,7 @@ describe('useChapterWorkflowActor', () => {
     })
   })
 
-  it('只在首次边界或 chapter revision 增长时 invalidate', async () => {
+  it('workflow row revision 增长时持续刷新节点详情', async () => {
     const lookup = vi
       .fn()
       .mockResolvedValueOnce(connection())
@@ -529,10 +530,9 @@ describe('useChapterWorkflowActor', () => {
     stream.subscriptions[0].onTask(taskEvent(6))
     await vi.waitFor(() => expect(invalidateChapterAndProject).toHaveBeenCalledTimes(1))
     stream.subscriptions[0].onTask(taskEvent(7))
-    await vi.waitFor(() => expect(lookup).toHaveBeenCalledTimes(3))
-    expect(invalidateChapterAndProject).toHaveBeenCalledTimes(1)
-    stream.subscriptions[0].onTask(taskEvent(8))
     await vi.waitFor(() => expect(invalidateChapterAndProject).toHaveBeenCalledTimes(2))
+    stream.subscriptions[0].onTask(taskEvent(8))
+    await vi.waitFor(() => expect(invalidateChapterAndProject).toHaveBeenCalledTimes(3))
     expect(invalidateChapterAndProject).toHaveBeenLastCalledWith({
       projectId: PROJECT_ID,
       chapterNumber: CHAPTER_NUMBER,
@@ -582,5 +582,31 @@ describe('useChapterWorkflowActor', () => {
     await expect(first).resolves.toBe(true)
     await vi.waitFor(() => expect(actor.snapshot.value.context.runId).toBe(RUN_ID))
     expect(lookup).toHaveBeenCalledTimes(2)
+  })
+
+  it('非安全来源缺少 randomUUID 时仍能启动工作流', async () => {
+    const getRandomValues = vi.fn((bytes: Uint8Array) => {
+      bytes.set(Array.from({ length: 16 }, (_, index) => index))
+      return bytes
+    })
+    vi.stubGlobal('crypto', { getRandomValues })
+    const startResult = deferred<ChapterWorkflowStartResponse>()
+    const start = vi.fn(() => startResult.promise)
+    const { ports } = createPorts({ start })
+    const { actor } = mountActor(ports)
+    await vi.waitFor(() => expect(actor.phase.value).toBe('idle'))
+
+    const startPromise = actor.start()
+
+    expect(getRandomValues).toHaveBeenCalledOnce()
+    expect(actor.snapshot.value.context.pendingCommandId).toBe(
+      '00010203-0405-4607-8809-0a0b0c0d0e0f',
+    )
+    expect(start).toHaveBeenCalledWith({
+      project_id: PROJECT_ID,
+      chapter_number: CHAPTER_NUMBER,
+    })
+    startResult.resolve({ ...connection(), created: true })
+    await expect(startPromise).resolves.toBe(true)
   })
 })

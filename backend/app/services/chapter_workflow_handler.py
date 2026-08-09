@@ -100,20 +100,45 @@ def _json_payload(raw: str) -> dict[str, Any]:
 
 
 def _content_from_response(raw: str) -> tuple[str, dict[str, Any]]:
-    cleaned = remove_think_tags(raw).strip()
-    normalized = unwrap_markdown_json(cleaned)
-    try:
-        payload = json.loads(normalized)
-    except json.JSONDecodeError:
+    content = remove_think_tags(raw).strip()
+    report: dict[str, Any] = {}
+    for _ in range(4):
         payload = None
-    if isinstance(payload, dict):
+        for candidate in (content, unwrap_markdown_json(content)):
+            unescaped = (
+                candidate.replace(r'\"', '"')
+                .replace(r"\\r", r"\r")
+                .replace(r"\\n", r"\n")
+                .replace(r"\\t", r"\t")
+            )
+            unescaped = unescaped.removeprefix(r"\r\n").removeprefix(r"\n")
+            unescaped = unescaped.removesuffix(r"\r\n").removesuffix(r"\n")
+            for normalized in (candidate, unescaped):
+                try:
+                    payload = json.loads(normalized)
+                    break
+                except json.JSONDecodeError:
+                    continue
+            if payload is not None:
+                break
+        if payload is None:
+            break
+        if isinstance(payload, str) and payload.strip() and payload.strip() != content:
+            content = payload.strip()
+            continue
+        if not isinstance(payload, dict):
+            break
+        if not report and isinstance(payload.get("report"), dict):
+            report = payload["report"]
         for key in ("content", "optimized_content", "revised_content", "chapter_content"):
             value = payload.get(key)
             if isinstance(value, str) and value.strip():
-                report = payload.get("report")
-                return value.strip(), report if isinstance(report, dict) else {}
-    if cleaned:
-        return cleaned, {}
+                content = value.strip()
+                break
+        else:
+            break
+    if content:
+        return content, report
     raise ValueError("模型未返回有效正文")
 
 

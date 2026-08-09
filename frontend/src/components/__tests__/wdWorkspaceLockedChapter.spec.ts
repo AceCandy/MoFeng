@@ -88,6 +88,70 @@ const mountWorkspace = async (
 }
 
 describe('WDWorkspace locked chapter state', () => {
+  it('hides the duplicate running banner and isolates live draft preview to the current run', async () => {
+    const project: NovelProject = {
+      id: 'novel-running-preview',
+      title: '全网退役',
+      initial_prompt: '',
+      conversation_history: [],
+      blueprint: {
+        chapter_outline: [
+          { chapter_number: 1, title: '一招', summary: '林拓重新站上擂台。' },
+        ],
+      },
+      chapters: [
+        {
+          chapter_number: 1,
+          title: '一招',
+          summary: '林拓重新站上擂台。',
+          real_summary: null,
+          content: null,
+          versions: ['上一轮遗留草稿'],
+          evaluation: null,
+          generation_status: 'generating',
+        },
+      ],
+    }
+
+    const withoutCandidate = await mountWorkspace(project, 1, {
+      availableVersions: [{ content: '上一轮遗留草稿' }],
+      workflowPhase: 'running',
+      workflowRunId: 'current-run',
+      workflowNodeKey: 'freeze_context',
+      workflowAllowedCommands: ['cancel'],
+    })
+    try {
+      expect(withoutCandidate.host.querySelector('.chapter-workflow')).toBeNull()
+      expect(withoutCandidate.host.textContent).not.toContain('章节生成中')
+      expect(withoutCandidate.host.querySelector('[data-action="cancel"]')).not.toBeNull()
+      expect(withoutCandidate.host.querySelector('.chapter-console__preview-card')).toBeNull()
+    } finally {
+      withoutCandidate.unmount()
+    }
+
+    const withCandidate = await mountWorkspace(project, 1, {
+      availableVersions: [{ content: '上一轮遗留草稿' }],
+      workflowPhase: 'running',
+      workflowRunId: 'current-run',
+      workflowNodeKey: 'generate_candidates',
+      workflowCandidates: [
+        {
+          id: 601,
+          content: '当前轮次刚生成的新草稿',
+          version_label: '版本一',
+          workflow_run_id: 'current-run',
+        },
+      ],
+    })
+    try {
+      const preview = withCandidate.host.querySelector('.chapter-console__preview-card')
+      expect(preview?.textContent).toContain('当前轮次刚生成的新草稿')
+      expect(preview?.textContent).not.toContain('上一轮遗留草稿')
+    } finally {
+      withCandidate.unmount()
+    }
+  })
+
   it('hides chapter tools and sends the writer to the first unfinished prerequisite chapter', async () => {
     const project: NovelProject = {
       id: 'novel-1',
@@ -253,7 +317,7 @@ describe('WDWorkspace locked chapter state', () => {
 
     const rendered = await mountWorkspace(project, 1, {
       workflowPhase: 'waitingForSelection',
-      workflowAllowedCommands: ['select'],
+      workflowAllowedCommands: ['select', 'cancel'],
       workflowCandidates: [
         {
           id: 301,
@@ -284,6 +348,9 @@ describe('WDWorkspace locked chapter state', () => {
       expect(rendered.host.textContent).toContain('待人工确认')
       expect(rendered.host.textContent).not.toContain('转入后台生成')
       expect(rendered.host.textContent).not.toContain('取消生成')
+      const cancelButtons = rendered.host.querySelectorAll('[data-action="cancel"]')
+      expect(cancelButtons).toHaveLength(1)
+      expect(cancelButtons[0]?.closest('.chapter-console__pipeline-header-main')).not.toBeNull()
       const pipelineTitles = Array.from(
         rendered.host.querySelectorAll('.chapter-console__pipeline-title'),
       ).map((item) => item.textContent?.trim())

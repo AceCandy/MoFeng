@@ -10,6 +10,10 @@ from sqlalchemy import func, select
 from app.models import (
     BackgroundTask,
     Chapter,
+    ChapterEvaluation,
+    ChapterGenerationTrace,
+    ChapterRevision,
+    ChapterVersion,
     ChapterWorkflowCommand,
     ChapterWorkflowRun,
     JobActivity,
@@ -228,6 +232,62 @@ async def _create_waiting_workflow(
     await session.refresh(run)
     await session.refresh(chapter)
     return job, run, chapter
+
+
+async def _add_run_outputs(
+    session,
+    *,
+    job: BackgroundTask,
+    run: ChapterWorkflowRun,
+    chapter: Chapter,
+    add_trace: bool = True,
+) -> tuple[int, int | None]:
+    version = ChapterVersion(
+        chapter_id=chapter.id,
+        version_label="v1",
+        content="CURRENT_RUN_DRAFT",
+        metadata={"_chapter_workflow": {"run_id": run.id, "ordinal": 1}},
+    )
+    session.add(version)
+    await session.flush()
+    session.add(
+        ChapterEvaluation(
+            chapter_id=chapter.id,
+            version_id=version.id,
+            decision="ai_review",
+            feedback="CURRENT_RUN_REVIEW",
+        )
+    )
+    trace_id = None
+    if add_trace:
+        source_cursor = await session.scalar(
+            select(JobEvent.cursor)
+            .where(JobEvent.job_id == job.id)
+            .order_by(JobEvent.cursor.desc())
+            .limit(1)
+        )
+        assert source_cursor is not None
+        trace = ChapterGenerationTrace(
+            chapter_id=chapter.id,
+            project_id=run.project_id,
+            chapter_number=run.chapter_number,
+            node_key="persist_versions",
+            node_label="保存草稿",
+            status="success",
+            metadata={"run_id": run.id},
+            source_run_id=run.id,
+            source_event_cursor=source_cursor,
+        )
+        session.add(trace)
+        await session.flush()
+        trace_id = trace.id
+    chapter.status = "waiting_for_confirm"
+    chapter.generation_progress = 100
+    chapter.generation_step = "waiting_for_confirm|v=1"
+    chapter.generation_step_index = 7
+    chapter.generation_step_total = 7
+    await session.commit()
+    return version.id, trace_id
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -857,6 +917,15 @@ async def test_ambiguous_cancel_is_terminal_without_new_intent_or_provider_call(
             project_id="command-cancel-project",
             run_id="command-cancel-run",
         )
+        chapter = await session.get(Chapter, run.chapter_id)
+        assert chapter is not None
+        version_id, _ = await _add_run_outputs(
+            session,
+            job=job,
+            run=run,
+            chapter=chapter,
+            add_trace=False,
+        )
         command = _command(
             command_id="command-cancel-ambiguous",
             run=run,
@@ -879,6 +948,12 @@ async def test_ambiguous_cancel_is_terminal_without_new_intent_or_provider_call(
         activities = await session.scalar(
             select(func.count()).select_from(JobActivity).where(JobActivity.job_id == job.id)
         )
+        remaining_version = await session.get(ChapterVersion, version_id)
+        remaining_traces = await session.scalar(
+            select(func.count())
+            .select_from(ChapterGenerationTrace)
+            .where(ChapterGenerationTrace.source_run_id == run.id)
+        )
         events = list(
             (
                 await session.execute(
@@ -894,6 +969,8 @@ async def test_ambiguous_cancel_is_terminal_without_new_intent_or_provider_call(
     assert persisted_original is not None
     assert _activity_snapshot(persisted_original) == original_before
     assert activities == 1
+    assert remaining_version is None
+    assert remaining_traces == 0
     assert [event.event_type for event in events].count("workflow.completed") == 1
 
 
@@ -929,6 +1006,12 @@ async def test_waiting_cancel_command_is_applied_atomically(isolated_pg):
             user_id=1714,
             project_id="command-waiting-cancel-project",
         )
+        version_id, trace_id = await _add_run_outputs(
+            session,
+            job=job,
+            run=run,
+            chapter=chapter,
+        )
         command = await JobService(session).submit_chapter_workflow_command(
             run.id,
             actor_user_id=1714,
@@ -943,6 +1026,7 @@ async def test_waiting_cancel_command_is_applied_atomically(isolated_pg):
         )
         await session.refresh(job)
         await session.refresh(run)
+        await session.refresh(chapter)
         events = list(
             (
                 await session.execute(
@@ -950,6 +1034,17 @@ async def test_waiting_cancel_command_is_applied_atomically(isolated_pg):
                 )
             ).scalars()
         )
+        remaining_versions = await session.scalar(
+            select(func.count())
+            .select_from(ChapterVersion)
+            .where(ChapterVersion.id == version_id)
+        )
+        remaining_evaluations = await session.scalar(
+            select(func.count())
+            .select_from(ChapterEvaluation)
+            .where(ChapterEvaluation.version_id == version_id)
+        )
+        remaining_trace = await session.get(ChapterGenerationTrace, trace_id)
 
     assert command.status == "applied"
     assert command.result_payload == {
@@ -961,6 +1056,14 @@ async def test_waiting_cancel_command_is_applied_atomically(isolated_pg):
     assert job.status == "cancelled"
     assert run.status == "cancelled"
     assert run.is_active is False
+    assert remaining_versions == 0
+    assert remaining_evaluations == 0
+    assert trace_id is not None and remaining_trace is None
+    assert chapter.status == "not_generated"
+    assert chapter.generation_progress == 0
+    assert chapter.generation_step is None
+    assert chapter.generation_step_index == 0
+    assert chapter.generation_step_total == 0
     assert [event.event_type for event in events][-3:] == [
         "workflow.command.accepted",
         "workflow.completed",
@@ -977,6 +1080,12 @@ async def test_running_cancel_command_requires_current_fence_to_finish(isolated_
             user_id=1715,
             project_id="command-running-cancel-project",
         )
+        version_id, trace_id = await _add_run_outputs(
+            session,
+            job=job,
+            run=run,
+            chapter=chapter,
+        )
         await JobService(session).resume_waiting(
             job.id,
             expected_fencing_token=job.fencing_token,
@@ -992,6 +1101,8 @@ async def test_running_cancel_command_requires_current_fence_to_finish(isolated_
             lease_seconds=30,
         )
         assert lease is not None
+        await session.refresh(job)
+        assert job.heartbeat_at is not None
         await session.refresh(run)
         command = await JobService(session).submit_chapter_workflow_command(
             run.id,
@@ -1014,14 +1125,112 @@ async def test_running_cancel_command_requires_current_fence_to_finish(isolated_
         assert job.cancel_requested_at is not None
         assert run.status == "running"
         assert run.is_active is True
+        assert await session.get(ChapterVersion, version_id) is not None
+        assert trace_id is not None and await session.get(ChapterGenerationTrace, trace_id) is not None
 
         heartbeat = await JobService(session).heartbeat(lease, lease_seconds=30)
         assert heartbeat.cancel_requested is True
         await JobService(session).mark_cancelled(lease)
+        await session.refresh(job)
         await session.refresh(run)
+        await session.refresh(chapter)
+        remaining_version = await session.get(ChapterVersion, version_id)
+        remaining_trace = await session.get(ChapterGenerationTrace, trace_id)
 
     assert run.status == "cancelled"
     assert run.is_active is False
+    assert job.heartbeat_at is None
+    assert remaining_version is None
+    assert trace_id is not None and remaining_trace is None
+    assert chapter.status == "not_generated"
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_cancel_preserves_selected_and_revision_versions_and_is_idempotent(isolated_pg):
+    async with isolated_pg.session_factory() as session:
+        job, run, chapter = await _create_waiting_workflow(
+            session,
+            user_id=1718,
+            project_id="command-cancel-protected-project",
+        )
+        candidate_id, _ = await _add_run_outputs(
+            session,
+            job=job,
+            run=run,
+            chapter=chapter,
+        )
+        selected = ChapterVersion(
+            chapter_id=chapter.id,
+            version_label="selected",
+            content="SELECTED_CANONICAL",
+        )
+        historical = ChapterVersion(
+            chapter_id=chapter.id,
+            version_label="historical",
+            content="HISTORICAL_CANONICAL",
+        )
+        session.add_all([selected, historical])
+        await session.flush()
+        selected_id = selected.id
+        historical_id = historical.id
+        chapter.selected_version_id = selected.id
+        chapter.current_revision = 1
+        chapter.status = "successful"
+        chapter.generation_progress = 100
+        run.base_revision = 1
+        session.add(
+            ChapterRevision(
+                id=str(uuid4()),
+                chapter_id=chapter.id,
+                project_id=run.project_id,
+                chapter_number=run.chapter_number,
+                revision=1,
+                selected_version_id=historical.id,
+                source_hash="d" * 64,
+                source_content=historical.content,
+                projection_context={},
+                lifecycle="successful",
+                required_projections=[],
+                skipped_projections=[],
+                source_generation=run.id,
+            )
+        )
+        await session.commit()
+
+        envelope = ChapterWorkflowCommandEnvelope(
+            command_id=str(uuid4()),
+            type="cancel",
+            payload={},
+            expected_run_revision=run.row_revision,
+            expected_chapter_revision=chapter.current_revision,
+            expected_checkpoint_id=run.checkpoint_id,
+        )
+        first = await JobService(session).submit_chapter_workflow_command(
+            run.id,
+            actor_user_id=1718,
+            envelope=envelope,
+        )
+        replay = await JobService(session).submit_chapter_workflow_command(
+            run.id,
+            actor_user_id=1718,
+            envelope=envelope,
+        )
+        await session.refresh(chapter)
+
+        remaining_ids = set(
+            (
+                await session.execute(
+                    select(ChapterVersion.id).where(ChapterVersion.chapter_id == chapter.id)
+                )
+            ).scalars()
+        )
+
+    assert replay.id == first.id
+    assert candidate_id not in remaining_ids
+    assert remaining_ids == {selected_id, historical_id}
+    assert chapter.selected_version_id == selected_id
+    assert chapter.current_revision == 1
+    assert chapter.status == "successful"
 
 
 @pytest.mark.asyncio(loop_scope="session")

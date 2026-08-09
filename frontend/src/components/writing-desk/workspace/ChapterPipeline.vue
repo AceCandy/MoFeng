@@ -10,6 +10,16 @@
         <h4>生成进度</h4>
         <span class="chapter-console__read-only-badge">只读回溯</span>
       </div>
+      <button
+        v-if="canCancel"
+        type="button"
+        class="md-btn md-btn-outlined md-ripple chapter-console__pipeline-cancel"
+        data-action="cancel"
+        :disabled="pending"
+        @click="emit('cancel')"
+      >
+        取消本轮
+      </button>
     </header>
     <ol class="chapter-console__pipeline">
       <li
@@ -76,12 +86,18 @@ interface Props {
   stepTooltipText: (key: string, index: number) => string
   shouldShowManualConfirmBadge: (key: string) => boolean
   activeStepKey: string | null
+  canCancel?: boolean
+  pending?: boolean
 }
 
-defineProps<Props>()
+withDefaults(defineProps<Props>(), {
+  canCancel: false,
+  pending: false,
+})
 
 const emit = defineEmits<{
   select: [key: string, index: number]
+  cancel: []
 }>()
 </script>
 
@@ -130,6 +146,11 @@ const emit = defineEmits<{
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--md-spacing-2);
+}
+
+.chapter-console__pipeline-cancel {
+  min-height: 36px;
+  white-space: nowrap;
 }
 
 .chapter-console__pipeline-meta-top {

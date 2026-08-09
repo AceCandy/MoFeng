@@ -8,8 +8,15 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from test_chapter_workflow_context import _start_and_claim
 
-from app.models import AIUsageRecord, BackgroundTask, ChapterWorkflowRun, JobActivity
+from app.models import (
+    AIUsageRecord,
+    BackgroundTask,
+    ChapterWorkflowRun,
+    JobActivity,
+    SystemConfig,
+)
 from app.schemas.chapter_context import ChapterContext
+from app.schemas.chapter_workflow import ChapterWorkflowStateV1
 from app.services.chapter_workflow_activities import (
     ChapterWorkflowActivityRef,
     ChapterWorkflowCandidateInput,
@@ -23,7 +30,11 @@ from app.services.chapter_workflow_activities import (
     ChapterWorkflowReviewOutput,
 )
 from app.services.chapter_workflow_context import ChapterWorkflowContextService
-from app.services.chapter_workflow_handler import ChapterWorkflowLLMProvidersV1
+from app.services.chapter_workflow_handler import (
+    ChapterWorkflowBindingAssemblerV1,
+    ChapterWorkflowLLMProvidersV1,
+    _content_from_response,
+)
 from app.services.job_registry import SideEffectClass
 from app.services.job_service import AmbiguousActivityError
 from app.services.llm_service import LLMService
@@ -35,6 +46,43 @@ def _activity_ref(execution) -> ChapterWorkflowActivityRef:
         activity_key=execution.activity_key,
         result_hash=execution.result.result_hash,
     )
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ('{"optimized_content":"普通正文"}', "普通正文"),
+        ('```json\n{"optimized_content":"候选正文"}\n```', "候选正文"),
+        (
+            '{"optimized_content":"```json\\n{\\"optimized_content\\":\\"最终正文\\"}\\n```"}',
+            "最终正文",
+        ),
+        (
+            r'```json\n{\"optimized_content\":\"第一段\\n第二段\"}\n```',
+            "第一段\n第二段",
+        ),
+        (
+            r'"```json\n{\"optimized_content\":\"外层正文\"}\n```"',
+            "外层正文",
+        ),
+        (
+            r'{"optimized_content":"路径 C:\\new\\chapter，字面量 \\n"}',
+            r"路径 C:\new\chapter，字面量 \n",
+        ),
+    ],
+)
+def test_content_from_response_unwraps_optimizer_payloads(raw, expected):
+    content, _report = _content_from_response(raw)
+
+    assert content == expected
+
+
+def test_content_from_response_preserves_literal_escapes_in_plain_text():
+    raw = r"正文包含 C:\new 与字面量 \n"
+
+    content, _report = _content_from_response(raw)
+
+    assert content == raw
 
 
 async def _context_and_service(isolated_pg, *, user_id: int, project_id: str):
@@ -50,6 +98,71 @@ async def _context_and_service(isolated_pg, *, user_id: int, project_id: str):
         context,
         ChapterWorkflowModelActivityService(execution),
     )
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_configured_version_count_drives_two_candidate_activities(isolated_pg):
+    async with isolated_pg.session_factory() as session:
+        session.add(
+            SystemConfig(
+                key="writer.chapter_versions",
+                value="2",
+                description="章节候选版本数量",
+            )
+        )
+        await session.commit()
+
+    started, execution = await _start_and_claim(
+        isolated_pg,
+        user_id=4301,
+        project_id="workflow-configured-candidate-count",
+    )
+    candidate_ordinals: list[int] = []
+
+    class Providers:
+        async def plan(self, _request, *, provider_request_key):
+            assert provider_request_key
+            return ChapterWorkflowPlanOutput(mission={"goal": "推进冲突"})
+
+        async def candidate(self, request, *, provider_request_key):
+            assert provider_request_key
+            candidate_ordinals.append(request.ordinal)
+            return ChapterWorkflowCandidateOutput(
+                ordinal=request.ordinal,
+                content=f"候选正文 {request.ordinal}",
+            )
+
+    assembler = ChapterWorkflowBindingAssemblerV1(execution, Providers())
+    state = ChapterWorkflowStateV1.initial(
+        run_id=started.run.id,
+        context_hash=started.run.context_hash,
+    )
+    context_update = await assembler.freeze_context(state)
+    state = state.model_copy(
+        update={
+            **context_update,
+            "node_key": "plan_and_direct",
+        }
+    )
+    plan_update = await assembler.plan_and_direct(state)
+    state = state.model_copy(
+        update={
+            "node_key": "generate_candidates",
+            "activity_refs": {
+                **state.activity_refs,
+                **plan_update["activity_refs"],
+            },
+            "result_refs": {
+                **state.result_refs,
+                **plan_update["result_refs"],
+            },
+        }
+    )
+
+    candidate_update = await assembler.generate_candidates(state)
+
+    assert candidate_ordinals == [1, 2]
+    assert set(candidate_update["activity_refs"]) == {"candidate:1", "candidate:2"}
 
 
 @pytest.mark.asyncio(loop_scope="session")

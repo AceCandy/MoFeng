@@ -135,6 +135,7 @@ import type {
   ChapterWorkflowTransportPhase,
 } from '@/composables/chapterWorkflowMachine'
 import { globalAlert } from '@/composables/useAlert'
+import { cleanVersionContent } from '@/utils/chapter'
 
 type WorkflowPanelPhase = ChapterWorkflowPhase | 'booting' | 'fatal'
 
@@ -228,7 +229,7 @@ const transportCopy = computed(() => {
 })
 
 const preview = (content: string) => {
-  const normalized = content.replace(/\s+/g, ' ').trim()
+  const normalized = cleanVersionContent(content).replace(/\s+/g, ' ').trim()
   return normalized.length > 120 ? `${normalized.slice(0, 120)}...` : normalized
 }
 
@@ -247,7 +248,7 @@ const onCancel = () => {
 const resolveSelectedCandidateContent = (): string | null => {
   const candidate = props.candidates.find((item) => item.id === selectedCandidateId.value)
   if (!candidate || !candidate.content?.trim()) return null
-  return candidate.content
+  return cleanVersionContent(candidate.content)
 }
 
 const emitCandidatePreview = () => {

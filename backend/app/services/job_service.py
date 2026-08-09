@@ -10,16 +10,17 @@ from hashlib import sha256
 from typing import Any, Awaitable, Callable, Optional, cast
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.config import settings
 from ..models.background_task import BackgroundTask
+from ..models.chapter_generation_trace import ChapterGenerationTrace
 from ..models.chapter_projection import ChapterProjectionRun, ChapterRevision
 from ..models.chapter_workflow import ChapterWorkflowCommand, ChapterWorkflowRun
 from ..models.job import AIUsageRecord, JobActivity, JobEvent, JobWorkerHeartbeat
-from ..models.novel import Chapter
+from ..models.novel import Chapter, ChapterEvaluation, ChapterVersion
 from ..repositories.chapter_workflow_repository import ChapterWorkflowRepository
 from ..repositories.job_repository import JobRepository
 from ..schemas.chapter_workflow import (
@@ -32,6 +33,7 @@ from ..schemas.job import ChapterWorkflowJobPayload
 from ..utils.ai_telemetry import AICallResult
 from .chapter_projection_state import retryable_projection_names
 from .chapter_workflow_transition import (
+    CHAPTER_WORKFLOW_NODE_LABELS,
     ChapterWorkflowEvent,
     ChapterWorkflowTransition,
     ChapterWorkflowTransitionAdapter,
@@ -1663,6 +1665,7 @@ class JobService:
             job.completed_at = requested_at
             job.lease_owner = None
             job.lease_expires_at = None
+            job.heartbeat_at = None
             event_type = "job.cancelled"
             await self._sync_projection_run_status(
                 job,
@@ -2777,9 +2780,10 @@ class JobService:
                 activity.fencing_token = lease.fencing_token
                 activity.started_at = started_at
                 activity.updated_at = started_at
-                await self._append_event(
+                await self._append_activity_event(
                     job,
                     "activity.retried",
+                    activity=activity,
                     now=started_at,
                     workflow_context=workflow_context,
                 )
@@ -2795,9 +2799,10 @@ class JobService:
                 activity.attempt = lease.attempt
                 activity.fencing_token = lease.fencing_token
                 activity.updated_at = started_at
-                await self._append_event(
+                await self._append_activity_event(
                     job,
                     "activity.retried",
+                    activity=activity,
                     now=started_at,
                     workflow_context=workflow_context,
                 )
@@ -2841,7 +2846,7 @@ class JobService:
             )
 
         provider_request_key = str(uuid4())
-        await self.repo.add_activity(
+        activity = await self.repo.add_activity(
             JobActivity(
                 id=str(uuid4()),
                 job_id=job.id,
@@ -2857,9 +2862,10 @@ class JobService:
                 updated_at=started_at,
             )
         )
-        await self._append_event(
+        await self._append_activity_event(
             job,
             "activity.started",
+            activity=activity,
             now=started_at,
             workflow_context=workflow_context,
         )
@@ -2947,11 +2953,13 @@ class JobService:
         activity.completed_at = completed_at
         activity.updated_at = completed_at
         await self.session.flush()
-        await self._append_event(
+        await self._append_activity_event(
             job,
             "activity.succeeded",
+            activity=activity,
             now=completed_at,
             workflow_context=workflow_context,
+            result_payload=activity_result,
         )
         await self.session.commit()
         await self.session.refresh(activity)
@@ -3004,11 +3012,13 @@ class JobService:
         activity.attempt = lease.attempt
         activity.fencing_token = lease.fencing_token
         activity.updated_at = recorded_at
-        await self._append_event(
+        await self._append_activity_event(
             job,
             "activity.retryable_failed" if retryable else "activity.failed",
+            activity=activity,
             now=recorded_at,
             workflow_context=workflow_context,
+            error=safe_category,
         )
         await self.session.commit()
         await self.session.refresh(activity)
@@ -3127,6 +3137,7 @@ class JobService:
         job.completed_at = cancelled_at
         job.lease_owner = None
         job.lease_expires_at = None
+        job.heartbeat_at = None
         job.log_entries = [
             *(job.log_entries or []),
             _log_entry("任务已取消", level="warning", now=cancelled_at),
@@ -3461,6 +3472,7 @@ class JobService:
         job.completed_at = now
         job.lease_owner = None
         job.lease_expires_at = None
+        job.heartbeat_at = None
         job.log_entries = [*(job.log_entries or []), log_entry]
         await self._sync_projection_run_status(
             job,
@@ -3539,6 +3551,17 @@ class JobService:
         if workflow_event is not None:
             event_type = workflow_event.event_type
             workflow_payload = workflow_event.payload
+        elif event_type == "job.cancelled" and workflow_context is not None:
+            await self._cleanup_cancelled_chapter_workflow(workflow_context)
+            workflow_event = self.workflow_transitions.apply_event(
+                job=job,
+                context=workflow_context,
+                source_event_type=event_type,
+                now=now,
+                transition=workflow_transition,
+            )
+            event_type = workflow_event.event_type
+            workflow_payload = workflow_event.payload
         elif workflow_context is not None and workflow_command is not None:
             workflow_event = self.workflow_transitions.command_event(
                 context=workflow_context,
@@ -3579,6 +3602,215 @@ class JobService:
                 sequence=sequence,
                 event_type=event_type,
                 payload=payload,
+                created_at=now,
+            )
+        )
+
+    async def _cleanup_cancelled_chapter_workflow(
+        self,
+        workflow_context: LockedChapterWorkflowTransition,
+    ) -> None:
+        """丢弃当前 run 的未确认派生结果，保留正式版本与 durable 审计。"""
+
+        chapter = workflow_context.chapter
+        run = workflow_context.run
+        versions = list(
+            (
+                await self.session.execute(
+                    select(ChapterVersion)
+                    .where(ChapterVersion.chapter_id == chapter.id)
+                    .order_by(ChapterVersion.id.asc())
+                    .with_for_update()
+                    .execution_options(populate_existing=True)
+                )
+            ).scalars()
+        )
+        revision_version_ids = set(
+            (
+                await self.session.execute(
+                    select(ChapterRevision.selected_version_id).where(
+                        ChapterRevision.chapter_id == chapter.id,
+                        ChapterRevision.selected_version_id.is_not(None),
+                    )
+                )
+            ).scalars()
+        )
+        protected_version_ids = {
+            version_id
+            for version_id in {chapter.selected_version_id, *revision_version_ids}
+            if version_id is not None
+        }
+        cancelled_version_ids = [
+            version.id
+            for version in versions
+            if version.id not in protected_version_ids
+            and isinstance(version.metadata_, dict)
+            and isinstance(version.metadata_.get("_chapter_workflow"), dict)
+            and version.metadata_["_chapter_workflow"].get("run_id") == run.id
+        ]
+        if cancelled_version_ids:
+            await self.session.execute(
+                delete(ChapterEvaluation).where(
+                    ChapterEvaluation.version_id.in_(cancelled_version_ids)
+                )
+            )
+            await self.session.execute(
+                delete(ChapterVersion).where(ChapterVersion.id.in_(cancelled_version_ids))
+            )
+        await self.session.execute(
+            delete(ChapterGenerationTrace).where(
+                ChapterGenerationTrace.source_run_id == run.id
+            )
+        )
+
+        if chapter.selected_version_id is None and int(chapter.current_revision or 0) == 0:
+            chapter.status = "not_generated"
+            chapter.generation_progress = 0
+            chapter.generation_step = None
+            chapter.generation_step_index = 0
+            chapter.generation_step_total = 0
+            chapter.generation_started_at = None
+            chapter.real_summary = None
+            chapter.word_count = 0
+            chapter.source_hash = None
+            chapter.required_projection_snapshot = []
+            chapter.projection_generation = None
+
+    async def _append_activity_event(
+        self,
+        job: BackgroundTask,
+        event_type: str,
+        *,
+        activity: JobActivity,
+        now: datetime,
+        workflow_context: Optional[LockedChapterWorkflowTransition],
+        result_payload: Optional[dict[str, Any]] = None,
+        error: Optional[str] = None,
+    ) -> JobEvent:
+        workflow_event = None
+        if workflow_context is not None:
+            workflow_event = self.workflow_transitions.apply_activity_event(
+                job=job,
+                context=workflow_context,
+                source_event_type=event_type,
+                request_payload=dict(activity.request_payload or {}),
+                now=now,
+            )
+        event = await self._append_event(
+            job,
+            event_type,
+            now=now,
+            workflow_context=workflow_context if workflow_event is None else None,
+            workflow_event=workflow_event,
+        )
+        if workflow_context is not None and workflow_event is not None:
+            self._add_activity_trace(
+                event=event,
+                activity=activity,
+                workflow_context=workflow_context,
+                result_payload=result_payload,
+                error=error,
+                now=now,
+            )
+        return event
+
+    def _add_activity_trace(
+        self,
+        *,
+        event: JobEvent,
+        activity: JobActivity,
+        workflow_context: LockedChapterWorkflowTransition,
+        result_payload: Optional[dict[str, Any]],
+        error: Optional[str],
+        now: datetime,
+    ) -> None:
+        request_payload = dict(activity.request_payload or {})
+        node_key = str(request_payload["node_key"])
+        node_label = CHAPTER_WORKFLOW_NODE_LABELS[node_key]
+        uses_llm = node_key in {
+            "plan_and_direct",
+            "generate_candidates",
+            "review_candidates",
+        }
+        status = (
+            "success"
+            if event.event_type == "activity.succeeded"
+            else "failed" if error is not None else "running"
+        )
+        output_payload: Optional[dict[str, Any]] = None
+        if result_payload is not None:
+            nested_output = result_payload.get("output")
+            output_payload = (
+                dict(nested_output)
+                if isinstance(nested_output, dict)
+                else {
+                    key: value
+                    for key, value in result_payload.items()
+                    if key not in {"ai_telemetry", "context_snapshot"}
+                }
+            )
+        duration_ms = None
+        if status != "running" and activity.started_at is not None:
+            duration_ms = max(0, round((now - activity.started_at).total_seconds() * 1000))
+        action = {
+            "running": "开始执行",
+            "success": "完成",
+            "failed": "执行失败",
+        }[status]
+        summary_status = {
+            "running": "进行中",
+            "success": "已完成",
+            "failed": "执行失败",
+        }[status]
+        call_type = {
+            "freeze_context": "rag_retrieval",
+            "plan_and_direct": "chat_llm",
+            "generate_candidates": "chat_llm",
+            "review_candidates": "chat_llm",
+        }.get(node_key, "database_write")
+        metadata: dict[str, Any] = {
+            "source": "job_activity",
+            "event_cursor": event.cursor,
+            "event_type": event.event_type,
+            "run_id": workflow_context.run.id,
+            "activity_key": activity.activity_key,
+            "input_payload": request_payload,
+            "actions": [f"{action}{node_label}"],
+            "summary": f"{node_label}{summary_status}",
+            "uses_llm": uses_llm,
+            "call_type": call_type,
+        }
+        if output_payload is not None:
+            metadata["output_payload"] = output_payload
+        if duration_ms is not None:
+            metadata["duration_ms"] = duration_ms
+        if uses_llm:
+            metadata["model_calls"] = [
+                {
+                    "call_type": "chat_llm",
+                    "stage": request_payload.get("stage", node_key),
+                    "status": status,
+                }
+            ]
+        self.session.add(
+            ChapterGenerationTrace(
+                chapter_id=workflow_context.chapter.id,
+                project_id=workflow_context.run.project_id,
+                chapter_number=workflow_context.run.chapter_number,
+                node_key=node_key,
+                node_label=node_label,
+                stage=str(request_payload.get("stage") or node_key)[:64],
+                status=status,
+                system_prompt=None,
+                user_prompt=None,
+                raw_response=None,
+                cleaned_output=None,
+                error=error,
+                metadata=metadata,
+                source_run_id=workflow_context.run.id,
+                source_event_cursor=event.cursor,
+                started_at=activity.started_at,
+                ended_at=now if status != "running" else None,
                 created_at=now,
             )
         )

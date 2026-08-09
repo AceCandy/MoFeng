@@ -53,6 +53,9 @@
               :selected-version-index="selectedVersionIndex"
               :available-versions="availableVersions"
               :workflow-phase="workflowPhase"
+              :workflow-run-id="workflowRunId"
+              :workflow-node-key="workflowNodeKey"
+              :workflow-progress="workflowProgress"
               :workflow-transport="workflowTransport"
               :workflow-allowed-commands="workflowAllowedCommands"
               :workflow-pending="workflowPending"
@@ -314,6 +317,9 @@ const chapterWorkflow = useChapterWorkflowActor(
 )
 const workflowPhase = chapterWorkflow.phase
 const workflowTransport = chapterWorkflow.transport
+const workflowRunId = computed(() => chapterWorkflow.snapshot.value.context.runId)
+const workflowNodeKey = computed(() => chapterWorkflow.snapshot.value.context.nodeKey)
+const workflowProgress = computed(() => chapterWorkflow.snapshot.value.context.progress)
 const workflowAllowedCommands = computed(
   () => chapterWorkflow.snapshot.value.context.allowedCommands,
 )

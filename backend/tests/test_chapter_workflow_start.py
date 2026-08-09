@@ -12,6 +12,7 @@ from app.models import (
     ChapterWorkflowRun,
     JobEvent,
     NovelProject,
+    SystemConfig,
 )
 from app.models.user import User
 from app.schemas.chapter_context import ChapterContext, ContextFallback, stable_digest
@@ -123,6 +124,46 @@ async def test_start_freezes_identity_and_reuses_active_run(isolated_pg):
     with pytest.raises(ValueError, match="runtime input 身份"):
         ChapterWorkflowJobPayload.model_validate(nested_drift)
 
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_start_freezes_configured_version_count_and_preserves_explicit_override(isolated_pg):
+    async with isolated_pg.session_factory() as session:
+        await _seed_project(session, user_id=4106, project_id="workflow-version-default")
+        await _seed_project(session, user_id=4107, project_id="workflow-version-explicit")
+        config = SystemConfig(
+            key="writer.chapter_versions",
+            value="2",
+            description="章节候选版本数量",
+        )
+        session.add(config)
+        await session.commit()
+
+        service = ChapterWorkflowStartService(session)
+        configured = await service.start(
+            user_id=4106,
+            project_id="workflow-version-default",
+            chapter_number=1,
+            idempotency_key="workflow-version-default",
+        )
+        config.value = "1"
+        await session.commit()
+        replay = await service.start(
+            user_id=4106,
+            project_id="workflow-version-default",
+            chapter_number=1,
+            idempotency_key="workflow-version-default",
+        )
+        explicit = await service.start(
+            user_id=4107,
+            project_id="workflow-version-explicit",
+            chapter_number=1,
+            flow_config={"versions": 1},
+        )
+
+    assert configured.root_job.payload["runtime_inputs"]["flow_config"]["versions"] == 2
+    assert replay.created is False
+    assert replay.root_job.payload["runtime_inputs"]["flow_config"]["versions"] == 2
+    assert explicit.root_job.payload["runtime_inputs"]["flow_config"]["versions"] == 1
 
 @pytest.mark.asyncio(loop_scope="session")
 async def test_start_rejects_blank_idempotency_key(isolated_pg):

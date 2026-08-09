@@ -50,6 +50,40 @@ _TRANSITION_SOURCE_EVENT_TYPES = {
     "workflow.phase_changed",
     "workflow.waiting",
 }
+CHAPTER_WORKFLOW_NODE_LABELS = {
+    "freeze_context": "冻结章节上下文",
+    "plan_and_direct": "规划章节方向",
+    "generate_candidates": "生成候选版本",
+    "review_candidates": "评审候选版本",
+    "persist_candidates": "保存候选版本",
+    "waiting_for_selection": "等待选择版本",
+    "finalize_revision": "定稿章节版本",
+    "projection_pending": "等待章节投影",
+    "observe_projection": "确认章节投影",
+    "successful": "章节工作流完成",
+    "failed": "章节工作流失败",
+    "cancelled": "章节工作流取消",
+    "superseded": "章节工作流已被替代",
+    "needs_attention": "章节工作流需要处理",
+    "workflow": "章节工作流状态",
+}
+_ACTIVITY_PROGRESS = {
+    "freeze_context": (5, 10),
+    "plan_and_direct": (15, 25),
+    "generate_candidates": (30, 45),
+    "review_candidates": (50, 55),
+    "persist_candidates": (58, 60),
+    "finalize_revision": (70, 85),
+    "projection_pending": (90, 90),
+    "observe_projection": (95, 98),
+}
+_ACTIVITY_EVENT_TYPES = {
+    "activity.started",
+    "activity.retried",
+    "activity.succeeded",
+    "activity.retryable_failed",
+    "activity.failed",
+}
 
 
 @dataclass(frozen=True)
@@ -171,6 +205,43 @@ class ChapterWorkflowTransitionAdapter:
             source_event_type=source_event_type,
             now=now,
             transition=transition,
+        )
+
+    def apply_activity_event(
+        self,
+        *,
+        job: BackgroundTask,
+        context: LockedChapterWorkflowTransition,
+        source_event_type: str,
+        request_payload: dict[str, object],
+        now: datetime,
+    ) -> Optional[ChapterWorkflowEvent]:
+        """用 activity 的公开节点身份推进 run，同时保留原 activity 事件类型。"""
+
+        if source_event_type not in _ACTIVITY_EVENT_TYPES:
+            raise ValueError("workflow activity event type 不受支持")
+        node_key = request_payload.get("node_key")
+        if not isinstance(node_key, str) or node_key not in _ACTIVITY_PROGRESS:
+            return None
+        start_progress, completed_progress = _ACTIVITY_PROGRESS[node_key]
+        target_progress = (
+            completed_progress if source_event_type == "activity.succeeded" else start_progress
+        )
+        workflow_event = self._apply_run_event(
+            job=job,
+            run=context.run,
+            source_event_type="workflow.phase_changed",
+            now=now,
+            transition=ChapterWorkflowTransition(
+                status=context.run.status,
+                node_key=node_key,
+                checkpoint_id=context.run.checkpoint_id,
+                progress=max(context.run.progress, target_progress),
+            ),
+        )
+        return ChapterWorkflowEvent(
+            event_type=source_event_type,
+            payload=workflow_event.payload,
         )
 
     def apply_reconciliation(

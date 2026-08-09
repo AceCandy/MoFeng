@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import re
 from datetime import datetime, timedelta, timezone
 from dataclasses import asdict, dataclass
@@ -27,6 +26,7 @@ from ..services.chapter_context_adapters import (
 from ..services.chapter_context_resolver import ChapterContextResolver
 from ..services.chapter_generation_trace_service import ChapterGenerationTraceService
 from ..services.chapter_guardrails import ChapterGuardrails
+from ..services.chapter_version_settings import resolve_chapter_version_count
 from ..services.chapter_word_count_settings import (
     build_word_count_requirement_text,
     count_chapter_words,
@@ -51,12 +51,6 @@ logger = logging.getLogger(__name__)
 # 使用固定 UTC+8，避免在 Windows/Python 环境缺少 tzdata 时 ZoneInfo 初始化失败。
 CN_TIMEZONE = timezone(timedelta(hours=8), name="Asia/Shanghai")
 VERSION_REFERENCE_PATTERN = re.compile(r"版本\s*(\d+)|第\s*(\d+)\s*(?:个\s*)?(?:版本|版)")
-MIN_CHAPTER_VERSION_COUNT = 1
-MAX_CHAPTER_VERSION_COUNT = 2
-
-
-def _clamp_version_count(value: int) -> int:
-    return max(MIN_CHAPTER_VERSION_COUNT, min(MAX_CHAPTER_VERSION_COUNT, int(value)))
 WRITER_GENERATION_MAX_TOKENS = 7000
 TRACE_NODE_META: Dict[str, Tuple[str, str]] = {
     "context_prep": ("整理前文", "context_prep"),
@@ -1713,35 +1707,7 @@ class PipelineOrchestrator:
         return config
 
     async def _resolve_version_count(self, requested_count: Optional[int]) -> int:
-        if requested_count:
-            try:
-                count = int(requested_count)
-                return _clamp_version_count(count)
-            except (TypeError, ValueError):
-                pass
-
-        repo = SystemConfigRepository(self.session)
-        for key in ("writer.chapter_versions", "writer.version_count"):
-            record = await repo.get_by_key(key)
-            if record and record.value:
-                try:
-                    val = int(record.value)
-                    if val >= 1:
-                        return _clamp_version_count(val)
-                except ValueError:
-                    pass
-
-        for env in ("WRITER_CHAPTER_VERSION_COUNT", "WRITER_CHAPTER_VERSIONS", "WRITER_VERSION_COUNT"):
-            v = os.getenv(env)
-            if v:
-                try:
-                    val = int(v)
-                    if val >= 1:
-                        return _clamp_version_count(val)
-                except ValueError:
-                    pass
-
-        return _clamp_version_count(int(settings.writer_chapter_versions))
+        return await resolve_chapter_version_count(self.session, requested_count)
 
     async def _generate_chapter_mission(
         self,
