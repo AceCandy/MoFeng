@@ -160,6 +160,9 @@ export function useChapterWorkflowActor(
   let activeStream: ActiveStream | null = null
   let currentEventsUrl: string | null = null
   let lookupRequestEpoch = 0
+  let wakeUpLookupGeneration = 0
+  let wakeUpLookupInFlight = false
+  let wakeUpLookupPending = false
   let reconnectFailures = 0
   let reconnectHandle: unknown | null = null
   let pollingHandle: unknown | null = null
@@ -205,6 +208,9 @@ export function useChapterWorkflowActor(
 
   const abortLookups = () => {
     lookupRequestEpoch += 1
+    wakeUpLookupGeneration += 1
+    wakeUpLookupInFlight = false
+    wakeUpLookupPending = false
     for (const controller of lookupControllers) controller.abort()
     lookupControllers.clear()
   }
@@ -444,6 +450,33 @@ export function useChapterWorkflowActor(
     scheduleReconnect(identity, mode)
   }
 
+  const scheduleWakeUpLookup = (identity: StreamIdentity) => {
+    wakeUpLookupPending = true
+    if (wakeUpLookupInFlight) return
+    const generation = wakeUpLookupGeneration
+    wakeUpLookupInFlight = true
+    void (async () => {
+      try {
+        while (
+          generation === wakeUpLookupGeneration
+          && wakeUpLookupPending
+          && isCurrentIdentity(identity)
+          && !snapshot.value.matches({ ready: { transport: 'reconnecting' } })
+        ) {
+          wakeUpLookupPending = false
+          await lookupAndApply(
+            { projectId: identity.projectId, chapterNumber: identity.chapterNumber },
+            identity.scopeEpoch,
+            'refetch',
+            identity.connectionEpoch,
+          )
+        }
+      } finally {
+        if (generation === wakeUpLookupGeneration) wakeUpLookupInFlight = false
+      }
+    })()
+  }
+
   const handleWakeUp = (identity: StreamIdentity, cursor: number) => {
     if (!isCurrentIdentity(identity)) return
     const previousCursor = snapshot.value.context.resumeCursor
@@ -456,12 +489,7 @@ export function useChapterWorkflowActor(
     })
     if (snapshot.value.context.resumeCursor !== cursor || previousCursor === cursor) return
     reconnectFailures = 0
-    void lookupAndApply(
-      { projectId: identity.projectId, chapterNumber: identity.chapterNumber },
-      identity.scopeEpoch,
-      'refetch',
-      identity.connectionEpoch,
-    )
+    scheduleWakeUpLookup(identity)
   }
 
   const handleReset = (identity: StreamIdentity) => {

@@ -85,6 +85,28 @@ For cursor-based task SSE:
 - Send the same cursor in the query and `Last-Event-ID` when both are present.
 - Treat `reset` as a state replacement boundary: fetch a new `snapshot_revision + resume_cursor` pair for the same stream scope, replace the cached task list/cursor, then reconnect.
 - Clear snapshot and cursor before reconnecting when the authenticated user or `(stream_type, stream_id)` changes.
+- Serialize snapshot lookups triggered by one stream scope. TanStack Query may reuse the
+  in-flight promise for an identical query key, so parallel wake-up lookups plus a
+  "latest request wins" guard can still apply the oldest response.
+- When a newer cursor arrives during that lookup, coalesce the wake-ups into one pending
+  follow-up lookup. Advance a coordinator generation and clear both the in-flight and
+  pending state at scope, reset, and identity boundaries.
+
+```ts
+pending = true
+if (inFlight) return
+const generation = currentGeneration
+inFlight = true
+try {
+  do {
+    pending = false
+    await lookupCurrent()
+  } while (generation === currentGeneration && pending && isCurrentScope())
+} finally {
+  if (generation === currentGeneration) inFlight = false
+}
+```
+
 - Redis availability is not a frontend state signal. The backend event log and snapshot pair remain authoritative, while the long polling interval remains the final fallback.
 
 See [Durable Job And Event Log](../backend/durable-job-guidelines.md) for the cross-layer contract.

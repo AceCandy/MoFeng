@@ -299,35 +299,41 @@ describe('useChapterWorkflowActor', () => {
     expect(lookup).toHaveBeenCalledTimes(2)
   })
 
-  it('并发 refetch 只接纳最后发起的结果，迟到 null 不清空新事实', async () => {
+  it('合并在途 refetch 期间的多个新 cursor，并在完成后补查最新快照', async () => {
     const firstRefetch = deferred<ChapterWorkflowConnection | null>()
     const secondRefetch = deferred<ChapterWorkflowConnection | null>()
     const lookup = vi
       .fn()
       .mockResolvedValueOnce(connection())
       .mockImplementationOnce(() => firstRefetch.promise)
-      .mockImplementationOnce(() => secondRefetch.promise)
+      .mockImplementation(() => secondRefetch.promise)
     const { ports, stream } = createPorts({ lookup })
     const { actor } = mountActor(ports)
     await vi.waitFor(() => expect(stream.subscriptions).toHaveLength(1))
 
     stream.subscriptions[0].onTask(taskEvent(6))
     stream.subscriptions[0].onTask(taskEvent(7))
+    stream.subscriptions[0].onTask(taskEvent(8))
+    await flushPromises()
+    expect(lookup).toHaveBeenCalledTimes(2)
+
+    firstRefetch.resolve(connection({ resume_cursor: 6 }))
     await vi.waitFor(() => expect(lookup).toHaveBeenCalledTimes(3))
     secondRefetch.resolve(connection({
       status: 'waiting_for_selection',
       root_job_status: 'waiting',
       node_key: 'waiting_for_selection',
       row_revision: 3,
-      resume_cursor: 7,
+      resume_cursor: 8,
     }))
     await vi.waitFor(() => expect(actor.snapshot.value.context.rowRevision).toBe(3))
-    firstRefetch.resolve(null)
     await flushPromises()
 
+    expect(lookup).toHaveBeenCalledTimes(3)
     expect(actor.snapshot.value.context).toMatchObject({
       runId: RUN_ID,
       rowRevision: 3,
+      resumeCursor: 8,
     })
     expect(actor.snapshot.value.value).toEqual({
       ready: { workflow: 'waitingForSelection', transport: 'connecting' },
