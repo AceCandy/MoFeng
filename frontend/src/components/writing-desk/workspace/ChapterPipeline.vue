@@ -237,16 +237,18 @@ const emit = defineEmits<{
 }
 
 .chapter-console__pipeline-item.is-in-progress::after {
-  background: linear-gradient(
+  background-color: var(--md-outline-variant);
+  background-image: linear-gradient(
     90deg,
-    var(--md-success) 0%,
-    var(--md-primary) 30%,
-    color-mix(in srgb, var(--md-surface) 92%, transparent) 50%,
-    var(--md-primary) 70%,
-    var(--md-outline-variant) 100%
+    transparent 0%,
+    var(--md-success) 25%,
+    var(--md-primary) 65%,
+    transparent 100%
   );
-  background-size: 200% 100%;
-  animation: line-flow 2s infinite linear;
+  background-position: -60% 0;
+  background-repeat: no-repeat;
+  background-size: 40% 100%;
+  animation: line-flow 1.4s infinite linear;
 }
 
 .chapter-console__pipeline-marker {
@@ -427,12 +429,6 @@ const emit = defineEmits<{
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .chapter-console__pipeline-item.is-in-progress .chapter-console__dot {
-    animation: none;
-  }
-}
-
 @keyframes dot-ripple {
   0% {
     transform: scale(1);
@@ -447,19 +443,19 @@ const emit = defineEmits<{
 
 @keyframes line-flow {
   0% {
-    background-position: 200% 0;
+    background-position: -60% 0;
   }
   100% {
-    background-position: 0 0;
+    background-position: 160% 0;
   }
 }
 
 @keyframes line-flow-vertical {
   0% {
-    background-position: 0 200%;
+    background-position: 0 -60%;
   }
   100% {
-    background-position: 0 0;
+    background-position: 0 160%;
   }
 }
 
@@ -501,16 +497,18 @@ const emit = defineEmits<{
   }
 
   .chapter-console__pipeline-item.is-in-progress::before {
-    background: linear-gradient(
+    background-color: var(--md-outline-variant);
+    background-image: linear-gradient(
       180deg,
-      var(--md-success) 0%,
-      var(--md-primary) 30%,
-      color-mix(in srgb, var(--md-surface) 92%, transparent) 50%,
-      var(--md-primary) 70%,
-      var(--md-outline-variant) 100%
+      transparent 0%,
+      var(--md-success) 25%,
+      var(--md-primary) 65%,
+      transparent 100%
     );
-    background-size: 100% 200%;
-    animation: line-flow-vertical 2s infinite linear;
+    background-position: 0 -60%;
+    background-repeat: no-repeat;
+    background-size: 100% 40%;
+    animation: line-flow-vertical 1.4s infinite linear;
   }
 
   .chapter-console__pipeline-item::after {
@@ -530,6 +528,14 @@ const emit = defineEmits<{
     flex-direction: row;
     align-items: center;
     gap: var(--md-spacing-2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chapter-console__pipeline-item.is-in-progress::before,
+  .chapter-console__pipeline-item.is-in-progress::after,
+  .chapter-console__pipeline-item.is-in-progress .chapter-console__dot::after {
+    animation: none;
   }
 }
 </style>
