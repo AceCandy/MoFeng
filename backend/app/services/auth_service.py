@@ -1,11 +1,13 @@
 # AIMETA P=认证服务_登录注册业务逻辑|R=登录_注册_令牌|NR=不含用户管理|E=AuthService|X=internal|A=服务类|D=jose,passlib|S=db|RD=./README.ai
 import asyncio
+import hashlib
 import logging
 import random
 import secrets
 import string
 import time
 from typing import Dict, Optional
+from urllib.parse import urlencode, urlparse
 
 import httpx
 import redis
@@ -27,6 +29,13 @@ from ..schemas.user import AuthOptions, Token, UserCreate, UserInDB, UserRegistr
 
 _VERIFICATION_CACHE: Dict[str, tuple[str, float]] = {}
 _LAST_SEND_TIME: Dict[str, float] = {}
+LINUXDO_OAUTH_STATE_TTL_SECONDS = 300
+LINUXDO_OAUTH_STATE_INVALID_DETAIL = "登录请求已失效，请重新发起"
+_LINUXDO_OAUTH_STATE_KEY_PREFIX = "oauth:linuxdo:state:"
+
+
+class LinuxdoOAuthStateError(ValueError):
+    """Linux.do OAuth state 缺失、失配、过期或已被消费。"""
 
 # 验证码 Redis 客户端（可选）：配置 REDIS_URL 时启用以支持多 worker 一致；未配置或连接失败则降级进程内字典
 _redis_client = None
@@ -335,9 +344,101 @@ class AuthService:
     # OAuth 对接示例（以 Linux.do 为例）
     # ------------------------------------------------------------------
 
-    async def handle_linuxdo_callback(self, code: str) -> Token:
+    @staticmethod
+    def _linuxdo_state_key(state: str) -> str:
+        state_hash = hashlib.sha256(state.encode("utf-8")).hexdigest()
+        return f"{_LINUXDO_OAUTH_STATE_KEY_PREFIX}{state_hash}"
+
+    @staticmethod
+    async def _get_linuxdo_state_client() -> redis.Redis:
+        try:
+            client = await asyncio.to_thread(_get_redis_client)
+        except Exception as exc:  # noqa: BLE001
+            raise ConnectionError("Linux.do OAuth state 存储不可用") from exc
+        if client is None:
+            raise ConnectionError("Linux.do OAuth state 存储不可用")
+        return client
+
+    async def create_linuxdo_authorization(self) -> tuple[str, str, bool]:
+        client_id = await self._get_config_value("linuxdo.client_id")
+        redirect_uri = await self._get_config_value("linuxdo.redirect_uri")
+        auth_url = await self._get_config_value("linuxdo.auth_url")
+        if not all([client_id, redirect_uri, auth_url]):
+            raise ValueError("未配置 Linux.do OAuth 参数")
+
+        parsed_auth_url = urlparse(auth_url)
+        parsed_redirect_uri = urlparse(redirect_uri)
+        if parsed_auth_url.scheme not in {"http", "https"} or not parsed_auth_url.netloc:
+            raise ValueError("Linux.do OAuth 授权地址无效")
+        if parsed_redirect_uri.scheme not in {"http", "https"} or not parsed_redirect_uri.netloc:
+            raise ValueError("Linux.do OAuth 回调地址无效")
+        if settings.environment == "production" and parsed_redirect_uri.scheme != "https":
+            raise ValueError("生产环境 Linux.do OAuth 回调地址必须使用 HTTPS")
+        if parsed_redirect_uri.scheme == "http" and parsed_redirect_uri.hostname not in {
+            "localhost",
+            "127.0.0.1",
+            "::1",
+        }:
+            raise ValueError("非生产环境仅允许本地 HTTP Linux.do OAuth 回调地址")
+
+        state = secrets.token_urlsafe(32)
+        state_client = await self._get_linuxdo_state_client()
+        try:
+            created = await asyncio.to_thread(
+                state_client.set,
+                self._linuxdo_state_key(state),
+                "1",
+                ex=LINUXDO_OAUTH_STATE_TTL_SECONDS,
+                nx=True,
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise ConnectionError("Linux.do OAuth state 存储不可用") from exc
+        if not created:
+            raise ConnectionError("Linux.do OAuth state 存储不可用")
+
+        params = {
+            "client_id": client_id,
+            "redirect_uri": redirect_uri,
+            "response_type": "code",
+            "scope": "user",
+            "state": state,
+        }
+        separator = "&" if parsed_auth_url.query else "?"
+        return (
+            f"{auth_url}{separator}{urlencode(params)}",
+            state,
+            parsed_redirect_uri.scheme == "https",
+        )
+
+    async def _consume_linuxdo_state(self, state: str) -> bool:
+        state_client = await self._get_linuxdo_state_client()
+        try:
+            value = await asyncio.to_thread(
+                state_client.getdel,
+                self._linuxdo_state_key(state),
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise ConnectionError("Linux.do OAuth state 存储不可用") from exc
+        return value is not None
+
+    async def handle_linuxdo_callback(
+        self,
+        code: Optional[str],
+        state: Optional[str],
+        browser_state: Optional[str],
+    ) -> Token:
         if not await self.is_linuxdo_login_enabled():
             raise HTTPException(status_code=403, detail="未启用 Linux.do 登录")
+        if (
+            not code
+            or not state
+            or not browser_state
+            or not secrets.compare_digest(state, browser_state)
+        ):
+            raise LinuxdoOAuthStateError(LINUXDO_OAUTH_STATE_INVALID_DETAIL)
+        if not await self._consume_linuxdo_state(state):
+            raise LinuxdoOAuthStateError(LINUXDO_OAUTH_STATE_INVALID_DETAIL)
+
         client_id = await self._get_config_value("linuxdo.client_id")
         client_secret = await self._get_config_value("linuxdo.client_secret")
         redirect_uri = await self._get_config_value("linuxdo.redirect_uri")
@@ -405,10 +506,6 @@ class AuthService:
     async def _get_config_value(self, key: str) -> Optional[str]:
         config = await self.system_config_repo.get_by_key(key)
         return config.value if config else None
-
-    async def get_config_value(self, key: str) -> Optional[str]:
-        """对外暴露的配置读取接口，便于路由层复用。"""
-        return await self._get_config_value(key)
 
     @staticmethod
     def _parse_bool(value: Optional[str], fallback: bool) -> bool:

@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/security-guidelines.md","reason":"核验 state、cookie、Redis 与 HTTPS 安全边界"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"核验统一 400/503 和分层职责"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"核验同步 Redis 未阻塞事件循环及测试覆盖"}
+{"file":".trellis/spec/backend/logging-guidelines.md","reason":"核验日志不包含 OAuth 敏感值"}

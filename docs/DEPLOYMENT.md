@@ -19,6 +19,7 @@ Remote server deployment scripts may still exist in the repository, but they are
 - Node.js 18+
 - npm
 - Optional: a Python virtual environment
+- Redis server 6.2+ when Linux.do OAuth is enabled
 
 ### 2.2 Backend
 
@@ -209,6 +210,26 @@ Additional common variables:
 - `POSTGRES_*`: PostgreSQL connection parts and bundled PostgreSQL configuration when `DATABASE_URL` is unset
 - `IMAGE_REPO`: image repository name
 
+### 4.3 Linux.do OAuth prerequisites
+
+When `ENABLE_LINUXDO_LOGIN=true`, all `LINUXDO_*` values must be configured and
+`REDIS_URL` must point to a reachable Redis server 6.2 or newer. OAuth state uses
+atomic `GETDEL`, expires after 300 seconds, and does not fall back to process memory;
+login and callback endpoints return 503 while Redis is unavailable.
+
+The callback URL must be exactly the URL registered with Linux.do. Production
+deployments require an HTTPS callback. Local development may use HTTP only with a
+loopback host such as `localhost` or `127.0.0.1`; the state cookie is `Secure` whenever
+the callback URL uses HTTPS.
+
+For the bundled Compose Redis, set `REDIS_URL=redis://redis:6379/0` and include the
+Redis profile in the startup command:
+
+```bash
+docker compose --env-file deploy/.env -f deploy/docker-compose.yml \
+  --profile postgres --profile redis up -d --build
+```
+
 ## 5. Database lifecycle commands
 
 The API runtime performs no schema or data mutation. Installation and deployment orchestration use separate commands:
@@ -314,7 +335,8 @@ For your own fork or branded deployment, review these items before release:
 
 - Check whether `ALLOW_USER_REGISTRATION` should be enabled
 - Check whether `ENABLE_LINUXDO_LOGIN` should remain enabled
-- If Linux.do login is enabled, replace all OAuth credentials and redirect URLs
+- If Linux.do login is enabled, replace all OAuth credentials and redirect URLs and
+  satisfy the Redis/HTTPS requirements in section 4.3
 
 ### 7.3 Model configuration expectations
 

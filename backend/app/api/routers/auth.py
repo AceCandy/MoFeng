@@ -3,8 +3,8 @@ import logging
 from datetime import timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,16 +12,44 @@ from ...core.config import settings
 from ...core.dependencies import get_current_user
 from ...db.session import get_session
 from ...schemas.user import AuthOptions, Token, User, UserInDB, UserRegistration
-from ...services.auth_service import AuthService
+from ...services.auth_service import (
+    LINUXDO_OAUTH_STATE_INVALID_DETAIL,
+    LINUXDO_OAUTH_STATE_TTL_SECONDS,
+    AuthService,
+    LinuxdoOAuthStateError,
+)
 
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+LINUXDO_OAUTH_STATE_COOKIE = "linuxdo_oauth_state"
+LINUXDO_OAUTH_COOKIE_PATH = "/api/auth/linuxdo"
 
 
 def get_auth_service(session: AsyncSession = Depends(get_session)) -> AuthService:
     return AuthService(session)
+
+
+def _clear_linuxdo_state_cookie(response: Response) -> None:
+    response.delete_cookie(
+        key=LINUXDO_OAUTH_STATE_COOKIE,
+        path=LINUXDO_OAUTH_COOKIE_PATH,
+    )
+
+
+def _linuxdo_callback_error(
+    status_code: int,
+    detail: object,
+    headers: Optional[dict[str, str]] = None,
+) -> JSONResponse:
+    response = JSONResponse(
+        status_code=status_code,
+        content={"detail": detail},
+        headers=headers,
+    )
+    _clear_linuxdo_state_cookie(response)
+    return response
 
 
 @router.post("/send-code", status_code=204)
@@ -64,26 +92,71 @@ async def login_with_linuxdo(service: AuthService = Depends(get_auth_service)):
     if not await service.is_linuxdo_login_enabled():
         logger.warning("Linux.do 登录未启用")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="未启用 Linux.do 登录")
-    client_id = await service.get_config_value("linuxdo.client_id")
-    redirect_uri = await service.get_config_value("linuxdo.redirect_uri")
-    auth_url = await service.get_config_value("linuxdo.auth_url")
-    if not all([client_id, redirect_uri, auth_url]):
-        logger.error("Linux.do OAuth 参数未配置完整")
-        raise HTTPException(status_code=500, detail="未配置 Linux.do OAuth 参数")
-    params = {
-        "client_id": client_id,
-        "redirect_uri": redirect_uri,
-        "response_type": "code",
-        "scope": "user",
-    }
-    query = "&".join(f"{k}={v}" for k, v in params.items())
-    logger.info("跳转 Linux.do 授权，client_id=%s", client_id)
-    return RedirectResponse(url=f"{auth_url}?{query}")
+    try:
+        authorization_url, state_value, secure_cookie = await service.create_linuxdo_authorization()
+    except ConnectionError as exc:
+        logger.warning("Linux.do OAuth state 存储不可用")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Linux.do 登录服务暂不可用，请稍后重试",
+        ) from exc
+    except ValueError as exc:
+        logger.error("Linux.do OAuth 配置不可用，error_type=%s", type(exc).__name__)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    response = RedirectResponse(url=authorization_url)
+    response.set_cookie(
+        key=LINUXDO_OAUTH_STATE_COOKIE,
+        value=state_value,
+        max_age=LINUXDO_OAUTH_STATE_TTL_SECONDS,
+        path=LINUXDO_OAUTH_COOKIE_PATH,
+        secure=secure_cookie,
+        httponly=True,
+        samesite="lax",
+    )
+    logger.info("跳转 Linux.do 授权")
+    return response
 
 
 @router.get("/linuxdo/register", response_class=HTMLResponse)
-async def register_with_linuxdo(code: str, service: AuthService = Depends(get_auth_service)):
-    token = await service.handle_linuxdo_callback(code)
+async def register_with_linuxdo(
+    request: Request,
+    code: Optional[str] = None,
+    state: Optional[str] = None,
+    service: AuthService = Depends(get_auth_service),
+):
+    browser_state = request.cookies.get(LINUXDO_OAUTH_STATE_COOKIE)
+    try:
+        if not await service.is_linuxdo_login_enabled():
+            return _linuxdo_callback_error(
+                status.HTTP_404_NOT_FOUND,
+                "未启用 Linux.do 登录",
+            )
+        token = await service.handle_linuxdo_callback(code, state, browser_state)
+    except LinuxdoOAuthStateError:
+        return _linuxdo_callback_error(
+            status.HTTP_400_BAD_REQUEST,
+            LINUXDO_OAUTH_STATE_INVALID_DETAIL,
+        )
+    except ConnectionError:
+        logger.warning("Linux.do OAuth state 存储不可用")
+        return _linuxdo_callback_error(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Linux.do 登录服务暂不可用，请稍后重试",
+        )
+    except HTTPException as exc:
+        return _linuxdo_callback_error(
+            exc.status_code,
+            exc.detail,
+            headers=exc.headers,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Linux.do OAuth 回调失败，error_type=%s", type(exc).__name__)
+        return _linuxdo_callback_error(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "Linux.do 登录失败，请重新发起",
+        )
+
     logger.info("Linux.do 授权回调成功")
     token_json = token.model_dump_json()
     html_content = f"""<!DOCTYPE html>
@@ -104,4 +177,6 @@ async def register_with_linuxdo(code: str, service: AuthService = Depends(get_au
     </script>
 </body>
 </html>"""
-    return HTMLResponse(content=html_content)
+    response = HTMLResponse(content=html_content)
+    _clear_linuxdo_state_cookie(response)
+    return response

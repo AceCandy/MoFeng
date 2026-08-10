@@ -99,6 +99,71 @@ Email codes are compared with `secrets.compare_digest` (`AuthService.verify_code
 
 `handle_linuxdo_callback` checks `is_registration_enabled()` before creating a user from an OAuth callback — OAuth is not a backdoor around the registration switch. Username collisions are disambiguated with `secrets.token_hex(3)`.
 
+### Linux.do OAuth state contract
+
+#### 1. Scope / Trigger
+
+Apply this contract when changing the Linux.do login route, callback route, Redis state
+storage, or OAuth cookie behavior. It prevents login CSRF and replay across workers.
+
+#### 2. Signatures
+
+- `create_linuxdo_authorization() -> tuple[str, str, bool]` returns the provider URL,
+  raw browser state, and whether the cookie must be `Secure`.
+- `handle_linuxdo_callback(code, state, browser_state) -> Token` validates and consumes
+  state before reading provider credentials or making provider HTTP requests.
+
+#### 3. Contracts
+
+- Generate state with `secrets.token_urlsafe(32)` and keep it for exactly 300 seconds.
+- Store only `sha256(state)` under `oauth:linuxdo:state:<digest>` with Redis
+  `SET ... NX EX 300`; consume it atomically with Redis 6.2+ `GETDEL`.
+- Run synchronous Redis initialization, `SET`, and `GETDEL` via `asyncio.to_thread`.
+- Bind the query state to a HostOnly, HttpOnly, SameSite=Lax cookie whose path is
+  `/api/auth/linuxdo`; derive `Secure` from the configured redirect URI.
+- Production redirect URIs require HTTPS. Development HTTP is limited to loopback.
+- Redis is mandatory when Linux.do login is enabled; never reuse the verification-code
+  in-process fallback for OAuth state.
+
+#### 4. Validation & Error Matrix
+
+| Condition | Public result |
+| --- | --- |
+| Missing code, query state, or cookie; mismatch; expiry; replay | 400 and delete cookie |
+| Redis missing, unavailable, or without `GETDEL` | 503 and delete cookie |
+| Linux.do login disabled | 404 and delete callback cookie |
+| Production callback URI is not HTTPS | Login request fails before redirect |
+| Valid, unconsumed state | Exactly one provider token exchange |
+
+#### 5. Good / Base / Bad Cases
+
+- Good: matching query/cookie values plus one Redis key enter the provider exchange once.
+- Base: an existing external user can log in while registration is disabled.
+- Bad: a second or concurrent callback cannot enter the provider exchange.
+
+#### 6. Tests Required
+
+- Assert the Redis key contains only the SHA-256 digest and uses `NX`, `EX`, and `GETDEL`.
+- Assert missing, mismatched, expired, replayed, and concurrent callbacks do not produce
+  more than one provider request sequence.
+- Assert login/callback 503 behavior, cookie attributes, cookie cleanup, HTTPS policy,
+  the registration gate, and the disabled-provider 404 behavior.
+
+#### 7. Wrong vs Correct
+
+```python
+# Wrong: state is not browser-bound or atomically consumed.
+if redis_client.get(state):
+    await exchange_code(code)
+
+# Correct: compare first, atomically consume the hashed key, then call the provider.
+if not secrets.compare_digest(state, browser_state):
+    raise LinuxdoOAuthStateError(...)
+if not await consume_hashed_state_with_getdel(state):
+    raise LinuxdoOAuthStateError(...)
+await exchange_code(code)
+```
+
 ### Resource ownership
 
 `NovelService.ensure_project_owner(project_id, user_id)` is the single ownership gate for project-scoped routes. Unauthorized access returns the **same 404 as a missing project** — same status, same detail — so a caller cannot learn whether a resource exists:
