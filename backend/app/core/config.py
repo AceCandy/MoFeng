@@ -16,276 +16,242 @@ class Settings(BaseSettings):
     debug: bool = Field(default=True, description="是否开启调试模式")
     allow_registration: bool = Field(
         default=True,
-        env="ALLOW_USER_REGISTRATION",
+        validation_alias=AliasChoices(
+            "ALLOW_USER_REGISTRATION",
+            "ALLOW_REGISTRATION",
+        ),
         description="是否允许用户自助注册",
     )
     logging_level: str = Field(
         default="INFO",
-        env="LOGGING_LEVEL",
         description="应用日志级别",
     )
     cors_origins: str = Field(
         default="http://localhost:6100,http://127.0.0.1:6100",
-        env="CORS_ORIGINS",
         description="允许的跨域来源，逗号分隔；生产环境必须配置为具体域名，禁止使用通配符 *",
     )
     allow_private_llm_endpoints: bool = Field(
         default=False,
-        env="ALLOW_PRIVATE_LLM_ENDPOINTS",
         description="是否允许 LLM/Embedding/TTS 指向私有/内网地址；仅内网部署时开启",
     )
     version_info_url: Optional[AnyUrl] = Field(
         default="https://raw.githubusercontent.com/2754026865/mofeng/refs/heads/main/release-metadata/version-info.json",
-        env="VERSION_INFO_URL",
         description="GitHub 版本信息 JSON 地址",
     )
     enable_linuxdo_login: bool = Field(
         default=False,
-        env="ENABLE_LINUXDO_LOGIN",
         description="是否启用 Linux.do OAuth 登录",
     )
 
     # -------------------- 安全相关配置 --------------------
-    secret_key: str = Field(..., env="SECRET_KEY", description="JWT 加密密钥")
-    jwt_algorithm: str = Field(default="HS256", env="JWT_ALGORITHM", description="JWT 加密算法")
+    secret_key: str = Field(..., description="JWT 加密密钥")
+    jwt_algorithm: str = Field(default="HS256", description="JWT 加密算法")
     access_token_expire_minutes: int = Field(
         default=60 * 24 * 7,
-        env="ACCESS_TOKEN_EXPIRE_MINUTES",
         description="访问令牌过期时间，单位分钟"
     )
 
     # -------------------- 数据库配置 --------------------
     database_url: Optional[str] = Field(
         default=None,
-        env="DATABASE_URL",
         description="完整的数据库连接串，填入后覆盖下方数据库配置"
     )
-    postgres_host: str = Field(default="localhost", env="POSTGRES_HOST", description="PostgreSQL 主机名")
-    postgres_port: int = Field(default=5432, env="POSTGRES_PORT", description="PostgreSQL 端口")
-    postgres_user: str = Field(default="postgres", env="POSTGRES_USER", description="PostgreSQL 用户名")
-    postgres_password: str = Field(default="", env="POSTGRES_PASSWORD", description="PostgreSQL 密码")
-    postgres_database: str = Field(default="mofeng", env="POSTGRES_DATABASE", description="PostgreSQL 数据库名称")
+    postgres_host: str = Field(default="localhost", description="PostgreSQL 主机名")
+    postgres_port: int = Field(default=5432, description="PostgreSQL 端口")
+    postgres_user: str = Field(default="postgres", description="PostgreSQL 用户名")
+    postgres_password: str = Field(default="", description="PostgreSQL 密码")
+    postgres_database: str = Field(default="mofeng", description="PostgreSQL 数据库名称")
 
     # -------------------- 管理员初始化配置 --------------------
     bootstrap_create_default_admin: bool = Field(
         default=True,
-        env="BOOTSTRAP_CREATE_DEFAULT_ADMIN",
         description="显式数据库引导时是否在无管理员的情况下创建默认管理员",
     )
-    admin_default_username: str = Field(default="admin", env="ADMIN_DEFAULT_USERNAME", description="默认管理员用户名")
-    admin_default_password: str = Field(default="your-admin-password-change-me", env="ADMIN_DEFAULT_PASSWORD", description="默认管理员密码；生产环境必须改为强密码")
-    admin_default_email: Optional[str] = Field(default=None, env="ADMIN_DEFAULT_EMAIL", description="默认管理员邮箱")
+    admin_default_username: str = Field(default="admin", description="默认管理员用户名")
+    admin_default_password: str = Field(default="your-admin-password-change-me", description="默认管理员密码；生产环境必须改为强密码")
+    admin_default_email: Optional[str] = Field(default=None, description="默认管理员邮箱")
 
     # -------------------- LLM 相关配置 --------------------
-    openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY", description="默认的 LLM API Key")
+    openai_api_key: Optional[str] = Field(default=None, description="默认的 LLM API Key")
     openai_base_url: Optional[HttpUrl] = Field(
         default=None,
-        env="OPENAI_API_BASE_URL",
         validation_alias=AliasChoices("OPENAI_API_BASE_URL", "OPENAI_BASE_URL"),
         description="LLM API Base URL",
     )
-    openai_model_name: str = Field(default="gpt-4o-mini", env="OPENAI_MODEL_NAME", description="默认 LLM 模型名称")
+    openai_model_name: str = Field(default="gpt-4o-mini", description="默认 LLM 模型名称")
     writer_chapter_versions: int = Field(
         default=1,
         ge=1,
-        env="WRITER_CHAPTER_VERSION_COUNT",
         validation_alias=AliasChoices("WRITER_CHAPTER_VERSION_COUNT", "WRITER_CHAPTER_VERSIONS"),
         description="每次生成章节的候选版本数量（支持 1~2）",
     )
     writer_chapter_word_limit: int = Field(
         default=3000,
         ge=2200,
-        env="WRITER_CHAPTER_WORD_LIMIT",
         description="章节正文生成目标字数下限配置，低于 2200 会回退默认值",
     )
     vector_top_k_chunks: int = Field(
         default=5,
         ge=0,
-        env="VECTOR_TOP_K_CHUNKS",
         description="剧情 chunk 检索条数",
     )
     vector_top_k_summaries: int = Field(
         default=3,
         ge=0,
-        env="VECTOR_TOP_K_SUMMARIES",
         description="章节摘要检索条数",
     )
     vector_chunk_size: int = Field(
         default=480,
         ge=128,
-        env="VECTOR_CHUNK_SIZE",
         description="章节分块的目标字数",
     )
     vector_chunk_overlap: int = Field(
         default=120,
         ge=0,
-        env="VECTOR_CHUNK_OVERLAP",
         description="章节分块重叠字数",
     )
     vector_store_enabled: bool = Field(
         default=True,
-        env="VECTOR_STORE_ENABLED",
         description="是否启用向量检索（pgvector），关闭后 RAG 检索将跳过",
     )
     chapter_context_shadow_compare: bool = Field(
         default=False,
-        env="CHAPTER_CONTEXT_SHADOW_COMPARE",
         description="是否记录 canonical Chapter context 与旧 prompt contract 的脱敏结构差异",
     )
     chapter_workflow_start_enabled: bool = Field(
         default=False,
-        env="CHAPTER_WORKFLOW_START_ENABLED",
         description="是否开放 durable Chapter workflow start API",
     )
     redis_url: Optional[str] = Field(
         default=None,
-        env="REDIS_URL",
         description="Redis 连接串（如 redis://localhost:6379/0），留空则禁用缓存与分布式会话",
     )
     job_worker_name: Optional[str] = Field(
         default=None,
-        env="JOB_WORKER_NAME",
         description="durable worker 服务名；进程实例 ID 会附加 pid 与随机 incarnation",
     )
     job_worker_generation: int = Field(
         default=1,
         ge=1,
-        env="JOB_WORKER_GENERATION",
         description="durable worker 当前 executor generation",
     )
     job_lease_seconds: int = Field(
         default=120,
         ge=2,
-        env="JOB_LEASE_SECONDS",
         description="单次 job lease 时长",
     )
     job_heartbeat_interval_seconds: float = Field(
         default=30.0,
         gt=0,
-        env="JOB_HEARTBEAT_INTERVAL_SECONDS",
         description="执行中 job lease 续租间隔，必须小于 lease",
     )
     job_worker_heartbeat_interval_seconds: float = Field(
         default=10.0,
         gt=0,
-        env="JOB_WORKER_HEARTBEAT_INTERVAL_SECONDS",
         description="worker 进程生命周期心跳间隔",
     )
     job_worker_poll_interval_seconds: float = Field(
         default=1.0,
         gt=0,
-        env="JOB_WORKER_POLL_INTERVAL_SECONDS",
         description="无任务时 PostgreSQL 扫描间隔",
     )
     job_worker_health_stale_seconds: int = Field(
         default=45,
         ge=2,
-        env="JOB_WORKER_HEALTH_STALE_SECONDS",
         description="worker heartbeat 超过该秒数即不健康",
     )
     job_peak_concurrency: int = Field(
         default=20,
         ge=1,
-        env="JOB_PEAK_CONCURRENCY",
         description="production readiness 预期 durable job 峰值并发",
     )
     job_load_test_concurrency: int = Field(
         default=40,
         ge=1,
-        env="JOB_LOAD_TEST_CONCURRENCY",
         description="production readiness 至少双倍目标并发演练值",
     )
     job_payload_max_bytes: int = Field(
         default=1024 * 1024,
         ge=1,
-        env="JOB_PAYLOAD_MAX_BYTES",
         description="durable job canonical JSON payload 最大 UTF-8 字节数",
     )
     job_max_duration_seconds: int = Field(
         default=30 * 60,
         ge=1,
-        env="JOB_MAX_DURATION_SECONDS",
         description="durable job 单次执行最大时长",
     )
     job_recovery_slo_seconds: int = Field(
         default=5 * 60,
         ge=1,
-        env="JOB_RECOVERY_SLO_SECONDS",
         description="worker crash recovery P95 目标上限",
     )
     job_queue_age_alert_seconds: int = Field(
         default=60,
         ge=1,
-        env="JOB_QUEUE_AGE_ALERT_SECONDS",
         description="最老 queued/retry job 超过该秒数触发告警",
     )
     job_projection_lag_alert_seconds: int = Field(
         default=5 * 60,
         ge=1,
-        env="JOB_PROJECTION_LAG_ALERT_SECONDS",
         description="projection backlog 超过该秒数触发告警",
     )
     job_event_retention_days: int = Field(
         default=30,
         ge=1,
-        env="JOB_EVENT_RETENTION_DAYS",
         description="JobEvent 保留天数",
     )
     job_retention_max_bytes: int = Field(
         default=100 * 1024 * 1024 * 1024,
         ge=1,
-        env="JOB_RETENTION_MAX_BYTES",
         description="JobEvent retention 最大预算字节数",
     )
     job_event_cleanup_interval_seconds: int = Field(
         default=3600,
         ge=60,
-        env="JOB_EVENT_CLEANUP_INTERVAL_SECONDS",
         description="worker 执行 JobEvent retention cleanup 的间隔",
     )
     chapter_workflow_retention_days: int = Field(
         default=30,
         ge=1,
-        env="CHAPTER_WORKFLOW_RETENTION_DAYS",
         description="terminal Chapter workflow 私有状态保留天数",
     )
     chapter_workflow_retention_batch_size: int = Field(
         default=100,
         ge=1,
         le=500,
-        env="CHAPTER_WORKFLOW_RETENTION_BATCH_SIZE",
         description="单次 Chapter workflow retention 最大 run 数",
     )
 
     # -------------------- Linux.do OAuth 配置 --------------------
-    linuxdo_client_id: Optional[str] = Field(default=None, env="LINUXDO_CLIENT_ID", description="Linux.do OAuth Client ID")
+    linuxdo_client_id: Optional[str] = Field(default=None, description="Linux.do OAuth Client ID")
     linuxdo_client_secret: Optional[str] = Field(
-        default=None, env="LINUXDO_CLIENT_SECRET", description="Linux.do OAuth Client Secret"
+        default=None, description="Linux.do OAuth Client Secret"
     )
     linuxdo_redirect_uri: Optional[HttpUrl] = Field(
-        default=None, env="LINUXDO_REDIRECT_URI", description="Linux.do OAuth 回调地址"
+        default=None, description="Linux.do OAuth 回调地址"
     )
     linuxdo_auth_url: Optional[HttpUrl] = Field(
-        default=None, env="LINUXDO_AUTH_URL", description="Linux.do OAuth 授权地址"
+        default=None, description="Linux.do OAuth 授权地址"
     )
     linuxdo_token_url: Optional[HttpUrl] = Field(
-        default=None, env="LINUXDO_TOKEN_URL", description="Linux.do OAuth Token 获取地址"
+        default=None, description="Linux.do OAuth Token 获取地址"
     )
     linuxdo_user_info_url: Optional[HttpUrl] = Field(
-        default=None, env="LINUXDO_USER_INFO_URL", description="Linux.do 用户信息接口地址"
+        default=None, description="Linux.do 用户信息接口地址"
     )
 
     # -------------------- 邮件配置 --------------------
-    smtp_server: Optional[str] = Field(default=None, env="SMTP_SERVER", description="SMTP 服务地址")
-    smtp_port: int = Field(default=587, env="SMTP_PORT", description="SMTP 服务端口")
-    smtp_username: Optional[str] = Field(default=None, env="SMTP_USERNAME", description="SMTP 登录用户名")
-    smtp_password: Optional[str] = Field(default=None, env="SMTP_PASSWORD", description="SMTP 登录密码")
-    email_from: Optional[str] = Field(default=None, env="EMAIL_FROM", description="邮件发送方显示名或邮箱")
+    smtp_server: Optional[str] = Field(default=None, description="SMTP 服务地址")
+    smtp_port: int = Field(default=587, description="SMTP 服务端口")
+    smtp_username: Optional[str] = Field(default=None, description="SMTP 登录用户名")
+    smtp_password: Optional[str] = Field(default=None, description="SMTP 登录密码")
+    email_from: Optional[str] = Field(default=None, description="邮件发送方显示名或邮箱")
 
     model_config = SettingsConfigDict(
         env_file=("new-backend/.env", ".env", "backend/.env"),
         env_file_encoding="utf-8",
-        extra="ignore"
+        extra="ignore",
+        populate_by_name=True,
     )
 
     @validator("database_url", pre=True, always=True)

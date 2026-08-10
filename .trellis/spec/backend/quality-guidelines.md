@@ -66,18 +66,25 @@ Bad example — defining schemas inline in a router (`app/api/routers/foreshadow
 
 ## Config (pydantic-settings)
 
-`app/core/config.py` defines `Settings(BaseSettings)` with explicit `env=` per field, computed DB-URL `@property`s, and an `lru_cache`-backed module-level singleton `settings`.
+`app/core/config.py` defines `Settings(BaseSettings)` with standard field-name environment loading, Pydantic v2 validation aliases for compatibility names, computed DB-URL `@property`s, and an `lru_cache`-backed module-level singleton `settings`.
 
 ```python
 class Settings(BaseSettings):
     app_name: str = Field(default="AI Novel Generator API", description="FastAPI 文档标题")
     debug: bool = Field(default=True, description="是否开启调试模式")
-    secret_key: str = Field(..., env="SECRET_KEY", description="JWT 加密密钥")
-    logging_level: str = Field(default="INFO", env="LOGGING_LEVEL", ...)
+    secret_key: str = Field(..., description="JWT 加密密钥")
+    allow_registration: bool = Field(
+        default=True,
+        validation_alias=AliasChoices(
+            "ALLOW_USER_REGISTRATION",
+            "ALLOW_REGISTRATION",
+        ),
+    )
     model_config = SettingsConfigDict(
         env_file=(".env", "backend/.env"),
         env_file_encoding="utf-8",
         extra="ignore",
+        populate_by_name=True,
     )
 
 @lru_cache
@@ -89,7 +96,9 @@ settings = get_settings()
 
 Rules for new config:
 
-- Every field names its env var explicitly via `env=` (and use `validation_alias=AliasChoices(...)` for backwards-compatible renames, e.g. `OPENAI_API_BASE_URL` / `OPENAI_BASE_URL`).
+- Standard environment names are inferred from the Python field name (`secret_key` → `SECRET_KEY`); do not pass the deprecated `env=` extra keyword to `Field`.
+- Use `validation_alias=AliasChoices(...)` only for a non-standard canonical name or backwards-compatible rename. Put the canonical name first so it wins when both variables exist.
+- Keep `populate_by_name=True` so tests and internal callers may construct `Settings` with Python field names even when a validation alias exists.
 - Compute derived values such as the DB URL as `@property`s (`sqlalchemy_database_uri`), not stored fields.
 - Consume `settings` by import, not by re-reading env vars ad hoc.
 

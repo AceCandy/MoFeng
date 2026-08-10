@@ -1,0 +1,3 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"核验 Pydantic v2、测试与 focused quality checks"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"核验 bootstrap 幂等和已有值保留"}
+{"file":".trellis/spec/backend/security-guidelines.md","reason":"核验注册开关未被其他路径绕过"}

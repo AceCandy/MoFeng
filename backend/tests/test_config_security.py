@@ -6,6 +6,69 @@ from app.core.config import Settings, assert_production_security, settings
 _STRONG_SECRET = "a" * 32  # 满足 SECRET_KEY 长度 >=32 且非弱值
 
 
+@pytest.mark.parametrize(
+    "env_name",
+    ["ALLOW_USER_REGISTRATION", "ALLOW_REGISTRATION"],
+)
+def test_registration_setting_accepts_canonical_and_legacy_env_names(
+    monkeypatch,
+    env_name: str,
+) -> None:
+    monkeypatch.delenv("ALLOW_USER_REGISTRATION", raising=False)
+    monkeypatch.delenv("ALLOW_REGISTRATION", raising=False)
+    monkeypatch.setenv(env_name, "false")
+
+    config = Settings(_env_file=None, secret_key=_STRONG_SECRET)
+
+    assert config.allow_registration is False
+
+
+def test_registration_setting_prefers_canonical_env_name(monkeypatch) -> None:
+    monkeypatch.setenv("ALLOW_USER_REGISTRATION", "false")
+    monkeypatch.setenv("ALLOW_REGISTRATION", "true")
+
+    config = Settings(_env_file=None, secret_key=_STRONG_SECRET)
+
+    assert config.allow_registration is False
+
+
+def test_registration_setting_preserves_default_and_direct_construction(monkeypatch) -> None:
+    monkeypatch.delenv("ALLOW_USER_REGISTRATION", raising=False)
+    monkeypatch.delenv("ALLOW_REGISTRATION", raising=False)
+
+    default_config = Settings(_env_file=None, secret_key=_STRONG_SECRET)
+    explicit_config = Settings(
+        _env_file=None,
+        secret_key=_STRONG_SECRET,
+        allow_registration=False,
+    )
+
+    assert default_config.allow_registration is True
+    assert explicit_config.allow_registration is False
+
+
+def test_settings_fields_do_not_use_deprecated_env_metadata() -> None:
+    deprecated_fields = {
+        name
+        for name, field in Settings.model_fields.items()
+        if field.json_schema_extra and "env" in field.json_schema_extra
+    }
+
+    assert deprecated_fields == set()
+
+
+def test_standard_field_names_still_load_from_uppercase_env(monkeypatch) -> None:
+    monkeypatch.setenv("SECRET_KEY", _STRONG_SECRET)
+    monkeypatch.setenv("JOB_PEAK_CONCURRENCY", "21")
+    monkeypatch.setenv("JOB_LOAD_TEST_CONCURRENCY", "42")
+
+    config = Settings(_env_file=None)
+
+    assert config.secret_key == _STRONG_SECRET
+    assert config.job_peak_concurrency == 21
+    assert config.job_load_test_concurrency == 42
+
+
 def test_assert_production_security_rejects_default_admin_password(monkeypatch) -> None:
     """生产环境使用占位符默认密码必须拒绝启动（H3）。"""
     monkeypatch.setattr(settings, "environment", "production")

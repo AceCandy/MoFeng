@@ -57,6 +57,11 @@ async def test_bootstrap_is_versioned_idempotent_and_preserves_user_values(
                 [
                     User(id=10, username="reader", hashed_password="hashed", is_admin=False),
                     SystemConfig(key="llm.model", value="user-model", description="user value"),
+                    SystemConfig(
+                        key="auth.allow_registration",
+                        value="true",
+                        description="user value",
+                    ),
                     SystemConfig(key="updates.version_check_url", value="legacy", description=None),
                     Prompt(name="sample", content="user content"),
                     Prompt(name="character_dna_guide", content="legacy prompt"),
@@ -80,6 +85,7 @@ async def test_bootstrap_is_versioned_idempotent_and_preserves_user_values(
                 "admin_default_password": "bootstrap-password",
                 "admin_default_email": "admin@example.com",
                 "openai_model_name": "seed-model",
+                "allow_registration": False,
             }
         )
         first = await run_bootstrap(
@@ -101,6 +107,9 @@ async def test_bootstrap_is_versioned_idempotent_and_preserves_user_values(
             model_value = await session.scalar(
                 select(SystemConfig.value).where(SystemConfig.key == "llm.model")
             )
+            registration_value = await session.scalar(
+                select(SystemConfig.value).where(SystemConfig.key == "auth.allow_registration")
+            )
             prompt_content = await session.scalar(select(Prompt.content).where(Prompt.name == "sample"))
             legacy_config = await session.get(SystemConfig, "updates.version_check_url")
             legacy_prompt = await session.scalar(
@@ -119,6 +128,7 @@ async def test_bootstrap_is_versioned_idempotent_and_preserves_user_values(
             )
 
         assert model_value == "user-model"
+        assert registration_value == "true"
         assert prompt_content == "user content"
         assert legacy_config is None
         assert legacy_prompt is None
@@ -126,6 +136,34 @@ async def test_bootstrap_is_versioned_idempotent_and_preserves_user_values(
         assert admin_count == 1
         assert ledger_count == len(BOOTSTRAP_STEPS)
         assert "plain-secret" not in caplog.text
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_seeds_registration_setting_from_settings_when_missing(
+    tmp_path: Path,
+) -> None:
+    engine, session_factory = await _sqlite_factory()
+    config = settings.model_copy(
+        update={
+            "bootstrap_create_default_admin": False,
+            "allow_registration": False,
+        }
+    )
+    try:
+        await run_bootstrap(
+            session_factory=session_factory,
+            config=config,
+            prompts_dir=tmp_path,
+        )
+
+        async with session_factory() as session:
+            registration_value = await session.scalar(
+                select(SystemConfig.value).where(SystemConfig.key == "auth.allow_registration")
+            )
+
+        assert registration_value == "false"
     finally:
         await engine.dispose()
 

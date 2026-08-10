@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/index.md","reason":"后端分层与开发前检查入口"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Pydantic Settings 与测试质量约定"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"bootstrap 只补数据、不修改 schema 的生命周期契约"}
+{"file":".trellis/spec/backend/security-guidelines.md","reason":"注册配置属于认证安全边界"}
