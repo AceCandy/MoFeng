@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 31
+- **Total Sessions**: 32
 - **Last Active**: 2026-08-10
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1038 | Active |
+| `journal-1.md` | ~1059 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 32 | 2026-08-10 | 修复章节生成响应与失败节点恢复 | `b797165c74bd52abec80cfc8cf080dd0417cac55` | `main` |
 | 31 | 2026-08-10 | 修复章节实时进度停滞 | `76f29e8` | `main` |
 | 30 | 2026-08-09 | 修复章节重生成与多版本生成 | `d1c3350`, `296c15f` | `main` |
 | 29 | 2026-08-09 | 修复候选描红稿重复展示 | `97a51c6` | `main` |

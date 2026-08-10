@@ -1036,3 +1036,24 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Status
 
 [OK] **Completed**
+
+
+## Session 32: 修复章节生成响应与失败节点恢复
+
+**Date**: 2026-08-10
+**Task**: 修复章节生成响应与失败节点恢复
+**Branch**: `main`
+
+### Summary
+
+收紧模型响应边界，修复截断与工作流歧义恢复，并完善失败节点重试和生成进度动效。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b797165c74bd52abec80cfc8cf080dd0417cac55` | (see git log) |
+
+### Status
+
+[OK] **Completed**
