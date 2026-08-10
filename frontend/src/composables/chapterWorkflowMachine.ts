@@ -118,6 +118,9 @@ const STATUS_TO_PHASE: Record<ChapterWorkflowSnapshot['status'], ChapterWorkflow
   superseded: 'superseded',
 }
 
+const canSubmitWithoutCheckpoint = (command: ChapterWorkflowCommand) =>
+  command === 'retry_external' || command === 'cancel'
+
 export const getChapterWorkflowPhase = (
   status: ChapterWorkflowSnapshot['status'],
 ): ChapterWorkflowPhase => STATUS_TO_PHASE[status]
@@ -280,13 +283,13 @@ const machineSetup = setup({
         || context.runId === null
         || context.rowRevision === null
         || context.chapterRevision === null
-        || context.checkpointId === null
       ) {
         return false
       }
       const envelope = event.envelope
       return isUuidLength(envelope.command_id)
         && context.allowedCommands.includes(envelope.type)
+        && (context.checkpointId !== null || canSubmitWithoutCheckpoint(envelope.type))
         && envelope.payload_version === 1
         && envelope.expected_run_revision === context.rowRevision
         && envelope.expected_chapter_revision === context.chapterRevision
@@ -701,7 +704,7 @@ export const createChapterWorkflowCommandEnvelope = (
     context.runId === null
     || context.rowRevision === null
     || context.chapterRevision === null
-    || context.checkpointId === null
+    || (context.checkpointId === null && !canSubmitWithoutCheckpoint(type))
     || !isUuidLength(commandId)
   ) {
     throw new Error('章节工作流命令缺少可用的关联快照')

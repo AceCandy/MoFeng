@@ -1,4 +1,4 @@
-<!-- AIMETA P=章节工作流生成轨迹回溯|R=只读节点进度_真实trace详情|NR=不提交重试取消评审命令|E=component:ChapterGenerating|X=internal|A=workflow-trace|D=vue|S=dom|RD=./README.ai -->
+<!-- AIMETA P=章节工作流生成轨迹回溯|R=节点进度_真实trace详情_失败节点重试|NR=不直接调用API_不持有命令状态|E=component:ChapterGenerating|X=internal|A=workflow-trace|D=vue|S=dom|RD=./README.ai -->
 <template>
   <section
     class="chapter-console"
@@ -10,10 +10,12 @@
       :step-tooltip-text="stepTooltipText"
       :should-show-manual-confirm-badge="shouldShowManualConfirmBadge"
       :active-step-key="activeStepKey"
+      :can-retry-active-step="canRetryExternal"
       :can-cancel="canCancel"
-      :pending="pending"
+      :pending="pending || retryConfirming"
       @select="selectStep"
       @cancel="emit('cancel')"
+      @retry-external="confirmExternalRetry"
     />
 
     <ChapterDraftPreview
@@ -34,10 +36,12 @@ import { computed, ref, watch } from 'vue'
 import ChapterPipeline from './ChapterPipeline.vue'
 import ChapterDraftPreview from './ChapterDraftPreview.vue'
 import ChapterStepInspector from './ChapterStepInspector.vue'
+import type { ChapterWorkflowCommand } from '@/api/chapterWorkflow'
 import type { Chapter, ChapterGenerationTrace } from '@/api/novel'
 import { useGenerationFailure } from '@/composables/useGenerationFailure'
 import { useGenerationPipeline } from '@/composables/useGenerationPipeline'
 import { useChapterGenerationTrace } from '@/composables/useChapterGenerationTrace'
+import { globalAlert } from '@/composables/useAlert'
 
 interface Props {
   chapterNumber: number | null
@@ -53,6 +57,8 @@ interface Props {
   statusUpdatedAt?: string | null
   generationTraces?: ChapterGenerationTrace[]
   readOnly?: boolean
+  allowedCommands?: readonly ChapterWorkflowCommand[]
+  retryActivityKey?: string | null
   canCancel?: boolean
   pending?: boolean
 }
@@ -63,19 +69,25 @@ const props = withDefaults(defineProps<Props>(), {
   chapterContentPreview: '',
   generationTraces: () => [],
   readOnly: true,
+  allowedCommands: () => [],
+  retryActivityKey: null,
   canCancel: false,
   pending: false,
 })
 
 const emit = defineEmits<{
   cancel: []
+  retryExternal: [activityKey: string]
 }>()
 
 const activeStepKey = ref<string | null>(null)
+const retryStepKey = ref<string | null>(null)
+const retryConfirming = ref(false)
 
 const selectStep = (key: string, index: number) => {
   if (stepState(key, index).tone !== 'waiting') {
     activeStepKey.value = key
+    retryStepKey.value = key
   }
 }
 
@@ -123,6 +135,7 @@ watch(
   () => currentStepKey.value,
   (newKey) => {
     activeStepKey.value = newKey
+    retryStepKey.value = null
   },
   { immediate: true }
 )
@@ -135,6 +148,33 @@ const { activeStepDetails } = useChapterGenerationTrace(props, {
   failureReason,
   failureScenario,
 })
+
+const canRetryExternal = computed(() =>
+  retryStepKey.value === currentStepKey.value
+  && activeStepKey.value === currentStepKey.value
+  && activeStepDetails.value?.status === '失败'
+  && props.allowedCommands.includes('retry_external')
+  && props.retryActivityKey !== null,
+)
+
+const confirmExternalRetry = async () => {
+  if (
+    !canRetryExternal.value
+    || props.retryActivityKey === null
+    || props.pending
+    || retryConfirming.value
+  ) return
+  retryConfirming.value = true
+  try {
+    const confirmed = await globalAlert.showConfirm(
+      '上一次外部模型调用可能已经发生。再次提交可能产生重复调用与费用，确认承担该风险后重试吗？',
+      '确认外部重试风险',
+    )
+    if (confirmed) emit('retryExternal', props.retryActivityKey)
+  } finally {
+    retryConfirming.value = false
+  }
+}
 
 </script>
 

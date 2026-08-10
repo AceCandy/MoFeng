@@ -156,10 +156,12 @@ class ChapterWorkflowCommandEnvelope(BaseModel):
     payload: dict[str, Any] = Field(default_factory=dict, max_length=16)
     expected_run_revision: int = Field(ge=0)
     expected_chapter_revision: int = Field(ge=0)
-    expected_checkpoint_id: str = Field(min_length=1, max_length=512)
+    expected_checkpoint_id: Optional[str] = Field(min_length=1, max_length=512)
 
     @model_validator(mode="after")
     def validate_command_payload(self) -> "ChapterWorkflowCommandEnvelope":
+        if self.expected_checkpoint_id is None and self.type not in {"retry_external", "cancel"}:
+            raise ValueError(f"{self.type} command 必须绑定 checkpoint")
         payload = self.payload
         if self.type == "select":
             selected_version_id = payload.get("selected_version_id")

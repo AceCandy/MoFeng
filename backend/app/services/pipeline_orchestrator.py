@@ -4,8 +4,8 @@ from __future__ import annotations
 import json
 import logging
 import re
-from datetime import datetime, timedelta, timezone
 from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple, TypedDict
 
 from fastapi import HTTPException
@@ -14,9 +14,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.config import settings
+from ..models.chapter_generation_trace import ChapterGenerationTrace
 from ..models.novel import Chapter
 from ..repositories.system_config_repository import SystemConfigRepository
 from ..schemas.chapter_context import ChapterContext, ContextFallback
+from ..schemas.novel import ChapterGenerationStatus
 from ..services.ai_review_service import AIReviewService
 from ..services.chapter_context_adapters import (
     ChapterContextShadowComparator,
@@ -39,12 +41,15 @@ from ..services.enrichment_service import EnrichmentService
 from ..services.event_bus import publish_chapter_status
 from ..services.llm_service import LLMService
 from ..services.memory_layer_service import MemoryLayerService
+from ..services.model_response_parser import (
+    parse_chapter_content_response,
+    parse_optimizer_response,
+)
 from ..services.novel_service import NovelService
 from ..services.preview_generation_service import PreviewGenerationService
 from ..services.prompt_service import PromptService
 from ..services.reader_simulator_service import ReaderSimulatorService, ReaderType
 from ..services.self_critique_service import CritiqueDimension, SelfCritiqueService
-from ..schemas.novel import ChapterGenerationStatus
 from ..utils.json_utils import remove_think_tags, unwrap_markdown_json
 
 logger = logging.getLogger(__name__)
@@ -707,12 +712,17 @@ class PipelineOrchestrator:
 
         if from_seq > self._trace_node_seq("review_refinement"):
             rr = latest_success("review_refinement")
-            if rr is None or not rr.cleaned_output:
+            full_content = output_of(rr).get("full_content")
+            if not isinstance(full_content, str) or not full_content.strip():
                 raise _RebuildError("缺少 review_refinement 的成功记录，无法还原润色结果")
+            try:
+                refined_content, _report = parse_chapter_content_response(full_content)
+            except ValueError as exc:
+                raise _RebuildError("review_refinement 的完整正文无效，无法还原润色结果") from exc
             versions = state.get("versions") or []
             best_idx = state.get("best_version_index", 0)
             if versions and 0 <= best_idx < len(versions):
-                versions[best_idx]["content"] = rr.cleaned_output
+                versions[best_idx]["content"] = refined_content
 
         return state
 
@@ -737,6 +747,15 @@ class PipelineOrchestrator:
         traces: List[ChapterGenerationTrace],
     ) -> List[Dict[str, Any]]:
         """从 trace 组装 versions，优先取 quality_review input_payload 的完整正文，其次 draft 定稿 trace。"""
+        def validated_content(value: object) -> Optional[str]:
+            if not isinstance(value, str) or not value.strip():
+                return None
+            try:
+                content, _report = parse_chapter_content_response(value)
+            except ValueError:
+                return None
+            return content
+
         qr_candidates = [
             t for t in traces
             if t.node_key == "quality_review" and t.status == "success"
@@ -745,14 +764,20 @@ class PipelineOrchestrator:
             qr_latest = max(qr_candidates, key=lambda t: (t.created_at, t.id))
             qr_versions = (qr_latest.metadata_ or {}).get("input_payload", {}).get("versions")
             if isinstance(qr_versions, list) and qr_versions:
-                return [
-                    {
+                versions: List[Dict[str, Any]] = []
+                for idx, value in enumerate(qr_versions):
+                    content = validated_content(
+                        value.get("content") if isinstance(value, dict) else None
+                    )
+                    if not content:
+                        logger.warning("quality_review trace 含无效候选正文，拒绝从该节点恢复")
+                        return []
+                    versions.append({
                         "index": idx,
-                        "content": (v.get("content") if isinstance(v, dict) else "") or "",
-                        "metadata": (v.get("metadata") if isinstance(v, dict) else {}) or {},
-                    }
-                    for idx, v in enumerate(qr_versions)
-                ]
+                        "content": content,
+                        "metadata": (value.get("metadata") if isinstance(value, dict) else {}) or {},
+                    })
+                return versions
 
         by_version: Dict[int, ChapterGenerationTrace] = {}
         for t in traces:
@@ -771,10 +796,10 @@ class PipelineOrchestrator:
         for idx in sorted(by_version.keys()):
             t = by_version[idx]
             op = (t.metadata_ or {}).get("output_payload") or {}
-            full = op.get("full_content")
+            full = validated_content(op.get("full_content"))
             if not full:
-                full = t.cleaned_output or ""
-                logger.warning("draft_generation trace 缺 full_content，退化使用 cleaned_output（可能含定稿前内容）")
+                logger.warning("draft_generation trace 缺少有效 full_content，拒绝使用未定稿输出恢复")
+                return []
             versions.append({
                 "index": len(versions),
                 "content": full,
@@ -2103,6 +2128,7 @@ class PipelineOrchestrator:
                     max_tokens=WRITER_GENERATION_MAX_TOKENS,
                     stage="chapter_writing",
                 )
+                content, _response_report = parse_chapter_content_response(response)
             except Exception as exc:
                 await self.trace_service.record_failure(
                     project_id=project_id,
@@ -2142,8 +2168,6 @@ class PipelineOrchestrator:
                     ended_at=datetime.now(CN_TIMEZONE),
                 )
                 raise
-            cleaned = remove_think_tags(response)
-            content = unwrap_markdown_json(cleaned)
             await self.trace_service.record_success(
                 project_id=project_id,
                 chapter_number=chapter_number,
@@ -2207,29 +2231,8 @@ class PipelineOrchestrator:
                 user_id=user_id,
             )
 
-        parsed_json = None
-        extracted_text = None
-        try:
-            parsed_json = json.loads(content)
-            extracted_text = self._extract_text(parsed_json)
-        except Exception:
-            parsed_json = None
-
         metadata["guardrail"] = guardrail_metadata
-        if parsed_json is not None:
-            metadata["parsed_json"] = parsed_json
-
-        resolved_content = extracted_text
-        if not resolved_content and isinstance(content, str):
-            stripped = content.strip()
-            if stripped:
-                looks_like_json = (
-                    (stripped.startswith("{") and stripped.endswith("}"))
-                    or (stripped.startswith("[") and stripped.endswith("]"))
-                )
-                # 避免把无法提取正文的结构化包装直接写入章节正文。
-                if not looks_like_json or parsed_json is None:
-                    resolved_content = stripped
+        resolved_content = (content or "").strip()
 
         if not resolved_content:
             logger.error(
@@ -2382,7 +2385,7 @@ class PipelineOrchestrator:
                     max_tokens=WRITER_GENERATION_MAX_TOKENS,
                     stage="chapter_enrichment",
                 )
-                enriched = unwrap_markdown_json(remove_think_tags(response)).strip()
+                enriched, _response_report = parse_chapter_content_response(response)
                 if not enriched:
                     logger.warning(
                         "Pipeline 第 %s 章版本 %s 第 %s 次补写返回空内容，沿用当前文本",
@@ -2484,7 +2487,7 @@ class PipelineOrchestrator:
                 max_tokens=WRITER_GENERATION_MAX_TOKENS,
                 stage="chapter_compression",
             )
-            compressed = unwrap_markdown_json(remove_think_tags(response)).strip()
+            compressed, _response_report = parse_chapter_content_response(response)
             return compressed or content
         except Exception as exc:
             logger.warning(
@@ -2569,34 +2572,11 @@ class PipelineOrchestrator:
                 max_tokens=WRITER_GENERATION_MAX_TOKENS,
                 stage="chapter_rewrite",
             )
-            cleaned = remove_think_tags(response)
-            return cleaned
+            rewritten, _response_report = parse_chapter_content_response(response)
+            return rewritten
         except Exception as exc:
             logger.warning("自动修复失败，返回原文: %s", exc)
             return original_text
-
-    @staticmethod
-    def _extract_text(value: object) -> Optional[str]:
-        if not value:
-            return None
-        if isinstance(value, str):
-            return value
-        if isinstance(value, dict):
-            for key in ("content", "chapter_content", "chapter_text", "text", "body", "story"):
-                if value.get(key):
-                    nested = PipelineOrchestrator._extract_text(value.get(key))
-                    if nested:
-                        return nested
-            return None
-        if isinstance(value, list):
-            parts: List[str] = []
-            for item in value:
-                nested = PipelineOrchestrator._extract_text(item)
-                if nested and nested.strip():
-                    parts.append(nested.strip())
-            if parts:
-                return "\n\n".join(parts)
-        return None
 
     @staticmethod
     def _extract_best_version_review(
@@ -2771,26 +2751,7 @@ class PipelineOrchestrator:
 
     @staticmethod
     def _parse_review_guided_refinement_response(raw_response: str) -> Tuple[str, str]:
-        cleaned = remove_think_tags(raw_response)
-        normalized = unwrap_markdown_json(cleaned).strip()
-        candidates = [normalized, cleaned.strip()]
-
-        for candidate in candidates:
-            if not candidate:
-                continue
-            try:
-                parsed = json.loads(candidate)
-            except json.JSONDecodeError:
-                continue
-            if not isinstance(parsed, dict):
-                continue
-            optimized_content = parsed.get("optimized_content")
-            if isinstance(optimized_content, str) and optimized_content.strip():
-                notes = parsed.get("optimization_notes")
-                return optimized_content.strip(), str(notes or "修复润色完成")
-
-        fallback = normalized or cleaned.strip()
-        return fallback, "修复润色完成（响应格式非标准JSON）"
+        return parse_optimizer_response(raw_response)
 
     async def _run_review_guided_refinement(
         self,
@@ -2859,6 +2820,7 @@ class PipelineOrchestrator:
                     "source_chars": len(source_content),
                 },
                 output_payload={
+                    "full_content": refined_content,
                     "optimization_notes": optimization_notes,
                     "refined_chars": len(refined_content),
                 },
@@ -3150,20 +3112,8 @@ class PipelineOrchestrator:
                     timeout=600.0,
                     stage="chapter_optimization",
                 )
-                cleaned = remove_think_tags(response)
-                normalized = unwrap_markdown_json(cleaned)
-                try:
-                    parsed = json.loads(normalized)
-                    optimized_content = parsed.get("optimized_content", cleaned)
-                    notes.append(
-                        {
-                            "dimension": dimension,
-                            "notes": parsed.get("optimization_notes", "优化完成"),
-                        }
-                    )
-                except json.JSONDecodeError:
-                    optimized_content = cleaned
-                    notes.append({"dimension": dimension, "notes": "优化完成（响应格式非标准JSON）"})
+                optimized_content, optimization_notes = parse_optimizer_response(response)
+                notes.append({"dimension": dimension, "notes": optimization_notes})
             except Exception as exc:
                 logger.warning("优化维度 %s 失败: %s", dimension, exc)
 

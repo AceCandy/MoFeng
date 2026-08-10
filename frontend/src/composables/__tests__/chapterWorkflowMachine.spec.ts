@@ -615,6 +615,62 @@ describe('chapterWorkflowMachine', () => {
     })
   })
 
+  it('checkpoint 缺失时只允许外部重试和取消', () => {
+    const actor = startActor()
+    lookupSnapshot(actor, snapshot({
+      status: 'needs_attention',
+      root_job_status: 'needs_attention',
+      checkpoint_id: null,
+      allowed_commands: ['retry_external', 'cancel'],
+      retry_activity_key: 'wf:review_candidates:stable-key',
+    }))
+    const retryExternal = createChapterWorkflowCommandEnvelope(
+      actor.getSnapshot().context,
+      'retry_external',
+      {
+        activity_key: 'wf:review_candidates:stable-key',
+        acknowledge_possible_duplicate: true,
+      },
+      COMMAND_ID,
+    )
+
+    expect(retryExternal.expected_checkpoint_id).toBeNull()
+    actor.send({ type: 'COMMAND_REQUESTED', envelope: retryExternal })
+    expect(actor.getSnapshot().context.pendingCommandId).toBe(COMMAND_ID)
+
+    const cancelActor = startActor()
+    lookupSnapshot(cancelActor, snapshot({
+      status: 'needs_attention',
+      root_job_status: 'needs_attention',
+      checkpoint_id: null,
+      allowed_commands: ['cancel'],
+    }))
+    const cancel = createChapterWorkflowCommandEnvelope(
+      cancelActor.getSnapshot().context,
+      'cancel',
+      {},
+      COMMAND_ID_2,
+    )
+    expect(cancel.expected_checkpoint_id).toBeNull()
+    cancelActor.send({ type: 'COMMAND_REQUESTED', envelope: cancel })
+    expect(cancelActor.getSnapshot().context.pendingCommandId).toBe(COMMAND_ID_2)
+
+    const determinateActor = startActor()
+    lookupSnapshot(determinateActor, snapshot({
+      status: 'failed',
+      root_job_status: 'failed',
+      node_key: 'failed',
+      checkpoint_id: null,
+      allowed_commands: ['retry'],
+    }))
+    expect(() => createChapterWorkflowCommandEnvelope(
+      determinateActor.getSnapshot().context,
+      'retry',
+      {},
+      COMMAND_ID_2,
+    )).toThrow('章节工作流命令缺少可用的关联快照')
+  })
+
   it('fatal 禁止业务状态，resync 同时失效 scope 与 connection epoch', () => {
     const actor = startActor()
     lookupSnapshot(actor, snapshot())

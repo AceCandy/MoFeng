@@ -5,7 +5,6 @@
 """
 import json
 import logging
-import re
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -17,129 +16,14 @@ from ...db.session import get_session
 from ...schemas.user import UserInDB
 from ...services.chapter_edit_service import ChapterEditService
 from ...services.llm_service import LLMService
+from ...services.model_response_parser import (
+    parse_optimizer_response as _parse_optimizer_response,
+)
 from ...services.novel_service import NovelService
 from ...services.prompt_service import PromptService
-from ...utils.json_utils import remove_think_tags, sanitize_json_like_text, unwrap_markdown_json
 
 router = APIRouter(prefix="/api/optimizer", tags=["Optimizer"])
 logger = logging.getLogger(__name__)
-
-
-_OPTIMIZED_FIELD_RE = re.compile(
-    r'"optimized_content"\s*:\s*"(?P<value>(?:\\.|[^"\\])*)"',
-    re.DOTALL,
-)
-_NOTES_FIELD_RE = re.compile(
-    r'"optimization_notes"\s*:\s*"(?P<value>(?:\\.|[^"\\])*)"',
-    re.DOTALL,
-)
-
-
-def _decode_json_string_fragment(fragment: str) -> Optional[str]:
-    """将 JSON 字符串片段解码为普通文本。"""
-    if not fragment:
-        return None
-    try:
-        return json.loads(f'"{fragment}"')
-    except Exception:
-        fallback = fragment.replace('\\"', '"').replace("\\n", "\n").replace("\\t", "\t")
-        return fallback
-
-
-def _load_optimizer_payload(text: str) -> Optional[dict]:
-    """尽量从文本中解析出包含 optimized_content 的 JSON 对象。"""
-    if not text:
-        return None
-
-    candidates = [text]
-    sanitized = sanitize_json_like_text(text)
-    if sanitized != text:
-        candidates.append(sanitized)
-
-    for candidate in candidates:
-        try:
-            payload = json.loads(candidate)
-        except Exception:
-            continue
-
-        if isinstance(payload, dict):
-            if "optimized_content" in payload:
-                return payload
-            for nested in payload.values():
-                if isinstance(nested, dict) and "optimized_content" in nested:
-                    return nested
-    return None
-
-
-def _extract_field_by_regex(raw_text: str, pattern: re.Pattern[str]) -> Optional[str]:
-    match = pattern.search(raw_text)
-    if not match:
-        return None
-    return _decode_json_string_fragment(match.group("value"))
-
-
-def _normalize_optimizer_text(raw_text: Optional[str]) -> str:
-    """清理优化结果中的代码块和嵌套 JSON 包裹。"""
-    if not raw_text:
-        return ""
-
-    text = raw_text.strip()
-
-    if text.startswith("```"):
-        text = unwrap_markdown_json(text).strip()
-
-    if '"optimized_content"' in text:
-        nested = _load_optimizer_payload(text)
-        if nested and isinstance(nested.get("optimized_content"), str):
-            nested_text = nested.get("optimized_content", "").strip()
-            if nested_text and nested_text != text:
-                return _normalize_optimizer_text(nested_text)
-
-    if text.startswith('"') and text.endswith('"'):
-        try:
-            decoded = json.loads(text)
-            if isinstance(decoded, str):
-                text = decoded.strip()
-        except Exception:
-            pass
-
-    return text
-
-
-def _parse_optimizer_response(raw_response: str) -> tuple[str, str]:
-    """解析优化模型响应，尽可能提取出干净正文与说明。"""
-    cleaned = remove_think_tags(raw_response)
-    candidates: list[str] = []
-
-    normalized = unwrap_markdown_json(cleaned)
-    if normalized:
-        candidates.append(normalized)
-
-    for match in re.finditer(r"```(?:json|JSON)?\s*(.*?)\s*```", cleaned, re.DOTALL):
-        block = (match.group(1) or "").strip()
-        if block and block not in candidates:
-            candidates.append(block)
-
-    if cleaned and cleaned not in candidates:
-        candidates.append(cleaned)
-
-    for candidate in candidates:
-        payload = _load_optimizer_payload(candidate)
-        if not payload:
-            continue
-        content = _normalize_optimizer_text(payload.get("optimized_content"))
-        notes = _normalize_optimizer_text(payload.get("optimization_notes"))
-        if content:
-            return content, (notes or "优化完成")
-
-    extracted_content = _extract_field_by_regex(cleaned, _OPTIMIZED_FIELD_RE)
-    extracted_notes = _extract_field_by_regex(cleaned, _NOTES_FIELD_RE)
-    if extracted_content:
-        return _normalize_optimizer_text(extracted_content), (
-            _normalize_optimizer_text(extracted_notes) or "优化完成（已从非标准响应提取）"
-        )
-
-    return _normalize_optimizer_text(cleaned), "优化完成（响应格式非标准JSON）"
 
 
 class OptimizeRequest(BaseModel):
@@ -275,16 +159,16 @@ async def optimize_chapter(
         )
 
     except Exception as exc:
-        logger.exception(
-            "项目 %s 第 %s 章优化失败: %s",
+        logger.error(
+            "项目 %s 第 %s 章优化失败 [error_type=%s]",
             request.project_id,
             request.chapter_number,
-            exc
+            type(exc).__name__,
         )
         raise HTTPException(
             status_code=500,
-            detail=f"优化过程中发生错误: {str(exc)[:200]}"
-        )
+            detail="优化过程中发生错误"
+        ) from None
 
 
 async def do_optimize_recommended_version(
@@ -377,19 +261,28 @@ async def optimize_recommended_version(
             optimization_notes=optimization_notes,
             dimension="recommended_version_review",
         )
-    except ValueError as val_exc:
-        raise HTTPException(status_code=400, detail=str(val_exc))
-    except Exception as exc:
-        logger.exception(
-            "项目 %s 第 %s 章推荐版本优化失败: %s",
+    except ValueError as exc:
+        logger.error(
+            "项目 %s 第 %s 章推荐版本优化请求无效 [error_type=%s]",
             request.project_id,
             request.chapter_number,
-            exc,
+            type(exc).__name__,
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="推荐版本优化请求无效",
+        ) from None
+    except Exception as exc:
+        logger.error(
+            "项目 %s 第 %s 章推荐版本优化失败 [error_type=%s]",
+            request.project_id,
+            request.chapter_number,
+            type(exc).__name__,
         )
         raise HTTPException(
             status_code=500,
-            detail=f"评审优化过程中发生错误: {str(exc)[:200]}"
-        )
+            detail="评审优化过程中发生错误",
+        ) from None
 
 
 @router.post("/apply-optimization", status_code=202)

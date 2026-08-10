@@ -1,8 +1,11 @@
-<!-- AIMETA P=章节工作流节点进度条|R=只读节点状态_节点选择|NR=不提交节点重试或生命周期命令|E=component:ChapterPipeline|X=internal|A=workflow-pipeline|D=vue|S=dom|RD=./README.ai -->
+<!-- AIMETA P=章节工作流节点进度条|R=节点状态_节点选择_失败节点重试入口|NR=不直接调用API_不持有命令状态|E=component:ChapterPipeline|X=internal|A=workflow-pipeline|D=vue|S=dom|RD=./README.ai -->
 <template>
   <article
     class="chapter-console__pipeline-card"
-    :class="{ 'is-read-only': true }"
+    :class="{
+      'is-read-only': true,
+      'has-node-retry': canRetryActiveStep && activeStepKey !== null,
+    }"
     aria-label="生成进度"
   >
     <header class="chapter-console__pipeline-header-main">
@@ -26,17 +29,59 @@
         v-for="(item, index) in pipelineSteps"
         :key="item.key"
         :aria-label="stepTooltipText(item.key, index)"
+        :aria-current="activeStepKey === item.key ? 'step' : undefined"
+        :role="canRetryActiveStep && activeStepKey === item.key
+          ? 'group'
+          : stepState(item.key, index).tone !== 'waiting' ? 'button' : undefined"
+        :tabindex="stepState(item.key, index).tone !== 'waiting'
+          && !(canRetryActiveStep && activeStepKey === item.key) ? 0 : undefined"
         :class="[
           'chapter-console__pipeline-item',
           `is-${stepState(item.key, index).tone}`,
           { 'is-current': stepState(item.key, index).tone === 'in-progress' },
+          { 'is-leading-to-current': isLeadingToCurrent(index) },
           { 'is-selected': activeStepKey === item.key },
           { 'is-clickable': stepState(item.key, index).tone !== 'waiting' },
+          { 'has-retry-action': canRetryActiveStep && activeStepKey === item.key },
         ]"
         @click="emit('select', item.key, index)"
+        @keydown.enter.self="emit('select', item.key, index)"
+        @keydown.space.self.prevent="emit('select', item.key, index)"
       >
+        <Transition name="chapter-node-retry">
+          <Tooltip
+            v-if="canRetryActiveStep && activeStepKey === item.key"
+            text="使用上一节点的结果重新执行当前节点"
+            :show-delay="240"
+            class="chapter-console__pipeline-node-retry-trigger"
+          >
+            <button
+              type="button"
+              class="md-btn md-ripple chapter-console__pipeline-node-retry"
+              data-action="retry-external-node"
+              :aria-label="`使用上一节点结果重试${item.label}`"
+              :disabled="pending"
+              @click.stop="emit('retryExternal')"
+            >
+              <svg
+                class="chapter-console__pipeline-node-retry-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 12a9 9 0 1 0 3-6.7" />
+                <path d="M3 4v6h6" />
+              </svg>
+              <span>{{ pending ? '提交' : '重试' }}</span>
+            </button>
+          </Tooltip>
+        </Transition>
         <Tooltip
-          :text="stepTooltipText(item.key, index)"
+          :text="canRetryActiveStep && activeStepKey === item.key ? undefined : stepTooltipText(item.key, index)"
           :show-delay="150"
           class="chapter-console__pipeline-tooltip-wrapper"
         >
@@ -86,18 +131,26 @@ interface Props {
   stepTooltipText: (key: string, index: number) => string
   shouldShowManualConfirmBadge: (key: string) => boolean
   activeStepKey: string | null
+  canRetryActiveStep?: boolean
   canCancel?: boolean
   pending?: boolean
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
+  canRetryActiveStep: false,
   canCancel: false,
   pending: false,
 })
 
+const isLeadingToCurrent = (index: number) => {
+  const nextStep = props.pipelineSteps[index + 1]
+  return nextStep ? props.stepState(nextStep.key, index + 1).tone === 'in-progress' : false
+}
+
 const emit = defineEmits<{
   select: [key: string, index: number]
   cancel: []
+  retryExternal: []
 }>()
 </script>
 
@@ -236,19 +289,19 @@ const emit = defineEmits<{
   background-color: var(--md-success);
 }
 
-.chapter-console__pipeline-item.is-in-progress::after {
-  background-color: var(--md-outline-variant);
+.chapter-console__pipeline-item.is-leading-to-current::after {
+  background-color: var(--md-success);
   background-image: linear-gradient(
     90deg,
     transparent 0%,
-    var(--md-success) 25%,
-    var(--md-primary) 65%,
+    color-mix(in srgb, var(--md-surface) 82%, transparent) 46%,
+    var(--md-primary) 68%,
     transparent 100%
   );
   background-position: -60% 0;
   background-repeat: no-repeat;
-  background-size: 40% 100%;
-  animation: line-flow 1.4s infinite linear;
+  background-size: 38% 100%;
+  animation: line-flow 1.25s infinite linear;
 }
 
 .chapter-console__pipeline-marker {
@@ -332,18 +385,27 @@ const emit = defineEmits<{
   position: relative;
 }
 
-.chapter-console__pipeline-item.is-in-progress .chapter-console__dot::after {
+.chapter-console__pipeline-item.is-in-progress .chapter-console__pipeline-marker::before,
+.chapter-console__pipeline-item.is-in-progress .chapter-console__pipeline-marker::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
   border-radius: 50%;
-  background-color: var(--md-primary);
-  animation: dot-ripple 1.5s infinite ease-out;
-  opacity: 0.4;
   pointer-events: none;
+}
+
+.chapter-console__pipeline-item.is-in-progress .chapter-console__pipeline-marker::before {
+  inset: -2px;
+  border: 2px solid color-mix(in srgb, var(--md-primary) 18%, transparent);
+  border-top-color: var(--md-primary);
+  border-right-color: var(--md-primary);
+  animation: current-node-orbit 1s infinite linear;
+}
+
+.chapter-console__pipeline-item.is-in-progress .chapter-console__pipeline-marker::after {
+  inset: 1px;
+  border: 1px solid var(--md-primary);
+  opacity: 0;
+  animation: current-node-ripple 1.6s infinite linear;
 }
 
 .chapter-console__pipeline-item.is-in-progress .chapter-console__pipeline-title {
@@ -408,11 +470,72 @@ const emit = defineEmits<{
   transform: scale(1.3);
 }
 
+.chapter-console__pipeline-item.is-clickable:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 4px;
+  border-radius: var(--md-radius-xs);
+}
+
+.chapter-console__pipeline-item > .chapter-console__pipeline-node-retry-trigger {
+  position: absolute;
+  z-index: 4;
+  top: -36px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.chapter-console__pipeline-node-retry {
+  width: 56px;
+  min-width: 56px;
+  min-height: 28px;
+  gap: 3px;
+  padding: 0 6px;
+  border: 1px solid color-mix(in srgb, var(--md-error) 55%, var(--md-outline));
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-surface);
+  color: var(--md-error);
+  box-shadow: none;
+  font-size: var(--md-label-medium);
+  font-weight: 700;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.chapter-console__pipeline-node-retry:hover:not(:disabled) {
+  border-color: var(--md-error);
+  background-color: color-mix(in srgb, var(--md-error) 8%, var(--md-surface));
+}
+
+.chapter-console__pipeline-node-retry-icon {
+  width: 13px;
+  height: 13px;
+  flex: none;
+}
+
+.chapter-node-retry-enter-active,
+.chapter-node-retry-leave-active {
+  transition:
+    opacity 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.chapter-node-retry-enter-from,
+.chapter-node-retry-leave-to {
+  opacity: 0;
+  filter: blur(2px);
+  transform: translate(-50%, 6px);
+}
+
 /* 选中节点的圆圈特效 */
 .chapter-console__pipeline-item.is-selected .chapter-console__dot {
   outline: 2px solid var(--md-primary);
   outline-offset: 3px;
   transform: scale(1.2);
+}
+
+.chapter-console__pipeline-item.is-selected.is-in-progress .chapter-console__dot {
+  outline: none;
 }
 
 .chapter-console__pipeline-item.is-selected.is-failed .chapter-console__dot {
@@ -424,20 +547,38 @@ const emit = defineEmits<{
 }
 
 @media (hover: hover) and (min-width: 834px) {
+  .chapter-console__pipeline-card.is-read-only.has-node-retry .chapter-console__pipeline {
+    margin-top: calc(var(--md-spacing-3) + 36px);
+  }
+
   .chapter-console__pipeline-tooltip-wrapper {
     cursor: pointer;
   }
 }
 
-@keyframes dot-ripple {
+@keyframes current-node-ripple {
   0% {
-    transform: scale(1);
-    opacity: 0.4;
+    transform: scale(0.55);
+    opacity: 0;
+  }
+
+  18% {
+    opacity: 0.72;
+  }
+
+  60% {
+    opacity: 0.42;
   }
 
   100% {
-    transform: scale(2.2);
+    transform: scale(1.5);
     opacity: 0;
+  }
+}
+
+@keyframes current-node-orbit {
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -470,6 +611,22 @@ const emit = defineEmits<{
     flex: none;
   }
 
+  .chapter-console__pipeline-item.has-retry-action {
+    padding-right: 68px;
+  }
+
+  .chapter-console__pipeline-item > .chapter-console__pipeline-node-retry-trigger {
+    top: 50%;
+    right: 0;
+    left: auto;
+    transform: translateY(-50%);
+  }
+
+  .chapter-node-retry-enter-from,
+  .chapter-node-retry-leave-to {
+    transform: translate(6px, -50%);
+  }
+
   .chapter-console__pipeline-tooltip-wrapper {
     flex-direction: row;
     align-items: flex-start;
@@ -496,19 +653,19 @@ const emit = defineEmits<{
     background-color: var(--md-success);
   }
 
-  .chapter-console__pipeline-item.is-in-progress::before {
-    background-color: var(--md-outline-variant);
+  .chapter-console__pipeline-item.is-leading-to-current::before {
+    background-color: var(--md-success);
     background-image: linear-gradient(
       180deg,
       transparent 0%,
-      var(--md-success) 25%,
-      var(--md-primary) 65%,
+      color-mix(in srgb, var(--md-surface) 82%, transparent) 46%,
+      var(--md-primary) 68%,
       transparent 100%
     );
     background-position: 0 -60%;
     background-repeat: no-repeat;
-    background-size: 100% 40%;
-    animation: line-flow-vertical 1.4s infinite linear;
+    background-size: 100% 38%;
+    animation: line-flow-vertical 1.25s infinite linear;
   }
 
   .chapter-console__pipeline-item::after {
@@ -532,10 +689,21 @@ const emit = defineEmits<{
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .chapter-console__pipeline-item.is-in-progress::before,
-  .chapter-console__pipeline-item.is-in-progress::after,
-  .chapter-console__pipeline-item.is-in-progress .chapter-console__dot::after {
+  .chapter-console__pipeline-item.is-leading-to-current::before,
+  .chapter-console__pipeline-item.is-leading-to-current::after,
+  .chapter-console__pipeline-item.is-in-progress .chapter-console__pipeline-marker::before,
+  .chapter-console__pipeline-item.is-in-progress .chapter-console__pipeline-marker::after {
     animation: none;
+  }
+
+  .chapter-console__pipeline-item.is-selected.is-in-progress .chapter-console__dot {
+    outline: 2px solid var(--md-primary);
+    outline-offset: 3px;
+  }
+
+  .chapter-node-retry-enter-active,
+  .chapter-node-retry-leave-active {
+    transition: none;
   }
 }
 </style>

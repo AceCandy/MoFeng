@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Literal, TypeVar, cast, get_args
 
@@ -18,6 +19,8 @@ from .chapter_workflow_context import ChapterWorkflowRetrievalActivityResult
 from .job_registry import SideEffectClass
 from .job_service import LeaseLostError
 from .job_worker import JobExecutionContext
+
+logger = logging.getLogger(__name__)
 
 ChapterWorkflowPostReviewStage = Literal[
     "review_guided_refinement",
@@ -330,6 +333,7 @@ class ChapterWorkflowModelActivityService:
             side_effect_class=SideEffectClass.AMBIGUOUS_EXTERNAL,
             request_payload=canonical_request,
         )
+        execution_activity_key = activity.activity_key
         if not activity.should_execute:
             result = ChapterWorkflowModelActivityResult.model_validate(activity.result)
             self._validate_replay(
@@ -339,16 +343,18 @@ class ChapterWorkflowModelActivityService:
                 output_type=output_type,
             )
             return ChapterWorkflowModelActivityExecution(
-                activity_key=activity_key,
+                activity_key=execution_activity_key,
                 ref_name=ref_name,
                 result=result,
             )
 
+        failure_phase = "provider"
         try:
             provider_result = await provider(
                 request,
                 provider_request_key=activity.provider_request_key,
             )
+            failure_phase = "response_validation"
             ai_call = provider_result if isinstance(provider_result, AICallResult) else None
             output_value = ai_call.value if ai_call is not None else provider_result
             output = output_type.model_validate(output_value)
@@ -369,22 +375,31 @@ class ChapterWorkflowModelActivityService:
             result = ChapterWorkflowModelActivityResult.model_validate(result_payload)
         except LeaseLostError:
             raise
-        except Exception:
+        except Exception as exc:
+            logger.error(
+                "Chapter workflow model activity result uncertain: "
+                "stage=%s failure_phase=%s activity_key=%s input_hash=%s error_type=%s",
+                stage,
+                failure_phase,
+                execution_activity_key,
+                input_hash,
+                type(exc).__name__,
+            )
             await self.execution.mark_activity_ambiguous(
-                activity_key,
+                execution_activity_key,
                 provider_request_key=activity.provider_request_key,
                 public_message=(f"章节工作流 {stage} 外部调用结果未知，需要人工确认"),
             )
             raise AssertionError("mark_activity_ambiguous 必须终止当前执行")
 
         await self.execution.complete_activity(
-            activity_key,
+            execution_activity_key,
             provider_request_key=activity.provider_request_key,
             result=result.model_dump(mode="json"),
             ai_call=ai_call,
         )
         return ChapterWorkflowModelActivityExecution(
-            activity_key=activity_key,
+            activity_key=execution_activity_key,
             ref_name=ref_name,
             result=result,
         )

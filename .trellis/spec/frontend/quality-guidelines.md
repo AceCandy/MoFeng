@@ -83,6 +83,21 @@ Use the project's custom alert channel — `useAlert()` / `globalAlert` — for 
 - Colocate tests as `src/**/__tests__/*` or alongside the module.
 - Prefer testing composables and pure utils (`src/utils/`) and query/mutation behavior over snapshot tests.
 
+### Motion verification
+
+Motion changes require real-browser evidence. An `animation` declaration or one static screenshot
+does not prove that users can see the effect.
+
+- Verify that the animation timeline advances on the intended element or pseudo-element.
+- Compare at least two time-separated frames on desktop and mobile; confirm direction as well as movement.
+- Emulate `prefers-reduced-motion: reduce`: continuous animations must stop while a static state marker remains.
+- For progress timelines, animate the connector entering the current node, not the connector leaving it.
+
+```ts
+const activeAnimations = root.getAnimations({ subtree: true })
+expect(activeAnimations.some((animation) => animation.currentTime !== null)).toBe(true)
+```
+
 ---
 
 ## AIMETA header (project convention)

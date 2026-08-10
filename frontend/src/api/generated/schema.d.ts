@@ -2210,7 +2210,7 @@ export interface components {
             /** Expected Chapter Revision */
             expected_chapter_revision: number;
             /** Expected Checkpoint Id */
-            expected_checkpoint_id: string;
+            expected_checkpoint_id: string | null;
             /** Expected Run Revision */
             expected_run_revision: number;
             /** Payload */

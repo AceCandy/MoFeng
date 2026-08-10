@@ -74,7 +74,7 @@
 
           <template v-else>
             <ChapterWorkflowPanel
-              v-if="shouldShowWorkflowPanel"
+              v-if="shouldRenderWorkflowPanel"
               :phase="workflowPhase"
               :transport="workflowTransport"
               :allowed-commands="workflowPanelAllowedCommands"
@@ -96,9 +96,12 @@
               v-if="activeTab === 'content' && shouldShowTraceReplay"
               class="writing-workspace__trace-replay"
               v-bind="traceReplayProps"
+              :allowed-commands="workflowAllowedCommands"
               :can-cancel="workflowAllowedCommands.includes('cancel')"
               :pending="workflowPending"
+              :retry-activity-key="workflowRetryActivityKey"
               @cancel="onWorkflowCancel"
+              @retry-external="emit('workflowRetryExternal', $event)"
             />
 
             <ChapterContent
@@ -469,10 +472,23 @@ const shouldShowTraceReplay = computed(() => {
       || workflowGenerationTraces.value.length > 0)
 })
 
+const hasInlineExternalRetry = computed(() =>
+  props.workflowPhase === 'failed'
+  && shouldShowTraceReplay.value
+  && props.workflowAllowedCommands.includes('retry_external')
+  && props.workflowRetryActivityKey !== null,
+)
+
 const workflowPanelAllowedCommands = computed(() =>
-  shouldShowTraceReplay.value
-    ? props.workflowAllowedCommands.filter((command) => command !== 'cancel')
-    : props.workflowAllowedCommands,
+  props.workflowAllowedCommands.filter((command) =>
+    (!shouldShowTraceReplay.value || command !== 'cancel')
+    && (!hasInlineExternalRetry.value || command !== 'retry_external'),
+  ),
+)
+
+const shouldRenderWorkflowPanel = computed(() =>
+  shouldShowWorkflowPanel.value
+  && (!hasInlineExternalRetry.value || workflowPanelAllowedCommands.value.length > 0),
 )
 
 const workflowGenerationStatus = computed<Chapter['generation_status'] | null>(() => {

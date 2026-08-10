@@ -402,6 +402,30 @@ class JobRepository(BaseRepository[BackgroundTask]):
         )
         return result.scalars().first()
 
+    async def get_latest_manual_retry_for_update(
+        self,
+        *,
+        job_id: str,
+        logical_step_key: str,
+    ) -> Optional[JobActivity]:
+        result = await self.session.execute(
+            select(JobActivity)
+            .where(
+                JobActivity.job_id == job_id,
+                JobActivity.activity_key.like("manual_retry:%"),
+                JobActivity.side_effect_class == "ambiguous_external",
+                JobActivity.status.in_(
+                    ("manual_retry_pending", "started", "ambiguous", "succeeded")
+                ),
+                JobActivity.request_payload["logical_step_key"].as_string() == logical_step_key,
+            )
+            .order_by(JobActivity.updated_at.desc(), JobActivity.id.desc())
+            .limit(1)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        return result.scalars().first()
+
     async def list_activities_for_update(self, *, job_id: str) -> list[JobActivity]:
         result = await self.session.execute(
             select(JobActivity)

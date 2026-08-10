@@ -10,12 +10,13 @@
 这对起点风格的网文很实用，可以稳定保持每章2k~4k字。
 """
 import logging
-from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
+from typing import Any, Dict, Optional
 
 from sqlalchemy.orm import Session
 
 from .llm_service import LLMService
+from .model_response_parser import parse_chapter_content_response
 
 logger = logging.getLogger(__name__)
 
@@ -237,7 +238,7 @@ class EnrichmentService:
                 max_tokens=4000,
                 temperature=0.6
             )
-            return response.strip() if response else None
+            return parse_chapter_content_response(response)[0] if response else None
         except Exception as e:
             logger.error(f"对话扩写失败: {e}")
             return None
@@ -269,7 +270,7 @@ class EnrichmentService:
                 max_tokens=3000,
                 temperature=0.6
             )
-            return response.strip() if response else None
+            return parse_chapter_content_response(response)[0] if response else None
         except Exception as e:
             logger.error(f"场景扩写失败: {e}")
             return None
@@ -295,7 +296,7 @@ class EnrichmentService:
                 max_tokens=8000,
                 temperature=0.6
             )
-            return response.strip() if response else None
+            return parse_chapter_content_response(response)[0] if response else None
         except Exception as e:
             logger.error(f"章节扩写失败: {e}")
             return None

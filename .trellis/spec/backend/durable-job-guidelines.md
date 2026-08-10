@@ -61,6 +61,14 @@ await ChapterWorkflowCandidatePersistenceService(execution).execute(
 Its state update contains only `node_key`, `candidate_version_ids`, and the
 `persist_candidates` activity/result references.
 
+Model response adapters expose one shared terminal and content boundary:
+
+```python
+{"content": str | None, "finish_reason": str | None}
+parse_chapter_content_response(raw: str) -> tuple[str, dict[str, Any]]
+parse_optimizer_response(raw: str) -> tuple[str, str]
+```
+
 ### HTTP and SSE boundary
 
 ```text
@@ -209,7 +217,28 @@ if payload_size > settings.job_payload_max_bytes:
 - `transactional`: the outcome writer executes inside the fenced PostgreSQL success transaction.
 - `idempotent_external`: persist an activity intent first, pass the stable provider request key to the provider, and upsert the result by activity key.
 - `ambiguous_external`: if the call may have happened but no durable result exists, stop automatic replay and move the job to `needs_attention`/`dead_letter`.
+- After durable identity and job/run status-pair validation, matching root/run
+  `needs_attention + ambiguous_external_result` is a stable reconciliation state.
+  Checkpoint missing/drift evidence must not recategorize it or replace its public error;
+  only an audited `retry_external` or cancel command may advance it.
+- Internal model-activity failure logs contain only the stage, failure phase,
+  content-addressed activity/input identifiers, and exception type. They never include
+  the exception message or traceback, provider request key, prompt, Chapter content,
+  provider response, token values, or secrets.
 - Database fencing guarantees one valid database outcome writer. It never proves an external provider call happened exactly once and cannot undo a call made by a stale process.
+- Provider transports normalize terminal reasons before service collection; Anthropic
+  `max_tokens` is the shared `length` failure and partial content is never a successful
+  model activity result.
+- Chapter candidate, post-review, and optimizer adapters parse strictly first, then may
+  use the shared JSON sanitizer for recoverable string quoting. When the prompt requires
+  structured output, an unparseable response or a parsed object without a supported正文
+  field fails before activity completion. Candidate prompts that allow plain text preserve
+  it unchanged; a leading `[` or `{` alone is not proof of JSON.
+- API optimization, review-guided refinement, and Pipeline dimension optimization use
+  the same optimizer response parser. Mandatory refinement propagates parse failure;
+  optional dimensions retain their prior正文 rather than adopting the raw response.
+  Extracting one field fragment does not validate the structured response: the complete
+  JSON object must parse before any optimizer field is accepted.
 
 ### Public projection and event stream contract
 
@@ -247,9 +276,17 @@ if payload_size > settings.job_payload_max_bytes:
 | Retryable failure below `max_attempts` | Append failure/retry event and schedule `retry_wait` |
 | Permanent failure or attempts exhausted | Append terminal failed/dead-letter event |
 | Ambiguous external activity is unresolved | Move to `needs_attention`/`dead_letter`; never auto-replay |
+| Root/run already agree on `needs_attention + ambiguous_external_result` | Preserve the original category and public error regardless of checkpoint missing/drift evidence |
 | Model activity context ref is absent, unfinished, hash-drifted, or its snapshot differs | Reject before creating the model activity intent; do not call the provider |
 | Model activity upstream ref set/stage/result/output differs | Reject before creating the next intent; same root job and matching entity identity alone do not authorize the input |
 | Model provider returns but typed output validation is uncertain | Mark that activity ambiguous and move the root job/run to `needs_attention`; do not retry the provider automatically |
+| Provider terminal reason means output-length exhaustion | Normalize to `length` and reject the partial response before activity completion |
+| Candidate response is a damaged structured wrapper or lacks a supported正文 field | Raise; do not persist the wrapper, field names, or partial正文 as a ChapterVersion |
+| Structured正文 has an unclosed fence/object or explanatory text outside its JSON/fence | Raise; only a complete JSON value or complete full-response fence may be unwrapped |
+| Optimizer text contains a field fragment but no complete JSON object | Raise; field-level regex extraction must not bypass object validation |
+| Plain正文 starts with bracketed prose such as `[注]` or `{旁白}` | Preserve it unchanged unless it actually parses as a structured response |
+| Optional正文 rewrite/expansion/compression/enrichment cannot pass the response boundary | Preserve the previous validated正文; a required initial candidate fails instead |
+| Trace recovery lacks `output_payload.full_content` from the successful finalized node | Do not rebuild from `cleaned_output`; fall back to an earlier validated workflow state |
 | Candidate persistence ref is unfinished, hash-drifted, wrong-stage, or not bound to the referenced candidate/review chain | Reject before creating the transactional intent; do not write ChapterVersion rows |
 | Root lease/fence, active run identity, or Chapter base revision drifts before the outcome transaction | Roll back the candidate rows, activity result, and event together |
 | Current or historical canonical ChapterVersion is present | Preserve every version referenced by Chapter or ChapterRevision; replace only unselected/unreferenced drafts |
@@ -273,7 +310,17 @@ if payload_size > settings.job_payload_max_bytes:
 - Base: Redis is disabled. Worker scans and SSE database polling still deliver ordered transitions, with higher latency but identical state.
 - Base: a client reconnects with the last durable cursor and receives only later events in ascending cursor order.
 - Bad: treating a Redis notification as the task event, accepting a result without a lease token, or retrying an ambiguous provider call because the database row has no result.
+- Good: a model activity becomes ambiguous before its latest checkpoint id is copied to
+  the run; reconciliation preserves the original external-result error until an audited
+  command resolves it.
+- Bad: replace an external-result ambiguity with `checkpoint_drift`, or log a caught
+  provider/validation exception whose message may contain prompt content or credentials.
 - Bad: returning ORM `payload`/`result` directly from task list/SSE or resuming a reset stream without fetching a new snapshot pair.
+- Good: an optimizer response with recoverable unescaped正文 quotes is extracted, while
+  an unclosed JSON wrapper fails before candidate persistence.
+- Base: ordinary正文 beginning with `[注]` or `{旁白}` remains unchanged.
+- Base: an optional正文 transform returns a damaged wrapper and the prior validated正文 remains selected.
+- Bad: treat provider `max_tokens` as success, extract JSON from surrounding prose, return raw JSON after extraction fails, or rebuild a version from trace `cleaned_output`.
 - Good: candidate persistence rereads model activities, verifies their
   content-addressed provenance, then writes versions and the transactional
   activity result under the root fence.
@@ -286,7 +333,15 @@ if payload_size > settings.job_payload_max_bytes:
 - Real process recovery: process A claims and is terminated by the OS; process B starts independently, waits for lease expiry, reclaims, and completes. Assert attempt increment, fencing increment, `job.queued -> job.started -> job.reclaimed -> job.succeeded` event order, and final owner cleanup.
 - Retry matrix: retry/backoff, permanent failure, max-attempt dead-letter, cancellation, unknown payload version, and inactive generation.
 - External activity: crash-after-provider-call-before-result is tested separately for provider dedupe and ambiguous dead-letter. Never use a transactional-only test as evidence of external exactly-once behavior.
-- Workflow model activities: real PostgreSQL tests cover stable candidate ordinal/post-review stage keys, replay call counts, private request/result separation, exact upstream-ledger verification, result tamper rejection, ambiguity synchronization, and one AI usage row across replay.
+- Workflow model activities: real PostgreSQL tests cover stable candidate ordinal/post-review stage keys, replay call counts, private request/result separation, exact upstream-ledger verification, result tamper rejection, ambiguity synchronization, safe internal failure logging, and one AI usage row across replay.
+- Workflow reconciliation: real PostgreSQL tests prove that matching root/run
+  `ambiguous_external_result` remains unchanged when the run checkpoint id is null and
+  the saver already has a later checkpoint; no replacement event is appended.
+- Model response boundary tests cover provider stop-reason normalization, recoverable
+  unescaped quotes, damaged/missing正文 wrappers, nested JSON, literal backslashes,
+  orphan field fragments, mixed explanatory text, unclosed fences, leading bracketed
+  prose, leading version-heading removal, optional-transform preservation, and trace
+  recovery without `cleaned_output` fallback.
 - Workflow candidate persistence: real PostgreSQL tests cover outcome-writer rollback, commit-before-checkpoint replay, concurrent replay producing one candidate set, stale fence/base revision rejection, cross-wired provenance rejection, current canonical preservation, and absence of正文/review reports from activity request/result, JobEvent, and checkpoint updates.
 - Enqueue: concurrent identical keys return one canonical row/outcome; mismatched canonical inputs fail without a duplicate.
 - Event log: state/event atomicity, global cursor order, stream-local sequence uniqueness, owner filtering, retention cleanup, and reset watermark.
@@ -342,6 +397,16 @@ execution = await ChapterWorkflowCandidatePersistenceService(context).execute(re
 checkpoint_update = execution.state_update()
 ```
 
+```python
+# Wrong: provider-specific truncation and invalid wrappers become successful正文.
+finish_reason = event["stop_reason"]
+return raw_response
+
+# Correct: normalize at transport, then validate before completing the activity.
+finish_reason = "length" if event["stop_reason"] == "max_tokens" else event["stop_reason"]
+content, report = parse_chapter_content_response(raw_response)
+```
+
 ## 8. Durable Chapter Workflow Extension
 
 Apply these additional rules when a Chapter generation run uses LangGraph persistence:
@@ -366,6 +431,114 @@ Apply these additional rules when a Chapter generation run uses LangGraph persis
 - Durable commands are `select`, `retry`, `retry_external`, `retry_projection`, and `cancel`. The inbox validates command id, payload version, expected workflow row revision, expected Chapter revision, and expected checkpoint id. A stale command is rejected without graph resume and exposes the current snapshot; a checkpoint-applied command marker is reconciled before any repeated resume.
 - Graph V1 uses stable node keys `freeze_context`, `plan_and_direct`, `generate_candidates`, `review_candidates`, `persist_candidates`, `waiting_for_selection`, `finalize_revision`, `projection_pending`, `observe_projection`, and `successful`. Existing trace keys and `from_node_key` remain legacy-drain adapters and are never checkpoint recovery inputs for a new run.
 - Finalize and every projection child job inherit the original workflow stream. The workflow may observe projection completion, but only the projection reconciler may move the current Chapter revision to `successful`.
+
+### Ambiguous external activity command recovery
+
+#### 1. Scope / Trigger
+
+Apply when `retry_external` or an activity-bound `cancel` resolves an unresolved
+`ambiguous_external` model activity. This path resumes the existing run and reuses its
+durable upstream activity results; it does not create a replacement workflow run.
+
+#### 2. Signatures
+
+```python
+ChapterWorkflowCommandEnvelope(
+    type: Literal["select", "retry", "retry_external", "retry_projection", "cancel"],
+    expected_checkpoint_id: str | None,
+    payload: dict[str, Any],
+)
+
+ActivityExecution(
+    activity_key: str,
+    provider_request_key: str,
+    should_execute: bool,
+    result: dict[str, Any] | None = None,
+)
+
+await JobRepository.get_latest_manual_retry_for_update(
+    *, job_id: str, logical_step_key: str
+) -> JobActivity | None
+```
+
+The derived activity key is `manual_retry:<command_id>`. Its request records the
+`manual_retry_command_id`, original `logical_step_key`, duplicate-call acknowledgement,
+the canonical provider request, and the replaced activity identity.
+
+#### 3. Contracts
+
+- `expected_checkpoint_id` is required but nullable. Only `retry_external` and
+  `cancel` may carry null; `select`, `retry`, and `retry_projection` require a non-null
+  checkpoint. Every command still compares the supplied value with the locked run, so
+  null matches only a run whose current checkpoint id is also null.
+- Submitting `retry_external`, or `cancel` with an activity key, appends acceptance,
+  applies the command, creates or replays its derived intent, transitions the root/run,
+  appends application events, and commits once. Leaving such a command pending for a
+  separate consumer is forbidden. Standard cancel without an activity key remains a
+  terminal command and does not resume the graph.
+- Graph node code continues to request the original logical activity key. Before any
+  provider call, `begin_activity` may substitute only the latest command-derived manual
+  intent whose applied command, run, activity identities, acknowledgement, replaced
+  activity, provider request key, and canonical request all match.
+- The returned `ActivityExecution.activity_key` is the storage identity for provider
+  result validation, checkpoint/result references, completion, ambiguity, and replay.
+  The original ambiguous activity remains immutable audit evidence.
+- `manual_retry_pending` may transition once to `started` under the current lease.
+  A manual activity already in `started` or `ambiguous` is uncertain and must stop in
+  `needs_attention` without another provider call. A `succeeded` manual activity replays
+  its durable result without another provider call.
+- Successful upstream activities retain their original keys and replay normally, so
+  graph re-entry invokes only the unresolved logical node's command-derived activity.
+
+#### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|-----------|-----------------|
+| Determinate command has null checkpoint | Reject at envelope validation |
+| Supplied checkpoint differs from the locked run, including null vs non-null | Reject as `stale_checkpoint` |
+| Retry command lacks activity key or duplicate-call acknowledgement | Reject before creating an intent |
+| Referenced original activity is absent, non-ambiguous, or has a non-canonical request | Reject and roll back command events/intent |
+| Derived intent identity differs from its applied command or original activity | Roll back and fail closed before provider invocation |
+| Derived activity is `manual_retry_pending` | Mark `started` under the lease and invoke the provider once |
+| Derived activity is `started` or `ambiguous` | Enter/retain `needs_attention`; never invoke the provider automatically |
+| Derived activity is `succeeded` | Replay the stored result without provider invocation |
+
+#### 5. Good / Base / Bad Cases
+
+- Good: a run with null checkpoint submits one acknowledged external retry, is requeued,
+  reuses every successful upstream result, and stores the new provider result under the
+  command-derived activity while preserving the original ambiguous row.
+- Base: the client repeats the same command id or the graph revisits a succeeded manual
+  activity; both return the same intent/result without another provider call.
+- Bad: mark the command accepted but leave it pending, call the provider under the
+  original ambiguous key, treat null as a checkpoint wildcard, or replay a manual
+  activity whose prior call may already have happened.
+
+#### 6. Tests Required
+
+- PostgreSQL integration starts with a real ambiguous model call and null run checkpoint,
+  submits `retry_external`, asserts command application plus requeue in one transaction,
+  claims a new lease, and proves only the target provider call count increases once.
+- Assert the original activity remains ambiguous, the command-derived activity succeeds,
+  and all completion/result/replay identities use the derived key.
+- Force the derived activity separately to `started` and `ambiguous`; assert graph re-entry
+  raises ambiguous-result handling and the provider call count does not increase.
+- Schema/frontend tests accept null checkpoint for external retry and cancel, and reject
+  null checkpoint for select, ordinary retry, and projection retry.
+
+#### 7. Wrong vs Correct
+
+```python
+# Wrong: the command exists, but no runtime path consumes its derived intent.
+command.status = "pending"
+return ActivityExecution(activity_key=logical_key, should_execute=True)
+
+# Correct: apply and queue atomically, then persist under the verified derived identity.
+await apply_retry_external(command)
+execution = await begin_activity(activity_key=logical_key, request_payload=canonical_request)
+result = await provider(provider_request_key=execution.provider_request_key)
+await complete_activity(activity_key=execution.activity_key, result=result)
+```
 
 ### Activity progress and live trace contract
 

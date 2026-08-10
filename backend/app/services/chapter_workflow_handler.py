@@ -16,7 +16,10 @@ from ..schemas.chapter_context import ChapterContext
 from ..schemas.chapter_workflow import ChapterWorkflowStateV1
 from ..schemas.job import ChapterWorkflowJobPayload
 from ..utils.ai_telemetry import AICallResult
-from ..utils.json_utils import remove_think_tags, unwrap_markdown_json
+from ..utils.json_utils import (
+    remove_think_tags,
+    unwrap_markdown_json,
+)
 from .chapter_context_adapters import GenerationContextAdapter, ReviewContextAdapter
 from .chapter_workflow_activities import (
     ChapterWorkflowActivityRef,
@@ -52,6 +55,7 @@ from .job_registry import SideEffectClass
 from .job_service import ChapterWorkflowAutomaticResume, JobService
 from .job_worker import JobExecutionContext, JobOutcome, JobWaitOutcome
 from .llm_service import LLMService
+from .model_response_parser import parse_chapter_content_response
 from .prompt_service import PromptService
 
 OutputT = TypeVar("OutputT", bound=BaseModel)
@@ -97,49 +101,6 @@ def _json_payload(raw: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ValueError("模型必须返回 JSON object")
     return value
-
-
-def _content_from_response(raw: str) -> tuple[str, dict[str, Any]]:
-    content = remove_think_tags(raw).strip()
-    report: dict[str, Any] = {}
-    for _ in range(4):
-        payload = None
-        for candidate in (content, unwrap_markdown_json(content)):
-            unescaped = (
-                candidate.replace(r'\"', '"')
-                .replace(r"\\r", r"\r")
-                .replace(r"\\n", r"\n")
-                .replace(r"\\t", r"\t")
-            )
-            unescaped = unescaped.removeprefix(r"\r\n").removeprefix(r"\n")
-            unescaped = unescaped.removesuffix(r"\r\n").removesuffix(r"\n")
-            for normalized in (candidate, unescaped):
-                try:
-                    payload = json.loads(normalized)
-                    break
-                except json.JSONDecodeError:
-                    continue
-            if payload is not None:
-                break
-        if payload is None:
-            break
-        if isinstance(payload, str) and payload.strip() and payload.strip() != content:
-            content = payload.strip()
-            continue
-        if not isinstance(payload, dict):
-            break
-        if not report and isinstance(payload.get("report"), dict):
-            report = payload["report"]
-        for key in ("content", "optimized_content", "revised_content", "chapter_content"):
-            value = payload.get(key)
-            if isinstance(value, str) and value.strip():
-                content = value.strip()
-                break
-        else:
-            break
-    if content:
-        return content, report
-    raise ValueError("模型未返回有效正文")
 
 
 @dataclass(frozen=True)
@@ -230,7 +191,7 @@ class ChapterWorkflowLLMProvidersV1:
             stage="chapter_writing",
             provider_request_key=provider_request_key,
         )
-        content, metadata = _content_from_response(call.value)
+        content, metadata = parse_chapter_content_response(call.value)
         return call.with_value(
             ChapterWorkflowCandidateOutput(
                 ordinal=request.ordinal,
@@ -341,7 +302,7 @@ class ChapterWorkflowLLMProvidersV1:
             stage="chapter_optimization",
             provider_request_key=provider_request_key,
         )
-        content, report = _content_from_response(call.value)
+        content, report = parse_chapter_content_response(call.value)
         return call.with_value(
             ChapterWorkflowPostReviewOutput(
                 stage=request.stage,

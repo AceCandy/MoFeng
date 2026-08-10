@@ -84,6 +84,9 @@ logger.info(f"任务进度 ... {novel_id}")   # interpolates even if level disab
 
 - Passwords, hashed passwords, JWT tokens, refresh tokens, API keys, raw `Authorization` headers.
 - Full request bodies that may contain user content secrets (prompt payloads are large — log ids, not content).
+- Exception messages or tracebacks from LLM/external boundaries. They may contain prompts,
+  Chapter content, provider responses, request keys, or credentials; log safe entity ids and
+  `type(exc).__name__` only.
 - Per-row dumps in hot loops.
 
 ---

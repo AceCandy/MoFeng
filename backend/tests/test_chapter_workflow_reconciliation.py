@@ -246,6 +246,51 @@ async def test_reconciler_fails_closed_on_missing_checkpoint_once(isolated_pg) -
         assert await _event_count(session, run.id) == first_events
 
 
+async def test_reconciler_preserves_ambiguous_external_attention(isolated_pg) -> None:
+    public_error = "章节工作流 version_review 外部调用结果未知，需要人工确认"
+    async with isolated_pg.session_factory() as session:
+        job, run, _chapter = await _create_workflow(session)
+        job.status = "needs_attention"
+        job.error_category = "ambiguous_external_result"
+        job.error = public_error
+        run.status = "needs_attention"
+        run.node_key = "review_candidates"
+        run.checkpoint_id = None
+        run.error_category = "ambiguous_external_result"
+        run.public_error = public_error
+        await session.commit()
+        before_events = await _event_count(session, run.id)
+
+    checkpoint = ChapterWorkflowCheckpointEvidence(
+        checkpoint_id="checkpoint-provider-result",
+        state=_state(run, node_key="review_candidates"),
+    )
+    async with isolated_pg.session_factory() as session:
+        result = await JobService(session).reconcile_chapter_workflow(
+            run.id,
+            checkpoint=checkpoint,
+        )
+
+        assert (result.action, result.reason_code) == (
+            "unchanged",
+            "ambiguous_external_result",
+        )
+        preserved_job = await session.get(BackgroundTask, job.id)
+        preserved_run = await session.get(ChapterWorkflowRun, run.id)
+        assert preserved_job is not None
+        assert (preserved_job.error_category, preserved_job.error) == (
+            "ambiguous_external_result",
+            public_error,
+        )
+        assert preserved_run is not None
+        assert (preserved_run.error_category, preserved_run.public_error) == (
+            "ambiguous_external_result",
+            public_error,
+        )
+        assert preserved_run.checkpoint_id is None
+        assert await _event_count(session, run.id) == before_events
+
+
 async def test_reconciler_applies_checkpointed_pending_command(isolated_pg) -> None:
     async with isolated_pg.session_factory() as session:
         job, run, chapter = await _create_workflow(session)

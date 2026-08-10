@@ -1,5 +1,7 @@
 import json
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from sqlalchemy import select
@@ -10,9 +12,14 @@ from app.models import Chapter, ChapterOutline, ChapterVersion, NovelBlueprint, 
 from app.models.user import User
 from app.services.chapter_context_adapters import GenerationContextAdapter
 from app.services.chapter_context_resolver import ChapterContextResolver
+from app.services.enrichment_service import EnrichmentService
 from app.services.novel_service import NovelService
-from app.services.pipeline_orchestrator import PipelineConfig, PipelineOrchestrator
-
+from app.services.pipeline_orchestrator import (
+    PipelineConfig,
+    PipelineOrchestrator,
+    _RebuildError,
+)
+from app.services.preview_generation_service import PreviewGenerationService
 
 ROOT = Path(__file__).resolve().parents[1]
 PIPELINE_SOURCE = ROOT / "app/services/pipeline_orchestrator.py"
@@ -181,6 +188,153 @@ def test_langgraph_pipeline_preserves_word_count_safeguards() -> None:
     assert "低于最低要求" in source
 
 
+def test_pipeline_routes_chapter_outputs_through_shared_parser() -> None:
+    source = _source()
+
+    assert source.count("parse_chapter_content_response(response)") >= 4
+    assert "full = t.cleaned_output" not in source
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_pipeline_optional_content_transforms_keep_previous_text_on_invalid_response(
+    monkeypatch,
+) -> None:
+    invalid_response = '```json\n{"content":"' + ("污染" * 80) + '"'
+    original = "原始正文" * 20
+    orchestrator = object.__new__(PipelineOrchestrator)
+    orchestrator.llm_service = SimpleNamespace(
+        get_llm_response=AsyncMock(return_value=invalid_response)
+    )
+    orchestrator.prompt_service = SimpleNamespace(
+        get_prompt=AsyncMock(return_value="压缩提示词")
+    )
+
+    rewritten = await orchestrator._rewrite_with_guardrails(
+        original_text=original,
+        chapter_mission=None,
+        violations_text="测试违规",
+        user_id=1,
+    )
+    expanded = await orchestrator._expand_chapter_to_minimum_word_count(
+        content=original,
+        minimum_word_count=1000,
+        target_word_count=1200,
+        user_id=1,
+        chapter_number=1,
+        version_index=1,
+    )
+    monkeypatch.setattr(
+        "app.services.pipeline_orchestrator.should_compress_chapter",
+        lambda _content, _target: True,
+    )
+    compressed = await orchestrator._compress_chapter_to_word_limit(
+        content=original,
+        target_word_count=20,
+        user_id=1,
+        chapter_number=1,
+        version_index=1,
+    )
+
+    assert rewritten == original
+    assert expanded == original
+    assert compressed == original
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_preview_and_enrichment_reject_invalid_chapter_wrappers() -> None:
+    invalid_response = '```json\n{"content":"污染正文"'
+    llm_service = SimpleNamespace(
+        get_llm_response=AsyncMock(return_value=invalid_response),
+        generate=AsyncMock(return_value=invalid_response),
+    )
+    prompt_service = SimpleNamespace(get_prompt=AsyncMock(return_value="测试提示词"))
+    preview_service = PreviewGenerationService(object(), llm_service, prompt_service)
+    enrichment_service = EnrichmentService(object(), llm_service)
+
+    preview_content = await preview_service.expand_preview_to_full_chapter(
+        preview={"preview_text": "预览"},
+        outline={"title": "标题", "summary": "摘要"},
+        blueprint_context="蓝图",
+        memory_context="记忆",
+        user_id=1,
+    )
+    enriched_content = await enrichment_service._enrich_chapter(
+        chapter_text="原始正文",
+        target_word_count=1000,
+        current_word_count=4,
+        user_id=1,
+    )
+
+    assert preview_content == ""
+    assert enriched_content is None
+
+
+def test_pipeline_recovery_does_not_use_unfinalized_cleaned_output() -> None:
+    trace = SimpleNamespace(
+        node_key="draft_generation",
+        status="success",
+        metadata_={"output_payload": {"version_index": 1}},
+        cleaned_output='{"optimized_content":"未验证正文"}',
+        created_at=1,
+        id=1,
+    )
+    orchestrator = object.__new__(PipelineOrchestrator)
+
+    assert orchestrator._rebuild_versions([trace]) == []
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_review_refinement_recovery_uses_validated_full_content() -> None:
+    draft = SimpleNamespace(
+        node_key="draft_generation",
+        status="success",
+        metadata_={
+            "output_payload": {
+                "version_index": 1,
+                "full_content": "初稿正文",
+            }
+        },
+        cleaned_output="未定稿内容",
+        created_at=1,
+        id=1,
+    )
+    refinement = SimpleNamespace(
+        node_key="review_refinement",
+        status="success",
+        metadata_={"output_payload": {"full_content": "恢复后的合法正文"}},
+        cleaned_output='{"optimized_content":"不应使用的正文"}',
+        created_at=2,
+        id=2,
+    )
+    orchestrator = object.__new__(PipelineOrchestrator)
+    node_sequences = {
+        "resume_target": 2,
+        "draft_generation": 0,
+        "review_refinement": 1,
+    }
+    orchestrator._trace_node_seq = lambda key: node_sequences.get(key, 2)
+
+    state = await orchestrator._rebuild_state_from_traces(
+        traces=[draft, refinement],
+        from_node_key="resume_target",
+        project_id="project-recovery",
+        chapter_number=1,
+        user_id=1,
+    )
+
+    assert state["versions"][0]["content"] == "恢复后的合法正文"
+
+    refinement.metadata_ = {"output_payload": {}}
+    with pytest.raises(_RebuildError, match="review_refinement"):
+        await orchestrator._rebuild_state_from_traces(
+            traces=[draft, refinement],
+            from_node_key="resume_target",
+            project_id="project-recovery",
+            chapter_number=1,
+            user_id=1,
+        )
+
+
 def test_langgraph_pipeline_records_generation_trace_nodes() -> None:
     source = _source()
 
@@ -285,6 +439,68 @@ def test_pipeline_review_and_refinement_failures_are_not_silently_ignored() -> N
     assert "raise RuntimeError(\"修复润色失败" in source
     assert "logger.warning(\"AI 评审失败，跳过" not in source
     assert "沿用默认版本选择" not in source
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_pipeline_review_refinement_rejects_unstructured_response() -> None:
+    class FakePromptService:
+        async def get_prompt(self, name: str) -> str:
+            assert name == "optimize_recommended_version"
+            return "结构化优化提示词"
+
+    class FakeLLMService:
+        async def get_llm_response(self, **kwargs) -> str:
+            return '```json\n{"optimized_content":"未闭合正文'
+
+    class FakeTraceService:
+        def __init__(self) -> None:
+            self.successes = []
+            self.failures = []
+
+        async def record_success(self, **kwargs) -> None:
+            self.successes.append(kwargs)
+
+        async def record_failure(self, **kwargs) -> None:
+            self.failures.append(kwargs)
+
+    orchestrator = object.__new__(PipelineOrchestrator)
+    orchestrator.prompt_service = FakePromptService()
+    orchestrator.llm_service = FakeLLMService()
+    orchestrator.trace_service = FakeTraceService()
+
+    with pytest.raises(RuntimeError, match="修复润色失败.*优化响应格式无效"):
+        await orchestrator._run_review_guided_refinement(
+            project_id="project-refinement-failure",
+            chapter_number=1,
+            source_content="原正文",
+            review_summary="压缩节奏",
+            version_number=1,
+            version_review={},
+            user_id=1,
+        )
+
+    assert orchestrator.trace_service.successes == []
+    assert len(orchestrator.trace_service.failures) == 1
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_pipeline_optimizer_preserves_content_after_invalid_response() -> None:
+    class FakePromptService:
+        async def get_prompt(self, name: str):
+            return "结构化优化提示词" if name == "optimize_dialogue" else None
+
+    class FakeLLMService:
+        async def get_llm_response(self, **kwargs) -> str:
+            return '```json\n{"optimized_content":"未闭合正文'
+
+    orchestrator = object.__new__(PipelineOrchestrator)
+    orchestrator.prompt_service = FakePromptService()
+    orchestrator.llm_service = FakeLLMService()
+
+    content, report = await orchestrator._run_optimizer("原正文", user_id=1)
+
+    assert content == "原正文"
+    assert report == {"steps": []}
 
 
 @pytest.mark.asyncio(loop_scope="session")

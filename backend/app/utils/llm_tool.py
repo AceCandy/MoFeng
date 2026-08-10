@@ -149,6 +149,8 @@ class LLMClient:
                     elif event_type == "message_delta":
                         delta = event.get("delta") or {}
                         finish_reason = delta.get("stop_reason")
+                        if finish_reason == "max_tokens":
+                            finish_reason = "length"
                         usage = event.get("usage") or {}
                         normalized_usage = None
                         if isinstance(usage, dict) and usage:

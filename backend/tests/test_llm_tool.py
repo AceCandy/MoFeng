@@ -7,7 +7,15 @@ from app.utils.llm_tool import ChatMessage, LLMClient
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_anthropic_stream_chat_uses_custom_messages_url(monkeypatch):
+@pytest.mark.parametrize(
+    ("stop_reason", "expected_finish_reason"),
+    [("end_turn", "end_turn"), ("max_tokens", "length")],
+)
+async def test_anthropic_stream_chat_normalizes_finish_reason_and_uses_custom_messages_url(
+    monkeypatch,
+    stop_reason,
+    expected_finish_reason,
+):
     class FakeStreamResponse:
         def raise_for_status(self):
             return None
@@ -20,7 +28,7 @@ async def test_anthropic_stream_chat_uses_custom_messages_url(monkeypatch):
 
         async def aiter_lines(self):
             yield 'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"你好"}}'
-            yield 'data: {"type":"message_delta","delta":{"stop_reason":"end_turn"}}'
+            yield f'data: {{"type":"message_delta","delta":{{"stop_reason":"{stop_reason}"}}}}'
 
     class FakeAsyncClient:
         last_request = {}
@@ -68,7 +76,7 @@ async def test_anthropic_stream_chat_uses_custom_messages_url(monkeypatch):
 
     assert chunks == [
         {"content": "你好", "finish_reason": None},
-        {"content": None, "finish_reason": "end_turn"},
+        {"content": None, "finish_reason": expected_finish_reason},
     ]
     assert FakeAsyncClient.last_request["method"] == "POST"
     assert FakeAsyncClient.last_request["url"] == "https://anthropic-proxy.example/v1/messages"

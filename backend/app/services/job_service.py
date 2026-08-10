@@ -137,6 +137,7 @@ class HeartbeatResult:
 class ActivityExecution:
     """handler 应执行 provider 调用，或直接复用已持久化结果。"""
 
+    activity_key: str
     provider_request_key: str
     should_execute: bool
     result: Optional[dict[str, Any]] = None
@@ -811,6 +812,15 @@ class JobService:
                 reason_code="job_run_status_mismatch",
                 now=reconciled_at,
             )
+
+        if (
+            job.status == "needs_attention"
+            and run.status == "needs_attention"
+            and job.error_category == "ambiguous_external_result"
+            and run.error_category == "ambiguous_external_result"
+        ):
+            await self.session.commit()
+            return ChapterWorkflowReconcileResult("unchanged", "ambiguous_external_result")
 
         state = checkpoint.state
         checkpoint_reason = checkpoint.reason_code
@@ -1785,7 +1795,49 @@ class JobService:
                 )
                 event_type = "workflow.command.accepted"
             elif command.type == "retry_external" or (command.type == "cancel" and command.payload):
-                event_type = "workflow.command.accepted"
+                await self._append_event(
+                    job,
+                    "workflow.command.accepted",
+                    now=submitted_at,
+                    workflow_context=workflow_context,
+                    workflow_command=command,
+                )
+                activity_key = command.payload.get("activity_key")
+                original = next(
+                    (
+                        activity
+                        for activity in ambiguous_activities
+                        if activity.activity_key == activity_key
+                    ),
+                    None,
+                )
+                if original is None:
+                    await self.session.rollback()
+                    raise ValueError("ambiguous command 缺少已验证的 activity")
+                if command.type == "retry_external":
+                    await self._apply_retry_external_command(
+                        command=command,
+                        job=job,
+                        original=original,
+                        workflow_context=workflow_context,
+                        applied_at=submitted_at,
+                    )
+                else:
+                    await self._apply_ambiguous_cancel_command(
+                        command=command,
+                        job=job,
+                        original=original,
+                        workflow_context=workflow_context,
+                        applied_at=submitted_at,
+                    )
+                await self._append_event(
+                    job,
+                    "workflow.command.applied",
+                    now=submitted_at,
+                    workflow_context=workflow_context,
+                    workflow_command=command,
+                )
+                event_type = None
             else:
                 await self._append_event(
                     job,
@@ -2700,6 +2752,63 @@ class JobService:
         else:
             raise ValueError("已应用 command 不是 ambiguous resolution 类型")
 
+    async def _resolve_manual_retry_activity(
+        self,
+        *,
+        job: BackgroundTask,
+        workflow_context: LockedChapterWorkflowTransition,
+        original: JobActivity,
+        canonical_request: dict[str, Any],
+    ) -> Optional[JobActivity]:
+        manual = await self.repo.get_latest_manual_retry_for_update(
+            job_id=job.id,
+            logical_step_key=original.activity_key,
+        )
+        if manual is None:
+            return None
+
+        request = manual.request_payload if isinstance(manual.request_payload, dict) else {}
+        command_id = request.get("manual_retry_command_id")
+        replaces = request.get("replaces_activity")
+        provider_request = request.get("provider_request")
+        command = (
+            await self.workflow_repo.get_command_for_update(command_id)
+            if isinstance(command_id, str)
+            else None
+        )
+        command_result = (
+            command.result_payload
+            if command is not None and isinstance(command.result_payload, dict)
+            else {}
+        )
+        command_payload = (
+            command.payload if command is not None and isinstance(command.payload, dict) else {}
+        )
+        if (
+            command is None
+            or command.type != "retry_external"
+            or command.status != "applied"
+            or command.run_id != workflow_context.run.id
+            or manual.activity_key != f"manual_retry:{command.id}"
+            or command_result.get("activity_id") != manual.id
+            or command_result.get("activity_key") != manual.activity_key
+            or command_result.get("provider_request_key") != manual.provider_request_key
+            or command_payload.get("activity_key") != original.activity_key
+            or command_payload.get("acknowledge_possible_duplicate") is not True
+            or request.get("logical_step_key") != original.activity_key
+            or request.get("acknowledge_possible_duplicate") is not True
+            or not isinstance(replaces, dict)
+            or replaces.get("id") != original.id
+            or replaces.get("activity_key") != original.activity_key
+            or replaces.get("provider_request_key") != original.provider_request_key
+            or not isinstance(provider_request, dict)
+            or _canonical_json(provider_request) != _canonical_json(canonical_request)
+            or _canonical_json(original.request_payload or {}) != _canonical_json(canonical_request)
+        ):
+            await self.session.rollback()
+            raise ValueError("manual retry intent 与已应用 command 身份不一致")
+        return manual
+
     async def _reject_workflow_command(
         self,
         command: ChapterWorkflowCommand,
@@ -2750,18 +2859,35 @@ class JobService:
             job_id=job.id,
             activity_key=activity_key,
         )
+        is_manual_retry = False
+        if (
+            workflow_context is not None
+            and activity is not None
+            and activity.status == "ambiguous"
+            and side_effect_class == SideEffectClass.AMBIGUOUS_EXTERNAL
+        ):
+            manual_activity = await self._resolve_manual_retry_activity(
+                job=job,
+                workflow_context=workflow_context,
+                original=activity,
+                canonical_request=canonical_request,
+            )
+            if manual_activity is not None:
+                activity = manual_activity
+                is_manual_retry = True
         if activity is not None:
             if activity.side_effect_class != side_effect_class.value:
                 await self.session.rollback()
                 raise ValueError("同一 activity_key 的 side-effect class 不可变")
-            if _canonical_json(activity.request_payload or {}) != _canonical_json(
-                canonical_request
-            ):
+            if not is_manual_retry and _canonical_json(
+                activity.request_payload or {}
+            ) != _canonical_json(canonical_request):
                 await self.session.rollback()
                 raise ValueError("同一 activity_key 的 canonical request 不可变")
             if activity.status == "succeeded":
                 await self.session.commit()
                 return ActivityExecution(
+                    activity_key=activity.activity_key,
                     provider_request_key=activity.provider_request_key,
                     should_execute=False,
                     result=dict(activity.result_payload or {}),
@@ -2790,6 +2916,7 @@ class JobService:
                 await self.session.commit()
                 await publish_background_task(job.user_id)
                 return ActivityExecution(
+                    activity_key=activity.activity_key,
                     provider_request_key=activity.provider_request_key,
                     should_execute=True,
                 )
@@ -2809,6 +2936,7 @@ class JobService:
                 await self.session.commit()
                 await publish_background_task(job.user_id)
                 return ActivityExecution(
+                    activity_key=activity.activity_key,
                     provider_request_key=activity.provider_request_key,
                     should_execute=True,
                 )
@@ -2841,6 +2969,7 @@ class JobService:
                 raise AmbiguousActivityError("外部调用结果未知，禁止自动重放")
             await self.session.commit()
             return ActivityExecution(
+                activity_key=activity.activity_key,
                 provider_request_key=activity.provider_request_key,
                 should_execute=True,
             )
@@ -2872,6 +3001,7 @@ class JobService:
         await self.session.commit()
         await publish_background_task(job.user_id)
         return ActivityExecution(
+            activity_key=activity.activity_key,
             provider_request_key=provider_request_key,
             should_execute=True,
         )

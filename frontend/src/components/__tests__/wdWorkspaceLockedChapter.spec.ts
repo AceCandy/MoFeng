@@ -26,6 +26,7 @@ const mountWorkspace = async (
     workflowCandidates?: ChapterVersionSelection[]
     workflowPending?: boolean
     workflowError?: string | null
+    workflowRetryActivityKey?: string | null
   } = {},
 ) => {
   const host = document.createElement('div')
@@ -56,7 +57,7 @@ const mountWorkspace = async (
     workflowAllowedCommands: overrides.workflowAllowedCommands ?? [],
     workflowPending: overrides.workflowPending ?? false,
     workflowError: overrides.workflowError ?? null,
-    workflowRetryActivityKey: null,
+    workflowRetryActivityKey: overrides.workflowRetryActivityKey ?? null,
     workflowCandidates: overrides.workflowCandidates ?? [],
     onSelectChapter: (chapterNumber: number) => selectedChapters.push(chapterNumber),
     onWorkflowSelectVersion: (versionId: number) => selectedWorkflowVersions.push(versionId),
@@ -254,6 +255,92 @@ describe('WDWorkspace locked chapter state', () => {
       expect(rendered.getWorkflowRetryCount()).toBe(1)
     } finally {
       rendered.unmount()
+    }
+  })
+
+  it('replaces the redundant failed panel with retry on the selected failed node', async () => {
+    const project: NovelProject = {
+      id: 'novel-1',
+      title: '全网退役',
+      initial_prompt: '',
+      conversation_history: [],
+      blueprint: {
+        chapter_outline: [
+          {
+            chapter_number: 1,
+            title: '一招',
+            summary: '林拓重新站上擂台。',
+          },
+        ],
+      },
+      chapters: [
+        {
+          chapter_number: 1,
+          title: '一招',
+          summary: '林拓重新站上擂台。',
+          real_summary: null,
+          content: null,
+          versions: null,
+          evaluation: null,
+          generation_status: 'failed',
+          generation_step: 'review_candidates',
+          generation_traces: [
+            {
+              id: 201,
+              node_key: 'quality_review',
+              node_label: 'AI评审',
+              stage: 'version_review',
+              status: 'failed',
+              uses_llm: true,
+              error: 'AI评审失败：外部模型返回结果不确定',
+              metadata: { run_id: 'run-1' },
+            },
+          ],
+        },
+      ],
+    }
+
+    const rendered = await mountWorkspace(project, 1, {
+      workflowPhase: 'failed',
+      workflowRunId: 'run-1',
+      workflowNodeKey: 'review_candidates',
+      workflowAllowedCommands: ['retry_external', 'cancel'],
+      workflowRetryActivityKey: 'wf:review_candidates:stable-key',
+      workflowError: '外部模型返回结果不确定',
+    })
+
+    try {
+      expect(rendered.host.querySelector('.chapter-workflow')).toBeNull()
+      expect(rendered.host.textContent).not.toContain('本轮需要处理')
+      expect(rendered.host.querySelector('[data-action="retry-external-node"]')).toBeNull()
+
+      const failedStep = Array.from(
+        rendered.host.querySelectorAll('.chapter-console__pipeline-item'),
+      ).find((item) => item.textContent?.includes('AI评审'))
+      failedStep?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      await nextTick()
+
+      expect(failedStep?.querySelector('[data-action="retry-external-node"]')).not.toBeNull()
+    } finally {
+      rendered.unmount()
+    }
+
+    const mixedRecovery = await mountWorkspace(project, 1, {
+      workflowPhase: 'failed',
+      workflowRunId: 'run-1',
+      workflowNodeKey: 'review_candidates',
+      workflowAllowedCommands: ['retry_external', 'retry'],
+      workflowRetryActivityKey: 'wf:review_candidates:stable-key',
+      workflowError: '外部模型返回结果不确定',
+    })
+
+    try {
+      const recoveryPanel = mixedRecovery.host.querySelector('.chapter-workflow')
+      expect(recoveryPanel).not.toBeNull()
+      expect(recoveryPanel?.querySelector('[data-action="retry"]')).not.toBeNull()
+      expect(recoveryPanel?.querySelector('[data-action="retry-external"]')).toBeNull()
+    } finally {
+      mixedRecovery.unmount()
     }
   })
 

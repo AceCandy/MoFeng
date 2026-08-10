@@ -1,7 +1,10 @@
 # AIMETA P=章节工作流模型activity测试|R=稳定阶段key_私有结果重放_ambiguity停止|NR=不持久化候选或执行完整graph|E=test_*|X=internal|A=integration_test|D=pytest|S=test|RD=./README.ai
 from __future__ import annotations
 
+import json
+import logging
 from copy import deepcopy
+from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
@@ -16,7 +19,10 @@ from app.models import (
     SystemConfig,
 )
 from app.schemas.chapter_context import ChapterContext
-from app.schemas.chapter_workflow import ChapterWorkflowStateV1
+from app.schemas.chapter_workflow import (
+    ChapterWorkflowCommandEnvelope,
+    ChapterWorkflowStateV1,
+)
 from app.services.chapter_workflow_activities import (
     ChapterWorkflowActivityRef,
     ChapterWorkflowCandidateInput,
@@ -33,11 +39,12 @@ from app.services.chapter_workflow_context import ChapterWorkflowContextService
 from app.services.chapter_workflow_handler import (
     ChapterWorkflowBindingAssemblerV1,
     ChapterWorkflowLLMProvidersV1,
-    _content_from_response,
 )
 from app.services.job_registry import SideEffectClass
-from app.services.job_service import AmbiguousActivityError
+from app.services.job_service import AmbiguousActivityError, JobService
+from app.services.job_worker import JobExecutionContext
 from app.services.llm_service import LLMService
+from app.services.model_response_parser import parse_chapter_content_response
 from app.utils.ai_telemetry import AICallResult, TokenUsage
 
 
@@ -69,20 +76,76 @@ def _activity_ref(execution) -> ChapterWorkflowActivityRef:
             r'{"optimized_content":"路径 C:\\new\\chapter，字面量 \\n"}',
             r"路径 C:\new\chapter，字面量 \n",
         ),
+        (
+            '```json\n{"optimized_content":"他按住"左胸"。",'
+            '"optimization_notes":["保留正文引号"]}\n```',
+            '他按住"左胸"。',
+        ),
     ],
 )
 def test_content_from_response_unwraps_optimizer_payloads(raw, expected):
-    content, _report = _content_from_response(raw)
+    content, _report = parse_chapter_content_response(raw)
 
     assert content == expected
 
 
-def test_content_from_response_preserves_literal_escapes_in_plain_text():
-    raw = r"正文包含 C:\new 与字面量 \n"
-
-    content, _report = _content_from_response(raw)
+@pytest.mark.parametrize(
+    "raw",
+    [
+        r"正文包含 C:\new 与字面量 \n",
+        "[注] 正文从方括号开始",
+        "{旁白} 正文从花括号开始",
+        '故事里写道 {"foo":"bar"}，随后继续。',
+    ],
+)
+def test_content_from_response_preserves_plain_text(raw):
+    content, _report = parse_chapter_content_response(raw)
 
     assert content == raw
+
+
+def test_content_from_response_unwraps_deep_complete_payloads():
+    raw = "最终正文"
+    for _ in range(6):
+        raw = json.dumps({"content": raw}, ensure_ascii=False)
+
+    content, _report = parse_chapter_content_response(raw)
+
+    assert content == "最终正文"
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        '```json\n{"optimized_content":"未闭合正文',
+        '```json\n{"optimized_content":"完整正文"}',
+        '{"optimized_content":"未闭合正文',
+        '以下是结果：\n{"optimized_content":"未闭合正文',
+        '以下是结果：\n{"optimized_content":"完整正文"}',
+        '说明\n```json\n{"optimized_content":"完整正文"}\n```\n尾注',
+        '{optimized_content: "未闭合正文"',
+        '{"optimization_notes":["缺少正文字段"]}',
+    ],
+)
+def test_content_from_response_rejects_invalid_structured_payload(raw):
+    with pytest.raises(ValueError, match="结构化"):
+        parse_chapter_content_response(raw)
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("# 版本一\n正文", "正文"),
+        ("## 版本 2\r\n正文", "正文"),
+        ("### 版本三：\n正文", "正文"),
+        ("普通正文\n# 版本一", "普通正文\n# 版本一"),
+        ("# 第一章\n正文", "# 第一章\n正文"),
+    ],
+)
+def test_content_from_response_removes_only_leading_version_heading(raw, expected):
+    content, _report = parse_chapter_content_response(raw)
+
+    assert content == expected
 
 
 async def _context_and_service(isolated_pg, *, user_id: int, project_id: str):
@@ -447,7 +510,9 @@ async def test_model_activities_replay_by_stable_ordinal_and_stage_with_private_
 @pytest.mark.asyncio(loop_scope="session")
 async def test_model_activity_provider_uncertainty_stops_run_without_automatic_replay(
     isolated_pg,
+    caplog: pytest.LogCaptureFixture,
 ):
+    caplog.set_level(logging.ERROR, logger="app.services.chapter_workflow_activities")
     started, _execution, context, service = await _context_and_service(
         isolated_pg,
         user_id=4302,
@@ -487,6 +552,226 @@ async def test_model_activity_provider_uncertainty_stops_run_without_automatic_r
     assert job is not None and job.status == "needs_attention"
     assert run is not None and run.status == "needs_attention" and run.is_active is True
     assert "SECRET_TOKEN" not in (job.error or "")
+    assert "failure_phase=provider" in caplog.text
+    assert "stage=plan_and_direct" in caplog.text
+    assert "error_type=RuntimeError" in caplog.text
+    assert "SECRET_TOKEN" not in caplog.text
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_retry_external_requeues_and_retries_only_ambiguous_review_activity(isolated_pg):
+    started, _execution, context, service = await _context_and_service(
+        isolated_pg,
+        user_id=4307,
+        project_id="workflow-model-manual-retry",
+    )
+    calls = {"plan": 0, "candidate": 0, "review": 0}
+    plan_input = ChapterWorkflowPlanInput(
+        context_snapshot=context.result.context_snapshot,
+        context_activity_key=context.activity_key,
+        context_result_hash=context.result.result_hash,
+    )
+
+    async def plan_provider(_request, *, provider_request_key):
+        assert provider_request_key
+        calls["plan"] += 1
+        return ChapterWorkflowPlanOutput(mission={"goal": "continue"})
+
+    plan = await service.execute_plan(plan_input, plan_provider)
+    candidate_input = ChapterWorkflowCandidateInput(
+        context_snapshot=context.result.context_snapshot,
+        context_activity_key=context.activity_key,
+        context_result_hash=context.result.result_hash,
+        upstream_refs={"plan": _activity_ref(plan)},
+        plan=plan.result.output,
+        ordinal=1,
+    )
+
+    async def candidate_provider(request, *, provider_request_key):
+        assert provider_request_key
+        calls["candidate"] += 1
+        return ChapterWorkflowCandidateOutput(ordinal=request.ordinal, content="candidate")
+
+    candidate_one = await service.execute_candidate(candidate_input, candidate_provider)
+    candidate_two_input = candidate_input.model_copy(update={"ordinal": 2})
+    candidate_two = await service.execute_candidate(candidate_two_input, candidate_provider)
+    review_input = ChapterWorkflowReviewInput(
+        context_snapshot=context.result.context_snapshot,
+        context_activity_key=context.activity_key,
+        context_result_hash=context.result.result_hash,
+        upstream_refs={
+            "plan": _activity_ref(plan),
+            "candidate:1": _activity_ref(candidate_one),
+            "candidate:2": _activity_ref(candidate_two),
+        },
+        plan=plan.result.output,
+        candidates=[candidate_one.result.output, candidate_two.result.output],
+    )
+
+    async def review_provider(_request, *, provider_request_key):
+        assert provider_request_key
+        calls["review"] += 1
+        if calls["review"] == 1:
+            raise RuntimeError("provider result uncertain")
+        return ChapterWorkflowReviewOutput(best_ordinal=1, report={"summary": "accepted"})
+
+    with pytest.raises(AmbiguousActivityError, match="结果未知"):
+        await service.execute_review(review_input, review_provider)
+
+    async with isolated_pg.session_factory() as session:
+        original = (
+            await session.execute(
+                select(JobActivity).where(
+                    JobActivity.job_id == started.root_job.id,
+                    JobActivity.activity_key.like("wf:review_candidates:%"),
+                )
+            )
+        ).scalar_one()
+        run = await session.get(ChapterWorkflowRun, started.run.id)
+        assert run is not None and run.checkpoint_id is None
+        command = await JobService(session).submit_chapter_workflow_command(
+            run.id,
+            actor_user_id=run.user_id,
+            envelope=ChapterWorkflowCommandEnvelope(
+                command_id=str(uuid4()),
+                type="retry_external",
+                payload={
+                    "activity_key": original.activity_key,
+                    "acknowledge_possible_duplicate": True,
+                },
+                expected_run_revision=run.row_revision,
+                expected_chapter_revision=run.base_revision,
+                expected_checkpoint_id=None,
+            ),
+        )
+        assert command.status == "applied"
+        manual_activity_key = command.result_payload["activity_key"]
+        retry_lease = await JobService(session).claim_next(
+            worker_id="workflow-model-manual-retry-worker",
+            lease_seconds=60,
+        )
+
+    assert retry_lease is not None
+    retry_execution = JobExecutionContext(
+        lease=retry_lease,
+        side_effect_class=SideEffectClass.TRANSACTIONAL,
+        session_factory=isolated_pg.session_factory,
+    )
+    retry_service = ChapterWorkflowModelActivityService(retry_execution)
+    assert await retry_service.execute_plan(plan_input, plan_provider) == plan
+    assert await retry_service.execute_candidate(candidate_input, candidate_provider) == candidate_one
+    assert await retry_service.execute_candidate(candidate_two_input, candidate_provider) == candidate_two
+    retried = await retry_service.execute_review(review_input, review_provider)
+    assert await retry_service.execute_review(review_input, review_provider) == retried
+
+    async with isolated_pg.session_factory() as session:
+        persisted_original = await session.get(JobActivity, original.id)
+        manual_activity = (
+            await session.execute(
+                select(JobActivity).where(
+                    JobActivity.job_id == started.root_job.id,
+                    JobActivity.activity_key == manual_activity_key,
+                )
+            )
+        ).scalar_one()
+
+    assert calls == {"plan": 1, "candidate": 2, "review": 2}
+    assert retried.activity_key == manual_activity_key
+    assert persisted_original is not None and persisted_original.status == "ambiguous"
+    assert manual_activity.status == "succeeded"
+    assert manual_activity.result_payload == retried.result.model_dump(mode="json")
+
+
+@pytest.mark.parametrize("manual_status", ["started", "ambiguous"])
+@pytest.mark.asyncio(loop_scope="session")
+async def test_retry_external_does_not_replay_uncertain_manual_activity(
+    isolated_pg,
+    manual_status,
+):
+    user_id = 4308 if manual_status == "started" else 4309
+    started, _execution, context, service = await _context_and_service(
+        isolated_pg,
+        user_id=user_id,
+        project_id=f"workflow-model-manual-{manual_status}",
+    )
+    request = ChapterWorkflowPlanInput(
+        context_snapshot=context.result.context_snapshot,
+        context_activity_key=context.activity_key,
+        context_result_hash=context.result.result_hash,
+    )
+    calls = 0
+
+    async def uncertain_provider(_request, *, provider_request_key):
+        nonlocal calls
+        assert provider_request_key
+        calls += 1
+        raise RuntimeError("provider result uncertain")
+
+    with pytest.raises(AmbiguousActivityError, match="结果未知"):
+        await service.execute_plan(request, uncertain_provider)
+
+    async with isolated_pg.session_factory() as session:
+        original = (
+            await session.execute(
+                select(JobActivity).where(
+                    JobActivity.job_id == started.root_job.id,
+                    JobActivity.activity_key.like("wf:plan_and_direct:%"),
+                )
+            )
+        ).scalar_one()
+        run = await session.get(ChapterWorkflowRun, started.run.id)
+        assert run is not None and run.checkpoint_id is None
+        command = await JobService(session).submit_chapter_workflow_command(
+            run.id,
+            actor_user_id=run.user_id,
+            envelope=ChapterWorkflowCommandEnvelope(
+                command_id=str(uuid4()),
+                type="retry_external",
+                payload={
+                    "activity_key": original.activity_key,
+                    "acknowledge_possible_duplicate": True,
+                },
+                expected_run_revision=run.row_revision,
+                expected_chapter_revision=run.base_revision,
+                expected_checkpoint_id=None,
+            ),
+        )
+        manual_activity_key = command.result_payload["activity_key"]
+        retry_lease = await JobService(session).claim_next(
+            worker_id=f"workflow-model-manual-{manual_status}-worker",
+            lease_seconds=60,
+        )
+        manual_activity = (
+            await session.execute(
+                select(JobActivity).where(
+                    JobActivity.job_id == started.root_job.id,
+                    JobActivity.activity_key == manual_activity_key,
+                )
+            )
+        ).scalar_one()
+        manual_activity.status = manual_status
+        await session.commit()
+
+    assert retry_lease is not None
+    retry_execution = JobExecutionContext(
+        lease=retry_lease,
+        side_effect_class=SideEffectClass.TRANSACTIONAL,
+        session_factory=isolated_pg.session_factory,
+    )
+    retry_service = ChapterWorkflowModelActivityService(retry_execution)
+    with pytest.raises(AmbiguousActivityError, match="禁止自动重放"):
+        await retry_service.execute_plan(request, uncertain_provider)
+
+    async with isolated_pg.session_factory() as session:
+        persisted_manual = await session.scalar(
+            select(JobActivity).where(
+                JobActivity.job_id == started.root_job.id,
+                JobActivity.activity_key == manual_activity_key,
+            )
+        )
+
+    assert calls == 1
+    assert persisted_manual is not None and persisted_manual.status == manual_status
 
 
 @pytest.mark.asyncio(loop_scope="session")

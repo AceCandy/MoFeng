@@ -3,13 +3,14 @@
 
 先生成章节预览（500字），确认方向后再扩写成完整章节。
 """
-from typing import Optional, Dict, Any, List
 import json
 import logging
+from typing import Any, Dict, List
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .llm_service import LLMService
+from .model_response_parser import parse_chapter_content_response
 from .prompt_service import PromptService
 
 logger = logging.getLogger(__name__)
@@ -195,7 +196,8 @@ class PreviewGenerationService:
                 stage="chapter_preview",
             )
             
-            return response.strip()
+            content, _report = parse_chapter_content_response(response)
+            return content
         except Exception as e:
             logger.error(f"扩写章节失败: {e}")
             return ""

@@ -1640,10 +1640,17 @@
             "type": "integer"
           },
           "expected_checkpoint_id": {
-            "maxLength": 512,
-            "minLength": 1,
-            "title": "Expected Checkpoint Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Checkpoint Id"
           },
           "expected_run_revision": {
             "minimum": 0.0,

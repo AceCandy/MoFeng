@@ -3,6 +3,7 @@ import { createApp, nextTick } from 'vue'
 
 import ChapterGenerating from '@/components/writing-desk/workspace/ChapterGenerating.vue'
 import type { ChapterGenerationTrace } from '@/api/novel'
+import { globalAlert } from '@/composables/useAlert'
 import { formatAiReviewOutputs } from '@/utils/generationTrace'
 
 const mountChapterGenerating = async (
@@ -88,6 +89,28 @@ describe('ChapterGenerating timing inspector', () => {
         .toBe(true)
     } finally {
       pending.unmount()
+    }
+  })
+
+  it('marks the incoming connector and current node for running motion', async () => {
+    const rendered = await mountChapterGenerating({
+      id: 101,
+      node_key: 'quality_review',
+      node_label: 'AI评审',
+      status: 'running',
+      uses_llm: true,
+      metadata: {},
+    })
+
+    try {
+      const current = rendered.host.querySelector('.chapter-console__pipeline-item.is-in-progress')
+      expect(current?.textContent).toContain('AI评审')
+      expect(current?.previousElementSibling?.classList.contains('is-leading-to-current')).toBe(true)
+      expect(current?.classList.contains('is-leading-to-current')).toBe(false)
+      expect(rendered.host.querySelector('.chapter-console__pipeline-card')
+        ?.classList.contains('has-node-retry')).toBe(false)
+    } finally {
+      rendered.unmount()
     }
   })
 
@@ -317,6 +340,119 @@ describe('ChapterGenerating timing inspector', () => {
       expect(rendered.host.textContent).not.toContain('放弃本轮草稿并重新生成')
     } finally {
       rendered.unmount()
+    }
+  })
+
+  it('retries the selected failed external node only when the snapshot allows it', async () => {
+    const onRetryExternal = vi.fn()
+    let resolveConfirmation: ((confirmed: boolean) => void) | undefined
+    const confirmation = new Promise<boolean>((resolve) => {
+      resolveConfirmation = resolve
+    })
+    const confirmSpy = vi.spyOn(globalAlert, 'showConfirm').mockReturnValue(confirmation)
+    const traces: ChapterGenerationTrace[] = [
+      {
+        id: 60,
+        node_key: 'draft_generation',
+        node_label: '生成正文',
+        stage: 'chapter_writing',
+        status: 'failed',
+        uses_llm: true,
+        error: '历史正文生成失败',
+        metadata: {},
+      },
+      {
+        id: 61,
+        node_key: 'quality_review',
+        node_label: 'AI评审',
+        stage: 'version_review',
+        status: 'failed',
+        uses_llm: true,
+        error: 'AI评审失败：外部模型返回结果不确定',
+        metadata: {
+          duration_ms: 1600,
+          actions: ['调用评审模型'],
+        },
+      },
+    ]
+    const rendered = await mountChapterGenerating(traces, {
+      status: 'failed',
+      generationStep: 'review_candidates',
+      allowedCommands: ['retry_external'],
+      retryActivityKey: 'wf:review_candidates:stable-key',
+      onRetryExternal,
+    })
+
+    try {
+      expect(rendered.host.querySelector('[data-action="retry-external-node"]')).toBeNull()
+      await clickPipelineStep(rendered.host, 'AI评审')
+      const retryButton = rendered.host.querySelector<HTMLButtonElement>(
+        '[data-action="retry-external-node"]',
+      )
+      expect(retryButton?.textContent).toContain('重试')
+      expect(retryButton?.getAttribute('aria-label')).toBe('使用上一节点结果重试AI评审')
+      expect(retryButton?.disabled).toBe(false)
+      expect(retryButton?.closest('.chapter-console__pipeline-item')?.textContent)
+        .toContain('AI评审')
+      expect(retryButton?.closest('.chapter-console__pipeline-card')
+        ?.classList.contains('has-node-retry')).toBe(true)
+
+      retryButton?.closest('.chapter-console__pipeline-node-retry-trigger')
+        ?.dispatchEvent(new MouseEvent('mouseenter'))
+      await new Promise((resolve) => setTimeout(resolve, 260))
+      await nextTick()
+      expect(document.body.querySelector('[role="tooltip"]')?.textContent)
+        .toContain('使用上一节点的结果重新执行当前节点')
+
+      retryButton?.click()
+      retryButton?.click()
+      await nextTick()
+      expect(confirmSpy).toHaveBeenCalledTimes(1)
+      expect(retryButton?.disabled).toBe(true)
+      resolveConfirmation?.(true)
+      await vi.waitFor(() => expect(onRetryExternal)
+        .toHaveBeenCalledWith('wf:review_candidates:stable-key'))
+
+      await clickPipelineStep(rendered.host, '生成正文')
+      await vi.waitFor(() => {
+        expect(rendered.host.querySelector('[data-action="retry-external-node"]')).toBeNull()
+      })
+    } finally {
+      confirmSpy.mockRestore()
+      rendered.unmount()
+    }
+
+    for (const props of [
+      { allowedCommands: [], retryActivityKey: 'wf:review_candidates:stable-key' },
+      { allowedCommands: ['retry_external'], retryActivityKey: null },
+    ]) {
+      const unavailable = await mountChapterGenerating(traces[1], {
+        status: 'failed',
+        generationStep: 'review_candidates',
+        ...props,
+      })
+      try {
+        await clickPipelineStep(unavailable.host, 'AI评审')
+        expect(unavailable.host.querySelector('[data-action="retry-external-node"]')).toBeNull()
+      } finally {
+        unavailable.unmount()
+      }
+    }
+
+    const pending = await mountChapterGenerating(traces[1], {
+      status: 'failed',
+      generationStep: 'review_candidates',
+      allowedCommands: ['retry_external'],
+      retryActivityKey: 'wf:review_candidates:stable-key',
+      pending: true,
+    })
+    try {
+      await clickPipelineStep(pending.host, 'AI评审')
+      expect(pending.host.querySelector<HTMLButtonElement>(
+        '[data-action="retry-external-node"]',
+      )?.disabled).toBe(true)
+    } finally {
+      pending.unmount()
     }
   })
 

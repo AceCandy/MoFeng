@@ -997,6 +997,33 @@ def test_command_envelope_rejects_noncanonical_payload(command_type, payload):
         )
 
 
+@pytest.mark.parametrize("command_type", ["select", "retry", "retry_projection"])
+def test_command_envelope_requires_checkpoint_for_determinate_resume(command_type):
+    payload = {"selected_version_id": 1} if command_type == "select" else {}
+    with pytest.raises(ValidationError, match="必须绑定 checkpoint"):
+        ChapterWorkflowCommandEnvelope(
+            command_id=str(uuid4()),
+            type=command_type,
+            payload=payload,
+            expected_run_revision=0,
+            expected_chapter_revision=0,
+            expected_checkpoint_id=None,
+        )
+
+
+def test_command_envelope_allows_cancel_without_checkpoint():
+    envelope = ChapterWorkflowCommandEnvelope(
+        command_id=str(uuid4()),
+        type="cancel",
+        payload={},
+        expected_run_revision=0,
+        expected_chapter_revision=0,
+        expected_checkpoint_id=None,
+    )
+
+    assert envelope.expected_checkpoint_id is None
+
+
 @pytest.mark.asyncio(loop_scope="session")
 async def test_waiting_cancel_command_is_applied_atomically(isolated_pg):
     session_factory = isolated_pg.session_factory
