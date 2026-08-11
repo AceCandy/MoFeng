@@ -38,11 +38,15 @@ const readStats = async (request: APIRequestContext): Promise<E2EStats> => {
   return response.json() as Promise<E2EStats>
 }
 
-const openWritingDesk = async (page: Page) => {
+const openWritingDeskPage = async (page: Page) => {
   await page.addInitScript(() => {
     localStorage.setItem('token', 'e2e-token')
   })
   await page.goto(writingDeskPath)
+}
+
+const openWritingDesk = async (page: Page) => {
+  await openWritingDeskPage(page)
   const panel = page.locator('.chapter-workflow')
   await expect(panel).toBeVisible()
   return panel
@@ -152,14 +156,16 @@ test('projection pending 只提交 retry_projection', async ({ page, request }) 
 
 test('外部重试必须确认重复调用风险并携带确认字段', async ({ page, request }) => {
   await resetScenario(request, 'external-retry')
-  const panel = await openWritingDesk(page)
-  await expectStatus(panel, '本轮需要处理', 'alert')
+  await openWritingDeskPage(page)
+  const console = page.getByRole('region', { name: 'AI章节生成控制台' })
+  await expect(console).toBeVisible()
 
-  await panel.getByRole('button', { name: '确认风险并重试' }).click()
+  await console.getByRole('button', { name: /AI评审失败/ }).click()
+  await console.getByRole('button', { name: '使用上一节点结果重试AI评审' }).click()
   const dialog = page.getByRole('dialog', { name: '确认外部重试风险' })
   await expect(dialog).toBeVisible()
   await dialog.getByRole('button', { name: '确定' }).click()
-  await expectStatus(panel, '章节生成中')
+  await expectStatus(page.locator('.chapter-workflow'), '章节生成中')
 
   expect((await readStats(request)).commands.at(-1)).toMatchObject({
     type: 'retry_external',

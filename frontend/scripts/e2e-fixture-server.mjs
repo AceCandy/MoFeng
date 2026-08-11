@@ -160,7 +160,18 @@ const projectChapter = () => ({
   generation_step: null,
   generation_step_index: null,
   generation_step_total: null,
-  generation_traces: [],
+  generation_traces: state.scenario === 'external-retry'
+    ? [{
+        id: 1,
+        node_key: 'quality_review',
+        node_label: 'AI评审',
+        stage: 'version_review',
+        status: 'failed',
+        uses_llm: true,
+        error: 'AI评审失败：外部模型返回结果不确定',
+        metadata: { run_id: runA },
+      }]
+    : [],
   word_count: 0,
 })
 

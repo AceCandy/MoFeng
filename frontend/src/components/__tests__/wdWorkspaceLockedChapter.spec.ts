@@ -89,7 +89,7 @@ const mountWorkspace = async (
 }
 
 describe('WDWorkspace locked chapter state', () => {
-  it('hides the duplicate running banner and isolates live draft preview to the current run', async () => {
+  it('keeps workflow status mounted and isolates live draft preview to the current run', async () => {
     const project: NovelProject = {
       id: 'novel-running-preview',
       title: '全网退役',
@@ -122,8 +122,10 @@ describe('WDWorkspace locked chapter state', () => {
       workflowAllowedCommands: ['cancel'],
     })
     try {
-      expect(withoutCandidate.host.querySelector('.chapter-workflow')).toBeNull()
-      expect(withoutCandidate.host.textContent).not.toContain('章节生成中')
+      const panel = withoutCandidate.host.querySelector('.chapter-workflow')
+      expect(panel?.getAttribute('role')).toBe('status')
+      expect(panel?.getAttribute('aria-live')).toBe('polite')
+      expect(panel?.querySelector('h3')?.textContent).toBe('章节生成中')
       expect(withoutCandidate.host.querySelector('[data-action="cancel"]')).not.toBeNull()
       expect(withoutCandidate.host.querySelector('.chapter-console__preview-card')).toBeNull()
     } finally {

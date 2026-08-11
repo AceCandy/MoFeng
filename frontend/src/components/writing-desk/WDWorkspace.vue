@@ -354,16 +354,6 @@ const workflowStatus = computed(() => {
 })
 const chapterStatusLabel = computed(() => workflowStatus.value.label)
 const chapterStatusTone = computed(() => workflowStatus.value.tone)
-const shouldShowWorkflowPanel = computed(() => {
-  const phase = props.workflowPhase
-  return phase === 'booting'
-    || phase === 'idle'
-    || phase === 'waitingForSelection'
-    || phase === 'failed'
-    || phase === 'cancelled'
-    || phase === 'fatal'
-})
-
 const { chapterInlineMeta } = useChapterInlineMeta({
   selectedChapter,
   selectedChapterResolvedContent,
@@ -487,8 +477,7 @@ const workflowPanelAllowedCommands = computed(() =>
 )
 
 const shouldRenderWorkflowPanel = computed(() =>
-  shouldShowWorkflowPanel.value
-  && (!hasInlineExternalRetry.value || workflowPanelAllowedCommands.value.length > 0),
+  !hasInlineExternalRetry.value || workflowPanelAllowedCommands.value.length > 0,
 )
 
 const workflowGenerationStatus = computed<Chapter['generation_status'] | null>(() => {
