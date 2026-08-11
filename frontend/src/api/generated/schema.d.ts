@@ -4655,8 +4655,9 @@ export interface operations {
     };
     register_with_linuxdo_api_auth_linuxdo_register_get: {
         parameters: {
-            query: {
-                code: string;
+            query?: {
+                code?: string | null;
+                state?: string | null;
             };
             header?: never;
             path?: never;
