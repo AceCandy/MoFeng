@@ -20,7 +20,8 @@
   "subtasks": [],
   "children": [
     "08-10-registration-config-bootstrap",
-    "08-10-linuxdo-oauth-state"
+    "08-10-linuxdo-oauth-state",
+    "08-11-quality-baseline"
   ],
   "parent": null,
   "relatedFiles": [],
