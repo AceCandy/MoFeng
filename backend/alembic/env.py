@@ -16,7 +16,7 @@ from app.db.chapter_workflow_checkpoint_schema import CHECKPOINT_TABLES
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # CLI 可显式注入目标连接串；默认仍使用应用配置。
 config.set_main_option(

@@ -77,7 +77,7 @@ def test_parse_optimizer_response_rejects_unstructured_or_incomplete_content(
 @pytest.mark.asyncio(loop_scope="session")
 async def test_optimize_chapter_does_not_expose_model_exception(
     monkeypatch,
-    caplog,
+    app_caplog,
 ) -> None:
     session = object()
     sensitive_error = "provider failure: 敏感响应片段"
@@ -117,7 +117,7 @@ async def test_optimize_chapter_does_not_expose_model_exception(
     monkeypatch.setattr(optimizer, "PromptService", DummyPromptService)
     monkeypatch.setattr(optimizer, "LLMService", DummyLLMService)
 
-    with caplog.at_level(logging.ERROR, logger=optimizer.__name__):
+    with app_caplog.at_level(logging.ERROR, logger=optimizer.__name__):
         with pytest.raises(optimizer.HTTPException) as exc_info:
             await optimizer.optimize_chapter(
                 request=optimizer.OptimizeRequest(
@@ -130,8 +130,8 @@ async def test_optimize_chapter_does_not_expose_model_exception(
             )
 
     assert exc_info.value.detail == "优化过程中发生错误"
-    assert "RuntimeError" in caplog.text
-    assert sensitive_error not in caplog.text
+    assert "RuntimeError" in app_caplog.text
+    assert sensitive_error not in app_caplog.text
     assert sensitive_error not in exc_info.value.detail
 
 
@@ -145,7 +145,7 @@ async def test_optimize_chapter_does_not_expose_model_exception(
 @pytest.mark.asyncio(loop_scope="session")
 async def test_optimize_recommended_version_does_not_expose_exception(
     monkeypatch,
-    caplog,
+    app_caplog,
     error_type,
     expected_status: int,
     expected_detail: str,
@@ -175,7 +175,7 @@ async def test_optimize_recommended_version_does_not_expose_exception(
         fail_optimization,
     )
 
-    with caplog.at_level(logging.ERROR, logger=optimizer.__name__):
+    with app_caplog.at_level(logging.ERROR, logger=optimizer.__name__):
         with pytest.raises(optimizer.HTTPException) as exc_info:
             await optimizer.optimize_recommended_version(
                 request=optimizer.OptimizeRecommendedVersionRequest(
@@ -190,8 +190,8 @@ async def test_optimize_recommended_version_does_not_expose_exception(
 
     assert exc_info.value.status_code == expected_status
     assert exc_info.value.detail == expected_detail
-    assert error_type.__name__ in caplog.text
-    assert sensitive_error not in caplog.text
+    assert error_type.__name__ in app_caplog.text
+    assert sensitive_error not in app_caplog.text
     assert sensitive_error not in exc_info.value.detail
 
 

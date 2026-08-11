@@ -1416,7 +1416,7 @@ async def test_production_handler_runs_selection_finalize_and_projection_resume(
                         user_id=8901,
                         project_id="workflow-production-handler",
                         chapter_number=1,
-                        flow_config={"preset": "basic", "enable_rag": False},
+                        flow_config={"preset": "basic", "enable_rag": False, "versions": 1},
                     )
 
                 provider_calls: list[str] = []
@@ -1684,10 +1684,14 @@ async def test_production_handler_runs_selection_finalize_and_projection_resume(
                             ChapterWorkflowCommand.type == "select",
                         )
                     )
-                    trace_count = await session.scalar(
-                        select(func.count())
-                        .select_from(ChapterGenerationTrace)
-                        .where(ChapterGenerationTrace.source_run_id == started.run.id)
+                    traces = list(
+                        (
+                            await session.execute(
+                                select(ChapterGenerationTrace)
+                                .where(ChapterGenerationTrace.source_run_id == started.run.id)
+                                .order_by(ChapterGenerationTrace.source_event_cursor)
+                            )
+                        ).scalars()
                     )
 
                 assert job is not None and job.status == "succeeded"
@@ -1711,7 +1715,10 @@ async def test_production_handler_runs_selection_finalize_and_projection_resume(
                 assert len({activity.activity_key for activity in activities}) == 7
                 assert len({activity.provider_request_key for activity in activities}) == 7
                 assert command_count == 1
-                assert trace_count == 0
+                assert [(trace.node_key, trace.status) for trace in traces] == [
+                    ("finalize_revision", "running"),
+                    ("finalize_revision", "success"),
+                ]
                 assert provider_calls == [
                     "plan",
                     "candidate:1",
@@ -1748,7 +1755,7 @@ async def test_production_workflow_recovers_across_process_kills_redis_off_and_r
                         user_id=8902,
                         project_id="workflow-process-recovery",
                         chapter_number=1,
-                        flow_config={"preset": "basic", "enable_rag": False},
+                        flow_config={"preset": "basic", "enable_rag": False, "versions": 1},
                     )
 
                 process_context = multiprocessing.get_context("spawn")

@@ -510,9 +510,9 @@ async def test_model_activities_replay_by_stable_ordinal_and_stage_with_private_
 @pytest.mark.asyncio(loop_scope="session")
 async def test_model_activity_provider_uncertainty_stops_run_without_automatic_replay(
     isolated_pg,
-    caplog: pytest.LogCaptureFixture,
+    app_caplog: pytest.LogCaptureFixture,
 ):
-    caplog.set_level(logging.ERROR, logger="app.services.chapter_workflow_activities")
+    app_caplog.set_level(logging.ERROR, logger="app.services.chapter_workflow_activities")
     started, _execution, context, service = await _context_and_service(
         isolated_pg,
         user_id=4302,
@@ -552,10 +552,10 @@ async def test_model_activity_provider_uncertainty_stops_run_without_automatic_r
     assert job is not None and job.status == "needs_attention"
     assert run is not None and run.status == "needs_attention" and run.is_active is True
     assert "SECRET_TOKEN" not in (job.error or "")
-    assert "failure_phase=provider" in caplog.text
-    assert "stage=plan_and_direct" in caplog.text
-    assert "error_type=RuntimeError" in caplog.text
-    assert "SECRET_TOKEN" not in caplog.text
+    assert "failure_phase=provider" in app_caplog.text
+    assert "stage=plan_and_direct" in app_caplog.text
+    assert "error_type=RuntimeError" in app_caplog.text
+    assert "SECRET_TOKEN" not in app_caplog.text
 
 
 @pytest.mark.asyncio(loop_scope="session")

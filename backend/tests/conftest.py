@@ -1,6 +1,7 @@
 """pytest 全局 fixture。"""
 
 import asyncio
+import logging
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -209,6 +210,18 @@ def _bypass_ssrf_in_integration_tests():
     settings.allow_private_llm_endpoints = True
     yield
     settings.allow_private_llm_endpoints = previous
+
+
+@pytest.fixture
+def app_caplog(caplog):
+    """让 app.* 日志在生产 logging 配置已加载时仍可被 caplog 捕获。"""
+    app_logger = logging.getLogger("app")
+    previous = app_logger.propagate
+    app_logger.propagate = True
+    try:
+        yield caplog
+    finally:
+        app_logger.propagate = previous
 
 
 @pytest.fixture(autouse=True)

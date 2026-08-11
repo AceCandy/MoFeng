@@ -72,7 +72,6 @@ def test_workspace_reads_query_loading_error_and_refetch_state():
     for text in [
         "useNovelProjectsQuery",
         "useDeleteNovelsMutation",
-        "useImportNovelMutation",
         "projectsQuery",
         "projectsLoading",
         "projectsError",

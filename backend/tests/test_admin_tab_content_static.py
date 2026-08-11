@@ -23,7 +23,7 @@ def test_admin_overview_shell_has_shared_global_styles():
         ":where(.admin-ops)",
         ":where(.admin-ops__summary)",
         ":where(.admin-ops__metrics)",
-        ":where(.admin-ops__metric)",
+        ":where(.admin-ops__metric, .metric-card)",
         ":where(.admin-ops__grid)",
         ":where(.admin-panel-card)",
     ]:

@@ -97,10 +97,11 @@ def test_impeccable_design_sidecar_matches_current_warm_paper_tokens():
 
     assert "clear-blue" not in color_meta
     assert "paper-white" not in color_meta
-    assert color_meta["primary"]["canonical"] == "#4d6b97"
-    assert color_meta["surface"]["canonical"] == "#fbfaf7"
-    assert color_meta["background"]["canonical"] == "#f4f0e9"
-    assert color_meta["on-surface"]["canonical"] == "#1f2530"
-    assert color_meta["error"]["canonical"] == "#b85c58"
-    assert sidecar["extensions"]["northStar"] == "安静写作台"
+    assert color_meta["primary"]["canonical"] == "#B8402F"
+    assert color_meta["secondary"]["canonical"] == "#B83C32"
+    assert color_meta["tertiary"]["canonical"] == "#2E5C8A"
+    assert color_meta["luomo"]["canonical"] == "#1C2224"
+    assert color_meta["surface"]["canonical"] == "#FAF6ED"
+    assert color_meta["error"]["canonical"] == "#B85C58"
+    assert sidecar["narrative"]["northStar"] == "描红界格 · 颜色即权责"
     assert "--md-error: #b85c58;" in main_css
