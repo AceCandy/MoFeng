@@ -9,21 +9,21 @@
 - 势力关系网络
 """
 
-from typing import Optional, Dict, Any, List
 import json
 import logging
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..schemas.chapter_context import ChapterContext
 from .chapter_context_adapters import ReviewContextAdapter
 from .constitution_service import ConstitutionService
-from .writer_persona_service import WriterPersonaService
-from .six_dimension_review_service import SixDimensionReviewService
-from .foreshadowing_tracker_service import ForeshadowingTrackerService
 from .faction_service import FactionService
+from .foreshadowing_tracker_service import ForeshadowingTrackerService
 from .llm_service import LLMService
 from .prompt_service import PromptService
+from .six_dimension_review_service import SixDimensionReviewService
+from .writer_persona_service import WriterPersonaService
 
 logger = logging.getLogger(__name__)
 

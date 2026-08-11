@@ -4,19 +4,18 @@ import hashlib
 import logging
 import random
 import secrets
+import smtplib
 import string
 import time
+from email.header import Header
+from email.mime.text import MIMEText
+from email.utils import formataddr, parseaddr
 from typing import Dict, Optional
 from urllib.parse import urlencode, urlparse
 
 import httpx
 import redis
-from email.header import Header
-from email.mime.text import MIMEText
-from email.utils import formataddr, parseaddr
 from fastapi import HTTPException, status
-
-import smtplib
 
 from ..core.config import settings
 from ..core.security import create_access_token, hash_password, verify_password

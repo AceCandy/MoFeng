@@ -80,8 +80,8 @@ def _clean_string(text: str, parse_json: bool = True) -> str:
 
 from fastapi import HTTPException, status
 from sqlalchemy import and_, delete, func, insert, or_, select, update
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from ..models import (
     BlueprintCharacter,
@@ -99,18 +99,28 @@ from ..repositories.novel_repository import NovelRepository
 from ..schemas.admin import AdminNovelSummary
 from ..schemas.novel import (
     Blueprint,
-    Chapter as ChapterSchema,
-    ChapterGenerationTrace as ChapterGenerationTraceSchema,
     ChapterGenerationStatus,
-    ChapterOutline as ChapterOutlineSchema,
-    ChapterVersionSelection as ChapterVersionSelectionSchema,
-    NovelProject as NovelProjectSchema,
     NovelProjectSummary,
     NovelSectionResponse,
     NovelSectionType,
 )
-from .chapter_word_count_settings import count_chapter_words
+from ..schemas.novel import (
+    Chapter as ChapterSchema,
+)
+from ..schemas.novel import (
+    ChapterGenerationTrace as ChapterGenerationTraceSchema,
+)
+from ..schemas.novel import (
+    ChapterOutline as ChapterOutlineSchema,
+)
+from ..schemas.novel import (
+    ChapterVersionSelection as ChapterVersionSelectionSchema,
+)
+from ..schemas.novel import (
+    NovelProject as NovelProjectSchema,
+)
 from .chapter_projection_service import ChapterProjectionService
+from .chapter_word_count_settings import count_chapter_words
 from .event_bus import publish_background_task
 
 logger = logging.getLogger(__name__)

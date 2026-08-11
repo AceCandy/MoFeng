@@ -1,9 +1,9 @@
 # AIMETA P=LLM配置API_模型配置管理|R=LLM配置CRUD|NR=不含模型调用|E=route:GET_POST_/api/llm-config/*|X=http|A=配置CRUD|D=fastapi,sqlalchemy|S=db|RD=./README.ai
 import logging
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List
 
 from ...core.dependencies import get_current_user
 from ...db.session import get_session

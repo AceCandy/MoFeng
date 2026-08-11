@@ -10,11 +10,12 @@ from pathlib import Path
 from typing import Any
 
 import sqlalchemy as sa
-from alembic import command
 from alembic.config import Config as AlembicConfig
 from alembic.script import ScriptDirectory
-from sqlalchemy.engine import Connection, URL, make_url
+from sqlalchemy.engine import URL, Connection, make_url
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
+
+from alembic import command
 
 from ..core.config import settings
 from ..models.database_bootstrap import LegacyDatabaseAdoption

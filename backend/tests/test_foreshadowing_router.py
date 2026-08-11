@@ -1,7 +1,8 @@
 """foreshadowing router 越权与正常访问测试（H1）。"""
 
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 from fastapi import HTTPException
 
 from app.api.routers.foreshadowing import list_foreshadowings

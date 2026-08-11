@@ -4,14 +4,14 @@
 提供角色状态追踪、时间线管理、因果链维护的核心功能。
 """
 
-from typing import Optional, List, Dict, Any
 import json
 import logging
+from typing import Any, Dict, List, Optional
 
+from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, desc, func
 
-from ..models.memory_layer import CharacterState, TimelineEvent, CausalChain, StoryTimeTracker
+from ..models.memory_layer import CausalChain, CharacterState, StoryTimeTracker, TimelineEvent
 from .llm_service import LLMService
 from .prompt_service import PromptService
 

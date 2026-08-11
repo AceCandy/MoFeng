@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...core.dependencies import get_current_user
 from ...db.session import get_session
 from ...models.novel import Chapter
+from ...models.project_memory import ProjectMemory
 from ...schemas.user import UserInDB
 from ...services.constitution_service import ConstitutionService
 from ...services.faction_service import FactionService
@@ -17,7 +18,6 @@ from ...services.memory_layer_service import MemoryLayerService
 from ...services.novel_service import NovelService
 from ...services.prompt_service import PromptService
 from ...services.writer_persona_service import WriterPersonaService
-from ...models.project_memory import ProjectMemory
 
 router = APIRouter(prefix="/api/projects", tags=["Projects"])
 

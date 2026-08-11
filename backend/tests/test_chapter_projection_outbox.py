@@ -10,9 +10,9 @@ from app.models import (
     Chapter,
     ChapterOutboxEvent,
     ChapterOutline,
+    ChapterProjectionReplayAudit,
     ChapterProjectionRollout,
     ChapterProjectionRolloutTransition,
-    ChapterProjectionReplayAudit,
     ChapterProjectionRun,
     ChapterRevision,
     ChapterSnapshot,
@@ -31,11 +31,11 @@ from app.schemas.job import (
     ChapterOutboxDispatchJobPayload,
     ChapterProjectionJobPayload,
 )
+from app.services.chapter_finalize_service import ChapterFinalizeSubmissionService
 from app.services.chapter_outbox_dispatcher import (
     ChapterOutboxDispatcher,
     repair_chapter_outbox_backlog,
 )
-from app.services.chapter_finalize_service import ChapterFinalizeSubmissionService
 from app.services.chapter_projection_ops import (
     ChapterProjectionConflictError,
     ChapterProjectionNotFoundError,

@@ -11,8 +11,8 @@ from ...db.session import get_session
 from ...schemas.user import UserInDB
 from ...services.chapter_context_adapters import ReviewContextAdapter
 from ...services.chapter_context_resolver import ChapterContextResolver
-from ...services.constitution_service import ConstitutionService
 from ...services.consistency_service import ConsistencyService
+from ...services.constitution_service import ConstitutionService
 from ...services.llm_service import LLMService
 from ...services.novel_service import NovelService
 from ...services.prompt_service import PromptService

@@ -4,7 +4,7 @@ import pytest
 
 from app.models import NovelProject
 from app.models.user import User
-from app.services.consistency_service import ConsistencyService, ConsistencyCheckResult
+from app.services.consistency_service import ConsistencyCheckResult, ConsistencyService
 
 
 class FakeLLMService:

@@ -4,19 +4,20 @@
 提供角色状态表、时间线、因果链的数据结构定义。
 """
 
+import enum
 from datetime import datetime, timezone
+
 from sqlalchemy import (
-    Column,
-    Integer,
+    JSON,
     BigInteger,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
     String,
     Text,
-    JSON,
-    ForeignKey,
-    DateTime,
-    Boolean,
 )
-import enum
 
 from ..db.base import Base
 

@@ -3,9 +3,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import hashlib
 import json
+from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable
 from uuid import uuid4
 
@@ -30,6 +30,10 @@ from .chapter_memory_projection import (
     memory_prompts,
     parse_memory_results,
 )
+from .chapter_projection_rollout import (
+    ChapterProjectionObservationPendingError,
+    ChapterProjectionRolloutService,
+)
 from .chapter_projection_runtime import (
     complete_projection,
     enqueue_downstream_projections,
@@ -39,10 +43,6 @@ from .chapter_projection_runtime import (
     mark_projection_stale,
     mark_tombstone_running,
     maybe_enqueue_reconciler,
-)
-from .chapter_projection_rollout import (
-    ChapterProjectionObservationPendingError,
-    ChapterProjectionRolloutService,
 )
 from .foreshadowing_sync_service import (
     ForeshadowingLLMRequest,

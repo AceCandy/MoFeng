@@ -4,10 +4,10 @@
 模拟不同类型读者的阅读体验，提供爽点检测、弃书风险评估、追读欲望分析。
 """
 
-from typing import Optional, Dict, Any, List
-from enum import Enum
 import json
 import logging
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 

@@ -13,15 +13,15 @@
 
 import logging
 import re
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models.project_memory import ProjectMemory, ChapterSnapshot
+from ..models.chapter_blueprint import ChapterBlueprint
 from ..models.memory_layer import CharacterState
 from ..models.novel import BlueprintCharacter
-from ..models.chapter_blueprint import ChapterBlueprint
+from ..models.project_memory import ChapterSnapshot, ProjectMemory
 from .chapter_word_count_settings import count_chapter_words
 from .llm_service import LLMService
 

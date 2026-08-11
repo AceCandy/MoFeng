@@ -2,8 +2,9 @@
 """伏笔管理服务"""
 
 import logging
-from typing import List, Optional, Dict
-from sqlalchemy import select, and_, func
+from typing import Dict, List, Optional
+
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.foreshadowing import (

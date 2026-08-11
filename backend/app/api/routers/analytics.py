@@ -7,6 +7,7 @@ import json
 import logging
 import re
 from typing import List, Optional
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -502,6 +503,7 @@ async def analyze_emotion_with_ai(
         )
         # 解析JSON
         import json
+
         from ...utils.json_utils import unwrap_markdown_json
 
         cleaned = unwrap_markdown_json(response)

@@ -5,8 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.llm_config import UserAIModelCreate
-from app.schemas.llm_config import UserAIModelUpdate
+from app.schemas.llm_config import UserAIModelCreate, UserAIModelUpdate
 from app.services.llm_config_service import LLMConfigService
 
 ROOT = Path(__file__).resolve().parents[1]

@@ -16,11 +16,11 @@ from app.schemas.chapter_context import (
     WriterVisibilityContext,
 )
 from app.services.chapter_context_adapters import (
+    WRITER_VISIBILITY_SHADOW_PREFIXES,
     ChapterContextShadowComparator,
     ConsistencyContextAdapter,
     GenerationContextAdapter,
     ReviewContextAdapter,
-    WRITER_VISIBILITY_SHADOW_PREFIXES,
 )
 
 

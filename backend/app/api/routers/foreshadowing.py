@@ -3,13 +3,14 @@
 
 import logging
 from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ...core.dependencies import get_current_user
 from ...db.session import get_session
 from ...services.foreshadowing_service import ForeshadowingService
 from ...services.novel_service import NovelService
-from ...core.dependencies import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/novels", tags=["foreshadowing"])

@@ -3,8 +3,8 @@ from typing import Iterable, Optional
 
 from sqlalchemy import select
 
-from .base import BaseRepository
 from ..models import Prompt
+from .base import BaseRepository
 
 
 class PromptRepository(BaseRepository[Prompt]):

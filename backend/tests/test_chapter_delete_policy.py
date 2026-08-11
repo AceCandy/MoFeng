@@ -7,17 +7,17 @@ from app.models import (
     Chapter,
     ChapterEvaluation,
     ChapterGenerationTrace,
-    ChapterOutline,
     ChapterOutboxEvent,
+    ChapterOutline,
     ChapterProjectionRun,
     ChapterRevision,
+    ChapterSnapshot,
     ChapterVersion,
     CharacterState,
     Foreshadowing,
     ForeshadowingStatusHistory,
-    ProjectMemory,
-    ChapterSnapshot,
     NovelProject,
+    ProjectMemory,
 )
 from app.models.background_task import BackgroundTask
 from app.models.user import User

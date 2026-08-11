@@ -10,15 +10,15 @@
 6. 冲突检测
 """
 
-from typing import Optional, Dict, Any, List
 import json
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .constitution_service import ConstitutionService
-from .writer_persona_service import WriterPersonaService
 from .llm_service import LLMService
 from .prompt_service import PromptService
+from .writer_persona_service import WriterPersonaService
 
 
 class SixDimensionReviewService:

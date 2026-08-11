@@ -5,12 +5,12 @@ from datetime import datetime
 from typing import Any, Optional
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
     DateTime,
     ForeignKey,
     Index,
     Integer,
-    JSON,
     String,
     Text,
     func,

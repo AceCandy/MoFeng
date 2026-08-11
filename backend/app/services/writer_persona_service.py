@@ -4,10 +4,10 @@ Writer 人格服务
 提供 Writer 人格的 CRUD 操作和风格注入功能。
 """
 
-from typing import Optional, List
+from typing import List, Optional
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.writer_persona import WriterPersona
 from ..schemas.chapter_context import WriterPersonaContext

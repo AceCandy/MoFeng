@@ -12,14 +12,14 @@
 """
 
 import logging
-from typing import Optional, Dict, Any, List, Union
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Union
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models.project_memory import ProjectMemory
 from ..models.chapter_blueprint import ChapterBlueprint
+from ..models.project_memory import ProjectMemory
 from .llm_service import LLMService
 from .vector_store_service import VectorStoreService
 

@@ -1,10 +1,10 @@
 # AIMETA P=章节伏笔同步服务_规则与模型判定|R=候选计算_状态判定_事务应用|NR=不持有HTTP或任务状态|E=ForeshadowingSyncService|X=internal|A=服务类|D=sqlalchemy,llm|S=db,net|RD=./README.ai
 from __future__ import annotations
 
-from dataclasses import dataclass
 import json
 import logging
 import re
+from dataclasses import dataclass
 from typing import Awaitable, Callable, Dict, List, Optional
 
 from sqlalchemy import select, update

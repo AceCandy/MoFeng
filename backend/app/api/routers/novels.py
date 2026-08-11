@@ -9,19 +9,22 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.dependencies import get_current_user
-from ...db.session import AsyncSessionLocal
-from ...db.session import get_session
+from ...db.session import AsyncSessionLocal, get_session
 from ...schemas.novel import (
     Blueprint,
     BlueprintGenerationResponse,
     BlueprintPatch,
-    Chapter as ChapterSchema,
     ConverseRequest,
     ConverseResponse,
-    NovelProject as NovelProjectSchema,
     NovelProjectSummary,
     NovelSectionResponse,
     NovelSectionType,
+)
+from ...schemas.novel import (
+    Chapter as ChapterSchema,
+)
+from ...schemas.novel import (
+    NovelProject as NovelProjectSchema,
 )
 from ...schemas.user import UserInDB
 from ...services.event_bus import subscribe_chapter_status

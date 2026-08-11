@@ -11,9 +11,9 @@
 这些字段用于指导 L2 Director 生成章节任务，实现"慢节奏 + 跨章起承转合"。
 """
 
+import enum
 from datetime import datetime
 from typing import Optional
-import enum
 
 from sqlalchemy import (
     JSON,

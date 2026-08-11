@@ -4,11 +4,11 @@
 提供小说宪法的 CRUD 操作和合规检查功能。
 """
 
-from typing import Optional
 import json
+from typing import Optional
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.constitution import NovelConstitution
 from .llm_service import LLMService

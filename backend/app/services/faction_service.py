@@ -4,12 +4,12 @@
 提供势力的 CRUD 操作、关系管理和上下文生成功能。
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
 
-from ..models.faction import Faction, FactionRelationship, FactionMember, FactionRelationshipHistory
+from ..models.faction import Faction, FactionMember, FactionRelationship, FactionRelationshipHistory
 from .prompt_service import PromptService
 
 

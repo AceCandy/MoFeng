@@ -3,8 +3,8 @@ from typing import Iterable, Optional
 
 from sqlalchemy import func, select
 
-from .base import BaseRepository
 from ..models import User
+from .base import BaseRepository
 
 
 class UserRepository(BaseRepository[User]):

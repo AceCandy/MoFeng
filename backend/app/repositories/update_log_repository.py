@@ -3,8 +3,8 @@ from typing import Iterable
 
 from sqlalchemy import select
 
-from .base import BaseRepository
 from ..models import UpdateLog
+from .base import BaseRepository
 
 
 class UpdateLogRepository(BaseRepository[UpdateLog]):

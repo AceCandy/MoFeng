@@ -3,8 +3,8 @@
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from .base import BaseRepository
 from ..models import UsageMetric
+from .base import BaseRepository
 
 
 class UsageMetricRepository(BaseRepository[UsageMetric]):

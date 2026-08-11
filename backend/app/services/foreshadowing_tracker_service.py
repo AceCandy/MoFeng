@@ -4,11 +4,11 @@
 提供伏笔的状态追踪、提醒和发展建议功能。
 """
 
-from typing import Optional, List, Dict, Any
 import json
+from typing import Any, Dict, List, Optional
 
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_
 
 from ..models.foreshadowing import Foreshadowing, ForeshadowingStatusHistory
 from .llm_service import LLMService

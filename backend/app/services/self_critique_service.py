@@ -4,10 +4,10 @@
 实现"生成 → 自我批评 → 修正 → 再批评 → 再修正"的迭代优化循环。
 """
 
-from typing import Optional, Dict, Any, List
-from enum import Enum
 import json
 import logging
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 

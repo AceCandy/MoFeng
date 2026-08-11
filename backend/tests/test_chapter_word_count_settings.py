@@ -1,9 +1,9 @@
 import pytest
 
 from app.services.chapter_word_count_settings import (
-    build_word_count_requirement_text,
     DEFAULT_CHAPTER_TARGET_WORD_COUNT,
     MIN_CHAPTER_TARGET_WORD_COUNT,
+    build_word_count_requirement_text,
     resolve_word_count_requirements,
     should_compress_chapter,
 )

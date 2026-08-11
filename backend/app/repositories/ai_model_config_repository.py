@@ -4,8 +4,8 @@ from typing import Iterable, Optional
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from .base import BaseRepository
 from ..models import UserAIModel, UserAIStageRoute, UserModelProvider
+from .base import BaseRepository
 
 
 class UserModelProviderRepository(BaseRepository[UserModelProvider]):

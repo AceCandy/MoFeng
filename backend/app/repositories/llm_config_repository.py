@@ -3,8 +3,8 @@ from typing import Optional
 
 from sqlalchemy import select
 
-from .base import BaseRepository
 from ..models import LLMConfig
+from .base import BaseRepository
 
 
 class LLMConfigRepository(BaseRepository[LLMConfig]):

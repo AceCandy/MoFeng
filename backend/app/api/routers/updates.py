@@ -1,11 +1,10 @@
 # AIMETA P=更新日志API_系统更新记录|R=更新日志查询|NR=不含日志修改|E=route:GET_/api/updates/*|X=http|A=日志查询|D=fastapi,sqlalchemy|S=db|RD=./README.ai
-from typing import Any, List, Optional
 import json
 import re
+from typing import Any, List, Optional
 from urllib.parse import urlparse
 
 import httpx
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 

@@ -3,8 +3,8 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..repositories.system_config_repository import SystemConfigRepository
 from ..models import SystemConfig
+from ..repositories.system_config_repository import SystemConfigRepository
 from ..schemas.config import SystemConfigCreate, SystemConfigRead, SystemConfigUpdate
 
 WRITER_VERSION_KEYS = {"writer.chapter_versions", "writer.version_count"}
