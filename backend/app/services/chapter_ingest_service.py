@@ -1,11 +1,11 @@
 # AIMETA P=章节导入服务_批量章节导入|R=批量导入_格式解析|NR=不含内容生成|E=ChapterIngestService|X=internal|A=服务类|D=sqlalchemy|S=db,fs|RD=./README.ai
-from __future__ import annotations
-
 """
 章节向量入库服务：在章节确认后负责切分文本、生成嵌入并写入向量库。
 
 全部注释使用中文，方便团队成员阅读理解。
 """
+
+from __future__ import annotations
 
 import logging
 from dataclasses import dataclass

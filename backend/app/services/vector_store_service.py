@@ -1,6 +1,4 @@
 # AIMETA P=向量存储服务_文本向量化|R=向量存储_相似搜索|NR=不含业务逻辑|E=VectorStoreService|X=internal|A=服务类|D=pgvector|S=db|RD=./README.ai
-from __future__ import annotations
-
 """
 基于 pgvector 的向量检索服务，封装章节内容的存储与查询。
 
@@ -10,6 +8,8 @@ pgvector 扩展）。embedding 列为不定维 Vector()，维度由运行时 emb
 
 本文件中的注释均使用中文，便于团队成员快速理解 RAG 相关逻辑。
 """
+
+from __future__ import annotations
 
 import logging
 from dataclasses import dataclass

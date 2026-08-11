@@ -335,7 +335,7 @@ class AuthService:
                     smtp.login(username, password)
                 smtp.sendmail(from_addr, [to_email], message.as_string())
                 logger.info("验证码邮件发送成功", extra={"to": to_email})
-            except Exception as exc:  # noqa: BLE001
+            except Exception:  # noqa: BLE001
                 logger.exception("验证码发送失败")
                 raise
             finally:

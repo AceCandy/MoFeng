@@ -493,7 +493,6 @@ class MemoryLayerService:
         self, project_id: str, chapter_number: int, chapter_content: str, user_id: int
     ) -> Dict[str, Any]:
         """检查章节与记忆层的一致性"""
-        issues = []
 
         # 获取记忆层上下文
         memory_context = await self.get_memory_context(project_id, chapter_number)

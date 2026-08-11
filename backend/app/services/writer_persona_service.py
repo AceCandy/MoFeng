@@ -27,7 +27,7 @@ class WriterPersonaService:
         """获取项目的活跃 Writer 人格"""
         result = await self.db.execute(
             select(WriterPersona).where(
-                WriterPersona.project_id == project_id, WriterPersona.is_active == True
+                WriterPersona.project_id == project_id, WriterPersona.is_active.is_(True)
             )
         )
         return result.scalar_one_or_none()

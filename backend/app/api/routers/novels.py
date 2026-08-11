@@ -741,7 +741,7 @@ async def patch_blueprint(
 ) -> NovelProjectSchema:
     """局部更新蓝图字段，对世界观或角色做微调。"""
     novel_service = NovelService(session)
-    project = await novel_service.ensure_project_owner(project_id, current_user.id)
+    await novel_service.ensure_project_owner(project_id, current_user.id)
 
     update_data = payload.model_dump(exclude_unset=True)
     await novel_service.patch_blueprint(project_id, update_data)

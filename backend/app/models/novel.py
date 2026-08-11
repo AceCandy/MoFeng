@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import (
     JSON,
@@ -20,6 +20,10 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base
+
+if TYPE_CHECKING:
+    from .chapter_generation_trace import ChapterGenerationTrace
+    from .user import User
 
 # 自定义列类型：兼容跨数据库环境
 BIGINT_PK_TYPE = BigInteger

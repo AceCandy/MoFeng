@@ -7,7 +7,51 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Iterable, List, Optional
 
+from fastapi import HTTPException, status
+from sqlalchemy import and_, delete, func, insert, or_, select, update
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from ..models import (
+    BlueprintCharacter,
+    BlueprintRelationship,
+    Chapter,
+    ChapterEvaluation,
+    ChapterGenerationTrace,
+    ChapterOutline,
+    ChapterVersion,
+    NovelBlueprint,
+    NovelConversation,
+    NovelProject,
+)
+from ..repositories.novel_repository import NovelRepository
+from ..schemas.admin import AdminNovelSummary
+from ..schemas.novel import (
+    Blueprint,
+    ChapterGenerationStatus,
+    NovelProjectSummary,
+    NovelSectionResponse,
+    NovelSectionType,
+)
+from ..schemas.novel import (
+    Chapter as ChapterSchema,
+)
+from ..schemas.novel import (
+    ChapterGenerationTrace as ChapterGenerationTraceSchema,
+)
+from ..schemas.novel import (
+    ChapterOutline as ChapterOutlineSchema,
+)
+from ..schemas.novel import (
+    ChapterVersionSelection as ChapterVersionSelectionSchema,
+)
+from ..schemas.novel import (
+    NovelProject as NovelProjectSchema,
+)
+from .chapter_projection_service import ChapterProjectionService
+from .chapter_word_count_settings import count_chapter_words
+from .event_bus import publish_background_task
 
 _PREFERRED_CONTENT_KEYS: tuple[str, ...] = (
     "content",
@@ -77,51 +121,6 @@ def _clean_string(text: str, parse_json: bool = True) -> str:
         stripped.replace("\\n", "\n").replace("\\t", "\t").replace('\\"', '"').replace("\\\\", "\\")
     )
 
-
-from fastapi import HTTPException, status
-from sqlalchemy import and_, delete, func, insert, or_, select, update
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
-
-from ..models import (
-    BlueprintCharacter,
-    BlueprintRelationship,
-    Chapter,
-    ChapterEvaluation,
-    ChapterGenerationTrace,
-    ChapterOutline,
-    ChapterVersion,
-    NovelBlueprint,
-    NovelConversation,
-    NovelProject,
-)
-from ..repositories.novel_repository import NovelRepository
-from ..schemas.admin import AdminNovelSummary
-from ..schemas.novel import (
-    Blueprint,
-    ChapterGenerationStatus,
-    NovelProjectSummary,
-    NovelSectionResponse,
-    NovelSectionType,
-)
-from ..schemas.novel import (
-    Chapter as ChapterSchema,
-)
-from ..schemas.novel import (
-    ChapterGenerationTrace as ChapterGenerationTraceSchema,
-)
-from ..schemas.novel import (
-    ChapterOutline as ChapterOutlineSchema,
-)
-from ..schemas.novel import (
-    ChapterVersionSelection as ChapterVersionSelectionSchema,
-)
-from ..schemas.novel import (
-    NovelProject as NovelProjectSchema,
-)
-from .chapter_projection_service import ChapterProjectionService
-from .chapter_word_count_settings import count_chapter_words
-from .event_bus import publish_background_task
 
 logger = logging.getLogger(__name__)
 

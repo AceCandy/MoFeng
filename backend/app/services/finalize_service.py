@@ -392,7 +392,7 @@ class FinalizeService:
                 parts.append(f"├──物品: {state.inventory}")
             if state.power_level:
                 parts.append(f"├──能力: {state.power_level}")
-            parts.append(f"├──状态:")
+            parts.append("├──状态:")
             parts.append(f"│  ├──身体状态: {state.health_status or '正常'}")
             parts.append(f"│  └──心理状态: {state.emotion or '平静'}")
             if state.relationship_changes:

@@ -1,11 +1,15 @@
 # AIMETA P=用户模型_用户账户定义|R=用户表|NR=不含用户逻辑|E=User|X=internal|A=ORM模型|D=sqlalchemy|S=none|RD=./README.ai
 from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Boolean, DateTime, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base
+
+if TYPE_CHECKING:
+    from .llm_config import LLMConfig
+    from .novel import NovelProject
 
 
 class User(Base):

@@ -19,6 +19,7 @@ from ...models.novel import Chapter, ChapterOutline, ChapterVersion, NovelProjec
 from ...schemas.user import UserInDB
 from ...services.llm_service import LLMService
 from ...services.prompt_service import PromptService
+from ...utils.json_utils import unwrap_markdown_json
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/analytics", tags=["Analytics"])
@@ -502,10 +503,6 @@ async def analyze_emotion_with_ai(
             stage="emotion_analysis",
         )
         # 解析JSON
-        import json
-
-        from ...utils.json_utils import unwrap_markdown_json
-
         cleaned = unwrap_markdown_json(response)
         data = json.loads(cleaned)
 
