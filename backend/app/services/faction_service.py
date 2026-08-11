@@ -5,10 +5,9 @@
 """
 
 from typing import Optional, List, Dict, Any
-import json
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, or_
 
 from ..models.faction import Faction, FactionRelationship, FactionMember, FactionRelationshipHistory
 from .prompt_service import PromptService

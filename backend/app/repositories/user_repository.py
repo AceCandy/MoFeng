@@ -2,7 +2,6 @@
 from typing import Iterable, Optional
 
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from .base import BaseRepository
 from ..models import User

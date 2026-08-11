@@ -19,7 +19,6 @@ from sqlalchemy import (
     JSON,
     BigInteger,
     DateTime,
-    Enum,
     Float,
     ForeignKey,
     Integer,
@@ -27,7 +26,7 @@ from sqlalchemy import (
     Text,
     func,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db.base import Base
 

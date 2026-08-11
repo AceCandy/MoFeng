@@ -24,7 +24,7 @@ from ..core.ssrf import assert_safe_base_url
 from ..models import User
 from ..repositories.system_config_repository import SystemConfigRepository
 from ..repositories.user_repository import UserRepository
-from ..schemas.user import AuthOptions, Token, UserCreate, UserInDB, UserRegistration
+from ..schemas.user import AuthOptions, Token, UserInDB, UserRegistration
 
 _VERIFICATION_CACHE: Dict[str, tuple[str, float]] = {}
 _LAST_SEND_TIME: Dict[str, float] = {}

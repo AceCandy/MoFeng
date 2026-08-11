@@ -3,7 +3,6 @@ from typing import Any, Generic, Iterable, Optional, TypeVar
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import InstrumentedAttribute
 
 ModelType = TypeVar("ModelType")
 

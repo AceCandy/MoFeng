@@ -4,12 +4,11 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import List, Tuple
 
-from fastapi import HTTPException, UploadFile, status
+from fastapi import HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models import Chapter
 from ..schemas.novel import Blueprint
 from ..services.llm_service import LLMService
 from ..services.novel_service import NovelService

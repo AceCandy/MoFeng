@@ -11,7 +11,7 @@ ChapterGuardrails: 章节后置一致性检查服务
 
 import re
 from dataclasses import dataclass, field
-from typing import List, Optional, Set
+from typing import List, Optional
 
 
 @dataclass

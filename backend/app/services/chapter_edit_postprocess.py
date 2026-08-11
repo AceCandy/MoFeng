@@ -16,7 +16,6 @@ from .chapter_ingest_service import ChapterIngestionService, PreparedChapterInge
 from .foreshadowing_sync_service import (
     ForeshadowingComputeContext,
     ForeshadowingLLMRequest,
-    ForeshadowingPlan,
     ForeshadowingSyncService,
 )
 from .job_worker import JobOutcome, PermanentJobError

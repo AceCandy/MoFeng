@@ -616,7 +616,7 @@ class KnowledgeRetrievalService:
         self, project_id: str, current_chapter: int, count: int
     ) -> List[Dict[str, Any]]:
         """获取前几章内容"""
-        from ..models.novel import Chapter, ChapterVersion
+        from ..models.novel import Chapter
 
         chapters = (
             (

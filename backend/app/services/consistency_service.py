@@ -182,7 +182,6 @@ class ConsistencyService:
             ConsistencyCheckResult
         """
         import time
-        import json
 
         start_time = time.time()
 

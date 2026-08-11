@@ -6,12 +6,11 @@
 
 from typing import Optional, List, Dict, Any
 import json
-from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 
-from ..models.foreshadowing import Foreshadowing, ForeshadowingStatusHistory, ForeshadowingReminder
+from ..models.foreshadowing import Foreshadowing, ForeshadowingStatusHistory
 from .llm_service import LLMService
 from .prompt_service import PromptService
 

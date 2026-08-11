@@ -5,7 +5,6 @@ Writer 人格服务
 """
 
 from typing import Optional, List
-import json
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select

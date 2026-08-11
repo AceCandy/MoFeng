@@ -1,7 +1,6 @@
 # AIMETA P=章节上下文解析器_统一事实读取入口|R=DB_RAG读取_可见性_预算_降级|NR=不含prompt评审与持久化|E=ChapterContextResolver|X=internal|A=resolver|D=sqlalchemy,pydantic|S=db,net|RD=./README.ai
 from __future__ import annotations
 
-import json
 import logging
 import math
 from copy import deepcopy

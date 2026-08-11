@@ -5,7 +5,6 @@
 """
 
 from datetime import datetime, timezone
-from typing import Optional, List
 from sqlalchemy import (
     Column,
     Integer,
@@ -16,10 +15,7 @@ from sqlalchemy import (
     ForeignKey,
     DateTime,
     Boolean,
-    Float,
-    Enum,
 )
-from sqlalchemy.orm import relationship
 import enum
 
 from ..db.base import Base
