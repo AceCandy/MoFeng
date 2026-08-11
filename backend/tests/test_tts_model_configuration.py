@@ -9,7 +9,6 @@ from app.schemas.llm_config import UserAIModelCreate
 from app.schemas.llm_config import UserAIModelUpdate
 from app.services.llm_config_service import LLMConfigService
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -228,7 +227,9 @@ async def test_update_model_rejects_incomplete_tts_configuration():
 
 def test_alembic_baseline_includes_tts_columns():
     # schema 改由 alembic baseline 管理（替代 _ensure_schema_updates 过渡态，schema.sql 已随 PG 迁移删除），确认 baseline 含 tts 列
-    baseline = (ROOT / "alembic" / "versions" / "a53385d06521_baseline.py").read_text(encoding="utf-8")
+    baseline = (ROOT / "alembic" / "versions" / "a53385d06521_baseline.py").read_text(
+        encoding="utf-8"
+    )
 
     for column in ["is_default_tts", "tts_protocol", "tts_voice", "tts_speed"]:
         assert column in baseline

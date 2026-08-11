@@ -17,6 +17,7 @@ from typing import List, Optional, Set
 @dataclass
 class Violation:
     """违规记录"""
+
     type: str  # forbidden_name | omniscient_cue | sudden_familiarity
     severity: str  # high | medium | low
     description: str
@@ -27,9 +28,10 @@ class Violation:
 @dataclass
 class GuardrailResult:
     """护栏检查结果"""
+
     passed: bool
     violations: List[Violation] = field(default_factory=list)
-    
+
     def add_violation(self, violation: Violation):
         self.violations.append(violation)
         self.passed = False
@@ -38,7 +40,7 @@ class GuardrailResult:
 class ChapterGuardrails:
     """
     章节护栏检查器。
-    
+
     检查维度：
     A) ForbiddenNameMention：正文出现 forbidden_characters 中任意名字（高优先级）
     B) OmniscientCue：出现全知视角的 cue 词（中优先级）
@@ -88,12 +90,8 @@ class ChapterGuardrails:
     ]
 
     def __init__(self):
-        self._omniscient_pattern = re.compile(
-            "|".join(self.OMNISCIENT_CUES), re.IGNORECASE
-        )
-        self._intro_pattern = re.compile(
-            "|".join(self.INTRO_INDICATORS), re.IGNORECASE
-        )
+        self._omniscient_pattern = re.compile("|".join(self.OMNISCIENT_CUES), re.IGNORECASE)
+        self._intro_pattern = re.compile("|".join(self.INTRO_INDICATORS), re.IGNORECASE)
 
     def check(
         self,
@@ -124,9 +122,7 @@ class ChapterGuardrails:
 
         # C) 检测新角色登场协议
         if allowed_new_characters:
-            self._check_character_introduction(
-                generated_text, allowed_new_characters, result
-            )
+            self._check_character_introduction(generated_text, allowed_new_characters, result)
 
         return result
 
@@ -185,7 +181,7 @@ class ChapterGuardrails:
             # 检查前 120 字是否有介绍性词汇
             intro_range = max(0, pos - 120)
             intro_text = text[intro_range:pos]
-            
+
             if not self._intro_pattern.search(intro_text):
                 context = self._extract_context(text, pos)
                 result.add_violation(
@@ -210,7 +206,7 @@ class ChapterGuardrails:
         """
         if result.passed:
             return ""
-        
+
         lines = ["检测到以下违规，需要修复："]
         for i, v in enumerate(result.violations, 1):
             lines.append(f"{i}. [{v.severity.upper()}] {v.description}")

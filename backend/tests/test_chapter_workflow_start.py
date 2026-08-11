@@ -165,6 +165,7 @@ async def test_start_freezes_configured_version_count_and_preserves_explicit_ove
     assert replay.root_job.payload["runtime_inputs"]["flow_config"]["versions"] == 2
     assert explicit.root_job.payload["runtime_inputs"]["flow_config"]["versions"] == 1
 
+
 @pytest.mark.asyncio(loop_scope="session")
 async def test_start_rejects_blank_idempotency_key(isolated_pg):
     async with isolated_pg.session_factory() as session:

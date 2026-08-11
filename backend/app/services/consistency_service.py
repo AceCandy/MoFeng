@@ -13,6 +13,7 @@
 - major: 主要问题，生成修订版本供选择
 - minor: 轻微问题，仅标注提示
 """
+
 import logging
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
@@ -30,14 +31,16 @@ logger = logging.getLogger(__name__)
 
 class ViolationSeverity(str, Enum):
     """冲突严重程度"""
+
     CRITICAL = "critical"  # 严重：自动触发重写
-    MAJOR = "major"        # 主要：生成修订版本
-    MINOR = "minor"        # 轻微：仅标注
+    MAJOR = "major"  # 主要：生成修订版本
+    MINOR = "minor"  # 轻微：仅标注
 
 
 @dataclass
 class ConsistencyViolation:
     """一致性冲突"""
+
     severity: ViolationSeverity
     category: str  # setting/character/plot/foreshadowing
     description: str
@@ -49,6 +52,7 @@ class ConsistencyViolation:
 @dataclass
 class ConsistencyCheckResult:
     """一致性检查结果"""
+
     is_consistent: bool
     violations: List[ConsistencyViolation]
     summary: str
@@ -148,18 +152,14 @@ GENERATE_FIX_PROMPT = """\
 class ConsistencyService:
     """
     一致性检查服务
-    
+
     负责检查章节内容与已有设定、状态的一致性。
     """
-    
-    def __init__(
-        self,
-        db: AsyncSession,
-        llm_service: LLMService
-    ):
+
+    def __init__(self, db: AsyncSession, llm_service: LLMService):
         self.session = db
         self.llm_service = llm_service
-    
+
     async def check_consistency(
         self,
         project_id: str,
@@ -171,21 +171,21 @@ class ConsistencyService:
     ) -> ConsistencyCheckResult:
         """
         检查章节一致性
-        
+
         Args:
             project_id: 项目ID
             chapter_text: 章节内容
             user_id: 用户ID
             include_foreshadowing: 是否检查伏笔一致性
-            
+
         Returns:
             ConsistencyCheckResult
         """
         import time
         import json
-        
+
         start_time = time.time()
-        
+
         # 获取检查所需的上下文
         context = await self._get_check_context(
             project_id,
@@ -194,39 +194,39 @@ class ConsistencyService:
             chapter_context=chapter_context,
             user_id=user_id,
         )
-        
+
         # 构建检查提示词
         prompt = CONSISTENCY_CHECK_PROMPT.format(
             novel_setting=context.get("novel_setting", "（未设定）"),
             character_state=context.get("character_state", "（未记录）"),
             global_summary=context.get("global_summary", "（无前文摘要）"),
             plot_arcs=context.get("plot_arcs", "（无剧情线记录）"),
-            chapter_text=chapter_text
+            chapter_text=chapter_text,
         )
-        
+
         try:
             response = await self.llm_service.generate(
                 prompt=prompt,
                 user_id=user_id,
                 max_tokens=2000,
-                temperature=0.2  # 低温度以获得更稳定的判断
+                temperature=0.2,  # 低温度以获得更稳定的判断
             )
-            
+
             # 解析响应
             result = self._parse_check_response(response)
             result.check_time_ms = int((time.time() - start_time) * 1000)
-            
+
             return result
-            
+
         except Exception as e:
             logger.error(f"一致性检查失败: {e}")
             return ConsistencyCheckResult(
                 is_consistent=False,  # 检查失败时默认拦截，质量门不放行
                 violations=[],
                 summary=f"检查过程出错: {str(e)}",
-                check_time_ms=int((time.time() - start_time) * 1000)
+                check_time_ms=int((time.time() - start_time) * 1000),
             )
-    
+
     async def auto_fix(
         self,
         project_id: str,
@@ -238,19 +238,19 @@ class ConsistencyService:
     ) -> Optional[str]:
         """
         自动修复一致性问题
-        
+
         Args:
             project_id: 项目ID
             chapter_text: 原始章节内容
             violations: 发现的冲突列表
             user_id: 用户ID
-            
+
         Returns:
             修复后的章节内容，如果修复失败返回None
         """
         if not violations:
             return chapter_text
-        
+
         # 获取上下文
         context = await self._get_check_context(
             project_id,
@@ -258,35 +258,34 @@ class ConsistencyService:
             chapter_context=chapter_context,
             user_id=user_id,
         )
-        
+
         # 格式化冲突信息
-        violations_text = "\n".join([
-            f"- [{v.severity.value}] {v.category}: {v.description}"
-            + (f"\n  位置: {v.location}" if v.location else "")
-            + (f"\n  建议: {v.suggested_fix}" if v.suggested_fix else "")
-            for v in violations
-        ])
-        
+        violations_text = "\n".join(
+            [
+                f"- [{v.severity.value}] {v.category}: {v.description}"
+                + (f"\n  位置: {v.location}" if v.location else "")
+                + (f"\n  建议: {v.suggested_fix}" if v.suggested_fix else "")
+                for v in violations
+            ]
+        )
+
         prompt = GENERATE_FIX_PROMPT.format(
             chapter_text=chapter_text,
             violations=violations_text,
             novel_setting=context.get("novel_setting", ""),
             character_state=context.get("character_state", ""),
-            global_summary=context.get("global_summary", "")
+            global_summary=context.get("global_summary", ""),
         )
-        
+
         try:
             response = await self.llm_service.generate(
-                prompt=prompt,
-                user_id=user_id,
-                max_tokens=8000,
-                temperature=0.5
+                prompt=prompt, user_id=user_id, max_tokens=8000, temperature=0.5
             )
             return response.strip() if response else None
         except Exception as e:
             logger.error(f"自动修复失败: {e}")
             return None
-    
+
     async def check_and_fix(
         self,
         project_id: str,
@@ -297,13 +296,13 @@ class ConsistencyService:
     ) -> Dict[str, Any]:
         """
         检查并自动修复一致性问题
-        
+
         Args:
             project_id: 项目ID
             chapter_text: 章节内容
             user_id: 用户ID
             auto_fix_threshold: 自动修复的严重程度阈值
-            
+
         Returns:
             包含检查结果和修复内容的字典
         """
@@ -320,25 +319,26 @@ class ConsistencyService:
             chapter_number=chapter_number,
             chapter_context=chapter_context,
         )
-        
-        result = {
-            "check_result": check_result,
-            "fixed_content": None,
-            "needs_manual_review": False
-        }
-        
+
+        result = {"check_result": check_result, "fixed_content": None, "needs_manual_review": False}
+
         if check_result.is_consistent:
             return result
-        
+
         # 根据严重程度决定处理方式
-        severity_order = [ViolationSeverity.CRITICAL, ViolationSeverity.MAJOR, ViolationSeverity.MINOR]
+        severity_order = [
+            ViolationSeverity.CRITICAL,
+            ViolationSeverity.MAJOR,
+            ViolationSeverity.MINOR,
+        ]
         threshold_index = severity_order.index(auto_fix_threshold)
-        
+
         violations_to_fix = [
-            v for v in check_result.violations
+            v
+            for v in check_result.violations
             if severity_order.index(v.severity) <= threshold_index
         ]
-        
+
         if violations_to_fix:
             # 尝试自动修复
             fixed_content = await self.auto_fix(
@@ -350,16 +350,18 @@ class ConsistencyService:
                 chapter_context=chapter_context,
             )
             result["fixed_content"] = fixed_content
-        
+
         # 检查是否有需要人工审核的问题
         manual_review_violations = [
-            v for v in check_result.violations
-            if v.severity == ViolationSeverity.MAJOR and auto_fix_threshold == ViolationSeverity.CRITICAL
+            v
+            for v in check_result.violations
+            if v.severity == ViolationSeverity.MAJOR
+            and auto_fix_threshold == ViolationSeverity.CRITICAL
         ]
         result["needs_manual_review"] = len(manual_review_violations) > 0
-        
+
         return result
-    
+
     async def _get_check_context(
         self,
         project_id: str,
@@ -401,11 +403,11 @@ class ConsistencyService:
             chapter_number=chapter_number,
             user_id=user_id,
         )
-    
+
     def _parse_check_response(self, response: str) -> ConsistencyCheckResult:
         """解析检查响应"""
         import json
-        
+
         try:
             # 清理响应
             response = response.strip()
@@ -413,42 +415,42 @@ class ConsistencyService:
                 response = response.split("```")[1]
                 if response.startswith("json"):
                     response = response[4:]
-            
+
             data = json.loads(response)
-            
+
             violations = []
             for v in data.get("violations", []):
-                violations.append(ConsistencyViolation(
-                    severity=ViolationSeverity(v.get("severity", "minor")),
-                    category=v.get("category", "unknown"),
-                    description=v.get("description", ""),
-                    location=v.get("location"),
-                    suggested_fix=v.get("suggested_fix"),
-                    confidence=v.get("confidence", 0.8)
-                ))
-            
+                violations.append(
+                    ConsistencyViolation(
+                        severity=ViolationSeverity(v.get("severity", "minor")),
+                        category=v.get("category", "unknown"),
+                        description=v.get("description", ""),
+                        location=v.get("location"),
+                        suggested_fix=v.get("suggested_fix"),
+                        confidence=v.get("confidence", 0.8),
+                    )
+                )
+
             return ConsistencyCheckResult(
                 is_consistent=data.get("is_consistent", True),
                 violations=violations,
-                summary=data.get("summary", "")
+                summary=data.get("summary", ""),
             )
-            
+
         except json.JSONDecodeError as e:
             logger.error(f"解析一致性检查响应失败: {e}")
             return ConsistencyCheckResult(
                 is_consistent=False,  # 解析失败默认拦截，质量门不放行
                 violations=[],
-                summary="响应解析失败，默认拦截"
+                summary="响应解析失败，默认拦截",
             )
-    
+
     async def get_violation_statistics(
-        self,
-        project_id: str,
-        chapter_range: Optional[tuple] = None
+        self, project_id: str, chapter_range: Optional[tuple] = None
     ) -> Dict[str, Any]:
         """
         获取冲突统计信息
-        
+
         用于分析项目的一致性问题分布。
         """
         # 这里可以从历史检查记录中统计
@@ -456,15 +458,6 @@ class ConsistencyService:
         return {
             "total_checks": 0,
             "total_violations": 0,
-            "by_severity": {
-                "critical": 0,
-                "major": 0,
-                "minor": 0
-            },
-            "by_category": {
-                "setting": 0,
-                "character": 0,
-                "plot": 0,
-                "foreshadowing": 0
-            }
+            "by_severity": {"critical": 0, "major": 0, "minor": 0},
+            "by_category": {"setting": 0, "character": 0, "plot": 0, "foreshadowing": 0},
         }

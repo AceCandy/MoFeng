@@ -26,7 +26,6 @@ from ..repositories.system_config_repository import SystemConfigRepository
 from ..repositories.user_repository import UserRepository
 from ..schemas.user import AuthOptions, Token, UserCreate, UserInDB, UserRegistration
 
-
 _VERIFICATION_CACHE: Dict[str, tuple[str, float]] = {}
 _LAST_SEND_TIME: Dict[str, float] = {}
 LINUXDO_OAUTH_STATE_TTL_SECONDS = 300
@@ -36,6 +35,7 @@ _LINUXDO_OAUTH_STATE_KEY_PREFIX = "oauth:linuxdo:state:"
 
 class LinuxdoOAuthStateError(ValueError):
     """Linux.do OAuth state 缺失、失配、过期或已被消费。"""
+
 
 # 验证码 Redis 客户端（可选）：配置 REDIS_URL 时启用以支持多 worker 一致；未配置或连接失败则降级进程内字典
 _redis_client = None
@@ -53,7 +53,9 @@ def _get_redis_client():
                 _redis_client.ping()
                 logging.getLogger(__name__).info("验证码 Redis 已连接")
             except Exception as exc:  # noqa: BLE001
-                logging.getLogger(__name__).warning("验证码 Redis 连接失败，降级进程内存储：%s", exc)
+                logging.getLogger(__name__).warning(
+                    "验证码 Redis 连接失败，降级进程内存储：%s", exc
+                )
                 _redis_client = None
     return _redis_client
 
@@ -86,7 +88,11 @@ class AuthService:
     ) -> Token:
         payload = {"is_admin": user.is_admin}
         token = create_access_token(user.username, extra_claims=payload)
-        should_change = self.requires_password_reset(user) if must_change_password is None else must_change_password
+        should_change = (
+            self.requires_password_reset(user)
+            if must_change_password is None
+            else must_change_password
+        )
         return Token(access_token=token, must_change_password=should_change)
 
     async def register_user(self, payload: UserRegistration) -> User:
@@ -208,7 +214,12 @@ class AuthService:
         password = smtp_config["smtp.password"]
         from_value = smtp_config.get("smtp.from") or username
         display_name, from_addr = parseaddr(from_value)
-        if not display_name and "@" not in from_value and "<" not in from_value and from_value.strip():
+        if (
+            not display_name
+            and "@" not in from_value
+            and "<" not in from_value
+            and from_value.strip()
+        ):
             display_name = from_value.strip()
         if not from_addr or "@" not in from_addr:
             if from_addr and "@" not in from_addr:
@@ -453,7 +464,9 @@ class AuthService:
             try:
                 assert_safe_base_url(url, allow_private=settings.allow_private_llm_endpoints)
             except ValueError as exc:
-                raise HTTPException(status_code=500, detail=f"Linux.do OAuth URL 不安全：{exc}") from exc
+                raise HTTPException(
+                    status_code=500, detail=f"Linux.do OAuth URL 不安全：{exc}"
+                ) from exc
 
         async with httpx.AsyncClient() as client:
             token_response = await client.post(
@@ -485,7 +498,9 @@ class AuthService:
         user = await self.user_repo.get_by_external_id(external_id)
         if user is None:
             if not await self.is_registration_enabled():
-                raise HTTPException(status_code=403, detail="当前暂未开放注册，无法通过 OAuth 创建账号")
+                raise HTTPException(
+                    status_code=403, detail="当前暂未开放注册，无法通过 OAuth 创建账号"
+                )
             username = data.get("username")
             if not username:
                 raise HTTPException(status_code=400, detail="Linux.do 返回数据缺少 username 字段")
@@ -549,10 +564,14 @@ class AuthService:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="当前密码错误")
 
         if verify_password(new_password, user.hashed_password):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="新密码不能与当前密码相同")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="新密码不能与当前密码相同"
+            )
 
         if user.is_admin and new_password == settings.admin_default_password:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="新密码不能为默认密码")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="新密码不能为默认密码"
+            )
 
         user.hashed_password = hash_password(new_password)
         await self.session.commit()

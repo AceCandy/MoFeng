@@ -66,9 +66,9 @@ async def _fetch_payload(url: str) -> Any:
             return response.json()
         text_payload = response.text
         stripped = text_payload.strip()
-        if (
-            stripped
-            and ((stripped.startswith("{") and stripped.endswith("}")) or (stripped.startswith("[") and stripped.endswith("]")))
+        if stripped and (
+            (stripped.startswith("{") and stripped.endswith("}"))
+            or (stripped.startswith("[") and stripped.endswith("]"))
         ):
             try:
                 return json.loads(stripped)
@@ -123,7 +123,10 @@ async def read_latest_updates(
 
 
 @router.get("/remote-version")
-async def read_remote_version(session: AsyncSession = Depends(get_session), current_admin: UserInDB = Depends(get_current_admin)) -> dict[str, Any]:
+async def read_remote_version(
+    session: AsyncSession = Depends(get_session),
+    current_admin: UserInDB = Depends(get_current_admin),
+) -> dict[str, Any]:
     """从 GitHub 版本 JSON 获取远程版本（服务端代理，避免浏览器跨域问题）。"""
     sources: list[tuple[str, str, Any]] = []
     deduplicated_urls: set[str] = set()

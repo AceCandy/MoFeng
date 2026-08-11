@@ -47,14 +47,12 @@ class Settings(BaseSettings):
     secret_key: str = Field(..., description="JWT 加密密钥")
     jwt_algorithm: str = Field(default="HS256", description="JWT 加密算法")
     access_token_expire_minutes: int = Field(
-        default=60 * 24 * 7,
-        description="访问令牌过期时间，单位分钟"
+        default=60 * 24 * 7, description="访问令牌过期时间，单位分钟"
     )
 
     # -------------------- 数据库配置 --------------------
     database_url: Optional[str] = Field(
-        default=None,
-        description="完整的数据库连接串，填入后覆盖下方数据库配置"
+        default=None, description="完整的数据库连接串，填入后覆盖下方数据库配置"
     )
     postgres_host: str = Field(default="localhost", description="PostgreSQL 主机名")
     postgres_port: int = Field(default=5432, description="PostgreSQL 端口")
@@ -68,7 +66,10 @@ class Settings(BaseSettings):
         description="显式数据库引导时是否在无管理员的情况下创建默认管理员",
     )
     admin_default_username: str = Field(default="admin", description="默认管理员用户名")
-    admin_default_password: str = Field(default="your-admin-password-change-me", description="默认管理员密码；生产环境必须改为强密码")
+    admin_default_password: str = Field(
+        default="your-admin-password-change-me",
+        description="默认管理员密码；生产环境必须改为强密码",
+    )
     admin_default_email: Optional[str] = Field(default=None, description="默认管理员邮箱")
 
     # -------------------- LLM 相关配置 --------------------
@@ -230,9 +231,7 @@ class Settings(BaseSettings):
     linuxdo_redirect_uri: Optional[HttpUrl] = Field(
         default=None, description="Linux.do OAuth 回调地址"
     )
-    linuxdo_auth_url: Optional[HttpUrl] = Field(
-        default=None, description="Linux.do OAuth 授权地址"
-    )
+    linuxdo_auth_url: Optional[HttpUrl] = Field(default=None, description="Linux.do OAuth 授权地址")
     linuxdo_token_url: Optional[HttpUrl] = Field(
         default=None, description="Linux.do OAuth Token 获取地址"
     )

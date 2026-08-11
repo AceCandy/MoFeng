@@ -13,8 +13,17 @@ from .vector_store_service import VectorStoreService, RetrievedChunk, RetrievedS
 
 # 融合服务（来自 上游融合仓库 的设计理念）
 from .finalize_service import FinalizeService
-from .consistency_service import ConsistencyService, ConsistencyCheckResult, ConsistencyViolation, ViolationSeverity
-from .knowledge_retrieval_service import KnowledgeRetrievalService, FilteredContext, RetrievedKnowledge
+from .consistency_service import (
+    ConsistencyService,
+    ConsistencyCheckResult,
+    ConsistencyViolation,
+    ViolationSeverity,
+)
+from .knowledge_retrieval_service import (
+    KnowledgeRetrievalService,
+    FilteredContext,
+    RetrievedKnowledge,
+)
 from .enrichment_service import EnrichmentService, EnrichmentResult
 
 __all__ = [

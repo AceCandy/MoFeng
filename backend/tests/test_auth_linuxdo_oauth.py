@@ -152,7 +152,10 @@ async def test_create_authorization_hashes_state_and_uses_threaded_redis(monkeyp
 async def test_create_authorization_allows_local_http_without_secure_cookie(monkeypatch) -> None:
     redis_client = _FakeRedis()
     service, _session = _service(monkeypatch, redis_client)
-    config = {**_LINUXDO_CONFIG, "linuxdo.redirect_uri": "http://localhost:8000/api/auth/linuxdo/register"}
+    config = {
+        **_LINUXDO_CONFIG,
+        "linuxdo.redirect_uri": "http://localhost:8000/api/auth/linuxdo/register",
+    }
     service._get_config_value = AsyncMock(side_effect=config.get)
     monkeypatch.setattr(settings, "environment", "development")
 
@@ -165,7 +168,10 @@ async def test_create_authorization_allows_local_http_without_secure_cookie(monk
 async def test_create_authorization_rejects_production_http_redirect(monkeypatch) -> None:
     redis_client = _FakeRedis()
     service, _session = _service(monkeypatch, redis_client)
-    config = {**_LINUXDO_CONFIG, "linuxdo.redirect_uri": "http://app.example/api/auth/linuxdo/register"}
+    config = {
+        **_LINUXDO_CONFIG,
+        "linuxdo.redirect_uri": "http://app.example/api/auth/linuxdo/register",
+    }
     service._get_config_value = AsyncMock(side_effect=config.get)
     monkeypatch.setattr(settings, "environment", "production")
 

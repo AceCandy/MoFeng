@@ -6,10 +6,14 @@ from app.models.user import User
 from app.services.novel_service import NovelService
 
 
-async def _seed_owner(db_session_factory, owner_id: int = 1, project_id: str = "project-owner") -> str:
+async def _seed_owner(
+    db_session_factory, owner_id: int = 1, project_id: str = "project-owner"
+) -> str:
     async with db_session_factory() as session:
         session.add(User(id=owner_id, username="owner", hashed_password="secret"))
-        session.add(NovelProject(id=project_id, user_id=owner_id, title="测试小说", initial_prompt="测试"))
+        session.add(
+            NovelProject(id=project_id, user_id=owner_id, title="测试小说", initial_prompt="测试")
+        )
         await session.commit()
     return project_id
 

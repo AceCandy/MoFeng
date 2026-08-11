@@ -260,13 +260,9 @@ async def _cleanup_committed_replay_scope(
             )
         )
         await session.execute(
-            delete(ChapterOutboxEvent).where(
-                ChapterOutboxEvent.project_id == project_id
-            )
+            delete(ChapterOutboxEvent).where(ChapterOutboxEvent.project_id == project_id)
         )
-        await session.execute(
-            delete(NovelProject).where(NovelProject.id == project_id)
-        )
+        await session.execute(delete(NovelProject).where(NovelProject.id == project_id))
         await session.execute(delete(User).where(User.id.in_(user_ids)))
         await session.commit()
 
@@ -281,18 +277,14 @@ async def _wait_for_database_blockers(
         async with session_factory() as observer:
             for _ in range(200):
                 blockers = {
-                    pid: set(
-                        await observer.scalar(select(func.pg_blocking_pids(pid))) or []
-                    )
+                    pid: set(await observer.scalar(select(func.pg_blocking_pids(pid))) or [])
                     for pid in blocked_pids
                 }
                 known_queue = {blocker_pid, *blocked_pids}
                 observed_blockers = set().union(*blockers.values())
                 if (
                     all(blockers[pid] for pid in blocked_pids)
-                    and all(
-                        blockers[pid].issubset(known_queue) for pid in blocked_pids
-                    )
+                    and all(blockers[pid].issubset(known_queue) for pid in blocked_pids)
                     and blocker_pid in observed_blockers
                 ):
                     return
@@ -377,15 +369,11 @@ async def _run_chapter_lock_queue(
     try:
         async with session_factory() as blocker:
             blocker_pid = int(await blocker.scalar(select(func.pg_backend_pid())))
-            await blocker.execute(
-                select(Chapter).where(Chapter.id == chapter_id).with_for_update()
-            )
+            await blocker.execute(select(Chapter).where(Chapter.id == chapter_id).with_for_update())
             blocked_pids: list[int] = []
             for command in commands:
                 tasks.append(asyncio.create_task(run(command)))
-                blocked_pids.append(
-                    await asyncio.wait_for(started_pids.get(), timeout=2)
-                )
+                blocked_pids.append(await asyncio.wait_for(started_pids.get(), timeout=2))
                 await _wait_for_database_blockers(
                     session_factory,
                     blocked_pids=tuple(blocked_pids),
@@ -429,20 +417,28 @@ async def test_dispatcher_repeated_execution_reuses_child_job_and_run(
 
     async with db_session_factory() as session:
         child_jobs = (
-            await session.execute(
-                select(BackgroundTask).where(
-                    BackgroundTask.project_id == "outbox-idempotency-project",
-                    BackgroundTask.task_type == "chapter_finalize",
+            (
+                await session.execute(
+                    select(BackgroundTask).where(
+                        BackgroundTask.project_id == "outbox-idempotency-project",
+                        BackgroundTask.task_type == "chapter_finalize",
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         runs = (
-            await session.execute(
-                select(ChapterProjectionRun).where(
-                    ChapterProjectionRun.project_id == "outbox-idempotency-project"
+            (
+                await session.execute(
+                    select(ChapterProjectionRun).where(
+                        ChapterProjectionRun.project_id == "outbox-idempotency-project"
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
     assert first == second
     assert first["status"] == "dispatched"
@@ -807,12 +803,10 @@ async def test_late_tombstone_is_single_execution_and_preserves_new_generation(
         assert all(run is not None and not run.is_active for run in persisted_old_runs)
         assert all(run is not None and run.is_active for run in persisted_new_runs)
         assert all(
-            artifact is not None and not artifact.is_active
-            for artifact in persisted_old_artifacts
+            artifact is not None and not artifact.is_active for artifact in persisted_old_artifacts
         )
         assert all(
-            artifact is not None and artifact.is_active
-            for artifact in persisted_new_artifacts
+            artifact is not None and artifact.is_active for artifact in persisted_new_artifacts
         )
     finally:
         await _cleanup_committed_replay_scope(
@@ -948,13 +942,17 @@ async def test_backlog_repair_recreates_only_missing_dispatcher(
     async with db_session_factory() as session:
         assert await repair_chapter_outbox_backlog(session) == 0
         dispatchers = (
-            await session.execute(
-                select(BackgroundTask).where(
-                    BackgroundTask.project_id == "outbox-backlog-project",
-                    BackgroundTask.task_type == "chapter_outbox_dispatch",
+            (
+                await session.execute(
+                    select(BackgroundTask).where(
+                        BackgroundTask.project_id == "outbox-backlog-project",
+                        BackgroundTask.task_type == "chapter_outbox_dispatch",
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
     assert len(dispatchers) == 1
     assert dispatchers[0].idempotency_key == "outbox-backlog-dispatch"
@@ -1007,9 +1005,7 @@ async def test_canonical_finalize_rollback_removes_revision_outbox_and_dispatche
 
     async with db_session_factory() as session:
         chapter = (
-            await session.execute(
-                select(Chapter).where(Chapter.project_id == project_id)
-            )
+            await session.execute(select(Chapter).where(Chapter.project_id == project_id))
         ).scalar_one()
         version = (
             await session.execute(
@@ -1029,14 +1025,10 @@ async def test_canonical_finalize_rollback_removes_revision_outbox_and_dispatche
 
     async with db_session_factory() as session:
         chapter = (
-            await session.execute(
-                select(Chapter).where(Chapter.project_id == project_id)
-            )
+            await session.execute(select(Chapter).where(Chapter.project_id == project_id))
         ).scalar_one()
         revision_count = await session.scalar(
-            select(func.count(ChapterRevision.id)).where(
-                ChapterRevision.project_id == project_id
-            )
+            select(func.count(ChapterRevision.id)).where(ChapterRevision.project_id == project_id)
         )
         outbox_count = await session.scalar(
             select(func.count(ChapterOutboxEvent.id)).where(
@@ -1044,9 +1036,7 @@ async def test_canonical_finalize_rollback_removes_revision_outbox_and_dispatche
             )
         )
         dispatcher_count = await session.scalar(
-            select(func.count(BackgroundTask.id)).where(
-                BackgroundTask.project_id == project_id
-            )
+            select(func.count(BackgroundTask.id)).where(BackgroundTask.project_id == project_id)
         )
         rollout_count = await session.scalar(
             select(func.count(ChapterProjectionRollout.id)).where(
@@ -1087,9 +1077,7 @@ async def test_replay_rejects_locked_scope_identity_drift(
         if drift == "revision_tombstoned":
             revision = (
                 await session.execute(
-                    select(ChapterRevision).where(
-                        ChapterRevision.project_id == project_id
-                    )
+                    select(ChapterRevision).where(ChapterRevision.project_id == project_id)
                 )
             ).scalar_one()
             revision.tombstoned_at = datetime.now(timezone.utc)
@@ -1204,15 +1192,11 @@ async def test_different_operators_concurrently_replay_one_projection_once(
         async with session_factory() as blocker:
             blocker_pid = int(await blocker.scalar(select(func.pg_backend_pid())))
             await blocker.execute(
-                select(Chapter)
-                .where(Chapter.id == request.chapter_id)
-                .with_for_update()
+                select(Chapter).where(Chapter.id == request.chapter_id).with_for_update()
             )
             tasks = [
                 asyncio.create_task(replay(owner_user_id, "summary-replay-owner")),
-                asyncio.create_task(
-                    replay(operator_user_id, "summary-replay-operator")
-                ),
+                asyncio.create_task(replay(operator_user_id, "summary-replay-operator")),
             ]
             blocked_pids = (
                 await asyncio.wait_for(started_pids.get(), timeout=2),
@@ -1243,7 +1227,9 @@ async def test_different_operators_concurrently_replay_one_projection_once(
                             ChapterProjectionRun.projection_name == "summary",
                         )
                     )
-                ).scalars().all()
+                )
+                .scalars()
+                .all()
             )
             jobs = list(
                 (
@@ -1253,7 +1239,9 @@ async def test_different_operators_concurrently_replay_one_projection_once(
                             BackgroundTask.task_type == "chapter_finalize",
                         )
                     )
-                ).scalars().all()
+                )
+                .scalars()
+                .all()
             )
             audits = list(
                 (
@@ -1262,7 +1250,9 @@ async def test_different_operators_concurrently_replay_one_projection_once(
                             ChapterProjectionReplayAudit.project_id == project_id
                         )
                     )
-                ).scalars().all()
+                )
+                .scalars()
+                .all()
             )
 
         assert sorted(run.status for run in runs) == ["failed", "queued"]
@@ -1321,9 +1311,7 @@ async def test_replay_and_rollout_fence_change_finish_without_deadlock(
             async with session_factory() as session:
                 pid = int(await session.scalar(select(func.pg_backend_pid())))
                 await started_pids.put(pid)
-                _, rollout = await ChapterProjectionRolloutService(
-                    session
-                )._load_chapter_rollout(
+                _, rollout = await ChapterProjectionRolloutService(session)._load_chapter_rollout(
                     project_id=project_id,
                     chapter_id=request.chapter_id,
                     for_update=True,
@@ -1335,9 +1323,7 @@ async def test_replay_and_rollout_fence_change_finish_without_deadlock(
         async with session_factory() as blocker:
             blocker_pid = int(await blocker.scalar(select(func.pg_backend_pid())))
             await blocker.execute(
-                select(Chapter)
-                .where(Chapter.id == request.chapter_id)
-                .with_for_update()
+                select(Chapter).where(Chapter.id == request.chapter_id).with_for_update()
             )
             tasks = [
                 asyncio.create_task(replay()),
@@ -1375,7 +1361,9 @@ async def test_replay_and_rollout_fence_change_finish_without_deadlock(
                             BackgroundTask.task_type == "chapter_finalize",
                         )
                     )
-                ).scalars().all()
+                )
+                .scalars()
+                .all()
             )
             assert (rollout.generation, rollout.fencing_token) == (2, 1)
             if isinstance(replay_result, ChapterProjectionConflictError):
@@ -1468,7 +1456,9 @@ async def test_concurrent_finalize_commands_allocate_monotonic_revisions(
                         .where(ChapterRevision.project_id == project_id)
                         .order_by(ChapterRevision.revision)
                     )
-                ).scalars().all()
+                )
+                .scalars()
+                .all()
             )
             events = list(
                 (
@@ -1477,7 +1467,9 @@ async def test_concurrent_finalize_commands_allocate_monotonic_revisions(
                         .where(ChapterOutboxEvent.project_id == project_id)
                         .order_by(ChapterOutboxEvent.revision)
                     )
-                ).scalars().all()
+                )
+                .scalars()
+                .all()
             )
             version = (
                 await session.execute(
@@ -1568,7 +1560,9 @@ async def test_finalize_then_regenerate_supersedes_freshly_locked_revision(
                         .where(ChapterRevision.project_id == project_id)
                         .order_by(ChapterRevision.revision)
                     )
-                ).scalars().all()
+                )
+                .scalars()
+                .all()
             )
             events = list(
                 (
@@ -1577,14 +1571,18 @@ async def test_finalize_then_regenerate_supersedes_freshly_locked_revision(
                         .where(ChapterOutboxEvent.project_id == project_id)
                         .order_by(ChapterOutboxEvent.revision)
                     )
-                ).scalars().all()
+                )
+                .scalars()
+                .all()
             )
             versions = list(
                 (
                     await session.execute(
                         select(ChapterVersion).where(ChapterVersion.chapter_id == chapter_id)
                     )
-                ).scalars().all()
+                )
+                .scalars()
+                .all()
             )
 
         assert chapter is not None
@@ -1664,11 +1662,11 @@ async def test_delete_then_finalize_fails_explicitly_after_chapter_disappears(
             revisions = list(
                 (
                     await session.execute(
-                        select(ChapterRevision).where(
-                            ChapterRevision.project_id == project_id
-                        )
+                        select(ChapterRevision).where(ChapterRevision.project_id == project_id)
                     )
-                ).scalars().all()
+                )
+                .scalars()
+                .all()
             )
             events = list(
                 (
@@ -1677,7 +1675,9 @@ async def test_delete_then_finalize_fails_explicitly_after_chapter_disappears(
                             ChapterOutboxEvent.project_id == project_id
                         )
                     )
-                ).scalars().all()
+                )
+                .scalars()
+                .all()
             )
 
         assert chapter is None

@@ -5,6 +5,7 @@ publish 端在生成流程/后台任务状态变更后发出通知（只发 chan
 SSE 端 subscribe channel，收到通知后再查 DB 推送完整快照。
 Redis 不可用或未配置时 publish 静默跳过（不阻塞业务流程），subscribe 返回 None 由调用方回退轮询。
 """
+
 from __future__ import annotations
 
 import asyncio

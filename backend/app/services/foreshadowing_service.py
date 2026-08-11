@@ -1,5 +1,6 @@
 # AIMETA P=伏笔服务_伏笔管理业务逻辑|R=伏笔CRUD_回收追踪|NR=不含自动分析|E=ForeshadowingService|X=internal|A=服务类|D=sqlalchemy|S=db|RD=./README.ai
 """伏笔管理服务"""
+
 import logging
 from typing import List, Optional, Dict
 from sqlalchemy import select, and_, func
@@ -42,9 +43,13 @@ class ForeshadowingService:
             query = query.where(Foreshadowing.type == foreshadowing_type)
 
         # 获取总数
-        count_query = select(func.count()).select_from(Foreshadowing).where(
-            Foreshadowing.project_id == project_id,
-            Foreshadowing.is_active.is_(True),
+        count_query = (
+            select(func.count())
+            .select_from(Foreshadowing)
+            .where(
+                Foreshadowing.project_id == project_id,
+                Foreshadowing.is_active.is_(True),
+            )
         )
         if status:
             count_query = count_query.where(Foreshadowing.status == status)
@@ -67,19 +72,25 @@ class ForeshadowingService:
     ) -> Foreshadowing:
         """放弃伏笔"""
         foreshadowing = (
-            await self.session.execute(
-                select(Foreshadowing).where(
-                    Foreshadowing.id == foreshadowing_id,
-                    Foreshadowing.is_active.is_(True),
+            (
+                await self.session.execute(
+                    select(Foreshadowing).where(
+                        Foreshadowing.id == foreshadowing_id,
+                        Foreshadowing.is_active.is_(True),
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if not foreshadowing:
             raise ValueError(f"伏笔不存在: {foreshadowing_id}")
 
         foreshadowing.status = ABANDONED_FORESHADOWING_STATUS
         if reason:
-            foreshadowing.author_note = f"{foreshadowing.author_note or ''}\n[放弃原因]: {reason}".strip()
+            foreshadowing.author_note = (
+                f"{foreshadowing.author_note or ''}\n[放弃原因]: {reason}".strip()
+            )
 
         await self.session.flush()
         logger.info(f"放弃伏笔: foreshadowing={foreshadowing_id}")
@@ -91,14 +102,18 @@ class ForeshadowingService:
         current_chapter_number: int,
     ) -> List[Foreshadowing]:
         """获取未回收的伏笔"""
-        query = select(Foreshadowing).where(
-            and_(
-                Foreshadowing.project_id == project_id,
-                Foreshadowing.status.in_(ACTIVE_FORESHADOWING_STATUSES),
-                Foreshadowing.chapter_number < current_chapter_number,
-                Foreshadowing.is_active.is_(True),
+        query = (
+            select(Foreshadowing)
+            .where(
+                and_(
+                    Foreshadowing.project_id == project_id,
+                    Foreshadowing.status.in_(ACTIVE_FORESHADOWING_STATUSES),
+                    Foreshadowing.chapter_number < current_chapter_number,
+                    Foreshadowing.is_active.is_(True),
+                )
             )
-        ).order_by(Foreshadowing.chapter_number)
+            .order_by(Foreshadowing.chapter_number)
+        )
 
         result = await self.session.execute(query)
         return result.scalars().all()

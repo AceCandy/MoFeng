@@ -53,7 +53,7 @@ def _load_complete_json(text: str) -> object | None:
 
     for candidate in candidates:
         unescaped = (
-            candidate.replace(r'\"', '"')
+            candidate.replace(r"\"", '"')
             .replace(r"\\r", r"\r")
             .replace(r"\\n", r"\n")
             .replace(r"\\t", r"\t")

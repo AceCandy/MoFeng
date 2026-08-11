@@ -26,7 +26,6 @@ from ...services.chapter_projection_rollout import (
     ChapterProjectionRolloutService,
 )
 
-
 router = APIRouter(prefix="/api/admin/chapter-projections", tags=["Admin"])
 
 

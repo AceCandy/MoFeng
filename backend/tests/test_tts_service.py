@@ -39,25 +39,33 @@ def _make_wav(pcm: bytes = b"\x01\x00" * 500) -> bytes:
     return b"RIFF" + struct.pack("<I", riff_size) + b"WAVE" + fmt_chunk + data_chunk
 
 
-def _make_wav_raw(pcm: bytes, bits: int = 16, *, audio_format: int = 1, channels: int = 1, rate: int = 24000) -> bytes:
+def _make_wav_raw(
+    pcm: bytes, bits: int = 16, *, audio_format: int = 1, channels: int = 1, rate: int = 24000
+) -> bytes:
     """构造指定位深/格式的 wav（用于测试标准化）。"""
     block_align = channels * (bits // 8)
     byte_rate = rate * block_align
     fmt_body = struct.pack("<HHIIHH", audio_format, channels, rate, byte_rate, block_align, bits)
     return (
-        b"RIFF" + struct.pack("<I", 4 + 8 + len(fmt_body) + 8 + len(pcm)) + b"WAVE"
-        + b"fmt " + struct.pack("<I", len(fmt_body)) + fmt_body
-        + b"data" + struct.pack("<I", len(pcm)) + pcm
+        b"RIFF"
+        + struct.pack("<I", 4 + 8 + len(fmt_body) + 8 + len(pcm))
+        + b"WAVE"
+        + b"fmt "
+        + struct.pack("<I", len(fmt_body))
+        + fmt_body
+        + b"data"
+        + struct.pack("<I", len(pcm))
+        + pcm
     )
 
 
 def _read_bits_per_sample(wav: bytes) -> int:
     offset = 12
     while offset + 8 <= len(wav):
-        chunk_id = wav[offset:offset + 4]
-        chunk_size = int.from_bytes(wav[offset + 4:offset + 8], "little")
+        chunk_id = wav[offset : offset + 4]
+        chunk_size = int.from_bytes(wav[offset + 4 : offset + 8], "little")
         if chunk_id == b"fmt " and chunk_size >= 16:
-            return int.from_bytes(wav[offset + 8 + 14:offset + 8 + 16], "little")
+            return int.from_bytes(wav[offset + 8 + 14 : offset + 8 + 16], "little")
         offset += 8 + chunk_size + (chunk_size & 1)
     return 0
 
@@ -261,7 +269,11 @@ async def test_synthesis_rejects_empty_or_invalid_audio(monkeypatch):
     [
         (
             "mimo_chat_audio",
-            {"choices": [{"message": {"audio": {"data": base64.b64encode(b"not-wav").decode("ascii")}}}]},
+            {
+                "choices": [
+                    {"message": {"audio": {"data": base64.b64encode(b"not-wav").decode("ascii")}}}
+                ]
+            },
             {},
         ),
         ("openai_speech", b"not-mp3", {"content-type": "audio/mpeg"}),

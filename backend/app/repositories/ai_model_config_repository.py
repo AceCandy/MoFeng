@@ -81,7 +81,9 @@ class UserAIModelRepository(BaseRepository[UserAIModel]):
         )
         return result.scalars().first()
 
-    async def list_enabled_by_capability(self, user_id: int, capability: str) -> Iterable[UserAIModel]:
+    async def list_enabled_by_capability(
+        self, user_id: int, capability: str
+    ) -> Iterable[UserAIModel]:
         models = await self.list_by_user(user_id)
         return [
             model

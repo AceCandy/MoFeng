@@ -33,7 +33,6 @@ from .chapter_projection_contract import (
 from .job_service import JobService
 from .job_worker import JobOutcome, PermanentJobError
 
-
 DISPATCH_JOB_TYPE = "chapter_outbox_dispatch"
 DISPATCH_PAYLOAD_VERSION = 1
 
@@ -117,30 +116,38 @@ class ChapterOutboxDispatcher:
             chapter_id = candidate.chapter_id or raw_payload.get("chapter_id")
             if isinstance(chapter_id, int):
                 chapter = (
-                    await self.session.execute(
-                        select(Chapter)
-                        .where(
-                            Chapter.id == chapter_id,
-                            Chapter.project_id == command.project_id,
+                    (
+                        await self.session.execute(
+                            select(Chapter)
+                            .where(
+                                Chapter.id == chapter_id,
+                                Chapter.project_id == command.project_id,
+                            )
+                            .with_for_update()
                         )
-                        .with_for_update()
                     )
-                ).scalars().first()
+                    .scalars()
+                    .first()
+                )
 
         event = (
-            await self.session.execute(
-                select(ChapterOutboxEvent)
-                .join(NovelProject, NovelProject.id == ChapterOutboxEvent.project_id)
-                .where(
-                    ChapterOutboxEvent.id == command.outbox_event_id,
-                    ChapterOutboxEvent.project_id == command.project_id,
-                    ChapterOutboxEvent.event_type == command.event_type,
-                    ChapterOutboxEvent.event_version == command.event_version,
-                    NovelProject.user_id == user_id,
+            (
+                await self.session.execute(
+                    select(ChapterOutboxEvent)
+                    .join(NovelProject, NovelProject.id == ChapterOutboxEvent.project_id)
+                    .where(
+                        ChapterOutboxEvent.id == command.outbox_event_id,
+                        ChapterOutboxEvent.project_id == command.project_id,
+                        ChapterOutboxEvent.event_type == command.event_type,
+                        ChapterOutboxEvent.event_version == command.event_version,
+                        NovelProject.user_id == user_id,
+                    )
+                    .with_for_update(of=ChapterOutboxEvent)
                 )
-                .with_for_update(of=ChapterOutboxEvent)
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if event is None:
             raise PermanentJobError(
                 "chapter_outbox_event_missing",
@@ -181,10 +188,7 @@ class ChapterOutboxDispatcher:
                 user_id=user_id,
             )
         raw_payload = event.payload if isinstance(event.payload, dict) else None
-        if (
-            raw_payload is None
-            or payload_fingerprint(raw_payload) != event.payload_fingerprint
-        ):
+        if raw_payload is None or payload_fingerprint(raw_payload) != event.payload_fingerprint:
             raise PermanentJobError(
                 "chapter_outbox_payload_mismatch",
                 "章节 outbox 事件指纹不匹配",
@@ -217,31 +221,39 @@ class ChapterOutboxDispatcher:
                 "run_ids": [],
             }
         revision = (
-            await self.session.execute(
-                select(ChapterRevision)
-                .where(
-                    ChapterRevision.id == payload.chapter_revision_id,
-                    ChapterRevision.chapter_id == chapter.id,
-                    ChapterRevision.project_id == chapter.project_id,
-                    ChapterRevision.chapter_number == chapter.chapter_number,
-                    ChapterRevision.revision == payload.revision,
-                    ChapterRevision.source_hash == payload.source_hash,
-                    ChapterRevision.source_generation == payload.source_generation,
-                    ChapterRevision.lifecycle == "finalizing",
+            (
+                await self.session.execute(
+                    select(ChapterRevision)
+                    .where(
+                        ChapterRevision.id == payload.chapter_revision_id,
+                        ChapterRevision.chapter_id == chapter.id,
+                        ChapterRevision.project_id == chapter.project_id,
+                        ChapterRevision.chapter_number == chapter.chapter_number,
+                        ChapterRevision.revision == payload.revision,
+                        ChapterRevision.source_hash == payload.source_hash,
+                        ChapterRevision.source_generation == payload.source_generation,
+                        ChapterRevision.lifecycle == "finalizing",
+                    )
+                    .with_for_update()
                 )
-                .with_for_update()
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         rollout = (
-            await self.session.execute(
-                select(ChapterProjectionRollout)
-                .where(
-                    ChapterProjectionRollout.chapter_id == chapter.id,
-                    ChapterProjectionRollout.project_id == chapter.project_id,
+            (
+                await self.session.execute(
+                    select(ChapterProjectionRollout)
+                    .where(
+                        ChapterProjectionRollout.chapter_id == chapter.id,
+                        ChapterProjectionRollout.project_id == chapter.project_id,
+                    )
+                    .with_for_update()
                 )
-                .with_for_update()
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if revision is None or rollout is None:
             return {
                 "status": "stale",
@@ -322,9 +334,7 @@ class ChapterOutboxDispatcher:
                 rollout_owner=payload.rollout_owner,
                 rollout_generation=payload.rollout_generation,
                 rollout_fencing_token=payload.rollout_fencing_token,
-                execution_mode=(
-                    "shadow" if payload.execution_mode == "shadow" else "active"
-                ),
+                execution_mode=("shadow" if payload.execution_mode == "shadow" else "active"),
                 legacy_job_id=legacy_job.id if legacy_job is not None else None,
                 selected_version_id=payload.selected_version_id,
                 content_hash=payload.content_hash,
@@ -374,8 +384,7 @@ class ChapterOutboxDispatcher:
             elif (
                 summary_run.chapter_revision_id != revision.id
                 or summary_run.projection_name != "summary"
-                or summary_run.artifact_generation
-                != payload.summary_artifact_generation
+                or summary_run.artifact_generation != payload.summary_artifact_generation
                 or summary_run.job_id not in (None, projection_job.id)
             ):
                 raise PermanentJobError(
@@ -562,8 +571,7 @@ async def repair_chapter_outbox_backlog(
         select(BackgroundTask.id).where(
             BackgroundTask.user_id == NovelProject.user_id,
             BackgroundTask.task_type == DISPATCH_JOB_TYPE,
-            BackgroundTask.idempotency_key
-            == dispatcher_key,
+            BackgroundTask.idempotency_key == dispatcher_key,
         )
     )
     rows = (

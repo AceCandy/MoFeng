@@ -32,7 +32,6 @@ from ..schemas.llm_config import (
     UserAIModelUpdate,
 )
 
-
 logger = logging.getLogger(__name__)
 
 CHAT_STAGE_KEYS = {
@@ -128,7 +127,9 @@ class LLMConfigService:
         )
 
     @staticmethod
-    def _normalize_capabilities(raw: Optional[dict], fallback: Optional[dict] = None) -> dict[str, bool]:
+    def _normalize_capabilities(
+        raw: Optional[dict], fallback: Optional[dict] = None
+    ) -> dict[str, bool]:
         source = raw or fallback or DEFAULT_PROVIDER_CAPABILITIES
         return {
             "chat": bool(source.get("chat")),
@@ -148,7 +149,9 @@ class LLMConfigService:
         # 音色与倍速改为朗读时在控件选择（全局偏好），不再要求模型预置
 
     @classmethod
-    def _provider_to_read(cls, provider, fallback_capabilities: Optional[dict] = None) -> ProviderRead:
+    def _provider_to_read(
+        cls, provider, fallback_capabilities: Optional[dict] = None
+    ) -> ProviderRead:
         return ProviderRead(
             id=provider.id,
             user_id=provider.user_id,
@@ -245,7 +248,7 @@ class LLMConfigService:
     def _build_url(self, base_url: Optional[str], default_url: str, path_suffix: str) -> str:
         """统一的 URL 构建逻辑，避免路径重复"""
         if base_url:
-            url = base_url.rstrip('/')
+            url = base_url.rstrip("/")
             # 如果 URL 已经包含路径后缀，则直接使用
             if not url.endswith(path_suffix):
                 url += path_suffix
@@ -266,13 +269,18 @@ class LLMConfigService:
         # 默认模式固定为 openai：仅在用户显式选择 ollama 时写入 ollama。
         if "embedding_provider_format" in data:
             raw_format = (data["embedding_provider_format"] or "").strip().lower()
-            data["embedding_provider_format"] = raw_format if raw_format in {"openai", "ollama"} else "openai"
+            data["embedding_provider_format"] = (
+                raw_format if raw_format in {"openai", "ollama"} else "openai"
+            )
         elif not instance or not (instance.embedding_provider_format or "").strip():
             data["embedding_provider_format"] = "openai"
         logger.info(
             "upsert llm config: user_id=%s embedding_provider_format=%s explicit_format=%s",
             user_id,
-            data.get("embedding_provider_format", instance.embedding_provider_format if instance else None),
+            data.get(
+                "embedding_provider_format",
+                instance.embedding_provider_format if instance else None,
+            ),
             "embedding_provider_format" in payload.model_dump(exclude_unset=True),
         )
 
@@ -306,12 +314,15 @@ class LLMConfigService:
         model_items = list(await self.model_repo.list_by_user(user_id))
         provider_fallbacks = self._infer_provider_capabilities(model_items)
         providers = [
-            self._provider_to_read(item, provider_fallbacks.get(item.id))
-            for item in provider_items
+            self._provider_to_read(item, provider_fallbacks.get(item.id)) for item in provider_items
         ]
         models = [self._model_to_read(item) for item in model_items]
-        routes = [self._route_to_read(item) for item in await self.stage_route_repo.list_by_user(user_id)]
-        return LLMConfigBundle(legacy=legacy, providers=providers, models=models, stage_routes=routes)
+        routes = [
+            self._route_to_read(item) for item in await self.stage_route_repo.list_by_user(user_id)
+        ]
+        return LLMConfigBundle(
+            legacy=legacy, providers=providers, models=models, stage_routes=routes
+        )
 
     @staticmethod
     def _infer_provider_capabilities(models: list) -> dict[int, dict[str, bool]]:
@@ -323,7 +334,9 @@ class LLMConfigService:
                 {"chat": False, "embedding": False, "tts": False},
             )
             provider_caps["chat"] = provider_caps["chat"] or bool(capabilities.get("chat"))
-            provider_caps["embedding"] = provider_caps["embedding"] or bool(capabilities.get("embedding"))
+            provider_caps["embedding"] = provider_caps["embedding"] or bool(
+                capabilities.get("embedding")
+            )
             provider_caps["tts"] = provider_caps["tts"] or bool(capabilities.get("tts"))
         return inferred
 
@@ -344,7 +357,9 @@ class LLMConfigService:
         return self._provider_to_read(provider)
 
     async def list_providers(self, user_id: int) -> list[ProviderRead]:
-        return [self._provider_to_read(item) for item in await self.provider_repo.list_by_user(user_id)]
+        return [
+            self._provider_to_read(item) for item in await self.provider_repo.list_by_user(user_id)
+        ]
 
     async def get_provider_models(self, user_id: int, provider_id: int) -> List[str]:
         provider = await self.provider_repo.get_owned(provider_id, user_id)
@@ -358,7 +373,9 @@ class LLMConfigService:
             provider_type=provider.provider_type,
         )
 
-    async def update_provider(self, user_id: int, provider_id: int, payload: ProviderUpdate) -> ProviderRead:
+    async def update_provider(
+        self, user_id: int, provider_id: int, payload: ProviderUpdate
+    ) -> ProviderRead:
         provider = await self.provider_repo.get_owned(provider_id, user_id)
         if not provider:
             raise ValueError("provider not found")
@@ -439,7 +456,9 @@ class LLMConfigService:
     async def list_models(self, user_id: int) -> list[UserAIModelRead]:
         return [self._model_to_read(item) for item in await self.model_repo.list_by_user(user_id)]
 
-    async def update_model(self, user_id: int, model_id: int, payload: UserAIModelUpdate) -> UserAIModelRead:
+    async def update_model(
+        self, user_id: int, model_id: int, payload: UserAIModelUpdate
+    ) -> UserAIModelRead:
         await self.model_repo.lock_user_configuration(user_id)
         model = await self.model_repo.get_owned(model_id, user_id)
         if not model:
@@ -532,7 +551,9 @@ class LLMConfigService:
                 if model.id != changed_model.id:
                     model.is_default_tts = False
 
-    async def upsert_stage_routes(self, user_id: int, payload: StageRoutesPayload) -> list[StageRouteRead]:
+    async def upsert_stage_routes(
+        self, user_id: int, payload: StageRoutesPayload
+    ) -> list[StageRouteRead]:
         incoming_stages = {item.stage for item in payload.routes}
         for item in payload.routes:
             capability = self.stage_capability(item.stage)
@@ -558,7 +579,9 @@ class LLMConfigService:
             if route.stage in ALL_STAGE_KEYS and route.stage not in incoming_stages:
                 await self.stage_route_repo.delete(route)
         await self.session.commit()
-        return [self._route_to_read(item) for item in await self.stage_route_repo.list_by_user(user_id)]
+        return [
+            self._route_to_read(item) for item in await self.stage_route_repo.list_by_user(user_id)
+        ]
 
     async def get_available_models(
         self,
@@ -594,7 +617,9 @@ class LLMConfigService:
                 return await self._get_openai_like_models(api_key, base_url)
         except Exception as e:
             error_msg = str(e)
-            logger.error("获取模型列表失败: provider=%s, error=%s", provider, error_msg, exc_info=True)
+            logger.error(
+                "获取模型列表失败: provider=%s, error=%s", provider, error_msg, exc_info=True
+            )
 
             # 提供更友好的错误信息
             if "Connection error" in error_msg or "disconnected" in error_msg.lower():
@@ -606,7 +631,9 @@ class LLMConfigService:
 
             return []
 
-    async def _get_openai_like_models(self, api_key: Optional[str], base_url: Optional[str]) -> List[str]:
+    async def _get_openai_like_models(
+        self, api_key: Optional[str], base_url: Optional[str]
+    ) -> List[str]:
         """获取 OpenAI 或 OpenAI-like API 的模型列表"""
         import httpx
         from openai import APIConnectionError, APIError
@@ -636,7 +663,11 @@ class LLMConfigService:
             return await self._get_models_via_http(api_key, base_url)
 
         except APIError as e:
-            logger.error("API 调用错误: status_code=%s, message=%s", getattr(e, 'status_code', 'unknown'), str(e))
+            logger.error(
+                "API 调用错误: status_code=%s, message=%s",
+                getattr(e, "status_code", "unknown"),
+                str(e),
+            )
             return await self._get_models_via_http(api_key, base_url)
 
         except Exception as e:
@@ -646,16 +677,18 @@ class LLMConfigService:
             if client is not None:
                 await client.close()
 
-    async def _get_models_via_http(self, api_key: Optional[str], base_url: Optional[str]) -> List[str]:
+    async def _get_models_via_http(
+        self, api_key: Optional[str], base_url: Optional[str]
+    ) -> List[str]:
         """使用 httpx 直接请求模型列表（备选方案）"""
         import httpx
 
         try:
             # 构建完整的 URL
             if base_url:
-                url = base_url.rstrip('/') + '/models'
+                url = base_url.rstrip("/") + "/models"
             else:
-                url = 'https://api.openai.com/v1/models'
+                url = "https://api.openai.com/v1/models"
 
             headers = {"Content-Type": "application/json"}
             if api_key:
@@ -670,8 +703,8 @@ class LLMConfigService:
 
                 if response.status_code == 200:
                     data = response.json()
-                    models = data.get('data', [])
-                    model_ids = [model.get('id') for model in models if model.get('id')]
+                    models = data.get("data", [])
+                    model_ids = [model.get("id") for model in models if model.get("id")]
                     logger.info("通过 HTTP 成功获取 %d 个模型", len(model_ids))
                     return sorted(model_ids)
                 elif response.status_code == 404:
@@ -681,7 +714,11 @@ class LLMConfigService:
                     logger.warning("认证失败 (401)，请检查 API Key 是否正确")
                     return []
                 else:
-                    logger.warning("HTTP 请求失败: status=%d, body=%s", response.status_code, response.text[:200])
+                    logger.warning(
+                        "HTTP 请求失败: status=%d, body=%s",
+                        response.status_code,
+                        response.text[:200],
+                    )
                     return []
 
         except httpx.TimeoutException:
@@ -710,15 +747,21 @@ class LLMConfigService:
             model_names = [
                 model.get("name")
                 for model in models
-                if isinstance(model, dict) and isinstance(model.get("name"), str) and model.get("name")
+                if isinstance(model, dict)
+                and isinstance(model.get("name"), str)
+                and model.get("name")
             ]
             logger.info("成功获取 %d 个 Ollama 模型", len(model_names))
             return sorted(model_names)
         except Exception as e:
-            logger.error("获取 Ollama 模型列表失败: base=%s error=%s", normalized_base, str(e), exc_info=True)
+            logger.error(
+                "获取 Ollama 模型列表失败: base=%s error=%s", normalized_base, str(e), exc_info=True
+            )
             return []
 
-    async def _get_anthropic_models(self, api_key: Optional[str], base_url: Optional[str]) -> List[str]:
+    async def _get_anthropic_models(
+        self, api_key: Optional[str], base_url: Optional[str]
+    ) -> List[str]:
         """获取 Anthropic 模型列表，失败或为空时返回空列表（不回退硬编码模型）。"""
         import httpx
 
@@ -743,7 +786,9 @@ class LLMConfigService:
             logger.info("成功获取 %d 个 Anthropic 模型", len(model_ids))
             return sorted(model_ids)
         except Exception as e:
-            logger.error("获取 Anthropic 模型列表失败: base=%s error=%s", base_url, str(e), exc_info=True)
+            logger.error(
+                "获取 Anthropic 模型列表失败: base=%s error=%s", base_url, str(e), exc_info=True
+            )
             return []
 
     async def _get_google_models(self, api_key: str, base_url: Optional[str]) -> List[str]:
@@ -753,9 +798,7 @@ class LLMConfigService:
         try:
             # 使用统一的 URL 构建方法
             url = self._build_url(
-                base_url,
-                "https://generativelanguage.googleapis.com/v1beta",
-                "/v1beta"
+                base_url, "https://generativelanguage.googleapis.com/v1beta", "/v1beta"
             )
             url += f"/models?key={api_key}"
 
@@ -781,7 +824,9 @@ class LLMConfigService:
                 logger.info("成功获取 %d 个 Google 模型", len(model_ids))
                 return sorted(model_ids)
         except httpx.HTTPStatusError as e:
-            logger.error("Google API HTTP 错误: status=%d, message=%s", e.response.status_code, str(e))
+            logger.error(
+                "Google API HTTP 错误: status=%d, message=%s", e.response.status_code, str(e)
+            )
             # 返回常用的 Gemini 模型作为备选
             return [
                 "gemini-2.0-flash-exp",
@@ -827,11 +872,7 @@ class LLMConfigService:
 
         try:
             # 使用统一的 URL 构建方法
-            url = self._build_url(
-                base_url,
-                "https://api.cohere.ai/v1",
-                "/v1"
-            )
+            url = self._build_url(base_url, "https://api.cohere.ai/v1", "/v1")
             url += "/models"
 
             headers = {
@@ -848,11 +889,15 @@ class LLMConfigService:
                 response.raise_for_status()
                 data = response.json()
 
-                model_ids = [model.get("name") for model in data.get("models", []) if model.get("name")]
+                model_ids = [
+                    model.get("name") for model in data.get("models", []) if model.get("name")
+                ]
                 logger.info("成功获取 %d 个 Cohere 模型", len(model_ids))
                 return sorted(model_ids)
         except httpx.HTTPStatusError as e:
-            logger.error("Cohere API HTTP 错误: status=%d, message=%s", e.response.status_code, str(e))
+            logger.error(
+                "Cohere API HTTP 错误: status=%d, message=%s", e.response.status_code, str(e)
+            )
             return [
                 "command-r-plus",
                 "command-r",

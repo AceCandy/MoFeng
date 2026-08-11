@@ -1062,9 +1062,7 @@ async def test_waiting_cancel_command_is_applied_atomically(isolated_pg):
             ).scalars()
         )
         remaining_versions = await session.scalar(
-            select(func.count())
-            .select_from(ChapterVersion)
-            .where(ChapterVersion.id == version_id)
+            select(func.count()).select_from(ChapterVersion).where(ChapterVersion.id == version_id)
         )
         remaining_evaluations = await session.scalar(
             select(func.count())
@@ -1153,7 +1151,9 @@ async def test_running_cancel_command_requires_current_fence_to_finish(isolated_
         assert run.status == "running"
         assert run.is_active is True
         assert await session.get(ChapterVersion, version_id) is not None
-        assert trace_id is not None and await session.get(ChapterGenerationTrace, trace_id) is not None
+        assert (
+            trace_id is not None and await session.get(ChapterGenerationTrace, trace_id) is not None
+        )
 
         heartbeat = await JobService(session).heartbeat(lease, lease_seconds=30)
         assert heartbeat.cancel_requested is True

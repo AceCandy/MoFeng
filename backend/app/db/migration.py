@@ -63,10 +63,7 @@ def _canonical_sort_key(value: Any) -> str:
 
 def _canonicalize(value: Any, *, field: str | None = None) -> Any:
     if isinstance(value, Mapping):
-        return {
-            key: _canonicalize(value[key], field=str(key))
-            for key in sorted(value)
-        }
+        return {key: _canonicalize(value[key], field=str(key)) for key in sorted(value)}
     if isinstance(value, (set, frozenset)):
         return sorted((_canonicalize(item) for item in value), key=_canonical_sort_key)
     if isinstance(value, (list, tuple)):
@@ -166,16 +163,13 @@ def inspect_schema_manifest(connection: Connection) -> dict[str, Any]:
                 "columns": _columns_manifest(inspector.get_columns(table_name)),
                 "primary_key": list(primary_key.get("constrained_columns") or ()),
                 "unique_constraints": [
-                    list(constraint.get("column_names") or ())
-                    for constraint in unique_constraints
+                    list(constraint.get("column_names") or ()) for constraint in unique_constraints
                 ],
                 "foreign_keys": [
                     {
                         "columns": list(foreign_key.get("constrained_columns") or ()),
                         "referred_table": foreign_key.get("referred_table"),
-                        "referred_columns": list(
-                            foreign_key.get("referred_columns") or ()
-                        ),
+                        "referred_columns": list(foreign_key.get("referred_columns") or ()),
                         "ondelete": (foreign_key.get("options") or {}).get("ondelete"),
                     }
                     for foreign_key in foreign_keys

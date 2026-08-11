@@ -3,6 +3,7 @@
 用字面 IP 构造用例，避免依赖外部 DNS（沙箱可能把外部域名解析到 198.18 私有段）。
 显式传入 allow_private/allow_loopback，不依赖全局 settings。
 """
+
 import pytest
 
 from app.core.ssrf import assert_safe_base_url

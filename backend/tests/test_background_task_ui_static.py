@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_SRC = ROOT / "frontend" / "src"
 WRITER_ROUTER = ROOT / "backend" / "app" / "api" / "routers" / "writer.py"
@@ -30,7 +29,7 @@ def test_outline_generation_is_submitted_as_background_task():
 
 def test_chapter_edits_submit_one_unified_durable_postprocess_job():
     writer = WRITER_ROUTER.read_text(encoding="utf-8")
-    for route in ("chapters/edit\"", "chapters/edit-fast\""):
+    for route in ('chapters/edit"', 'chapters/edit-fast"'):
         block = writer.split(route, 1)[1].split("\n\n@router.", 1)[0]
         assert "background_tasks: BackgroundTasks" not in block
         assert "background_tasks.add_task(" not in block

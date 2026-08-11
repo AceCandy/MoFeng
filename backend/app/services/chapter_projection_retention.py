@@ -24,7 +24,6 @@ from ..schemas.chapter_projection import (
     ChapterProjectionRetentionResponse,
 )
 
-
 RetentionMode = Literal["preview", "purge"]
 
 
@@ -69,10 +68,14 @@ class ChapterProjectionRetentionService:
             raise ValueError("不支持的章节投影 retention 模式")
 
         operator = (
-            await self.session.execute(
-                select(User).where(User.id == operator_user_id).with_for_update()
+            (
+                await self.session.execute(
+                    select(User).where(User.id == operator_user_id).with_for_update()
+                )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if operator is None:
             raise ChapterProjectionRetentionNotFoundError("operator_not_found")
         if not operator.is_admin or not operator.is_active:
@@ -91,46 +94,57 @@ class ChapterProjectionRetentionService:
             return response
 
         chapter = (
-            await self.session.execute(
-                select(Chapter)
-                .where(
-                    Chapter.project_id == request.project_id,
-                    Chapter.chapter_number == request.chapter_number,
+            (
+                await self.session.execute(
+                    select(Chapter)
+                    .where(
+                        Chapter.project_id == request.project_id,
+                        Chapter.chapter_number == request.chapter_number,
+                    )
+                    .with_for_update()
                 )
-                .with_for_update()
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         revision = (
-            await self.session.execute(
-                select(ChapterRevision)
-                .where(
-                    ChapterRevision.project_id == request.project_id,
-                    ChapterRevision.chapter_number == request.chapter_number,
-                    ChapterRevision.revision == request.revision,
+            (
+                await self.session.execute(
+                    select(ChapterRevision)
+                    .where(
+                        ChapterRevision.project_id == request.project_id,
+                        ChapterRevision.chapter_number == request.chapter_number,
+                        ChapterRevision.revision == request.revision,
+                    )
+                    .with_for_update()
                 )
-                .with_for_update()
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if revision is None:
             await self.session.rollback()
             raise ChapterProjectionRetentionNotFoundError("revision_not_found")
 
         projection_name = "rag" if request.artifact_kind == "rag" else "foreshadowing"
         runs = (
-            await self.session.execute(
-                select(ChapterProjectionRun)
-                .where(
-                    ChapterProjectionRun.chapter_revision_id == revision.id,
-                    ChapterProjectionRun.project_id == request.project_id,
-                    ChapterProjectionRun.revision == request.revision,
-                    ChapterProjectionRun.projection_name == projection_name,
-                    ChapterProjectionRun.artifact_generation
-                    == request.artifact_generation,
+            (
+                await self.session.execute(
+                    select(ChapterProjectionRun)
+                    .where(
+                        ChapterProjectionRun.chapter_revision_id == revision.id,
+                        ChapterProjectionRun.project_id == request.project_id,
+                        ChapterProjectionRun.revision == request.revision,
+                        ChapterProjectionRun.projection_name == projection_name,
+                        ChapterProjectionRun.artifact_generation == request.artifact_generation,
+                    )
+                    .order_by(ChapterProjectionRun.id)
+                    .with_for_update()
                 )
-                .order_by(ChapterProjectionRun.id)
-                .with_for_update()
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         candidate_ids, active_count = await self._load_artifacts(request)
         candidate_rows = {name: len(ids) for name, ids in candidate_ids.items()}
         candidate_total = sum(candidate_rows.values())
@@ -244,14 +258,18 @@ class ChapterProjectionRetentionService:
                 Foreshadowing.is_manual.is_(False),
             )
             ids = (
-                await self.session.execute(
-                    select(Foreshadowing.id)
-                    .where(*base_filters, Foreshadowing.is_active.is_(False))
-                    .order_by(Foreshadowing.id)
-                    .limit(request.max_rows + 1)
-                    .with_for_update()
+                (
+                    await self.session.execute(
+                        select(Foreshadowing.id)
+                        .where(*base_filters, Foreshadowing.is_active.is_(False))
+                        .order_by(Foreshadowing.id)
+                        .limit(request.max_rows + 1)
+                        .with_for_update()
+                    )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             active_count = int(
                 await self.session.scalar(
                     select(func.count(Foreshadowing.id)).where(
@@ -273,14 +291,18 @@ class ChapterProjectionRetentionService:
                 model.artifact_generation == common["artifact_generation"],
             )
             ids = (
-                await self.session.execute(
-                    select(model.id)
-                    .where(*base_filters, model.is_active.is_(False))
-                    .order_by(model.id)
-                    .limit(request.max_rows + 1)
-                    .with_for_update()
+                (
+                    await self.session.execute(
+                        select(model.id)
+                        .where(*base_filters, model.is_active.is_(False))
+                        .order_by(model.id)
+                        .limit(request.max_rows + 1)
+                        .with_for_update()
+                    )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             active_count += int(
                 await self.session.scalar(
                     select(func.count(model.id)).where(
@@ -344,34 +366,40 @@ class ChapterProjectionRetentionService:
         idempotency_key: str,
     ) -> ChapterProjectionRetentionAudit | None:
         return (
-            await self.session.execute(
-                select(ChapterProjectionRetentionAudit).where(
-                    ChapterProjectionRetentionAudit.operator_user_id == operator_user_id,
-                    ChapterProjectionRetentionAudit.idempotency_key == idempotency_key,
+            (
+                await self.session.execute(
+                    select(ChapterProjectionRetentionAudit).where(
+                        ChapterProjectionRetentionAudit.operator_user_id == operator_user_id,
+                        ChapterProjectionRetentionAudit.idempotency_key == idempotency_key,
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
 
     async def _find_completed_target(
         self,
         request: ChapterProjectionRetentionRequest,
     ) -> ChapterProjectionRetentionAudit | None:
         return (
-            await self.session.execute(
-                select(ChapterProjectionRetentionAudit).where(
-                    ChapterProjectionRetentionAudit.project_id == request.project_id,
-                    ChapterProjectionRetentionAudit.chapter_number
-                    == request.chapter_number,
-                    ChapterProjectionRetentionAudit.revision == request.revision,
-                    ChapterProjectionRetentionAudit.artifact_generation
-                    == request.artifact_generation,
-                    ChapterProjectionRetentionAudit.artifact_kind
-                    == request.artifact_kind,
-                    ChapterProjectionRetentionAudit.mode == "purge",
-                    ChapterProjectionRetentionAudit.status == "completed",
+            (
+                await self.session.execute(
+                    select(ChapterProjectionRetentionAudit).where(
+                        ChapterProjectionRetentionAudit.project_id == request.project_id,
+                        ChapterProjectionRetentionAudit.chapter_number == request.chapter_number,
+                        ChapterProjectionRetentionAudit.revision == request.revision,
+                        ChapterProjectionRetentionAudit.artifact_generation
+                        == request.artifact_generation,
+                        ChapterProjectionRetentionAudit.artifact_kind == request.artifact_kind,
+                        ChapterProjectionRetentionAudit.mode == "purge",
+                        ChapterProjectionRetentionAudit.status == "completed",
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
 
     @staticmethod
     def _existing_response(
@@ -391,9 +419,7 @@ class ChapterProjectionRetentionService:
             return
         if response.reason_code == "rate_limit_exceeded":
             raise ChapterProjectionRetentionRateLimitError(response.reason_code)
-        raise ChapterProjectionRetentionConflictError(
-            response.reason_code or "retention_rejected"
-        )
+        raise ChapterProjectionRetentionConflictError(response.reason_code or "retention_rejected")
 
 
 __all__ = [

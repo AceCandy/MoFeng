@@ -3,6 +3,7 @@ Writer 人格服务
 
 提供 Writer 人格的 CRUD 操作和风格注入功能。
 """
+
 from typing import Optional, List
 import json
 
@@ -27,8 +28,7 @@ class WriterPersonaService:
         """获取项目的活跃 Writer 人格"""
         result = await self.db.execute(
             select(WriterPersona).where(
-                WriterPersona.project_id == project_id,
-                WriterPersona.is_active == True
+                WriterPersona.project_id == project_id, WriterPersona.is_active == True
             )
         )
         return result.scalar_one_or_none()
@@ -42,19 +42,17 @@ class WriterPersonaService:
 
     async def get_persona_by_id(self, persona_id: int) -> Optional[WriterPersona]:
         """根据 ID 获取 Writer 人格"""
-        result = await self.db.execute(
-            select(WriterPersona).where(WriterPersona.id == persona_id)
-        )
+        result = await self.db.execute(select(WriterPersona).where(WriterPersona.id == persona_id))
         return result.scalar_one_or_none()
 
     async def create_persona(self, project_id: str, data: dict) -> WriterPersona:
         """创建 Writer 人格"""
         persona = WriterPersona(project_id=project_id)
-        
+
         for key, value in data.items():
             if hasattr(persona, key):
                 setattr(persona, key, value)
-        
+
         self.db.add(persona)
         await self.db.commit()
         await self.db.refresh(persona)
@@ -73,11 +71,11 @@ class WriterPersonaService:
         persona = await self.get_persona_by_id(persona_id)
         if persona is None:
             return None
-        
+
         for key, value in data.items():
             if hasattr(persona, key):
                 setattr(persona, key, value)
-        
+
         await self.db.commit()
         await self.db.refresh(persona)
         return persona
@@ -91,12 +89,12 @@ class WriterPersonaService:
         personas = result.scalars().all()
         for p in personas:
             p.is_active = False
-        
+
         # 设置指定人格为活跃
         persona = await self.get_persona_by_id(persona_id)
         if persona is None or persona.project_id != project_id:
             return False
-        
+
         persona.is_active = True
         await self.db.commit()
         return True
@@ -119,21 +117,23 @@ class WriterPersonaService:
         base_hints = [
             "情绪更细腻，节奏更慢，多写内心戏和感官描写",
             "冲突更强，节奏更快，多写动作和对话",
-            "悬念更重，多埋伏笔，结尾钩子更强"
+            "悬念更重，多埋伏笔，结尾钩子更强",
         ]
-        
+
         hint = base_hints[version_index % len(base_hints)]
-        
+
         # 如果有人格，增加人格特定的变化
         if persona:
             if persona.catchphrases:
                 catchphrase = persona.catchphrases[version_index % len(persona.catchphrases)]
                 hint += f"，适当使用口头禅「{catchphrase}」"
-            
+
             if persona.imperfection_patterns:
-                pattern = persona.imperfection_patterns[version_index % len(persona.imperfection_patterns)]
+                pattern = persona.imperfection_patterns[
+                    version_index % len(persona.imperfection_patterns)
+                ]
                 hint += f"，体现「{pattern}」"
-        
+
         return hint
 
     async def check_style_compliance(
@@ -182,31 +182,40 @@ class WriterPersonaService:
         issues = []
 
         import re
+
         for pattern in ai_patterns:
             if re.search(pattern, chapter_content):
-                issues.append({
-                    "type": "ai_pattern",
-                    "severity": "warning",
-                    "description": f"检测到 AI 典型模式：{pattern}",
-                    "suggestion": "请使用更自然的表达方式"
-                })
-        
+                issues.append(
+                    {
+                        "type": "ai_pattern",
+                        "severity": "warning",
+                        "description": f"检测到 AI 典型模式：{pattern}",
+                        "suggestion": "请使用更自然的表达方式",
+                    }
+                )
+
         # 检查口头禅使用
         if catchphrases:
             catchphrase_used = any(cp in chapter_content for cp in catchphrases)
             if not catchphrase_used:
-                issues.append({
-                    "type": "missing_catchphrase",
-                    "severity": "info",
-                    "description": "未使用任何口头禅",
-                    "suggestion": f"建议适当使用：{', '.join(catchphrases[:3])}"
-                })
-        
-        score = 100 - len([i for i in issues if i["severity"] == "warning"]) * 10 - len([i for i in issues if i["severity"] == "info"]) * 2
-        
+                issues.append(
+                    {
+                        "type": "missing_catchphrase",
+                        "severity": "info",
+                        "description": "未使用任何口头禅",
+                        "suggestion": f"建议适当使用：{', '.join(catchphrases[:3])}",
+                    }
+                )
+
+        score = (
+            100
+            - len([i for i in issues if i["severity"] == "warning"]) * 10
+            - len([i for i in issues if i["severity"] == "info"]) * 2
+        )
+
         return {
             "compliance": len([i for i in issues if i["severity"] == "warning"]) == 0,
             "score": max(0, score),
             "issues": issues,
-            "summary": f"风格检查完成，发现 {len(issues)} 个问题"
+            "summary": f"风格检查完成，发现 {len(issues)} 个问题",
         }

@@ -126,7 +126,9 @@ class ChapterIngestionService:
         """只执行文本切分与 embedding，不写数据库。"""
 
         if not settings.vector_store_enabled:
-            logger.warning("向量库未启用，跳过章节向量写入: project=%s chapter=%s", project_id, chapter_number)
+            logger.warning(
+                "向量库未启用，跳过章节向量写入: project=%s chapter=%s", project_id, chapter_number
+            )
             return PreparedChapterIngestion(False, True, [], [])
 
         async def embed(text: str) -> List[float]:
@@ -283,9 +285,15 @@ class ChapterIngestionService:
         separators = [
             "\n\n",
             "\n",
-            "。", "！", "？",
-            "!", "?", "；", ";",
-            "，", ",",
+            "。",
+            "！",
+            "？",
+            "!",
+            "?",
+            "；",
+            ";",
+            "，",
+            ",",
             " ",
         ]
         splitter = RecursiveCharacterTextSplitter(

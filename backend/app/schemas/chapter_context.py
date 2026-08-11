@@ -9,7 +9,6 @@ from typing import Any, Dict, Generic, List, Optional, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-
 CHAPTER_CONTEXT_SCHEMA_VERSION = "chapter-context.v1"
 SOURCE_REVISION_SCHEMA_VERSION = "chapter-source-revision.v1"
 MISSING_REVISION = "missing"

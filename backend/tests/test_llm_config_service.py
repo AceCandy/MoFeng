@@ -21,7 +21,9 @@ async def test_mask_api_key_keeps_only_suffix():
 async def test_pick_default_model_requires_capability():
     service = LLMConfigService(AsyncMock())
     models = [
-        SimpleNamespace(id=1, model_name="embed", capabilities_json={"embedding": True}, is_enabled=True),
+        SimpleNamespace(
+            id=1, model_name="embed", capabilities_json={"embedding": True}, is_enabled=True
+        ),
         SimpleNamespace(id=2, model_name="chat", capabilities_json={"chat": True}, is_enabled=True),
     ]
 
@@ -162,9 +164,7 @@ async def test_upsert_stage_routes_rejects_disabled_model():
     with pytest.raises(ValueError) as exc_info:
         await service.upsert_stage_routes(
             7,
-            SimpleNamespace(
-                routes=[SimpleNamespace(stage="chapter_writing", model_id=10)]
-            ),
+            SimpleNamespace(routes=[SimpleNamespace(stage="chapter_writing", model_id=10)]),
         )
 
     assert "disabled" in str(exc_info.value)
@@ -187,9 +187,7 @@ async def test_upsert_stage_routes_rejects_disabled_provider():
     with pytest.raises(ValueError) as exc_info:
         await service.upsert_stage_routes(
             7,
-            SimpleNamespace(
-                routes=[SimpleNamespace(stage="chapter_writing", model_id=10)]
-            ),
+            SimpleNamespace(routes=[SimpleNamespace(stage="chapter_writing", model_id=10)]),
         )
 
     assert "provider disabled" in str(exc_info.value)

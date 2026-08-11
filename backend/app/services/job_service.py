@@ -3788,9 +3788,7 @@ class JobService:
                 delete(ChapterVersion).where(ChapterVersion.id.in_(cancelled_version_ids))
             )
         await self.session.execute(
-            delete(ChapterGenerationTrace).where(
-                ChapterGenerationTrace.source_run_id == run.id
-            )
+            delete(ChapterGenerationTrace).where(ChapterGenerationTrace.source_run_id == run.id)
         )
 
         if chapter.selected_version_id is None and int(chapter.current_revision or 0) == 0:

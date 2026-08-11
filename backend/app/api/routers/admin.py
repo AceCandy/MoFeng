@@ -36,6 +36,7 @@ from ...services.novel_service import NovelService
 from ...services.prompt_service import PromptService
 from ...services.update_log_service import UpdateLogService
 from ...services.user_service import UserService
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
@@ -74,8 +75,12 @@ async def read_statistics(
     user_count = await session.scalar(select(func.count(User.id))) or 0
     usage = await session.get(UsageMetric, "api_request_count")
     api_request_count = usage.value if usage else 0
-    logger.info("管理员获取统计数据：小说=%s，用户=%s，请求=%s", novel_count, user_count, api_request_count)
-    return Statistics(novel_count=novel_count, user_count=user_count, api_request_count=api_request_count)
+    logger.info(
+        "管理员获取统计数据：小说=%s，用户=%s，请求=%s", novel_count, user_count, api_request_count
+    )
+    return Statistics(
+        novel_count=novel_count, user_count=user_count, api_request_count=api_request_count
+    )
 
 
 @router.get("/users", response_model=List[UserSchema])
@@ -125,7 +130,7 @@ async def update_user(
         user = await service.update_user_admin(user_id, payload)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-        
+
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
     logger.info("管理员 %s 更新用户：%s", current_admin.username, user_id)
@@ -380,5 +385,7 @@ async def change_password(
     current_admin=Depends(get_current_admin),
     service: AuthService = Depends(get_auth_service),
 ) -> None:
-    await service.change_password(current_admin.username, payload.old_password, payload.new_password)
+    await service.change_password(
+        current_admin.username, payload.old_password, payload.new_password
+    )
     logger.info("管理员 %s 修改密码", current_admin.username)

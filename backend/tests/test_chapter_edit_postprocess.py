@@ -17,7 +17,6 @@ from app.services.job_worker import JobExecutionContext, JobWorker
 from app.services.llm_service import LLMService
 from app.services.prompt_service import PromptService
 
-
 CONTENT_WITH_CLUE = "那枚神秘徽章隐藏着他的身份秘密，真相显得格外蹊跷又不对劲。"
 
 
@@ -150,8 +149,10 @@ async def test_postprocess_applies_summary_vectors_and_foreshadowing_atomically(
             )
         ).scalar_one()
         activities = (
-            await session.execute(select(JobActivity).where(JobActivity.job_id == job_id))
-        ).scalars().all()
+            (await session.execute(select(JobActivity).where(JobActivity.job_id == job_id)))
+            .scalars()
+            .all()
+        )
 
     assert job is not None
     assert job.status == "succeeded"
@@ -200,7 +201,9 @@ async def test_postprocess_stops_when_content_changes_after_llm(
     summary_call = AsyncMock(side_effect=edit_during_summary)
     embedding_call = AsyncMock(return_value=[0.1, 0.2, 0.3])
     monkeypatch.setattr(LLMService, "get_summary_detached", summary_call)
-    monkeypatch.setattr(LLMService, "get_llm_response_detached", AsyncMock(return_value='{"items":[]}'))
+    monkeypatch.setattr(
+        LLMService, "get_llm_response_detached", AsyncMock(return_value='{"items":[]}')
+    )
     monkeypatch.setattr(LLMService, "get_embedding_detached", embedding_call)
     worker = JobWorker(
         session_factory=db_session_factory,
@@ -220,10 +223,14 @@ async def test_postprocess_stops_when_content_changes_after_llm(
             )
         ).scalar_one()
         chunks = (
-            await session.execute(
-                select(RagChunk).where(RagChunk.project_id == "postprocess-stale-after-llm")
+            (
+                await session.execute(
+                    select(RagChunk).where(RagChunk.project_id == "postprocess-stale-after-llm")
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
     assert job is not None
     assert job.status == "succeeded"
@@ -285,15 +292,23 @@ async def test_final_outcome_cas_rejects_content_changed_after_compute(
             )
         ).scalar_one()
         chunks = (
-            await session.execute(
-                select(RagChunk).where(RagChunk.project_id == "postprocess-final-cas")
+            (
+                await session.execute(
+                    select(RagChunk).where(RagChunk.project_id == "postprocess-final-cas")
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         foreshadowings = (
-            await session.execute(
-                select(Foreshadowing).where(Foreshadowing.project_id == "postprocess-final-cas")
+            (
+                await session.execute(
+                    select(Foreshadowing).where(Foreshadowing.project_id == "postprocess-final-cas")
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
     assert job is not None
     assert job.status == "succeeded"

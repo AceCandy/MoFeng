@@ -99,7 +99,9 @@ def _build_context(*, created_at: datetime) -> ChapterContext:
             ContextSource.PROJECT_MEMORY,
             "projection:4",
         ),
-        constitution=_section("第三人称有限视角", ContextSource.NOVEL_CONSTITUTION, "constitution-1"),
+        constitution=_section(
+            "第三人称有限视角", ContextSource.NOVEL_CONSTITUTION, "constitution-1"
+        ),
         writer_persona=_section(
             WriterPersonaContext(prompt_context="语言简洁", name="冷笔"),
             ContextSource.WRITER_PERSONA,
@@ -381,9 +383,7 @@ def test_legacy_writer_shadow_mapping_is_independent(monkeypatch) -> None:
     context = _build_context(created_at=datetime.now(timezone.utc))
 
     def fail_if_called(_context):
-        raise AssertionError(
-            "legacy shadow mapping must not call the canonical review adapter"
-        )
+        raise AssertionError("legacy shadow mapping must not call the canonical review adapter")
 
     monkeypatch.setattr(ReviewContextAdapter, "to_prompt_context", fail_if_called)
 

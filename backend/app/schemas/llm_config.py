@@ -4,7 +4,6 @@ from typing import Annotated, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, HttpUrl, StringConstraints, model_validator
 
-
 ProviderType = Literal["openai_compatible", "anthropic", "ollama", "custom"]
 TTSProtocol = Literal["mimo_chat_audio", "openai_speech"]
 PricePerMillion = Annotated[

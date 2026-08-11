@@ -110,7 +110,9 @@ async def test_bootstrap_is_versioned_idempotent_and_preserves_user_values(
             registration_value = await session.scalar(
                 select(SystemConfig.value).where(SystemConfig.key == "auth.allow_registration")
             )
-            prompt_content = await session.scalar(select(Prompt.content).where(Prompt.name == "sample"))
+            prompt_content = await session.scalar(
+                select(Prompt.content).where(Prompt.name == "sample")
+            )
             legacy_config = await session.get(SystemConfig, "updates.version_check_url")
             legacy_prompt = await session.scalar(
                 select(Prompt).where(Prompt.name == "character_dna_guide")
@@ -182,7 +184,9 @@ async def test_completed_bootstrap_checksum_drift_fails_closed(tmp_path: Path) -
             await session.commit()
 
         with pytest.raises(BootstrapContractError, match="checksum"):
-            await run_bootstrap(session_factory=session_factory, config=config, prompts_dir=tmp_path)
+            await run_bootstrap(
+                session_factory=session_factory, config=config, prompts_dir=tmp_path
+            )
     finally:
         await engine.dispose()
 

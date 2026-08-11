@@ -13,7 +13,6 @@ from app.services.chapter_context_resolver import (
 )
 from app.services.knowledge_retrieval_service import KnowledgeRetrievalService
 
-
 NOW = datetime(2026, 7, 27, tzinfo=timezone.utc)
 
 
@@ -313,9 +312,7 @@ async def test_projection_content_changes_section_revision_and_hash_only() -> No
 async def test_equivalent_revision_timezones_have_the_same_source_revision() -> None:
     first_sources = _sources()
     second_sources = _sources()
-    second_sources.project.blueprint.updated_at = NOW.astimezone(
-        timezone(timedelta(hours=8))
-    )
+    second_sources.project.blueprint.updated_at = NOW.astimezone(timezone(timedelta(hours=8)))
     second_sources.project.chapters[0].selected_version.created_at = NOW.astimezone(
         timezone(timedelta(hours=-5))
     )

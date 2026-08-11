@@ -29,7 +29,9 @@ from app.services.novel_service import NovelService
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_delete_chapters_allows_draft_outlines_and_latest_completed_chapter_only(db_session_factory) -> None:
+async def test_delete_chapters_allows_draft_outlines_and_latest_completed_chapter_only(
+    db_session_factory,
+) -> None:
     async with db_session_factory() as session:
         project_id = "project-delete-policy"
         session.add(User(id=1, username="writer", hashed_password="secret"))
@@ -52,7 +54,11 @@ async def test_delete_chapters_allows_draft_outlines_and_latest_completed_chapte
         session.add(version)
         await session.flush()
         latest_completed.selected_version_id = version.id
-        session.add(ChapterEvaluation(chapter_id=latest_completed.id, version_id=version.id, feedback="评审"))
+        session.add(
+            ChapterEvaluation(
+                chapter_id=latest_completed.id, version_id=version.id, feedback="评审"
+            )
+        )
         session.add(
             ChapterGenerationTrace(
                 chapter_id=latest_completed.id,
@@ -79,17 +85,29 @@ async def test_delete_chapters_allows_draft_outlines_and_latest_completed_chapte
             confirmation_text="删除第2章及全部产物",
         )
 
-        assert not (
-            await session.execute(select(Chapter).where(Chapter.project_id == project_id, Chapter.chapter_number == 2))
-        ).scalars().first()
-        assert not (
-            await session.execute(
-                select(ChapterOutline).where(
-                    ChapterOutline.project_id == project_id,
-                    ChapterOutline.chapter_number == 2,
+        assert (
+            not (
+                await session.execute(
+                    select(Chapter).where(
+                        Chapter.project_id == project_id, Chapter.chapter_number == 2
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
+        assert (
+            not (
+                await session.execute(
+                    select(ChapterOutline).where(
+                        ChapterOutline.project_id == project_id,
+                        ChapterOutline.chapter_number == 2,
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
         assert (await session.execute(select(ChapterVersion))).scalars().all() == []
         assert (await session.execute(select(ChapterEvaluation))).scalars().all() == []
         assert (await session.execute(select(ChapterGenerationTrace))).scalars().all() == []
@@ -111,7 +129,9 @@ async def test_delete_chapters_allows_draft_outlines_and_latest_completed_chapte
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_delete_chapters_rejects_middle_outline_deletion_that_leaves_gap(db_session_factory) -> None:
+async def test_delete_chapters_rejects_middle_outline_deletion_that_leaves_gap(
+    db_session_factory,
+) -> None:
 
     async with db_session_factory() as session:
         project_id = "project-delete-middle-outline"
@@ -138,7 +158,9 @@ async def test_delete_chapters_rejects_middle_outline_deletion_that_leaves_gap(d
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_delete_latest_completed_chapter_requires_confirmation_flag_not_confirmation_text(db_session_factory) -> None:
+async def test_delete_latest_completed_chapter_requires_confirmation_flag_not_confirmation_text(
+    db_session_factory,
+) -> None:
 
     async with db_session_factory() as session:
         project_id = "project-delete-confirmation"
@@ -175,13 +197,23 @@ async def test_delete_latest_completed_chapter_requires_confirmation_flag_not_co
             delete_artifacts_confirmed=True,
             confirmation_text="旧版确认文本",
         )
-        assert not (
-            await session.execute(select(Chapter).where(Chapter.project_id == project_id, Chapter.chapter_number == 2))
-        ).scalars().first()
+        assert (
+            not (
+                await session.execute(
+                    select(Chapter).where(
+                        Chapter.project_id == project_id, Chapter.chapter_number == 2
+                    )
+                )
+            )
+            .scalars()
+            .first()
+        )
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_delete_latest_completed_chapter_removes_finalization_artifacts_and_restores_memory(db_session_factory) -> None:
+async def test_delete_latest_completed_chapter_removes_finalization_artifacts_and_restores_memory(
+    db_session_factory,
+) -> None:
     async with db_session_factory() as session:
         project_id = "project-delete-artifacts"
         session.add(User(id=1, username="writer", hashed_password="secret"))
@@ -207,7 +239,11 @@ async def test_delete_latest_completed_chapter_removes_finalization_artifacts_an
         first_chapter.selected_version_id = first_version.id
         latest_completed.selected_version_id = second_version.id
 
-        session.add(ProjectMemory(project_id=project_id, global_summary="第二章后的全局记忆", last_updated_chapter=2))
+        session.add(
+            ProjectMemory(
+                project_id=project_id, global_summary="第二章后的全局记忆", last_updated_chapter=2
+            )
+        )
         session.add(
             ChapterSnapshot(
                 project_id=project_id,
@@ -229,10 +265,14 @@ async def test_delete_latest_completed_chapter_removes_finalization_artifacts_an
         session.add(BlueprintCharacter(project_id=project_id, name="主角", position=1))
         await session.flush()
         bp_character = (
-            await session.execute(
-                select(BlueprintCharacter).where(BlueprintCharacter.project_id == project_id)
+            (
+                await session.execute(
+                    select(BlueprintCharacter).where(BlueprintCharacter.project_id == project_id)
+                )
             )
-        ).scalars().one()
+            .scalars()
+            .one()
+        )
         session.add(
             CharacterState(
                 id=1,
@@ -281,15 +321,23 @@ async def test_delete_latest_completed_chapter_removes_finalization_artifacts_an
         )
 
         deleted_snapshot = (
-            await session.execute(
-                select(ChapterSnapshot).where(ChapterSnapshot.chapter_number == 2)
+            (
+                await session.execute(
+                    select(ChapterSnapshot).where(ChapterSnapshot.chapter_number == 2)
+                )
             )
-        ).scalars().one()
+            .scalars()
+            .one()
+        )
         deleted_state = (
-            await session.execute(
-                select(CharacterState).where(CharacterState.chapter_number == 2)
+            (
+                await session.execute(
+                    select(CharacterState).where(CharacterState.chapter_number == 2)
+                )
             )
-        ).scalars().one()
+            .scalars()
+            .one()
+        )
         retained_foreshadowings = {
             item.content: item
             for item in (await session.execute(select(Foreshadowing))).scalars().all()
@@ -303,8 +351,14 @@ async def test_delete_latest_completed_chapter_removes_finalization_artifacts_an
         assert len((await session.execute(select(ForeshadowingStatusHistory))).scalars().all()) == 1
 
         memory = (
-            await session.execute(select(ProjectMemory).where(ProjectMemory.project_id == project_id))
-        ).scalars().one()
+            (
+                await session.execute(
+                    select(ProjectMemory).where(ProjectMemory.project_id == project_id)
+                )
+            )
+            .scalars()
+            .one()
+        )
         assert memory.last_updated_chapter == 1
         assert memory.global_summary == "第一章后的全局记忆"
 
@@ -340,13 +394,19 @@ async def test_tombstone_transaction_rollback_preserves_visibility(db_session_fa
 
     async with db_session_factory() as session:
         chapter = (
-            await session.execute(select(Chapter).where(Chapter.project_id == project_id))
-        ).scalars().one()
+            (await session.execute(select(Chapter).where(Chapter.project_id == project_id)))
+            .scalars()
+            .one()
+        )
         snapshot = (
-            await session.execute(
-                select(ChapterSnapshot).where(ChapterSnapshot.project_id == project_id)
+            (
+                await session.execute(
+                    select(ChapterSnapshot).where(ChapterSnapshot.project_id == project_id)
+                )
             )
-        ).scalars().one()
+            .scalars()
+            .one()
+        )
         assert chapter.current_revision == 0
         assert chapter.tombstone_revision == 0
         assert snapshot.is_active is True
@@ -373,8 +433,12 @@ async def test_delete_completed_chapter_increments_memory_version(db_session_fac
                 version=5,
             )
         )
-        session.add(ChapterOutline(project_id=project_id, chapter_number=1, title="第1章", summary=""))
-        session.add(ChapterOutline(project_id=project_id, chapter_number=2, title="第2章", summary=""))
+        session.add(
+            ChapterOutline(project_id=project_id, chapter_number=1, title="第1章", summary="")
+        )
+        session.add(
+            ChapterOutline(project_id=project_id, chapter_number=2, title="第2章", summary="")
+        )
         session.add(Chapter(project_id=project_id, chapter_number=1, status="successful"))
         ch2 = Chapter(project_id=project_id, chapter_number=2, status="successful")
         session.add(ch2)
@@ -414,10 +478,14 @@ async def test_delete_completed_chapter_increments_memory_version(db_session_fac
         )
 
         memory = (
-            await session.execute(
-                select(ProjectMemory).where(ProjectMemory.project_id == project_id)
+            (
+                await session.execute(
+                    select(ProjectMemory).where(ProjectMemory.project_id == project_id)
+                )
             )
-        ).scalars().one()
+            .scalars()
+            .one()
+        )
         assert memory.version == 6  # 5 + 1
         assert memory.global_summary == "第一章摘要"
         assert memory.last_updated_chapter == 1
@@ -453,10 +521,14 @@ async def test_deleted_chapter_tombstone_worker_completes_typed_run(db_session_f
             delete_artifacts_confirmed=True,
         )
         dispatcher = (
-            await session.execute(
-                select(BackgroundTask).where(BackgroundTask.project_id == project_id)
+            (
+                await session.execute(
+                    select(BackgroundTask).where(BackgroundTask.project_id == project_id)
+                )
             )
-        ).scalars().one()
+            .scalars()
+            .one()
+        )
         dispatcher_id = dispatcher.id
 
     worker = JobWorker(
@@ -481,12 +553,16 @@ async def test_deleted_chapter_tombstone_worker_completes_typed_run(db_session_f
         dispatcher = await JobService(session).get_job(dispatcher_id)
         job = await JobService(session).get_job(tombstone_job_id)
         run = (
-            await session.execute(
-                select(ChapterProjectionRun).where(
-                    ChapterProjectionRun.job_id == tombstone_job_id
+            (
+                await session.execute(
+                    select(ChapterProjectionRun).where(
+                        ChapterProjectionRun.job_id == tombstone_job_id
+                    )
                 )
             )
-        ).scalars().one()
+            .scalars()
+            .one()
+        )
         assert dispatcher is not None
         assert dispatcher.result["job_ids"] == [tombstone_job_id]
         assert job is not None and job.status == "succeeded"

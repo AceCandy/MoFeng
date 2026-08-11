@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 FRONTEND_SRC = Path(__file__).resolve().parents[2] / "frontend" / "src"
 
 
@@ -17,9 +16,9 @@ def test_admin_tab_switch_regression_keeps_panel_renderable():
 
     # 移除 hover/focus 预取，避免在频繁切换时提前触发动态导入失败并污染模块状态。
     for removed in [
-        "@mouseenter=\"prefetchSection(",
-        "@focus=\"prefetchSection(",
-        "@touchstart.passive=\"prefetchSection(",
+        '@mouseenter="prefetchSection(',
+        '@focus="prefetchSection(',
+        '@touchstart.passive="prefetchSection(',
         "const componentLoaders:",
         "const prefetchedSections",
         "const prefetchInFlight",

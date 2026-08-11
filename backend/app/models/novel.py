@@ -4,7 +4,19 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import JSON, BigInteger, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func, text
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db.base import Base
@@ -32,12 +44,16 @@ class NovelProject(Base):
     __tablename__ = "novel_projects"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     initial_prompt: Mapped[Optional[str]] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(32), default="draft")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     owner: Mapped["User"] = relationship("User", back_populates="novel_projects")
     blueprint: Mapped[Optional["NovelBlueprint"]] = relationship(
@@ -47,13 +63,19 @@ class NovelProject(Base):
         back_populates="project", cascade="all, delete-orphan", order_by="NovelConversation.seq"
     )
     characters: Mapped[list["BlueprintCharacter"]] = relationship(
-        back_populates="project", cascade="all, delete-orphan", order_by="BlueprintCharacter.position"
+        back_populates="project",
+        cascade="all, delete-orphan",
+        order_by="BlueprintCharacter.position",
     )
     relationships_: Mapped[list["BlueprintRelationship"]] = relationship(
-        back_populates="project", cascade="all, delete-orphan", order_by="BlueprintRelationship.position"
+        back_populates="project",
+        cascade="all, delete-orphan",
+        order_by="BlueprintRelationship.position",
     )
     outlines: Mapped[list["ChapterOutline"]] = relationship(
-        back_populates="project", cascade="all, delete-orphan", order_by="ChapterOutline.chapter_number"
+        back_populates="project",
+        cascade="all, delete-orphan",
+        order_by="ChapterOutline.chapter_number",
     )
     chapters: Mapped[list["Chapter"]] = relationship(
         back_populates="project", cascade="all, delete-orphan", order_by="Chapter.chapter_number"
@@ -66,7 +88,9 @@ class NovelConversation(Base):
     __tablename__ = "novel_conversations"
 
     id: Mapped[int] = mapped_column(BIGINT_PK_TYPE, primary_key=True, autoincrement=True)
-    project_id: Mapped[str] = mapped_column(ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     seq: Mapped[int] = mapped_column(Integer, nullable=False)
     role: Mapped[str] = mapped_column(String(32), nullable=False)
     content: Mapped[str] = mapped_column(LONG_TEXT_TYPE, nullable=False)
@@ -94,7 +118,9 @@ class NovelBlueprint(Base):
     full_synopsis: Mapped[Optional[str]] = mapped_column(LONG_TEXT_TYPE)
     world_setting: Mapped[Optional[dict]] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     project: Mapped[NovelProject] = relationship(back_populates="blueprint")
 
@@ -105,7 +131,9 @@ class BlueprintCharacter(Base):
     __tablename__ = "blueprint_characters"
 
     id: Mapped[int] = mapped_column(BIGINT_PK_TYPE, primary_key=True, autoincrement=True)
-    project_id: Mapped[str] = mapped_column(ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     identity: Mapped[Optional[str]] = mapped_column(String(255))
     personality: Mapped[Optional[str]] = mapped_column(Text)
@@ -124,7 +152,9 @@ class BlueprintRelationship(Base):
     __tablename__ = "blueprint_relationships"
 
     id: Mapped[int] = mapped_column(BIGINT_PK_TYPE, primary_key=True, autoincrement=True)
-    project_id: Mapped[str] = mapped_column(ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     character_from: Mapped[str] = mapped_column(String(255), nullable=False)
     character_to: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
@@ -139,7 +169,9 @@ class ChapterOutline(Base):
     __tablename__ = "chapter_outlines"
 
     id: Mapped[int] = mapped_column(BIGINT_PK_TYPE, primary_key=True, autoincrement=True)
-    project_id: Mapped[str] = mapped_column(ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     chapter_number: Mapped[int] = mapped_column(Integer, nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     summary: Mapped[Optional[str]] = mapped_column(Text)
@@ -161,7 +193,9 @@ class Chapter(Base):
     )
 
     id: Mapped[int] = mapped_column(BIGINT_PK_TYPE, primary_key=True, autoincrement=True)
-    project_id: Mapped[str] = mapped_column(ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False)
+    project_id: Mapped[str] = mapped_column(
+        ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False
+    )
     chapter_number: Mapped[int] = mapped_column(Integer, nullable=False)
     real_summary: Mapped[Optional[str]] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(32), default="not_generated")
@@ -171,7 +205,9 @@ class Chapter(Base):
     generation_step_total: Mapped[int] = mapped_column(Integer, default=0)
     generation_started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     word_count: Mapped[int] = mapped_column(Integer, default=0)
-    current_revision: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+    current_revision: Mapped[int] = mapped_column(
+        BigInteger, nullable=False, default=0, server_default="0"
+    )
     source_hash: Mapped[Optional[str]] = mapped_column(String(64))
     required_projection_snapshot: Mapped[list[str]] = mapped_column(
         JSON,
@@ -180,12 +216,16 @@ class Chapter(Base):
         server_default=text("'[]'::json"),
     )
     projection_generation: Mapped[Optional[str]] = mapped_column(String(36))
-    tombstone_revision: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+    tombstone_revision: Mapped[int] = mapped_column(
+        BigInteger, nullable=False, default=0, server_default="0"
+    )
     selected_version_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("chapter_versions.id", ondelete="SET NULL"), nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     project: Mapped[NovelProject] = relationship(back_populates="chapters")
     versions: Mapped[list["ChapterVersion"]] = relationship(
@@ -203,7 +243,9 @@ class Chapter(Base):
         post_update=True,
     )
     evaluations: Mapped[list["ChapterEvaluation"]] = relationship(
-        back_populates="chapter", cascade="all, delete-orphan", order_by="ChapterEvaluation.created_at"
+        back_populates="chapter",
+        cascade="all, delete-orphan",
+        order_by="ChapterEvaluation.created_at",
     )
     generation_traces: Mapped[list["ChapterGenerationTrace"]] = relationship(
         "ChapterGenerationTrace",
@@ -222,7 +264,9 @@ class ChapterVersion(Base):
 
     id: Mapped[int] = mapped_column(BIGINT_PK_TYPE, primary_key=True, autoincrement=True)
     # use_alter: 与 chapters.selected_version_id 构成循环 FK，建表时延后创建避免顺序依赖
-    chapter_id: Mapped[int] = mapped_column(ForeignKey("chapters.id", ondelete="CASCADE", use_alter=True), nullable=False, index=True)
+    chapter_id: Mapped[int] = mapped_column(
+        ForeignKey("chapters.id", ondelete="CASCADE", use_alter=True), nullable=False, index=True
+    )
     version_label: Mapped[Optional[str]] = mapped_column(String(64))
     provider: Mapped[Optional[str]] = mapped_column(String(64))
     content: Mapped[str] = mapped_column(LONG_TEXT_TYPE, nullable=False)
@@ -246,8 +290,12 @@ class ChapterEvaluation(Base):
     __tablename__ = "chapter_evaluations"
 
     id: Mapped[int] = mapped_column(BIGINT_PK_TYPE, primary_key=True, autoincrement=True)
-    chapter_id: Mapped[int] = mapped_column(ForeignKey("chapters.id", ondelete="CASCADE"), nullable=False, index=True)
-    version_id: Mapped[Optional[int]] = mapped_column(ForeignKey("chapter_versions.id", ondelete="CASCADE"))
+    chapter_id: Mapped[int] = mapped_column(
+        ForeignKey("chapters.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    version_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("chapter_versions.id", ondelete="CASCADE")
+    )
     decision: Mapped[Optional[str]] = mapped_column(String(32))
     feedback: Mapped[Optional[str]] = mapped_column(Text)
     score: Mapped[Optional[float]] = mapped_column(Float)

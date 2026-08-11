@@ -1,4 +1,5 @@
 """consistency_service async 修复测试（H5）。"""
+
 import pytest
 
 from app.models import NovelProject
@@ -12,11 +13,15 @@ class FakeLLMService:
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_get_check_context_uses_async_session_without_missing_greenlet(db_session_factory) -> None:
+async def test_get_check_context_uses_async_session_without_missing_greenlet(
+    db_session_factory,
+) -> None:
     """_get_check_context 改用 async query 后不再抛 MissingGreenlet（H5）。"""
     async with db_session_factory() as session:
         session.add(User(id=1, username="writer", hashed_password="secret"))
-        session.add(NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试"))
+        session.add(
+            NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试")
+        )
         await session.commit()
 
         service = ConsistencyService(session, FakeLLMService())
@@ -31,7 +36,9 @@ async def test_check_consistency_returns_result_without_500(db_session_factory) 
     """check_consistency 端到端返回 ConsistencyCheckResult，不再因 MissingGreenlet 500（H5）。"""
     async with db_session_factory() as session:
         session.add(User(id=1, username="writer", hashed_password="secret"))
-        session.add(NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试"))
+        session.add(
+            NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试")
+        )
         await session.commit()
 
         service = ConsistencyService(session, FakeLLMService())

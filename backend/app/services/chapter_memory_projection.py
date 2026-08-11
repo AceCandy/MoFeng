@@ -27,10 +27,10 @@ async def load_memory_input(session: AsyncSession, *, project_id: str) -> dict[s
     """Read the stable inputs needed before external memory computation."""
 
     memory = (
-        await session.execute(
-            select(ProjectMemory).where(ProjectMemory.project_id == project_id)
-        )
-    ).scalars().first()
+        (await session.execute(select(ProjectMemory).where(ProjectMemory.project_id == project_id)))
+        .scalars()
+        .first()
+    )
     old_state = await FinalizeService(
         session,
         LLMService(session),
@@ -168,12 +168,16 @@ async def apply_memory_projection(
     memory = None
     if activate:
         memory = (
-            await session.execute(
-                select(ProjectMemory)
-                .where(ProjectMemory.project_id == project_id)
-                .with_for_update()
+            (
+                await session.execute(
+                    select(ProjectMemory)
+                    .where(ProjectMemory.project_id == project_id)
+                    .with_for_update()
+                )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if memory is None:
             memory = ProjectMemory(
                 project_id=project_id,

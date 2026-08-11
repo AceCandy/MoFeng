@@ -19,7 +19,6 @@ from ...services.auth_service import (
     LinuxdoOAuthStateError,
 )
 
-
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
@@ -66,14 +65,19 @@ async def read_auth_options(service: AuthService = Depends(get_auth_service)):
 
 
 @router.post("/users", response_model=User, status_code=status.HTTP_201_CREATED)
-async def register_user(payload: UserRegistration, service: AuthService = Depends(get_auth_service)):
+async def register_user(
+    payload: UserRegistration, service: AuthService = Depends(get_auth_service)
+):
     user = await service.register_user(payload)
     logger.info("注册新用户：%s", user.username)
     return User.model_validate(user)
 
 
 @router.post("/token", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), service: AuthService = Depends(get_auth_service)):
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    service: AuthService = Depends(get_auth_service),
+):
     user = await service.authenticate_user(form_data.username, form_data.password)
     must_change_password = service.requires_password_reset(user)
     token = await service.create_access_token(user, must_change_password=must_change_password)

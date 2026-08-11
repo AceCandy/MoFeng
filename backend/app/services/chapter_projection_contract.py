@@ -11,7 +11,6 @@ from pydantic import ValidationError
 
 from ..schemas.job import ChapterFinalizeOutboxPayload
 
-
 FINALIZE_EVENT_TYPE = "ChapterFinalizationRequested"
 OUTBOX_EVENT_VERSION = 2
 SUPPORTED_EVENT_TYPES = (
@@ -65,10 +64,7 @@ def validate_finalize_outbox_event(
 ]:
     """统一校验 finalize outbox 的版本、指纹和 envelope/payload identity。"""
 
-    if (
-        event.event_type != FINALIZE_EVENT_TYPE
-        or event.event_version != OUTBOX_EVENT_VERSION
-    ):
+    if event.event_type != FINALIZE_EVENT_TYPE or event.event_version != OUTBOX_EVENT_VERSION:
         return None, "event_contract_mismatch"
     if not isinstance(event.payload, dict):
         return None, "invalid_payload"

@@ -55,9 +55,7 @@ async def test_model_pricing_round_trips_through_create_and_update_service() -> 
         model.id = 10
         return model
 
-    service.provider_repo = SimpleNamespace(
-        get_owned=AsyncMock(return_value=SimpleNamespace(id=3))
-    )
+    service.provider_repo = SimpleNamespace(get_owned=AsyncMock(return_value=SimpleNamespace(id=3)))
     service.model_repo = SimpleNamespace(
         add=add_model,
         lock_user_configuration=AsyncMock(),

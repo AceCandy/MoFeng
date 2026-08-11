@@ -41,14 +41,18 @@ class ConfigService:
         normalized_value = self._normalize_config_value(payload.key, payload.value)
         instance = await self.repo.get_by_key(payload.key)
         if instance:
-            await self.repo.update_fields(instance, value=normalized_value, description=payload.description)
+            await self.repo.update_fields(
+                instance, value=normalized_value, description=payload.description
+            )
         else:
             instance = SystemConfig(**payload.model_dump(update={"value": normalized_value}))
             await self.repo.add(instance)
         await self.session.commit()
         return SystemConfigRead.model_validate(instance)
 
-    async def patch_config(self, key: str, payload: SystemConfigUpdate) -> Optional[SystemConfigRead]:
+    async def patch_config(
+        self, key: str, payload: SystemConfigUpdate
+    ) -> Optional[SystemConfigRead]:
         instance = await self.repo.get_by_key(key)
         if not instance:
             return None

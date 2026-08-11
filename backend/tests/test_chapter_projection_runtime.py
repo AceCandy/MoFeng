@@ -45,12 +45,8 @@ def test_derived_projection_identity_is_stable_and_dependency_scoped() -> None:
 
     first = _derived_projection_id(**inputs)
     assert _derived_projection_id(**inputs) == first
-    assert _derived_projection_id(
-        **{**inputs, "dependency_run_id": _uuid()}
-    ) != first
-    assert _derived_projection_id(
-        **{**inputs, "projection_name": "foreshadowing"}
-    ) != first
+    assert _derived_projection_id(**{**inputs, "dependency_run_id": _uuid()}) != first
+    assert _derived_projection_id(**{**inputs, "projection_name": "foreshadowing"}) != first
     assert _derived_projection_id(**{**inputs, "identity": "artifact"}) != first
 
 
@@ -576,14 +572,18 @@ async def test_vector_activation_requires_current_canonical_identity(
                 await session.execute(
                     select(RagChunk).where(RagChunk.project_id == chapter.project_id)
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         summaries = list(
             (
                 await session.execute(
                     select(RagSummary).where(RagSummary.project_id == chapter.project_id)
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         assert {row.artifact_generation for row in chunks if row.is_active} == {
             "vector-generation-2"
@@ -786,12 +786,8 @@ async def test_paused_reconciler_cannot_finalize_a_regenerated_revision(
             await asyncio.gather(worker_task, return_exceptions=True)
         async with session_factory() as session:
             await session.execute(
-                delete(ChapterOutboxEvent).where(
-                    ChapterOutboxEvent.project_id == project_id
-                )
+                delete(ChapterOutboxEvent).where(ChapterOutboxEvent.project_id == project_id)
             )
-            await session.execute(
-                delete(NovelProject).where(NovelProject.id == project_id)
-            )
+            await session.execute(delete(NovelProject).where(NovelProject.id == project_id))
             await session.execute(delete(User).where(User.id == owner_user_id))
             await session.commit()

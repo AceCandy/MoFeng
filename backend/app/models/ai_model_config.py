@@ -28,7 +28,9 @@ class UserModelProvider(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    provider_type: Mapped[str] = mapped_column(String(32), default="openai_compatible", nullable=False)
+    provider_type: Mapped[str] = mapped_column(
+        String(32), default="openai_compatible", nullable=False
+    )
     base_url: Mapped[str] = mapped_column(Text, nullable=False)
     api_key_encrypted: Mapped[str | None] = mapped_column(Text)
     api_key_preview: Mapped[str | None] = mapped_column(String(32))
@@ -77,7 +79,9 @@ class UserAIModel(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    provider_id: Mapped[int] = mapped_column(ForeignKey("user_model_providers.id", ondelete="CASCADE"), index=True)
+    provider_id: Mapped[int] = mapped_column(
+        ForeignKey("user_model_providers.id", ondelete="CASCADE"), index=True
+    )
     display_name: Mapped[str] = mapped_column(String(120), nullable=False)
     model_name: Mapped[str] = mapped_column(String(160), nullable=False)
     capabilities_json: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
@@ -90,12 +94,8 @@ class UserAIModel(Base):
     tts_speed: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
     input_price_per_million: Mapped[Decimal | None] = mapped_column(Numeric(24, 12))
     output_price_per_million: Mapped[Decimal | None] = mapped_column(Numeric(24, 12))
-    cached_input_price_per_million: Mapped[Decimal | None] = mapped_column(
-        Numeric(24, 12)
-    )
-    cache_write_input_price_per_million: Mapped[Decimal | None] = mapped_column(
-        Numeric(24, 12)
-    )
+    cached_input_price_per_million: Mapped[Decimal | None] = mapped_column(Numeric(24, 12))
+    cache_write_input_price_per_million: Mapped[Decimal | None] = mapped_column(Numeric(24, 12))
     pricing_currency: Mapped[str | None] = mapped_column(String(3))
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -114,9 +114,13 @@ class UserAIStageRoute(Base):
 
     __tablename__ = "user_ai_stage_routes"
 
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
     stage: Mapped[str] = mapped_column(String(64), primary_key=True)
-    model_id: Mapped[int] = mapped_column(ForeignKey("user_ai_models.id", ondelete="CASCADE"), index=True)
+    model_id: Mapped[int] = mapped_column(
+        ForeignKey("user_ai_models.id", ondelete="CASCADE"), index=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

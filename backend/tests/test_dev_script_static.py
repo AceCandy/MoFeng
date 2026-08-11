@@ -107,7 +107,7 @@ def test_deploy_defines_and_gates_independent_durable_worker():
     assert "restart: unless-stopped" in compose
     assert "stop_grace_period: 15m" in compose
     assert 'test: ["CMD", "python", "-m", "app.worker", "health"]' in compose
-    assert 'JOB_WORKER_NAME: ${JOB_WORKER_NAME:-mofeng-worker}' in compose
+    assert "JOB_WORKER_NAME: ${JOB_WORKER_NAME:-mofeng-worker}" in compose
 
     for key in (
         "JOB_WORKER_GENERATION",
@@ -122,7 +122,7 @@ def test_deploy_defines_and_gates_independent_durable_worker():
         assert f"{key}=" in env_example
         assert f"{key}:" in compose
 
-    assert 'exec -T worker python -m app.worker health' in deploy_script
+    assert "exec -T worker python -m app.worker health" in deploy_script
     assert "durable worker 健康检查失败" in deploy_script
     assert "logs --tail=80 worker" in deploy_script
 
@@ -170,9 +170,7 @@ def test_deploy_compose_resolves_durable_worker_structure(tmp_path):
         "app.worker",
         "health",
     ]
-    assert worker["depends_on"]["bootstrap"]["condition"] == (
-        "service_completed_successfully"
-    )
+    assert worker["depends_on"]["bootstrap"]["condition"] == ("service_completed_successfully")
     assert worker["environment"]["JOB_WORKER_NAME"] == "mofeng-worker"
 
 

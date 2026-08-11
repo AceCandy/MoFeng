@@ -147,25 +147,33 @@ class ChapterProjectionRolloutService:
         """Create the greenfield projection owner and its first audit row."""
 
         locked_chapter = (
-            await self.session.execute(
-                select(Chapter)
-                .where(
-                    Chapter.id == chapter.id,
-                    Chapter.project_id == chapter.project_id,
+            (
+                await self.session.execute(
+                    select(Chapter)
+                    .where(
+                        Chapter.id == chapter.id,
+                        Chapter.project_id == chapter.project_id,
+                    )
+                    .with_for_update()
                 )
-                .with_for_update()
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if locked_chapter is None:
             raise ChapterProjectionRolloutNotFoundError("chapter_not_found")
         chapter = locked_chapter
         rollout = (
-            await self.session.execute(
-                select(ChapterProjectionRollout)
-                .where(ChapterProjectionRollout.chapter_id == chapter.id)
-                .with_for_update()
+            (
+                await self.session.execute(
+                    select(ChapterProjectionRollout)
+                    .where(ChapterProjectionRollout.chapter_id == chapter.id)
+                    .with_for_update()
+                )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if rollout is not None:
             validate_rollout_owner_state(rollout.owner, rollout.state)
             return rollout
@@ -395,7 +403,9 @@ class ChapterProjectionRolloutService:
                 "promoted_projection_count": len(manifest["projection_run_ids"]),
             },
         )
-        return self._status_payload(chapter, rollout, RolloutGate(False, ("rollout_not_shadow_or_draining",)))
+        return self._status_payload(
+            chapter, rollout, RolloutGate(False, ("rollout_not_shadow_or_draining",))
+        )
 
     async def rollback(
         self,
@@ -471,13 +481,17 @@ class ChapterProjectionRolloutService:
             raise ChapterProjectionRolloutConflictError("projection_not_shadow_mode")
         sample_key = f"revision:{revision.revision}:reconcile:{reconcile_run.id}"
         existing = (
-            await self.session.execute(
-                select(ChapterProjectionShadowObservation).where(
-                    ChapterProjectionShadowObservation.rollout_id == rollout.id,
-                    ChapterProjectionShadowObservation.sample_key == sample_key,
+            (
+                await self.session.execute(
+                    select(ChapterProjectionShadowObservation).where(
+                        ChapterProjectionShadowObservation.rollout_id == rollout.id,
+                        ChapterProjectionShadowObservation.sample_key == sample_key,
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if existing is not None:
             return existing
 
@@ -500,7 +514,9 @@ class ChapterProjectionRolloutService:
                     )
                     .with_for_update()
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         by_name = {run.projection_name: run for run in runs}
         required = set(revision.required_projections or [])
@@ -531,16 +547,20 @@ class ChapterProjectionRolloutService:
         staged_snapshot = None
         if memory_run is not None:
             staged_snapshot = (
-                await self.session.execute(
-                    select(ChapterSnapshot).where(
-                        ChapterSnapshot.project_id == chapter.project_id,
-                        ChapterSnapshot.chapter_number == chapter.chapter_number,
-                        ChapterSnapshot.chapter_revision == revision.revision,
-                        ChapterSnapshot.artifact_generation == memory_run.artifact_generation,
-                        ChapterSnapshot.projection_run_id == memory_run.id,
+                (
+                    await self.session.execute(
+                        select(ChapterSnapshot).where(
+                            ChapterSnapshot.project_id == chapter.project_id,
+                            ChapterSnapshot.chapter_number == chapter.chapter_number,
+                            ChapterSnapshot.chapter_revision == revision.revision,
+                            ChapterSnapshot.artifact_generation == memory_run.artifact_generation,
+                            ChapterSnapshot.projection_run_id == memory_run.id,
+                        )
                     )
                 )
-            ).scalars().first()
+                .scalars()
+                .first()
+            )
         if staged_snapshot is None:
             violations.append("shadow_memory_snapshot_missing")
         elif staged_snapshot.is_active:
@@ -581,11 +601,11 @@ class ChapterProjectionRolloutService:
 
         foreshadowing_run = by_name.get("foreshadowing")
         plan_payload = (
-            (foreshadowing_run.result or {}).get("plan")
-            if foreshadowing_run is not None
-            else None
+            (foreshadowing_run.result or {}).get("plan") if foreshadowing_run is not None else None
         )
-        expected_candidates = len(plan_payload.get("candidates") or []) if isinstance(plan_payload, dict) else 0
+        expected_candidates = (
+            len(plan_payload.get("candidates") or []) if isinstance(plan_payload, dict) else 0
+        )
         staged_candidates = 0
         if foreshadowing_run is not None:
             staged_candidates = int(
@@ -594,8 +614,7 @@ class ChapterProjectionRolloutService:
                         Foreshadowing.project_id == chapter.project_id,
                         Foreshadowing.chapter_id == chapter.id,
                         Foreshadowing.chapter_revision == revision.revision,
-                        Foreshadowing.artifact_generation
-                        == foreshadowing_run.artifact_generation,
+                        Foreshadowing.artifact_generation == foreshadowing_run.artifact_generation,
                         Foreshadowing.projection_run_id == foreshadowing_run.id,
                         Foreshadowing.is_active.is_(False),
                     )
@@ -606,16 +625,20 @@ class ChapterProjectionRolloutService:
             violations.append("shadow_foreshadowing_candidate_count_mismatch")
 
         legacy_snapshot = (
-            await self.session.execute(
-                select(ChapterSnapshot)
-                .where(
-                    ChapterSnapshot.project_id == chapter.project_id,
-                    ChapterSnapshot.chapter_number == chapter.chapter_number,
-                    ChapterSnapshot.is_active.is_(True),
+            (
+                await self.session.execute(
+                    select(ChapterSnapshot)
+                    .where(
+                        ChapterSnapshot.project_id == chapter.project_id,
+                        ChapterSnapshot.chapter_number == chapter.chapter_number,
+                        ChapterSnapshot.is_active.is_(True),
+                    )
+                    .order_by(ChapterSnapshot.id.desc())
                 )
-                .order_by(ChapterSnapshot.id.desc())
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         safe_comparison = {
             "legacy": {
                 "summary_digest": _value_digest(chapter.real_summary),
@@ -648,8 +671,7 @@ class ChapterProjectionRolloutService:
         content_differences = [
             key
             for key in ("summary_digest", "snapshot_digest")
-            if safe_comparison["legacy"].get(key)
-            != safe_comparison["projection"].get(key)
+            if safe_comparison["legacy"].get(key) != safe_comparison["projection"].get(key)
         ]
         diff = {
             "unexplained_count": len(violations),
@@ -722,21 +744,29 @@ class ChapterProjectionRolloutService:
         operator_user_id: int,
     ) -> tuple[Chapter, ChapterProjectionRollout]:
         chapter = (
-            await self.session.execute(
-                select(Chapter)
-                .where(Chapter.id == chapter_id, Chapter.project_id == project_id)
-                .with_for_update()
+            (
+                await self.session.execute(
+                    select(Chapter)
+                    .where(Chapter.id == chapter_id, Chapter.project_id == project_id)
+                    .with_for_update()
+                )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if chapter is None:
             raise ChapterProjectionRolloutNotFoundError("chapter_not_found")
         rollout = (
-            await self.session.execute(
-                select(ChapterProjectionRollout)
-                .where(ChapterProjectionRollout.chapter_id == chapter.id)
-                .with_for_update()
+            (
+                await self.session.execute(
+                    select(ChapterProjectionRollout)
+                    .where(ChapterProjectionRollout.chapter_id == chapter.id)
+                    .with_for_update()
+                )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if rollout is not None:
             validate_rollout_owner_state(rollout.owner, rollout.state)
             return chapter, rollout
@@ -834,8 +864,7 @@ class ChapterProjectionRolloutService:
         jobs = list(
             (
                 await self.session.execute(
-                    select(BackgroundTask)
-                    .where(
+                    select(BackgroundTask).where(
                         BackgroundTask.project_id == chapter.project_id,
                         BackgroundTask.status.in_(NONTERMINAL_JOB_STATUSES),
                         or_(
@@ -844,7 +873,9 @@ class ChapterProjectionRolloutService:
                         ),
                     )
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         for job in jobs:
             payload = job.payload if isinstance(job.payload, dict) else {}
@@ -862,15 +893,19 @@ class ChapterProjectionRolloutService:
         rollout: ChapterProjectionRollout,
     ) -> dict[str, Any]:
         revision = (
-            await self.session.execute(
-                select(ChapterRevision)
-                .where(
-                    ChapterRevision.chapter_id == chapter.id,
-                    ChapterRevision.revision == chapter.current_revision,
+            (
+                await self.session.execute(
+                    select(ChapterRevision)
+                    .where(
+                        ChapterRevision.chapter_id == chapter.id,
+                        ChapterRevision.revision == chapter.current_revision,
+                    )
+                    .with_for_update()
                 )
-                .with_for_update()
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if revision is None or revision.lifecycle != "shadow_ready":
             raise ChapterProjectionRolloutConflictError("shadow_revision_not_ready")
         runs = list(
@@ -884,7 +919,9 @@ class ChapterProjectionRolloutService:
                     )
                     .with_for_update()
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         by_name = {run.projection_name: run for run in runs}
         required = set(revision.required_projections or [])
@@ -895,9 +932,7 @@ class ChapterProjectionRolloutService:
             for name in required
         ):
             raise ChapterProjectionRolloutConflictError("shadow_required_projection_not_ready")
-        promoted_runs = [
-            run for run in by_name.values() if run.status in {"succeeded", "skipped"}
-        ]
+        promoted_runs = [run for run in by_name.values() if run.status in {"succeeded", "skipped"}]
 
         summary_run = by_name.get("summary")
         memory_run = by_name.get("memory")
@@ -910,44 +945,56 @@ class ChapterProjectionRolloutService:
             raise ChapterProjectionRolloutConflictError("shadow_summary_missing")
 
         staged_snapshot = (
-            await self.session.execute(
-                select(ChapterSnapshot)
-                .where(
-                    ChapterSnapshot.project_id == chapter.project_id,
-                    ChapterSnapshot.chapter_number == chapter.chapter_number,
-                    ChapterSnapshot.chapter_revision == revision.revision,
-                    ChapterSnapshot.artifact_generation == memory_run.artifact_generation,
-                    ChapterSnapshot.projection_run_id == memory_run.id,
-                    ChapterSnapshot.is_active.is_(False),
+            (
+                await self.session.execute(
+                    select(ChapterSnapshot)
+                    .where(
+                        ChapterSnapshot.project_id == chapter.project_id,
+                        ChapterSnapshot.chapter_number == chapter.chapter_number,
+                        ChapterSnapshot.chapter_revision == revision.revision,
+                        ChapterSnapshot.artifact_generation == memory_run.artifact_generation,
+                        ChapterSnapshot.projection_run_id == memory_run.id,
+                        ChapterSnapshot.is_active.is_(False),
+                    )
+                    .with_for_update()
                 )
-                .with_for_update()
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if staged_snapshot is None:
             raise ChapterProjectionRolloutConflictError("shadow_memory_snapshot_missing")
         legacy_snapshot = (
-            await self.session.execute(
-                select(ChapterSnapshot)
-                .where(
-                    ChapterSnapshot.project_id == chapter.project_id,
-                    ChapterSnapshot.chapter_number == chapter.chapter_number,
-                    ChapterSnapshot.is_active.is_(True),
-                    ChapterSnapshot.id != staged_snapshot.id,
+            (
+                await self.session.execute(
+                    select(ChapterSnapshot)
+                    .where(
+                        ChapterSnapshot.project_id == chapter.project_id,
+                        ChapterSnapshot.chapter_number == chapter.chapter_number,
+                        ChapterSnapshot.is_active.is_(True),
+                        ChapterSnapshot.id != staged_snapshot.id,
+                    )
+                    .order_by(ChapterSnapshot.id.desc())
+                    .with_for_update()
                 )
-                .order_by(ChapterSnapshot.id.desc())
-                .with_for_update()
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if legacy_snapshot is None:
             raise ChapterProjectionRolloutConflictError("legacy_memory_snapshot_missing")
 
         memory = (
-            await self.session.execute(
-                select(ProjectMemory)
-                .where(ProjectMemory.project_id == chapter.project_id)
-                .with_for_update()
+            (
+                await self.session.execute(
+                    select(ProjectMemory)
+                    .where(ProjectMemory.project_id == chapter.project_id)
+                    .with_for_update()
+                )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if memory is None:
             raise ChapterProjectionRolloutConflictError("project_memory_missing")
         if int(memory.last_updated_chapter or 0) > chapter.chapter_number:
@@ -981,7 +1028,9 @@ class ChapterProjectionRolloutService:
                     )
                     .with_for_update()
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         legacy_character_ids = [item.id for item in legacy_character_rows]
         legacy_rag_chunk_rows = list(
@@ -995,7 +1044,9 @@ class ChapterProjectionRolloutService:
                     )
                     .with_for_update()
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         legacy_rag_chunk_ids = [item.id for item in legacy_rag_chunk_rows]
         legacy_rag_summary_rows = list(
@@ -1009,7 +1060,9 @@ class ChapterProjectionRolloutService:
                     )
                     .with_for_update()
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         legacy_rag_summary_ids = [item.id for item in legacy_rag_summary_rows]
         legacy_foreshadowing_rows = list(
@@ -1024,7 +1077,9 @@ class ChapterProjectionRolloutService:
                     )
                     .with_for_update()
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         legacy_foreshadowing_ids = [item.id for item in legacy_foreshadowing_rows]
         staged_rag_chunk_ids: list[str] = []
@@ -1075,8 +1130,7 @@ class ChapterProjectionRolloutService:
                         Foreshadowing.project_id == chapter.project_id,
                         Foreshadowing.chapter_id == chapter.id,
                         Foreshadowing.chapter_revision == revision.revision,
-                        Foreshadowing.artifact_generation
-                        == foreshadowing_run.artifact_generation,
+                        Foreshadowing.artifact_generation == foreshadowing_run.artifact_generation,
                         Foreshadowing.projection_run_id == foreshadowing_run.id,
                         Foreshadowing.is_active.is_(False),
                     )
@@ -1102,12 +1156,13 @@ class ChapterProjectionRolloutService:
                         )
                         .with_for_update()
                     )
-                ).scalars().all()
+                )
+                .scalars()
+                .all()
             )
         source_by_id = {item.id: item for item in source_rows}
         if any(
-            source_by_id.get(item.id) is None
-            or source_by_id[item.id].status != item.status
+            source_by_id.get(item.id) is None or source_by_id[item.id].status != item.status
             for item in plan.active
         ):
             raise ChapterProjectionRolloutConflictError("foreshadowing_source_changed")
@@ -1143,15 +1198,19 @@ class ChapterProjectionRolloutService:
             )
 
         blueprint = (
-            await self.session.execute(
-                select(ChapterBlueprint)
-                .where(
-                    ChapterBlueprint.project_id == chapter.project_id,
-                    ChapterBlueprint.chapter_number == chapter.chapter_number,
+            (
+                await self.session.execute(
+                    select(ChapterBlueprint)
+                    .where(
+                        ChapterBlueprint.project_id == chapter.project_id,
+                        ChapterBlueprint.chapter_number == chapter.chapter_number,
+                    )
+                    .with_for_update()
                 )
-                .with_for_update()
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
 
         manifest = {
             "revision": revision.revision,
@@ -1251,9 +1310,7 @@ class ChapterProjectionRolloutService:
             "projection_run_ids": [run.id for run in by_name.values()],
             "promoted_projection_run_ids": [run.id for run in promoted_runs],
             "previous_active_projection_run_ids": [run.id for run in runs if run.is_active],
-            "projection_run_ids_by_name": {
-                name: run.id for name, run in by_name.items()
-            },
+            "projection_run_ids_by_name": {name: run.id for name, run in by_name.items()},
             "projection_generations": {
                 name: run.artifact_generation for name, run in by_name.items()
             },
@@ -1262,9 +1319,7 @@ class ChapterProjectionRolloutService:
         if set(manifest["promoted_projection_run_ids"]) & set(
             manifest["previous_active_projection_run_ids"]
         ):
-            raise ChapterProjectionRolloutConflictError(
-                "shadow_projection_owner_overlap"
-            )
+            raise ChapterProjectionRolloutConflictError("shadow_projection_owner_overlap")
 
         chapter.real_summary = summary
         await self.session.execute(
@@ -1483,9 +1538,7 @@ class ChapterProjectionRolloutService:
             "generation_step_index": (int,),
             "generation_step_total": (int,),
         }
-        chapter_state = self._manifest_mapping(
-            manifest.get("chapter_state"), chapter_fields
-        )
+        chapter_state = self._manifest_mapping(manifest.get("chapter_state"), chapter_fields)
         promoted_chapter_state = self._manifest_mapping(
             manifest.get("promoted_chapter_state"), chapter_fields
         )
@@ -1496,9 +1549,7 @@ class ChapterProjectionRolloutService:
             "projection_revision": (int,),
             "projection_generation": (str, none_type),
         }
-        memory_state = self._manifest_mapping(
-            manifest.get("project_memory_state"), memory_fields
-        )
+        memory_state = self._manifest_mapping(manifest.get("project_memory_state"), memory_fields)
         promoted_memory_state = self._manifest_mapping(
             manifest.get("promoted_project_memory_state"), memory_fields
         )
@@ -1533,36 +1584,20 @@ class ChapterProjectionRolloutService:
         ):
             raise ChapterProjectionRolloutConflictError("rollback_manifest_invalid")
 
-        legacy_character_ids = self._manifest_ids(
-            manifest, "legacy_character_state_ids", int
-        )
-        promoted_character_ids = self._manifest_ids(
-            manifest, "promoted_character_state_ids", int
-        )
+        legacy_character_ids = self._manifest_ids(manifest, "legacy_character_state_ids", int)
+        promoted_character_ids = self._manifest_ids(manifest, "promoted_character_state_ids", int)
         legacy_chunk_ids = self._manifest_ids(manifest, "legacy_rag_chunk_ids", str)
         legacy_summary_ids = self._manifest_ids(manifest, "legacy_rag_summary_ids", str)
-        promoted_chunk_ids = self._manifest_ids(
-            manifest, "promoted_rag_chunk_ids", str
-        )
-        promoted_summary_ids = self._manifest_ids(
-            manifest, "promoted_rag_summary_ids", str
-        )
-        legacy_foreshadowing_ids = self._manifest_ids(
-            manifest, "legacy_foreshadowing_ids", int
-        )
-        promoted_foreshadowing_ids = self._manifest_ids(
-            manifest, "promoted_foreshadowing_ids", int
-        )
-        promoted_run_ids = self._manifest_ids(
-            manifest, "promoted_projection_run_ids", str
-        )
+        promoted_chunk_ids = self._manifest_ids(manifest, "promoted_rag_chunk_ids", str)
+        promoted_summary_ids = self._manifest_ids(manifest, "promoted_rag_summary_ids", str)
+        legacy_foreshadowing_ids = self._manifest_ids(manifest, "legacy_foreshadowing_ids", int)
+        promoted_foreshadowing_ids = self._manifest_ids(manifest, "promoted_foreshadowing_ids", int)
+        promoted_run_ids = self._manifest_ids(manifest, "promoted_projection_run_ids", str)
         previous_active_run_ids = self._manifest_ids(
             manifest, "previous_active_projection_run_ids", str
         )
 
-        projection_run_ids = self._manifest_ids(
-            manifest, "projection_run_ids", str
-        )
+        projection_run_ids = self._manifest_ids(manifest, "projection_run_ids", str)
         if (
             set(projection_run_ids) != set(run_ids_by_name.values())
             or not set(promoted_run_ids).issubset(projection_run_ids)
@@ -1621,8 +1656,7 @@ class ChapterProjectionRolloutService:
             set(legacy_character_ids) != set(legacy_character_identities)
             or set(legacy_chunk_ids) != set(legacy_chunk_identities)
             or set(legacy_summary_ids) != set(legacy_summary_identities)
-            or set(legacy_foreshadowing_ids)
-            != set(legacy_foreshadowing_identities)
+            or set(legacy_foreshadowing_ids) != set(legacy_foreshadowing_identities)
         ):
             raise ChapterProjectionRolloutConflictError("rollback_manifest_invalid")
 
@@ -1661,8 +1695,7 @@ class ChapterProjectionRolloutService:
                 "generation_step_index": 4,
                 "generation_step_total": 4,
             }
-            or promoted_memory_state["last_updated_chapter"]
-            != chapter.chapter_number
+            or promoted_memory_state["last_updated_chapter"] != chapter.chapter_number
             or promoted_memory_state["projection_revision"] != manifest["revision"]
             or promoted_memory_state["projection_generation"] != memory_generation
             or legacy_snapshot_identity["project_id"] != chapter.project_id
@@ -1671,15 +1704,19 @@ class ChapterProjectionRolloutService:
             raise ChapterProjectionRolloutConflictError("rollback_manifest_invalid")
 
         revision = (
-            await self.session.execute(
-                select(ChapterRevision)
-                .where(
-                    ChapterRevision.chapter_id == chapter.id,
-                    ChapterRevision.revision == chapter.current_revision,
+            (
+                await self.session.execute(
+                    select(ChapterRevision)
+                    .where(
+                        ChapterRevision.chapter_id == chapter.id,
+                        ChapterRevision.revision == chapter.current_revision,
+                    )
+                    .with_for_update()
                 )
-                .with_for_update()
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if revision is None or revision.lifecycle != "successful":
             raise ChapterProjectionRolloutConflictError("rollback_revision_advanced")
         previous_lifecycle = manifest.get("revision_lifecycle")
@@ -1693,19 +1730,22 @@ class ChapterProjectionRolloutService:
             "generation_step_index": chapter.generation_step_index,
             "generation_step_total": chapter.generation_step_total,
         }
-        if (
-            current_chapter_state != promoted_chapter_state
-            or chapter.real_summary != manifest.get("promoted_real_summary")
+        if current_chapter_state != promoted_chapter_state or chapter.real_summary != manifest.get(
+            "promoted_real_summary"
         ):
             raise ChapterProjectionRolloutConflictError("rollback_chapter_advanced")
 
         memory = (
-            await self.session.execute(
-                select(ProjectMemory)
-                .where(ProjectMemory.project_id == chapter.project_id)
-                .with_for_update()
+            (
+                await self.session.execute(
+                    select(ProjectMemory)
+                    .where(ProjectMemory.project_id == chapter.project_id)
+                    .with_for_update()
+                )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         current_memory_state = (
             {
                 "global_summary": memory.global_summary,
@@ -1731,7 +1771,9 @@ class ChapterProjectionRolloutService:
                     .where(ChapterSnapshot.id.in_([legacy_snapshot_id, promoted_snapshot_id]))
                     .with_for_update()
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         snapshots_by_id = {item.id: item for item in snapshots}
         legacy_snapshot = snapshots_by_id.get(legacy_snapshot_id)
@@ -1741,11 +1783,9 @@ class ChapterProjectionRolloutService:
         if (
             legacy_snapshot.project_id != legacy_snapshot_identity.get("project_id")
             or legacy_snapshot.project_id != chapter.project_id
-            or legacy_snapshot.chapter_number
-            != legacy_snapshot_identity.get("chapter_number")
+            or legacy_snapshot.chapter_number != legacy_snapshot_identity.get("chapter_number")
             or legacy_snapshot.chapter_number != chapter.chapter_number
-            or legacy_snapshot.chapter_revision
-            != legacy_snapshot_identity.get("chapter_revision")
+            or legacy_snapshot.chapter_revision != legacy_snapshot_identity.get("chapter_revision")
             or legacy_snapshot.artifact_generation
             != legacy_snapshot_identity.get("artifact_generation")
             or legacy_snapshot.is_active
@@ -1763,15 +1803,19 @@ class ChapterProjectionRolloutService:
             raise ChapterProjectionRolloutConflictError("rollback_projection_artifacts_advanced")
 
         blueprint = (
-            await self.session.execute(
-                select(ChapterBlueprint)
-                .where(
-                    ChapterBlueprint.project_id == chapter.project_id,
-                    ChapterBlueprint.chapter_number == chapter.chapter_number,
+            (
+                await self.session.execute(
+                    select(ChapterBlueprint)
+                    .where(
+                        ChapterBlueprint.project_id == chapter.project_id,
+                        ChapterBlueprint.chapter_number == chapter.chapter_number,
+                    )
+                    .with_for_update()
                 )
-                .with_for_update()
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if blueprint_state is None:
             if blueprint is not None:
                 raise ChapterProjectionRolloutConflictError("rollback_blueprint_advanced")
@@ -1786,19 +1830,25 @@ class ChapterProjectionRolloutService:
             raise ChapterProjectionRolloutConflictError("rollback_blueprint_advanced")
 
         all_run_ids = sorted(set(projection_run_ids + previous_active_run_ids))
-        runs = list(
-            (
-                await self.session.execute(
-                    select(ChapterProjectionRun)
-                    .where(
-                        ChapterProjectionRun.id.in_(all_run_ids),
-                        ChapterProjectionRun.chapter_id == chapter.id,
-                        ChapterProjectionRun.revision == revision.revision,
+        runs = (
+            list(
+                (
+                    await self.session.execute(
+                        select(ChapterProjectionRun)
+                        .where(
+                            ChapterProjectionRun.id.in_(all_run_ids),
+                            ChapterProjectionRun.chapter_id == chapter.id,
+                            ChapterProjectionRun.revision == revision.revision,
+                        )
+                        .with_for_update()
                     )
-                    .with_for_update()
                 )
-            ).scalars().all()
-        ) if all_run_ids else []
+                .scalars()
+                .all()
+            )
+            if all_run_ids
+            else []
+        )
         self._require_exact_ids(
             [run.id for run in runs],
             all_run_ids,
@@ -1807,32 +1857,24 @@ class ChapterProjectionRolloutService:
         promoted_run_id_set = set(promoted_run_ids)
         previous_run_id_set = set(previous_active_run_ids)
         runs_by_id = {run.id: run for run in runs}
-        if any(
-            run.is_active != (run.id in promoted_run_id_set)
-            for run in runs
-        ):
+        if any(run.is_active != (run.id in promoted_run_id_set) for run in runs):
             raise ChapterProjectionRolloutConflictError("rollback_projection_runs_advanced")
         if any(
             runs_by_id[run_id].projection_name != projection_name
-            or runs_by_id[run_id].artifact_generation
-            != generations[projection_name]
+            or runs_by_id[run_id].artifact_generation != generations[projection_name]
             for projection_name, run_id in run_ids_by_name.items()
         ):
             raise ChapterProjectionRolloutConflictError("rollback_manifest_invalid")
         foreshadowing_run = runs_by_id.get(foreshadowing_run_id)
         plan_payload = (
-            (foreshadowing_run.result or {}).get("plan")
-            if foreshadowing_run is not None
-            else None
+            (foreshadowing_run.result or {}).get("plan") if foreshadowing_run is not None else None
         )
         if not isinstance(plan_payload, dict):
             raise ChapterProjectionRolloutConflictError("rollback_manifest_invalid")
         try:
             plan = deserialize_foreshadowing_plan(plan_payload)
         except (TypeError, ValueError, KeyError) as exc:
-            raise ChapterProjectionRolloutConflictError(
-                "rollback_manifest_invalid"
-            ) from exc
+            raise ChapterProjectionRolloutConflictError("rollback_manifest_invalid") from exc
         if set(state_ids) != {item.id for item in plan.active}:
             raise ChapterProjectionRolloutConflictError("rollback_manifest_invalid")
 
@@ -1850,39 +1892,45 @@ class ChapterProjectionRolloutService:
                     )
                     .with_for_update()
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         self._require_exact_ids(
             [item.id for item in promoted_character_rows],
             promoted_character_ids,
             "rollback_projection_artifacts_advanced",
         )
-        legacy_character_rows = list(
-            (
-                await self.session.execute(
-                    select(CharacterState)
-                    .where(
-                        CharacterState.id.in_(legacy_character_ids),
-                        CharacterState.project_id == chapter.project_id,
-                        CharacterState.chapter_number == chapter.chapter_number,
-                        CharacterState.is_active.is_(False),
+        legacy_character_rows = (
+            list(
+                (
+                    await self.session.execute(
+                        select(CharacterState)
+                        .where(
+                            CharacterState.id.in_(legacy_character_ids),
+                            CharacterState.project_id == chapter.project_id,
+                            CharacterState.chapter_number == chapter.chapter_number,
+                            CharacterState.is_active.is_(False),
+                        )
+                        .with_for_update()
                     )
-                    .with_for_update()
                 )
-            ).scalars().all()
-        ) if legacy_character_ids else []
+                .scalars()
+                .all()
+            )
+            if legacy_character_ids
+            else []
+        )
         self._require_exact_ids(
             [item.id for item in legacy_character_rows],
             legacy_character_ids,
             "rollback_manifest_invalid",
         )
         if any(
-            item.chapter_revision
-            != legacy_character_identities[item.id]["chapter_revision"]
+            item.chapter_revision != legacy_character_identities[item.id]["chapter_revision"]
             or item.artifact_generation
             != legacy_character_identities[item.id]["artifact_generation"]
-            or item.projection_run_id
-            != legacy_character_identities[item.id]["projection_run_id"]
+            or item.projection_run_id != legacy_character_identities[item.id]["projection_run_id"]
             for item in legacy_character_rows
         ):
             raise ChapterProjectionRolloutConflictError("rollback_manifest_invalid")
@@ -1893,38 +1941,50 @@ class ChapterProjectionRolloutService:
             not isinstance(rag_generation, str) or not isinstance(rag_run_id, str)
         ):
             raise ChapterProjectionRolloutConflictError("rollback_manifest_invalid")
-        promoted_chunk_rows = list(
-            (
-                await self.session.execute(
-                    select(RagChunk)
-                    .where(
-                        RagChunk.project_id == chapter.project_id,
-                        RagChunk.chapter_number == chapter.chapter_number,
-                        RagChunk.source_revision == revision.revision,
-                        RagChunk.artifact_generation == rag_generation,
-                        RagChunk.projection_run_id == rag_run_id,
-                        RagChunk.is_active.is_(True),
+        promoted_chunk_rows = (
+            list(
+                (
+                    await self.session.execute(
+                        select(RagChunk)
+                        .where(
+                            RagChunk.project_id == chapter.project_id,
+                            RagChunk.chapter_number == chapter.chapter_number,
+                            RagChunk.source_revision == revision.revision,
+                            RagChunk.artifact_generation == rag_generation,
+                            RagChunk.projection_run_id == rag_run_id,
+                            RagChunk.is_active.is_(True),
+                        )
+                        .with_for_update()
                     )
-                    .with_for_update()
                 )
-            ).scalars().all()
-        ) if isinstance(rag_generation, str) and isinstance(rag_run_id, str) else []
-        promoted_summary_rows = list(
-            (
-                await self.session.execute(
-                    select(RagSummary)
-                    .where(
-                        RagSummary.project_id == chapter.project_id,
-                        RagSummary.chapter_number == chapter.chapter_number,
-                        RagSummary.source_revision == revision.revision,
-                        RagSummary.artifact_generation == rag_generation,
-                        RagSummary.projection_run_id == rag_run_id,
-                        RagSummary.is_active.is_(True),
+                .scalars()
+                .all()
+            )
+            if isinstance(rag_generation, str) and isinstance(rag_run_id, str)
+            else []
+        )
+        promoted_summary_rows = (
+            list(
+                (
+                    await self.session.execute(
+                        select(RagSummary)
+                        .where(
+                            RagSummary.project_id == chapter.project_id,
+                            RagSummary.chapter_number == chapter.chapter_number,
+                            RagSummary.source_revision == revision.revision,
+                            RagSummary.artifact_generation == rag_generation,
+                            RagSummary.projection_run_id == rag_run_id,
+                            RagSummary.is_active.is_(True),
+                        )
+                        .with_for_update()
                     )
-                    .with_for_update()
                 )
-            ).scalars().all()
-        ) if isinstance(rag_generation, str) and isinstance(rag_run_id, str) else []
+                .scalars()
+                .all()
+            )
+            if isinstance(rag_generation, str) and isinstance(rag_run_id, str)
+            else []
+        )
         self._require_exact_ids(
             [item.id for item in promoted_chunk_rows],
             promoted_chunk_ids,
@@ -1935,34 +1995,46 @@ class ChapterProjectionRolloutService:
             promoted_summary_ids,
             "rollback_projection_artifacts_advanced",
         )
-        legacy_chunk_rows = list(
-            (
-                await self.session.execute(
-                    select(RagChunk)
-                    .where(
-                        RagChunk.id.in_(legacy_chunk_ids),
-                        RagChunk.project_id == chapter.project_id,
-                        RagChunk.chapter_number == chapter.chapter_number,
-                        RagChunk.is_active.is_(False),
+        legacy_chunk_rows = (
+            list(
+                (
+                    await self.session.execute(
+                        select(RagChunk)
+                        .where(
+                            RagChunk.id.in_(legacy_chunk_ids),
+                            RagChunk.project_id == chapter.project_id,
+                            RagChunk.chapter_number == chapter.chapter_number,
+                            RagChunk.is_active.is_(False),
+                        )
+                        .with_for_update()
                     )
-                    .with_for_update()
                 )
-            ).scalars().all()
-        ) if legacy_chunk_ids else []
-        legacy_summary_rows = list(
-            (
-                await self.session.execute(
-                    select(RagSummary)
-                    .where(
-                        RagSummary.id.in_(legacy_summary_ids),
-                        RagSummary.project_id == chapter.project_id,
-                        RagSummary.chapter_number == chapter.chapter_number,
-                        RagSummary.is_active.is_(False),
+                .scalars()
+                .all()
+            )
+            if legacy_chunk_ids
+            else []
+        )
+        legacy_summary_rows = (
+            list(
+                (
+                    await self.session.execute(
+                        select(RagSummary)
+                        .where(
+                            RagSummary.id.in_(legacy_summary_ids),
+                            RagSummary.project_id == chapter.project_id,
+                            RagSummary.chapter_number == chapter.chapter_number,
+                            RagSummary.is_active.is_(False),
+                        )
+                        .with_for_update()
                     )
-                    .with_for_update()
                 )
-            ).scalars().all()
-        ) if legacy_summary_ids else []
+                .scalars()
+                .all()
+            )
+            if legacy_summary_ids
+            else []
+        )
         self._require_exact_ids(
             [item.id for item in legacy_chunk_rows],
             legacy_chunk_ids,
@@ -1975,18 +2047,13 @@ class ChapterProjectionRolloutService:
         )
         if any(
             item.source_revision != legacy_chunk_identities[item.id]["source_revision"]
-            or item.artifact_generation
-            != legacy_chunk_identities[item.id]["artifact_generation"]
-            or item.projection_run_id
-            != legacy_chunk_identities[item.id]["projection_run_id"]
+            or item.artifact_generation != legacy_chunk_identities[item.id]["artifact_generation"]
+            or item.projection_run_id != legacy_chunk_identities[item.id]["projection_run_id"]
             for item in legacy_chunk_rows
         ) or any(
-            item.source_revision
-            != legacy_summary_identities[item.id]["source_revision"]
-            or item.artifact_generation
-            != legacy_summary_identities[item.id]["artifact_generation"]
-            or item.projection_run_id
-            != legacy_summary_identities[item.id]["projection_run_id"]
+            item.source_revision != legacy_summary_identities[item.id]["source_revision"]
+            or item.artifact_generation != legacy_summary_identities[item.id]["artifact_generation"]
+            or item.projection_run_id != legacy_summary_identities[item.id]["projection_run_id"]
             for item in legacy_summary_rows
         ):
             raise ChapterProjectionRolloutConflictError("rollback_manifest_invalid")
@@ -2005,62 +2072,72 @@ class ChapterProjectionRolloutService:
                     )
                     .with_for_update()
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         self._require_exact_ids(
             [item.id for item in promoted_foreshadowing_rows],
             promoted_foreshadowing_ids,
             "rollback_projection_artifacts_advanced",
         )
-        legacy_foreshadowing_rows = list(
-            (
-                await self.session.execute(
-                    select(Foreshadowing)
-                    .where(
-                        Foreshadowing.id.in_(legacy_foreshadowing_ids),
-                        Foreshadowing.project_id == chapter.project_id,
-                        Foreshadowing.chapter_id == chapter.id,
-                        Foreshadowing.is_manual.is_(False),
-                        Foreshadowing.is_active.is_(False),
+        legacy_foreshadowing_rows = (
+            list(
+                (
+                    await self.session.execute(
+                        select(Foreshadowing)
+                        .where(
+                            Foreshadowing.id.in_(legacy_foreshadowing_ids),
+                            Foreshadowing.project_id == chapter.project_id,
+                            Foreshadowing.chapter_id == chapter.id,
+                            Foreshadowing.is_manual.is_(False),
+                            Foreshadowing.is_active.is_(False),
+                        )
+                        .with_for_update()
                     )
-                    .with_for_update()
                 )
-            ).scalars().all()
-        ) if legacy_foreshadowing_ids else []
+                .scalars()
+                .all()
+            )
+            if legacy_foreshadowing_ids
+            else []
+        )
         self._require_exact_ids(
             [item.id for item in legacy_foreshadowing_rows],
             legacy_foreshadowing_ids,
             "rollback_manifest_invalid",
         )
         if any(
-            item.chapter_id
-            != legacy_foreshadowing_identities[item.id]["chapter_id"]
-            or item.chapter_number
-            != legacy_foreshadowing_identities[item.id]["chapter_number"]
-            or item.chapter_revision
-            != legacy_foreshadowing_identities[item.id]["chapter_revision"]
+            item.chapter_id != legacy_foreshadowing_identities[item.id]["chapter_id"]
+            or item.chapter_number != legacy_foreshadowing_identities[item.id]["chapter_number"]
+            or item.chapter_revision != legacy_foreshadowing_identities[item.id]["chapter_revision"]
             or item.artifact_generation
             != legacy_foreshadowing_identities[item.id]["artifact_generation"]
             or item.projection_run_id
             != legacy_foreshadowing_identities[item.id]["projection_run_id"]
-            or item.is_manual
-            != legacy_foreshadowing_identities[item.id]["is_manual"]
+            or item.is_manual != legacy_foreshadowing_identities[item.id]["is_manual"]
             for item in legacy_foreshadowing_rows
         ):
             raise ChapterProjectionRolloutConflictError("rollback_manifest_invalid")
-        state_rows = list(
-            (
-                await self.session.execute(
-                    select(Foreshadowing)
-                    .where(
-                        Foreshadowing.id.in_(state_ids),
-                        Foreshadowing.project_id == chapter.project_id,
-                        Foreshadowing.is_active.is_(True),
+        state_rows = (
+            list(
+                (
+                    await self.session.execute(
+                        select(Foreshadowing)
+                        .where(
+                            Foreshadowing.id.in_(state_ids),
+                            Foreshadowing.project_id == chapter.project_id,
+                            Foreshadowing.is_active.is_(True),
+                        )
+                        .with_for_update()
                     )
-                    .with_for_update()
                 )
-            ).scalars().all()
-        ) if state_ids else []
+                .scalars()
+                .all()
+            )
+            if state_ids
+            else []
+        )
         self._require_exact_ids(
             [item.id for item in state_rows],
             state_ids,
@@ -2078,14 +2155,10 @@ class ChapterProjectionRolloutService:
                 or current.projection_run_id != previous["projection_run_id"]
                 or current.is_manual != previous["is_manual"]
                 or current.status != previous["expected_status"]
-                or current.resolved_chapter_id
-                != previous["expected_resolved_chapter_id"]
-                or current.resolved_chapter_number
-                != previous["expected_resolved_chapter_number"]
+                or current.resolved_chapter_id != previous["expected_resolved_chapter_id"]
+                or current.resolved_chapter_number != previous["expected_resolved_chapter_number"]
             ):
-                raise ChapterProjectionRolloutConflictError(
-                    "rollback_foreshadowing_advanced"
-                )
+                raise ChapterProjectionRolloutConflictError("rollback_foreshadowing_advanced")
 
         promoted_snapshot.is_active = False
         legacy_snapshot.is_active = True

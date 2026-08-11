@@ -8,7 +8,6 @@ from app.models import ChapterOutline, NovelBlueprint, NovelProject
 from app.models.user import User
 from app.services.novel_service import NovelService
 
-
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -21,10 +20,14 @@ def test_chapter_outline_model_declares_structured_story_fields() -> None:
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_update_or_create_outline_persists_structured_story_fields(db_session_factory) -> None:
+async def test_update_or_create_outline_persists_structured_story_fields(
+    db_session_factory,
+) -> None:
     async with db_session_factory() as session:
         session.add(User(id=1, username="writer", hashed_password="secret"))
-        session.add(NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试"))
+        session.add(
+            NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试")
+        )
         session.add(NovelBlueprint(project_id="project-1", title="测试项目"))
         await session.commit()
 
@@ -41,17 +44,21 @@ async def test_update_or_create_outline_persists_structured_story_fields(db_sess
         await session.commit()
 
         project = (
-            await session.execute(
-                select(NovelProject)
-                .options(
-                    selectinload(NovelProject.blueprint),
-                    selectinload(NovelProject.characters),
-                    selectinload(NovelProject.relationships_),
-                    selectinload(NovelProject.outlines),
+            (
+                await session.execute(
+                    select(NovelProject)
+                    .options(
+                        selectinload(NovelProject.blueprint),
+                        selectinload(NovelProject.characters),
+                        selectinload(NovelProject.relationships_),
+                        selectinload(NovelProject.outlines),
+                    )
+                    .where(NovelProject.id == "project-1")
                 )
-                .where(NovelProject.id == "project-1")
             )
-        ).scalars().one()
+            .scalars()
+            .one()
+        )
 
         outline = service._build_blueprint_schema(project).chapter_outline[0]
 
@@ -73,7 +80,9 @@ def test_outline_generation_prompt_and_task_require_structured_story_fields() ->
 
 def test_alembic_baseline_includes_chapter_outline_structured_fields() -> None:
     # schema 改由 alembic baseline 管理（替代 _ensure_schema_updates 过渡态），确认 baseline 含结构化字段列
-    baseline = (BACKEND_ROOT / "alembic" / "versions" / "a53385d06521_baseline.py").read_text(encoding="utf-8")
+    baseline = (BACKEND_ROOT / "alembic" / "versions" / "a53385d06521_baseline.py").read_text(
+        encoding="utf-8"
+    )
 
     for field_name in ("goals", "highlights", "character_states"):
         assert f"sa.Column('{field_name}'" in baseline

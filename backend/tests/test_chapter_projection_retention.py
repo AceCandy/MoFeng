@@ -20,7 +20,6 @@ from app.services.chapter_projection_retention import (
     ChapterProjectionRetentionService,
 )
 
-
 PROJECT_ID = "11111111-1111-1111-1111-111111111111"
 OLD_GENERATION = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
 CURRENT_GENERATION = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
@@ -183,10 +182,7 @@ async def test_preview_then_purge_inactive_rag_generation_is_idempotent(
         assert repeated == purge
         assert await session.scalar(select(func.count(RagChunk.id))) == 0
         assert await session.scalar(select(func.count(RagSummary.id))) == 0
-        assert (
-            await session.scalar(select(func.count(ChapterProjectionRetentionAudit.id)))
-            == 2
-        )
+        assert await session.scalar(select(func.count(ChapterProjectionRetentionAudit.id))) == 2
 
         with pytest.raises(
             ChapterProjectionRetentionConflictError,
@@ -266,8 +262,7 @@ async def test_purge_preserves_manual_foreshadowing(
         )
         rows = (
             await session.execute(
-                select(Foreshadowing.content, Foreshadowing.is_manual)
-                .order_by(Foreshadowing.id)
+                select(Foreshadowing.content, Foreshadowing.is_manual).order_by(Foreshadowing.id)
             )
         ).all()
 
@@ -310,9 +305,7 @@ async def test_preview_rejects_active_artifacts_and_batch_overflow(
         assert active_response.status == "rejected"
         assert active_response.reason_code == "active_artifacts"
 
-        await session.execute(
-            RagChunk.__table__.update().values(is_active=False)
-        )
+        await session.execute(RagChunk.__table__.update().values(is_active=False))
         await session.commit()
         overflow_response = await ChapterProjectionRetentionService(session).execute(
             request=_request(
@@ -479,7 +472,4 @@ async def test_purge_rolls_back_when_candidate_becomes_active(
         artifact = await session.get(RagChunk, "retention-state-change-chunk")
         assert artifact is not None
         assert artifact.is_active is False
-        assert (
-            await session.scalar(select(func.count(ChapterProjectionRetentionAudit.id)))
-            == 0
-        )
+        assert await session.scalar(select(func.count(ChapterProjectionRetentionAudit.id))) == 0

@@ -21,7 +21,9 @@ class UpdateLogService:
             return list(await self.repo.list())
         return list(await self.repo.list_latest(limit))
 
-    async def create_log(self, content: str, creator: str | None = None, *, is_pinned: bool = False) -> UpdateLog:
+    async def create_log(
+        self, content: str, creator: str | None = None, *, is_pinned: bool = False
+    ) -> UpdateLog:
         if is_pinned:
             await self._clear_pinned()
         log = UpdateLog(content=content, created_by=creator, is_pinned=is_pinned)
@@ -30,7 +32,9 @@ class UpdateLogService:
         await self.session.refresh(log)
         return log
 
-    async def update_log(self, log_id: int, *, content: Optional[str] = None, is_pinned: Optional[bool] = None) -> UpdateLog:
+    async def update_log(
+        self, log_id: int, *, content: Optional[str] = None, is_pinned: Optional[bool] = None
+    ) -> UpdateLog:
         log = await self.repo.get(id=log_id)
         if not log:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="更新记录不存在")

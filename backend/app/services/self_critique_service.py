@@ -3,6 +3,7 @@
 
 实现"生成 → 自我批评 → 修正 → 再批评 → 再修正"的迭代优化循环。
 """
+
 from typing import Optional, Dict, Any, List
 from enum import Enum
 import json
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 class CritiqueDimension(str, Enum):
     """批评维度"""
+
     LOGIC = "logic"  # 逻辑一致性
     CHARACTER = "character"  # 人设一致性
     WRITING = "writing"  # 文笔质量
@@ -38,9 +40,9 @@ class SelfCritiqueService:
                 "时间线是否自洽",
                 "角色行为动机是否充分",
                 "世界观规则是否一致",
-                "是否存在前后矛盾"
+                "是否存在前后矛盾",
             ],
-            "severity_weight": 1.5  # 逻辑问题权重更高
+            "severity_weight": 1.5,  # 逻辑问题权重更高
         },
         CritiqueDimension.CHARACTER: {
             "name": "人设一致性",
@@ -49,9 +51,9 @@ class SelfCritiqueService:
                 "角色说话方式是否符合人设",
                 "角色决策是否符合其价值观",
                 "角色成长是否合理",
-                "是否存在 OOC（Out of Character）"
+                "是否存在 OOC（Out of Character）",
             ],
-            "severity_weight": 1.3
+            "severity_weight": 1.3,
         },
         CritiqueDimension.WRITING: {
             "name": "文笔质量",
@@ -60,9 +62,9 @@ class SelfCritiqueService:
                 "是否存在重复啰嗦",
                 "是否存在口水话",
                 "描写是否生动具体",
-                "是否过度使用形容词"
+                "是否过度使用形容词",
             ],
-            "severity_weight": 1.0
+            "severity_weight": 1.0,
         },
         CritiqueDimension.PACING: {
             "name": "节奏控制",
@@ -71,9 +73,9 @@ class SelfCritiqueService:
                 "场景转换是否流畅",
                 "是否存在拖沓或过于仓促",
                 "高潮和低谷是否分布合理",
-                "是否给读者喘息的空间"
+                "是否给读者喘息的空间",
             ],
-            "severity_weight": 1.0
+            "severity_weight": 1.0,
         },
         CritiqueDimension.EMOTION: {
             "name": "情感表达",
@@ -82,9 +84,9 @@ class SelfCritiqueService:
                 "情感变化是否自然",
                 "是否过度煽情或过于冷漠",
                 "读者是否能产生共鸣",
-                "情感高潮是否有足够铺垫"
+                "情感高潮是否有足够铺垫",
             ],
-            "severity_weight": 0.8
+            "severity_weight": 0.8,
         },
         CritiqueDimension.DIALOGUE: {
             "name": "对话质量",
@@ -93,10 +95,10 @@ class SelfCritiqueService:
                 "是否能区分不同角色的说话风格",
                 "是否存在说教或信息灌输",
                 "对话是否推动剧情或展现人物",
-                "是否存在无意义的对话"
+                "是否存在无意义的对话",
             ],
-            "severity_weight": 0.9
-        }
+            "severity_weight": 0.9,
+        },
     }
 
     def __init__(self, db: AsyncSession, llm_service: LLMService, prompt_service: PromptService):
@@ -109,21 +111,21 @@ class SelfCritiqueService:
         chapter_content: str,
         dimension: CritiqueDimension,
         context: Optional[Dict[str, Any]] = None,
-        user_id: int = 0
+        user_id: int = 0,
     ) -> Dict[str, Any]:
         """
         对章节进行单维度批评
-        
+
         Args:
             chapter_content: 章节内容
             dimension: 批评维度
             context: 上下文信息（如角色设定、前文摘要等）
-        
+
         Returns:
             包含问题列表和修改建议的字典
         """
         dim_config = self.CRITIQUE_PROMPTS[dimension]
-        
+
         context_str = ""
         if context:
             if context.get("character_profiles"):
@@ -132,9 +134,9 @@ class SelfCritiqueService:
                 context_str += f"\n[前文摘要]\n{context['previous_summary'][:1000]}"
             if context.get("emotion_target"):
                 context_str += f"\n[情绪目标]\n{context['emotion_target']}"
-        
+
         focus_points = "\n".join(f"- {f}" for f in dim_config["focus"])
-        
+
         prompt = f"""你是一位严格的文学编辑，现在需要从"{dim_config['name']}"维度审查以下章节。
 
 [审查重点]
@@ -175,9 +177,9 @@ class SelfCritiqueService:
                 conversation_history=[{"role": "user", "content": prompt}],
                 temperature=0.3,
                 user_id=user_id,
-                timeout=120.0
+                timeout=120.0,
             )
-            
+
             content = response
             json_start = content.find("{")
             json_end = content.rfind("}") + 1
@@ -187,14 +189,14 @@ class SelfCritiqueService:
                 return result
         except Exception as e:
             logger.warning(f"批评维度 {dimension.value} 失败: {e}")
-        
+
         return {
             "dimension": dimension.value,
             "overall_score": 70,
             "issues": [],
             "strengths": [],
             "summary": "无法完成审查",
-            "weight": dim_config["severity_weight"]
+            "weight": dim_config["severity_weight"],
         }
 
     async def full_critique(
@@ -202,17 +204,17 @@ class SelfCritiqueService:
         chapter_content: str,
         dimensions: Optional[List[CritiqueDimension]] = None,
         context: Optional[Dict[str, Any]] = None,
-        user_id: int = 0
+        user_id: int = 0,
     ) -> Dict[str, Any]:
         """
         对章节进行全维度批评
-        
+
         Returns:
             包含各维度批评结果和综合评分的字典
         """
         if dimensions is None:
             dimensions = list(CritiqueDimension)
-        
+
         results = {
             "dimension_critiques": {},
             "all_issues": [],
@@ -221,27 +223,27 @@ class SelfCritiqueService:
             "major_count": 0,
             "minor_count": 0,
             "needs_revision": False,
-            "priority_fixes": []
+            "priority_fixes": [],
         }
-        
+
         total_weight = 0
         weighted_score_sum = 0
-        
+
         for dimension in dimensions:
             critique = await self.critique_chapter(
                 chapter_content=chapter_content,
                 dimension=dimension,
                 context=context,
-                user_id=user_id
+                user_id=user_id,
             )
-            
+
             results["dimension_critiques"][dimension.value] = critique
-            
+
             # 统计问题
             for issue in critique.get("issues", []):
                 issue["dimension"] = dimension.value
                 results["all_issues"].append(issue)
-                
+
                 severity = issue.get("severity", "minor")
                 if severity == "critical":
                     results["critical_count"] += 1
@@ -249,35 +251,34 @@ class SelfCritiqueService:
                     results["major_count"] += 1
                 else:
                     results["minor_count"] += 1
-            
+
             # 计算加权分数
             weight = critique.get("weight", 1.0)
             score = critique.get("overall_score", 70)
             weighted_score_sum += score * weight
             total_weight += weight
-        
+
         # 计算综合分数
         if total_weight > 0:
             results["weighted_score"] = round(weighted_score_sum / total_weight, 1)
-        
+
         # 判断是否需要修改
         results["needs_revision"] = (
-            results["critical_count"] > 0 or 
-            results["major_count"] >= 3 or
-            results["weighted_score"] < 60
+            results["critical_count"] > 0
+            or results["major_count"] >= 3
+            or results["weighted_score"] < 60
         )
-        
+
         # 确定优先修复的问题
         priority_issues = [
-            issue for issue in results["all_issues"]
+            issue
+            for issue in results["all_issues"]
             if issue.get("severity") in ["critical", "major"]
         ]
         # 按严重程度排序
-        priority_issues.sort(
-            key=lambda x: 0 if x.get("severity") == "critical" else 1
-        )
+        priority_issues.sort(key=lambda x: 0 if x.get("severity") == "critical" else 1)
         results["priority_fixes"] = priority_issues[:5]  # 最多 5 个优先修复
-        
+
         return results
 
     async def revise_chapter(
@@ -285,21 +286,21 @@ class SelfCritiqueService:
         chapter_content: str,
         issues: List[Dict[str, Any]],
         context: Optional[Dict[str, Any]] = None,
-        user_id: int = 0
+        user_id: int = 0,
     ) -> str:
         """
         根据批评意见修改章节
-        
+
         Args:
             chapter_content: 原章节内容
             issues: 需要修复的问题列表
-        
+
         Returns:
             修改后的章节内容
         """
         if not issues:
             return chapter_content
-        
+
         # 构建问题列表
         issues_text = ""
         for i, issue in enumerate(issues[:10], 1):  # 最多处理 10 个问题
@@ -312,12 +313,12 @@ class SelfCritiqueService:
 - 建议：{issue.get('suggestion', '')}
 - 示例：{issue.get('example', '无')}
 """
-        
+
         context_str = ""
         if context:
             if context.get("character_profiles"):
                 context_str += f"\n[角色设定]\n{context['character_profiles'][:1500]}"
-        
+
         prompt = f"""你是一位资深网文作者，现在需要根据编辑的批评意见修改章节。
 
 [编辑批评意见]
@@ -343,9 +344,9 @@ class SelfCritiqueService:
                 conversation_history=[{"role": "user", "content": prompt}],
                 temperature=0.7,
                 user_id=user_id,
-                timeout=180.0
+                timeout=180.0,
             )
-            
+
             return response.strip()
         except Exception as e:
             logger.error(f"修改章节失败: {e}")
@@ -358,18 +359,18 @@ class SelfCritiqueService:
         target_score: float = 75.0,
         dimensions: Optional[List[CritiqueDimension]] = None,
         context: Optional[Dict[str, Any]] = None,
-        user_id: int = 0
+        user_id: int = 0,
     ) -> Dict[str, Any]:
         """
         执行完整的批评-修正循环
-        
+
         Args:
             chapter_content: 初始章节内容
             max_iterations: 最大迭代次数
             target_score: 目标分数（达到后停止迭代）
             dimensions: 批评维度
             context: 上下文信息
-        
+
         Returns:
             包含最终内容、迭代历史、最终评分的字典
         """
@@ -378,78 +379,78 @@ class SelfCritiqueService:
             dimensions = [
                 CritiqueDimension.LOGIC,
                 CritiqueDimension.CHARACTER,
-                CritiqueDimension.WRITING
+                CritiqueDimension.WRITING,
             ]
-        
+
         result = {
             "original_content": chapter_content,
             "final_content": chapter_content,
             "iterations": [],
             "final_score": 0,
             "improvement": 0,
-            "status": "pending"
+            "status": "pending",
         }
-        
+
         current_content = chapter_content
-        
+
         for iteration in range(max_iterations):
             iteration_data = {
                 "iteration": iteration + 1,
                 "critique": None,
                 "revised": False,
                 "score_before": 0,
-                "score_after": 0
+                "score_after": 0,
             }
-            
+
             # 批评当前版本
             critique = await self.full_critique(
                 chapter_content=current_content,
                 dimensions=dimensions,
                 context=context,
-                user_id=user_id
+                user_id=user_id,
             )
-            
+
             iteration_data["critique"] = {
                 "weighted_score": critique["weighted_score"],
                 "critical_count": critique["critical_count"],
                 "major_count": critique["major_count"],
                 "minor_count": critique["minor_count"],
-                "needs_revision": critique["needs_revision"]
+                "needs_revision": critique["needs_revision"],
             }
             iteration_data["score_before"] = critique["weighted_score"]
-            
+
             # 检查是否达到目标
             if critique["weighted_score"] >= target_score and not critique["needs_revision"]:
                 iteration_data["score_after"] = critique["weighted_score"]
                 result["iterations"].append(iteration_data)
                 result["status"] = "target_reached"
                 break
-            
+
             # 如果不需要修改，也停止
             if not critique["needs_revision"]:
                 iteration_data["score_after"] = critique["weighted_score"]
                 result["iterations"].append(iteration_data)
                 result["status"] = "acceptable"
                 break
-            
+
             # 修改章节
             revised_content = await self.revise_chapter(
                 chapter_content=current_content,
                 issues=critique["priority_fixes"],
                 context=context,
-                user_id=user_id
+                user_id=user_id,
             )
-            
+
             if revised_content and revised_content != current_content:
                 iteration_data["revised"] = True
                 current_content = revised_content
-                
+
                 # 重新评分
                 re_critique = await self.full_critique(
                     chapter_content=current_content,
                     dimensions=dimensions,
                     context=context,
-                    user_id=user_id
+                    user_id=user_id,
                 )
                 iteration_data["score_after"] = re_critique["weighted_score"]
             else:
@@ -457,30 +458,26 @@ class SelfCritiqueService:
                 result["iterations"].append(iteration_data)
                 result["status"] = "revision_failed"
                 break
-            
+
             result["iterations"].append(iteration_data)
-        
+
         # 设置最终结果
         result["final_content"] = current_content
-        
+
         if result["iterations"]:
             result["final_score"] = result["iterations"][-1]["score_after"]
             initial_score = result["iterations"][0]["score_before"]
             result["improvement"] = round(result["final_score"] - initial_score, 1)
-        
+
         if result["status"] == "pending":
             result["status"] = "max_iterations_reached"
-        
+
         return result
 
-    async def quick_critique(
-        self,
-        chapter_content: str,
-        user_id: int = 0
-    ) -> Dict[str, Any]:
+    async def quick_critique(self, chapter_content: str, user_id: int = 0) -> Dict[str, Any]:
         """
         快速批评（只检查最重要的问题）
-        
+
         用于在生成过程中快速评估质量
         """
         prompt = f"""快速审查以下章节，找出最严重的问题。
@@ -511,9 +508,9 @@ class SelfCritiqueService:
                 conversation_history=[{"role": "user", "content": prompt}],
                 temperature=0.2,
                 user_id=user_id,
-                timeout=60.0
+                timeout=60.0,
             )
-            
+
             content = response
             json_start = content.find("{")
             json_end = content.rfind("}") + 1
@@ -521,11 +518,11 @@ class SelfCritiqueService:
                 return json.loads(content[json_start:json_end])
         except Exception as e:
             logger.warning(f"快速批评失败: {e}")
-        
+
         return {
             "quick_score": 70,
             "critical_issues": [],
             "ai_words_found": [],
             "has_hook": True,
-            "pass": True
+            "pass": True,
         }

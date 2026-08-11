@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from typing import Any, Generic, Iterable, Mapping, Optional, TypeVar
 
-
 T = TypeVar("T")
 U = TypeVar("U")
 _TOKENS_PER_MILLION = Decimal(1_000_000)
@@ -181,7 +180,9 @@ class AIModelPricing:
             input_price_per_million=_decimal(payload.get("input_price_per_million")),
             output_price_per_million=_decimal(payload.get("output_price_per_million")),
             cached_input_price_per_million=_decimal(payload.get("cached_input_price_per_million")),
-            cache_write_input_price_per_million=_decimal(payload.get("cache_write_input_price_per_million")),
+            cache_write_input_price_per_million=_decimal(
+                payload.get("cache_write_input_price_per_million")
+            ),
             currency=normalized_currency or None,
         )
 
@@ -200,9 +201,7 @@ def calculate_ai_cost(
         return None, pricing.currency, "usage_unavailable"
 
     regular_input_tokens = (
-        usage.input_tokens
-        - usage.cached_input_tokens
-        - usage.cache_write_input_tokens
+        usage.input_tokens - usage.cached_input_tokens - usage.cache_write_input_tokens
     )
     if regular_input_tokens < 0:
         return None, pricing.currency, "usage_invalid"
@@ -317,13 +316,9 @@ def combine_ai_call_results(
 
     usage = TokenUsage.combine(item.usage for item in items)
     unknown_reasons = [
-        item.cost_unknown_reason
-        for item in items
-        if item.cost_unknown_reason is not None
+        item.cost_unknown_reason for item in items if item.cost_unknown_reason is not None
     ]
-    non_null_currencies = {
-        item.cost_currency for item in items if item.cost_currency is not None
-    }
+    non_null_currencies = {item.cost_currency for item in items if item.cost_currency is not None}
     if len(non_null_currencies) > 1:
         raise ValueError("AI 调用聚合的成本币种必须一致")
     currency = next(iter(non_null_currencies), None)
@@ -340,9 +335,7 @@ def combine_ai_call_results(
         amounts = [_decimal(item.cost_amount) for item in items]
         if any(amount is None for amount in amounts) or currency is None:
             raise ValueError("AI 调用成本 envelope 不完整")
-        amount = _decimal_string(
-            sum((item for item in amounts if item is not None), Decimal(0))
-        )
+        amount = _decimal_string(sum((item for item in amounts if item is not None), Decimal(0)))
         unknown_reason = None
 
     return AICallResult(

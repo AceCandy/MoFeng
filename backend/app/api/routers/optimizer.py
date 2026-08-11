@@ -3,6 +3,7 @@
 章节内容分层优化API
 支持对话、环境描写、心理活动、节奏韵律四个维度的深度优化
 """
+
 import json
 import logging
 from typing import Optional
@@ -28,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 class OptimizeRequest(BaseModel):
     """优化请求"""
+
     project_id: str = Field(..., description="项目ID")
     chapter_number: int = Field(..., description="章节编号")
     dimension: str = Field(..., description="优化维度: dialogue/environment/psychology/rhythm")
@@ -36,6 +38,7 @@ class OptimizeRequest(BaseModel):
 
 class OptimizeResponse(BaseModel):
     """优化响应"""
+
     optimized_content: str = Field(..., description="优化后的内容")
     optimization_notes: str = Field(..., description="优化说明")
     dimension: str = Field(..., description="优化维度")
@@ -43,6 +46,7 @@ class OptimizeResponse(BaseModel):
 
 class OptimizeRecommendedVersionRequest(BaseModel):
     """基于评审结果优化推荐版本请求"""
+
     project_id: str = Field(..., description="项目ID")
     chapter_number: int = Field(..., description="章节编号")
     source_content: str = Field(..., description="推荐版本正文")
@@ -53,6 +57,7 @@ class OptimizeRecommendedVersionRequest(BaseModel):
 
 class ApplyOptimizationRequest(BaseModel):
     """应用优化内容请求"""
+
     project_id: str = Field(..., description="项目ID")
     chapter_number: int = Field(..., description="章节编号")
     optimized_content: str = Field(..., description="优化后的完整内容")
@@ -62,8 +67,9 @@ DIMENSION_PROMPT_MAP = {
     "dialogue": "optimize_dialogue",
     "environment": "optimize_environment",
     "psychology": "optimize_psychology",
-    "rhythm": "optimize_rhythm"
+    "rhythm": "optimize_rhythm",
 }
+
 
 @router.post("/optimize", response_model=OptimizeResponse)
 async def optimize_chapter(
@@ -81,8 +87,7 @@ async def optimize_chapter(
     project = await novel_service.ensure_project_owner(request.project_id, current_user.id)
 
     chapter = next(
-        (ch for ch in project.chapters if ch.chapter_number == request.chapter_number),
-        None
+        (ch for ch in project.chapters if ch.chapter_number == request.chapter_number), None
     )
     if not chapter:
         raise HTTPException(status_code=404, detail="章节不存在")
@@ -95,7 +100,7 @@ async def optimize_chapter(
     if request.dimension not in DIMENSION_PROMPT_MAP:
         raise HTTPException(
             status_code=400,
-            detail=f"不支持的优化维度: {request.dimension}，支持的维度: {list(DIMENSION_PROMPT_MAP.keys())}"
+            detail=f"不支持的优化维度: {request.dimension}，支持的维度: {list(DIMENSION_PROMPT_MAP.keys())}",
         )
 
     prompt_name = DIMENSION_PROMPT_MAP[request.dimension]
@@ -104,7 +109,7 @@ async def optimize_chapter(
     if not optimizer_prompt:
         raise HTTPException(
             status_code=500,
-            detail=f"缺少{request.dimension}优化提示词，请联系管理员配置 '{prompt_name}' 提示词"
+            detail=f"缺少{request.dimension}优化提示词，请联系管理员配置 '{prompt_name}' 提示词",
         )
 
     character_dna = {}
@@ -116,7 +121,7 @@ async def optimize_chapter(
 
     optimize_input = {
         "original_content": original_content,
-        "additional_notes": request.additional_notes or "无额外指令"
+        "additional_notes": request.additional_notes or "无额外指令",
     }
 
     if character_dna:
@@ -127,16 +132,15 @@ async def optimize_chapter(
         current_user.id,
         request.project_id,
         request.chapter_number,
-        request.dimension
+        request.dimension,
     )
 
     try:
         response = await llm_service.get_llm_response(
             system_prompt=optimizer_prompt,
-            conversation_history=[{
-                "role": "user",
-                "content": json.dumps(optimize_input, ensure_ascii=False)
-            }],
+            conversation_history=[
+                {"role": "user", "content": json.dumps(optimize_input, ensure_ascii=False)}
+            ],
             temperature=0.7,
             user_id=current_user.id,
             timeout=600.0,
@@ -149,13 +153,13 @@ async def optimize_chapter(
             "项目 %s 第 %s 章 %s 优化完成",
             request.project_id,
             request.chapter_number,
-            request.dimension
+            request.dimension,
         )
 
         return OptimizeResponse(
             optimized_content=optimized_content,
             optimization_notes=optimization_notes,
-            dimension=request.dimension
+            dimension=request.dimension,
         )
 
     except Exception as exc:
@@ -165,10 +169,7 @@ async def optimize_chapter(
             request.chapter_number,
             type(exc).__name__,
         )
-        raise HTTPException(
-            status_code=500,
-            detail="优化过程中发生错误"
-        ) from None
+        raise HTTPException(status_code=500, detail="优化过程中发生错误") from None
 
 
 async def do_optimize_recommended_version(
@@ -201,10 +202,9 @@ async def do_optimize_recommended_version(
 
     response = await llm_service.get_llm_response(
         system_prompt=optimizer_prompt,
-        conversation_history=[{
-            "role": "user",
-            "content": json.dumps(optimize_input, ensure_ascii=False)
-        }],
+        conversation_history=[
+            {"role": "user", "content": json.dumps(optimize_input, ensure_ascii=False)}
+        ],
         temperature=0.7,
         user_id=user_id,
         timeout=600.0,
@@ -299,8 +299,14 @@ async def apply_optimization(
     resolved_chapter_number = request.chapter_number if request else chapter_number
     resolved_optimized_content = request.optimized_content if request else None
 
-    if not resolved_project_id or resolved_chapter_number is None or resolved_optimized_content is None:
-        raise HTTPException(status_code=422, detail="缺少必填参数: project_id/chapter_number/optimized_content")
+    if (
+        not resolved_project_id
+        or resolved_chapter_number is None
+        or resolved_optimized_content is None
+    ):
+        raise HTTPException(
+            status_code=422, detail="缺少必填参数: project_id/chapter_number/optimized_content"
+        )
 
     edit_result = await ChapterEditService(session).apply_content(
         project_id=resolved_project_id,

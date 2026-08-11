@@ -28,13 +28,35 @@ _FORESHADOWING_RULES = [
         "type": "mystery",
         "importance": "major",
         "confidence": 0.76,
-        "keywords": ["神秘", "秘密", "真相", "谜团", "身份", "来历", "幕后", "蹊跷", "古怪", "诡异", "不对劲"],
+        "keywords": [
+            "神秘",
+            "秘密",
+            "真相",
+            "谜团",
+            "身份",
+            "来历",
+            "幕后",
+            "蹊跷",
+            "古怪",
+            "诡异",
+            "不对劲",
+        ],
     },
     {
         "type": "question",
         "importance": "major",
         "confidence": 0.72,
-        "keywords": ["为什么", "为何", "到底", "究竟", "不明白", "不知道", "怎么会", "何以", "难道"],
+        "keywords": [
+            "为什么",
+            "为何",
+            "到底",
+            "究竟",
+            "不明白",
+            "不知道",
+            "怎么会",
+            "何以",
+            "难道",
+        ],
     },
     {
         "type": "clue",
@@ -46,18 +68,79 @@ _FORESHADOWING_RULES = [
         "type": "setup",
         "importance": "minor",
         "confidence": 0.61,
-        "keywords": ["将来", "日后", "以后", "将会", "埋下", "伏笔", "悬念", "预感", "迟早", "终有一天"],
+        "keywords": [
+            "将来",
+            "日后",
+            "以后",
+            "将会",
+            "埋下",
+            "伏笔",
+            "悬念",
+            "预感",
+            "迟早",
+            "终有一天",
+        ],
     },
 ]
-_PAYOFF_MARKERS = ["原来", "真相", "答案", "揭晓", "揭开", "终于明白", "其实", "果然", "解释了", "应验"]
+_PAYOFF_MARKERS = [
+    "原来",
+    "真相",
+    "答案",
+    "揭晓",
+    "揭开",
+    "终于明白",
+    "其实",
+    "果然",
+    "解释了",
+    "应验",
+]
 _REINFORCE_MARKERS = ["再次", "又", "仍", "依旧", "继续", "再度", "回想", "提到", "印证"]
-_QUESTION_CUES = ["为什么", "为何", "到底", "究竟", "怎么会", "何以", "难道", "是谁", "是什么", "怎么", "吗"]
+_QUESTION_CUES = [
+    "为什么",
+    "为何",
+    "到底",
+    "究竟",
+    "怎么会",
+    "何以",
+    "难道",
+    "是谁",
+    "是什么",
+    "怎么",
+    "吗",
+]
 _TYPE_LIMITS = {"question": 2, "mystery": 2, "clue": 1, "setup": 1}
 _MYSTERY_STRONG_CUES = {"秘密", "真相", "谜团", "身份", "来历", "幕后"}
 _KEYWORD_STOPWORDS = {
-    "这个", "那个", "一些", "一种", "已经", "还是", "就是", "如果", "但是", "因为",
-    "他们", "我们", "你们", "自己", "事情", "时候", "没有", "不会", "不能", "然后",
-    "以及", "为了", "这里", "那里", "这样", "那样", "非常", "特别", "可能", "突然",
+    "这个",
+    "那个",
+    "一些",
+    "一种",
+    "已经",
+    "还是",
+    "就是",
+    "如果",
+    "但是",
+    "因为",
+    "他们",
+    "我们",
+    "你们",
+    "自己",
+    "事情",
+    "时候",
+    "没有",
+    "不会",
+    "不能",
+    "然后",
+    "以及",
+    "为了",
+    "这里",
+    "那里",
+    "这样",
+    "那样",
+    "非常",
+    "特别",
+    "可能",
+    "突然",
 }
 
 
@@ -308,7 +391,9 @@ def _contains_any(text: str, needles: List[str]) -> bool:
 
 
 def _rule_status(content: str, item: ActiveForeshadowingSnapshot) -> str:
-    anchors = [keyword for keyword in item.keywords if isinstance(keyword, str) and len(keyword) >= 2]
+    anchors = [
+        keyword for keyword in item.keywords if isinstance(keyword, str) and len(keyword) >= 2
+    ]
     if not anchors:
         anchors = _extract_keyword_anchors(item.content, max_count=6)
     if _contains_any(content, _PAYOFF_MARKERS) and anchors and _contains_any(content, anchors):
@@ -338,15 +423,19 @@ class ForeshadowingSyncService:
         active: List[ActiveForeshadowingSnapshot] = []
         if normalized:
             rows = (
-                await self.session.execute(
-                    select(Foreshadowing).where(
-                        Foreshadowing.project_id == project_id,
-                        Foreshadowing.chapter_number < chapter_number,
-                        Foreshadowing.is_active.is_(True),
-                        Foreshadowing.status.in_(["planted", "developing", "partial"]),
+                (
+                    await self.session.execute(
+                        select(Foreshadowing).where(
+                            Foreshadowing.project_id == project_id,
+                            Foreshadowing.chapter_number < chapter_number,
+                            Foreshadowing.is_active.is_(True),
+                            Foreshadowing.status.in_(["planted", "developing", "partial"]),
+                        )
                     )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             active = [
                 ActiveForeshadowingSnapshot(
                     id=item.id,
@@ -364,9 +453,7 @@ class ForeshadowingSyncService:
             else None
         )
         status_prompt = (
-            await prompt_service.get_prompt("foreshadowing_status_judge")
-            if active
-            else None
+            await prompt_service.get_prompt("foreshadowing_status_judge") if active else None
         )
         return ForeshadowingComputeContext(
             chapter_number=chapter_number,
@@ -522,7 +609,9 @@ class ForeshadowingSyncService:
                     )
                     .with_for_update()
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         for item in staged:
             item.is_active = True
@@ -554,16 +643,20 @@ class ForeshadowingSyncService:
         if not active_ids:
             return 0, 0
         rows = (
-            await self.session.execute(
-                select(Foreshadowing)
-                .where(
-                    Foreshadowing.project_id == project_id,
-                    Foreshadowing.id.in_(active_ids),
-                    Foreshadowing.is_active.is_(True),
+            (
+                await self.session.execute(
+                    select(Foreshadowing)
+                    .where(
+                        Foreshadowing.project_id == project_id,
+                        Foreshadowing.id.in_(active_ids),
+                        Foreshadowing.is_active.is_(True),
+                    )
+                    .with_for_update()
                 )
-                .with_for_update()
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         active_by_id = {item.id: item for item in rows}
 
         revealed_count = 0
@@ -714,7 +807,11 @@ class ForeshadowingSyncService:
             if not isinstance(item, dict) or not item.get("keep"):
                 continue
             item_id = item.get("id")
-            if not isinstance(item_id, int) or item_id in seen_ids or not 0 <= item_id < len(limited):
+            if (
+                not isinstance(item_id, int)
+                or item_id in seen_ids
+                or not 0 <= item_id < len(limited)
+            ):
                 continue
             seen_ids.add(item_id)
             source = limited[item_id]
@@ -729,15 +826,19 @@ class ForeshadowingSyncService:
             refined.append(
                 {
                     "content": source["content"],
-                    "type": item.get("type")
-                    if item.get("type") in {"mystery", "question", "clue", "setup"}
-                    else source["type"],
+                    "type": (
+                        item.get("type")
+                        if item.get("type") in {"mystery", "question", "clue", "setup"}
+                        else source["type"]
+                    ),
                     "keywords": keywords
                     or source.get("keywords")
                     or _extract_keyword_anchors(source["content"], max_count=5),
-                    "importance": item.get("importance")
-                    if item.get("importance") in {"major", "minor", "subtle"}
-                    else source.get("importance", "minor"),
+                    "importance": (
+                        item.get("importance")
+                        if item.get("importance") in {"major", "minor", "subtle"}
+                        else source.get("importance", "minor")
+                    ),
                     "confidence": max(0.0, min(1.0, float(confidence))),
                 }
             )
@@ -764,11 +865,16 @@ class ForeshadowingSyncService:
                 continue
             item_id = item.get("id")
             status = item.get("status")
-            if isinstance(item_id, int) and item_id in valid_ids and status in {
-                "revealed",
-                "developing",
-                "unchanged",
-            }:
+            if (
+                isinstance(item_id, int)
+                and item_id in valid_ids
+                and status
+                in {
+                    "revealed",
+                    "developing",
+                    "unchanged",
+                }
+            ):
                 decisions[item_id] = status
         return decisions
 

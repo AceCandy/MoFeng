@@ -28,7 +28,7 @@ def _normalize_version_content(raw_content: Any, metadata: Any) -> str:
     text = _coerce_text(raw_content)
     if text:
         return text
-    
+
     # 如果没有原始内容，尝试从元数据提取（兼容旧逻辑）
     text = _coerce_text(metadata)
     return text or ""
@@ -74,11 +74,9 @@ def _clean_string(text: str, parse_json: bool = True) -> str:
     if stripped.startswith('"') and stripped.endswith('"') and len(stripped) >= 2:
         stripped = stripped[1:-1]
     return (
-        stripped.replace("\\n", "\n")
-        .replace("\\t", "\t")
-        .replace('\\"', '"')
-        .replace("\\\\", "\\")
+        stripped.replace("\\n", "\n").replace("\\t", "\t").replace('\\"', '"').replace("\\\\", "\\")
     )
+
 
 from fastapi import HTTPException, status
 from sqlalchemy import and_, delete, func, insert, or_, select, update
@@ -141,16 +139,17 @@ class NovelService:
     # ------------------------------------------------------------------
     @classmethod
     def is_inspiration_seed(cls, title: str | None, initial_prompt: str | None) -> bool:
-        return (
-            (title or "").strip() == cls.INSPIRATION_TITLE
-            and (initial_prompt or "").strip() == cls.INSPIRATION_INITIAL_PROMPT
-        )
+        return (title or "").strip() == cls.INSPIRATION_TITLE and (
+            initial_prompt or ""
+        ).strip() == cls.INSPIRATION_INITIAL_PROMPT
 
     @classmethod
     def is_unfinished_inspiration_project(cls, project: NovelProject) -> bool:
         if project.status in cls.INSPIRATION_UNFINISHED_STATUSES:
             return True
-        return project.status == "draft" and cls.is_inspiration_seed(project.title, project.initial_prompt)
+        return project.status == "draft" and cls.is_inspiration_seed(
+            project.title, project.initial_prompt
+        )
 
     async def create_project(
         self,
@@ -335,11 +334,15 @@ class NovelService:
         result = await self.session.execute(stmt)
         return list(result.scalars())
 
-    async def append_conversation(self, project_id: str, role: str, content: str, metadata: Optional[Dict] = None) -> None:
+    async def append_conversation(
+        self, project_id: str, role: str, content: str, metadata: Optional[Dict] = None
+    ) -> None:
         # 原子 INSERT SELECT MAX(seq)+1，避免读改写并发竞态产生重复 seq
-        next_seq = select(func.coalesce(func.max(NovelConversation.seq), 0) + 1).where(
-            NovelConversation.project_id == project_id
-        ).scalar_subquery()
+        next_seq = (
+            select(func.coalesce(func.max(NovelConversation.seq), 0) + 1)
+            .where(NovelConversation.project_id == project_id)
+            .scalar_subquery()
+        )
         await self.session.execute(
             insert(NovelConversation).values(
                 project_id=project_id,
@@ -369,7 +372,9 @@ class NovelService:
         record.full_synopsis = blueprint.full_synopsis
         record.world_setting = blueprint.world_setting
 
-        await self.session.execute(delete(BlueprintCharacter).where(BlueprintCharacter.project_id == project_id))
+        await self.session.execute(
+            delete(BlueprintCharacter).where(BlueprintCharacter.project_id == project_id)
+        )
         for index, data in enumerate(blueprint.characters):
             self.session.add(
                 BlueprintCharacter(
@@ -380,19 +385,26 @@ class NovelService:
                     goals=data.get("goals"),
                     abilities=data.get("abilities"),
                     relationship_to_protagonist=data.get("relationship_to_protagonist"),
-                    extra={k: v for k, v in data.items() if k not in {
-                        "name",
-                        "identity",
-                        "personality",
-                        "goals",
-                        "abilities",
-                        "relationship_to_protagonist",
-                    }},
+                    extra={
+                        k: v
+                        for k, v in data.items()
+                        if k
+                        not in {
+                            "name",
+                            "identity",
+                            "personality",
+                            "goals",
+                            "abilities",
+                            "relationship_to_protagonist",
+                        }
+                    },
                     position=index,
                 )
             )
 
-        await self.session.execute(delete(BlueprintRelationship).where(BlueprintRelationship.project_id == project_id))
+        await self.session.execute(
+            delete(BlueprintRelationship).where(BlueprintRelationship.project_id == project_id)
+        )
         for index, relation in enumerate(blueprint.relationships):
             self.session.add(
                 BlueprintRelationship(
@@ -404,7 +416,9 @@ class NovelService:
                 )
             )
 
-        await self.session.execute(delete(ChapterOutline).where(ChapterOutline.project_id == project_id))
+        await self.session.execute(
+            delete(ChapterOutline).where(ChapterOutline.project_id == project_id)
+        )
         for outline in blueprint.chapter_outline:
             self.session.add(
                 ChapterOutline(
@@ -436,7 +450,9 @@ class NovelService:
             existing = blueprint.world_setting or {}
             blueprint.world_setting = {**existing, **patch["world_setting"]}
         if "characters" in patch and patch["characters"] is not None:
-            await self.session.execute(delete(BlueprintCharacter).where(BlueprintCharacter.project_id == project_id))
+            await self.session.execute(
+                delete(BlueprintCharacter).where(BlueprintCharacter.project_id == project_id)
+            )
             for index, data in enumerate(patch["characters"]):
                 self.session.add(
                     BlueprintCharacter(
@@ -447,19 +463,26 @@ class NovelService:
                         goals=data.get("goals"),
                         abilities=data.get("abilities"),
                         relationship_to_protagonist=data.get("relationship_to_protagonist"),
-                        extra={k: v for k, v in data.items() if k not in {
-                            "name",
-                            "identity",
-                            "personality",
-                            "goals",
-                            "abilities",
-                            "relationship_to_protagonist",
-                        }},
+                        extra={
+                            k: v
+                            for k, v in data.items()
+                            if k
+                            not in {
+                                "name",
+                                "identity",
+                                "personality",
+                                "goals",
+                                "abilities",
+                                "relationship_to_protagonist",
+                            }
+                        },
                         position=index,
                     )
                 )
         if "relationships" in patch and patch["relationships"] is not None:
-            await self.session.execute(delete(BlueprintRelationship).where(BlueprintRelationship.project_id == project_id))
+            await self.session.execute(
+                delete(BlueprintRelationship).where(BlueprintRelationship.project_id == project_id)
+            )
             for index, relation in enumerate(patch["relationships"]):
                 self.session.add(
                     BlueprintRelationship(
@@ -471,7 +494,9 @@ class NovelService:
                     )
                 )
         if "chapter_outline" in patch and patch["chapter_outline"] is not None:
-            await self.session.execute(delete(ChapterOutline).where(ChapterOutline.project_id == project_id))
+            await self.session.execute(
+                delete(ChapterOutline).where(ChapterOutline.project_id == project_id)
+            )
             for outline in patch["chapter_outline"]:
                 self.session.add(
                     ChapterOutline(
@@ -491,12 +516,9 @@ class NovelService:
     # 章节与版本
     # ------------------------------------------------------------------
     async def get_outline(self, project_id: str, chapter_number: int) -> Optional[ChapterOutline]:
-        stmt = (
-            select(ChapterOutline)
-            .where(
-                ChapterOutline.project_id == project_id,
-                ChapterOutline.chapter_number == chapter_number,
-            )
+        stmt = select(ChapterOutline).where(
+            ChapterOutline.project_id == project_id,
+            ChapterOutline.chapter_number == chapter_number,
         )
         result = await self.session.execute(stmt)
         return result.scalars().first()
@@ -583,13 +605,17 @@ class NovelService:
         # 调用方可能持有 finalize 提交前的 ORM 快照；必须先锁定并覆盖为数据库当前值。
         with self.session.no_autoflush:
             locked_chapter = (
-                await self.session.execute(
-                    select(Chapter)
-                    .where(Chapter.id == chapter.id)
-                    .with_for_update()
-                    .execution_options(populate_existing=True)
+                (
+                    await self.session.execute(
+                        select(Chapter)
+                        .where(Chapter.id == chapter.id)
+                        .with_for_update()
+                        .execution_options(populate_existing=True)
+                    )
                 )
-            ).scalars().first()
+                .scalars()
+                .first()
+            )
         if locked_chapter is None:
             raise ValueError("章节不存在")
         chapter = locked_chapter
@@ -614,8 +640,12 @@ class NovelService:
         chapter.word_count = 0
         chapter.projection_generation = None
         await self.session.flush()
-        await self.session.execute(delete(ChapterEvaluation).where(ChapterEvaluation.chapter_id == chapter.id))
-        await self.session.execute(delete(ChapterVersion).where(ChapterVersion.chapter_id == chapter.id))
+        await self.session.execute(
+            delete(ChapterEvaluation).where(ChapterEvaluation.chapter_id == chapter.id)
+        )
+        await self.session.execute(
+            delete(ChapterVersion).where(ChapterVersion.chapter_id == chapter.id)
+        )
         versions: List[ChapterVersion] = []
         for index, content in enumerate(contents):
             extra = metadata[index] if metadata and index < len(metadata) else None
@@ -652,18 +682,22 @@ class NovelService:
         return versions
 
     async def select_chapter_version(self, chapter: Chapter, version_index: int) -> ChapterVersion:
-        stmt = select(ChapterVersion).where(ChapterVersion.chapter_id == chapter.id).order_by(ChapterVersion.created_at)
+        stmt = (
+            select(ChapterVersion)
+            .where(ChapterVersion.chapter_id == chapter.id)
+            .order_by(ChapterVersion.created_at)
+        )
         result = await self.session.execute(stmt)
         versions = result.scalars().all()
-        
+
         if not versions or version_index < 0 or version_index >= len(versions):
             raise HTTPException(status_code=400, detail="版本索引无效")
         selected = versions[version_index]
-        
+
         # 校验内容是否为空
         if not selected.content or len(selected.content.strip()) == 0:
             raise HTTPException(status_code=400, detail="选中的版本内容为空，无法确认为最终版")
-        
+
         chapter.selected_version_id = selected.id
         # 同步关系对象，避免同一请求事务中 selected_version 仍为旧缓存。
         chapter.selected_version = selected
@@ -678,7 +712,13 @@ class NovelService:
         await self._touch_project(chapter.project_id)
         return selected
 
-    async def add_chapter_evaluation(self, chapter: Chapter, version: Optional[ChapterVersion], feedback: str, decision: Optional[str] = None) -> None:
+    async def add_chapter_evaluation(
+        self,
+        chapter: Chapter,
+        version: Optional[ChapterVersion],
+        feedback: str,
+        decision: Optional[str] = None,
+    ) -> None:
         evaluation = ChapterEvaluation(
             chapter_id=chapter.id,
             version_id=version.id if version else None,
@@ -725,11 +765,11 @@ class NovelService:
         if project is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="项目不存在")
         chapters_result = await self.session.execute(
-            select(Chapter)
-            .where(Chapter.project_id == project_id)
-            .with_for_update()
+            select(Chapter).where(Chapter.project_id == project_id).with_for_update()
         )
-        chapters_by_number = {chapter.chapter_number: chapter for chapter in chapters_result.scalars()}
+        chapters_by_number = {
+            chapter.chapter_number: chapter for chapter in chapters_result.scalars()
+        }
         completed_numbers = sorted(
             number
             for number, chapter in chapters_by_number.items()
@@ -765,8 +805,12 @@ class NovelService:
                     detail="删除最近已完成章节必须二次确认删除章节及全部产物",
                 )
 
-            later_outline_numbers = sorted(number for number in outline_numbers if number > completed_number)
-            missing_later_numbers = [number for number in later_outline_numbers if number not in draft_numbers]
+            later_outline_numbers = sorted(
+                number for number in outline_numbers if number > completed_number
+            )
+            missing_later_numbers = [
+                number for number in later_outline_numbers if number not in draft_numbers
+            ]
             if missing_later_numbers:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -775,7 +819,9 @@ class NovelService:
 
         if draft_numbers:
             first_draft_number = min(draft_numbers)
-            expected_tail_numbers = sorted(number for number in outline_numbers if number >= first_draft_number)
+            expected_tail_numbers = sorted(
+                number for number in outline_numbers if number >= first_draft_number
+            )
             if sorted(draft_numbers) != expected_tail_numbers:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -783,7 +829,9 @@ class NovelService:
                 )
 
         completed_chapter_ids = [
-            chapters_by_number[number].id for number in completed_to_delete if number in chapters_by_number
+            chapters_by_number[number].id
+            for number in completed_to_delete
+            if number in chapters_by_number
         ]
         tombstone_jobs = []
 
@@ -799,10 +847,14 @@ class NovelService:
                         )
                     )
                 await self.session.execute(
-                    delete(ChapterEvaluation).where(ChapterEvaluation.chapter_id.in_(completed_chapter_ids))
+                    delete(ChapterEvaluation).where(
+                        ChapterEvaluation.chapter_id.in_(completed_chapter_ids)
+                    )
                 )
                 await self.session.execute(
-                    delete(ChapterVersion).where(ChapterVersion.chapter_id.in_(completed_chapter_ids))
+                    delete(ChapterVersion).where(
+                        ChapterVersion.chapter_id.in_(completed_chapter_ids)
+                    )
                 )
                 await self.session.execute(
                     delete(ChapterGenerationTrace).where(
@@ -818,7 +870,9 @@ class NovelService:
 
             if draft_numbers:
                 draft_chapter_ids = [
-                    chapters_by_number[number].id for number in draft_numbers if number in chapters_by_number
+                    chapters_by_number[number].id
+                    for number in draft_numbers
+                    if number in chapters_by_number
                 ]
                 if draft_chapter_ids:
                     await self.session.execute(
@@ -918,7 +972,9 @@ class NovelService:
             return value.replace(tzinfo=timezone.utc)
         return value.astimezone(timezone.utc)
 
-    async def _auto_fail_stale_in_progress_chapters(self, project_id: str, chapters: List[Chapter]) -> None:
+    async def _auto_fail_stale_in_progress_chapters(
+        self, project_id: str, chapters: List[Chapter]
+    ) -> None:
         if not chapters:
             return
 
@@ -1221,7 +1277,9 @@ class NovelService:
             generation_step=chapter.generation_step if chapter else None,
             generation_step_index=chapter.generation_step_index if chapter else 0,
             generation_step_total=chapter.generation_step_total if chapter else 0,
-            generation_started_at=chapter.__dict__.get("generation_started_at") if chapter else None,
+            generation_started_at=(
+                chapter.__dict__.get("generation_started_at") if chapter else None
+            ),
             # updated_at 可能因 DB 侧 onupdate 在 commit 后被标记为 expired；
             # 序列化阶段只读取已加载值，避免触发异步懒加载导致 MissingGreenlet。
             status_updated_at=chapter.__dict__.get("updated_at") if chapter else None,

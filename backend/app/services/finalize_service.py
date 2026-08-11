@@ -10,6 +10,7 @@
 
 这是"生成后闭环"的核心服务，确保长程一致性。
 """
+
 import logging
 import re
 from typing import Optional, Dict, Any
@@ -157,7 +158,7 @@ class FinalizeService:
         chapter_number: int,
         chapter_text: str,
         user_id: int,
-        skip_vector_update: bool = False
+        skip_vector_update: bool = False,
     ) -> Dict[str, Any]:
         """
         对指定章节执行定稿处理
@@ -319,20 +320,20 @@ class FinalizeService:
     async def _get_or_create_project_memory(self, project_id: str) -> ProjectMemory:
         """获取或创建项目记忆"""
         memory = (
-            await self.db.execute(
-                select(ProjectMemory).where(ProjectMemory.project_id == project_id)
+            (
+                await self.db.execute(
+                    select(ProjectMemory).where(ProjectMemory.project_id == project_id)
+                )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
 
         if not memory:
             memory = ProjectMemory(
                 project_id=project_id,
                 global_summary="",
-                plot_arcs={
-                    "unresolved_hooks": [],
-                    "main_conflicts": [],
-                    "character_arcs": []
-                }
+                plot_arcs={"unresolved_hooks": [], "main_conflicts": [], "character_arcs": []},
             )
             self.db.add(memory)
             await self.db.flush()
@@ -340,22 +341,15 @@ class FinalizeService:
         return memory
 
     async def _update_global_summary(
-        self,
-        chapter_text: str,
-        old_summary: str,
-        user_id: int
+        self, chapter_text: str, old_summary: str, user_id: int
     ) -> Optional[str]:
         """更新全局摘要（异常向上传播，由 _safe_llm_call 统一记录，H4）"""
         prompt = UPDATE_GLOBAL_SUMMARY_PROMPT.format(
-            chapter_text=chapter_text,
-            global_summary=old_summary
+            chapter_text=chapter_text, global_summary=old_summary
         )
 
         response = await self.llm_service.generate(
-            prompt=prompt,
-            user_id=user_id,
-            max_tokens=3000,
-            temperature=0.3
+            prompt=prompt, user_id=user_id, max_tokens=3000, temperature=0.3
         )
         return response.strip() if response else None
 
@@ -363,19 +357,23 @@ class FinalizeService:
         """获取角色状态文本"""
         # 获取最新的角色状态记录
         states = (
-            await self.db.execute(
-                select(CharacterState)
-                .where(
-                    CharacterState.project_id == project_id,
-                    CharacterState.is_active.is_(True),
-                )
-                .order_by(
-                    CharacterState.chapter_number.desc(),
-                    CharacterState.chapter_revision.desc(),
-                    CharacterState.id.desc(),
+            (
+                await self.db.execute(
+                    select(CharacterState)
+                    .where(
+                        CharacterState.project_id == project_id,
+                        CharacterState.is_active.is_(True),
+                    )
+                    .order_by(
+                        CharacterState.chapter_number.desc(),
+                        CharacterState.chapter_revision.desc(),
+                        CharacterState.id.desc(),
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         if not states:
             return ""
@@ -406,22 +404,15 @@ class FinalizeService:
         return "\n\n".join(text_parts)
 
     async def _update_character_state(
-        self,
-        chapter_text: str,
-        old_state: str,
-        user_id: int
+        self, chapter_text: str, old_state: str, user_id: int
     ) -> Optional[str]:
         """更新角色状态（异常向上传播，由 _safe_llm_call 统一记录，H4）"""
         prompt = UPDATE_CHARACTER_STATE_PROMPT.format(
-            chapter_text=chapter_text,
-            old_state=old_state or "（暂无角色状态记录）"
+            chapter_text=chapter_text, old_state=old_state or "（暂无角色状态记录）"
         )
 
         response = await self.llm_service.generate(
-            prompt=prompt,
-            user_id=user_id,
-            max_tokens=4000,
-            temperature=0.3
+            prompt=prompt, user_id=user_id, max_tokens=4000, temperature=0.3
         )
         return response.strip() if response else None
 
@@ -523,11 +514,7 @@ class FinalizeService:
         return None
 
     async def _update_plot_arcs(
-        self,
-        chapter_text: str,
-        chapter_number: int,
-        old_plot_arcs: Dict,
-        user_id: int
+        self, chapter_text: str, chapter_number: int, old_plot_arcs: Dict, user_id: int
     ) -> Optional[Dict]:
         """更新剧情线追踪（异常向上传播，由 _safe_llm_call 统一记录，H4）"""
         import json
@@ -535,14 +522,11 @@ class FinalizeService:
         prompt = UPDATE_PLOT_ARCS_PROMPT.format(
             chapter_text=chapter_text,
             chapter_number=chapter_number,
-            plot_arcs=json.dumps(old_plot_arcs, ensure_ascii=False, indent=2)
+            plot_arcs=json.dumps(old_plot_arcs, ensure_ascii=False, indent=2),
         )
 
         response = await self.llm_service.generate(
-            prompt=prompt,
-            user_id=user_id,
-            max_tokens=2000,
-            temperature=0.3
+            prompt=prompt, user_id=user_id, max_tokens=2000, temperature=0.3
         )
         if not response:
             return None
@@ -555,22 +539,15 @@ class FinalizeService:
         return json.loads(response)
 
     async def _generate_chapter_summary(
-        self,
-        chapter_text: str,
-        chapter_number: int,
-        user_id: int
+        self, chapter_text: str, chapter_number: int, user_id: int
     ) -> Optional[str]:
         """生成章节摘要（异常向上传播，由 _safe_llm_call 统一记录，H4）"""
         prompt = GENERATE_CHAPTER_SUMMARY_PROMPT.format(
-            chapter_text=chapter_text[:5000],  # 限制长度
-            chapter_number=chapter_number
+            chapter_text=chapter_text[:5000], chapter_number=chapter_number  # 限制长度
         )
 
         response = await self.llm_service.generate(
-            prompt=prompt,
-            user_id=user_id,
-            max_tokens=500,
-            temperature=0.3
+            prompt=prompt, user_id=user_id, max_tokens=500, temperature=0.3
         )
         return response.strip() if response else None
 
@@ -608,59 +585,64 @@ class FinalizeService:
     async def _update_blueprint_status(self, project_id: str, chapter_number: int):
         """更新章节蓝图状态"""
         blueprint = (
-            await self.db.execute(
-                select(ChapterBlueprint).where(
-                    ChapterBlueprint.project_id == project_id,
-                    ChapterBlueprint.chapter_number == chapter_number,
+            (
+                await self.db.execute(
+                    select(ChapterBlueprint).where(
+                        ChapterBlueprint.project_id == project_id,
+                        ChapterBlueprint.chapter_number == chapter_number,
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
 
         if blueprint:
             blueprint.is_finalized = True
 
-    async def get_finalize_context(
-        self,
-        project_id: str,
-        chapter_number: int
-    ) -> Dict[str, Any]:
+    async def get_finalize_context(self, project_id: str, chapter_number: int) -> Dict[str, Any]:
         """
         获取定稿上下文信息
 
         用于在生成章节时提供上下文参考。
         """
         memory = (
-            await self.db.execute(
-                select(ProjectMemory).where(ProjectMemory.project_id == project_id)
+            (
+                await self.db.execute(
+                    select(ProjectMemory).where(ProjectMemory.project_id == project_id)
+                )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
 
         # 获取最近的章节快照
         recent_snapshots = (
-            await self.db.execute(
-                select(ChapterSnapshot)
-                .where(
-                    ChapterSnapshot.project_id == project_id,
-                    ChapterSnapshot.chapter_number < chapter_number,
-                    ChapterSnapshot.is_active.is_(True),
+            (
+                await self.db.execute(
+                    select(ChapterSnapshot)
+                    .where(
+                        ChapterSnapshot.project_id == project_id,
+                        ChapterSnapshot.chapter_number < chapter_number,
+                        ChapterSnapshot.is_active.is_(True),
+                    )
+                    .order_by(
+                        ChapterSnapshot.chapter_number.desc(),
+                        ChapterSnapshot.chapter_revision.desc(),
+                        ChapterSnapshot.id.desc(),
+                    )
+                    .limit(3)
                 )
-                .order_by(
-                    ChapterSnapshot.chapter_number.desc(),
-                    ChapterSnapshot.chapter_revision.desc(),
-                    ChapterSnapshot.id.desc(),
-                )
-                .limit(3)
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         return {
             "global_summary": memory.global_summary if memory else None,
             "plot_arcs": memory.plot_arcs if memory else None,
             "recent_snapshots": [
-                {
-                    "chapter_number": s.chapter_number,
-                    "summary": s.chapter_summary
-                }
+                {"chapter_number": s.chapter_number, "summary": s.chapter_summary}
                 for s in recent_snapshots
-            ]
+            ],
         }

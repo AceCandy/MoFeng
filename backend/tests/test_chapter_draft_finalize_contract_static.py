@@ -12,7 +12,6 @@ from app.schemas.novel import (
     ForeshadowingSyncStats,
 )
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMAS_SOURCE = ROOT / "app/schemas/novel.py"
 PIPELINE_SOURCE = ROOT / "app/services/pipeline_orchestrator.py"

@@ -14,7 +14,6 @@ from .llm_service import LLMService
 from .novel_service import NovelService
 from .prompt_service import PromptService
 
-
 _REQUIRED_OUTLINE_FIELDS = (
     "chapter_number",
     "title",
@@ -64,7 +63,9 @@ def _parse_generated_outline_item(item: Any) -> dict[str, Any]:
     }
 
 
-def _parse_generated_outlines(response: str, payload: ChapterOutlineJobPayload) -> list[dict[str, Any]]:
+def _parse_generated_outlines(
+    response: str, payload: ChapterOutlineJobPayload
+) -> list[dict[str, Any]]:
     cleaned = remove_think_tags(response)
     normalized = unwrap_markdown_json(cleaned)
     data = json.loads(normalized)
@@ -74,7 +75,9 @@ def _parse_generated_outlines(response: str, payload: ChapterOutlineJobPayload) 
 
     outlines = [_parse_generated_outline_item(item) for item in raw_outlines]
     chapter_numbers = [item["chapter_number"] for item in outlines]
-    expected_numbers = list(range(payload.start_chapter, payload.start_chapter + payload.num_chapters))
+    expected_numbers = list(
+        range(payload.start_chapter, payload.start_chapter + payload.num_chapters)
+    )
     if chapter_numbers != expected_numbers:
         raise ValueError("AI 返回的章节编号或数量与生成请求不一致")
     return outlines
@@ -93,7 +96,9 @@ async def handle_chapter_outline_job(context) -> JobOutcome:
     try:
         async with context.session_factory() as session:
             novel_service = NovelService(session)
-            project = await novel_service.ensure_project_owner(payload.project_id, context.lease.user_id)
+            project = await novel_service.ensure_project_owner(
+                payload.project_id, context.lease.user_id
+            )
             project_schema = await novel_service._serialize_project(project)
             if not project_schema.blueprint:
                 raise ValueError("项目还没有可用于续写大纲的世界蓝图")
@@ -123,7 +128,9 @@ async def handle_chapter_outline_job(context) -> JobOutcome:
             if not outline_prompt:
                 raise ValueError("未配置大纲生成提示词")
     except HTTPException as exc:
-        raise PermanentJobError("outline_project_unavailable", str(exc.detail or "项目不存在")) from exc
+        raise PermanentJobError(
+            "outline_project_unavailable", str(exc.detail or "项目不存在")
+        ) from exc
     except ValueError as exc:
         raise PermanentJobError("outline_prerequisite_missing", str(exc)) from exc
 

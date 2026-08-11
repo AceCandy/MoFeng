@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 WRITER_SOURCE = ROOT / "app/api/routers/writer.py"
 
@@ -23,10 +22,14 @@ def test_confirm_finalize_endpoint_submits_one_durable_job() -> None:
 
 
 def test_confirm_finalize_does_not_execute_long_pipeline_in_web_process() -> None:
-    block = _source().split("async def confirm_finalize_chapter", 1)[1].split(
-        "\n\n@router.",
-        1,
-    )[0]
+    block = (
+        _source()
+        .split("async def confirm_finalize_chapter", 1)[1]
+        .split(
+            "\n\n@router.",
+            1,
+        )[0]
+    )
 
     assert "background_tasks.add_task" not in block
     assert "_schedule_finalize_task" not in block

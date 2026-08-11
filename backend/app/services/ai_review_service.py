@@ -217,7 +217,9 @@ class AIReviewService:
         }
         return json.dumps(payload, ensure_ascii=False, indent=2)
 
-    def _build_base_context_payload(self, review_context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    def _build_base_context_payload(
+        self, review_context: Optional[Dict[str, Any]]
+    ) -> Dict[str, Any]:
         context = review_context or {}
         return {
             "novel_blueprint": context.get("novel_blueprint") or {},
@@ -250,12 +252,18 @@ class AIReviewService:
         version_reviews = self._parse_version_reviews(data, len(versions))
 
         if not version_reviews:
-            version_reviews = self._build_default_version_reviews(len(versions), best_version_index, data)
+            version_reviews = self._build_default_version_reviews(
+                len(versions), best_version_index, data
+            )
 
         aggregate_scores = self._extract_scores(data.get("scores"))
         if not aggregate_scores:
             best_review = next(
-                (review for review in version_reviews if review.version_number == best_version_index + 1),
+                (
+                    review
+                    for review in version_reviews
+                    if review.version_number == best_version_index + 1
+                ),
                 None,
             )
             aggregate_scores = best_review.scores if best_review else {}
@@ -268,7 +276,9 @@ class AIReviewService:
             best_version_index=best_version_index,
             scores=aggregate_scores,
             overall_evaluation=self._coerce_text(data.get("overall_evaluation")),
-            critical_flaws=[self._coerce_text(item) for item in critical_flaws if self._coerce_text(item)],
+            critical_flaws=[
+                self._coerce_text(item) for item in critical_flaws if self._coerce_text(item)
+            ],
             refinement_suggestions=self._coerce_text(data.get("refinement_suggestions")),
             final_recommendation=self._coerce_text(data.get("final_recommendation")),
             version_reviews=version_reviews,
@@ -295,7 +305,9 @@ class AIReviewService:
             version_reviews=version_reviews,
         )
 
-    def _parse_version_reviews(self, data: Dict[str, Any], version_count: int) -> List[VersionReview]:
+    def _parse_version_reviews(
+        self, data: Dict[str, Any], version_count: int
+    ) -> List[VersionReview]:
         raw_reviews = data.get("version_reviews")
         if not isinstance(raw_reviews, list):
             return []

@@ -2,6 +2,7 @@
 """
 情感曲线和伏笔追踪分析API
 """
+
 import json
 import logging
 import re
@@ -24,8 +25,10 @@ router = APIRouter(prefix="/api/analytics", tags=["Analytics"])
 
 # ==================== 数据模型 ====================
 
+
 class EmotionPoint(BaseModel):
     """单个章节的情感数据点"""
+
     chapter_number: int
     title: str
     emotion_type: str  # 喜悦/悲伤/愤怒/恐惧/惊讶/平静
@@ -36,6 +39,7 @@ class EmotionPoint(BaseModel):
 
 class EmotionCurveResponse(BaseModel):
     """情感曲线响应"""
+
     project_id: str
     project_title: str
     total_chapters: int
@@ -46,6 +50,7 @@ class EmotionCurveResponse(BaseModel):
 
 class Foreshadowing(BaseModel):
     """单个伏笔"""
+
     id: str
     description: str
     planted_chapter: int
@@ -58,6 +63,7 @@ class Foreshadowing(BaseModel):
 
 class ForeshadowingResponse(BaseModel):
     """伏笔追踪响应"""
+
     project_id: str
     project_title: str
     total_foreshadowings: int
@@ -70,7 +76,20 @@ class ForeshadowingResponse(BaseModel):
 # ==================== 情感分析 ====================
 
 EMOTION_KEYWORDS = {
-    "喜悦": ["开心", "高兴", "欣喜", "兴奋", "愉快", "欢乐", "幸福", "满足", "得意", "狂喜", "笑", "乐"],
+    "喜悦": [
+        "开心",
+        "高兴",
+        "欣喜",
+        "兴奋",
+        "愉快",
+        "欢乐",
+        "幸福",
+        "满足",
+        "得意",
+        "狂喜",
+        "笑",
+        "乐",
+    ],
     "悲伤": ["难过", "伤心", "悲痛", "哀伤", "忧郁", "沮丧", "失落", "绝望", "泪", "哭", "痛苦"],
     "愤怒": ["生气", "愤怒", "恼火", "暴怒", "怒火", "气愤", "恨", "咬牙", "握拳", "怒吼"],
     "恐惧": ["害怕", "恐惧", "惊恐", "担忧", "焦虑", "不安", "颤抖", "发抖", "心惊", "胆寒"],
@@ -94,27 +113,27 @@ NARRATIVE_PHASE_KEYWORDS = {
 def analyze_emotion(text: str) -> tuple[str, int]:
     """分析文本的主要情感和强度"""
     emotion_scores = {emotion: 0 for emotion in EMOTION_KEYWORDS}
-    
+
     for emotion, keywords in EMOTION_KEYWORDS.items():
         for keyword in keywords:
             count = text.count(keyword)
             emotion_scores[emotion] += count
-    
+
     # 找出最高分的情感
     max_emotion = max(emotion_scores, key=emotion_scores.get)
     max_score = emotion_scores[max_emotion]
-    
+
     if max_score == 0:
         return "平静", 3
-    
+
     # 计算强度 (1-10)
     intensity = min(10, max(1, max_score))
-    
+
     # 根据感叹号和问号增加强度
     exclamation_count = text.count("！") + text.count("!")
     question_count = text.count("？") + text.count("?")
     intensity = min(10, intensity + exclamation_count // 3 + question_count // 5)
-    
+
     return max_emotion, intensity
 
 
@@ -122,12 +141,12 @@ def detect_narrative_phase(text: str, summary: str = "") -> Optional[str]:
     """检测叙事阶段"""
     combined_text = text + " " + summary
     phase_scores = {phase: 0 for phase in NARRATIVE_PHASE_KEYWORDS}
-    
+
     for phase, keywords in NARRATIVE_PHASE_KEYWORDS.items():
         for keyword in keywords:
             if keyword in combined_text:
                 phase_scores[phase] += 1
-    
+
     max_phase = max(phase_scores, key=phase_scores.get)
     if phase_scores[max_phase] > 0:
         return max_phase
@@ -142,11 +161,11 @@ def generate_emotion_description(emotion: str, intensity: int, title: str) -> st
         (7, 8): "强烈的",
         (9, 10): "极度的",
     }
-    
+
     for (low, high), word in intensity_words.items():
         if low <= intensity <= high:
             return f"《{title}》呈现{word}{emotion}情绪"
-    
+
     return f"《{title}》的情感基调为{emotion}"
 
 
@@ -174,14 +193,14 @@ def extract_foreshadowings(chapters_data: list) -> List[Foreshadowing]:
     """从章节数据中提取伏笔"""
     foreshadowings = []
     planted_items = []  # 记录已埋设的伏笔
-    
+
     for chapter in chapters_data:
         chapter_num = chapter["chapter_number"]
         title = chapter["title"]
         content = chapter.get("content", "")
         summary = chapter.get("summary", "")
         combined = content + " " + summary
-        
+
         # 检测埋设的伏笔
         for i, pattern in enumerate(FORESHADOWING_PLANT_PATTERNS):
             matches = re.findall(pattern, combined)
@@ -190,15 +209,17 @@ def extract_foreshadowings(chapters_data: list) -> List[Foreshadowing]:
                 # 提取上下文作为描述
                 context_match = re.search(f".{{0,20}}{re.escape(match)}.{{0,20}}", combined)
                 description = context_match.group(0) if context_match else match
-                
-                planted_items.append({
-                    "id": foreshadowing_id,
-                    "description": description.strip(),
-                    "planted_chapter": chapter_num,
-                    "planted_chapter_title": title,
-                    "importance": "short" if i < 2 else ("medium" if i < 4 else "long"),
-                })
-        
+
+                planted_items.append(
+                    {
+                        "id": foreshadowing_id,
+                        "description": description.strip(),
+                        "planted_chapter": chapter_num,
+                        "planted_chapter_title": title,
+                        "importance": "short" if i < 2 else ("medium" if i < 4 else "long"),
+                    }
+                )
+
         # 检测回收的伏笔
         for pattern in FORESHADOWING_PAYOFF_PATTERNS:
             if re.search(pattern, combined):
@@ -209,15 +230,17 @@ def extract_foreshadowings(chapters_data: list) -> List[Foreshadowing]:
                         if any(word in combined for word in planted["description"].split()[:3]):
                             planted["actual_payoff_chapter"] = chapter_num
                             break
-    
+
     # 构建伏笔列表
     current_chapter = max(c["chapter_number"] for c in chapters_data) if chapters_data else 0
-    
+
     for planted in planted_items:
         # 计算预期回收章节
         importance_offset = {"short": 2, "medium": 6, "long": 15}
-        expected_payoff = planted["planted_chapter"] + importance_offset.get(planted["importance"], 5)
-        
+        expected_payoff = planted["planted_chapter"] + importance_offset.get(
+            planted["importance"], 5
+        )
+
         # 确定状态
         if planted.get("actual_payoff_chapter"):
             status = "paid_off"
@@ -225,18 +248,20 @@ def extract_foreshadowings(chapters_data: list) -> List[Foreshadowing]:
             status = "overdue"
         else:
             status = "planted"
-        
-        foreshadowings.append(Foreshadowing(
-            id=planted["id"],
-            description=planted["description"],
-            planted_chapter=planted["planted_chapter"],
-            planted_chapter_title=planted["planted_chapter_title"],
-            expected_payoff_chapter=expected_payoff,
-            actual_payoff_chapter=planted.get("actual_payoff_chapter"),
-            status=status,
-            importance=planted["importance"],
-        ))
-    
+
+        foreshadowings.append(
+            Foreshadowing(
+                id=planted["id"],
+                description=planted["description"],
+                planted_chapter=planted["planted_chapter"],
+                planted_chapter_title=planted["planted_chapter_title"],
+                expected_payoff_chapter=expected_payoff,
+                actual_payoff_chapter=planted.get("actual_payoff_chapter"),
+                status=status,
+                importance=planted["importance"],
+            )
+        )
+
     return foreshadowings
 
 
@@ -262,6 +287,7 @@ async def load_selected_version_content_map(
 
 # ==================== API端点 ====================
 
+
 @router.get("/{project_id}/emotion-curve", response_model=EmotionCurveResponse)
 async def get_emotion_curve(
     project_id: str,
@@ -269,63 +295,70 @@ async def get_emotion_curve(
     current_user: UserInDB = Depends(get_current_user),
 ) -> EmotionCurveResponse:
     """获取小说的情感曲线数据"""
-    
+
     # 获取项目
     result = await session.execute(
         select(NovelProject).where(
-            NovelProject.id == project_id,
-            NovelProject.user_id == current_user.id
+            NovelProject.id == project_id, NovelProject.user_id == current_user.id
         )
     )
     project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="项目不存在")
-    
+
     # 获取所有章节和大纲
     chapters_result = await session.execute(
         select(Chapter).where(Chapter.project_id == project_id).order_by(Chapter.chapter_number)
     )
     chapters = chapters_result.scalars().all()
-    
+
     outlines_result = await session.execute(
-        select(ChapterOutline).where(ChapterOutline.project_id == project_id).order_by(ChapterOutline.chapter_number)
+        select(ChapterOutline)
+        .where(ChapterOutline.project_id == project_id)
+        .order_by(ChapterOutline.chapter_number)
     )
     outlines = {o.chapter_number: o for o in outlines_result.scalars().all()}
     selected_content_map = await load_selected_version_content_map(session, chapters)
-    
+
     # 分析每个章节的情感
     emotion_points = []
     emotion_counts = {}
     total_intensity = 0
-    
+
     for chapter in chapters:
         # 获取章节内容
-        content = selected_content_map.get(chapter.selected_version_id, "") if chapter.selected_version_id else ""
-        
+        content = (
+            selected_content_map.get(chapter.selected_version_id, "")
+            if chapter.selected_version_id
+            else ""
+        )
+
         outline = outlines.get(chapter.chapter_number)
         title = outline.title if outline else f"第{chapter.chapter_number}章"
         summary = outline.summary if outline else ""
-        
+
         # 分析情感
         emotion, intensity = analyze_emotion(content + " " + summary)
         narrative_phase = detect_narrative_phase(content, summary)
         description = generate_emotion_description(emotion, intensity, title)
-        
-        emotion_points.append(EmotionPoint(
-            chapter_number=chapter.chapter_number,
-            title=title,
-            emotion_type=emotion,
-            intensity=intensity,
-            narrative_phase=narrative_phase,
-            description=description,
-        ))
-        
+
+        emotion_points.append(
+            EmotionPoint(
+                chapter_number=chapter.chapter_number,
+                title=title,
+                emotion_type=emotion,
+                intensity=intensity,
+                narrative_phase=narrative_phase,
+                description=description,
+            )
+        )
+
         emotion_counts[emotion] = emotion_counts.get(emotion, 0) + 1
         total_intensity += intensity
-    
+
     # 计算统计数据
     avg_intensity = total_intensity / len(chapters) if chapters else 0
-    
+
     return EmotionCurveResponse(
         project_id=project_id,
         project_title=project.title,
@@ -343,52 +376,59 @@ async def get_foreshadowing(
     current_user: UserInDB = Depends(get_current_user),
 ) -> ForeshadowingResponse:
     """获取小说的伏笔追踪数据"""
-    
+
     # 获取项目
     result = await session.execute(
         select(NovelProject).where(
-            NovelProject.id == project_id,
-            NovelProject.user_id == current_user.id
+            NovelProject.id == project_id, NovelProject.user_id == current_user.id
         )
     )
     project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="项目不存在")
-    
+
     # 获取所有章节和大纲
     chapters_result = await session.execute(
         select(Chapter).where(Chapter.project_id == project_id).order_by(Chapter.chapter_number)
     )
     chapters = chapters_result.scalars().all()
-    
+
     outlines_result = await session.execute(
-        select(ChapterOutline).where(ChapterOutline.project_id == project_id).order_by(ChapterOutline.chapter_number)
+        select(ChapterOutline)
+        .where(ChapterOutline.project_id == project_id)
+        .order_by(ChapterOutline.chapter_number)
     )
     outlines = {o.chapter_number: o for o in outlines_result.scalars().all()}
     selected_content_map = await load_selected_version_content_map(session, chapters)
-    
+
     # 构建章节数据
     chapters_data = []
     for chapter in chapters:
-        content = selected_content_map.get(chapter.selected_version_id, "") if chapter.selected_version_id else ""
-        
+        content = (
+            selected_content_map.get(chapter.selected_version_id, "")
+            if chapter.selected_version_id
+            else ""
+        )
+
         outline = outlines.get(chapter.chapter_number)
-        
-        chapters_data.append({
-            "chapter_number": chapter.chapter_number,
-            "title": outline.title if outline else f"第{chapter.chapter_number}章",
-            "summary": outline.summary if outline else "",
-            "content": content,
-        })
-    
+
+        chapters_data.append(
+            {
+                "chapter_number": chapter.chapter_number,
+                "title": outline.title if outline else f"第{chapter.chapter_number}章",
+                "summary": outline.summary if outline else "",
+                "content": content,
+            }
+        )
+
     # 提取伏笔
     foreshadowings = extract_foreshadowings(chapters_data)
-    
+
     # 统计
     planted_count = sum(1 for f in foreshadowings if f.status == "planted")
     paid_off_count = sum(1 for f in foreshadowings if f.status == "paid_off")
     overdue_count = sum(1 for f in foreshadowings if f.status == "overdue")
-    
+
     return ForeshadowingResponse(
         project_id=project_id,
         project_title=project.title,
@@ -407,44 +447,49 @@ async def analyze_emotion_with_ai(
     current_user: UserInDB = Depends(get_current_user),
 ) -> EmotionCurveResponse:
     """使用AI深度分析情感曲线（更准确但较慢）"""
-    
+
     # 获取项目
     result = await session.execute(
         select(NovelProject).where(
-            NovelProject.id == project_id,
-            NovelProject.user_id == current_user.id
+            NovelProject.id == project_id, NovelProject.user_id == current_user.id
         )
     )
     project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="项目不存在")
-    
+
     # 获取所有章节
     chapters_result = await session.execute(
         select(Chapter).where(Chapter.project_id == project_id).order_by(Chapter.chapter_number)
     )
     chapters = chapters_result.scalars().all()
-    
+
     outlines_result = await session.execute(
-        select(ChapterOutline).where(ChapterOutline.project_id == project_id).order_by(ChapterOutline.chapter_number)
+        select(ChapterOutline)
+        .where(ChapterOutline.project_id == project_id)
+        .order_by(ChapterOutline.chapter_number)
     )
     outlines = {o.chapter_number: o for o in outlines_result.scalars().all()}
-    
+
     # 构建章节摘要列表
     chapter_summaries = []
     for chapter in chapters:
         outline = outlines.get(chapter.chapter_number)
         if outline:
-            chapter_summaries.append(f"第{chapter.chapter_number}章《{outline.title}》：{outline.summary}")
-    
+            chapter_summaries.append(
+                f"第{chapter.chapter_number}章《{outline.title}》：{outline.summary}"
+            )
+
     if not chapter_summaries:
         raise HTTPException(status_code=400, detail="没有可分析的章节")
-    
+
     llm_service = LLMService(session)
     prompt_service = PromptService(session)
     system_prompt = await prompt_service.get_prompt("emotion_analysis")
     if not system_prompt:
-        raise HTTPException(status_code=500, detail="缺少情感分析提示词，请联系管理员配置 'emotion_analysis' 提示词")
+        raise HTTPException(
+            status_code=500, detail="缺少情感分析提示词，请联系管理员配置 'emotion_analysis' 提示词"
+        )
     prompt = json.dumps({"chapters": chapter_summaries}, ensure_ascii=False)
 
     try:
@@ -458,32 +503,35 @@ async def analyze_emotion_with_ai(
         # 解析JSON
         import json
         from ...utils.json_utils import unwrap_markdown_json
+
         cleaned = unwrap_markdown_json(response)
         data = json.loads(cleaned)
-        
+
         emotion_points = []
         emotion_counts = {}
         total_intensity = 0
-        
+
         for item in data.get("chapters", []):
             outline = outlines.get(item["chapter_number"])
             title = outline.title if outline else f"第{item['chapter_number']}章"
-            
-            emotion_points.append(EmotionPoint(
-                chapter_number=item["chapter_number"],
-                title=title,
-                emotion_type=item.get("emotion_type", "平静"),
-                intensity=item.get("intensity", 5),
-                narrative_phase=item.get("narrative_phase"),
-                description=item.get("description", ""),
-            ))
-            
+
+            emotion_points.append(
+                EmotionPoint(
+                    chapter_number=item["chapter_number"],
+                    title=title,
+                    emotion_type=item.get("emotion_type", "平静"),
+                    intensity=item.get("intensity", 5),
+                    narrative_phase=item.get("narrative_phase"),
+                    description=item.get("description", ""),
+                )
+            )
+
             emotion = item.get("emotion_type", "平静")
             emotion_counts[emotion] = emotion_counts.get(emotion, 0) + 1
             total_intensity += item.get("intensity", 5)
-        
+
         avg_intensity = total_intensity / len(emotion_points) if emotion_points else 0
-        
+
         return EmotionCurveResponse(
             project_id=project_id,
             project_title=project.title,
@@ -492,7 +540,7 @@ async def analyze_emotion_with_ai(
             average_intensity=round(avg_intensity, 2),
             emotion_distribution=emotion_counts,
         )
-        
+
     except Exception as e:
         logger.error(f"AI情感分析失败: {e}")
         # 回退到关键词分析

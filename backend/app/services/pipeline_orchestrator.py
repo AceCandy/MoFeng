@@ -230,10 +230,14 @@ class PipelineOrchestrator:
         try:
             final_state = await graph.ainvoke(initial_state)
         except HTTPException as e:
-            await self._mark_generation_failed(project_id=project_id, chapter_number=chapter_number, error=e)
+            await self._mark_generation_failed(
+                project_id=project_id, chapter_number=chapter_number, error=e
+            )
             raise
         except Exception as e:
-            await self._mark_generation_failed(project_id=project_id, chapter_number=chapter_number, error=e)
+            await self._mark_generation_failed(
+                project_id=project_id, chapter_number=chapter_number, error=e
+            )
             raise
         return final_state["response"]
 
@@ -254,7 +258,8 @@ class PipelineOrchestrator:
         start_graph_node = TRACE_KEY_TO_GRAPH_NODE[normalized_key]
 
         traces = await self.trace_service.list_for_chapter(
-            project_id=project_id, chapter_number=chapter_number,
+            project_id=project_id,
+            chapter_number=chapter_number,
         )
         if not traces:
             raise HTTPException(status_code=409, detail="无可恢复的 trace 记录，请使用整章生成")
@@ -361,7 +366,8 @@ class PipelineOrchestrator:
             await publish_chapter_status(project_id, chapter_number)
 
             await self.trace_service.delete_failed_traces(
-                project_id=project_id, chapter_number=chapter_number,
+                project_id=project_id,
+                chapter_number=chapter_number,
             )
             label, stage = TRACE_NODE_META.get(from_node_key, (from_node_key, from_node_key))
             await self.trace_service.record_failure(
@@ -410,8 +416,7 @@ class PipelineOrchestrator:
             raise ValueError(f"未知的恢复起点节点: {start_graph_node}")
         start_idx = self.GRAPH_SEQUENCE.index(start_graph_node)
         prereq_to_add = [
-            node for node in RECOVERY_PREREQ_NODES
-            if self.GRAPH_SEQUENCE.index(node) < start_idx
+            node for node in RECOVERY_PREREQ_NODES if self.GRAPH_SEQUENCE.index(node) < start_idx
         ]
         ordered = prereq_to_add + list(self.GRAPH_SEQUENCE[start_idx:])
 
@@ -500,10 +505,7 @@ class PipelineOrchestrator:
                     chapter_number,
                 )
             else:
-                if (
-                    restored.project_id == project_id
-                    and restored.chapter_number == chapter_number
-                ):
+                if restored.project_id == project_id and restored.chapter_number == chapter_number:
                     updated = self.chapter_context_resolver.with_runtime_inputs(
                         restored,
                         writing_notes=writing_notes,
@@ -514,9 +516,7 @@ class PipelineOrchestrator:
                         requested_query = self.chapter_context_resolver.normalize_rag_query(
                             rag_query
                         )
-                        restored_rag_enabled = (
-                            restored.rag.fallback != ContextFallback.DISABLED
-                        )
+                        restored_rag_enabled = restored.rag.fallback != ContextFallback.DISABLED
                         retrieval_inputs_changed = (
                             restored_rag_enabled != rag_enabled
                             or restored.rag.value.query != requested_query
@@ -612,9 +612,7 @@ class PipelineOrchestrator:
             ip = input_of(ctx)
             completed = op.get("completed_chapters") or []
             completed_summaries = op.get("completed_summaries") or [
-                c.get("summary", "")
-                for c in completed
-                if isinstance(c, dict) and c.get("summary")
+                c.get("summary", "") for c in completed if isinstance(c, dict) and c.get("summary")
             ]
             state["history_context"] = {
                 "previous_summary": op.get("previous_summary", ""),
@@ -633,7 +631,9 @@ class PipelineOrchestrator:
             ]
             state["outline_title"] = ip.get("outline_title") or f"第{chapter_number}章"
             state["outline_summary"] = ip.get("outline_summary") or ""
-            state["writing_notes"] = state.get("writing_notes") or ip.get("writing_notes") or "无额外写作指令"
+            state["writing_notes"] = (
+                state.get("writing_notes") or ip.get("writing_notes") or "无额外写作指令"
+            )
             state["config"] = await self._resolve_config_from_trace_or_flow(op, flow_config)
             chapter_context = await self._restore_chapter_context_snapshot(
                 op.get("chapter_context"),
@@ -747,6 +747,7 @@ class PipelineOrchestrator:
         traces: List[ChapterGenerationTrace],
     ) -> List[Dict[str, Any]]:
         """从 trace 组装 versions，优先取 quality_review input_payload 的完整正文，其次 draft 定稿 trace。"""
+
         def validated_content(value: object) -> Optional[str]:
             if not isinstance(value, str) or not value.strip():
                 return None
@@ -757,8 +758,7 @@ class PipelineOrchestrator:
             return content
 
         qr_candidates = [
-            t for t in traces
-            if t.node_key == "quality_review" and t.status == "success"
+            t for t in traces if t.node_key == "quality_review" and t.status == "success"
         ]
         if qr_candidates:
             qr_latest = max(qr_candidates, key=lambda t: (t.created_at, t.id))
@@ -772,11 +772,14 @@ class PipelineOrchestrator:
                     if not content:
                         logger.warning("quality_review trace 含无效候选正文，拒绝从该节点恢复")
                         return []
-                    versions.append({
-                        "index": idx,
-                        "content": content,
-                        "metadata": (value.get("metadata") if isinstance(value, dict) else {}) or {},
-                    })
+                    versions.append(
+                        {
+                            "index": idx,
+                            "content": content,
+                            "metadata": (value.get("metadata") if isinstance(value, dict) else {})
+                            or {},
+                        }
+                    )
                 return versions
 
         by_version: Dict[int, ChapterGenerationTrace] = {}
@@ -798,13 +801,17 @@ class PipelineOrchestrator:
             op = (t.metadata_ or {}).get("output_payload") or {}
             full = validated_content(op.get("full_content"))
             if not full:
-                logger.warning("draft_generation trace 缺少有效 full_content，拒绝使用未定稿输出恢复")
+                logger.warning(
+                    "draft_generation trace 缺少有效 full_content，拒绝使用未定稿输出恢复"
+                )
                 return []
-            versions.append({
-                "index": len(versions),
-                "content": full,
-                "metadata": op.get("version_metadata") or {},
-            })
+            versions.append(
+                {
+                    "index": len(versions),
+                    "content": full,
+                    "metadata": op.get("version_metadata") or {},
+                }
+            )
         return versions
 
     async def _mark_generation_failed(
@@ -1075,7 +1082,9 @@ class PipelineOrchestrator:
             "outline_summary": generation_context["outline_summary"],
         }
 
-    async def _graph_generate_chapter_mission(self, state: PipelineGraphState) -> PipelineGraphState:
+    async def _graph_generate_chapter_mission(
+        self, state: PipelineGraphState
+    ) -> PipelineGraphState:
         await self._set_chapter_generation_state(
             project_id=state["project_id"],
             chapter_number=state["chapter_number"],
@@ -1106,10 +1115,14 @@ class PipelineOrchestrator:
 
         return {
             "chapter_mission": chapter_mission,
-            "allowed_new_characters": chapter_mission.get("allowed_new_characters", []) if chapter_mission else [],
+            "allowed_new_characters": (
+                chapter_mission.get("allowed_new_characters", []) if chapter_mission else []
+            ),
         }
 
-    async def _graph_build_visibility_context(self, state: PipelineGraphState) -> PipelineGraphState:
+    async def _graph_build_visibility_context(
+        self, state: PipelineGraphState
+    ) -> PipelineGraphState:
         chapter_context = self.chapter_context_resolver.with_runtime_inputs(
             ChapterContext.model_validate(state["chapter_context"]),
             chapter_mission=state.get("chapter_mission"),
@@ -1138,11 +1151,18 @@ class PipelineOrchestrator:
             "introduced_characters": introduced_characters,
         }
 
-    async def _graph_prepare_enhanced_context(self, state: PipelineGraphState) -> PipelineGraphState:
+    async def _graph_prepare_enhanced_context(
+        self, state: PipelineGraphState
+    ) -> PipelineGraphState:
         config = state["config"]
         enhanced_flow = None
         enhanced_context = None
-        if config.enable_constitution or config.enable_persona or config.enable_foreshadowing or config.enable_faction:
+        if (
+            config.enable_constitution
+            or config.enable_persona
+            or config.enable_foreshadowing
+            or config.enable_faction
+        ):
             enhanced_flow = EnhancedWritingFlow(self.session, self.llm_service, self.prompt_service)
             enhanced_context = await enhanced_flow.prepare_writing_context(
                 project_id=state["project_id"],
@@ -1167,7 +1187,9 @@ class PipelineOrchestrator:
             "project_memory_text": generation_context["project_memory_text"],
         }
 
-    async def _graph_prepare_retrieval_context(self, state: PipelineGraphState) -> PipelineGraphState:
+    async def _graph_prepare_retrieval_context(
+        self, state: PipelineGraphState
+    ) -> PipelineGraphState:
         started_at = datetime.now(CN_TIMEZONE)
         await self._set_chapter_generation_state(
             project_id=state["project_id"],
@@ -1270,9 +1292,13 @@ class PipelineOrchestrator:
         enhanced_flow = state.get("enhanced_flow")
         enhanced_context = state.get("enhanced_context")
         if enhanced_flow and enhanced_context:
-            prompt_sections = enhanced_flow.build_enhanced_prompt_sections(prompt_sections, enhanced_context)
+            prompt_sections = enhanced_flow.build_enhanced_prompt_sections(
+                prompt_sections, enhanced_context
+            )
 
-        prompt_input = "\n\n".join(f"{title}\n{content}" for title, content in prompt_sections if content)
+        prompt_input = "\n\n".join(
+            f"{title}\n{content}" for title, content in prompt_sections if content
+        )
         logger.debug("Pipeline prompt length: %s chars", len(prompt_input))
         await self._set_chapter_generation_state(
             project_id=state["project_id"],
@@ -1478,7 +1504,9 @@ class PipelineOrchestrator:
                 "skip_reason": None,
                 "metrics": {
                     "version_count": len(versions),
-                    "content_lengths": [len(version.get("content", "") or "") for version in versions],
+                    "content_lengths": [
+                        len(version.get("content", "") or "") for version in versions
+                    ],
                     "best_version_index": best_version_index,
                 },
             },
@@ -1488,7 +1516,9 @@ class PipelineOrchestrator:
 
         return {"best_version_index": best_version_index, "review_summaries": review_summaries}
 
-    async def _graph_apply_post_generation_reviews(self, state: PipelineGraphState) -> PipelineGraphState:
+    async def _graph_apply_post_generation_reviews(
+        self, state: PipelineGraphState
+    ) -> PipelineGraphState:
         versions = state["versions"]
         if not versions:
             return {"versions": versions, "review_summaries": state["review_summaries"]}
@@ -1531,9 +1561,11 @@ class PipelineOrchestrator:
                 chapter_title=state["outline_title"],
                 chapter_content=best_content,
                 chapter_context=state["chapter_context"],
-                chapter_plan=json.dumps(state.get("chapter_mission"), ensure_ascii=False)
-                if state.get("chapter_mission")
-                else None,
+                chapter_plan=(
+                    json.dumps(state.get("chapter_mission"), ensure_ascii=False)
+                    if state.get("chapter_mission")
+                    else None
+                ),
                 previous_summary=state["history_context"]["previous_summary"],
             )
             review_summaries["enhanced_review"] = review_result
@@ -1633,8 +1665,7 @@ class PipelineOrchestrator:
             },
             output_payload={
                 "versions": [
-                    {"index": item["index"], "version_id": item["version_id"]}
-                    for item in variants
+                    {"index": item["index"], "version_id": item["version_id"]} for item in variants
                 ],
                 "status": ChapterGenerationStatus.WAITING_FOR_CONFIRM.value,
             },
@@ -1869,7 +1900,9 @@ class PipelineOrchestrator:
         involved_characters: List[str],
     ) -> str:
         memory_layer = MemoryLayerService(self.session, self.llm_service, self.prompt_service)
-        return await memory_layer.get_memory_context(project_id, chapter_number, involved_characters)
+        return await memory_layer.get_memory_context(
+            project_id, chapter_number, involved_characters
+        )
 
     async def _build_prompt_sections(
         self,
@@ -1888,8 +1921,14 @@ class PipelineOrchestrator:
         memory_context: Optional[str],
     ) -> List[Tuple[str, str]]:
         blueprint_text = json.dumps(writer_blueprint, ensure_ascii=False, indent=2)
-        mission_text = json.dumps(chapter_mission, ensure_ascii=False, indent=2) if chapter_mission else "无导演脚本"
-        forbidden_text = json.dumps(forbidden_characters, ensure_ascii=False) if forbidden_characters else "无"
+        mission_text = (
+            json.dumps(chapter_mission, ensure_ascii=False, indent=2)
+            if chapter_mission
+            else "无导演脚本"
+        )
+        forbidden_text = (
+            json.dumps(forbidden_characters, ensure_ascii=False) if forbidden_characters else "无"
+        )
 
         sections: List[Tuple[str, str]] = [
             ("[世界蓝图](JSON，已裁剪)", blueprint_text),
@@ -1923,7 +1962,10 @@ class PipelineOrchestrator:
 
         sections.extend(
             [
-                ("[当前章节目标]", f"标题：{outline_title}\n摘要：{outline_summary}\n写作要求：{writing_notes}"),
+                (
+                    "[当前章节目标]",
+                    f"标题：{outline_title}\n摘要：{outline_summary}\n写作要求：{writing_notes}",
+                ),
                 (
                     "[篇幅与排版要求]",
                     build_word_count_requirement_text(target_word_count)
@@ -2084,7 +2126,9 @@ class PipelineOrchestrator:
                 },
                 output_payload={
                     "full_chapter": content,
-                    "preview_status": preview_meta.get("status") if isinstance(preview_meta, dict) else None,
+                    "preview_status": (
+                        preview_meta.get("status") if isinstance(preview_meta, dict) else None
+                    ),
                 },
                 metadata={
                     "trace_kind": "workflow",
@@ -2105,7 +2149,9 @@ class PipelineOrchestrator:
                     "metrics": {
                         "version_index": index + 1,
                         "preview": True,
-                        "preview_status": preview_meta.get("status") if isinstance(preview_meta, dict) else None,
+                        "preview_status": (
+                            preview_meta.get("status") if isinstance(preview_meta, dict) else None
+                        ),
                         "output_chars": len(content or ""),
                     },
                 },
@@ -2511,7 +2557,9 @@ class PipelineOrchestrator:
         enhanced_context: Optional[Dict[str, Any]],
         user_id: int,
     ) -> Tuple[str, Dict[str, Any]]:
-        preview_service = PreviewGenerationService(self.session, self.llm_service, self.prompt_service)
+        preview_service = PreviewGenerationService(
+            self.session, self.llm_service, self.prompt_service
+        )
         blueprint_context = json.dumps(writer_blueprint, ensure_ascii=False, indent=2)
 
         extra_constraints = []
@@ -2734,7 +2782,9 @@ class PipelineOrchestrator:
                     or ai_review.get("final_recommendation")
                     or "AI评审已完成"
                 ),
-                "scores": ai_review.get("scores") if isinstance(ai_review.get("scores"), dict) else {},
+                "scores": (
+                    ai_review.get("scores") if isinstance(ai_review.get("scores"), dict) else {}
+                ),
             }
             best_choice = 1
 
@@ -2794,7 +2844,9 @@ class PipelineOrchestrator:
                 timeout=600.0,
                 stage="chapter_optimization",
             )
-            refined_content, optimization_notes = self._parse_review_guided_refinement_response(response)
+            refined_content, optimization_notes = self._parse_review_guided_refinement_response(
+                response
+            )
             if not refined_content.strip():
                 raise RuntimeError("修复润色失败：模型返回的最终正文为空")
 
@@ -2949,9 +3001,7 @@ class PipelineOrchestrator:
         if not ai_review_result:
             raise RuntimeError("AI评审失败：多版本评审结果为空")
 
-        review_map = {
-            review.version_number: review for review in ai_review_result.version_reviews
-        }
+        review_map = {review.version_number: review for review in ai_review_result.version_reviews}
         for idx, variant in enumerate(versions):
             version_review = review_map.get(idx + 1)
             variant.setdefault("metadata", {})["ai_review"] = {
@@ -2960,8 +3010,16 @@ class PipelineOrchestrator:
                 "evaluation": version_review.overall_review if version_review else None,
                 "pros": version_review.pros if version_review else [],
                 "cons": version_review.cons if version_review else [],
-                "flaws": ai_review_result.critical_flaws if idx == ai_review_result.best_version_index else None,
-                "suggestions": ai_review_result.refinement_suggestions if idx == ai_review_result.best_version_index else None,
+                "flaws": (
+                    ai_review_result.critical_flaws
+                    if idx == ai_review_result.best_version_index
+                    else None
+                ),
+                "suggestions": (
+                    ai_review_result.refinement_suggestions
+                    if idx == ai_review_result.best_version_index
+                    else None
+                ),
             }
 
         return ai_review_result.best_version_index, {
@@ -3083,7 +3141,9 @@ class PipelineOrchestrator:
         report["auto_fix_applied"] = False
         return chapter_text, report
 
-    async def _run_optimizer(self, chapter_content: str, *, user_id: int) -> Tuple[str, Dict[str, Any]]:
+    async def _run_optimizer(
+        self, chapter_content: str, *, user_id: int
+    ) -> Tuple[str, Dict[str, Any]]:
         prompt_map = {
             "dialogue": "optimize_dialogue",
             "environment": "optimize_environment",
@@ -3106,7 +3166,9 @@ class PipelineOrchestrator:
             try:
                 response = await self.llm_service.get_llm_response(
                     system_prompt=prompt,
-                    conversation_history=[{"role": "user", "content": json.dumps(optimize_input, ensure_ascii=False)}],
+                    conversation_history=[
+                        {"role": "user", "content": json.dumps(optimize_input, ensure_ascii=False)}
+                    ],
                     temperature=0.7,
                     user_id=user_id,
                     timeout=600.0,
@@ -3158,5 +3220,6 @@ class PipelineOrchestrator:
             "rag": config.enable_rag,
             "rag_mode": config.rag_mode == "two_stage",
         }
+
 
 __all__ = ["PipelineOrchestrator", "PipelineConfig"]

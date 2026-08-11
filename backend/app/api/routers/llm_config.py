@@ -24,7 +24,6 @@ from ...schemas.llm_config import (
 from ...schemas.user import UserInDB
 from ...services.llm_config_service import LLMConfigService
 
-
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/llm-config", tags=["LLM Configuration"])
@@ -74,8 +73,7 @@ async def list_models(
     """获取可用的模型列表"""
     try:
         models = await service.get_available_models(
-            api_key=payload.llm_provider_api_key,
-            base_url=payload.llm_provider_url
+            api_key=payload.llm_provider_api_key, base_url=payload.llm_provider_url
         )
         logger.info("用户 %s 获取模型列表，返回 %d 个模型", current_user.id, len(models))
         return models
@@ -135,7 +133,12 @@ async def list_provider_models(
 ) -> List[str]:
     try:
         models = await service.get_provider_models(current_user.id, provider_id)
-        logger.info("用户 %s 通过供应商 %s 拉取模型，返回 %d 个模型", current_user.id, provider_id, len(models))
+        logger.info(
+            "用户 %s 通过供应商 %s 拉取模型，返回 %d 个模型",
+            current_user.id,
+            provider_id,
+            len(models),
+        )
         return models
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

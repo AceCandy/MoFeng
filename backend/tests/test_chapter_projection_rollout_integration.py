@@ -253,9 +253,7 @@ async def test_complete_cutover_then_rollback_restores_exact_legacy_state(
             projection_run_id=memory_run.id,
             is_active=False,
         )
-        session.add_all(
-            [revision, rollout, memory, legacy_snapshot, foreign_foreshadowing]
-        )
+        session.add_all([revision, rollout, memory, legacy_snapshot, foreign_foreshadowing])
         await session.flush()
         session.add_all([summary_run, observation])
         await session.flush()
@@ -824,9 +822,7 @@ async def test_runtime_metrics_separate_current_history_legacy_and_shadow(
         )
         await session.commit()
 
-        metrics = await ChapterProjectionService(session).get_runtime_metrics(
-            now=checked_at
-        )
+        metrics = await ChapterProjectionService(session).get_runtime_metrics(now=checked_at)
 
         assert metrics["status_counts"] == {"queued": 1, "succeeded": 1}
         assert metrics["history_status_counts"] == {
@@ -868,9 +864,7 @@ async def test_runtime_metrics_separate_current_history_legacy_and_shadow(
             "other": 1,
             "pricing_unconfigured": 1,
         }
-        assert metrics["rollout_transition_counts"] == {
-            "legacy.legacy->legacy.shadow": 1
-        }
+        assert metrics["rollout_transition_counts"] == {"legacy.legacy->legacy.shadow": 1}
         assert metrics["shadow_rollout_count"] == 1
         assert metrics["shadow_observation_outcome_counts"] == {"match": 1}
         assert metrics["shadow_oldest_window_age_seconds"] == 600

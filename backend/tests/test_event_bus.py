@@ -5,6 +5,7 @@
 - SSE：subscribe + get_message 替代每秒轮询、subscribe 前发初始态、降级 5s 轮询、aclose 退出。
 - pipeline：三处状态变更 commit 后 publish。
 """
+
 import asyncio
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
@@ -235,9 +236,7 @@ def test_pipeline_publishes_chapter_status_on_state_changes() -> None:
     """三处状态变更（_set/_mark_failed/_mark_failed_resume）commit 后 publish 通知。"""
     source = _pipeline_source()
     assert "from ..services.event_bus import publish_chapter_status" in source
-    assert (
-        source.count("await publish_chapter_status(project_id, chapter_number)") >= 3
-    )
+    assert source.count("await publish_chapter_status(project_id, chapter_number)") >= 3
 
 
 # ---------------- 后台任务事件总线（方案 B 扩展） ----------------
@@ -295,7 +294,9 @@ async def test_subscribe_background_task_returns_pubsub_on_success() -> None:
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_subscribe_background_task_returns_none_and_closes_pubsub_on_connection_error() -> None:
+async def test_subscribe_background_task_returns_none_and_closes_pubsub_on_connection_error() -> (
+    None
+):
     """subscribe 建连失败时返回 None 并 aclose pubsub，避免连接泄漏。"""
     pubsub = MagicMock()
     pubsub.subscribe = AsyncMock(side_effect=ConnectionError("redis down"))

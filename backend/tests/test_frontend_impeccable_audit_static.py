@@ -2,7 +2,6 @@ import json
 import re
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[2]
 FRONTEND = ROOT / "frontend"
 SRC = FRONTEND / "src"
@@ -66,7 +65,17 @@ def test_motion_does_not_transition_layout_properties():
         SRC / "assets" / "main.css",
         SRC / "components" / "shared" / "NovelDetailShell.vue",
     ]
-    layout_properties = ("width", "height", "left", "right", "top", "bottom", "padding", "margin", "flex-basis")
+    layout_properties = (
+        "width",
+        "height",
+        "left",
+        "right",
+        "top",
+        "bottom",
+        "padding",
+        "margin",
+        "flex-basis",
+    )
     violations = []
 
     for path in checked_sources:

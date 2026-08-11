@@ -3,6 +3,7 @@
 
 模拟不同类型读者的阅读体验，提供爽点检测、弃书风险评估、追读欲望分析。
 """
+
 from typing import Optional, Dict, Any, List
 from enum import Enum
 import json
@@ -18,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 class ReaderType(str, Enum):
     """读者类型"""
+
     CASUAL = "casual"  # 休闲读者：追求轻松愉快
     HARDCORE = "hardcore"  # 硬核读者：追求逻辑严密
     EMOTIONAL = "emotional"  # 情感读者：追求情感共鸣
@@ -88,57 +90,59 @@ class ReaderSimulatorService:
         chapter_number: int,
         reader_types: Optional[List[ReaderType]] = None,
         previous_summary: Optional[str] = None,
-        user_id: int = 0
+        user_id: int = 0,
     ) -> Dict[str, Any]:
         """
         模拟阅读体验
-        
+
         Returns:
             包含各类读者反馈的综合报告
         """
         if reader_types is None:
             reader_types = list(ReaderType)
-        
+
         results = {
             "overall_score": 0,
             "reader_feedbacks": {},
             "thrill_points": [],
             "abandon_risks": [],
             "hook_strength": 0,
-            "recommendations": []
+            "recommendations": [],
         }
-        
+
         # 1. 检测爽点
         thrill_points = await self._detect_thrill_points(chapter_content, user_id)
         results["thrill_points"] = thrill_points
-        
+
         # 2. 模拟各类读者反馈
         total_score = 0
         for reader_type in reader_types:
             feedback = await self._simulate_single_reader(
-                chapter_content, chapter_number, reader_type, 
-                thrill_points, previous_summary, user_id
+                chapter_content,
+                chapter_number,
+                reader_type,
+                thrill_points,
+                previous_summary,
+                user_id,
             )
             results["reader_feedbacks"][reader_type.value] = feedback
             total_score += feedback.get("satisfaction", 50)
-        
+
         results["overall_score"] = round(total_score / len(reader_types), 1)
-        
+
         # 3. 评估弃书风险
         results["abandon_risks"] = self._evaluate_abandon_risks(results["reader_feedbacks"])
-        
+
         # 4. 评估追读欲望（钩子强度）
         results["hook_strength"] = await self._evaluate_hook_strength(chapter_content, user_id)
-        
+
         # 5. 生成综合建议
         results["recommendations"] = self._generate_recommendations(results)
-        
+
         return results
 
     async def _detect_thrill_points(
-        self, 
-        chapter_content: str, 
-        user_id: int
+        self, chapter_content: str, user_id: int
     ) -> List[Dict[str, Any]]:
         """检测章节中的爽点"""
         prompt = f"""分析以下章节内容，找出所有"爽点"（让读者感到兴奋、满足、痛快的情节点）。
@@ -179,9 +183,9 @@ class ReaderSimulatorService:
                 conversation_history=[{"role": "user", "content": prompt}],
                 temperature=0.3,
                 user_id=user_id,
-                timeout=120.0
+                timeout=120.0,
             )
-            
+
             content = response
             json_start = content.find("{")
             json_end = content.rfind("}") + 1
@@ -190,7 +194,7 @@ class ReaderSimulatorService:
                 return result.get("thrill_points", [])
         except Exception as e:
             logger.warning(f"检测爽点失败: {e}")
-        
+
         return []
 
     async def _simulate_single_reader(
@@ -200,14 +204,14 @@ class ReaderSimulatorService:
         reader_type: ReaderType,
         thrill_points: List[Dict[str, Any]],
         previous_summary: Optional[str],
-        user_id: int
+        user_id: int,
     ) -> Dict[str, Any]:
         """模拟单个类型读者的阅读体验"""
         profile = self.READER_PROFILES[reader_type]
-        
+
         # 计算爽点满足度
         thrill_score = self._calculate_thrill_score(thrill_points, profile["thrill_sensitivity"])
-        
+
         prompt = f"""你现在扮演一个"{profile['name']}"。
 
 [读者画像]
@@ -244,9 +248,9 @@ class ReaderSimulatorService:
                 conversation_history=[{"role": "user", "content": prompt}],
                 temperature=0.7,
                 user_id=user_id,
-                timeout=120.0
+                timeout=120.0,
             )
-            
+
             content = response
             json_start = content.find("{")
             json_end = content.rfind("}") + 1
@@ -257,7 +261,7 @@ class ReaderSimulatorService:
                 return result
         except Exception as e:
             logger.warning(f"模拟{profile['name']}失败: {e}")
-        
+
         # 返回默认值
         return {
             "satisfaction": 50,
@@ -268,52 +272,47 @@ class ReaderSimulatorService:
             "abandon_risk": 5,
             "comment": "无法评价",
             "thrill_score": thrill_score,
-            "reader_type": reader_type.value
+            "reader_type": reader_type.value,
         }
 
     def _calculate_thrill_score(
-        self, 
-        thrill_points: List[Dict[str, Any]], 
-        sensitivity: float
+        self, thrill_points: List[Dict[str, Any]], sensitivity: float
     ) -> float:
         """计算爽点得分"""
         if not thrill_points:
             return 0
-        
+
         total_intensity = sum(tp.get("intensity", 5) for tp in thrill_points)
         base_score = min(100, total_intensity * 10)
-        
+
         return round(base_score * sensitivity, 1)
 
     def _evaluate_abandon_risks(
-        self, 
-        reader_feedbacks: Dict[str, Dict[str, Any]]
+        self, reader_feedbacks: Dict[str, Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """评估弃书风险"""
         risks = []
-        
+
         for reader_type, feedback in reader_feedbacks.items():
             abandon_risk = feedback.get("abandon_risk", 5)
             if abandon_risk >= 7:
                 profile = self.READER_PROFILES.get(ReaderType(reader_type), {})
-                risks.append({
-                    "reader_type": reader_type,
-                    "risk_level": abandon_risk,
-                    "triggers": profile.get("abandon_triggers", []),
-                    "complaints": feedback.get("complaints", [])
-                })
-        
+                risks.append(
+                    {
+                        "reader_type": reader_type,
+                        "risk_level": abandon_risk,
+                        "triggers": profile.get("abandon_triggers", []),
+                        "complaints": feedback.get("complaints", []),
+                    }
+                )
+
         return sorted(risks, key=lambda x: x["risk_level"], reverse=True)
 
-    async def _evaluate_hook_strength(
-        self, 
-        chapter_content: str, 
-        user_id: int
-    ) -> Dict[str, Any]:
+    async def _evaluate_hook_strength(self, chapter_content: str, user_id: int) -> Dict[str, Any]:
         """评估章节结尾的钩子强度"""
         # 提取章节结尾（最后 500 字）
         ending = chapter_content[-500:] if len(chapter_content) > 500 else chapter_content
-        
+
         prompt = f"""分析以下章节结尾的"钩子"强度（让读者想继续看下一章的吸引力）。
 
 [章节结尾]
@@ -335,9 +334,9 @@ class ReaderSimulatorService:
                 conversation_history=[{"role": "user", "content": prompt}],
                 temperature=0.3,
                 user_id=user_id,
-                timeout=60.0
+                timeout=60.0,
             )
-            
+
             content = response
             json_start = content.find("{")
             json_end = content.rfind("}") + 1
@@ -345,30 +344,30 @@ class ReaderSimulatorService:
                 return json.loads(content[json_start:json_end])
         except Exception as e:
             logger.warning(f"评估钩子强度失败: {e}")
-        
+
         return {
             "hook_strength": 5,
             "hook_type": "未知",
             "hook_description": "",
-            "improvement_suggestion": ""
+            "improvement_suggestion": "",
         }
 
     def _generate_recommendations(self, results: Dict[str, Any]) -> List[str]:
         """生成综合建议"""
         recommendations = []
-        
+
         # 基于整体得分
         overall_score = results.get("overall_score", 50)
         if overall_score < 60:
             recommendations.append("整体满意度偏低，需要重点优化")
-        
+
         # 基于爽点数量
         thrill_count = len(results.get("thrill_points", []))
         if thrill_count == 0:
             recommendations.append("本章缺少爽点，建议增加至少 1-2 个爽点")
         elif thrill_count < 2:
             recommendations.append("爽点数量偏少，可以适当增加")
-        
+
         # 基于弃书风险
         abandon_risks = results.get("abandon_risks", [])
         if abandon_risks:
@@ -377,7 +376,7 @@ class ReaderSimulatorService:
                 f"警告：{high_risk['reader_type']} 读者弃书风险较高，"
                 f"主要槽点：{', '.join(high_risk.get('complaints', [])[:2])}"
             )
-        
+
         # 基于钩子强度
         hook_data = results.get("hook_strength", {})
         if isinstance(hook_data, dict):
@@ -387,27 +386,25 @@ class ReaderSimulatorService:
                     f"章节结尾钩子较弱（{hook_strength}/10），"
                     f"建议：{hook_data.get('improvement_suggestion', '增加悬念')}"
                 )
-        
+
         # 收集各类读者的共同槽点
         all_complaints = []
         for feedback in results.get("reader_feedbacks", {}).values():
             all_complaints.extend(feedback.get("complaints", []))
-        
+
         if all_complaints:
             # 找出出现频率最高的槽点
             from collections import Counter
+
             common_complaints = Counter(all_complaints).most_common(2)
             for complaint, count in common_complaints:
                 if count >= 2:
                     recommendations.append(f"多类读者共同槽点：{complaint}")
-        
+
         return recommendations[:5]  # 最多返回 5 条建议
 
     async def get_reader_simulation_context(
-        self,
-        chapter_content: str,
-        chapter_number: int,
-        user_id: int
+        self, chapter_content: str, chapter_number: int, user_id: int
     ) -> str:
         """生成读者模拟上下文（用于写作参考）"""
         # 快速模拟（只用爽点读者和挑剔读者）
@@ -415,9 +412,9 @@ class ReaderSimulatorService:
             chapter_content=chapter_content,
             chapter_number=chapter_number,
             reader_types=[ReaderType.THRILL_SEEKER, ReaderType.CRITIC],
-            user_id=user_id
+            user_id=user_id,
         )
-        
+
         lines = [
             "# 读者模拟反馈\n",
             f"## 整体得分：{results['overall_score']}/100",
@@ -425,22 +422,24 @@ class ReaderSimulatorService:
             "## 爽点检测",
             f"- 发现 {len(results['thrill_points'])} 个爽点",
         ]
-        
+
         for tp in results["thrill_points"][:3]:
-            lines.append(f"  - [{tp.get('type')}] {tp.get('description')} (强度 {tp.get('intensity')}/10)")
-        
+            lines.append(
+                f"  - [{tp.get('type')}] {tp.get('description')} (强度 {tp.get('intensity')}/10)"
+            )
+
         lines.append("")
         lines.append("## 读者反馈")
-        
+
         for reader_type, feedback in results["reader_feedbacks"].items():
             lines.append(f"### {reader_type}")
             lines.append(f"- 满意度：{feedback.get('satisfaction')}/100")
             lines.append(f"- 评价：{feedback.get('comment')}")
-        
+
         if results["recommendations"]:
             lines.append("")
             lines.append("## 改进建议")
             for rec in results["recommendations"]:
                 lines.append(f"- {rec}")
-        
+
         return "\n".join(lines)

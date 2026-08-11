@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[2]
 INSPIRATION_MODE = ROOT / "frontend/src/views/InspirationMode.vue"
 

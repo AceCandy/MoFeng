@@ -58,7 +58,7 @@ class UserService:
     async def create_user_admin(self, payload: UserCreateAdmin) -> UserInDB:
         if payload.is_admin:
             raise ValueError("不允许直接创建管理员账号")
-            
+
         hashed_password = hash_password(payload.password)
         user = User(
             username=payload.username,
@@ -92,17 +92,17 @@ class UserService:
         except IntegrityError as exc:
             await self.session.rollback()
             raise ValueError("用户名或邮箱已存在") from exc
-            
+
         return UserInDB.model_validate(user)
 
     async def delete_user(self, user_id: int) -> bool:
         user = await self.repo.get(id=user_id)
         if not user:
             return False
-            
+
         if user.is_admin:
             raise ValueError("无法删除管理员账号")
-            
+
         await self.repo.delete(user)
         await self.session.commit()
         return True

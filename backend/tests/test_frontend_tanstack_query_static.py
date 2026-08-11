@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 FRONTEND_ROOT = ROOT.parent / "frontend"
 FRONTEND_SRC = FRONTEND_ROOT / "src"
@@ -87,7 +86,11 @@ def test_workspace_reads_query_loading_error_and_refetch_state():
 
 
 def test_writing_desk_reads_project_and_chapter_through_query_cache():
-    source = _source("views/WritingDesk.vue") + "\n" + _composables_source("composables/useWritingDesk*.ts")
+    source = (
+        _source("views/WritingDesk.vue")
+        + "\n"
+        + _composables_source("composables/useWritingDesk*.ts")
+    )
 
     for text in [
         "useNovelProjectQuery",
@@ -136,10 +139,9 @@ def test_inspiration_stream_unblocks_input_before_background_cache_refresh():
     query_source = _source("queries/novel.ts")
     stream_source = _source("api/novel.ts")
 
-    converse_block = query_source.split("export function useConverseConceptStreamMutation", 1)[1].split(
-        "export function useGenerateBlueprintMutation",
-        1,
-    )[0]
+    converse_block = query_source.split("export function useConverseConceptStreamMutation", 1)[
+        1
+    ].split("export function useGenerateBlueprintMutation", 1,)[0]
 
     assert "void refreshProjectQueries().catch" in converse_block
     assert "await refreshProjectQueries()" not in converse_block
@@ -158,7 +160,11 @@ def test_http_errors_keep_payload_for_inspiration_conflict_redirect():
 
 
 def test_detail_shell_uses_query_project_cache_for_editing_paths():
-    source = _source("components/shared/NovelDetailShell.vue") + "\n" + _composables_source("composables/useShell*.ts")
+    source = (
+        _source("components/shared/NovelDetailShell.vue")
+        + "\n"
+        + _composables_source("composables/useShell*.ts")
+    )
 
     for text in [
         "useNovelProjectQuery",
@@ -338,7 +344,13 @@ def test_llm_queries_own_model_routing_server_state_and_mutations():
 
 
 def test_personal_model_routing_uses_query_cache_for_bundle_and_mutations():
-    source = _source("components/llm-settings/PersonalModelRouting.vue") + "\n" + _composables_source("composables/useModelBundle.ts") + "\n" + _composables_source("components/llm-settings/use*.ts")
+    source = (
+        _source("components/llm-settings/PersonalModelRouting.vue")
+        + "\n"
+        + _composables_source("composables/useModelBundle.ts")
+        + "\n"
+        + _composables_source("components/llm-settings/use*.ts")
+    )
 
     for text in [
         "@/queries/llm",
@@ -386,7 +398,11 @@ def test_inspiration_model_readiness_uses_llm_query_cache():
 
 def test_optimizer_requests_are_mutations_not_direct_api_calls():
     query_source = _source("queries/novel.ts")
-    writing_desk = _source("views/WritingDesk.vue") + "\n" + _composables_source("composables/useWritingDeskOptimize.ts")
+    writing_desk = (
+        _source("views/WritingDesk.vue")
+        + "\n"
+        + _composables_source("composables/useWritingDeskOptimize.ts")
+    )
     chapter_content = _source("components/writing-desk/workspace/ChapterContent.vue")
 
     for text in [

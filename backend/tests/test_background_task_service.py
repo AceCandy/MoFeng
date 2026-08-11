@@ -6,10 +6,14 @@ from app.services.background_task_service import BackgroundTaskService
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_background_task_service_delegates_create_and_queries_to_job_service(db_session_factory):
+async def test_background_task_service_delegates_create_and_queries_to_job_service(
+    db_session_factory,
+):
     async with db_session_factory() as session:
         session.add(User(id=1, username="writer", hashed_password="secret"))
-        session.add(NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试"))
+        session.add(
+            NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试")
+        )
         await session.commit()
 
         service = BackgroundTaskService(session)

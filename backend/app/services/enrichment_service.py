@@ -9,6 +9,7 @@
 
 这对起点风格的网文很实用，可以稳定保持每章2k~4k字。
 """
+
 import logging
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class EnrichmentResult:
     """扩写结果"""
+
     original_word_count: int
     enriched_word_count: int
     enriched_content: str
@@ -111,262 +113,232 @@ ENRICH_SCENE_PROMPT = """\
 class EnrichmentService:
     """
     章节扩写服务
-    
+
     负责检测字数不足并进行智能扩写。
     """
-    
-    def __init__(
-        self,
-        db: Session,
-        llm_service: LLMService
-    ):
+
+    def __init__(self, db: Session, llm_service: LLMService):
         self.db = db
         self.llm_service = llm_service
-    
+
     async def check_and_enrich(
-        self,
-        chapter_text: str,
-        target_word_count: int,
-        user_id: int,
-        threshold: float = 0.7
+        self, chapter_text: str, target_word_count: int, user_id: int, threshold: float = 0.7
     ) -> Optional[EnrichmentResult]:
         """
         检查字数并在需要时进行扩写
-        
+
         Args:
             chapter_text: 章节内容
             target_word_count: 目标字数
             user_id: 用户ID
             threshold: 触发扩写的阈值（默认70%）
-            
+
         Returns:
             如果进行了扩写返回EnrichmentResult，否则返回None
         """
         current_count = self._count_words(chapter_text)
-        
+
         # 检查是否需要扩写
         if current_count >= target_word_count * threshold:
             logger.info(f"字数充足 ({current_count}/{target_word_count})，无需扩写")
             return None
-        
+
         logger.info(f"字数不足 ({current_count}/{target_word_count})，开始扩写")
-        
+
         # 执行扩写
         enriched = await self._enrich_chapter(
             chapter_text=chapter_text,
             target_word_count=target_word_count,
             current_word_count=current_count,
-            user_id=user_id
+            user_id=user_id,
         )
-        
+
         if not enriched:
             return None
-        
+
         enriched_count = self._count_words(enriched)
-        
+
         return EnrichmentResult(
             original_word_count=current_count,
             enriched_word_count=enriched_count,
             enriched_content=enriched,
             enrichment_ratio=enriched_count / current_count if current_count > 0 else 1.0,
-            enrichment_type="detail"
+            enrichment_type="detail",
         )
-    
+
     async def enrich_to_target(
-        self,
-        chapter_text: str,
-        target_word_count: int,
-        user_id: int,
-        max_iterations: int = 3
+        self, chapter_text: str, target_word_count: int, user_id: int, max_iterations: int = 3
     ) -> str:
         """
         迭代扩写直到达到目标字数
-        
+
         Args:
             chapter_text: 章节内容
             target_word_count: 目标字数
             user_id: 用户ID
             max_iterations: 最大迭代次数
-            
+
         Returns:
             扩写后的内容
         """
         current_text = chapter_text
-        
+
         for i in range(max_iterations):
             current_count = self._count_words(current_text)
-            
+
             if current_count >= target_word_count * 0.9:  # 达到90%即可
                 break
-            
+
             logger.info(f"扩写迭代 {i+1}: {current_count}/{target_word_count}")
-            
+
             result = await self.check_and_enrich(
                 chapter_text=current_text,
                 target_word_count=target_word_count,
                 user_id=user_id,
-                threshold=0.9  # 使用更高的阈值进行迭代
+                threshold=0.9,  # 使用更高的阈值进行迭代
             )
-            
+
             if result:
                 current_text = result.enriched_content
             else:
                 break
-        
+
         return current_text
-    
+
     async def enrich_dialogue(
-        self,
-        dialogue_text: str,
-        character_info: str,
-        user_id: int
+        self, dialogue_text: str, character_info: str, user_id: int
     ) -> Optional[str]:
         """
         扩写对话场景
-        
+
         专门针对对话进行扩写，增加潜台词和内心活动。
         """
         prompt = ENRICH_DIALOGUE_PROMPT.format(
-            dialogue_text=dialogue_text,
-            character_info=character_info
+            dialogue_text=dialogue_text, character_info=character_info
         )
-        
+
         try:
             response = await self.llm_service.generate(
-                prompt=prompt,
-                user_id=user_id,
-                max_tokens=4000,
-                temperature=0.6
+                prompt=prompt, user_id=user_id, max_tokens=4000, temperature=0.6
             )
             return parse_chapter_content_response(response)[0] if response else None
         except Exception as e:
             logger.error(f"对话扩写失败: {e}")
             return None
-    
+
     async def enrich_scene(
-        self,
-        scene_text: str,
-        location: str,
-        time: str,
-        atmosphere: str,
-        user_id: int
+        self, scene_text: str, location: str, time: str, atmosphere: str, user_id: int
     ) -> Optional[str]:
         """
         扩写场景描写
-        
+
         专门针对场景进行扩写，增加感官细节。
         """
         prompt = ENRICH_SCENE_PROMPT.format(
-            scene_text=scene_text,
-            location=location,
-            time=time,
-            atmosphere=atmosphere
+            scene_text=scene_text, location=location, time=time, atmosphere=atmosphere
         )
-        
+
         try:
             response = await self.llm_service.generate(
-                prompt=prompt,
-                user_id=user_id,
-                max_tokens=3000,
-                temperature=0.6
+                prompt=prompt, user_id=user_id, max_tokens=3000, temperature=0.6
             )
             return parse_chapter_content_response(response)[0] if response else None
         except Exception as e:
             logger.error(f"场景扩写失败: {e}")
             return None
-    
+
     async def _enrich_chapter(
-        self,
-        chapter_text: str,
-        target_word_count: int,
-        current_word_count: int,
-        user_id: int
+        self, chapter_text: str, target_word_count: int, current_word_count: int, user_id: int
     ) -> Optional[str]:
         """执行章节扩写"""
         prompt = ENRICH_CHAPTER_PROMPT.format(
             chapter_text=chapter_text,
             target_word_count=target_word_count,
-            current_word_count=current_word_count
+            current_word_count=current_word_count,
         )
-        
+
         try:
             response = await self.llm_service.generate(
-                prompt=prompt,
-                user_id=user_id,
-                max_tokens=8000,
-                temperature=0.6
+                prompt=prompt, user_id=user_id, max_tokens=8000, temperature=0.6
             )
             return parse_chapter_content_response(response)[0] if response else None
         except Exception as e:
             logger.error(f"章节扩写失败: {e}")
             return None
-    
+
     def _count_words(self, text: str) -> int:
         """计算中文字数"""
         import re
+
         # 移除空白字符
-        text = re.sub(r'\s+', '', text)
+        text = re.sub(r"\s+", "", text)
         # 计算字符数（中文一个字符算一个字）
         return len(text)
-    
+
     def get_enrichment_suggestions(
-        self,
-        chapter_text: str,
-        target_word_count: int
+        self, chapter_text: str, target_word_count: int
     ) -> Dict[str, Any]:
         """
         获取扩写建议
-        
+
         分析章节内容，给出具体的扩写建议。
         """
         current_count = self._count_words(chapter_text)
         needed = target_word_count - current_count
-        
+
         suggestions = {
             "current_word_count": current_count,
             "target_word_count": target_word_count,
             "needed": max(0, needed),
             "ratio": current_count / target_word_count if target_word_count > 0 else 1.0,
-            "recommendations": []
+            "recommendations": [],
         }
-        
+
         if needed <= 0:
             suggestions["status"] = "sufficient"
             return suggestions
-        
+
         suggestions["status"] = "needs_enrichment"
-        
+
         # 分析内容，给出建议
         if "说" in chapter_text or "道" in chapter_text or '"' in chapter_text:
-            suggestions["recommendations"].append({
-                "type": "dialogue",
-                "description": "检测到对话场景，建议增加人物内心活动和潜台词",
-                "estimated_words": min(needed // 2, 500)
-            })
-        
+            suggestions["recommendations"].append(
+                {
+                    "type": "dialogue",
+                    "description": "检测到对话场景，建议增加人物内心活动和潜台词",
+                    "estimated_words": min(needed // 2, 500),
+                }
+            )
+
         # 检测场景描写
         scene_keywords = ["走进", "来到", "站在", "坐在", "看着"]
         if any(kw in chapter_text for kw in scene_keywords):
-            suggestions["recommendations"].append({
-                "type": "scene",
-                "description": "检测到场景转换，建议增加环境细节描写",
-                "estimated_words": min(needed // 3, 300)
-            })
-        
+            suggestions["recommendations"].append(
+                {
+                    "type": "scene",
+                    "description": "检测到场景转换，建议增加环境细节描写",
+                    "estimated_words": min(needed // 3, 300),
+                }
+            )
+
         # 检测动作场景
         action_keywords = ["打", "踢", "跑", "跳", "攻击", "防御"]
         if any(kw in chapter_text for kw in action_keywords):
-            suggestions["recommendations"].append({
-                "type": "action",
-                "description": "检测到动作场景，建议增加动作细节和感官描写",
-                "estimated_words": min(needed // 3, 400)
-            })
-        
+            suggestions["recommendations"].append(
+                {
+                    "type": "action",
+                    "description": "检测到动作场景，建议增加动作细节和感官描写",
+                    "estimated_words": min(needed // 3, 400),
+                }
+            )
+
         # 通用建议
-        suggestions["recommendations"].append({
-            "type": "general",
-            "description": "建议在情节转折处增加人物的情绪反应和思考",
-            "estimated_words": min(needed // 4, 300)
-        })
-        
+        suggestions["recommendations"].append(
+            {
+                "type": "general",
+                "description": "建议在情节转折处增加人物的情绪反应和思考",
+                "estimated_words": min(needed // 4, 300),
+            }
+        )
+
         return suggestions

@@ -12,8 +12,7 @@ CHAPTER_WORD_LIMIT_CONFIG_KEY = "writer.chapter_word_limit"
 
 
 class SystemConfigReader(Protocol):
-    async def get_by_key(self, key: str):
-        ...
+    async def get_by_key(self, key: str): ...
 
 
 def normalize_chapter_target_word_count(value: object) -> int:

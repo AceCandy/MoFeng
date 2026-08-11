@@ -328,7 +328,11 @@ class ChapterContextResolver:
                 query=query,
                 fallback=ContextFallback.DISABLED,
             )
-        elif not settings.vector_store_enabled or self._vector_store_error or self.vector_store is None:
+        elif (
+            not settings.vector_store_enabled
+            or self._vector_store_error
+            or self.vector_store is None
+        ):
             rag = self._empty_rag_section(
                 mode=mode,
                 query=query,
@@ -367,34 +371,50 @@ class ChapterContextResolver:
             raise HTTPException(status_code=404, detail="项目不存在")
 
         chapter_blueprint = (
-            await self.session.execute(
-                select(ChapterBlueprint).where(
-                    ChapterBlueprint.project_id == project_id,
-                    ChapterBlueprint.chapter_number == chapter_number,
+            (
+                await self.session.execute(
+                    select(ChapterBlueprint).where(
+                        ChapterBlueprint.project_id == project_id,
+                        ChapterBlueprint.chapter_number == chapter_number,
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         constitution = (
-            await self.session.execute(
-                select(NovelConstitution).where(NovelConstitution.project_id == project_id)
-            )
-        ).scalars().first()
-        project_memory = (
-            await self.session.execute(
-                select(ProjectMemory).where(ProjectMemory.project_id == project_id)
-            )
-        ).scalars().first()
-        writer_persona = (
-            await self.session.execute(
-                select(WriterPersona)
-                .where(
-                    WriterPersona.project_id == project_id,
-                    WriterPersona.is_active.is_(True),
+            (
+                await self.session.execute(
+                    select(NovelConstitution).where(NovelConstitution.project_id == project_id)
                 )
-                .order_by(WriterPersona.updated_at.desc(), WriterPersona.id.desc())
-                .limit(1)
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
+        project_memory = (
+            (
+                await self.session.execute(
+                    select(ProjectMemory).where(ProjectMemory.project_id == project_id)
+                )
+            )
+            .scalars()
+            .first()
+        )
+        writer_persona = (
+            (
+                await self.session.execute(
+                    select(WriterPersona)
+                    .where(
+                        WriterPersona.project_id == project_id,
+                        WriterPersona.is_active.is_(True),
+                    )
+                    .order_by(WriterPersona.updated_at.desc(), WriterPersona.id.desc())
+                    .limit(1)
+                )
+            )
+            .scalars()
+            .first()
+        )
         foreshadows = list(
             (
                 await self.session.execute(
@@ -411,7 +431,9 @@ class ChapterContextResolver:
                         Foreshadowing.id,
                     )
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         character_states = list(
             (
@@ -429,7 +451,9 @@ class ChapterContextResolver:
                     )
                     .limit(self.policy.max_character_states + 1)
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         return ChapterContextSources(
             project=project,
@@ -528,9 +552,7 @@ class ChapterContextResolver:
         *,
         chapter_number: int,
     ) -> tuple[ContextSection[ChapterHistory], List[Dict[str, Any]]]:
-        outlines = {
-            item.chapter_number: item for item in (getattr(project, "outlines", []) or [])
-        }
+        outlines = {item.chapter_number: item for item in (getattr(project, "outlines", []) or [])}
         candidates = []
         revisions = []
         summary_missing = False
@@ -563,13 +585,9 @@ class ChapterContextResolver:
                 {
                     "chapter_number": chapter.chapter_number,
                     "selected_version_id": chapter.selected_version_id,
-                    "selected_version_created_at": self._datetime_value(
-                        selected.created_at
-                    ),
+                    "selected_version_created_at": self._datetime_value(selected.created_at),
                     "selected_content_hash": stable_digest(selected_content),
-                    "real_summary_hash": stable_digest(
-                        (chapter.real_summary or "").strip()
-                    ),
+                    "real_summary_hash": stable_digest((chapter.real_summary or "").strip()),
                 }
             )
             text_truncated = text_truncated or was_truncated
@@ -662,9 +680,7 @@ class ChapterContextResolver:
             "chapter_focus": record.chapter_focus,
             "suspense_type": record.suspense_type,
             "emotional_arc": record.emotional_arc,
-            "involved_foreshadowings": self._normalize_json(
-                record.involved_foreshadowings or []
-            ),
+            "involved_foreshadowings": self._normalize_json(record.involved_foreshadowings or []),
             "mission_constraints": self._normalize_json(record.mission_constraints or {}),
             "brief_summary": record.brief_summary or "",
             "director_script": record.director_script or "",
@@ -1092,9 +1108,7 @@ class ChapterContextResolver:
                 user_guidance=context.writing_notes.value,
                 top_k=settings.vector_top_k_chunks,
                 chapter_blueprint=context.chapter_blueprint.value,
-                global_summary=str(
-                    context.project_memory.value.get("global_summary") or ""
-                ),
+                global_summary=str(context.project_memory.value.get("global_summary") or ""),
             )
         except Exception:
             logger.warning("canonical context 两阶段 RAG 失败")

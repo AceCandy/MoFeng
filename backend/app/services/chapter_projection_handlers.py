@@ -54,7 +54,6 @@ from .job_worker import JobOutcome, PermanentJobError, RetryableJobError
 from .llm_service import LLMService
 from .prompt_service import PromptService
 
-
 ActivityCall = Callable[
     [],
     Awaitable[dict[str, Any] | AICallResult[dict[str, Any]]],
@@ -129,9 +128,7 @@ async def _run_activity(
         status_code = getattr(exc, "status_code", None)
         if status_code is None:
             status_code = getattr(getattr(exc, "response", None), "status_code", None)
-        if status_code == 429 or (
-            isinstance(status_code, int) and status_code >= 500
-        ):
+        if status_code == 429 or (isinstance(status_code, int) and status_code >= 500):
             await context.mark_activity_failed(
                 activity_key,
                 provider_request_key=activity.provider_request_key,
@@ -446,13 +443,17 @@ async def handle_chapter_rag_projection(context) -> JobOutcome:
         title = projection_context.get("rag_title")
         if not isinstance(title, str) or not title:
             outline = (
-                await session.execute(
-                    select(ChapterOutline).where(
-                        ChapterOutline.project_id == payload.project_id,
-                        ChapterOutline.chapter_number == payload.chapter_number,
+                (
+                    await session.execute(
+                        select(ChapterOutline).where(
+                            ChapterOutline.project_id == payload.project_id,
+                            ChapterOutline.chapter_number == payload.chapter_number,
+                        )
                     )
                 )
-            ).scalars().first()
+                .scalars()
+                .first()
+            )
             title = outline.title if outline and outline.title else f"第{payload.chapter_number}章"
     if not summary_text:
         raise PermanentJobError("summary_dependency_missing", "RAG 投影缺少已提交摘要")
@@ -795,8 +796,7 @@ async def handle_chapter_projection_reconcile(context) -> JobOutcome:
             ).all()
         )
         active_status_invalid = (
-            expected_active
-            and current.chapter.status != ChapterGenerationStatus.FINALIZING.value
+            expected_active and current.chapter.status != ChapterGenerationStatus.FINALIZING.value
         )
         if satisfied != required or active_status_invalid:
             result["status"] = "not_ready"
@@ -820,7 +820,9 @@ async def handle_chapter_projection_reconcile(context) -> JobOutcome:
                     rollout=current.rollout,
                 )
             except ChapterProjectionObservationPendingError as exc:
-                raise RetryableJobError(exc.code, "等待 legacy owner 完成后再记录 shadow 观察") from exc
+                raise RetryableJobError(
+                    exc.code, "等待 legacy owner 完成后再记录 shadow 观察"
+                ) from exc
             result["status"] = (
                 "shadow_observed" if observation.outcome == "match" else "shadow_mismatch"
             )
@@ -950,6 +952,7 @@ async def handle_chapter_projection_tombstone(context) -> JobOutcome:
         foreshadowing_generation = payload.target_artifact_generations.get(
             "foreshadowing", payload.target_generation
         )
+
         def rag_predicates(model):
             return (
                 model.project_id == payload.project_id,
@@ -1007,8 +1010,7 @@ async def handle_chapter_projection_tombstone(context) -> JobOutcome:
                 projection_result = await session.execute(
                     update(ChapterProjectionRun)
                     .where(
-                        ChapterProjectionRun.chapter_revision_id
-                        == current.target_revision.id,
+                        ChapterProjectionRun.chapter_revision_id == current.target_revision.id,
                         ChapterProjectionRun.projection_name == projection_name,
                         ChapterProjectionRun.artifact_generation == artifact_generation,
                         ChapterProjectionRun.id != current.run.id,

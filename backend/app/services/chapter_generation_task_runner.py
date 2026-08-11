@@ -12,7 +12,6 @@ from .job_worker import JobOutcome, PermanentJobError
 from .novel_service import NovelService
 from .pipeline_orchestrator import PipelineOrchestrator
 
-
 _GENERATION_ACTIVITY_KEY = "chapter_generation_pipeline"
 
 
@@ -40,7 +39,9 @@ async def handle_chapter_generation_job(context) -> JobOutcome:
     try:
         payload = ChapterGenerationJobPayload.model_validate(context.lease.payload)
     except ValidationError as exc:
-        raise PermanentJobError("invalid_chapter_generation_payload", "章节生成任务参数无效") from exc
+        raise PermanentJobError(
+            "invalid_chapter_generation_payload", "章节生成任务参数无效"
+        ) from exc
     if context.lease.project_id != payload.project_id:
         raise PermanentJobError("chapter_generation_project_mismatch", "章节生成任务项目不匹配")
 

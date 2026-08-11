@@ -52,6 +52,7 @@ IMPORTANT: 你的回复必须是合法的 JSON 对象，并严格包含以下字
 不要输出额外的文本或解释。
 """
 
+
 def _ensure_prompt(prompt: str | None, name: str) -> str:
     if not prompt:
         raise HTTPException(status_code=500, detail=f"未配置名为 {name} 的提示词，请联系管理员")
@@ -122,7 +123,7 @@ async def _parse_blueprint_json_with_repair(
         )
         raise HTTPException(
             status_code=500,
-            detail=f"蓝图生成失败，AI 返回的内容格式不正确，自动修复也未成功。错误详情: {str(parse_error)}"
+            detail=f"蓝图生成失败，AI 返回的内容格式不正确，自动修复也未成功。错误详情: {str(parse_error)}",
         ) from repair_exc
 
 
@@ -195,7 +196,7 @@ class StreamingJSONFieldExtractor:
         except json.JSONDecodeError:
             return ""
 
-        delta = decoded[len(self._decoded_value):]
+        delta = decoded[len(self._decoded_value) :]
         self._decoded_value = decoded
         return delta
 
@@ -239,7 +240,9 @@ async def create_novel(
             )
         project_status = novel_service.INSPIRATION_ACTIVE_STATUS
 
-    project = await novel_service.create_project(current_user.id, title, initial_prompt, status=project_status)
+    project = await novel_service.create_project(
+        current_user.id, title, initial_prompt, status=project_status
+    )
     logger.info("用户 %s 创建项目 %s", current_user.id, project.id)
     return await novel_service.get_project_schema(project.id, current_user.id)
 
@@ -322,7 +325,9 @@ async def stream_chapter_status(
         try:
             async with AsyncSessionLocal() as session:
                 service = NovelService(session)
-                chapter = await service.get_chapter_schema(project_id, current_user.id, chapter_number)
+                chapter = await service.get_chapter_schema(
+                    project_id, current_user.id, chapter_number
+                )
             return chapter.model_dump(mode="json"), None
         except HTTPException as exc:
             return None, _sse_event("error", {"detail": str(exc.detail)})
@@ -465,8 +470,7 @@ async def converse_with_concept(
         len(history_records),
     )
     conversation_history = [
-        {"role": record.role, "content": record.content}
-        for record in history_records
+        {"role": record.role, "content": record.content} for record in history_records
     ]
     user_content = json.dumps(request.user_input, ensure_ascii=False)
     conversation_history.append({"role": "user", "content": user_content})
@@ -495,12 +499,12 @@ async def converse_with_concept(
             current_user.id,
             exc,
             llm_response[:1000],
-            normalized[:1000] if 'normalized' in locals() else "N/A",
-            sanitized[:1000] if 'sanitized' in locals() else "N/A",
+            normalized[:1000] if "normalized" in locals() else "N/A",
+            sanitized[:1000] if "sanitized" in locals() else "N/A",
         )
         raise HTTPException(
             status_code=500,
-            detail=f"概念对话失败，AI 返回的内容格式不正确。请重试或联系管理员。错误详情: {str(exc)}"
+            detail=f"概念对话失败，AI 返回的内容格式不正确。请重试或联系管理员。错误详情: {str(exc)}",
         ) from exc
 
     await novel_service.append_conversation(project_id, "user", user_content)
@@ -537,8 +541,7 @@ async def converse_with_concept_stream(
     )
 
     conversation_history = [
-        {"role": record.role, "content": record.content}
-        for record in history_records
+        {"role": record.role, "content": record.content} for record in history_records
     ]
     user_content = json.dumps(request.user_input, ensure_ascii=False)
     conversation_history.append({"role": "user", "content": user_content})
@@ -572,7 +575,9 @@ async def converse_with_concept_stream(
             await novel_service.append_conversation(project_id, "user", user_content)
             await novel_service.append_conversation(project_id, "assistant", normalized)
 
-            logger.info("项目 %s 流式概念对话完成，is_complete=%s", project_id, parsed.get("is_complete"))
+            logger.info(
+                "项目 %s 流式概念对话完成，is_complete=%s", project_id, parsed.get("is_complete")
+            )
 
             if parsed.get("is_complete"):
                 parsed["ready_for_blueprint"] = True
@@ -595,7 +600,9 @@ async def converse_with_concept_stream(
         except HTTPException as exc:
             yield _sse_event("error", {"detail": str(exc.detail)})
         except Exception as exc:
-            logger.exception("流式概念对话失败: project_id=%s user_id=%s", project_id, current_user.id)
+            logger.exception(
+                "流式概念对话失败: project_id=%s user_id=%s", project_id, current_user.id
+            )
             yield _sse_event(
                 "error",
                 {"detail": f"概念对话失败: {str(exc)}"},
@@ -654,10 +661,12 @@ async def generate_blueprint(
         logger.warning("项目 %s 对话历史格式异常，无法提取有效内容", project_id)
         raise HTTPException(
             status_code=400,
-            detail="无法从历史对话中提取有效内容，请检查对话历史格式或重新进行概念对话"
+            detail="无法从历史对话中提取有效内容，请检查对话历史格式或重新进行概念对话",
         )
 
-    system_prompt = _ensure_prompt(await prompt_service.get_prompt("screenwriting"), "screenwriting")
+    system_prompt = _ensure_prompt(
+        await prompt_service.get_prompt("screenwriting"), "screenwriting"
+    )
     blueprint_raw = await llm_service.get_llm_response(
         system_prompt=system_prompt,
         conversation_history=formatted_history,

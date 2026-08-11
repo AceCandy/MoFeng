@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Chapter, ChapterGenerationTrace
 
-
 CN_TIMEZONE = timezone(timedelta(hours=8), name="Asia/Shanghai")
 SECRET_VALUE_PATTERN = re.compile(
     r"(?i)(api[_-]?key|authorization|token|secret|password)(\s*[:=]\s*)([^\s,;]+)"
@@ -74,13 +73,12 @@ def _infer_uses_llm(
     metadata_value = _metadata_uses_llm(metadata)
     if metadata_value is not None:
         return metadata_value
-    return any(
-        bool((value or "").strip())
-        for value in (system_prompt, user_prompt, raw_response)
-    )
+    return any(bool((value or "").strip()) for value in (system_prompt, user_prompt, raw_response))
 
 
-def _calculate_duration_ms(started_at: Optional[datetime], ended_at: Optional[datetime]) -> Optional[int]:
+def _calculate_duration_ms(
+    started_at: Optional[datetime], ended_at: Optional[datetime]
+) -> Optional[int]:
     if not started_at or not ended_at:
         return None
     duration = ended_at - started_at
@@ -161,12 +159,16 @@ class ChapterGenerationTraceService:
         started_at: Optional[datetime] = None,
         ended_at: Optional[datetime] = None,
     ) -> ChapterGenerationTrace:
-        resolved_uses_llm = _infer_uses_llm(
-            metadata=metadata,
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            raw_response=raw_response,
-        ) if uses_llm is None else uses_llm
+        resolved_uses_llm = (
+            _infer_uses_llm(
+                metadata=metadata,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                raw_response=raw_response,
+            )
+            if uses_llm is None
+            else uses_llm
+        )
         duration_ms = _calculate_duration_ms(started_at, ended_at)
         return await self._record(
             project_id=project_id,
@@ -207,12 +209,16 @@ class ChapterGenerationTraceService:
         started_at: Optional[datetime] = None,
         ended_at: Optional[datetime] = None,
     ) -> ChapterGenerationTrace:
-        resolved_uses_llm = _infer_uses_llm(
-            metadata=metadata,
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            raw_response=None,
-        ) if uses_llm is None else uses_llm
+        resolved_uses_llm = (
+            _infer_uses_llm(
+                metadata=metadata,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                raw_response=None,
+            )
+            if uses_llm is None
+            else uses_llm
+        )
         duration_ms = _calculate_duration_ms(started_at, ended_at)
         return await self._record(
             project_id=project_id,
@@ -234,7 +240,9 @@ class ChapterGenerationTraceService:
             ended_at=ended_at,
         )
 
-    async def list_for_chapter(self, *, project_id: str, chapter_number: int) -> List[ChapterGenerationTrace]:
+    async def list_for_chapter(
+        self, *, project_id: str, chapter_number: int
+    ) -> List[ChapterGenerationTrace]:
         chapter = await self._get_chapter(project_id=project_id, chapter_number=chapter_number)
         result = await self.session.execute(
             select(ChapterGenerationTrace)

@@ -23,5 +23,3 @@ async def test_get_unresolved_foreshadowings_uses_active_statuses_and_previous_c
     assert "project_id" in compiled
     assert "chapter_number <" in compiled
     assert "status IN" in compiled
-
-

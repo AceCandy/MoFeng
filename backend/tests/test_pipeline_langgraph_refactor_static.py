@@ -43,7 +43,7 @@ def _writer_generate_block() -> str:
 def _writer_evaluate_block() -> str:
     source = WRITER_ROUTER_SOURCE.read_text(encoding="utf-8")
     return source.split('@router.post("/novels/{project_id}/chapters/evaluate"', 1)[1].split(
-        "\n\n@router.post(\"/novels/{project_id}/chapters/finalize\"",
+        '\n\n@router.post("/novels/{project_id}/chapters/finalize"',
         1,
     )[0]
 
@@ -83,7 +83,7 @@ def test_pipeline_graph_sequence_covers_every_generation_stage() -> None:
 def test_pipeline_review_context_uses_canonical_adapter() -> None:
     source = _source()
 
-    assert "ReviewContextAdapter.to_prompt_context(state[\"chapter_context\"])" in source
+    assert 'ReviewContextAdapter.to_prompt_context(state["chapter_context"])' in source
     assert "ChapterContextResolver(" in source
     assert "def _build_review_context(" not in source
 
@@ -205,9 +205,7 @@ async def test_pipeline_optional_content_transforms_keep_previous_text_on_invali
     orchestrator.llm_service = SimpleNamespace(
         get_llm_response=AsyncMock(return_value=invalid_response)
     )
-    orchestrator.prompt_service = SimpleNamespace(
-        get_prompt=AsyncMock(return_value="压缩提示词")
-    )
+    orchestrator.prompt_service = SimpleNamespace(get_prompt=AsyncMock(return_value="压缩提示词"))
 
     rewritten = await orchestrator._rewrite_with_guardrails(
         original_text=original,
@@ -343,7 +341,7 @@ def test_langgraph_pipeline_records_generation_trace_nodes() -> None:
     assert 'node_key="director_mission"' in source
     assert 'node_key="rag_retrieval"' in source
     assert 'node_key="draft_generation"' in source
-    assert 'raw_response=response' in source
+    assert "raw_response=response" in source
 
 
 def test_pipeline_trace_metadata_describes_actions_and_model_calls() -> None:
@@ -369,7 +367,9 @@ def test_pipeline_marks_director_mission_before_running_director_llm() -> None:
         1,
     )[0]
 
-    assert block.index('step="director_mission"') < block.index("chapter_mission = await self._generate_chapter_mission(")
+    assert block.index('step="director_mission"') < block.index(
+        "chapter_mission = await self._generate_chapter_mission("
+    )
 
 
 def test_pipeline_does_not_record_user_waiting_time_as_trace_node() -> None:
@@ -435,9 +435,9 @@ def test_novel_service_no_longer_keeps_finalize_version_index_branch() -> None:
 def test_pipeline_review_and_refinement_failures_are_not_silently_ignored() -> None:
     source = _source()
 
-    assert "raise RuntimeError(\"AI评审失败" in source
-    assert "raise RuntimeError(\"修复润色失败" in source
-    assert "logger.warning(\"AI 评审失败，跳过" not in source
+    assert 'raise RuntimeError("AI评审失败' in source
+    assert 'raise RuntimeError("修复润色失败' in source
+    assert 'logger.warning("AI 评审失败，跳过' not in source
     assert "沿用默认版本选择" not in source
 
 
@@ -660,7 +660,7 @@ def test_pipeline_state_does_not_reuse_orm_entities_across_commits() -> None:
     assert '"project": project' not in source
     assert '"chapter": chapter' not in source
     assert 'state["project"].chapters' not in source
-    assert "_serialize_project(state[\"project\"])" not in source
+    assert '_serialize_project(state["project"])' not in source
     assert "chapters: List[Chapter]" not in source
     assert "await self._set_chapter_generation_state(" in source
     assert "await self.chapter_context_resolver.resolve(" in source
@@ -669,7 +669,9 @@ def test_pipeline_state_does_not_reuse_orm_entities_across_commits() -> None:
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_canonical_context_loads_selected_version_with_async_session(db_session_factory) -> None:
+async def test_canonical_context_loads_selected_version_with_async_session(
+    db_session_factory,
+) -> None:
     async with db_session_factory() as session:
         project_id = "project-history-context"
         session.add(User(id=1, username="writer", hashed_password="secret"))
@@ -747,7 +749,9 @@ async def test_mark_generation_failed_records_full_runtime_error_trace(db_sessio
                 initial_prompt="测试提示",
             )
         )
-        session.add(ChapterOutline(project_id=project_id, chapter_number=1, title="第一章", summary="开篇"))
+        session.add(
+            ChapterOutline(project_id=project_id, chapter_number=1, title="第一章", summary="开篇")
+        )
         chapter = Chapter(
             project_id=project_id,
             chapter_number=1,
@@ -779,7 +783,9 @@ async def test_mark_generation_failed_records_full_runtime_error_trace(db_sessio
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_replace_chapter_versions_stores_review_feedback_while_waiting_for_confirm(db_session_factory) -> None:
+async def test_replace_chapter_versions_stores_review_feedback_while_waiting_for_confirm(
+    db_session_factory,
+) -> None:
     async with db_session_factory() as session:
         project_id = "project-auto-review-feedback"
         session.add(User(id=1, username="writer", hashed_password="secret"))
@@ -791,7 +797,9 @@ async def test_replace_chapter_versions_stores_review_feedback_while_waiting_for
                 initial_prompt="测试提示",
             )
         )
-        session.add(ChapterOutline(project_id=project_id, chapter_number=1, title="第一章", summary="开篇"))
+        session.add(
+            ChapterOutline(project_id=project_id, chapter_number=1, title="第一章", summary="开篇")
+        )
         chapter = Chapter(project_id=project_id, chapter_number=1, status="generating")
         session.add(chapter)
         await session.commit()

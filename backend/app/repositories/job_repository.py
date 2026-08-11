@@ -592,8 +592,9 @@ class JobRepository(BaseRepository[BackgroundTask]):
             select(func.coalesce(func.max(JobEvent.cursor), 0))
         )
         projected_event_cursor = await self.session.scalar(
-            select(func.coalesce(ChapterGenerationTraceProjectionCheckpoint.last_event_cursor, 0))
-            .where(
+            select(
+                func.coalesce(ChapterGenerationTraceProjectionCheckpoint.last_event_cursor, 0)
+            ).where(
                 ChapterGenerationTraceProjectionCheckpoint.projector_name
                 == CHAPTER_GENERATION_TRACE_PROJECTOR_NAME
             )

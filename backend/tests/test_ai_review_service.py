@@ -39,9 +39,8 @@ def test_parse_review_response_uses_one_based_version_numbers() -> None:
 
 
 def test_to_evaluation_payload_preserves_version_specific_reviews() -> None:
-    payload = (
-        AIReviewService(llm_service=None, prompt_service=None)
-        ._build_fallback_result("兜底", ["版本A", "版本B"])
+    payload = AIReviewService(llm_service=None, prompt_service=None)._build_fallback_result(
+        "兜底", ["版本A", "版本B"]
     )
     payload.version_reviews = [
         VersionReview(
@@ -78,7 +77,10 @@ def test_parse_review_response_falls_back_for_invalid_json() -> None:
     assert result.best_version_index == 0
     assert result.final_recommendation == "解析失败，建议人工审核"
     assert [review.version_number for review in result.version_reviews] == [1, 2]
-    assert all(review.overall_review == "AI 返回非结构化结果，建议人工复核" for review in result.version_reviews)
+    assert all(
+        review.overall_review == "AI 返回非结构化结果，建议人工复核"
+        for review in result.version_reviews
+    )
 
 
 def test_build_base_context_payload_includes_review_context_extensions() -> None:

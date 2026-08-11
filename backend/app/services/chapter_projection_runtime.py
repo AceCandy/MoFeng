@@ -25,7 +25,6 @@ from .chapter_projection_contract import (
 )
 from .job_service import JobService
 
-
 PROJECTION_JOB_TYPES = {
     "memory": "chapter_projection_memory",
     "rag": "chapter_projection_rag",
@@ -130,8 +129,7 @@ async def load_current_projection(
         or finalize_payload.outbox_event_id != payload.outbox_event_id
         or finalize_payload.rollout_owner != payload.rollout_owner
         or finalize_payload.rollout_generation != payload.rollout_generation
-        or finalize_payload.rollout_fencing_token
-        != payload.rollout_fencing_token
+        or finalize_payload.rollout_fencing_token != payload.rollout_fencing_token
         or finalize_payload.execution_mode != payload.execution_mode
         or finalize_payload.skip_vector_update != payload.skip_vector_update
         or (
@@ -306,8 +304,7 @@ async def load_current_tombstone(
         target_revision = (await session.execute(target_stmt)).scalars().first()
         if (
             target_revision is None
-            or target_revision.lifecycle
-            not in ("tombstoned", "superseded")
+            or target_revision.lifecycle not in ("tombstoned", "superseded")
             or target_revision.superseded_by_revision != payload.tombstone_revision
         ):
             return None
@@ -534,14 +531,18 @@ async def enqueue_downstream_projections(
 
     if "rag" not in required:
         skipped = (
-            await session.execute(
-                select(ChapterProjectionRun).where(
-                    ChapterProjectionRun.chapter_revision_id == current.revision.id,
-                    ChapterProjectionRun.projection_name == "rag",
-                    ChapterProjectionRun.dependency_run_id == current.run.id,
+            (
+                await session.execute(
+                    select(ChapterProjectionRun).where(
+                        ChapterProjectionRun.chapter_revision_id == current.revision.id,
+                        ChapterProjectionRun.projection_name == "rag",
+                        ChapterProjectionRun.dependency_run_id == current.run.id,
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         if skipped is None:
             skipped = ChapterProjectionRun(
                 id=_derived_projection_id(

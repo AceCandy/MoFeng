@@ -296,7 +296,9 @@ class VectorStoreService:
                     "source_revision": int(item.get("source_revision", 0)),
                     "artifact_generation": item.get("artifact_generation", "legacy"),
                     "projection_run_id": item.get("projection_run_id"),
-                    "is_active": bool(item.get("is_active", True)) if is_active is None else is_active,
+                    "is_active": (
+                        bool(item.get("is_active", True)) if is_active is None else is_active
+                    ),
                 }
                 for item in payload
             ]
@@ -341,7 +343,9 @@ class VectorStoreService:
                     "source_revision": int(item.get("source_revision", 0)),
                     "artifact_generation": item.get("artifact_generation", "legacy"),
                     "projection_run_id": item.get("projection_run_id"),
-                    "is_active": bool(item.get("is_active", True)) if is_active is None else is_active,
+                    "is_active": (
+                        bool(item.get("is_active", True)) if is_active is None else is_active
+                    ),
                 }
                 for item in payload
             ]

@@ -1,4 +1,5 @@
 """assert_production_security 对默认管理员密码的校验测试（H3）。"""
+
 import pytest
 
 from app.core.config import Settings, assert_production_security, settings

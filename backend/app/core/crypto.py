@@ -56,7 +56,7 @@ def decrypt(stored: str | None) -> str | None:
     if not stored.startswith(_PREFIX):
         return stored
     try:
-        return _fernet().decrypt(stored[len(_PREFIX):].encode("ascii")).decode("utf-8")
+        return _fernet().decrypt(stored[len(_PREFIX) :].encode("ascii")).decode("utf-8")
     except InvalidToken:
         # 密钥变更或密文损坏时静默退化为无 Key，避免阻断调用链
         return None

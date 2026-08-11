@@ -25,10 +25,14 @@ class FakeLLMService:
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_finalize_chapter_uses_async_session_without_missing_greenlet(db_session_factory) -> None:
+async def test_finalize_chapter_uses_async_session_without_missing_greenlet(
+    db_session_factory,
+) -> None:
     async with db_session_factory() as session:
         session.add(User(id=1, username="writer", hashed_password="secret"))
-        session.add(NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试"))
+        session.add(
+            NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试")
+        )
         await session.commit()
         session.add(BlueprintCharacter(project_id="project-1", name="主角", position=1))
         session.add(ChapterBlueprint(project_id="project-1", chapter_number=1))
@@ -52,22 +56,44 @@ async def test_finalize_chapter_uses_async_session_without_missing_greenlet(db_s
         }
 
         memory = (
-            await session.execute(select(ProjectMemory).where(ProjectMemory.project_id == "project-1"))
-        ).scalars().one()
-        blueprint = (
-            await session.execute(
-                select(ChapterBlueprint).where(
-                    ChapterBlueprint.project_id == "project-1",
-                    ChapterBlueprint.chapter_number == 1,
+            (
+                await session.execute(
+                    select(ProjectMemory).where(ProjectMemory.project_id == "project-1")
                 )
             )
-        ).scalars().one()
+            .scalars()
+            .one()
+        )
+        blueprint = (
+            (
+                await session.execute(
+                    select(ChapterBlueprint).where(
+                        ChapterBlueprint.project_id == "project-1",
+                        ChapterBlueprint.chapter_number == 1,
+                    )
+                )
+            )
+            .scalars()
+            .one()
+        )
         snapshots = (
-            await session.execute(select(ChapterSnapshot).where(ChapterSnapshot.project_id == "project-1"))
-        ).scalars().all()
+            (
+                await session.execute(
+                    select(ChapterSnapshot).where(ChapterSnapshot.project_id == "project-1")
+                )
+            )
+            .scalars()
+            .all()
+        )
         states = (
-            await session.execute(select(CharacterState).where(CharacterState.project_id == "project-1"))
-        ).scalars().all()
+            (
+                await session.execute(
+                    select(CharacterState).where(CharacterState.project_id == "project-1")
+                )
+            )
+            .scalars()
+            .all()
+        )
 
         assert memory.global_summary == "更新后的全局摘要"
         assert memory.last_updated_chapter == 1
@@ -82,10 +108,14 @@ async def test_finalize_chapter_uses_async_session_without_missing_greenlet(db_s
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_finalize_chapter_skips_character_state_without_blueprint_character(db_session_factory) -> None:
+async def test_finalize_chapter_skips_character_state_without_blueprint_character(
+    db_session_factory,
+) -> None:
     async with db_session_factory() as session:
         session.add(User(id=1, username="writer", hashed_password="secret"))
-        session.add(NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试"))
+        session.add(
+            NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试")
+        )
         await session.commit()
         session.add(ChapterBlueprint(project_id="project-1", chapter_number=1))
         await session.commit()
@@ -103,11 +133,23 @@ async def test_finalize_chapter_skips_character_state_without_blueprint_characte
         assert result["updates"]["character_state"] == "updated"
 
         states = (
-            await session.execute(select(CharacterState).where(CharacterState.project_id == "project-1"))
-        ).scalars().all()
+            (
+                await session.execute(
+                    select(CharacterState).where(CharacterState.project_id == "project-1")
+                )
+            )
+            .scalars()
+            .all()
+        )
         snapshots = (
-            await session.execute(select(ChapterSnapshot).where(ChapterSnapshot.project_id == "project-1"))
-        ).scalars().all()
+            (
+                await session.execute(
+                    select(ChapterSnapshot).where(ChapterSnapshot.project_id == "project-1")
+                )
+            )
+            .scalars()
+            .all()
+        )
 
         # 没有蓝图角色时不能写 character_id=0，否则 MySQL 外键会在定稿时回滚整笔事务。
         assert states == []
@@ -139,7 +181,9 @@ async def test_finalize_chapter_all_llm_fail_returns_success_false(db_session_fa
     """所有 LLM 调用失败时 success=False 且记录全部失败项，不再静默误报成功；不写快照避免与上层回滚不一致（H4）。"""
     async with db_session_factory() as session:
         session.add(User(id=1, username="writer", hashed_password="secret"))
-        session.add(NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试"))
+        session.add(
+            NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试")
+        )
         await session.commit()
         session.add(ChapterBlueprint(project_id="project-1", chapter_number=1))
         await session.commit()
@@ -158,17 +202,27 @@ async def test_finalize_chapter_all_llm_fail_returns_success_false(db_session_fa
         assert len(result["errors"]) == 4
         # 全失败不写快照，避免章节回滚后残留无效快照
         snapshots = (
-            await session.execute(select(ChapterSnapshot).where(ChapterSnapshot.project_id == "project-1"))
-        ).scalars().all()
+            (
+                await session.execute(
+                    select(ChapterSnapshot).where(ChapterSnapshot.project_id == "project-1")
+                )
+            )
+            .scalars()
+            .all()
+        )
         assert snapshots == []
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_finalize_chapter_partial_llm_fail_returns_partial_success(db_session_factory) -> None:
+async def test_finalize_chapter_partial_llm_fail_returns_partial_success(
+    db_session_factory,
+) -> None:
     """部分 LLM 调用失败时 success=True 且 partial_success=True，失败项记录到 errors（H4）。"""
     async with db_session_factory() as session:
         session.add(User(id=1, username="writer", hashed_password="secret"))
-        session.add(NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试"))
+        session.add(
+            NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试")
+        )
         await session.commit()
         session.add(ChapterBlueprint(project_id="project-1", chapter_number=1))
         await session.commit()
@@ -208,10 +262,16 @@ class ConcurrentModifyLLMService:
         if not self._modified:
             async with self._factory() as other:
                 memory = (
-                    await other.execute(
-                        select(ProjectMemory).where(ProjectMemory.project_id == self._project_id)
+                    (
+                        await other.execute(
+                            select(ProjectMemory).where(
+                                ProjectMemory.project_id == self._project_id
+                            )
+                        )
                     )
-                ).scalars().one()
+                    .scalars()
+                    .one()
+                )
                 memory.version += 1
                 memory.global_summary = "并发用户编辑"
                 await other.commit()
@@ -230,7 +290,9 @@ async def test_finalize_chapter_conflict_keeps_concurrent_edit(db_session_factor
     """乐观锁冲突：LLM 期间 memory.version 被并发改，写回不覆盖，result.conflict=True，LLM 结果仍入 snapshot。"""
     async with db_session_factory() as session:
         session.add(User(id=1, username="writer", hashed_password="secret"))
-        session.add(NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试"))
+        session.add(
+            NovelProject(id="project-1", user_id=1, title="测试项目", initial_prompt="测试")
+        )
         await session.commit()
         session.add(BlueprintCharacter(project_id="project-1", name="主角", position=1))
         session.add(ChapterBlueprint(project_id="project-1", chapter_number=1))
@@ -255,16 +317,24 @@ async def test_finalize_chapter_conflict_keeps_concurrent_edit(db_session_factor
     # 用独立 session 验证 memory 保留并发修改、snapshot 仍有 LLM 结果
     async with db_session_factory() as verify:
         memory = (
-            await verify.execute(
-                select(ProjectMemory).where(ProjectMemory.project_id == "project-1")
+            (
+                await verify.execute(
+                    select(ProjectMemory).where(ProjectMemory.project_id == "project-1")
+                )
             )
-        ).scalars().one()
+            .scalars()
+            .one()
+        )
         assert memory.global_summary == "并发用户编辑"
         assert memory.version == 2
         snapshots = (
-            await verify.execute(
-                select(ChapterSnapshot).where(ChapterSnapshot.project_id == "project-1")
+            (
+                await verify.execute(
+                    select(ChapterSnapshot).where(ChapterSnapshot.project_id == "project-1")
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         assert len(snapshots) == 1
         assert snapshots[0].global_summary_snapshot == "LLM 生成的摘要"

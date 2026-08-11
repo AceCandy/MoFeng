@@ -30,7 +30,6 @@ from .job_service import AmbiguousActivityError, JobService, LeaseLostError
 from .job_worker import JobOutcome, PermanentJobError
 from .llm_service import LLMService
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -332,9 +331,7 @@ async def handle_chapter_finalize_job(context) -> JobOutcome:
 
         memory_revision = canonical[1].revision if canonical is not None else 0
         memory_source_hash = canonical[1].source_hash if canonical is not None else None
-        memory_source_generation = (
-            canonical[1].source_generation if canonical is not None else None
-        )
+        memory_source_generation = canonical[1].source_generation if canonical is not None else None
         memory_stats = await apply_memory_projection(
             session,
             project_id=payload.project_id,

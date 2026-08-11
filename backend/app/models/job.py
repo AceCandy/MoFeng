@@ -77,7 +77,9 @@ class JobEvent(Base):
 
     __tablename__ = "job_events"
     __table_args__ = (
-        UniqueConstraint("stream_type", "stream_id", "sequence", name="uq_job_events_stream_sequence"),
+        UniqueConstraint(
+            "stream_type", "stream_id", "sequence", name="uq_job_events_stream_sequence"
+        ),
         Index("ix_job_events_user_cursor", "user_id", "cursor"),
         Index("ix_job_events_stream_cursor", "stream_type", "stream_id", "cursor"),
     )
@@ -254,7 +256,9 @@ class JobExecutorControl(Base):
     scope: Mapped[str] = mapped_column(String(32), primary_key=True)
     active_generation: Mapped[int] = mapped_column(Integer, nullable=False)
     rollout_owner: Mapped[str] = mapped_column(String(128), nullable=False)
-    fencing_token: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+    fencing_token: Mapped[int] = mapped_column(
+        BigInteger, nullable=False, default=0, server_default="0"
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

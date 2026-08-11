@@ -65,7 +65,7 @@ def _activity_ref(execution) -> ChapterWorkflowActivityRef:
             "最终正文",
         ),
         (
-            r'```json\n{\"optimized_content\":\"第一段\\n第二段\"}\n```',
+            r"```json\n{\"optimized_content\":\"第一段\\n第二段\"}\n```",
             "第一段\n第二段",
         ),
         (
@@ -659,8 +659,13 @@ async def test_retry_external_requeues_and_retries_only_ambiguous_review_activit
     )
     retry_service = ChapterWorkflowModelActivityService(retry_execution)
     assert await retry_service.execute_plan(plan_input, plan_provider) == plan
-    assert await retry_service.execute_candidate(candidate_input, candidate_provider) == candidate_one
-    assert await retry_service.execute_candidate(candidate_two_input, candidate_provider) == candidate_two
+    assert (
+        await retry_service.execute_candidate(candidate_input, candidate_provider) == candidate_one
+    )
+    assert (
+        await retry_service.execute_candidate(candidate_two_input, candidate_provider)
+        == candidate_two
+    )
     retried = await retry_service.execute_review(review_input, review_provider)
     assert await retry_service.execute_review(review_input, review_provider) == retried
 

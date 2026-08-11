@@ -6,7 +6,6 @@ from typing import Any, Dict, Iterable, List, Union
 
 from ..schemas.chapter_context import ChapterContext
 
-
 ContextInput = Union[ChapterContext, Dict[str, Any]]
 
 WRITER_VISIBILITY_SHADOW_PREFIXES = (
@@ -239,7 +238,11 @@ class ChapterContextShadowComparator:
             return
         if legacy == canonical:
             return
-        kind = "list_changed" if isinstance(legacy, list) and isinstance(canonical, list) else "value_changed"
+        kind = (
+            "list_changed"
+            if isinstance(legacy, list) and isinstance(canonical, list)
+            else "value_changed"
+        )
         cls._append(output, path or "$", kind, legacy, canonical, allowed)
 
     @staticmethod

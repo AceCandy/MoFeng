@@ -22,7 +22,9 @@ async def test_put_project_memory_optimistic_lock_conflict(db_session_factory) -
     async with db_session_factory() as session:
         current_user = UserInDB(id=1, username="owner", hashed_password="secret")
         # 新建 memory（version=1，不传 expected_version 跳过守卫）
-        await put_project_memory("p1", ProjectMemoryPayload(global_summary="初始"), session, current_user)
+        await put_project_memory(
+            "p1", ProjectMemoryPayload(global_summary="初始"), session, current_user
+        )
 
     async with db_session_factory() as session:
         current_user = UserInDB(id=1, username="owner", hashed_password="secret")
@@ -38,10 +40,10 @@ async def test_put_project_memory_optimistic_lock_conflict(db_session_factory) -
     # memory 未被覆盖
     async with db_session_factory() as verify:
         memory = (
-            await verify.execute(
-                select(ProjectMemory).where(ProjectMemory.project_id == "p1")
-            )
-        ).scalars().one()
+            (await verify.execute(select(ProjectMemory).where(ProjectMemory.project_id == "p1")))
+            .scalars()
+            .one()
+        )
         assert memory.global_summary == "初始"
         assert memory.version == 1
 
@@ -52,7 +54,9 @@ async def test_put_project_memory_optimistic_lock_success(db_session_factory) ->
     await _seed_owner(db_session_factory)
     async with db_session_factory() as session:
         current_user = UserInDB(id=1, username="owner", hashed_password="secret")
-        res1 = await put_project_memory("p1", ProjectMemoryPayload(global_summary="初始"), session, current_user)
+        res1 = await put_project_memory(
+            "p1", ProjectMemoryPayload(global_summary="初始"), session, current_user
+        )
         assert res1["memory"]["version"] == 1
 
         res2 = await put_project_memory(

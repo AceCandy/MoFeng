@@ -28,13 +28,17 @@ class RagChunk(Base):
     )
 
     id: Mapped[str] = mapped_column(String(192), primary_key=True)
-    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False)
+    project_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False
+    )
     chapter_number: Mapped[int] = mapped_column(Integer, nullable=False)
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     chapter_title: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     embedding = mapped_column(Vector(), nullable=False)
-    source_revision: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+    source_revision: Mapped[int] = mapped_column(
+        BigInteger, nullable=False, default=0, server_default="0"
+    )
     artifact_generation: Mapped[str] = mapped_column(
         String(36), nullable=False, default="legacy", server_default="legacy"
     )
@@ -42,7 +46,9 @@ class RagChunk(Base):
         String(36),
         ForeignKey("chapter_projection_runs.id", ondelete="SET NULL"),
     )
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
     # metadata 是 SQLAlchemy DeclarativeBase 保留属性，属性名用 meta 映射列名 metadata
     meta: Mapped[Optional[dict]] = mapped_column("metadata", JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -61,12 +67,16 @@ class RagSummary(Base):
     )
 
     id: Mapped[str] = mapped_column(String(192), primary_key=True)
-    project_id: Mapped[str] = mapped_column(String(36), ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False)
+    project_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("novel_projects.id", ondelete="CASCADE"), nullable=False
+    )
     chapter_number: Mapped[int] = mapped_column(Integer, nullable=False)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     embedding = mapped_column(Vector(), nullable=False)
-    source_revision: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
+    source_revision: Mapped[int] = mapped_column(
+        BigInteger, nullable=False, default=0, server_default="0"
+    )
     artifact_generation: Mapped[str] = mapped_column(
         String(36), nullable=False, default="legacy", server_default="legacy"
     )
@@ -74,7 +84,9 @@ class RagSummary(Base):
         String(36),
         ForeignKey("chapter_projection_runs.id", ondelete="SET NULL"),
     )
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

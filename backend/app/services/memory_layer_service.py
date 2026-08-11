@@ -3,6 +3,7 @@
 
 提供角色状态追踪、时间线管理、因果链维护的核心功能。
 """
+
 from typing import Optional, List, Dict, Any
 import json
 import logging
@@ -11,12 +12,7 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, desc, func
 
-from ..models.memory_layer import (
-    CharacterState,
-    TimelineEvent,
-    CausalChain,
-    StoryTimeTracker
-)
+from ..models.memory_layer import CharacterState, TimelineEvent, CausalChain, StoryTimeTracker
 from .llm_service import LLMService
 from .prompt_service import PromptService
 
@@ -34,10 +30,7 @@ class MemoryLayerService:
     # ===== 角色状态管理 =====
 
     async def get_character_state(
-        self, 
-        project_id: str, 
-        character_name: str, 
-        chapter_number: Optional[int] = None
+        self, project_id: str, character_name: str, chapter_number: Optional[int] = None
     ) -> Optional[CharacterState]:
         """获取角色在指定章节的状态（默认最新）"""
         query = select(CharacterState).where(
@@ -47,30 +40,28 @@ class MemoryLayerService:
                 CharacterState.is_active.is_(True),
             )
         )
-        
+
         if chapter_number:
             query = query.where(CharacterState.chapter_number <= chapter_number)
-        
+
         query = query.order_by(
             desc(CharacterState.chapter_number),
             desc(CharacterState.chapter_revision),
             desc(CharacterState.id),
         ).limit(1)
-        
+
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
     async def get_all_character_states(
-        self, 
-        project_id: str, 
-        chapter_number: int
+        self, project_id: str, chapter_number: int
     ) -> List[CharacterState]:
         """获取所有角色在指定章节的最新状态"""
         # 使用子查询获取每个角色的最新状态
         subquery = (
             select(
                 CharacterState.character_name,
-                func.max(CharacterState.chapter_number).label("max_chapter")
+                func.max(CharacterState.chapter_number).label("max_chapter"),
             )
             .where(
                 and_(
@@ -82,15 +73,15 @@ class MemoryLayerService:
             .group_by(CharacterState.character_name)
             .subquery()
         )
-        
+
         query = (
             select(CharacterState)
             .join(
                 subquery,
                 and_(
                     CharacterState.character_name == subquery.c.character_name,
-                    CharacterState.chapter_number == subquery.c.max_chapter
-                )
+                    CharacterState.chapter_number == subquery.c.max_chapter,
+                ),
             )
             .where(
                 CharacterState.project_id == project_id,
@@ -102,7 +93,7 @@ class MemoryLayerService:
                 CharacterState.id.desc(),
             )
         )
-        
+
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
@@ -112,12 +103,12 @@ class MemoryLayerService:
         character_name: str,
         chapter_number: int,
         state_updates: Dict[str, Any],
-        character_id: Optional[int] = None
+        character_id: Optional[int] = None,
     ) -> CharacterState:
         """更新角色状态（创建新的状态快照）"""
         # 获取上一章的状态作为基础
         prev_state = await self.get_character_state(project_id, character_name, chapter_number - 1)
-        
+
         # 创建新状态
         new_state = CharacterState(
             project_id=project_id,
@@ -134,12 +125,12 @@ class MemoryLayerService:
             known_secrets=prev_state.known_secrets if prev_state else [],
             current_goals=prev_state.current_goals if prev_state else [],
         )
-        
+
         # 应用更新
         for key, value in state_updates.items():
             if hasattr(new_state, key):
                 setattr(new_state, key, value)
-        
+
         self.db.add(new_state)
         await self.db.commit()
         await self.db.refresh(new_state)
@@ -151,7 +142,7 @@ class MemoryLayerService:
         chapter_number: int,
         chapter_content: str,
         character_names: List[str],
-        user_id: int
+        user_id: int,
     ) -> List[Dict[str, Any]]:
         """从章节内容中提取角色状态变化"""
         prompt = f"""分析以下章节内容，提取每个角色的状态变化。
@@ -191,9 +182,9 @@ class MemoryLayerService:
                 conversation_history=[{"role": "user", "content": prompt}],
                 temperature=0.2,
                 user_id=user_id,
-                timeout=120.0
+                timeout=120.0,
             )
-            
+
             # 解析 JSON
             content = response
             json_start = content.find("{")
@@ -203,27 +194,27 @@ class MemoryLayerService:
                 return result.get("character_states", [])
         except Exception as e:
             logger.warning(f"提取角色状态失败: {e}")
-        
+
         return []
 
     # ===== 时间线管理 =====
 
     async def get_timeline(
-        self, 
-        project_id: str, 
+        self,
+        project_id: str,
         start_chapter: Optional[int] = None,
-        end_chapter: Optional[int] = None
+        end_chapter: Optional[int] = None,
     ) -> List[TimelineEvent]:
         """获取时间线事件"""
         query = select(TimelineEvent).where(TimelineEvent.project_id == project_id)
-        
+
         if start_chapter:
             query = query.where(TimelineEvent.chapter_number >= start_chapter)
         if end_chapter:
             query = query.where(TimelineEvent.chapter_number <= end_chapter)
-        
+
         query = query.order_by(TimelineEvent.chapter_number, TimelineEvent.id)
-        
+
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
@@ -238,7 +229,7 @@ class MemoryLayerService:
         involved_characters: Optional[List[str]] = None,
         location: Optional[str] = None,
         importance: int = 5,
-        is_turning_point: bool = False
+        is_turning_point: bool = False,
     ) -> TimelineEvent:
         """添加时间线事件"""
         event = TimelineEvent(
@@ -251,7 +242,7 @@ class MemoryLayerService:
             involved_characters=involved_characters,
             location=location,
             importance=importance,
-            is_turning_point=is_turning_point
+            is_turning_point=is_turning_point,
         )
         self.db.add(event)
         await self.db.commit()
@@ -259,11 +250,7 @@ class MemoryLayerService:
         return event
 
     async def extract_timeline_events_from_chapter(
-        self,
-        project_id: str,
-        chapter_number: int,
-        chapter_content: str,
-        user_id: int
+        self, project_id: str, chapter_number: int, chapter_content: str, user_id: int
     ) -> List[Dict[str, Any]]:
         """从章节内容中提取时间线事件"""
         prompt = f"""分析以下章节内容，提取关键事件。
@@ -297,9 +284,9 @@ class MemoryLayerService:
                 conversation_history=[{"role": "user", "content": prompt}],
                 temperature=0.2,
                 user_id=user_id,
-                timeout=120.0
+                timeout=120.0,
             )
-            
+
             content = response
             json_start = content.find("{")
             json_end = content.rfind("}") + 1
@@ -308,7 +295,7 @@ class MemoryLayerService:
                 return result.get("events", [])
         except Exception as e:
             logger.warning(f"提取时间线事件失败: {e}")
-        
+
         return []
 
     # ===== 因果链管理 =====
@@ -316,12 +303,9 @@ class MemoryLayerService:
     async def get_pending_causal_chains(self, project_id: str) -> List[CausalChain]:
         """获取待解决的因果链"""
         result = await self.db.execute(
-            select(CausalChain).where(
-                and_(
-                    CausalChain.project_id == project_id,
-                    CausalChain.status == "pending"
-                )
-            ).order_by(CausalChain.cause_chapter)
+            select(CausalChain)
+            .where(and_(CausalChain.project_id == project_id, CausalChain.status == "pending"))
+            .order_by(CausalChain.cause_chapter)
         )
         return list(result.scalars().all())
 
@@ -334,7 +318,7 @@ class MemoryLayerService:
         cause_type: str = "event",
         effect_type: str = "event",
         involved_characters: Optional[List[str]] = None,
-        importance: int = 5
+        importance: int = 5,
     ) -> CausalChain:
         """添加因果链"""
         chain = CausalChain(
@@ -346,7 +330,7 @@ class MemoryLayerService:
             effect_description=effect_description,
             involved_characters=involved_characters,
             importance=importance,
-            status="pending"
+            status="pending",
         )
         self.db.add(chain)
         await self.db.commit()
@@ -354,24 +338,19 @@ class MemoryLayerService:
         return chain
 
     async def resolve_causal_chain(
-        self,
-        chain_id: int,
-        effect_chapter: int,
-        resolution_description: str
+        self, chain_id: int, effect_chapter: int, resolution_description: str
     ) -> Optional[CausalChain]:
         """解决因果链"""
-        result = await self.db.execute(
-            select(CausalChain).where(CausalChain.id == chain_id)
-        )
+        result = await self.db.execute(select(CausalChain).where(CausalChain.id == chain_id))
         chain = result.scalar_one_or_none()
-        
+
         if chain:
             chain.status = "resolved"
             chain.effect_chapter = effect_chapter
             chain.resolution_description = resolution_description
             await self.db.commit()
             await self.db.refresh(chain)
-        
+
         return chain
 
     # ===== 故事时间追踪 =====
@@ -382,38 +361,30 @@ class MemoryLayerService:
             select(StoryTimeTracker).where(StoryTimeTracker.project_id == project_id)
         )
         tracker = result.scalar_one_or_none()
-        
+
         if not tracker:
-            tracker = StoryTimeTracker(
-                project_id=project_id,
-                chapter_time_map={}
-            )
+            tracker = StoryTimeTracker(project_id=project_id, chapter_time_map={})
             self.db.add(tracker)
             await self.db.commit()
             await self.db.refresh(tracker)
-        
+
         return tracker
 
     async def update_chapter_time(
-        self,
-        project_id: str,
-        chapter_number: int,
-        start_time: str,
-        end_time: str,
-        duration: str
+        self, project_id: str, chapter_number: int, start_time: str, end_time: str, duration: str
     ) -> StoryTimeTracker:
         """更新章节时间"""
         tracker = await self.get_or_create_time_tracker(project_id)
-        
+
         chapter_time_map = tracker.chapter_time_map or {}
         chapter_time_map[str(chapter_number)] = {
             "start_time": start_time,
             "end_time": end_time,
-            "duration": duration
+            "duration": duration,
         }
         tracker.chapter_time_map = chapter_time_map
         tracker.current_time = end_time
-        
+
         await self.db.commit()
         await self.db.refresh(tracker)
         return tracker
@@ -421,14 +392,11 @@ class MemoryLayerService:
     # ===== 综合上下文生成 =====
 
     async def get_memory_context(
-        self,
-        project_id: str,
-        chapter_number: int,
-        involved_characters: Optional[List[str]] = None
+        self, project_id: str, chapter_number: int, involved_characters: Optional[List[str]] = None
     ) -> str:
         """生成记忆层上下文（用于注入到写作提示词）"""
         lines = ["# 记忆层上下文\n"]
-        
+
         # 1. 角色状态
         character_states = await self.get_all_character_states(project_id, chapter_number - 1)
         if character_states:
@@ -446,12 +414,10 @@ class MemoryLayerService:
                 if state.current_goals:
                     lines.append(f"- 当前目标：{', '.join(state.current_goals[:3])}")
                 lines.append("")
-        
+
         # 2. 最近事件
         recent_events = await self.get_timeline(
-            project_id, 
-            start_chapter=max(1, chapter_number - 5),
-            end_chapter=chapter_number - 1
+            project_id, start_chapter=max(1, chapter_number - 5), end_chapter=chapter_number - 1
         )
         if recent_events:
             lines.append("## 最近事件\n")
@@ -460,7 +426,7 @@ class MemoryLayerService:
                 if event.is_turning_point:
                     lines.append("  （转折点）")
             lines.append("")
-        
+
         # 3. 待解决的因果链
         pending_chains = await self.get_pending_causal_chains(project_id)
         if pending_chains:
@@ -469,7 +435,7 @@ class MemoryLayerService:
                 lines.append(f"- 【第{chain.cause_chapter}章】{chain.cause_description}")
                 lines.append(f"  → 预期效果：{chain.effect_description}")
             lines.append("")
-        
+
         # 4. 故事时间
         tracker = await self.get_or_create_time_tracker(project_id)
         if tracker.current_time:
@@ -478,7 +444,7 @@ class MemoryLayerService:
             if tracker.current_date:
                 lines.append(f"- 当前日期：{tracker.current_date}")
             lines.append("")
-        
+
         return "\n".join(lines) if len(lines) > 1 else "（无记忆层上下文）"
 
     async def update_memory_after_chapter(
@@ -487,15 +453,15 @@ class MemoryLayerService:
         chapter_number: int,
         chapter_content: str,
         character_names: List[str],
-        user_id: int
+        user_id: int,
     ) -> Dict[str, Any]:
         """章节完成后更新记忆层"""
         results = {
             "character_states_updated": 0,
             "timeline_events_added": 0,
-            "causal_chains_added": 0
+            "causal_chains_added": 0,
         }
-        
+
         # 1. 提取并更新角色状态
         character_states = await self.extract_character_states_from_chapter(
             project_id, chapter_number, chapter_content, character_names, user_id
@@ -503,44 +469,36 @@ class MemoryLayerService:
         for state_data in character_states:
             char_name = state_data.pop("character_name", None)
             if char_name:
-                await self.update_character_state(
-                    project_id, char_name, chapter_number, state_data
-                )
+                await self.update_character_state(project_id, char_name, chapter_number, state_data)
                 results["character_states_updated"] += 1
-        
+
         # 2. 提取并添加时间线事件
         events = await self.extract_timeline_events_from_chapter(
             project_id, chapter_number, chapter_content, user_id
         )
         for event_data in events:
             await self.add_timeline_event(
-                project_id=project_id,
-                chapter_number=chapter_number,
-                **event_data
+                project_id=project_id, chapter_number=chapter_number, **event_data
             )
             results["timeline_events_added"] += 1
-        
+
         logger.info(
             f"项目 {project_id} 第 {chapter_number} 章记忆层更新完成: "
             f"角色状态 {results['character_states_updated']}, "
             f"时间线事件 {results['timeline_events_added']}"
         )
-        
+
         return results
 
     async def check_consistency(
-        self,
-        project_id: str,
-        chapter_number: int,
-        chapter_content: str,
-        user_id: int
+        self, project_id: str, chapter_number: int, chapter_content: str, user_id: int
     ) -> Dict[str, Any]:
         """检查章节与记忆层的一致性"""
         issues = []
-        
+
         # 获取记忆层上下文
         memory_context = await self.get_memory_context(project_id, chapter_number)
-        
+
         prompt = f"""检查以下章节内容与记忆层上下文的一致性。
 
 [记忆层上下文]
@@ -577,9 +535,9 @@ class MemoryLayerService:
                 conversation_history=[{"role": "user", "content": prompt}],
                 temperature=0.2,
                 user_id=user_id,
-                timeout=120.0
+                timeout=120.0,
             )
-            
+
             content = response
             json_start = content.find("{")
             json_end = content.rfind("}") + 1
@@ -587,5 +545,5 @@ class MemoryLayerService:
                 return json.loads(content[json_start:json_end])
         except Exception as e:
             logger.warning(f"一致性检查失败: {e}")
-        
+
         return {"consistent": True, "issues": []}

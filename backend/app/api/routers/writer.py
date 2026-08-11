@@ -12,6 +12,7 @@ Writer API Router - 人类化起点长篇写作系统
 2. 跨章 1234 逻辑：通过 ChapterMission 控制每章只写一个节拍
 3. 后置护栏检查：自动检测并修复违规内容
 """
+
 import json
 import logging
 import re
@@ -94,7 +95,9 @@ def get_job_service(session: AsyncSession = Depends(get_session)) -> JobService:
     return JobService(session)
 
 
-async def _load_project_schema(service: NovelService, project_id: str, user_id: int) -> NovelProjectSchema:
+async def _load_project_schema(
+    service: NovelService, project_id: str, user_id: int
+) -> NovelProjectSchema:
     return await service.get_project_schema(project_id, user_id)
 
 
@@ -132,9 +135,7 @@ async def _enqueue_chapter_generation(
     idempotency_key: Optional[str],
 ) -> BackgroundTaskResponse:
     try:
-        workflow_response = await ChapterWorkflowCompatibilityService(
-            session
-        ).adapt_generation(
+        workflow_response = await ChapterWorkflowCompatibilityService(session).adapt_generation(
             user_id=user_id,
             project_id=project_id,
             chapter_number=chapter_number,
@@ -182,9 +183,7 @@ async def _enqueue_chapter_finalize(
     idempotency_key: Optional[str] = None,
 ) -> BackgroundTaskResponse:
     try:
-        workflow_response = await ChapterWorkflowCompatibilityService(
-            session
-        ).adapt_finalize(
+        workflow_response = await ChapterWorkflowCompatibilityService(session).adapt_finalize(
             project_id=project_id,
             chapter_number=chapter_number,
             user_id=user_id,
@@ -493,6 +492,7 @@ async def evaluate_chapter(
     await novel_service.ensure_project_owner(project_id, current_user.id)
     # 确保预加载 selected_version 与 versions 关系
     from sqlalchemy.orm import selectinload
+
     stmt = (
         select(Chapter)
         .options(
@@ -511,12 +511,18 @@ async def evaluate_chapter(
         chapter = await novel_service.get_or_create_chapter(project_id, request.chapter_number)
 
     ordered_versions = sorted(
-        [version for version in (chapter.versions or []) if version.content and version.content.strip()],
+        [
+            version
+            for version in (chapter.versions or [])
+            if version.content and version.content.strip()
+        ],
         key=lambda item: item.created_at,
     )
 
     version_to_evaluate = chapter.selected_version
-    if version_to_evaluate and (not version_to_evaluate.content or not version_to_evaluate.content.strip()):
+    if version_to_evaluate and (
+        not version_to_evaluate.content or not version_to_evaluate.content.strip()
+    ):
         version_to_evaluate = None
 
     if not ordered_versions and not version_to_evaluate:
@@ -571,7 +577,11 @@ async def evaluate_chapter(
             ai_review_service = AIReviewService(llm_service, prompt_service)
             ai_review_result = await ai_review_service.review_versions(
                 versions=[version.content for version in ordered_versions],
-                chapter_mission=review_context.get("chapter_mission") if isinstance(review_context.get("chapter_mission"), dict) else None,
+                chapter_mission=(
+                    review_context.get("chapter_mission")
+                    if isinstance(review_context.get("chapter_mission"), dict)
+                    else None
+                ),
                 user_id=current_user.id,
                 review_context=review_context,
             )
@@ -598,25 +608,28 @@ async def evaluate_chapter(
                 raise ValueError("评审结果为空")
 
             # 单版本同样包装成与多版本结构一致的 JSON 格式
-            evaluation_feedback = json.dumps({
-                "best_choice": 1,
-                "reason_for_choice": evaluation_text,
-                "evaluation": {
-                    "version1": {
-                        "pros": [],
-                        "cons": [],
-                        "overall_review": evaluation_text,
-                        "scores": {}
-                    }
-                }
-            }, ensure_ascii=False)
+            evaluation_feedback = json.dumps(
+                {
+                    "best_choice": 1,
+                    "reason_for_choice": evaluation_text,
+                    "evaluation": {
+                        "version1": {
+                            "pros": [],
+                            "cons": [],
+                            "overall_review": evaluation_text,
+                            "scores": {},
+                        }
+                    },
+                },
+                ensure_ascii=False,
+            )
             evaluation_version = version_to_evaluate
 
         await novel_service.add_chapter_evaluation(
             chapter=chapter,
             version=evaluation_version,
             feedback=evaluation_feedback,
-            decision="reviewed"
+            decision="reviewed",
         )
         logger.info("项目 %s 第 %s 章评审成功", project_id, request.chapter_number)
 
@@ -634,7 +647,9 @@ async def evaluate_chapter(
 
             if not source_version:
                 # 只有单版本或者没找到多版本对应索引，使用 evaluation_version 或者是 ordered_versions[-1]
-                source_version = evaluation_version or (ordered_versions[-1] if ordered_versions else None)
+                source_version = evaluation_version or (
+                    ordered_versions[-1] if ordered_versions else None
+                )
 
             if source_version and source_version.content:
                 source_content = source_version.content
@@ -649,6 +664,7 @@ async def evaluate_chapter(
 
                 # 3. 调用优化函数 do_optimize_recommended_version
                 from .optimizer import do_optimize_recommended_version
+
                 optimized_content, _ = await do_optimize_recommended_version(
                     llm_service=llm_service,
                     prompt_service=prompt_service,
@@ -684,7 +700,12 @@ async def evaluate_chapter(
                 await session.commit()
 
         except Exception as opt_exc:
-            logger.warning("项目 %s 第 %s 章自动优化失败，降级为仅评审: %s", project_id, request.chapter_number, opt_exc)
+            logger.warning(
+                "项目 %s 第 %s 章自动优化失败，降级为仅评审: %s",
+                project_id,
+                request.chapter_number,
+                opt_exc,
+            )
             # 确保即使优化失败，章节也处于 waiting_for_confirm 状态
             chapter.status = "waiting_for_confirm"
             chapter.generation_step = "evaluation_done"
@@ -697,12 +718,9 @@ async def evaluate_chapter(
         await session.rollback()
 
         # 重新加载 chapter 对象（因为 rollback 后对象已脱离 session）
-        stmt = (
-            select(Chapter)
-            .where(
-                Chapter.project_id == project_id,
-                Chapter.chapter_number == request.chapter_number,
-            )
+        stmt = select(Chapter).where(
+            Chapter.project_id == project_id,
+            Chapter.chapter_number == request.chapter_number,
         )
         result = await session.execute(stmt)
         chapter = result.scalars().first()
@@ -712,12 +730,13 @@ async def evaluate_chapter(
             # 注意：这里不能再用 add_chapter_evaluation，因为它会设置状态为 waiting_for_confirm
             # 失败时应该设置为 evaluation_failed
             from app.models.novel import ChapterEvaluation
+
             evaluation_record = ChapterEvaluation(
                 chapter_id=chapter.id,
                 version_id=version_to_evaluate.id if version_to_evaluate else None,
                 decision="failed",
                 feedback=failure_detail,
-                score=None
+                score=None,
             )
             session.add(evaluation_record)
             chapter.status = "evaluation_failed"
@@ -737,7 +756,9 @@ async def evaluate_chapter(
                     error=failure_detail,
                     input_payload={
                         "version_count": len(ordered_versions),
-                        "selected_version_id": version_to_evaluate.id if version_to_evaluate else None,
+                        "selected_version_id": (
+                            version_to_evaluate.id if version_to_evaluate else None
+                        ),
                     },
                     metadata={
                         "trace_kind": "llm",
@@ -760,13 +781,14 @@ async def evaluate_chapter(
                     ended_at=datetime.now(CN_TIMEZONE),
                 )
             except Exception:
-                logger.exception("项目 %s 第 %s 章记录评审失败 trace 失败", project_id, request.chapter_number)
+                logger.exception(
+                    "项目 %s 第 %s 章记录评审失败 trace 失败", project_id, request.chapter_number
+                )
 
         # 抛出异常，让前端知道评审失败
         raise HTTPException(status_code=500, detail=failure_detail) from exc
 
     return await _load_project_schema(novel_service, project_id, current_user.id)
-
 
 
 @router.post("/novels/{project_id}/chapters/update-outline", response_model=NovelProjectSchema)
@@ -812,7 +834,9 @@ async def delete_chapters(
     return await _load_project_schema(novel_service, project_id, current_user.id)
 
 
-@router.post("/novels/{project_id}/chapters/outline", response_model=BackgroundTaskResponse, status_code=202)
+@router.post(
+    "/novels/{project_id}/chapters/outline", response_model=BackgroundTaskResponse, status_code=202
+)
 async def generate_chapters_outline(
     project_id: str,
     request: GenerateOutlineRequest,
@@ -900,7 +924,9 @@ async def edit_chapter_content_fast(
     real_summary = chapter.real_summary
     selected_version = None
     if chapter.selected_version_id and chapter.versions:
-        selected_version = next((v for v in chapter.versions if v.id == chapter.selected_version_id), None)
+        selected_version = next(
+            (v for v in chapter.versions if v.id == chapter.selected_version_id), None
+        )
     if (
         selected_version is None
         and chapter.selected_version

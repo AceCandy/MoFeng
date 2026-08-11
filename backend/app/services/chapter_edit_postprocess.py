@@ -48,11 +48,7 @@ def _artifact_lineage(
 
     if not isinstance(payload, ChapterFinalizeJobPayload) or payload.chapter_revision_id is None:
         return 0, "legacy", None, None
-    if (
-        payload.revision is None
-        or payload.source_hash is None
-        or payload.source_generation is None
-    ):
+    if payload.revision is None or payload.source_hash is None or payload.source_generation is None:
         raise PermanentJobError("invalid_legacy_lineage", "章节定稿任务缺少 canonical lineage")
     return payload.revision, "legacy", payload.source_hash, payload.source_generation
 
@@ -134,13 +130,17 @@ async def _load_snapshot(
         if not summary_prompt:
             raise PermanentJobError("summary_prompt_missing", "未配置章节摘要提示词")
         outline = (
-            await session.execute(
-                select(ChapterOutline).where(
-                    ChapterOutline.project_id == payload.project_id,
-                    ChapterOutline.chapter_number == payload.chapter_number,
+            (
+                await session.execute(
+                    select(ChapterOutline).where(
+                        ChapterOutline.project_id == payload.project_id,
+                        ChapterOutline.chapter_number == payload.chapter_number,
+                    )
                 )
             )
-        ).scalars().first()
+            .scalars()
+            .first()
+        )
         foreshadowing = await ForeshadowingSyncService(session).load_compute_context(
             project_id=payload.project_id,
             chapter_number=payload.chapter_number,
@@ -177,7 +177,9 @@ async def handle_chapter_edit_postprocess_job(
         try:
             payload = ChapterEditPostprocessJobPayload.model_validate(context.lease.payload)
         except ValidationError as exc:
-            raise PermanentJobError("invalid_chapter_edit_payload", "章节后处理任务参数无效") from exc
+            raise PermanentJobError(
+                "invalid_chapter_edit_payload", "章节后处理任务参数无效"
+            ) from exc
     else:
         payload = payload_override
     if context.lease.project_id != payload.project_id:

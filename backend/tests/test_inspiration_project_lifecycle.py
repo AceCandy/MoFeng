@@ -8,7 +8,6 @@ from app.api.routers.novels import create_novel
 from app.models.user import User
 from app.services.novel_service import NovelService
 
-
 ROOT = Path(__file__).resolve().parents[2]
 NOVELS_ROUTER = ROOT / "backend/app/api/routers/novels.py"
 
@@ -57,7 +56,9 @@ async def test_legacy_unnamed_inspiration_draft_is_treated_as_unfinished(db_sess
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_create_novel_returns_conflict_with_existing_unfinished_inspiration(db_session_factory):
+async def test_create_novel_returns_conflict_with_existing_unfinished_inspiration(
+    db_session_factory,
+):
     async with db_session_factory() as session:
         session.add(User(id=1, username="writer", hashed_password="secret"))
         await session.commit()
@@ -86,7 +87,7 @@ async def test_create_novel_returns_conflict_with_existing_unfinished_inspiratio
 def test_generate_blueprint_does_not_rename_unfinished_inspiration_before_save():
     source = NOVELS_ROUTER.read_text(encoding="utf-8")
     generate_block = source.split("async def generate_blueprint", 1)[1].split(
-        "\n\n@router.post(\"/{project_id}/blueprint/save\"",
+        '\n\n@router.post("/{project_id}/blueprint/save"',
         1,
     )[0]
 

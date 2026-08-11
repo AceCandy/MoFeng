@@ -90,10 +90,12 @@ async def test_optimize_chapter_does_not_expose_model_exception(
             assert project_id == "project-1"
             assert user_id == 42
             return SimpleNamespace(
-                chapters=[SimpleNamespace(
-                    chapter_number=3,
-                    selected_version=SimpleNamespace(content="原正文"),
-                )],
+                chapters=[
+                    SimpleNamespace(
+                        chapter_number=3,
+                        selected_version=SimpleNamespace(content="原正文"),
+                    )
+                ],
             )
 
     class DummyPromptService:
@@ -245,8 +247,12 @@ def test_optimizer_does_not_import_writer_private_foreshadowing_logic() -> None:
 def test_optimizer_frontend_uses_durable_acceptance_contract() -> None:
     root = Path(__file__).resolve().parents[2]
     api_source = (root / "frontend/src/api/novel.ts").read_text(encoding="utf-8")
-    response_block = api_source.split("export interface ApplyOptimizationResponse", 1)[1].split("}", 1)[0]
-    writing_desk = (root / "frontend/src/composables/useWritingDeskOptimize.ts").read_text(encoding="utf-8")
+    response_block = api_source.split("export interface ApplyOptimizationResponse", 1)[1].split(
+        "}", 1
+    )[0]
+    writing_desk = (root / "frontend/src/composables/useWritingDeskOptimize.ts").read_text(
+        encoding="utf-8"
+    )
     chapter_content = (
         root / "frontend/src/components/writing-desk/workspace/ChapterContent.vue"
     ).read_text(encoding="utf-8")

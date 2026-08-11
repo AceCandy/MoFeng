@@ -15,7 +15,6 @@ from ..core.crypto import decrypt
 from ..core.ssrf import assert_safe_base_url
 from ..repositories.ai_model_config_repository import UserAIModelRepository
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -67,7 +66,9 @@ class TTSService:
         ):
             raise TTSConfigurationError("默认语音朗读模型不可用")
         try:
-            assert_safe_base_url(provider.base_url, allow_private=settings.allow_private_llm_endpoints)
+            assert_safe_base_url(
+                provider.base_url, allow_private=settings.allow_private_llm_endpoints
+            )
         except ValueError as exc:
             raise TTSConfigurationError(str(exc)) from exc
         if not provider.api_key_encrypted or not model.tts_protocol:
@@ -92,7 +93,9 @@ class TTSService:
         }
 
     @classmethod
-    async def _post_limited(cls, client: httpx.AsyncClient, url: str, **kwargs) -> tuple[bytes, str]:
+    async def _post_limited(
+        cls, client: httpx.AsyncClient, url: str, **kwargs
+    ) -> tuple[bytes, str]:
         async with client.stream("POST", url, **kwargs) as response:
             response.raise_for_status()
             content_length = response.headers.get("content-length")
@@ -129,8 +132,8 @@ class TTSService:
     def _wav_data_complete(audio: bytes) -> bool:
         offset = 12  # 跳过 "RIFF" + size + "WAVE" 头
         while offset + 8 <= len(audio):
-            chunk_id = audio[offset:offset + 4]
-            chunk_size = int.from_bytes(audio[offset + 4:offset + 8], "little")
+            chunk_id = audio[offset : offset + 4]
+            chunk_size = int.from_bytes(audio[offset + 4 : offset + 8], "little")
             if chunk_id == b"data":
                 return len(audio) >= offset + 8 + chunk_size
             offset += 8 + chunk_size + (chunk_size & 1)  # 奇数大小需补 1 字节 padding
@@ -143,10 +146,10 @@ class TTSService:
         # 拦截"完整但静音"的音频：定位 data chunk，存在非零样本才算有效
         offset = 12
         while offset + 8 <= len(audio):
-            chunk_id = audio[offset:offset + 4]
-            chunk_size = int.from_bytes(audio[offset + 4:offset + 8], "little")
+            chunk_id = audio[offset : offset + 4]
+            chunk_size = int.from_bytes(audio[offset + 4 : offset + 8], "little")
             if chunk_id == b"data":
-                return any(audio[offset + 8:offset + 8 + chunk_size])
+                return any(audio[offset + 8 : offset + 8 + chunk_size])
             offset += 8 + chunk_size + (chunk_size & 1)
         return False
 
@@ -162,16 +165,16 @@ class TTSService:
         pcm = b""
         offset = 12
         while offset + 8 <= len(audio):
-            chunk_id = audio[offset:offset + 4]
-            chunk_size = int.from_bytes(audio[offset + 4:offset + 8], "little")
+            chunk_id = audio[offset : offset + 4]
+            chunk_size = int.from_bytes(audio[offset + 4 : offset + 8], "little")
             body = offset + 8
             if chunk_id == b"fmt " and chunk_size >= 16:
-                audio_format = int.from_bytes(audio[body:body + 2], "little") or 1
-                num_channels = int.from_bytes(audio[body + 2:body + 4], "little") or 1
-                sample_rate = int.from_bytes(audio[body + 4:body + 8], "little") or 24000
-                bits_per_sample = int.from_bytes(audio[body + 14:body + 16], "little") or 16
+                audio_format = int.from_bytes(audio[body : body + 2], "little") or 1
+                num_channels = int.from_bytes(audio[body + 2 : body + 4], "little") or 1
+                sample_rate = int.from_bytes(audio[body + 4 : body + 8], "little") or 24000
+                bits_per_sample = int.from_bytes(audio[body + 14 : body + 16], "little") or 16
             elif chunk_id == b"data":
-                pcm = audio[body:body + chunk_size]
+                pcm = audio[body : body + chunk_size]
             offset += 8 + chunk_size + (chunk_size & 1)
         if not pcm:
             return audio
@@ -179,15 +182,24 @@ class TTSService:
         if audio_format != 1 or bits_per_sample != 16:
             logger.info(
                 "MiMo wav 标准化为 pcm16: format=%d channels=%d rate=%d bits=%d",
-                audio_format, num_channels, sample_rate, bits_per_sample,
+                audio_format,
+                num_channels,
+                sample_rate,
+                bits_per_sample,
             )
         byte_rate = sample_rate * num_channels * 2
         block_align = num_channels * 2
         fmt_body = struct.pack("<HHIIHH", 1, num_channels, sample_rate, byte_rate, block_align, 16)
         return (
-            b"RIFF" + struct.pack("<I", 4 + 8 + len(fmt_body) + 8 + len(pcm16)) + b"WAVE"
-            + b"fmt " + struct.pack("<I", len(fmt_body)) + fmt_body
-            + b"data" + struct.pack("<I", len(pcm16)) + pcm16
+            b"RIFF"
+            + struct.pack("<I", 4 + 8 + len(fmt_body) + 8 + len(pcm16))
+            + b"WAVE"
+            + b"fmt "
+            + struct.pack("<I", len(fmt_body))
+            + fmt_body
+            + b"data"
+            + struct.pack("<I", len(pcm16))
+            + pcm16
         )
 
     @staticmethod
@@ -197,7 +209,7 @@ class TTSService:
             # IEEE float32 → 16-bit PCM
             out = bytearray()
             for i in range(0, len(pcm) - 3, 4):
-                val = struct.unpack("<f", pcm[i:i + 4])[0]
+                val = struct.unpack("<f", pcm[i : i + 4])[0]
                 clamped = -1.0 if val < -1.0 else (1.0 if val > 1.0 else val)
                 out += int(clamped * 32767).to_bytes(2, "little", signed=True)
             return bytes(out)
@@ -213,14 +225,14 @@ class TTSService:
             # 24-bit signed → 16-bit signed（右移 8 位）
             out = bytearray()
             for i in range(0, len(pcm) - 2, 3):
-                val = int.from_bytes(pcm[i:i + 3], "little", signed=True)
+                val = int.from_bytes(pcm[i : i + 3], "little", signed=True)
                 out += (val >> 8).to_bytes(2, "little", signed=True)
             return bytes(out)
         if bits_per_sample == 32:
             # 32-bit signed → 16-bit signed（右移 16 位）
             out = bytearray()
             for i in range(0, len(pcm) - 3, 4):
-                val = int.from_bytes(pcm[i:i + 4], "little", signed=True)
+                val = int.from_bytes(pcm[i : i + 4], "little", signed=True)
                 out += (val >> 16).to_bytes(2, "little", signed=True)
             return bytes(out)
         return pcm[: len(pcm) // 2 * 2]
@@ -240,21 +252,37 @@ class TTSService:
         for attempt in range(self.UPSTREAM_RETRY_ATTEMPTS):
             try:
                 async with httpx.AsyncClient(timeout=self.UPSTREAM_TIMEOUT_SECONDS) as client:
-                    body, media_type = await self._post_limited(client, url, headers=headers, json=payload)
+                    body, media_type = await self._post_limited(
+                        client, url, headers=headers, json=payload
+                    )
                 audio = parse_response(body, media_type)
                 if audio is not None:
                     return audio
                 last_error = TTSUpstreamError("语音模型未返回有效音频")
-                logger.warning("上游 TTS 返回无效音频 attempt=%d/%d", attempt + 1, self.UPSTREAM_RETRY_ATTEMPTS)
+                logger.warning(
+                    "上游 TTS 返回无效音频 attempt=%d/%d", attempt + 1, self.UPSTREAM_RETRY_ATTEMPTS
+                )
             except httpx.TimeoutException:
                 last_error = TimeoutError("语音模型响应超时")
-                logger.warning("上游 TTS 超时 attempt=%d/%d", attempt + 1, self.UPSTREAM_RETRY_ATTEMPTS)
+                logger.warning(
+                    "上游 TTS 超时 attempt=%d/%d", attempt + 1, self.UPSTREAM_RETRY_ATTEMPTS
+                )
             except httpx.HTTPError as exc:
                 last_error = TTSUpstreamError("语音模型调用失败")
-                logger.warning("上游 TTS HTTP 错误 attempt=%d/%d: %s", attempt + 1, self.UPSTREAM_RETRY_ATTEMPTS, exc)
+                logger.warning(
+                    "上游 TTS HTTP 错误 attempt=%d/%d: %s",
+                    attempt + 1,
+                    self.UPSTREAM_RETRY_ATTEMPTS,
+                    exc,
+                )
             except (KeyError, IndexError, TypeError, ValueError, binascii.Error) as exc:
                 last_error = TTSUpstreamError("语音模型未返回有效音频")
-                logger.warning("上游 TTS 响应解析失败 attempt=%d/%d: %s", attempt + 1, self.UPSTREAM_RETRY_ATTEMPTS, exc)
+                logger.warning(
+                    "上游 TTS 响应解析失败 attempt=%d/%d: %s",
+                    attempt + 1,
+                    self.UPSTREAM_RETRY_ATTEMPTS,
+                    exc,
+                )
         raise last_error or TTSUpstreamError("语音模型未返回有效音频")
 
     async def _synthesize_mimo(self, model, text: str, voice: str) -> SpeechAudio:

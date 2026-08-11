@@ -1,5 +1,6 @@
 # AIMETA P=伏笔API_伏笔列表查询|R=伏笔列表查询|NR=不含创建回收分析|E=route:GET_/api/novels/*/foreshadowings|X=http|A=伏笔查询|D=fastapi,sqlalchemy|S=db|RD=./README.ai
 """伏笔管理 API 接口"""
+
 import logging
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -30,7 +31,7 @@ async def list_foreshadowings(
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_session),
-    current_user = Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
     """获取伏笔列表"""
     # 越权校验置于 try 外：非项目拥有者统一返回 404，与“项目不存在”同码同文案，

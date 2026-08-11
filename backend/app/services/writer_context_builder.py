@@ -35,7 +35,7 @@ def _shallow_copy_blueprint(blueprint: dict) -> dict:
 class WriterContextBuilder:
     """
     构建写作层可见的上下文，实现信息可见性过滤。
-    
+
     核心原则：
     - L3 Writer 只能看到「已公开」的信息
     - 未登场角色不能出现在 prompt 中（连名字都不出现）
@@ -81,17 +81,13 @@ class WriterContextBuilder:
             包含裁剪后蓝图和角色信息的字典
         """
         # 1. 提取所有角色名
-        all_names = [
-            c.get("name") for c in blueprint.get("characters", []) if c.get("name")
-        ]
+        all_names = [c.get("name") for c in blueprint.get("characters", []) if c.get("name")]
 
         # 2. 检测已登场角色（从已完成章节中）
         introduced = _detect_names(all_names, completed_summaries + [previous_tail])
 
         # 3. 检测本章计划提及的角色（从大纲/写作指令中）
-        planned = _detect_names(
-            all_names, [outline_title, outline_summary, writing_notes]
-        )
+        planned = _detect_names(all_names, [outline_title, outline_summary, writing_notes])
 
         # 4. 合并允许的角色集合
         allowed = introduced | planned
@@ -108,16 +104,14 @@ class WriterContextBuilder:
         # 裁剪角色列表：只保留允许的角色
         if "characters" in writer_blueprint:
             writer_blueprint["characters"] = [
-                c for c in writer_blueprint.get("characters", [])
-                if c.get("name") in allowed
+                c for c in writer_blueprint.get("characters", []) if c.get("name") in allowed
             ]
 
         # 裁剪关系列表：只保留与允许角色相关的关系
         if "relationships" in writer_blueprint:
             rels = writer_blueprint.get("relationships", [])
             writer_blueprint["relationships"] = [
-                r for r in rels
-                if r.get("from") in allowed and r.get("to") in allowed
+                r for r in rels if r.get("from") in allowed and r.get("to") in allowed
             ]
 
         # 6. 计算禁止角色列表（用于 Guardrails 检查）
@@ -134,10 +128,10 @@ class WriterContextBuilder:
     def get_forbidden_names_pattern(self, forbidden_characters: List[str]) -> Optional[re.Pattern]:
         """
         生成用于检测禁止角色名的正则表达式。
-        
+
         Args:
             forbidden_characters: 禁止出现的角色名列表
-            
+
         Returns:
             编译后的正则表达式，如果列表为空则返回 None
         """

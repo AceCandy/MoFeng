@@ -188,7 +188,9 @@ async def put_project_memory(
             # 乐观锁守卫：version 不匹配说明期间被并发改过，拒绝覆盖。
             stmt = (
                 update(ProjectMemory)
-                .where(ProjectMemory.id == memory.id, ProjectMemory.version == payload.expected_version)
+                .where(
+                    ProjectMemory.id == memory.id, ProjectMemory.version == payload.expected_version
+                )
                 .values(**update_values, version=ProjectMemory.version + 1)
             )
             update_result = await session.execute(stmt)
