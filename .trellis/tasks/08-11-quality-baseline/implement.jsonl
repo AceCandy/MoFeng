@@ -1,0 +1,7 @@
+{"file":".trellis/spec/backend/index.md","reason":"后端质量检查与相关规范入口"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"pytest、异步边界与后端质量约定"}
+{"file":".trellis/spec/frontend/index.md","reason":"前端质量与组件规范入口"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Vitest、构建和前端质量约定"}
+{"file":".trellis/spec/backend/transport-contracts.md","reason":"OpenAPI 产物、API contract 与 SSE fixture 契约"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"fixture、transport 与 UI 消费链路复核"}
+{"file":".trellis/tasks/08-11-quality-baseline/research/planning-evidence.md","reason":"Q1 命令、浏览器契约与环境依赖的实测规划证据"}

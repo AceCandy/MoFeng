@@ -1,0 +1,5 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"核验后端测试、静态检查、格式和 scoped mypy"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"核验前端静态门、Vitest、构建与浏览器测试"}
+{"file":".trellis/spec/backend/transport-contracts.md","reason":"核验 API 产物和 fixture 未偏离 transport contract"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"核验跨层失败归因与行为契约未被测试迁就"}
+{"file":".trellis/tasks/08-11-quality-baseline/research/planning-evidence.md","reason":"核验最终范围、命令与环境声明未偏离规划证据"}

@@ -30,6 +30,60 @@ Reference: `app/main.py`.
 
 ---
 
+## Scenario: running Alembic in an application process
+
+### 1. Scope / Trigger
+
+Apply this contract when Alembic is imported or executed in a process that may already
+have application loggers or pytest `caplog` handlers configured.
+
+### 2. Signature
+
+```python
+fileConfig(config.config_file_name, disable_existing_loggers=False)
+```
+
+### 3. Contracts
+
+- Alembic may configure its own handlers and levels, but it must not disable existing
+  `app.*`, root, or test-capture loggers.
+- A migration followed by ordinary application work in the same process must preserve
+  the same application logging behavior as before the migration.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+| --- | --- |
+| No application logging configured yet | Alembic logging initializes normally |
+| `app.*` logger already configured | Logger remains enabled after Alembic setup |
+| pytest capture handler already installed | Later `app.*` records remain capturable |
+
+### 5. Good / Base / Bad Cases
+
+- Good: an in-process migration runs, then an application error record reaches its
+  configured handler once.
+- Base: the Alembic CLI runs in a fresh process and produces its normal migration logs.
+- Bad: default `fileConfig(...)` disables pre-existing non-root loggers and makes later
+  logging behavior depend on test/import order.
+
+### 6. Tests Required
+
+- Run Alembic setup before a logging assertion and prove an `app.*` record is still
+  captured without changing production propagation globally.
+- Restore any logger propagation or handler state changed by a test fixture.
+
+### 7. Wrong vs Correct
+
+```python
+# Wrong: defaults disable existing non-root loggers.
+fileConfig(config.config_file_name)
+
+# Correct: Alembic coexists with application and test logging.
+fileConfig(config.config_file_name, disable_existing_loggers=False)
+```
+
+---
+
 ## Obtain a logger per module
 
 Top of every module that logs:
