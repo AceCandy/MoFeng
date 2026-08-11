@@ -1057,3 +1057,33 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Status
 
 [OK] **Completed**
+
+
+## Session 33: 恢复后端、前端与 E2E 质量基线
+
+**Date**: 2026-08-11
+**Task**: 恢复后端、前端与 E2E 质量基线
+**Branch**: `main`
+
+### Summary
+
+修复注册与 OAuth 契约、日志测试隔离、静态检查与格式漂移、OpenAPI 工具链和写作台浏览器契约；最终后端 707/707、前端单测 291/291、Playwright 20/20，所有质量门退出 0。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `bc43e84` | (see git log) |
+| `0f249b4` | (see git log) |
+| `f4c5167` | (see git log) |
+| `6a69c2b` | (see git log) |
+| `62e59a0` | (see git log) |
+| `6b33235` | (see git log) |
+| `b8767f5` | (see git log) |
+| `478f7b0` | (see git log) |
+| `5f410bb` | (see git log) |
+| `b2e4e91` | (see git log) |
+
+### Status
+
+[OK] **Completed**
