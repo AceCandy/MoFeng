@@ -1223,3 +1223,24 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Status
 
 [OK] **Completed**
+
+
+## Session 39: 修复润色后重复选版
+
+**Date**: 2026-08-13
+**Task**: 修复润色后重复选版
+**Branch**: `main`
+
+### Summary
+
+人工确认阶段只投影并确认 AI 优选且完成润色的章节版本；保留旧数据兼容回退，并补充后端与前端回归测试。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `e862e92` | (see git log) |
+
+### Status
+
+[OK] **Completed**
