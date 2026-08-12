@@ -1117,3 +1117,24 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Status
 
 [OK] **Completed**
+
+
+## Session 35: 完成通用弹窗与写作台无障碍整改
+
+**Date**: 2026-08-12
+**Task**: 完成通用弹窗与写作台无障碍整改
+**Branch**: `main`
+
+### Summary
+
+完成 U1 无障碍整改：通用弹窗接入统一焦点管理，写作台 pipeline 使用原生按钮并补齐键盘/触控语义，助手滚动区可聚焦，新增 axe Playwright 验收与 focused tests，更新 frontend component spec。lint、type-check、unit 296/296、build、生产依赖 audit、完整 Playwright 26/26 全部通过；U1 已提交 d1a0abf 并归档。D1/T1 仍待实施。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d1a0abf` | (see git log) |
+
+### Status
+
+[OK] **Completed**
