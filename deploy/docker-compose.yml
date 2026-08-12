@@ -1,3 +1,5 @@
+name: ${COMPOSE_PROJECT_NAME:-mofeng}
+
 x-application-environment: &application-environment
   SECRET_KEY: ${SECRET_KEY:?请设置SECRET_KEY}
   ENVIRONMENT: ${ENVIRONMENT:-production}
@@ -74,14 +76,14 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
-    container_name: mofeng-migrate
+    container_name: ${COMPOSE_PROJECT_NAME:-mofeng}-migrate
     command: ["python", "-m", "app.db.cli", "db-migrate"]
     user: "1000:1000"
     restart: "no"
 
   bootstrap:
     <<: *application-runtime
-    container_name: mofeng-bootstrap
+    container_name: ${COMPOSE_PROJECT_NAME:-mofeng}-bootstrap
     command: ["python", "-m", "app.db.cli", "db-bootstrap"]
     user: "1000:1000"
     restart: "no"
@@ -91,7 +93,7 @@ services:
 
   app:
     <<: *application-runtime
-    container_name: mofeng-app
+    container_name: ${COMPOSE_PROJECT_NAME:-mofeng}-app
     ports:
       - "${APP_PORT:-6100}:6100"
     restart: unless-stopped
@@ -109,7 +111,7 @@ services:
 
   worker:
     <<: *application-runtime
-    container_name: mofeng-worker
+    container_name: ${COMPOSE_PROJECT_NAME:-mofeng}-worker
     command: ["python", "-m", "app.worker", "run"]
     user: "1000:1000"
     restart: unless-stopped
@@ -130,7 +132,7 @@ services:
   # PostgreSQL 数据库服务（通过 profile postgres 启用）
   pg:
     image: pgvector/pgvector:pg16
-    container_name: mofeng-pg
+    container_name: ${COMPOSE_PROJECT_NAME:-mofeng}-pg
     profiles:
       - postgres
     environment:
@@ -153,7 +155,7 @@ services:
   # Redis 缓存服务（可选，通过 profile redis 启用）
   redis:
     image: redis:7-alpine
-    container_name: mofeng-redis
+    container_name: ${COMPOSE_PROJECT_NAME:-mofeng}-redis
     profiles:
       - redis
     restart: unless-stopped

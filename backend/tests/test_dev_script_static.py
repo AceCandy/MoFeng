@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 import shutil
 import socket
 import subprocess
@@ -15,9 +16,12 @@ DEPLOY_ENV_EXAMPLE = ROOT / "deploy" / ".env.example"
 DEPLOY_COMPOSE = ROOT / "deploy" / "docker-compose.yml"
 DEPLOY_NGINX = ROOT / "deploy" / "nginx.conf"
 DEPLOY_SUPERVISOR = ROOT / "deploy" / "supervisord.conf"
+DEPLOY_DOCKERFILE = ROOT / "deploy" / "Dockerfile"
 DEPLOY_SCRIPT = ROOT / "deploy" / "scripts" / "deploy_docker.sh"
+RELEASE_SMOKE_SCRIPT = ROOT / "deploy" / "scripts" / "smoke_release_image.sh"
 QUICK_DEPLOY_SCRIPT = ROOT / "deploy" / "scripts" / "quick_deploy.sh"
 SERVER_DEPLOY_SCRIPT = ROOT / "deploy" / "scripts" / "server_deploy.sh"
+TRANSPORT_CI = ROOT / ".github" / "workflows" / "transport-contract-ci.yml"
 
 
 def _load_dev_servers_module():
@@ -81,6 +85,13 @@ def test_deploy_default_ports_are_consistent():
     assert "--port 6101" in supervisor
 
 
+def test_supervisor_sets_appuser_home_for_database_ssl_defaults():
+    supervisor = DEPLOY_SUPERVISOR.read_text(encoding="utf-8")
+
+    assert "user=appuser" in supervisor
+    assert 'environment=HOME="/home/appuser"' in supervisor
+
+
 def test_deploy_examples_and_operator_commands_resolve_database_config():
     env_example = DEPLOY_ENV_EXAMPLE.read_text(encoding="utf-8")
     deploy_script = DEPLOY_SCRIPT.read_text(encoding="utf-8")
@@ -127,6 +138,64 @@ def test_deploy_defines_and_gates_independent_durable_worker():
     assert "logs --tail=80 worker" in deploy_script
 
 
+def test_python_dependency_install_requires_hash_locks():
+    dockerfile = DEPLOY_DOCKERFILE.read_text(encoding="utf-8")
+    transport_ci = TRANSPORT_CI.read_text(encoding="utf-8")
+
+    assert "pip install --no-cache-dir --upgrade pip" not in dockerfile
+    assert "pip install --no-cache-dir --no-compile --require-hashes" in dockerfile
+    assert "python -m pip install --require-hashes -r requirements-dev.txt" in transport_ci
+    assert "backend/requirements.in" in transport_ci
+    assert "backend/requirements-dev.in" in transport_ci
+
+
+def test_release_smoke_uses_digest_and_cleans_isolated_resources():
+    compose = DEPLOY_COMPOSE.read_text(encoding="utf-8")
+    smoke = RELEASE_SMOKE_SCRIPT.read_text(encoding="utf-8")
+
+    for service in ("migrate", "bootstrap", "app", "worker", "pg"):
+        assert f"container_name: ${{COMPOSE_PROJECT_NAME:-mofeng}}-{service}" in compose
+
+    assert "@sha256:[0-9a-f]{64}" in smoke
+    assert 'docker pull "$image_ref"' in smoke
+    assert 'docker tag "$image_ref" "$local_image"' in smoke
+    assert '--project-name "$project_name"' in smoke
+    assert "--profile postgres" in smoke
+    assert "ENVIRONMENT=development" in smoke
+    assert "LINUXDO_REDIRECT_URI=http://127.0.0.1/" in smoke
+    assert "python -m app.db.cli db-migrate" in smoke
+    assert "python -m app.db.cli db-bootstrap" in smoke
+    assert "python -m app.db.cli db-check" in smoke
+    assert "/api/ready" in smoke
+    assert "python -m app.worker health" in smoke
+    assert "python -m app.worker metrics" in smoke
+    assert "down --volumes --remove-orphans" in smoke
+    assert "--timeout 10" in smoke
+    assert 'docker image rm "$local_image"' in smoke
+    assert "trap cleanup EXIT" in smoke
+
+
+@pytest.mark.parametrize(
+    "image_ref",
+    (
+        "acecandy/mofeng:latest",
+        "acecandy/mofeng@sha256:short",
+        f"acecandy/mofeng@sha256:{'A' * 64}",
+    ),
+)
+def test_release_smoke_rejects_non_digest_references_before_using_docker(image_ref):
+    result = subprocess.run(
+        ["bash", str(RELEASE_SMOKE_SCRIPT), image_ref],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 2
+    assert "<repository@sha256:digest>" in result.stderr
+
+
 def test_deploy_compose_resolves_durable_worker_structure(tmp_path):
     docker = shutil.which("docker")
     if docker is None:
@@ -148,6 +217,8 @@ def test_deploy_compose_resolves_durable_worker_structure(tmp_path):
             str(env_file),
             "-f",
             str(DEPLOY_COMPOSE),
+            "--profile",
+            "postgres",
             "config",
             "--format",
             "json",
@@ -156,10 +227,16 @@ def test_deploy_compose_resolves_durable_worker_structure(tmp_path):
         check=False,
         capture_output=True,
         text=True,
+        env={**os.environ, "COMPOSE_PROJECT_NAME": "mofeng-smoke-contract"},
     )
     assert result.returncode == 0, result.stderr
 
-    worker = json.loads(result.stdout)["services"]["worker"]
+    config = json.loads(result.stdout)
+    assert config["name"] == "mofeng-smoke-contract"
+    for service in ("migrate", "bootstrap", "app", "worker", "pg"):
+        assert config["services"][service]["container_name"] == (f"mofeng-smoke-contract-{service}")
+
+    worker = config["services"]["worker"]
     assert worker["command"] == ["python", "-m", "app.worker", "run"]
     assert worker["restart"] == "unless-stopped"
     assert worker["stop_grace_period"] == "15m0s"
