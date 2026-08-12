@@ -1138,3 +1138,24 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Status
 
 [OK] **Completed**
+
+
+## Session 36: 补全 durable worker 部署摘要
+
+**Date**: 2026-08-12
+**Task**: 补全 durable worker 部署摘要
+**Branch**: `main`
+
+### Summary
+
+完成 D1：README 更新为 migrate → bootstrap → app + worker，明确 one-shot 门禁、app/worker 同一发布单元、HTTP readiness 与 worker 健康区别、health/metrics 检查命令，并链接 docs/DEPLOYMENT.md。仅修改 README，契约检查与 git diff --check 通过；已提交 c587ed8 并归档 D1。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c587ed8` | (see git log) |
+
+### Status
+
+[OK] **Completed**
