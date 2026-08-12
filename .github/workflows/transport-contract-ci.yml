@@ -87,6 +87,8 @@ jobs:
         working-directory: backend
 
       - name: Check backend transport contracts
+        env:
+          SECRET_KEY: ci-test-secret-key-only-not-for-production-0123456789abcdef
         run: |
           python -m pytest -q \
             tests/test_openapi_contract.py \
