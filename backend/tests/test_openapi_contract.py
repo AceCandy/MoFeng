@@ -155,6 +155,25 @@ def test_in_scope_json_operations_reference_explicit_models() -> None:
     assert task_list_schema["items"]["$ref"] == ("#/components/schemas/BackgroundTaskResponse")
 
 
+def test_framework_request_schemas_preserve_published_metadata() -> None:
+    schema = _fresh_application_schema()
+    schemas = schema["components"]["schemas"]
+
+    def request_properties(path: str, media_type: str) -> dict[str, Any]:
+        reference = schema["paths"][path]["post"]["requestBody"]["content"][media_type]["schema"][
+            "$ref"
+        ]
+        return schemas[reference.rsplit("/", maxsplit=1)[-1]]["properties"]
+
+    login = request_properties("/api/auth/token", "application/x-www-form-urlencoded")
+    assert "format" not in login["client_secret"]
+    assert "format" not in login["password"]
+
+    novel_import = request_properties("/api/novels/import", "multipart/form-data")
+    assert novel_import["file"]["format"] == "binary"
+    assert "contentMediaType" not in novel_import["file"]
+
+
 def test_stable_operation_id_is_legacy_compatible_and_fail_closed() -> None:
     from app.openapi_schema import stable_operation_id
 

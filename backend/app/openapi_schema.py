@@ -7,8 +7,9 @@ from typing import Any, cast
 
 from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
+from fastapi.openapi.constants import REF_TEMPLATE
 from fastapi.openapi.models import Schema
-from fastapi.openapi.utils import REF_TEMPLATE, get_openapi
+from fastapi.openapi.utils import get_openapi
 from fastapi.routing import APIRoute
 from pydantic import BaseModel
 from pydantic.json_schema import models_json_schema
@@ -91,6 +92,59 @@ def _register_extra_models(document: dict[str, Any]) -> None:
     components["schemas"] = {name: schemas[name] for name in sorted(schemas)}
 
 
+def _request_body_schema(
+    document: dict[str, Any],
+    *,
+    path: str,
+    media_type: str,
+) -> dict[str, Any] | None:
+    schema = (
+        document.get("paths", {})
+        .get(path, {})
+        .get("post", {})
+        .get("requestBody", {})
+        .get("content", {})
+        .get(media_type, {})
+        .get("schema", {})
+    )
+    reference = schema.get("$ref") if isinstance(schema, dict) else None
+    prefix = "#/components/schemas/"
+    if not isinstance(reference, str) or not reference.startswith(prefix):
+        return None
+    schemas = document.get("components", {}).get("schemas", {})
+    component = schemas.get(reference.removeprefix(prefix))
+    return component if isinstance(component, dict) else None
+
+
+def _preserve_request_schema_compatibility(document: dict[str, Any]) -> None:
+    """稳定框架升级前已经发布的登录与文件上传 schema。"""
+
+    login = _request_body_schema(
+        document,
+        path="/api/auth/token",
+        media_type="application/x-www-form-urlencoded",
+    )
+    login_properties = login.get("properties", {}) if login else {}
+    for field_name in ("client_secret", "password"):
+        field = login_properties.get(field_name)
+        if isinstance(field, dict) and field.get("format") == "password":
+            field.pop("format")
+
+    novel_import = _request_body_schema(
+        document,
+        path="/api/novels/import",
+        media_type="multipart/form-data",
+    )
+    import_properties = novel_import.get("properties", {}) if novel_import else {}
+    file_schema = import_properties.get("file")
+    if (
+        isinstance(file_schema, dict)
+        and file_schema.get("contentMediaType") == "application/octet-stream"
+    ):
+        file_schema.pop("contentMediaType")
+        file_schema["format"] = "binary"
+
+
 def validate_openapi_document(document: dict[str, Any]) -> None:
     """拒绝不完整 operationId 与 pinned oasdiff 无法可靠解析的结构。"""
 
@@ -149,6 +203,7 @@ def build_openapi_schema(application: FastAPI) -> dict[str, Any]:
         separate_input_output_schemas=application.separate_input_output_schemas,
     )
     _register_extra_models(document)
+    _preserve_request_schema_compatibility(document)
     validate_openapi_document(document)
     return document
 

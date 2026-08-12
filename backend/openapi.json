@@ -664,7 +664,7 @@
           "grant_type": {
             "anyOf": [
               {
-                "pattern": "password",
+                "pattern": "^password$",
                 "type": "string"
               },
               {
@@ -5365,6 +5365,13 @@
       },
       "ValidationError": {
         "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
           "loc": {
             "items": {
               "anyOf": [
