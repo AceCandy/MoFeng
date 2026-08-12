@@ -4,10 +4,118 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app.models import Chapter, ChapterOutline, NovelProject
+from app.models import Chapter, ChapterOutline, ChapterVersion, NovelProject
 from app.models.user import User
 from app.services.chapter_generation_trace_service import ChapterGenerationTraceService
 from app.services.novel_service import NovelService
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_waiting_confirmation_only_projects_the_ai_best_version(
+    db_session_factory,
+):
+    async with db_session_factory() as session:
+        project_id = "project-best-version-confirmation"
+        session.add(User(id=1, username="writer", hashed_password="secret"))
+        session.add(NovelProject(id=project_id, user_id=1, title="测试小说", initial_prompt="测试"))
+        outline = ChapterOutline(
+            project_id=project_id,
+            chapter_number=1,
+            title="第一章",
+            summary="开篇",
+        )
+        chapter = Chapter(
+            project_id=project_id,
+            chapter_number=1,
+            status="waiting_for_confirm",
+        )
+        session.add_all([outline, chapter])
+        await session.flush()
+        session.add_all(
+            [
+                ChapterVersion(
+                    chapter_id=chapter.id,
+                    version_label="v1",
+                    content="未入选的原始版本",
+                    metadata={"ai_review": {"is_best": False}},
+                ),
+                ChapterVersion(
+                    chapter_id=chapter.id,
+                    version_label="v2",
+                    content="优选并完成润色的版本",
+                    metadata={"ai_review": {"is_best": True}},
+                ),
+            ]
+        )
+        await session.commit()
+
+        result = await session.execute(
+            select(Chapter)
+            .options(selectinload(Chapter.versions))
+            .where(Chapter.id == chapter.id)
+        )
+        loaded_chapter = result.scalars().one()
+        schema = NovelService(session)._build_chapter_schema_from_entities(
+            chapter_number=1,
+            outline=outline,
+            chapter=loaded_chapter,
+        )
+
+        assert schema.versions == ["未入选的原始版本", "优选并完成润色的版本"]
+        assert schema.version_selections is not None
+        best_version = next(
+            version
+            for version in loaded_chapter.versions
+            if version.metadata["ai_review"]["is_best"] is True
+        )
+        assert [(item.id, item.content) for item in schema.version_selections] == [
+            (best_version.id, "优选并完成润色的版本")
+        ]
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_waiting_confirmation_keeps_legacy_candidates_without_best_marker(
+    db_session_factory,
+):
+    async with db_session_factory() as session:
+        project_id = "project-legacy-version-confirmation"
+        session.add(User(id=1, username="writer", hashed_password="secret"))
+        session.add(NovelProject(id=project_id, user_id=1, title="测试小说", initial_prompt="测试"))
+        outline = ChapterOutline(
+            project_id=project_id,
+            chapter_number=1,
+            title="第一章",
+            summary="开篇",
+        )
+        chapter = Chapter(
+            project_id=project_id,
+            chapter_number=1,
+            status="waiting_for_confirm",
+        )
+        session.add_all([outline, chapter])
+        await session.flush()
+        session.add_all(
+            [
+                ChapterVersion(chapter_id=chapter.id, version_label="v1", content="旧候选一"),
+                ChapterVersion(chapter_id=chapter.id, version_label="v2", content="旧候选二"),
+            ]
+        )
+        await session.commit()
+
+        result = await session.execute(
+            select(Chapter)
+            .options(selectinload(Chapter.versions))
+            .where(Chapter.id == chapter.id)
+        )
+        loaded_chapter = result.scalars().one()
+        schema = NovelService(session)._build_chapter_schema_from_entities(
+            chapter_number=1,
+            outline=outline,
+            chapter=loaded_chapter,
+        )
+
+        assert schema.version_selections is not None
+        assert [item.content for item in schema.version_selections] == ["旧候选一", "旧候选二"]
 
 
 @pytest.mark.asyncio(loop_scope="session")

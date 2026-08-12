@@ -64,6 +64,23 @@ describe('ChapterWorkflowPanel', () => {
     expect(host.querySelector('[data-action="select"]')).toBeNull()
   })
 
+  it('唯一润色结果无需再次选版即可确认真实版本 ID', async () => {
+    const onSelectVersion = vi.fn()
+    const host = mountPanel(
+      { candidates: [candidates[1]] },
+      { onSelectVersion },
+    )
+    await nextTick()
+
+    expect(host.textContent).toContain('请确认润色结果')
+    expect(host.querySelector('[role="radiogroup"]')).toBeNull()
+    expect(host.querySelector('[role="radio"]')).toBeNull()
+    expect(host.querySelector('[data-action="select"]')?.textContent).toContain('确认并继续')
+
+    host.querySelector<HTMLButtonElement>('[data-action="select"]')?.click()
+    expect(onSelectVersion).toHaveBeenCalledWith(42)
+  })
+
   it('选择候选时提交真实版本 ID 而非数组下标', async () => {
     const onSelectVersion = vi.fn()
     const host = mountPanel({}, { onSelectVersion })
@@ -153,8 +170,8 @@ describe('ChapterWorkflowPanel', () => {
     ]
     await nextTick()
 
-    const currentRadio = host.querySelector<HTMLButtonElement>('[role="radio"]')
-    expect(currentRadio?.getAttribute('aria-checked')).toBe('true')
+    expect(host.querySelector('[role="radio"]')).toBeNull()
+    expect(host.querySelector('[data-confirmation-result]')?.textContent).toContain('新运行的唯一候选正文')
     host.querySelector<HTMLButtonElement>('[data-action="select"]')?.click()
     expect(onSelectVersion).toHaveBeenCalledWith(99)
     expect(onSelectVersion).not.toHaveBeenCalledWith(42)

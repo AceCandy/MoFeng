@@ -713,6 +713,66 @@ job.status = "cancelled"
 await append_event(job, "job.cancelled")
 ```
 
+### Waiting-for-confirm candidate projection
+
+#### 1. Scope / Trigger
+
+Apply when a Chapter read exposes candidates while `Chapter.status` is
+`waiting_for_confirm`, including compatibility generation and durable workflow reads.
+
+#### 2. Signatures
+
+`Chapter.versions` is the full readable version collection.
+`Chapter.version_selections` is the actionable confirmation collection. Compatibility
+AI review provenance is `ChapterVersion.metadata_["ai_review"]["is_best"]`.
+
+#### 3. Contracts
+
+- Keep every persisted candidate in `versions`; the confirmation projection must not
+  delete or rewrite `ChapterVersion` rows.
+- When exactly one candidate has the strict boolean marker `is_best is True`, expose
+  only that version in `version_selections`; this is the reviewed and post-review
+  refined result.
+- When zero or multiple candidates carry the marker, preserve the full candidate set.
+  Never guess by array order, label, natural-language review text, or truthy values.
+- Confirmation submits the real `ChapterVersion.id`. A single candidate is a confirm
+  action, not a one-item version-choice control.
+
+#### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|-----------|-----------------|
+| One strict `is_best=true` marker | Return that version as the sole selection |
+| Missing or malformed review metadata | Return all candidates for compatibility |
+| Multiple strict best markers | Return all candidates; do not silently choose |
+| Chapter is not waiting for confirmation | Preserve the normal full read projection |
+
+#### 5. Good / Base / Bad Cases
+
+- Good: version 2 is reviewed, refined, and solely confirmable while both persisted
+  versions remain visible through `versions`.
+- Base: a legacy run has no structured marker and remains confirmable through the
+  existing multi-candidate UI.
+- Bad: render every persisted draft as actionable after review, or filter by index 0.
+
+#### 6. Tests Required
+
+- Persist two versions with the second marked best; assert `versions` has two entries,
+  `version_selections` has one entry, and its id/content belong to the second version.
+- Cover missing-marker compatibility and frontend submission of the real version id.
+- Keep multi-candidate keyboard behavior for compatibility fallback.
+
+#### 7. Wrong vs Correct
+
+```python
+# Wrong: persisted history is treated as the actionable confirmation set.
+version_selections = project(ordered_versions)
+
+# Correct: only a unique structured best marker narrows the confirmation set.
+best_versions = [version for version in ordered_versions if is_strict_best(version)]
+version_selections = project(best_versions if len(best_versions) == 1 else ordered_versions)
+```
+
 ```python
 # Correct: the shared fenced terminal event path cleans the current run atomically.
 job.status = "cancelled"

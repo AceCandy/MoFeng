@@ -86,7 +86,17 @@
         候选版本同步中
       </p>
       <template v-else>
-        <div class="chapter-workflow__candidate-list" role="radiogroup" aria-label="章节候选版本">
+        <div
+          v-if="hasSingleCandidate"
+          class="chapter-workflow__candidate chapter-workflow__candidate--result"
+          data-confirmation-result
+        >
+          <span class="chapter-workflow__candidate-label">润色结果</span>
+          <span class="chapter-workflow__candidate-preview">
+            {{ preview(candidates[0].content) }}
+          </span>
+        </div>
+        <div v-else class="chapter-workflow__candidate-list" role="radiogroup" aria-label="章节候选版本">
           <button
             v-for="(candidate, index) in candidates"
             :key="candidate.id"
@@ -116,7 +126,7 @@
           :disabled="pending || selectedCandidateId === null"
           @click="selectCandidate"
         >
-          {{ pending ? '正在提交...' : '选定并继续' }}
+          {{ pending ? '正在提交...' : hasSingleCandidate ? '确认并继续' : '选定并继续' }}
         </button>
       </template>
     </div>
@@ -175,6 +185,9 @@ const stateCopy = computed(() => {
     case 'running':
       return { title: '章节生成中', description: '生成、评审与候选整理正在后台推进。' }
     case 'waitingForSelection':
+      if (hasSingleCandidate.value) {
+        return { title: '请确认润色结果', description: '确认后将写入正文并同步派生数据。' }
+      }
       return { title: '请选择候选版本', description: '选定后将进入正文提交与派生数据同步。' }
     case 'finalizing':
       return { title: '正在提交正文', description: '已接受选版，正在写入章节修订。' }
@@ -203,6 +216,7 @@ const tone = computed(() => {
 
 const isAlert = computed(() => props.phase === 'fatal' || props.phase === 'failed')
 const canSelect = computed(() => props.allowedCommands.includes('select'))
+const hasSingleCandidate = computed(() => props.candidates.length === 1)
 const canRetry = computed(() => props.allowedCommands.includes('retry'))
 const canRetryProjection = computed(() => props.allowedCommands.includes('retry_projection'))
 const canCancel = computed(() => props.allowedCommands.includes('cancel'))
@@ -420,6 +434,11 @@ watch(
     border-color var(--md-duration-short) var(--md-easing-standard),
     background-color var(--md-duration-short) var(--md-easing-standard),
     box-shadow var(--md-duration-short) var(--md-easing-standard);
+}
+
+.chapter-workflow__candidate--result {
+  cursor: default;
+  background: var(--md-miaohong-wash);
 }
 
 .chapter-workflow__candidate:hover,

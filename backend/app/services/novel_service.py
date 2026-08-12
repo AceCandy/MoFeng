@@ -1256,6 +1256,17 @@ class NovelService:
                         key=lambda item: (item.created_at, item.id),
                     )
                     versions = [version.content for version in ordered_versions]
+                    confirmation_versions = ordered_versions
+                    if status_value == ChapterGenerationStatus.WAITING_FOR_CONFIRM.value:
+                        best_versions = [
+                            version
+                            for version in ordered_versions
+                            if isinstance(version.metadata, dict)
+                            and isinstance(version.metadata.get("ai_review"), dict)
+                            and version.metadata["ai_review"].get("is_best") is True
+                        ]
+                        if len(best_versions) == 1:
+                            confirmation_versions = best_versions
                     version_selections = [
                         ChapterVersionSelectionSchema(
                             id=version.id,
@@ -1263,7 +1274,7 @@ class NovelService:
                             version_label=version.version_label,
                             workflow_run_id=self._version_workflow_run_id(version),
                         )
-                        for version in ordered_versions
+                        for version in confirmation_versions
                     ]
                 if loaded_evaluations:
                     latest = sorted(loaded_evaluations, key=lambda item: item.created_at)[-1]
