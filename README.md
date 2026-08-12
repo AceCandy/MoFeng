@@ -157,7 +157,7 @@ flowchart TD
 - 后端：FastAPI + SQLAlchemy + Pydantic Settings + LangGraph（章节生成流水线状态机编排）
 - 存储：PostgreSQL + pgvector 向量检索 + Redis（缓存与后台任务 SSE 推送）
 - AI：OpenAI 兼容接口 + OpenAI / Ollama Embedding
-- 部署：Docker Compose 单容器，supervisord 托管 uvicorn + nginx 多进程；可选 PostgreSQL / Redis profile
+- 部署：Docker Compose 共享应用镜像，独立 app + durable worker；可选 PostgreSQL / Redis profile
 
 ### 前端状态模型
 
@@ -238,7 +238,14 @@ copy deploy\.env.example deploy\.env
 docker compose --env-file deploy/.env -f deploy/docker-compose.yml --profile postgres up -d --build
 ```
 
-Compose 会按 `migrate → bootstrap → app` 执行；任一 one-shot 失败时应用不会启动。
+Compose 会按 `migrate → bootstrap → app + worker` 执行：`migrate` 与 `bootstrap` 是 one-shot
+门禁，任一失败时 app 和 worker 都不会启动。app 的 HTTP readiness 只代表 API 与数据库
+就绪，不代表 durable worker 健康；发布后需同时检查：
+
+```bash
+python -m app.worker health
+python -m app.worker metrics
+```
 
 默认访问地址：`http://127.0.0.1:6100`
 
@@ -261,9 +268,11 @@ Docker 部署：使用 `deploy/.env.example` 作为 `deploy/.env` 模板。
 - `CHAPTER_WORKFLOW_START_ENABLED=true`（WritingDesk statechart 发布）
 - `POSTGRES_HOST` / `POSTGRES_PORT` / `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DATABASE`
 
-WritingDesk statechart 与该开关属于同一发布单元。上线时先部署兼容后端，再显式启用
+WritingDesk statechart、app 与独立 durable worker 属于同一发布单元。上线时先部署兼容后端，再显式启用
 `CHAPTER_WORKFLOW_START_ENABLED=true`，最后部署新前端。回滚必须同时部署上一版前端并把
 该开关设为 `false`；不能让仅支持 statechart 的新前端继续连接关闭了 workflow start 的后端。
+
+完整部署顺序、健康检查、迁移和回滚步骤见 [部署运维文档](docs/DEPLOYMENT.md)。
 
 建议补齐（确保创作能力完整可用）：
 
