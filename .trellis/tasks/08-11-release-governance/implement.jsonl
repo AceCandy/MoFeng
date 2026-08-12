@@ -1,0 +1,6 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"依赖升级、JWT 兼容、后端全量质量与配置约束"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"候选镜像 migrate/bootstrap/check 与隔离 PostgreSQL 验证契约"}
+{"file":".trellis/spec/backend/security-guidelines.md","reason":"JWT、依赖审计、凭据和安全失败关闭边界"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"前端依赖升级后的 lint、type、unit、build 和浏览器验证"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"复用现有 Compose、DB CLI、worker CLI 和 Buildx 能力"}
+{"file":".trellis/tasks/08-11-release-governance/research/feasibility-2026-08-11.md","reason":"当前审计、发布顺序、官方 action 能力和环境验证边界"}

@@ -21,7 +21,8 @@
   "children": [
     "08-10-registration-config-bootstrap",
     "08-10-linuxdo-oauth-state",
-    "08-11-quality-baseline"
+    "08-11-quality-baseline",
+    "08-11-release-governance"
   ],
   "parent": null,
   "relatedFiles": [],

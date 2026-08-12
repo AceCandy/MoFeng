@@ -186,7 +186,7 @@ Bootstrap versions insert active configuration and prompt defaults only when mis
 
 ### 1. Scope / Trigger
 
-Apply this contract whenever a change touches Alembic, bootstrap data, database readiness, legacy adoption, database deployment ordering, or the environment values consumed by those roles. It prevents application processes from becoming implicit schema/data writers and makes failed releases observable before traffic is accepted.
+Apply this contract whenever a change touches Alembic, bootstrap data, database readiness, legacy adoption, database deployment ordering, process-manager user switching, or the environment values consumed by those roles. It prevents application processes from becoming implicit schema/data writers and makes failed releases observable before traffic is accepted.
 
 It also applies when a versioned database contains an ORM-created table that is newer than its `alembic_version`, such as residue from an older runtime or test fixture that called `Base.metadata.create_all`. The owning revision must reconcile that object explicitly rather than assuming revision and physical schema always advance together.
 
@@ -212,6 +212,10 @@ POSTGRES_USER=<user>
 POSTGRES_PASSWORD=<password>
 POSTGRES_DATABASE=<database>
 
+# A process manager that switches to appuser must also switch HOME.
+user=appuser
+environment=HOME="/home/appuser"
+
 GET /health
 GET /api/health
 GET /ready
@@ -235,6 +239,7 @@ Persistent contracts:
 - `BOOTSTRAP_CREATE_DEFAULT_ADMIN` defaults to `true`. When it is true in production, `ADMIN_DEFAULT_PASSWORD` must pass the production strength gate; when false, an administrator password is not required.
 - `DATABASE_URL`, when set, is the complete target URL and takes precedence over every `POSTGRES_*` value. External-URL mode does not require `POSTGRES_PASSWORD` as a separate variable and deployment must not enable the bundled `postgres` profile.
 - When `DATABASE_URL` is absent, `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DATABASE` form the target URL. `POSTGRES_HOST=pg` selects the bundled Compose PostgreSQL profile.
+- A process manager that starts the database client as `appuser` must set `HOME=/home/appuser`; changing only the UID may leave `HOME=/root`, making asyncpg's default PostgreSQL SSL-file discovery fail with `PermissionError` before connecting.
 - Application runtime, Alembic/bootstrap, and durable jobs accept PostgreSQL only. SQLite remains an isolated unit-test aid, not a local/deployment compatibility target; tests that exercise PostgreSQL locking, migration SQL, JSON behavior, or async driver semantics must use PostgreSQL.
 - An owning revision may adopt a precreated ORM table only after validating its ordered columns, types, nullability/defaults, primary key, named CHECK/unique constraints, foreign keys, and indexes against the target contract. Matching data is preserved and required seed rows use conflict-safe inserts; any mismatch fails before stamping the revision. A bare `IF NOT EXISTS` or unconditional skip is forbidden because it hides schema drift.
 - A revision that must inspect the live catalog to reconcile precreated objects rejects Alembic offline SQL generation. Its downgrade must also reject destructive removal of adopted data or lineage; release rollback uses the documented binary rollback floor instead of schema deletion.
@@ -255,6 +260,7 @@ Persistent contracts:
 | Production default-admin bootstrap uses a weak/empty password | Bootstrap refuses to write data |
 | `DATABASE_URL` is set without a separate `POSTGRES_PASSWORD` | External mode remains valid and no bundled PostgreSQL service starts |
 | `DATABASE_URL` and `POSTGRES_*` are both set | The complete `DATABASE_URL` wins; values are never merged |
+| Process manager runs as `appuser` with `HOME=/root` or another inaccessible directory | Deployment is invalid; readiness may report `database_unreachable` even though an independent CLI check succeeds |
 | A release/deployment targets a non-PostgreSQL URL | Unsupported target; it cannot satisfy the release/readiness evidence and must not be presented as compatible |
 | A prior revision has an exact-contract ORM-created target table | Adopt the table, preserve existing rows/cursors, insert only missing seed rows, and advance normally |
 | A prior revision has an incompatible same-name table | Fail closed; the DDL transaction rolls back and `alembic_version` remains unchanged |
@@ -265,6 +271,7 @@ Persistent contracts:
 
 - Good: an empty database runs `db-migrate -> db-bootstrap -> db-check`; the check reports ready and runtime starts without any write-side initialization.
 - Good: an external `DATABASE_URL` deploys migrate/bootstrap/app/worker without a separate `POSTGRES_PASSWORD` and without starting the bundled `pg` service.
+- Good: the process manager switches both the application UID and HOME, and HTTP readiness succeeds in the real image after migrate/bootstrap/check.
 - Base: rerunning migrate/bootstrap against a current database performs no additional bootstrap mutation and still validates every immutable ledger contract.
 - Base: isolated, database-agnostic unit tests may use SQLite but cannot satisfy a PostgreSQL integration acceptance criterion.
 - Good: a database at revision N contains the exact ORM form of a table owned by N+1; N+1 validates and adopts it without overwriting a nonzero cursor.
@@ -272,6 +279,7 @@ Persistent contracts:
 - Bad: `has_table(...)` causes N+1 to skip `CREATE TABLE` without checking the physical contract, then stamps an unknown or partial schema as current.
 - Bad: offline SQL assumes a catalog-dependent target table is absent, or downgrade drops an adopted table because the revision did not record who created it.
 - Bad: API lifespan, worker import, or a health endpoint invokes Alembic, `create_all`, seed logic, administrator creation, legacy key migration, or automatic `stamp`.
+- Bad: a root-owned process manager sets `user=appuser` but leaves `HOME=/root`; an isolated `db-check` passes while the managed HTTP process reports `database_unreachable`.
 
 ### 6. Tests Required
 
@@ -281,7 +289,8 @@ Persistent contracts:
 - PostgreSQL migration integration: from the immediately prior revision, precreate the exact ORM table and prove upgrade, seed preservation, and head convergence; drift one structural element and prove rejection, transaction rollback, and unchanged `alembic_version`.
 - Migration safety: reject offline SQL for catalog-dependent reconciliation; reject destructive downgrade and prove the revision plus nonzero checkpoint cursor remain unchanged; run `alembic check` on the resulting head schema.
 - PostgreSQL async integration: flush paths that use SQL-expression/server-generated timestamps perform explicit refreshes when needed; durable job enqueue allocates its stream sequence before the job insert and does not require a second job-row flush before public serialization.
-- Static/deployment: runtime imports no mixed `init_db`; the image contains Alembic files; Compose resolves in bundled and external PostgreSQL modes and orders `migrate -> bootstrap -> app`.
+- Static/deployment: runtime imports no mixed `init_db`; the image contains Alembic files; Compose resolves in bundled and external PostgreSQL modes and orders `migrate -> bootstrap -> app`; managed app processes set HOME to the selected user's home.
+- Release image smoke: use the real Supervisor/Uvicorn entrypoint and assert HTTP readiness plus worker health/metrics after migrate/bootstrap/check; a CLI-only probe does not cover process-manager environment inheritance.
 - Deployment matrix: external `DATABASE_URL` works without `POSTGRES_PASSWORD` and does not enable bundled `pg`; bundled mode requires its `POSTGRES_*` values; no non-PostgreSQL target is accepted as runtime/Alembic/durable-job evidence.
 
 ### 7. Wrong vs Correct
@@ -307,6 +316,21 @@ async def lifespan(app: FastAPI):
 ```
 
 Deployment owns the write-side sequence before this runtime starts.
+
+Wrong process-manager user switching:
+
+```ini
+[program:uvicorn]
+user=appuser
+```
+
+Correct:
+
+```ini
+[program:uvicorn]
+user=appuser
+environment=HOME="/home/appuser"
+```
 
 For external PostgreSQL, pass the complete `DATABASE_URL` and omit the Compose `postgres` profile. For bundled PostgreSQL, leave `DATABASE_URL` unset and provide `POSTGRES_*`; never combine a URL from parts of both modes.
 

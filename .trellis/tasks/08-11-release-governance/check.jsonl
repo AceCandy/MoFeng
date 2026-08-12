@@ -1,0 +1,7 @@
+{"file":".trellis/spec/backend/index.md","reason":"后端 Pre-Development Checklist 与全量 Quality Check"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"后端依赖、测试、类型与静态检查复核"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"真实 PostgreSQL 生命周期和发布 smoke 复核"}
+{"file":".trellis/spec/backend/security-guidelines.md","reason":"JWT、依赖审计、secret 和失败关闭复核"}
+{"file":".trellis/spec/frontend/index.md","reason":"前端质量入口和依赖升级验证范围"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"前端 lint、type、unit、build、Playwright 复核"}
+{"file":".trellis/tasks/08-11-release-governance/research/feasibility-2026-08-11.md","reason":"对照实时基线、外部能力和未验证边界"}

@@ -370,7 +370,8 @@ update release-metadata/version-info.json
   `contents: write`。
 - Docker 凭据在任何 Git tag 创建前校验。
 - 发布 job 开始和推 tag 前分别断言 `git rev-parse HEAD == github.sha`、当前 ref 为 main，
-  并重新 fetch remote tags；目标 Git tag 或 registry 版本 tag 已存在时失败关闭。
+  并重新 fetch remote tags；目标 Git tag 或 registry 版本 tag 已存在且指向相同 source/digest
+  时幂等成功，指向不同时失败关闭。
 - 只构建一次正式多架构内容，先推到非发布语义的 `build-<source-sha>` tag，并把 OCI
   revision/source/version labels 和 BuildKit provenance 绑定到 source SHA。
 - `docker buildx imagetools inspect` 必须解析并校验 `sha256:<64 hex>` manifest digest 及
@@ -386,6 +387,14 @@ update release-metadata/version-info.json
 - `latest` 通过 digest promotion 指向已经验证的版本，不重新构建。
 - promotion 后再次 inspect `latest`，必须与版本 digest 一致。版本 metadata 新增
   `image_digest`；现有 `commit_sha` 始终指向构建 commit，而不是后续 metadata commit。
+- 正式发布开始时记录 metadata blob 和 `latest` digest。metadata 已含 `image_digest` 时以其
+  version/source/digest 为前一正式状态；仅在 pre-R1 metadata 缺少该字段时，允许以最高远端
+  SemVer Git tag、同版本镜像、`latest` 和 provenance 四方一致的结果建立一次性 legacy
+  baseline。任一不一致即停止，新 schema 生效后禁止回退推断。`latest` 已是本次目标 digest
+  时幂等成功，否则只有仍等于前一 digest（首次发布为不存在）时才能 promotion。
+- metadata 以记录的远端文件 blob 为乐观锁，在最新 `origin/main` 上普通 push；相同发布
+  身份幂等成功，metadata 被其他发布改变时停止。无关 main 提交导致非快进时可重新 fetch、
+  复核 blob 后有界重试，禁止 force push。
 - release workflow 使用的第三方 Actions 和扫描器固定到完整 commit SHA；扫描器版本和
   数据库更新时间写入 job summary。
 - 不设置 `continue-on-error`。advisory 临时例外必须有编号、负责人、原因和到期日，且
@@ -393,17 +402,20 @@ update release-metadata/version-info.json
 
 ### 8.3 非原子发布的失败处理
 
-Git 和 Docker registry 不能形成真正事务，因此按“较易清理的状态先发生”排序：
+Git 和 Docker registry 不能形成真正事务，因此按可验证、只向前恢复的状态排序：
 
 | 失败点 | 外部状态 | 处理 |
 | --- | --- | --- |
 | gate / credential / candidate build | 无发布状态 | 修复后重跑 |
-| 已推 SHA candidate、扫描未通过 | 只有非发布 candidate，`latest` 未变 | 保留短期诊断后按策略清理 |
-| 已推版本镜像、未推 Git tag | 只有不可变版本镜像，`latest` 未变 | 删除孤立版本或用同版本恢复 |
-| 已推 Git tag、未更新 `latest` | 版本已正式存在 | 不移动/删除 tag，恢复 promotion |
-| 已更新 `latest`、metadata 失败 | 用户已可拉取版本 | 重试 metadata，保持 digest 不变 |
+| 已推 SHA candidate、扫描未通过 | 只有非发布 candidate，`latest` 未变 | 保留用于诊断；修复后新 run，不自动删除 |
+| 已推版本镜像、未推 Git tag | 只有不可变版本镜像，`latest` 未变 | 只允许原 source/digest 重跑并继续，不删除或复用 |
+| 已推 Git tag、未更新 `latest` | 版本已正式存在 | 不移动/删除 tag；前一 digest 仍匹配时恢复 promotion，否则停止 |
+| 已更新 `latest`、metadata 失败 | 用户已可拉取版本 | 以 metadata blob 乐观锁重试；并发发布已改变 metadata 时停止 |
 
-Git tag 一旦推送即视为不可变。标签后的失败只允许修复前进，不自动删除或重写 tag。
+Git tag 和 version image 一旦推送即视为不可变。之后只允许原 source/digest 修复前进，不
+自动删除、重写或复用。候选 tag 按 source SHA 保留；registry retention 属于独立平台治理。
+OCI Distribution API 不保证 tag promotion 具备原子 CAS，因此正式镜像 tag 的写凭据必须
+只授予该 workflow，并由 concurrency 串行；否则自动发布不得恢复。
 
 ### 8.4 改动范围
 
@@ -564,6 +576,7 @@ npm run test:e2e
 
 - 候选镜像 Trivy high/critical 为 0。
 - 镜像版本 tag 的 digest 与 `latest` promotion digest 一致。
+- 候选逐平台 OCI labels 与 provenance 的 source/revision 绑定构建 source SHA。
 - Git tag 指向被质量门验证的 source commit。
 - `release-metadata/version-info.json` 的 version、git_tag、image tag、digest 和 source SHA
   一致。
@@ -608,6 +621,8 @@ npm run test:e2e
 - Redis 成为启用 Linux.do OAuth 的可用性前置条件；这是为了多 worker 下的安全一致性，
   不做不安全降级。
 - Registry 与 Git 无分布式事务，R1 只能通过状态排序和恢复步骤缩小部分发布窗口。
+- OCI registry tag 更新不保证原子 compare-and-swap；R1 依赖 workflow 串行、唯一写入凭据
+  和 promotion 前后校验。若平台不能保证唯一 writer，自动发布必须保持暂停。
 - 同一浏览器同时发起多个 Linux.do 登录时，单个 HostOnly cookie 只保留最后一次 state；
   较早的 callback 会安全失败，需要用户重新发起。
 - `useDialogA11y` 没有全局 topmost modal stack；本设计保持“同一产品流程只打开一个
