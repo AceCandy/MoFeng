@@ -153,6 +153,8 @@ jobs:
     if: ${{ needs.plan.outputs.should_publish == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      SECRET_KEY: ci-test-secret-key-only-not-for-production-0123456789abcdef
     steps:
       - name: 检出发布源提交
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -178,6 +180,7 @@ jobs:
         working-directory: backend
         run: |
           set -euo pipefail
+          python -m app.openapi_export --check --output openapi.json
           python -m pytest -q
           python -m ruff check app tests
           python -m black --check app tests
@@ -211,7 +214,8 @@ jobs:
         working-directory: frontend
         run: |
           set -euo pipefail
-          npm run api:check
+          npm run api:check:types
+          npm run api:check:ownership
           npm run lint
           npm run type-check
           npm run test:unit

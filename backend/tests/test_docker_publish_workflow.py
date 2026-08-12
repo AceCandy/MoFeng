@@ -124,6 +124,35 @@ def test_release_permissions_pins_and_dry_run_boundary_are_fail_closed():
         assert "dry_run != 'true'" in str(jobs[job_name]["if"])
 
 
+def test_quality_gates_keep_openapi_export_with_backend_dependencies():
+    jobs = _load_workflow()["jobs"]
+    backend_gate = jobs["backend-gate"]
+    frontend_gate = jobs["frontend-gate"]
+
+    test_secret = backend_gate["env"]["SECRET_KEY"]
+    assert test_secret.startswith("ci-test-")
+    assert len(test_secret) >= 32
+    assert "${{" not in test_secret
+
+    backend_commands = {
+        line.strip()
+        for step in backend_gate["steps"]
+        for line in step.get("run", "").splitlines()
+    }
+    assert "python -m app.openapi_export --check --output openapi.json" in backend_commands
+
+    frontend_commands = {
+        line.strip()
+        for step in frontend_gate["steps"]
+        for line in step.get("run", "").splitlines()
+    }
+    assert "npm run api:check:types" in frontend_commands
+    assert "npm run api:check:ownership" in frontend_commands
+    assert "npm run api:check" not in frontend_commands
+    assert "npm run api:check:openapi" not in frontend_commands
+    assert not any("app.openapi_export" in command for command in frontend_commands)
+
+
 def test_candidate_is_digest_verified_scanned_and_smoked_before_promotion():
     jobs = _load_workflow()["jobs"]
     build = jobs["build-candidate"]
