@@ -207,6 +207,67 @@ Do not read source identity from `root.configSource.request.args` or
 .buildDefinition.externalParameters.request.root.request.args["vcs:source"]
 ```
 
+## Release image vulnerability gate
+
+### 1. Scope / Trigger
+
+Apply this contract when the pinned Trivy gate reports `HIGH` or `CRITICAL`
+vulnerabilities from the final release image, including findings inherited from its
+base image or packaging-tool metadata.
+
+### 2. Signatures
+
+The release gate scans each platform digest with Trivy using
+`severity: HIGH,CRITICAL` and `exit-code: "1"`. Local verification must scan the
+built runtime image with the same Trivy version and severity threshold.
+
+### 3. Contracts
+
+- Fix the vulnerable final-image contents or select a base image that can satisfy the
+  gate; do not weaken the gate to accommodate the current image.
+- Remove build-only packaging tools from the runtime filesystem when the application
+  does not require them.
+- A base-image family change must preserve the configured nginx path, supervisor
+  startup, UID `1000`, runtime dependency imports, and release smoke behavior.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required behavior |
+| --- | --- |
+| Any platform has a HIGH/CRITICAL finding | Stop before smoke and promotion |
+| Only an unfixed base-image finding remains | Change/fix the image; do not ignore it |
+| Scan is clean but app or worker smoke fails | Stop before promotion |
+| Every platform scan and digest smoke pass | Continue to candidate verification |
+
+### 5. Good / Base / Bad Cases
+
+- Good: the final multi-platform image has zero HIGH/CRITICAL findings and its digest
+  passes database, HTTP, and worker smoke.
+- Base: a local single-platform runtime build is scanned and smoked before pushing a
+  workflow fix; GitHub still performs the authoritative multi-platform check.
+- Bad: `ignore-unfixed`, VEX, an exception list, or `continue-on-error` makes a known
+  release-image vulnerability non-blocking.
+
+### 6. Tests Required
+
+- Contract tests pin the intended base-image family, package-manager command, removal
+  of unused packaging tools, Trivy severity/exit behavior, and explicit smoke command.
+- Build the runtime target, scan the final image, and run the digest-only smoke script
+  through isolated PostgreSQL before promotion.
+- The repository dry-run must prove both platform scans and smoke pass without changing
+  version tags, `latest`, Git tags, or release metadata.
+
+### 7. Wrong vs Correct
+
+```yaml
+# Wrong: hides a known release-image vulnerability.
+ignore-unfixed: true
+
+# Correct: keep the blocking gate and fix the image contents.
+severity: HIGH,CRITICAL
+exit-code: "1"
+```
+
 ---
 
 ## Forbidden patterns

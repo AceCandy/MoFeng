@@ -655,7 +655,7 @@ jobs:
       - name: 运行候选 digest smoke
         shell: bash
         run: >-
-          deploy/scripts/smoke_release_image.sh
+          bash deploy/scripts/smoke_release_image.sh
           "${{ needs.plan.outputs.image_repo }}@${{ needs.build-candidate.outputs.manifest_digest }}"
 
   candidate-verified:

@@ -142,8 +142,12 @@ def test_python_dependency_install_requires_hash_locks():
     dockerfile = DEPLOY_DOCKERFILE.read_text(encoding="utf-8")
     transport_ci = TRANSPORT_CI.read_text(encoding="utf-8")
 
+    assert dockerfile.count("FROM python:3.11-alpine") == 2
+    assert "FROM python:3.11-slim" not in dockerfile
+    assert "apk add --no-cache" in dockerfile
     assert "pip install --no-cache-dir --upgrade pip" not in dockerfile
     assert "pip install --no-cache-dir --no-compile --require-hashes" in dockerfile
+    assert dockerfile.count("pip uninstall -y pip setuptools wheel") == 2
     assert "python -m pip install --require-hashes -r requirements-dev.txt" in transport_ci
     assert "backend/requirements.in" in transport_ci
     assert "backend/requirements-dev.in" in transport_ci

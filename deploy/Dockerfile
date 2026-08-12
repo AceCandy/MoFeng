@@ -26,21 +26,17 @@ RUN npm run build
 # ============================================
 # 第二阶段：构建 Python 依赖（仅构建层保留编译工具）
 # ============================================
-FROM python:3.11-slim AS python-builder
+FROM python:3.11-alpine AS python-builder
 ARG APP_VERSION
 ENV APP_VERSION=${APP_VERSION}
-
-# 配置 apt 使用中国镜像源
-RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list.d/debian.sources && \
-    sed -i 's|security.debian.org/debian-security|mirrors.tuna.tsinghua.edu.cn/debian-security|g' /etc/apt/sources.list.d/debian.sources
 
 WORKDIR /build
 
 # 仅在构建阶段安装编译依赖，避免进入最终运行镜像
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apk add --no-cache \
     gcc \
-    pkg-config \
-    && rm -rf /var/lib/apt/lists/*
+    musl-dev \
+    pkgconf
 
 # 配置 pip 使用中国镜像源
 RUN pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
@@ -52,29 +48,26 @@ ENV PATH="/opt/venv/bin:${PATH}"
 COPY backend/requirements.txt ./requirements.txt
 RUN python -m pip install --no-cache-dir --no-compile --require-hashes -r requirements.txt && \
     /opt/venv/bin/python -m uvicorn --version >/dev/null && \
+    python -m pip uninstall -y pip setuptools wheel && \
     find /opt/venv -type d \( -name "tests" -o -name "test" -o -name "__pycache__" \) -prune -exec rm -rf {} + && \
     find /opt/venv -type f \( -name "*.pyc" -o -name "*.pyo" -o -name "*.a" \) -delete
 
 # ============================================
 # 第三阶段：构建最终镜像（后端 + nginx）
 # ============================================
-FROM python:3.11-slim AS runtime
+FROM python:3.11-alpine AS runtime
 ARG APP_VERSION
 ENV APP_VERSION=${APP_VERSION}
 ENV PATH="/opt/venv/bin:${PATH}"
 
-# 配置 apt 使用中国镜像源
-RUN sed -i 's/deb.debian.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apt/sources.list.d/debian.sources && \
-    sed -i 's|security.debian.org/debian-security|mirrors.tuna.tsinghua.edu.cn/debian-security|g' /etc/apt/sources.list.d/debian.sources
-
 WORKDIR /app
 
 # 安装运行时依赖：不再包含编译工具链，降低最终镜像体积
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    nginx-light \
+RUN apk add --no-cache \
+    nginx \
     supervisor \
-    curl \
-    && rm -rf /var/lib/apt/lists/* /usr/share/doc/* /usr/share/man/* /usr/share/info/*
+    curl && \
+    python -m pip uninstall -y pip setuptools wheel
 
 # 从构建阶段复制 Python 依赖环境
 COPY --from=python-builder /opt/venv /opt/venv
@@ -92,7 +85,7 @@ RUN rm -rf /app/storage && mkdir -p /app/storage
 COPY --from=frontend-builder /frontend/dist /usr/share/nginx/html
 
 # 复制部署配置
-COPY deploy/nginx.conf /etc/nginx/sites-available/default
+COPY deploy/nginx.conf /etc/nginx/http.d/default.conf
 COPY deploy/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY deploy/docker-entrypoint.sh /app/docker-entrypoint.sh
 
@@ -100,7 +93,7 @@ COPY deploy/docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
 # 创建非 root 用户（供 supervisor 使用）
-RUN useradd -m -u 1000 appuser && \
+RUN adduser -D -u 1000 appuser && \
     chown -R appuser:appuser /app
 
 # 暴露端口（nginx 前端入口 6100 端口）

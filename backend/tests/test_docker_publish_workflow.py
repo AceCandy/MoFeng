@@ -187,7 +187,7 @@ def test_candidate_is_digest_verified_scanned_and_smoked_before_promotion():
     assert "@${{ matrix.digest }}" in trivy["with"]["image-ref"]
 
     smoke_source = "\n".join(step.get("run", "") for step in jobs["smoke-candidate"]["steps"])
-    assert "smoke_release_image.sh" in smoke_source
+    assert "bash deploy/scripts/smoke_release_image.sh" in smoke_source
     assert "@${{ needs.build-candidate.outputs.manifest_digest }}" in smoke_source
 
 
