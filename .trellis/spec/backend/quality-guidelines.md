@@ -140,6 +140,73 @@ Rule for new tasks: reuse `app.db.session.AsyncSessionLocal` and `settings.sqlal
   every compared timestamp in the same SQL update. Reassigning the same ORM value may
   not mark it dirty, allowing `onupdate=func.now()` to replace the intended tie.
 
+## External structured artifact verification
+
+### 1. Scope / Trigger
+
+Apply this contract when a CI or release gate parses JSON emitted by a pinned external
+tool or registry. Producer configuration proves requested behavior, not the emitted
+schema; verify field paths against a redacted artifact produced by the pinned version.
+
+### 2. Signatures
+
+BuildKit provenance is read with:
+
+```bash
+docker buildx imagetools inspect <digest-or-tag> --format '{{json .Provenance}}'
+```
+
+### 3. Contracts
+
+For each expected platform, require `SLSA` and validate:
+
+- `.buildDefinition.buildType` is the BuildKit SLSA definition URL.
+- `.buildDefinition.externalParameters.request.args["build-arg:APP_VERSION"]` is the
+  planned version.
+- `.buildDefinition.externalParameters.request.root.request.args["vcs:source"]` is the
+  repository URL.
+- `.buildDefinition.externalParameters.request.root.request.args["vcs:revision"]` is
+  the source commit.
+
+Do not read source identity from `root.configSource.request.args` or
+`runDetails.metadata.vcs`; those paths are not part of the observed BuildKit output.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required behavior |
+| --- | --- |
+| Platform key or `SLSA` is missing | Fail the release gate |
+| Source, revision, version, or build type differs | Fail the release gate |
+| Provenance uses an unverified/obsolete path | Fail the contract test before dry-run |
+| All expected platforms and fields match | Continue to digest scanning and smoke |
+
+### 5. Good / Base / Bad Cases
+
+- Good: a multi-platform map has exactly the expected platform keys and every SLSA
+  entry matches repository, source commit, and version.
+- Base: a legacy single-platform artifact exposes top-level `SLSA`; validate the same
+  fields and require exactly one expected platform.
+- Bad: the producer was configured with `provenance: mode=max`, but the verifier assumes
+  undocumented paths or skips emitted-value checks.
+
+### 6. Tests Required
+
+- Workflow contract tests assert the required `root.request.args` paths appear in both
+  candidate and baseline verifiers.
+- Tests reject known obsolete `root.configSource` and `runDetails.metadata.vcs` paths.
+- Before enabling formal promotion, run the verifier against a real candidate artifact
+  from the pinned action/tool chain and confirm each platform passes.
+
+### 7. Wrong vs Correct
+
+```jq
+# Wrong: paths were inferred instead of observed.
+.buildDefinition.externalParameters.request.root.configSource.request.args["vcs:source"]
+
+# Correct: path verified against the emitted BuildKit provenance.
+.buildDefinition.externalParameters.request.root.request.args["vcs:source"]
+```
+
 ---
 
 ## Forbidden patterns

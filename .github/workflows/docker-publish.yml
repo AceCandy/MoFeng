@@ -377,12 +377,10 @@ jobs:
                   == "https://github.com/moby/buildkit/blob/master/docs/attestations/slsa-definitions.md"
                 and .buildDefinition.externalParameters.request.args["build-arg:APP_VERSION"]
                   == $version
-                and .buildDefinition.externalParameters.request.root.configSource.request.args["vcs:source"]
+                and .buildDefinition.externalParameters.request.root.request.args["vcs:source"]
                   == $repository
-                and .buildDefinition.externalParameters.request.root.configSource.request.args["vcs:revision"]
-                  == $source
-                and .runDetails.metadata.vcs.source == $repository
-                and .runDetails.metadata.vcs.revision == $source;
+                and .buildDefinition.externalParameters.request.root.request.args["vcs:revision"]
+                  == $source;
               [$platforms[].platform] as $expected_platforms
               | if has("SLSA") then
                   ($expected_platforms | length) == 1 and (.SLSA | valid_slsa)
@@ -570,12 +568,10 @@ jobs:
                 == "https://github.com/moby/buildkit/blob/master/docs/attestations/slsa-definitions.md"
               and .buildDefinition.externalParameters.request.args["build-arg:APP_VERSION"]
                 == $version
-              and .buildDefinition.externalParameters.request.root.configSource.request.args["vcs:source"]
+              and .buildDefinition.externalParameters.request.root.request.args["vcs:source"]
                 == $repository
-              and .buildDefinition.externalParameters.request.root.configSource.request.args["vcs:revision"]
-                == $source
-              and .runDetails.metadata.vcs.source == $repository
-              and .runDetails.metadata.vcs.revision == $source;
+              and .buildDefinition.externalParameters.request.root.request.args["vcs:revision"]
+                == $source;
             (keys | sort) == ([$platforms[].platform] | sort)
             and all(.[]; has("SLSA") and (.SLSA | valid_slsa))
           ' <<<"${provenance}" >/dev/null

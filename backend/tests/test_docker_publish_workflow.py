@@ -191,6 +191,23 @@ def test_candidate_is_digest_verified_scanned_and_smoked_before_promotion():
     assert "@${{ needs.build-candidate.outputs.manifest_digest }}" in smoke_source
 
 
+def test_provenance_uses_buildkit_root_request_vcs_contract():
+    source = WORKFLOW_FILE.read_text(encoding="utf-8")
+
+    assert (
+        source.count('.buildDefinition.externalParameters.request.root.request.args["vcs:source"]')
+        == 2
+    )
+    assert (
+        source.count(
+            '.buildDefinition.externalParameters.request.root.request.args["vcs:revision"]'
+        )
+        == 2
+    )
+    assert ".buildDefinition.externalParameters.request.root.configSource" not in source
+    assert ".runDetails.metadata.vcs" not in source
+
+
 def test_formal_state_is_idempotent_and_metadata_uses_blob_optimistic_lock():
     source = WORKFLOW_FILE.read_text(encoding="utf-8")
 

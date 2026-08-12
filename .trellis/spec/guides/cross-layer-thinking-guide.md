@@ -49,6 +49,7 @@ If you cannot name the type at every hop, you are not ready to write the code.
 | PostgreSQL event log ↔ Redis | Treating a wake-up notification as durable data instead of rereading by cursor |
 | SSE snapshot ↔ Client cursor | Reusing an expired cursor or changing stream scope without replacing the snapshot/cursor pair |
 | Model output ↔ Chapter content | Assuming one JSON encoding layer and persisting fenced or escaped wrapper fields as chapter prose |
+| External structured artifact ↔ verifier | Guessing a registry or CLI JSON path instead of checking the exact pinned tool output |
 
 ---
 
@@ -117,6 +118,7 @@ Legacy Celery tasks must reuse `app.db.session.AsyncSessionLocal` and `settings.
 - **Flush as invisible I/O setup** — inserting an ORM aggregate, flushing it again to fill a derived field, then serializing an expired attribute. Allocate derived fields while transient or explicitly await a refresh.
 - **Wake-up as truth** — applying a Redis notification directly to UI state. Redis may duplicate or lose notifications; always reread the PostgreSQL event log from the durable cursor.
 - **Ideal-only model payload tests** — testing plain JSON while missing fenced JSON, nested payloads, or a whole response escaped one additional time. Normalize at the storage boundary and keep a shared read-side cleaner for already persisted data; regression tests must cover all four shapes and prove ordinary prose with literal escape sequences remains unchanged.
+- **Guessed external artifact paths** — writing `jq` assertions from documentation or field names without inspecting a real artifact produced by the pinned version. Capture a redacted representative shape, verify every required field path against it, and add a contract test that rejects known obsolete paths. A producer option such as `provenance: mode=max` proves intent, not the emitted schema.
 
 ---
 
@@ -145,3 +147,4 @@ After implementation:
 - [ ] A transient job/event receives its stream sequence before the job insert; public serialization does not depend on implicit async ORM I/O.
 - [ ] SSE reset and user/scope changes replace both snapshot and cursor before reconnecting.
 - [ ] AI-generated structured text tests cover plain JSON, fenced JSON, nested payloads, whole-response escaping, and ordinary-prose escape preservation at both the storage and compatibility-read boundaries.
+- [ ] External registry/CLI JSON verifiers are exercised against a representative artifact from the pinned producer version; required paths and known obsolete paths are both covered.
