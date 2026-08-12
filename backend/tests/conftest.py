@@ -1,6 +1,5 @@
 """pytest 全局 fixture。"""
 
-import asyncio
 import logging
 import os
 from collections.abc import AsyncIterator
@@ -222,17 +221,6 @@ def app_caplog(caplog):
         yield caplog
     finally:
         app_logger.propagate = previous
-
-
-@pytest.fixture(autouse=True)
-def _restore_session_loop_for_marked_tests(request):
-    """避免函数级 loop 测试污染后续 session loop 测试。"""
-    marker = request.node.get_closest_marker("asyncio")
-    if marker is None:
-        return
-    loop_scope = marker.kwargs.get("loop_scope") or marker.kwargs.get("scope")
-    if loop_scope == "session":
-        asyncio.set_event_loop(request.getfixturevalue("_session_event_loop"))
 
 
 @pytest_asyncio.fixture(scope="session", loop_scope="session")

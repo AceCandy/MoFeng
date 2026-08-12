@@ -50,8 +50,7 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:${PATH}"
 
 COPY backend/requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir --no-compile -r requirements.txt && \
+RUN python -m pip install --no-cache-dir --no-compile --require-hashes -r requirements.txt && \
     /opt/venv/bin/python -m uvicorn --version >/dev/null && \
     find /opt/venv -type d \( -name "tests" -o -name "test" -o -name "__pycache__" \) -prune -exec rm -rf {} + && \
     find /opt/venv -type f \( -name "*.pyc" -o -name "*.pyo" -o -name "*.a" \) -delete

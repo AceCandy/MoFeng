@@ -11,6 +11,7 @@ on:
       - 'backend/pyproject.toml'
       - 'backend/pytest.ini'
       - 'backend/requirements*.txt'
+      - 'backend/requirements*.in'
       - 'backend/tests/test_openapi_contract.py'
       - 'backend/tests/test_task_event_sse.py'
       - 'backend/tests/test_chapter_workflow_http.py'
@@ -39,6 +40,7 @@ on:
       - 'backend/pyproject.toml'
       - 'backend/pytest.ini'
       - 'backend/requirements*.txt'
+      - 'backend/requirements*.in'
       - 'backend/tests/test_openapi_contract.py'
       - 'backend/tests/test_task_event_sse.py'
       - 'backend/tests/test_chapter_workflow_http.py'
@@ -75,11 +77,13 @@ jobs:
           python-version: '3.11'
           cache: pip
           cache-dependency-path: |
+            backend/requirements.in
             backend/requirements.txt
+            backend/requirements-dev.in
             backend/requirements-dev.txt
 
       - name: Install backend dependencies
-        run: python -m pip install -r requirements-dev.txt
+        run: python -m pip install --require-hashes -r requirements-dev.txt
         working-directory: backend
 
       - name: Check backend transport contracts
