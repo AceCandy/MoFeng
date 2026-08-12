@@ -1159,3 +1159,24 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Status
 
 [OK] **Completed**
+
+
+## Session 37: 补齐 scoped task SSE 纵深校验
+
+**Date**: 2026-08-12
+**Task**: 补齐 scoped task SSE 纵深校验
+**Branch**: `main`
+
+### Summary
+
+完成 T1：task SSE decoder 复核嵌套 task 的 expected stream scope，scope 漂移以 malformed/scope 拒绝且不调用 onTask；保留全局任务流兼容性和原 snapshot scope 规则。同步 transport contract，focused 18/18、完整 unit 298/298、lint、type-check、diff check 通过；已提交 5cb3c20 并归档 T1。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5cb3c20` | (see git log) |
+
+### Status
+
+[OK] **Completed**
