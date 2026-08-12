@@ -1087,3 +1087,33 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Status
 
 [OK] **Completed**
+
+
+## Session 34: 完成依赖治理与发布状态机
+
+**Date**: 2026-08-12
+**Task**: 完成依赖治理与发布状态机
+**Branch**: `main`
+
+### Summary
+
+完成 Python 与前端依赖治理、PyJWT 兼容迁移和 hash lock；将 Docker 发布重构为质量门、双架构候选扫描、真实 smoke、digest promotion 与可恢复 metadata 状态机。正式 run 31596457677 全绿发布 v0.1.35，version/latest/candidate 均指向 sha256:e070890176ede70114781d858f598b287ea6216c164a5d92e6975cb0ac446230，Git tag 与 metadata 均绑定 source 82b2311；DOCKERHUB_TOKEN 已确认为该 workflow 专用。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `69c1e87` | (see git log) |
+| `d7c1070` | (see git log) |
+| `cfd1e82` | (see git log) |
+| `f54d18e` | (see git log) |
+| `1ee4849` | (see git log) |
+| `c582696` | (see git log) |
+| `cbee73b` | (see git log) |
+| `cb63508` | (see git log) |
+| `82b2311` | (see git log) |
+| `f909723` | (see git log) |
+
+### Status
+
+[OK] **Completed**
