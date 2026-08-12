@@ -142,6 +142,10 @@ async def test_openai_embedding_result_includes_real_usage_and_cost(monkeypatch)
             return None
 
     monkeypatch.setattr("app.services.llm_service.AsyncOpenAI", FakeAsyncOpenAI)
+    monkeypatch.setattr(
+        "app.services.llm_service.assert_safe_base_url",
+        lambda *_args, **_kwargs: None,
+    )
     service = LLMService(AsyncMock())
 
     result = await service._get_embedding_with_route_result(
@@ -291,7 +295,11 @@ async def test_resolve_llm_config_requires_primary_chat_model_even_when_enabled_
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_resolve_llm_config_uses_stage_route_model():
+async def test_resolve_llm_config_uses_stage_route_model(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.llm_service.assert_safe_base_url",
+        lambda *_args, **_kwargs: None,
+    )
     service = LLMService(AsyncMock())
     provider = SimpleNamespace(
         name="Stage Provider",

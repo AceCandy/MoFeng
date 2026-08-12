@@ -129,22 +129,29 @@ def test_quality_gates_keep_openapi_export_with_backend_dependencies():
     backend_gate = jobs["backend-gate"]
     frontend_gate = jobs["frontend-gate"]
 
+    postgres = backend_gate["services"]["postgres"]
+    assert postgres["image"] == "pgvector/pgvector:pg16"
+    assert postgres["env"]["POSTGRES_USER"] == "mofeng"
+    assert postgres["env"]["POSTGRES_PASSWORD"] == "ci-postgres-password"
+    assert postgres["env"]["POSTGRES_DB"] == "mofeng"
+    assert postgres["ports"] == ["5432:5432"]
+    assert "pg_isready -U mofeng -d mofeng" in postgres["options"]
+
     test_secret = backend_gate["env"]["SECRET_KEY"]
     assert test_secret.startswith("ci-test-")
     assert len(test_secret) >= 32
     assert "${{" not in test_secret
+    expected_database_url = "postgresql+asyncpg://mofeng:ci-postgres-password@127.0.0.1:5432/mofeng"
+    assert backend_gate["env"]["TEST_POSTGRES_URL"] == expected_database_url
+    assert backend_gate["env"]["DATABASE_URL"] == expected_database_url
 
     backend_commands = {
-        line.strip()
-        for step in backend_gate["steps"]
-        for line in step.get("run", "").splitlines()
+        line.strip() for step in backend_gate["steps"] for line in step.get("run", "").splitlines()
     }
     assert "python -m app.openapi_export --check --output openapi.json" in backend_commands
 
     frontend_commands = {
-        line.strip()
-        for step in frontend_gate["steps"]
-        for line in step.get("run", "").splitlines()
+        line.strip() for step in frontend_gate["steps"] for line in step.get("run", "").splitlines()
     }
     assert "npm run api:check:types" in frontend_commands
     assert "npm run api:check:ownership" in frontend_commands
