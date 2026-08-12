@@ -61,8 +61,7 @@ const matchesStreamScope = (
   expectedScope?: BackgroundTaskStreamScope,
 ) => {
   if (!expectedScope) {
-    return (value.stream_type === undefined || value.stream_type === null)
-      && (value.stream_id === undefined || value.stream_id === null)
+    return true
   }
   return value.stream_type === expectedScope.stream_type
     && value.stream_id === expectedScope.stream_id
@@ -132,13 +131,21 @@ export const decodeBackgroundTaskSnapshot = (
   ) {
     return { kind: 'malformed', reason: 'snapshot' }
   }
-  if (!matchesStreamScope(value, expectedScope)) {
+  if (
+    !matchesStreamScope(value, expectedScope)
+    || (!expectedScope
+      && (value.stream_type !== undefined && value.stream_type !== null
+        || value.stream_id !== undefined && value.stream_id !== null))
+  ) {
     return { kind: 'malformed', reason: 'scope' }
   }
   return { kind: 'ok', value: value as BackgroundTaskSnapshot }
 }
 
-const decodeBackgroundTaskEvent = (payload: unknown): TaskDecodeResult<BackgroundTaskEvent> => {
+const decodeBackgroundTaskEvent = (
+  payload: unknown,
+  expectedScope?: BackgroundTaskStreamScope,
+): TaskDecodeResult<BackgroundTaskEvent> => {
   const decoded = decodeVersionedRecord(payload)
   if (decoded.kind !== 'ok') return decoded
   const value = decoded.value
@@ -149,6 +156,9 @@ const decodeBackgroundTaskEvent = (payload: unknown): TaskDecodeResult<Backgroun
     || !isBackgroundTask(value.task)
   ) {
     return { kind: 'malformed', reason: 'task' }
+  }
+  if (!matchesStreamScope(value.task as Record<string, unknown>, expectedScope)) {
+    return { kind: 'malformed', reason: 'scope' }
   }
   return { kind: 'ok', value: value as BackgroundTaskEvent }
 }
@@ -179,7 +189,7 @@ export const decodeBackgroundTaskStreamMessage = (
     return decoded.kind === 'ok' ? { ...decoded, event } : decoded
   }
   if (event === 'task') {
-    const decoded = decodeBackgroundTaskEvent(payload)
+    const decoded = decodeBackgroundTaskEvent(payload, expectedScope)
     return decoded.kind === 'ok' ? { ...decoded, event } : decoded
   }
   if (event === 'reset') {

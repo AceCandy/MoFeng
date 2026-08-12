@@ -26,6 +26,12 @@ const task = (id: string, createdAt: string, progress = 0): BackgroundTask => ({
   updated_at: createdAt,
 })
 
+const scopedTask = (
+  id: string,
+  scope: BackgroundTaskStreamScope,
+  createdAt = '2026-07-28T00:00:00Z',
+) => ({ ...task(id, createdAt), ...scope })
+
 const event = (cursor: number, value: BackgroundTask): BackgroundTaskEvent => ({
   schema_version: 1,
   cursor,
@@ -143,6 +149,26 @@ describe('reduceTaskEvent', () => {
       reason: 'cursor_expired',
       retained_through_cursor: 10,
     })).toEqual({ kind: 'malformed', reason: 'schema_version' })
+  })
+
+  it('task 事件严格复核 expected scope，并保留全局流兼容性', () => {
+    const expectedScope = { stream_type: 'workflow' as const, stream_id: 'run-1' }
+    const matching = event(11, scopedTask('job-1', expectedScope))
+    const wrongType = event(11, scopedTask('job-1', { stream_type: 'job', stream_id: 'run-1' }))
+    const wrongId = event(11, scopedTask('job-1', { stream_type: 'workflow', stream_id: 'run-2' }))
+
+    expect(decodeBackgroundTaskStreamMessage('task', matching, expectedScope)).toEqual({
+      kind: 'ok', event: 'task', value: matching,
+    })
+    expect(decodeBackgroundTaskStreamMessage('task', wrongType, expectedScope)).toEqual({
+      kind: 'malformed', reason: 'scope',
+    })
+    expect(decodeBackgroundTaskStreamMessage('task', wrongId, expectedScope)).toEqual({
+      kind: 'malformed', reason: 'scope',
+    })
+    expect(decodeBackgroundTaskStreamMessage('task', matching)).toEqual({
+      kind: 'ok', event: 'task', value: matching,
+    })
   })
 
   it('等待指定 durable task 到 succeeded 后才返回', async () => {
@@ -316,6 +342,28 @@ describe('reduceTaskEvent', () => {
     expect(onSnapshot).not.toHaveBeenCalled()
     expect(onTask).not.toHaveBeenCalled()
     expect(onReset).not.toHaveBeenCalled()
+  })
+
+  it('scope 漂移的 task SSE 不调用 onTask', async () => {
+    const scope = { stream_type: 'workflow' as const, stream_id: 'run-1' }
+    const drifted = event(11, scopedTask('job-2', { stream_type: 'workflow', stream_id: 'run-2' }))
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(
+          `event: task\ndata: ${JSON.stringify(drifted)}\n\n`,
+        ))
+        controller.close()
+      },
+    }))))
+    const onTask = vi.fn()
+
+    await expect(TaskAPI.subscribeTasks({
+      scope,
+      onSnapshot: vi.fn(),
+      onTask,
+      onReset: vi.fn(),
+    })).rejects.toMatchObject({ name: 'TaskContractError', code: 'malformed' })
+    expect(onTask).not.toHaveBeenCalled()
   })
 
   it('HTTP snapshot 与 SSE 共用版本校验', async () => {

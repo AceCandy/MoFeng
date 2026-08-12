@@ -85,8 +85,10 @@ skip semantic comparison; an unreadable existing baseline fails closed.
 - Task HTTP snapshot and SSE snapshot use the same decoder. Snapshot/task/reset
   validate `schema_version`, reducer-critical cursor/task fields, and required shapes
   before invoking handlers. A scoped snapshot must echo the requested
-  `stream_type`/`stream_id`; an unscoped snapshot must keep both absent/null. Unknown
-  outer events are ignored. An invalid stream first fetches one same-scope snapshot;
+  `stream_type`/`stream_id`; an unscoped snapshot must keep both absent/null. A scoped
+  task event must match the expected scope on its nested `task`; a global task stream
+  without expected scope accepts any otherwise valid task scope. Unknown outer events
+  are ignored. An invalid stream first fetches one same-scope snapshot;
   an invalid recovery snapshot stops SSE state and yields to the existing polling
   result.
 - Every task-stream callback is bound to the current, non-aborted connection identity.
@@ -111,6 +113,7 @@ skip semantic comparison; an unreadable existing baseline fails closed.
 | Task payload is not an object or lacks an integer version | Decoder returns `malformed`; no handler/state mutation |
 | Task payload version is not `1` | Decoder returns `unsupported_version`; no handler/state mutation |
 | Snapshot scope differs from the requested scope | Decoder returns `malformed`; no handler/state mutation |
+| Task event nested scope differs from the expected scope | Decoder returns `malformed`; no handler/state mutation |
 | Identity has the expected length but is not a canonical UUID | Decoder returns `malformed`; no cache/actor mutation |
 | Aborted or superseded connection delivers a late callback | Ignore it without changing snapshot or cursor |
 | Unknown outer task SSE event | Ignore it without changing state or cursor |
