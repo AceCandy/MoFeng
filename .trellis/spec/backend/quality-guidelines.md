@@ -145,8 +145,10 @@ Rule for new tasks: reuse `app.db.session.AsyncSessionLocal` and `settings.sqlal
 ### 1. Scope / Trigger
 
 Apply this contract when a CI or release gate parses JSON emitted by a pinned external
-tool or registry. Producer configuration proves requested behavior, not the emitted
-schema; verify field paths against a redacted artifact produced by the pinned version.
+tool or registry, or reads repository metadata through shell. Producer configuration
+proves requested behavior, not the emitted schema; verify field paths against a
+redacted artifact produced by the pinned version and preserve JSON bytes across shell
+expansion boundaries.
 
 ### 2. Signatures
 
@@ -154,6 +156,13 @@ BuildKit provenance is read with:
 
 ```bash
 docker buildx imagetools inspect <digest-or-tag> --format '{{json .Provenance}}'
+```
+
+Release metadata is read and queried with:
+
+```bash
+metadata_json="$(git show origin/main:release-metadata/version-info.json)"
+metadata_digest="$(jq -r '.image_digest // empty' <<<"${metadata_json}")"
 ```
 
 ### 3. Contracts
@@ -171,6 +180,11 @@ For each expected platform, require `SLSA` and validate:
 Do not read source identity from `root.configSource.request.args` or
 `runDetails.metadata.vcs`; those paths are not part of the observed BuildKit output.
 
+Pass repository metadata to `jq` unchanged. An empty string is a valid no-metadata
+input for this query and produces an empty digest. Do not embed a brace-bearing JSON
+default such as `{}` inside `${parameter:-word}`; Bash can leave the closing brace as
+literal input and turn valid JSON into `...}}`.
+
 ### 4. Validation & Error Matrix
 
 | Condition | Required behavior |
@@ -178,6 +192,8 @@ Do not read source identity from `root.configSource.request.args` or
 | Platform key or `SLSA` is missing | Fail the release gate |
 | Source, revision, version, or build type differs | Fail the release gate |
 | Provenance uses an unverified/obsolete path | Fail the contract test before dry-run |
+| Metadata JSON is malformed after shell expansion | Fail before baseline selection |
+| Metadata is absent | Produce an empty digest and continue through the empty-baseline rules |
 | All expected platforms and fields match | Continue to digest scanning and smoke |
 
 ### 5. Good / Base / Bad Cases
@@ -186,14 +202,20 @@ Do not read source identity from `root.configSource.request.args` or
   entry matches repository, source commit, and version.
 - Base: a legacy single-platform artifact exposes top-level `SLSA`; validate the same
   fields and require exactly one expected platform.
+- Base: absent repository metadata yields an empty digest without manufacturing a JSON
+  default inside shell parameter expansion.
 - Bad: the producer was configured with `provenance: mode=max`, but the verifier assumes
   undocumented paths or skips emitted-value checks.
+- Bad: `${metadata_json:-{}}` appends a literal closing brace to non-empty JSON before
+  `jq` parses it.
 
 ### 6. Tests Required
 
 - Workflow contract tests assert the required `root.request.args` paths appear in both
   candidate and baseline verifiers.
 - Tests reject known obsolete `root.configSource` and `runDetails.metadata.vcs` paths.
+- Execute the workflow's metadata query line with normal, legacy, and empty metadata;
+  assert the digest is preserved or empty and the shell command exits successfully.
 - Before enabling formal promotion, run the verifier against a real candidate artifact
   from the pinned action/tool chain and confirm each platform passes.
 
@@ -205,6 +227,14 @@ Do not read source identity from `root.configSource.request.args` or
 
 # Correct: path verified against the emitted BuildKit provenance.
 .buildDefinition.externalParameters.request.root.request.args["vcs:source"]
+```
+
+```bash
+# Wrong: Bash may append a literal `}` when metadata_json is non-empty.
+jq -r '.image_digest // empty' <<<"${metadata_json:-{}}"
+
+# Correct: jq accepts empty input and the JSON crosses the shell boundary unchanged.
+jq -r '.image_digest // empty' <<<"${metadata_json}"
 ```
 
 ## Release image vulnerability gate

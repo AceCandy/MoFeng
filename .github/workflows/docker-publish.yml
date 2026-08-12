@@ -410,7 +410,7 @@ jobs:
           previous_digest=""
           baseline_mode="empty"
 
-          metadata_digest="$(jq -r '.image_digest // empty' <<<"${metadata_json:-{}}")"
+          metadata_digest="$(jq -r '.image_digest // empty' <<<"${metadata_json}")"
           if [[ -n "${metadata_digest}" ]]; then
             baseline_mode="normal"
             previous_version="$(jq -er '.version' <<<"${metadata_json}")"

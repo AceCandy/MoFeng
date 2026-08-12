@@ -50,6 +50,7 @@ If you cannot name the type at every hop, you are not ready to write the code.
 | SSE snapshot ↔ Client cursor | Reusing an expired cursor or changing stream scope without replacing the snapshot/cursor pair |
 | Model output ↔ Chapter content | Assuming one JSON encoding layer and persisting fenced or escaped wrapper fields as chapter prose |
 | External structured artifact ↔ verifier | Guessing a registry or CLI JSON path instead of checking the exact pinned tool output |
+| Repository JSON ↔ shell verifier | Letting parameter expansion alter JSON before `jq` validates it |
 
 ---
 
@@ -119,6 +120,7 @@ Legacy Celery tasks must reuse `app.db.session.AsyncSessionLocal` and `settings.
 - **Wake-up as truth** — applying a Redis notification directly to UI state. Redis may duplicate or lose notifications; always reread the PostgreSQL event log from the durable cursor.
 - **Ideal-only model payload tests** — testing plain JSON while missing fenced JSON, nested payloads, or a whole response escaped one additional time. Normalize at the storage boundary and keep a shared read-side cleaner for already persisted data; regression tests must cover all four shapes and prove ordinary prose with literal escape sequences remains unchanged.
 - **Guessed external artifact paths** — writing `jq` assertions from documentation or field names without inspecting a real artifact produced by the pinned version. Capture a redacted representative shape, verify every required field path against it, and add a contract test that rejects known obsolete paths. A producer option such as `provenance: mode=max` proves intent, not the emitted schema.
+- **JSON defaults inside shell expansion** — `${value:-{}}` can leave a literal closing brace when `value` is non-empty. Pass JSON unchanged to `jq`, let empty input represent absence when the query supports it, and execute the actual workflow line in a contract test.
 
 ---
 
@@ -148,3 +150,4 @@ After implementation:
 - [ ] SSE reset and user/scope changes replace both snapshot and cursor before reconnecting.
 - [ ] AI-generated structured text tests cover plain JSON, fenced JSON, nested payloads, whole-response escaping, and ordinary-prose escape preservation at both the storage and compatibility-read boundaries.
 - [ ] External registry/CLI JSON verifiers are exercised against a representative artifact from the pinned producer version; required paths and known obsolete paths are both covered.
+- [ ] Shell-based JSON verifiers preserve normal, legacy, and empty inputs through the actual workflow command before an external-state write is enabled.

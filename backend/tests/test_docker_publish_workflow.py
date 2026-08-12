@@ -1,5 +1,6 @@
 # AIMETA P=Docker发布状态机契约|R=结构化校验DAG_权限_dry-run_不可逆顺序|NR=不执行GitHub或registry操作|E=test_*|X=internal|A=contract_test|D=pytest,pyyaml|S=test|RD=../../.trellis/tasks/08-11-release-governance/design.md
 import re
+import subprocess
 from pathlib import Path
 
 import yaml
@@ -221,3 +222,39 @@ def test_formal_state_is_idempotent_and_metadata_uses_blob_optimistic_lock():
     assert "Git tag conflict" in source
     assert "latest changed after baseline capture" in source
     assert "metadata blob changed" in source
+
+
+def test_metadata_digest_shell_parsing_preserves_json_input():
+    source = WORKFLOW_FILE.read_text(encoding="utf-8")
+    capture_step = next(
+        step
+        for step in _load_workflow()["jobs"]["capture-baseline"]["steps"]
+        if step.get("id") == "capture"
+    )
+    capture_line = next(
+        line.strip()
+        for line in capture_step["run"].splitlines()
+        if line.strip().startswith('metadata_digest="$(jq -r')
+    )
+    command = "\n".join(
+        (
+            "set -euo pipefail",
+            'metadata_json="$1"',
+            capture_line,
+            'printf "%s" "${metadata_digest}"',
+        )
+    )
+
+    def parse(metadata_json):
+        return subprocess.run(
+            ["bash", "-c", command, "metadata-test", metadata_json],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout
+
+    digest = "sha256:" + "a" * 64
+    assert parse(f'{{"image_digest":"{digest}"}}') == digest
+    assert parse('{"version":"0.1.34"}') == ""
+    assert parse("") == ""
+    assert "metadata_json:-{}" not in source
