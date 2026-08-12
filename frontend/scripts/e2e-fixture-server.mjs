@@ -420,6 +420,14 @@ const server = createServer(async (request, response) => {
       })
       return
     }
+    if (request.method === 'GET' && path === '/api/auth/options') {
+      json(response, 200, {
+        allow_registration: true,
+        enable_email_verification: false,
+        enable_linuxdo_login: false,
+      })
+      return
+    }
     if (request.method === 'GET' && path === '/api/llm-config') {
       json(response, 200, {
         legacy: null,

@@ -546,7 +546,9 @@ onUnmounted(() => {
 }
 
 .md-text-field-icon--button {
-  padding: 0;
+  width: 44px;
+  height: 44px;
+  padding: 11px;
   border: 0;
   background: transparent;
   cursor: pointer;

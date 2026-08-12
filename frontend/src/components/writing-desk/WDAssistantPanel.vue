@@ -1,7 +1,7 @@
 <!-- AIMETA P=写作台_AI助手侧栏|R=章节建议_快捷操作|NR=不含正文编辑|E=component:WDAssistantPanel|X=ui|A=侧栏组件|D=vue|S=dom|RD=./README.ai -->
 <template>
   <aside class="wd-ai" aria-label="AI 编辑助手">
-    <div class="wd-ai__panel">
+    <div class="wd-ai__panel" tabindex="0">
       <template v-if="isCompletedChapter">
         <section class="wd-ai__real-summary-shell" aria-label="章节实际内容梳理">
           <div

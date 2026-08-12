@@ -1,6 +1,7 @@
 <!-- AIMETA P=通用组件_水墨大弹窗容器|R=弹窗容器_水墨遮罩_中式边框|NR=不含具体业务逻辑|E=component:GlobalModalContainer|X=ui|A=弹窗容器|D=vue|S=dom|RD=./README.ai -->
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { ref, useId } from 'vue'
+import { useDialogA11y } from '@/composables/useDialogA11y'
 
 const props = withDefaults(
   defineProps<{
@@ -12,7 +13,7 @@ const props = withDefaults(
   {
     title: '能力配置',
     width: 'min(92vw, 1100px)',
-    hideCloseButton: true,
+    hideCloseButton: false,
   }
 )
 
@@ -20,37 +21,32 @@ const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
-const modalBoxRef = ref<HTMLElement | null>(Reflect.get(window, 'undefined') || null)
+const modalBoxRef = ref<HTMLElement | null>(null)
+const closeButtonRef = ref<HTMLElement | null>(null)
+const active = ref(true)
+const titleId = useId()
 
 const handleClose = () => {
   emit('close')
 }
 
-// 支持 ESC 键优雅关闭
-const handleKeyDown = (event: KeyboardEvent) => {
-  if (event.key === 'Escape') {
-    handleClose()
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('keydown', handleKeyDown)
-  // 阻止外层页面滚动，保持弹窗内部独立滚动
-  document.body.style.overflow = 'hidden'
-})
-
-onUnmounted(() => {
-  document.removeEventListener('keydown', handleKeyDown)
-  document.body.style.overflow = ''
+useDialogA11y({
+  active,
+  dialogRef: modalBoxRef,
+  initialFocusRef: closeButtonRef,
+  onClose: handleClose,
 })
 </script>
 
 <template>
-  <div class="m3-ink-modal-overlay" @click.self="handleClose" role="dialog" aria-modal="true">
+  <div class="m3-ink-modal-overlay" @click.self="handleClose">
     <div
       ref="modalBoxRef"
       class="m3-ink-modal-box"
       :style="{ width: props.width }"
+      role="dialog"
+      aria-modal="true"
+      :aria-labelledby="titleId"
       tabindex="-1"
     >
       <!-- 四角黄铜古角扣 -->
@@ -65,8 +61,8 @@ onUnmounted(() => {
           <span v-if="props.badgeText !== '' && props.title" class="m3-ink-modal-header__badge">
             {{ props.badgeText || props.title.slice(0, 1) }}
           </span>
-          <h2 class="m3-ink-modal-header__title">
-            {{ props.badgeText !== '' && props.title ? props.title.slice(1) : props.title }}
+          <h2 :id="titleId" class="m3-ink-modal-header__title">
+            {{ props.title }}
           </h2>
         </div>
 
@@ -76,9 +72,11 @@ onUnmounted(() => {
           <!-- 朱砂钤印风格关闭按钮 -->
           <button
             v-if="!props.hideCloseButton"
+            ref="closeButtonRef"
             type="button"
             class="m3-ink-modal-close-btn"
-            title="关闭本案头配置"
+            :aria-label="`关闭${props.title}`"
+            :title="`关闭${props.title}`"
             @click="handleClose"
           >
             <span class="m3-ink-modal-close-badge">閉</span>
@@ -252,7 +250,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 38px;
+  min-height: 44px;
   padding: 0 12px 0 6px;
   border: 1px dashed var(--md-outline-variant);
   border-radius: var(--md-radius-xs);

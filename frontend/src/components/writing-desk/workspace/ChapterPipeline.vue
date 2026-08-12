@@ -28,13 +28,6 @@
       <li
         v-for="(item, index) in pipelineSteps"
         :key="item.key"
-        :aria-label="stepTooltipText(item.key, index)"
-        :aria-current="activeStepKey === item.key ? 'step' : undefined"
-        :role="canRetryActiveStep && activeStepKey === item.key
-          ? 'group'
-          : stepState(item.key, index).tone !== 'waiting' ? 'button' : undefined"
-        :tabindex="stepState(item.key, index).tone !== 'waiting'
-          && !(canRetryActiveStep && activeStepKey === item.key) ? 0 : undefined"
         :class="[
           'chapter-console__pipeline-item',
           `is-${stepState(item.key, index).tone}`,
@@ -44,9 +37,6 @@
           { 'is-clickable': stepState(item.key, index).tone !== 'waiting' },
           { 'has-retry-action': canRetryActiveStep && activeStepKey === item.key },
         ]"
-        @click="emit('select', item.key, index)"
-        @keydown.enter.self="emit('select', item.key, index)"
-        @keydown.space.self.prevent="emit('select', item.key, index)"
       >
         <Transition name="chapter-node-retry">
           <Tooltip
@@ -80,38 +70,47 @@
             </button>
           </Tooltip>
         </Transition>
-        <Tooltip
-          :text="canRetryActiveStep && activeStepKey === item.key ? undefined : stepTooltipText(item.key, index)"
-          :show-delay="150"
-          class="chapter-console__pipeline-tooltip-wrapper"
+        <button
+          type="button"
+          class="chapter-console__pipeline-select"
+          :aria-label="stepTooltipText(item.key, index)"
+          :aria-current="activeStepKey === item.key ? 'step' : undefined"
+          :disabled="stepState(item.key, index).tone === 'waiting'"
+          @click="emit('select', item.key, index)"
         >
-          <div class="chapter-console__pipeline-marker">
-            <span class="chapter-console__dot"></span>
-          </div>
-          <div class="chapter-console__pipeline-content">
-            <div class="chapter-console__pipeline-header">
-              <span class="chapter-console__pipeline-title">{{ item.label }}</span>
-              <span
-                v-if="shouldShowManualConfirmBadge(item.key)"
-                class="chapter-console__pipeline-badge chapter-console__pipeline-badge--manual-confirm"
-              >
-                待人工确认
-              </span>
-              <span
-                v-if="stepState(item.key, index).tone === 'in-progress'"
-                class="chapter-console__pipeline-badge"
-              >
-                进行中
-              </span>
-              <span
-                v-else-if="stepState(item.key, index).tone === 'failed'"
-                class="chapter-console__pipeline-badge chapter-console__pipeline-badge--failed"
-              >
-                失败
-              </span>
+          <Tooltip
+            :text="canRetryActiveStep && activeStepKey === item.key ? undefined : stepTooltipText(item.key, index)"
+            :show-delay="150"
+            class="chapter-console__pipeline-tooltip-wrapper"
+          >
+            <div class="chapter-console__pipeline-marker">
+              <span class="chapter-console__dot"></span>
             </div>
-          </div>
-        </Tooltip>
+            <div class="chapter-console__pipeline-content">
+              <div class="chapter-console__pipeline-header">
+                <span class="chapter-console__pipeline-title">{{ item.label }}</span>
+                <span
+                  v-if="shouldShowManualConfirmBadge(item.key)"
+                  class="chapter-console__pipeline-badge chapter-console__pipeline-badge--manual-confirm"
+                >
+                  待人工确认
+                </span>
+                <span
+                  v-if="stepState(item.key, index).tone === 'in-progress'"
+                  class="chapter-console__pipeline-badge"
+                >
+                  进行中
+                </span>
+                <span
+                  v-else-if="stepState(item.key, index).tone === 'failed'"
+                  class="chapter-console__pipeline-badge chapter-console__pipeline-badge--failed"
+                >
+                  失败
+                </span>
+              </div>
+            </div>
+          </Tooltip>
+        </button>
       </li>
     </ol>
   </article>
@@ -357,7 +356,7 @@ const emit = defineEmits<{
 }
 
 .chapter-console__pipeline-badge--failed {
-  color: var(--md-error);
+  color: var(--md-error-text);
   background-color: color-mix(in srgb, var(--md-error) 14%, var(--md-surface));
   border: 1px solid color-mix(in srgb, var(--md-error) 28%, transparent);
 }
@@ -376,7 +375,7 @@ const emit = defineEmits<{
 }
 
 .chapter-console__pipeline-item.is-done .chapter-console__pipeline-title {
-  color: color-mix(in srgb, var(--md-on-surface) 60%, transparent);
+  color: var(--md-on-surface-variant);
 }
 
 .chapter-console__pipeline-item.is-in-progress .chapter-console__dot {
@@ -434,7 +433,7 @@ const emit = defineEmits<{
 }
 
 .chapter-console__pipeline-item.is-failed .chapter-console__pipeline-title {
-  color: var(--md-error);
+  color: var(--md-error-text);
   font-weight: 700;
 }
 
@@ -443,6 +442,18 @@ const emit = defineEmits<{
   flex-direction: column;
   align-items: center;
   width: 100%;
+}
+
+.chapter-console__pipeline-select {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
 }
 
 /* 只读回溯模式：覆写 pipeline 内部元素（ol/item/title）的间距与字号。
@@ -462,7 +473,7 @@ const emit = defineEmits<{
   font-weight: 600;
 }
 
-.chapter-console__pipeline-item.is-clickable {
+.chapter-console__pipeline-item.is-clickable .chapter-console__pipeline-select {
   cursor: pointer;
 }
 
@@ -470,7 +481,7 @@ const emit = defineEmits<{
   transform: scale(1.3);
 }
 
-.chapter-console__pipeline-item.is-clickable:focus-visible {
+.chapter-console__pipeline-select:focus-visible {
   outline: 2px solid var(--md-primary);
   outline-offset: 4px;
   border-radius: var(--md-radius-xs);
@@ -553,6 +564,10 @@ const emit = defineEmits<{
 
   .chapter-console__pipeline-tooltip-wrapper {
     cursor: pointer;
+  }
+
+  .chapter-console__pipeline-select {
+    align-items: stretch;
   }
 }
 

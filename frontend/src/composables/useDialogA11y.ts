@@ -67,6 +67,7 @@ export const useDialogA11y = ({
   restoreFocus = true,
 }: UseDialogA11yOptions) => {
   let previousActiveElement: HTMLElement | null = null
+  let isActivated = false
 
   const closeDialog = () => {
     onClose?.()
@@ -147,6 +148,8 @@ export const useDialogA11y = ({
   }
 
   const activate = () => {
+    if (isActivated) return
+    isActivated = true
     previousActiveElement = document.activeElement as HTMLElement | null
     if (shouldLockBodyScroll) {
       lockBodyScroll()
@@ -156,6 +159,8 @@ export const useDialogA11y = ({
   }
 
   const deactivate = () => {
+    if (!isActivated) return
+    isActivated = false
     document.removeEventListener('keydown', onDocumentKeydown)
     if (shouldLockBodyScroll) {
       unlockBodyScroll()

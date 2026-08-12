@@ -143,7 +143,7 @@ watch(
   gap: 8px;
   padding: 16px;
   border-bottom: 1px solid var(--md-outline-variant);
-  color: var(--md-on-surface-variant);
+  color: var(--md-on-surface);
   font-size: 13px;
 }
 
@@ -303,7 +303,7 @@ watch(
 .task-log-panel__empty,
 .task-log-panel__empty-detail {
   margin: 16px;
-  color: var(--md-on-surface-variant);
+  color: var(--md-on-surface);
   font-size: 13px;
 }
 

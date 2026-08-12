@@ -319,7 +319,7 @@ describe('WDWorkspace locked chapter state', () => {
       const failedStep = Array.from(
         rendered.host.querySelectorAll('.chapter-console__pipeline-item'),
       ).find((item) => item.textContent?.includes('AI评审'))
-      failedStep?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      failedStep?.querySelector<HTMLButtonElement>('.chapter-console__pipeline-select')?.click()
       await nextTick()
 
       expect(failedStep?.querySelector('[data-action="retry-external-node"]')).not.toBeNull()
@@ -451,7 +451,7 @@ describe('WDWorkspace locked chapter state', () => {
       ).find((item) => item.textContent?.includes('整理前文'))
       expect(contextStep).toBeTruthy()
 
-      contextStep?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      contextStep?.querySelector<HTMLButtonElement>('.chapter-console__pipeline-select')?.click()
       await nextTick()
 
       expect(rendered.host.textContent).toContain('节点详情')

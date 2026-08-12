@@ -5,6 +5,7 @@
     class="writing-desk-seal-stamp md-ripple"
     :class="{ 'is-active': isActive }"
     :title="isActive ? '折叠右侧辅助面板' : '展开右侧辅助面板'"
+    :aria-label="isActive ? '折叠右侧辅助面板' : '展开右侧辅助面板'"
     @click="$emit('toggle')"
   >
     <!-- 印信篆字 (阴刻朱砂白文) -->
@@ -30,8 +31,8 @@ defineEmits(['toggle'])
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 38px;
-  width: 38px; /* 默认正方形印章尺寸 */
+  height: 44px;
+  width: 44px; /* 默认正方形印章尺寸 */
   padding: 0;
   cursor: pointer;
   border: 1px solid var(--md-secondary);
@@ -127,14 +128,14 @@ defineEmits(['toggle'])
     top: auto;
     bottom: 30px; /* 贴靠右下角 */
     right: 0;
-    width: 38px;
-    height: 38px;
+    width: 44px;
+    height: 44px;
     border-radius: 6px 0 0 6px / 8px 0 0 8px;
     box-shadow: -2px 2px 6px color-mix(in srgb, var(--md-secondary-dark) 30%, transparent);
   }
 
   .writing-desk-seal-stamp:hover {
-    width: 38px;
+    width: 44px;
     border-radius: 6px 0 0 6px / 8px 0 0 8px;
     transform: scale(1.05); /* 仅做轻微点击缩放提示 */
   }

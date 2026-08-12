@@ -42,7 +42,7 @@ const clickPipelineStep = async (host: HTMLElement, label: string) => {
     item.textContent?.includes(label),
   )
   expect(step).toBeTruthy()
-  step?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  step?.querySelector<HTMLButtonElement>('.chapter-console__pipeline-select')?.click()
   await nextTick()
 }
 
@@ -197,7 +197,8 @@ describe('ChapterGenerating timing inspector', () => {
 
     try {
       const failedStep = rendered.host.querySelector('.chapter-console__pipeline-item.is-failed')
-      expect(failedStep?.getAttribute('aria-label')).toContain(fullError)
+      expect(failedStep?.querySelector('.chapter-console__pipeline-select')?.getAttribute('aria-label'))
+        .toContain(fullError)
     } finally {
       rendered.unmount()
     }
@@ -230,7 +231,8 @@ describe('ChapterGenerating timing inspector', () => {
       const failedStep = rendered.host.querySelector('.chapter-console__pipeline-item.is-failed')
       expect(failedStep?.textContent).toContain('AI评审')
       expect(failedStep?.textContent).toContain('失败')
-      expect(failedStep?.getAttribute('aria-label')).toContain('AI评审失败')
+      expect(failedStep?.querySelector('.chapter-console__pipeline-select')?.getAttribute('aria-label'))
+        .toContain('AI评审失败')
       expect(rendered.host.textContent).toContain('状态：失败')
       expect(rendered.host.textContent).toContain('评审节点未返回更具体的失败原因')
       expect(rendered.host.textContent).not.toContain('状态：成功')
