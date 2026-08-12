@@ -1,0 +1,2 @@
+{"file":"docs/audit-remediation-design-2026-08-10.md","reason":"独立核对 U1 全部验收项未被弱化"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"核对 lint/type/unit/E2E 和浏览器证据"}

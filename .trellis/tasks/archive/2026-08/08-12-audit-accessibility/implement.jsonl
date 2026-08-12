@@ -1,0 +1,3 @@
+{"file":"docs/audit-remediation-design-2026-08-10.md","reason":"U1 的已批准需求、边界和验收矩阵"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Vue 组件 props/emits、scoped CSS 与组件约定"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"前端测试、触控和实现质量约束"}
