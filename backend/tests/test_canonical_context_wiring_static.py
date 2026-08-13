@@ -21,16 +21,16 @@ def test_enhanced_flow_has_no_noncanonical_context_fallback() -> None:
     assert "get_foreshadowing_reminders(" not in block
 
 
-def test_six_dimension_entrypoints_receive_canonical_context() -> None:
+def test_review_and_workflow_entrypoints_receive_canonical_context() -> None:
     router = _block(
         "app/api/routers/review.py",
         "async def review_six_dimension(",
         '@router.post("/consistency")',
     )
-    pipeline = _block(
-        "app/services/pipeline_orchestrator.py",
-        "async def _graph_apply_post_generation_reviews(",
-        "async def _graph_persist_versions(",
+    workflow_provider = _block(
+        "app/services/chapter_workflow_handler.py",
+        "class ChapterWorkflowLLMProvidersV1:",
+        "class ChapterWorkflowBindingAssemblerV1:",
     )
     review_service = _block(
         "app/services/six_dimension_review_service.py",
@@ -40,7 +40,9 @@ def test_six_dimension_entrypoints_receive_canonical_context() -> None:
 
     assert "ChapterContextResolver(" in router
     assert "ReviewContextAdapter.to_prompt_context(chapter_context)" in router
-    assert 'chapter_context=state["chapter_context"]' in pipeline
+    assert "ChapterContext.model_validate(request.context_snapshot)" in workflow_provider
+    assert "GenerationContextAdapter.to_context(context)" in workflow_provider
+    assert "ReviewContextAdapter.to_prompt_context(context)" in workflow_provider
     assert "constitution_context" in review_service
     assert "writer_persona_context" in review_service
     assert "get_constitution(" not in review_service

@@ -56,7 +56,6 @@ POSTGRES_USER=mofeng_smoke
 POSTGRES_PASSWORD=smoke-only-password-$project_name
 POSTGRES_DATABASE=mofeng_smoke
 BOOTSTRAP_CREATE_DEFAULT_ADMIN=false
-CHAPTER_WORKFLOW_START_ENABLED=true
 APP_PORT=0
 REDIS_URL=
 LINUXDO_REDIRECT_URI=http://127.0.0.1/api/auth/linuxdo/register

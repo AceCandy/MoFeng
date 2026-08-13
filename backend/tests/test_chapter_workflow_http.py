@@ -7,9 +7,8 @@ from uuid import UUID, uuid4
 import httpx
 import pytest
 from pydantic import ValidationError
-from sqlalchemy import func, select, update
+from sqlalchemy import update
 
-from app.core.config import settings
 from app.core.dependencies import get_current_user
 from app.db.session import get_session
 from app.main import app
@@ -155,48 +154,32 @@ def test_workflow_snapshot_requires_bounded_retry_activity_key():
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_start_gate_and_duplicate_return_public_snapshot(isolated_pg):
+async def test_start_and_duplicate_return_public_snapshot(isolated_pg):
     async with isolated_pg.session_factory() as session:
         await _seed_users_and_project(session)
 
-    previous_gate = settings.chapter_workflow_start_enabled
-    try:
-        settings.chapter_workflow_start_enabled = False
-        async with _client(isolated_pg, user_id=6101) as client:
-            disabled = await client.post("/api/writer/chapter-workflows", json=_start_payload())
-        assert disabled.status_code == 404
-        assert disabled.json() == {"detail": "章节工作流入口未启用"}
+    async with _client(isolated_pg, user_id=6101) as client:
+        created = await client.post("/api/writer/chapter-workflows", json=_start_payload())
+        duplicate = await client.post("/api/writer/chapter-workflows", json=_start_payload())
 
-        async with isolated_pg.session_factory() as session:
-            assert await session.scalar(select(func.count()).select_from(ChapterWorkflowRun)) == 0
+    assert created.status_code == 202
+    assert duplicate.status_code == 202
+    created_body = created.json()
+    duplicate_body = duplicate.json()
+    assert created_body["created"] is True
+    assert duplicate_body["created"] is False
+    assert duplicate_body["snapshot"] == created_body["snapshot"]
+    assert created_body["snapshot"]["run_id"] != created_body["snapshot"]["root_job_id"]
+    assert created_body["snapshot"]["project_id"] == "workflow-http-project"
+    assert created_body["snapshot"]["allowed_commands"] == ["cancel"]
+    assert created_body["events_url"].endswith(
+        f"stream_type=workflow&stream_id={created_body['snapshot']['run_id']}"
+    )
+    _assert_private_workflow_data_absent(created_body)
 
-        settings.chapter_workflow_start_enabled = True
-        async with _client(isolated_pg, user_id=6101) as client:
-            created = await client.post("/api/writer/chapter-workflows", json=_start_payload())
-            duplicate = await client.post("/api/writer/chapter-workflows", json=_start_payload())
-
-        assert created.status_code == 202
-        assert duplicate.status_code == 202
-        created_body = created.json()
-        duplicate_body = duplicate.json()
-        assert created_body["created"] is True
-        assert duplicate_body["created"] is False
-        assert duplicate_body["snapshot"] == created_body["snapshot"]
-        assert created_body["snapshot"]["run_id"] != created_body["snapshot"]["root_job_id"]
-        assert created_body["snapshot"]["project_id"] == "workflow-http-project"
-        assert created_body["snapshot"]["allowed_commands"] == ["cancel"]
-        assert created_body["events_url"].endswith(
-            f"stream_type=workflow&stream_id={created_body['snapshot']['run_id']}"
-        )
-        _assert_private_workflow_data_absent(created_body)
-
-        operation = app.openapi()["paths"]["/api/writer/chapter-workflows/{run_id}/commands"][
-            "post"
-        ]
-        conflict_schema = operation["responses"]["409"]["content"]["application/json"]["schema"]
-        assert conflict_schema["$ref"].endswith("ChapterWorkflowCommandConflictResponse")
-    finally:
-        settings.chapter_workflow_start_enabled = previous_gate
+    operation = app.openapi()["paths"]["/api/writer/chapter-workflows/{run_id}/commands"]["post"]
+    conflict_schema = operation["responses"]["409"]["content"]["application/json"]["schema"]
+    assert conflict_schema["$ref"].endswith("ChapterWorkflowCommandConflictResponse")
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -204,60 +187,55 @@ async def test_snapshot_missing_and_foreign_runs_are_identical_404(isolated_pg):
     async with isolated_pg.session_factory() as session:
         await _seed_users_and_project(session)
 
-    previous_gate = settings.chapter_workflow_start_enabled
-    try:
-        settings.chapter_workflow_start_enabled = True
-        async with _client(isolated_pg, user_id=6101) as client:
-            created = await client.post("/api/writer/chapter-workflows", json=_start_payload())
-            run_id = created.json()["snapshot"]["run_id"]
-            missing_run_id = str(uuid4())
-            missing = await client.get(f"/api/writer/chapter-workflows/{missing_run_id}")
-            missing_command = await client.post(
-                f"/api/writer/chapter-workflows/{missing_run_id}/commands",
-                json={
-                    "command_id": str(uuid4()),
-                    "type": "cancel",
-                    "payload_version": 1,
-                    "payload": {},
-                    "expected_run_revision": 0,
-                    "expected_chapter_revision": 0,
-                    "expected_checkpoint_id": "missing-checkpoint",
-                },
-            )
-            missing_project_payload = _start_payload()
-            missing_project_payload["project_id"] = "missing-workflow-project"
-            missing_project = await client.post(
-                "/api/writer/chapter-workflows",
-                json=missing_project_payload,
-            )
+    async with _client(isolated_pg, user_id=6101) as client:
+        created = await client.post("/api/writer/chapter-workflows", json=_start_payload())
+        run_id = created.json()["snapshot"]["run_id"]
+        missing_run_id = str(uuid4())
+        missing = await client.get(f"/api/writer/chapter-workflows/{missing_run_id}")
+        missing_command = await client.post(
+            f"/api/writer/chapter-workflows/{missing_run_id}/commands",
+            json={
+                "command_id": str(uuid4()),
+                "type": "cancel",
+                "payload_version": 1,
+                "payload": {},
+                "expected_run_revision": 0,
+                "expected_chapter_revision": 0,
+                "expected_checkpoint_id": "missing-checkpoint",
+            },
+        )
+        missing_project_payload = _start_payload()
+        missing_project_payload["project_id"] = "missing-workflow-project"
+        missing_project = await client.post(
+            "/api/writer/chapter-workflows",
+            json=missing_project_payload,
+        )
 
-        async with _client(isolated_pg, user_id=6102) as client:
-            foreign = await client.get(f"/api/writer/chapter-workflows/{run_id}")
-            foreign_command = await client.post(
-                f"/api/writer/chapter-workflows/{run_id}/commands",
-                json={
-                    "command_id": str(uuid4()),
-                    "type": "cancel",
-                    "payload_version": 1,
-                    "payload": {},
-                    "expected_run_revision": 0,
-                    "expected_chapter_revision": 0,
-                    "expected_checkpoint_id": "foreign-checkpoint",
-                },
-            )
-            foreign_project = await client.post(
-                "/api/writer/chapter-workflows",
-                json=_start_payload(),
-            )
+    async with _client(isolated_pg, user_id=6102) as client:
+        foreign = await client.get(f"/api/writer/chapter-workflows/{run_id}")
+        foreign_command = await client.post(
+            f"/api/writer/chapter-workflows/{run_id}/commands",
+            json={
+                "command_id": str(uuid4()),
+                "type": "cancel",
+                "payload_version": 1,
+                "payload": {},
+                "expected_run_revision": 0,
+                "expected_chapter_revision": 0,
+                "expected_checkpoint_id": "foreign-checkpoint",
+            },
+        )
+        foreign_project = await client.post(
+            "/api/writer/chapter-workflows",
+            json=_start_payload(),
+        )
 
-        assert missing.status_code == foreign.status_code == 404
-        assert missing.json() == foreign.json() == {"detail": "章节工作流不存在"}
-        assert missing_command.status_code == foreign_command.status_code == 404
-        assert missing_command.json() == foreign_command.json() == {"detail": "章节工作流不存在"}
-        assert missing_project.status_code == foreign_project.status_code == 404
-        assert missing_project.json() == foreign_project.json() == {"detail": "项目不存在"}
-    finally:
-        settings.chapter_workflow_start_enabled = previous_gate
+    assert missing.status_code == foreign.status_code == 404
+    assert missing.json() == foreign.json() == {"detail": "章节工作流不存在"}
+    assert missing_command.status_code == foreign_command.status_code == 404
+    assert missing_command.json() == foreign_command.json() == {"detail": "章节工作流不存在"}
+    assert missing_project.status_code == foreign_project.status_code == 404
+    assert missing_project.json() == foreign_project.json() == {"detail": "项目不存在"}
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -268,200 +246,194 @@ async def test_current_lookup_uses_full_order_and_excludes_successor_predecessor
     async with isolated_pg.session_factory() as session:
         await _seed_users_and_project(session)
 
-    previous_gate = settings.chapter_workflow_start_enabled
-    try:
-        settings.chapter_workflow_start_enabled = True
-        first_run_id = "22222222-2222-4222-8222-222222222222"
-        second_run_id = "11111111-1111-4111-8111-111111111111"
-        run_ids = iter((UUID(first_run_id), UUID(second_run_id)))
-        monkeypatch.setattr(
-            "app.services.chapter_workflow_start.uuid4",
-            lambda: next(run_ids),
+    first_run_id = "22222222-2222-4222-8222-222222222222"
+    second_run_id = "11111111-1111-4111-8111-111111111111"
+    run_ids = iter((UUID(first_run_id), UUID(second_run_id)))
+    monkeypatch.setattr(
+        "app.services.chapter_workflow_start.uuid4",
+        lambda: next(run_ids),
+    )
+    async with _client(isolated_pg, user_id=6101) as client:
+        first_response = await client.post(
+            "/api/writer/chapter-workflows",
+            json=_start_payload(),
         )
-        async with _client(isolated_pg, user_id=6101) as client:
-            first_response = await client.post(
-                "/api/writer/chapter-workflows",
-                json=_start_payload(),
-            )
-        first_id = first_response.json()["snapshot"]["run_id"]
-        assert first_id == first_run_id
+    first_id = first_response.json()["snapshot"]["run_id"]
+    assert first_id == first_run_id
 
-        async with isolated_pg.session_factory() as session:
-            first = await session.get(ChapterWorkflowRun, first_id)
-            assert first is not None
-            first_job = await session.get(BackgroundTask, first.root_job_id)
-            assert first_job is not None
-            first.is_active = False
-            first.status = "failed"
-            first.node_key = "failed"
-            first_job.status = "failed"
-            await session.commit()
+    async with isolated_pg.session_factory() as session:
+        first = await session.get(ChapterWorkflowRun, first_id)
+        assert first is not None
+        first_job = await session.get(BackgroundTask, first.root_job_id)
+        assert first_job is not None
+        first.is_active = False
+        first.status = "failed"
+        first.node_key = "failed"
+        first_job.status = "failed"
+        await session.commit()
 
-        async with _client(isolated_pg, user_id=6101) as client:
-            second_response = await client.post(
-                "/api/writer/chapter-workflows",
-                json=_start_payload(),
-            )
-        second_id = second_response.json()["snapshot"]["run_id"]
-        assert second_id == second_run_id
+    async with _client(isolated_pg, user_id=6101) as client:
+        second_response = await client.post(
+            "/api/writer/chapter-workflows",
+            json=_start_payload(),
+        )
+    second_id = second_response.json()["snapshot"]["run_id"]
+    assert second_id == second_run_id
 
-        async with isolated_pg.session_factory() as session:
-            first = await session.get(ChapterWorkflowRun, first_id)
-            second = await session.get(ChapterWorkflowRun, second_id)
-            assert first is not None and second is not None
-            first_job = await session.get(BackgroundTask, first.root_job_id)
-            assert first_job is not None
+    async with isolated_pg.session_factory() as session:
+        first = await session.get(ChapterWorkflowRun, first_id)
+        second = await session.get(ChapterWorkflowRun, second_id)
+        assert first is not None and second is not None
+        first_job = await session.get(BackgroundTask, first.root_job_id)
+        assert first_job is not None
 
-            first.is_active = True
-            first.status = "queued"
-            first.node_key = "freeze_context"
-            first.base_revision = 2
-            first.successor_run_id = None
-            first_job.status = "queued"
-            first_job.payload = {**first_job.payload, "base_revision": 2}
-            await session.commit()
+        first.is_active = True
+        first.status = "queued"
+        first.node_key = "freeze_context"
+        first.base_revision = 2
+        first.successor_run_id = None
+        first_job.status = "queued"
+        first_job.payload = {**first_job.payload, "base_revision": 2}
+        await session.commit()
 
-        settings.chapter_workflow_start_enabled = False
-        async with _client(isolated_pg, user_id=6101) as client:
-            multiple_active_current = await client.get(
-                "/api/writer/chapter-workflows/current",
-                params={"project_id": "workflow-http-project", "chapter_number": 1},
-            )
-
-        assert multiple_active_current.status_code == 200
-        assert multiple_active_current.json()["snapshot"]["run_id"] == first_id
-        assert multiple_active_current.json()["events_url"].endswith(
-            f"stream_type=workflow&stream_id={first_id}"
+    async with _client(isolated_pg, user_id=6101) as client:
+        multiple_active_current = await client.get(
+            "/api/writer/chapter-workflows/current",
+            params={"project_id": "workflow-http-project", "chapter_number": 1},
         )
 
-        async with isolated_pg.session_factory() as session:
-            first = await session.get(ChapterWorkflowRun, first_id)
-            assert first is not None
-            first_job = await session.get(BackgroundTask, first.root_job_id)
-            assert first_job is not None
-            first.is_active = False
-            first.status = "failed"
-            first.node_key = "failed"
-            first.base_revision = 3
-            first_job.status = "failed"
-            await session.commit()
+    assert multiple_active_current.status_code == 200
+    assert multiple_active_current.json()["snapshot"]["run_id"] == first_id
+    assert multiple_active_current.json()["events_url"].endswith(
+        f"stream_type=workflow&stream_id={first_id}"
+    )
+
+    async with isolated_pg.session_factory() as session:
+        first = await session.get(ChapterWorkflowRun, first_id)
+        assert first is not None
+        first_job = await session.get(BackgroundTask, first.root_job_id)
+        assert first_job is not None
+        first.is_active = False
+        first.status = "failed"
+        first.node_key = "failed"
+        first.base_revision = 3
+        first_job.status = "failed"
+        await session.commit()
+
+    async with _client(isolated_pg, user_id=6101) as client:
+        active_over_terminal = await client.get(
+            "/api/writer/chapter-workflows/current",
+            params={"project_id": "workflow-http-project", "chapter_number": 1},
+        )
+        missing_current = await client.get(
+            "/api/writer/chapter-workflows/current",
+            params={"project_id": "missing-workflow-project", "chapter_number": 1},
+        )
+    async with _client(isolated_pg, user_id=6102) as client:
+        foreign_current = await client.get(
+            "/api/writer/chapter-workflows/current",
+            params={"project_id": "workflow-http-project", "chapter_number": 1},
+        )
+
+    assert active_over_terminal.status_code == 200
+    assert active_over_terminal.json()["snapshot"]["run_id"] == second_id
+    assert missing_current.status_code == foreign_current.status_code == 200
+    assert missing_current.json() is foreign_current.json() is None
+
+    async with isolated_pg.session_factory() as session:
+        first = await session.get(ChapterWorkflowRun, first_id)
+        second = await session.get(ChapterWorkflowRun, second_id)
+        assert first is not None and second is not None
+        first_job = await session.get(BackgroundTask, first.root_job_id)
+        second_job = await session.get(BackgroundTask, second.root_job_id)
+        assert first_job is not None and second_job is not None
+
+        first.is_active = False
+        first.status = "failed"
+        first.node_key = "failed"
+        first.successor_run_id = None
+        first_job.status = "failed"
+        second.is_active = False
+        second.status = "cancelled"
+        second.node_key = "cancelled"
+        second_job.status = "cancelled"
+
+        earlier = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        later = earlier + timedelta(hours=1)
+        await session.execute(
+            update(ChapterWorkflowRun)
+            .where(ChapterWorkflowRun.id == first_id)
+            .values(base_revision=2, updated_at=earlier)
+        )
+        await session.execute(
+            update(ChapterWorkflowRun)
+            .where(ChapterWorkflowRun.id == second_id)
+            .values(base_revision=1, updated_at=later)
+        )
+        await session.commit()
 
         async with _client(isolated_pg, user_id=6101) as client:
-            active_over_terminal = await client.get(
-                "/api/writer/chapter-workflows/current",
-                params={"project_id": "workflow-http-project", "chapter_number": 1},
-            )
-            missing_current = await client.get(
-                "/api/writer/chapter-workflows/current",
-                params={"project_id": "missing-workflow-project", "chapter_number": 1},
-            )
-        async with _client(isolated_pg, user_id=6102) as client:
-            foreign_current = await client.get(
-                "/api/writer/chapter-workflows/current",
-                params={"project_id": "workflow-http-project", "chapter_number": 1},
-            )
 
-        assert active_over_terminal.status_code == 200
-        assert active_over_terminal.json()["snapshot"]["run_id"] == second_id
-        assert missing_current.status_code == foreign_current.status_code == 200
-        assert missing_current.json() is foreign_current.json() is None
+            async def current_run_id() -> str:
+                response = await client.get(
+                    "/api/writer/chapter-workflows/current",
+                    params={
+                        "project_id": "workflow-http-project",
+                        "chapter_number": 1,
+                    },
+                )
+                assert response.status_code == 200
+                return response.json()["snapshot"]["run_id"]
 
-        async with isolated_pg.session_factory() as session:
-            first = await session.get(ChapterWorkflowRun, first_id)
-            second = await session.get(ChapterWorkflowRun, second_id)
-            assert first is not None and second is not None
-            first_job = await session.get(BackgroundTask, first.root_job_id)
-            second_job = await session.get(BackgroundTask, second.root_job_id)
-            assert first_job is not None and second_job is not None
+            assert await current_run_id() == first_id
 
-            first.is_active = False
-            first.status = "failed"
-            first.node_key = "failed"
-            first.successor_run_id = None
-            first_job.status = "failed"
-            second.is_active = False
-            second.status = "cancelled"
-            second.node_key = "cancelled"
-            second_job.status = "cancelled"
-
-            earlier = datetime(2026, 1, 1, tzinfo=timezone.utc)
-            later = earlier + timedelta(hours=1)
             await session.execute(
                 update(ChapterWorkflowRun)
                 .where(ChapterWorkflowRun.id == first_id)
-                .values(base_revision=2, updated_at=earlier)
+                .values(base_revision=2, updated_at=later)
             )
             await session.execute(
                 update(ChapterWorkflowRun)
                 .where(ChapterWorkflowRun.id == second_id)
-                .values(base_revision=1, updated_at=later)
+                .values(base_revision=2, updated_at=earlier)
             )
             await session.commit()
+            assert await current_run_id() == first_id
 
-            async with _client(isolated_pg, user_id=6101) as client:
+            await session.execute(
+                update(ChapterWorkflowRun)
+                .where(ChapterWorkflowRun.id == first_id)
+                .values(updated_at=later, created_at=earlier)
+            )
+            await session.execute(
+                update(ChapterWorkflowRun)
+                .where(ChapterWorkflowRun.id == second_id)
+                .values(updated_at=later, created_at=later)
+            )
+            await session.commit()
+            assert await current_run_id() == second_id
 
-                async def current_run_id() -> str:
-                    response = await client.get(
-                        "/api/writer/chapter-workflows/current",
-                        params={
-                            "project_id": "workflow-http-project",
-                            "chapter_number": 1,
-                        },
-                    )
-                    assert response.status_code == 200
-                    return response.json()["snapshot"]["run_id"]
+            await session.execute(
+                update(ChapterWorkflowRun)
+                .where(ChapterWorkflowRun.id == first_id)
+                .values(updated_at=later, created_at=later)
+            )
+            await session.execute(
+                update(ChapterWorkflowRun)
+                .where(ChapterWorkflowRun.id == second_id)
+                .values(updated_at=later, created_at=later)
+            )
+            await session.commit()
+            assert await current_run_id() == first_id
 
-                assert await current_run_id() == first_id
+            await session.execute(
+                update(ChapterWorkflowRun)
+                .where(ChapterWorkflowRun.id == first_id)
+                .values(successor_run_id=second_id, updated_at=later)
+            )
+            await session.commit()
+            assert await current_run_id() == second_id
 
-                await session.execute(
-                    update(ChapterWorkflowRun)
-                    .where(ChapterWorkflowRun.id == first_id)
-                    .values(base_revision=2, updated_at=later)
-                )
-                await session.execute(
-                    update(ChapterWorkflowRun)
-                    .where(ChapterWorkflowRun.id == second_id)
-                    .values(base_revision=2, updated_at=earlier)
-                )
-                await session.commit()
-                assert await current_run_id() == first_id
-
-                await session.execute(
-                    update(ChapterWorkflowRun)
-                    .where(ChapterWorkflowRun.id == first_id)
-                    .values(updated_at=later, created_at=earlier)
-                )
-                await session.execute(
-                    update(ChapterWorkflowRun)
-                    .where(ChapterWorkflowRun.id == second_id)
-                    .values(updated_at=later, created_at=later)
-                )
-                await session.commit()
-                assert await current_run_id() == second_id
-
-                await session.execute(
-                    update(ChapterWorkflowRun)
-                    .where(ChapterWorkflowRun.id == first_id)
-                    .values(updated_at=later, created_at=later)
-                )
-                await session.execute(
-                    update(ChapterWorkflowRun)
-                    .where(ChapterWorkflowRun.id == second_id)
-                    .values(updated_at=later, created_at=later)
-                )
-                await session.commit()
-                assert await current_run_id() == first_id
-
-                await session.execute(
-                    update(ChapterWorkflowRun)
-                    .where(ChapterWorkflowRun.id == first_id)
-                    .values(successor_run_id=second_id, updated_at=later)
-                )
-                await session.commit()
-                assert await current_run_id() == second_id
-
-    finally:
-        settings.chapter_workflow_start_enabled = previous_gate
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -469,73 +441,65 @@ async def test_stale_command_returns_409_with_complete_current_snapshot(isolated
     async with isolated_pg.session_factory() as session:
         await _seed_users_and_project(session)
 
-    previous_gate = settings.chapter_workflow_start_enabled
-    try:
-        settings.chapter_workflow_start_enabled = True
-        async with _client(isolated_pg, user_id=6101) as client:
-            created = await client.post("/api/writer/chapter-workflows", json=_start_payload())
-            run_id = created.json()["snapshot"]["run_id"]
+    async with _client(isolated_pg, user_id=6101) as client:
+        created = await client.post("/api/writer/chapter-workflows", json=_start_payload())
+        run_id = created.json()["snapshot"]["run_id"]
 
-        # 关闭新 start 后，已创建 run 的 snapshot/command 仍必须可 drain。
-        settings.chapter_workflow_start_enabled = False
+    async with isolated_pg.session_factory() as session:
+        run = await session.get(ChapterWorkflowRun, run_id)
+        assert run is not None
+        job = await session.get(BackgroundTask, run.root_job_id)
+        assert job is not None
+        run.status = "waiting_for_selection"
+        run.node_key = "waiting_for_selection"
+        run.checkpoint_id = "checkpoint-http"
+        job.status = "waiting"
+        await session.commit()
 
-        async with isolated_pg.session_factory() as session:
-            run = await session.get(ChapterWorkflowRun, run_id)
-            assert run is not None
-            job = await session.get(BackgroundTask, run.root_job_id)
-            assert job is not None
-            run.status = "waiting_for_selection"
-            run.node_key = "waiting_for_selection"
-            run.checkpoint_id = "checkpoint-http"
-            job.status = "waiting"
-            await session.commit()
+    async with _client(isolated_pg, user_id=6101) as client:
+        current = await client.get(f"/api/writer/chapter-workflows/{run_id}")
+        current_snapshot = current.json()
+        stale = await client.post(
+            f"/api/writer/chapter-workflows/{run_id}/commands",
+            json={
+                "command_id": str(uuid4()),
+                "type": "select",
+                "payload_version": 1,
+                "payload": {"selected_version_id": 1},
+                "expected_run_revision": current_snapshot["row_revision"] + 1,
+                "expected_chapter_revision": current_snapshot["current_chapter_revision"],
+                "expected_checkpoint_id": current_snapshot["checkpoint_id"],
+            },
+        )
+        latest = await client.get(f"/api/writer/chapter-workflows/{run_id}")
+        accepted_command_id = str(uuid4())
+        accepted = await client.post(
+            f"/api/writer/chapter-workflows/{run_id}/commands",
+            json={
+                "command_id": accepted_command_id,
+                "type": "cancel",
+                "payload_version": 1,
+                "payload": {},
+                "expected_run_revision": latest.json()["row_revision"],
+                "expected_chapter_revision": latest.json()["current_chapter_revision"],
+                "expected_checkpoint_id": latest.json()["checkpoint_id"],
+            },
+        )
 
-        async with _client(isolated_pg, user_id=6101) as client:
-            current = await client.get(f"/api/writer/chapter-workflows/{run_id}")
-            current_snapshot = current.json()
-            stale = await client.post(
-                f"/api/writer/chapter-workflows/{run_id}/commands",
-                json={
-                    "command_id": str(uuid4()),
-                    "type": "select",
-                    "payload_version": 1,
-                    "payload": {"selected_version_id": 1},
-                    "expected_run_revision": current_snapshot["row_revision"] + 1,
-                    "expected_chapter_revision": current_snapshot["current_chapter_revision"],
-                    "expected_checkpoint_id": current_snapshot["checkpoint_id"],
-                },
-            )
-            latest = await client.get(f"/api/writer/chapter-workflows/{run_id}")
-            accepted_command_id = str(uuid4())
-            accepted = await client.post(
-                f"/api/writer/chapter-workflows/{run_id}/commands",
-                json={
-                    "command_id": accepted_command_id,
-                    "type": "cancel",
-                    "payload_version": 1,
-                    "payload": {},
-                    "expected_run_revision": latest.json()["row_revision"],
-                    "expected_chapter_revision": latest.json()["current_chapter_revision"],
-                    "expected_checkpoint_id": latest.json()["checkpoint_id"],
-                },
-            )
-
-        assert stale.status_code == 409
-        assert stale.json() == {
-            "detail": {
-                "reason_code": "stale_run_revision",
-                "current_snapshot": latest.json(),
-            }
+    assert stale.status_code == 409
+    assert stale.json() == {
+        "detail": {
+            "reason_code": "stale_run_revision",
+            "current_snapshot": latest.json(),
         }
-        assert latest.json()["run_id"] == current_snapshot["run_id"]
-        assert latest.json()["row_revision"] == current_snapshot["row_revision"]
-        assert latest.json()["resume_cursor"] > current_snapshot["resume_cursor"]
-        assert accepted.status_code == 202
-        assert accepted.json()["command_id"] == accepted_command_id
-        assert accepted.json()["type"] == "cancel"
-        assert accepted.json()["status"] == "applied"
-        assert accepted.json()["snapshot"]["status"] == "cancelled"
-        _assert_private_workflow_data_absent(stale.json())
-        _assert_private_workflow_data_absent(accepted.json())
-    finally:
-        settings.chapter_workflow_start_enabled = previous_gate
+    }
+    assert latest.json()["run_id"] == current_snapshot["run_id"]
+    assert latest.json()["row_revision"] == current_snapshot["row_revision"]
+    assert latest.json()["resume_cursor"] > current_snapshot["resume_cursor"]
+    assert accepted.status_code == 202
+    assert accepted.json()["command_id"] == accepted_command_id
+    assert accepted.json()["type"] == "cancel"
+    assert accepted.json()["status"] == "applied"
+    assert accepted.json()["snapshot"]["status"] == "cancelled"
+    _assert_private_workflow_data_absent(stale.json())
+    _assert_private_workflow_data_absent(accepted.json())

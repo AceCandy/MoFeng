@@ -16,12 +16,11 @@ def test_core_user_facing_ai_calls_pass_stage_keys():
         "app/services/chapter_outline_task_runner.py": [
             'stage="chapter_outline"',
         ],
-        "app/services/pipeline_orchestrator.py": [
+        "app/services/chapter_workflow_handler.py": [
             'stage="chapter_mission"',
             'stage="chapter_writing"',
-            'stage="chapter_rewrite"',
-            'stage="chapter_compression"',
-            'stage="chapter_enrichment"',
+            'stage="version_review"',
+            'stage="chapter_optimization"',
         ],
         "app/api/routers/optimizer.py": [
             'stage="chapter_optimization"',

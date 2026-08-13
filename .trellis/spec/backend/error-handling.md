@@ -11,7 +11,7 @@ The codebase has **two coexisting error-signaling patterns** and **no custom exc
 | Pattern | Where used | Verdict for new code |
 |---------|------------|----------------------|
 | **A. Service raises `ValueError`, router translates to `HTTPException`** | `user_service`, `llm_config_service`, `foreshadowing_service`, `prompt_service` | ✅ Recommended |
-| **B. Service raises `HTTPException` directly** | `auth_service`, `novel_service`, `llm_service`, `import_service`, `update_log_service`, `chapter_generation_trace_service`, `pipeline_orchestrator` | ⚠️ Legacy — couples service layer to FastAPI, do not extend |
+| **B. Service raises `HTTPException` directly** | `auth_service`, `novel_service`, `llm_service`, `import_service`, `update_log_service`, `chapter_generation_trace_service` | ⚠️ Legacy — couples service layer to FastAPI, do not extend |
 | `RuntimeError` raised and never translated | `ai_review_service` | ⚠️ Becomes an uncontrolled 500 |
 
 ---

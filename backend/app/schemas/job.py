@@ -1,4 +1,4 @@
-# AIMETA P=持久任务payload契约_版本化业务参数|R=任务payload校验|NR=不含任务执行逻辑|E=ChapterOutlineJobPayload_ChapterGenerationJobPayload_ChapterWorkflowJobPayload_ChapterFinalizeJobPayload|X=internal|A=pydantic_contract|D=pydantic|S=none|RD=./README.ai
+# AIMETA P=持久任务payload契约_版本化业务参数|R=任务payload校验|NR=不含任务执行逻辑|E=ChapterOutlineJobPayload_ChapterWorkflowJobPayload_ChapterFinalizeJobPayload|X=internal|A=pydantic_contract|D=pydantic|S=none|RD=./README.ai
 from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -162,16 +162,6 @@ class ChapterTombstoneJobPayload(BaseModel):
         if any(not generation or len(generation) > 36 for generation in value.values()):
             raise ValueError("target artifact generation 长度必须为 1 到 36")
         return value
-
-
-class ChapterGenerationJobPayload(BaseModel):
-    """章节 LangGraph 生成 durable job v1 的持久参数。"""
-
-    project_id: str = Field(min_length=1, max_length=36)
-    chapter_number: int = Field(ge=1)
-    writing_notes: Optional[str] = None
-    flow_config: FlowConfig = Field(default_factory=FlowConfig)
-    from_node_key: Optional[str] = None
 
 
 class ChapterWorkflowRetrievalInputs(BaseModel):

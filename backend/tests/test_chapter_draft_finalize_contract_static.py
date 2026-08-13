@@ -14,7 +14,6 @@ from app.schemas.novel import (
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMAS_SOURCE = ROOT / "app/schemas/novel.py"
-PIPELINE_SOURCE = ROOT / "app/services/pipeline_orchestrator.py"
 
 
 def _source() -> str:
@@ -45,10 +44,8 @@ def test_confirm_finalize_contracts_exist() -> None:
 
 def test_generation_flow_no_longer_exposes_async_finalize_flag() -> None:
     schema_source = SCHEMAS_SOURCE.read_text(encoding="utf-8")
-    pipeline_source = PIPELINE_SOURCE.read_text(encoding="utf-8")
 
     assert "async_finalize" not in schema_source
-    assert "async_finalize" not in pipeline_source
 
 
 def test_chapter_generation_status_finalizing_value() -> None:

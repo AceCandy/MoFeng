@@ -39,7 +39,8 @@ def test_chapter_edits_submit_one_unified_durable_postprocess_job():
 def test_chapter_generation_and_finalize_are_submitted_to_durable_worker():
     writer = WRITER_ROUTER.read_text(encoding="utf-8")
 
-    assert 'job_type="chapter_generation"' in writer
+    assert 'job_type="chapter_generation"' not in writer
+    assert "ChapterWorkflowCompatibilityService(session).adapt_generation(" in writer
     assert 'job_type="chapter_finalize"' not in writer
     assert "ChapterFinalizeSubmissionService(session).submit(" in writer
     assert writer.count("response_model=BackgroundTaskResponse") >= 6

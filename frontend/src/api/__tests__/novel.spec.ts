@@ -7,7 +7,7 @@ const makeTaskResponse = () => ({
   id: 'chapter-job-1',
   user_id: 1,
   project_id: 'project-1',
-  task_type: 'chapter_generation',
+  task_type: 'chapter_workflow',
   title: '生成第三章正文',
   status: 'queued',
   progress: 0,

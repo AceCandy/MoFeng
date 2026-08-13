@@ -107,9 +107,8 @@ Configuration:
 
 - `test_chapter_context_contract.py`: deterministic serialization, tamper rejection, every-section provenance, visibility, adapter equality, and structure-only shadow diffs.
 - `test_chapter_context_resolver.py`: first chapter, budgets, projection versus canonical revisions, content-sensitive history/record revisions, RAG fallbacks, and no second DB read in two-stage retrieval.
-- `test_pipeline_context_restore.py`: invalid/mismatched snapshot rebuild, runtime updates, retrieval input refresh/disable, and unchanged snapshot reuse.
-- Static wiring tests must assert pipeline/writer/review/consistency use resolver/adapters and do not restore deleted context builders.
-- `test_chapter_workflow_context.py`: real PostgreSQL intent/result, explicit fallback, replay without a second resolver call, private-result tamper rejection, identity drift before intent, retryable failure, and reference-only state update.
+- Static wiring tests must assert workflow provider/writer/review/consistency use resolver/adapters and do not restore deleted context builders.
+- `test_chapter_workflow_context.py`: invalid/mismatched snapshot rejection, retrieval input refresh/disable, unchanged snapshot reuse, real PostgreSQL intent/result, explicit fallback, replay without a second resolver call, private-result tamper rejection, identity drift before intent, retryable failure, and reference-only state update.
 - `test_chapter_workflow_start.py`: effective retrieval inputs participate in `runtime_input_hash`, unsupported modes fail the typed freeze, and the base RAG section remains disabled.
 
 ## 7. Wrong vs Correct

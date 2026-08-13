@@ -509,7 +509,7 @@ migrate -> bootstrap -> app + worker
 
 并明确：
 
-- `CHAPTER_WORKFLOW_START_ENABLED=true` 时，app 与独立 durable worker 是同一发布单元。
+- app 与独立 durable worker 是同一发布单元；章节生成始终进入 durable workflow。
 - app HTTP 健康不代表 worker 健康；发布后同时检查 `python -m app.worker health` 和
   `python -m app.worker metrics`。
 - migrate/bootstrap 是 one-shot；任一失败时 app 和 worker 均不得启动。

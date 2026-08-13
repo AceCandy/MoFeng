@@ -4,7 +4,6 @@ from sqlalchemy.engine import URL
 from ..core.config import settings
 from .chapter_edit_postprocess import handle_chapter_edit_postprocess_job
 from .chapter_finalize_task_runner import handle_chapter_finalize_job
-from .chapter_generation_task_runner import handle_chapter_generation_job
 from .chapter_outbox_dispatcher import handle_chapter_outbox_dispatch
 from .chapter_outline_task_runner import handle_chapter_outline_job
 from .chapter_projection_handlers import (
@@ -43,12 +42,6 @@ def register_job_handlers(
         payload_version=1,
         side_effect_class=SideEffectClass.AMBIGUOUS_EXTERNAL,
         handler=handle_chapter_edit_postprocess_job,
-    )
-    registry.register(
-        job_type="chapter_generation",
-        payload_version=1,
-        side_effect_class=SideEffectClass.AMBIGUOUS_EXTERNAL,
-        handler=handle_chapter_generation_job,
     )
     registry.register(
         job_type="chapter_workflow",

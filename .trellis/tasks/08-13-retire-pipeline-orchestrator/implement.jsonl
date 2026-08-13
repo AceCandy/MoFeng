@@ -1,0 +1,5 @@
+{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file": ".trellis/spec/backend/index.md", "reason": "后端分层、质量与 durable 变更入口"}
+{"file": ".trellis/spec/backend/durable-job-guidelines.md", "reason": "durable workflow、worker registry、恢复与投影合同"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "无 workflow run 的 retry 冲突需在 router 边界映射"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "覆盖 HTTP、服务、worker、配置和部署的删除边界"}

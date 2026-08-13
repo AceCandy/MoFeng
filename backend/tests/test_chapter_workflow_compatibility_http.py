@@ -1,5 +1,5 @@
-# AIMETA P=章节工作流兼容HTTP与发布演练|R=legacy_facade_gate切换_单owner与canonical结果|NR=不执行完整graph或外部provider|E=test_*|X=internal|A=integration_test|D=pytest,httpx,postgresql|S=test|RD=../app/services/README.ai
-"""HTTP coverage for legacy writer routes during the workflow cutover window."""
+# AIMETA P=章节工作流兼容HTTP|R=writer_facade_durable路由_单owner与canonical结果|NR=不执行完整graph或外部provider|E=test_*|X=internal|A=integration_test|D=pytest,httpx,postgresql|S=test|RD=../app/services/README.ai
+"""HTTP coverage for existing writer routes backed by durable Chapter workflows."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ import pytest
 from sqlalchemy import func, select
 from test_chapter_workflow_http import _client, _seed_users_and_project, _start_payload
 
-from app.core.config import settings
 from app.models import ChapterOutboxEvent, ChapterRevision
 from app.models.background_task import BackgroundTask
 from app.models.chapter_workflow import ChapterWorkflowCommand, ChapterWorkflowRun
@@ -144,37 +143,28 @@ async def _finalize_candidate_once(
     return first.result.target_chapter_revision
 
 
-async def test_legacy_generation_drains_when_start_gate_is_closed(
-    isolated_pg,
-    monkeypatch,
-) -> None:
-    monkeypatch.setattr(settings, "chapter_workflow_start_enabled", False)
+async def test_generation_retry_without_workflow_returns_conflict(isolated_pg) -> None:
     await _seed(isolated_pg)
 
     async with _client(isolated_pg, user_id=6101) as client:
         response = await client.post(
             "/api/writer/novels/workflow-http-project/chapters/generate",
-            headers={"Idempotency-Key": "legacy-retry-1"},
+            headers={"Idempotency-Key": "missing-workflow-retry-1"},
             json={
                 "chapter_number": 1,
-                "writing_notes": "legacy drain",
+                "writing_notes": "retry without workflow",
                 "from_node_key": "draft_generation",
             },
         )
 
-    assert response.status_code == 202
-    assert response.json()["task_type"] == "chapter_generation"
+    assert response.status_code == 409
+    assert response.json() == {"detail": "workflow_retry_run_not_found"}
     async with isolated_pg.session_factory() as session:
-        job = (await session.execute(select(BackgroundTask))).scalars().one()
-        assert job.payload["from_node_key"] == "draft_generation"
+        assert await _count(session, BackgroundTask) == 0
         assert await _count(session, ChapterWorkflowRun) == 0
 
 
-async def test_legacy_generate_uses_one_workflow_root_when_gate_is_open(
-    isolated_pg,
-    monkeypatch,
-) -> None:
-    monkeypatch.setattr(settings, "chapter_workflow_start_enabled", True)
+async def test_generate_uses_one_workflow_root(isolated_pg) -> None:
     await _seed(isolated_pg)
     payload = {"chapter_number": 1, "writing_notes": "compat start"}
 
@@ -183,7 +173,6 @@ async def test_legacy_generate_uses_one_workflow_root_when_gate_is_open(
             "/api/writer/novels/workflow-http-project/chapters/generate",
             json=payload,
         )
-        monkeypatch.setattr(settings, "chapter_workflow_start_enabled", False)
         second = await client.post(
             "/api/writer/novels/workflow-http-project/chapters/generate",
             json=payload,
@@ -197,19 +186,18 @@ async def test_legacy_generate_uses_one_workflow_root_when_gate_is_open(
     async with isolated_pg.session_factory() as session:
         assert await _count(session, BackgroundTask) == 1
         assert await _count(session, ChapterWorkflowRun) == 1
-        legacy_jobs = (
-            await session.execute(
-                select(BackgroundTask).where(BackgroundTask.task_type == "chapter_generation")
-            )
-        ).scalars()
-        assert list(legacy_jobs) == []
+        assert list(
+            (
+                await session.execute(
+                    select(BackgroundTask).where(BackgroundTask.task_type == "chapter_generation")
+                )
+            ).scalars()
+        ) == []
 
 
-async def test_legacy_generate_rejects_conflicting_start_idempotency_key(
+async def test_generate_rejects_conflicting_start_idempotency_key(
     isolated_pg,
-    monkeypatch,
 ) -> None:
-    monkeypatch.setattr(settings, "chapter_workflow_start_enabled", True)
     await _seed(isolated_pg)
 
     async with _client(isolated_pg, user_id=6101) as client:
@@ -229,11 +217,9 @@ async def test_legacy_generate_rejects_conflicting_start_idempotency_key(
     assert conflicting.json() == {"detail": "同一 idempotency_key 不能用于不同的任务参数"}
 
 
-async def test_legacy_generate_replays_terminal_workflow_by_idempotency_key(
+async def test_generate_replays_terminal_workflow_by_idempotency_key(
     isolated_pg,
-    monkeypatch,
 ) -> None:
-    monkeypatch.setattr(settings, "chapter_workflow_start_enabled", True)
     await _seed(isolated_pg)
     payload = {"chapter_number": 1, "writing_notes": "terminal replay"}
     headers = {"Idempotency-Key": "workflow-start-terminal-1"}
@@ -268,28 +254,26 @@ async def test_legacy_generate_replays_terminal_workflow_by_idempotency_key(
         assert await _count(session, ChapterWorkflowRun) == 1
 
 
-async def test_rollout_gate_open_shares_one_owner_across_legacy_and_new_http(
+async def test_writer_and_workflow_http_share_one_owner(
     isolated_pg,
-    monkeypatch,
 ) -> None:
-    monkeypatch.setattr(settings, "chapter_workflow_start_enabled", True)
     await _seed(isolated_pg)
 
     async with _client(isolated_pg, user_id=6101) as client:
-        legacy_start = await client.post(
+        writer_start = await client.post(
             "/api/writer/novels/workflow-http-project/chapters/generate",
-            headers={"Idempotency-Key": "rollout-start-1"},
-            json={"chapter_number": 1, "writing_notes": "rollout drill"},
+            headers={"Idempotency-Key": "writer-start-1"},
+            json={"chapter_number": 1, "writing_notes": "shared owner"},
         )
         current = await client.get(
             "/api/writer/chapter-workflows/current",
             params={"project_id": "workflow-http-project", "chapter_number": 1},
         )
 
-    assert legacy_start.status_code == 202
+    assert writer_start.status_code == 202
     assert current.status_code == 200
     snapshot = current.json()["snapshot"]
-    assert snapshot["root_job_id"] == legacy_start.json()["id"]
+    assert snapshot["root_job_id"] == writer_start.json()["id"]
     assert current.json()["events_url"].endswith(snapshot["run_id"])
 
     version_ids = await _add_candidate_versions(isolated_pg, run_id=snapshot["run_id"])
@@ -299,7 +283,7 @@ async def test_rollout_gate_open_shares_one_owner_across_legacy_and_new_http(
         run_status="waiting_for_selection",
         job_status="waiting",
         node_key="waiting_for_selection",
-        checkpoint_id="rollout-drill-checkpoint",
+        checkpoint_id="shared-owner-checkpoint",
         chapter_status="waiting_for_confirm",
     )
 
@@ -358,11 +342,9 @@ async def test_rollout_gate_open_shares_one_owner_across_legacy_and_new_http(
     assert "chapter_generation" not in task_types
 
 
-async def test_legacy_select_drains_when_no_workflow_exists(
+async def test_select_without_workflow_uses_durable_finalize_projection(
     isolated_pg,
-    monkeypatch,
 ) -> None:
-    monkeypatch.setattr(settings, "chapter_workflow_start_enabled", False)
     await _seed(isolated_pg)
     selected_version_id = await _add_legacy_version(isolated_pg)
 
@@ -386,9 +368,7 @@ async def test_legacy_select_drains_when_no_workflow_exists(
 
 async def test_active_workflow_select_is_idempotent_and_never_enqueues_finalize(
     isolated_pg,
-    monkeypatch,
 ) -> None:
-    monkeypatch.setattr(settings, "chapter_workflow_start_enabled", True)
     await _seed(isolated_pg)
     snapshot = await _start_workflow(isolated_pg)
     version_ids = await _add_candidate_versions(isolated_pg, run_id=snapshot["run_id"])
@@ -400,7 +380,6 @@ async def test_active_workflow_select_is_idempotent_and_never_enqueues_finalize(
         node_key="waiting_for_selection",
         checkpoint_id="compat-select-checkpoint",
     )
-    monkeypatch.setattr(settings, "chapter_workflow_start_enabled", False)
 
     async with _client(isolated_pg, user_id=6101) as client:
         first = await client.post(
@@ -431,11 +410,9 @@ async def test_active_workflow_select_is_idempotent_and_never_enqueues_finalize(
         assert await _count(session, BackgroundTask) == 1
 
 
-async def test_rollback_gate_closed_drains_active_owner_without_duplicate_outcome(
+async def test_existing_routes_share_active_owner_without_duplicate_outcome(
     isolated_pg,
-    monkeypatch,
 ) -> None:
-    monkeypatch.setattr(settings, "chapter_workflow_start_enabled", True)
     await _seed(isolated_pg)
     snapshot = await _start_workflow(isolated_pg)
     version_ids = await _add_candidate_versions(isolated_pg, run_id=snapshot["run_id"])
@@ -445,16 +422,15 @@ async def test_rollback_gate_closed_drains_active_owner_without_duplicate_outcom
         run_status="waiting_for_selection",
         job_status="waiting",
         node_key="waiting_for_selection",
-        checkpoint_id="rollback-drill-checkpoint",
+        checkpoint_id="existing-routes-checkpoint",
         chapter_status="waiting_for_confirm",
     )
-    monkeypatch.setattr(settings, "chapter_workflow_start_enabled", False)
 
     async with _client(isolated_pg, user_id=6101) as client:
-        legacy_generate = await client.post(
+        writer_generate = await client.post(
             "/api/writer/novels/workflow-http-project/chapters/generate",
             headers={"Idempotency-Key": "previous-frontend-generate-1"},
-            json={"chapter_number": 1, "writing_notes": "rollback drain"},
+            json={"chapter_number": 1, "writing_notes": "reuse active workflow"},
         )
         first_select = await client.post(
             "/api/writer/novels/workflow-http-project/chapters/select",
@@ -467,10 +443,10 @@ async def test_rollback_gate_closed_drains_active_owner_without_duplicate_outcom
             json={"chapter_number": 1, "version_index": 0},
         )
 
-    assert legacy_generate.status_code == first_select.status_code == 202
+    assert writer_generate.status_code == first_select.status_code == 202
     assert replayed_select.status_code == 202
     assert (
-        legacy_generate.json()["id"]
+        writer_generate.json()["id"]
         == first_select.json()["id"]
         == replayed_select.json()["id"]
         == snapshot["root_job_id"]
@@ -509,9 +485,7 @@ async def test_rollback_gate_closed_drains_active_owner_without_duplicate_outcom
 
 async def test_active_workflow_rejects_unrepresentable_finalize_options(
     isolated_pg,
-    monkeypatch,
 ) -> None:
-    monkeypatch.setattr(settings, "chapter_workflow_start_enabled", True)
     await _seed(isolated_pg)
     snapshot = await _start_workflow(isolated_pg)
     await _add_candidate_versions(isolated_pg, run_id=snapshot["run_id"])
@@ -543,9 +517,7 @@ async def test_active_workflow_rejects_unrepresentable_finalize_options(
 
 async def test_active_workflow_from_node_maps_only_to_matching_retry(
     isolated_pg,
-    monkeypatch,
 ) -> None:
-    monkeypatch.setattr(settings, "chapter_workflow_start_enabled", True)
     await _seed(isolated_pg)
     snapshot = await _start_workflow(isolated_pg)
     await _set_run_state(
@@ -556,7 +528,6 @@ async def test_active_workflow_from_node_maps_only_to_matching_retry(
         node_key="generate_candidates",
         checkpoint_id="compat-retry-checkpoint",
     )
-    monkeypatch.setattr(settings, "chapter_workflow_start_enabled", False)
 
     async with _client(isolated_pg, user_id=6101) as client:
         mismatch = await client.post(

@@ -5,7 +5,6 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import func, select
 
-from app.api.routers.tasks import _public_task_response
 from app.core.config import settings
 from app.models import (
     BlueprintCharacter,
@@ -40,7 +39,6 @@ from app.services.job_service import JobService
 from app.services.job_worker import JobWorker
 from app.services.llm_service import LLMService
 from app.services.novel_service import NovelService
-from app.services.pipeline_orchestrator import PipelineOrchestrator
 from app.services.prompt_service import PromptService
 from app.utils.ai_telemetry import AICallResult, TokenUsage
 
@@ -1005,79 +1003,3 @@ async def test_failed_summary_replay_completes_without_regenerating_canonical_co
     assert finalization_requested_count == 1
     assert sorted(run.status for run in summary_runs) == ["failed", "succeeded"]
     assert {run.dependency_run_id for run in downstream_runs} == {replay.projection_run_id}
-
-
-@pytest.mark.asyncio(loop_scope="session")
-async def test_generation_worker_publishes_only_whitelisted_result(
-    db_session_factory,
-    monkeypatch,
-):
-    async with db_session_factory() as session:
-        session.add(User(id=1403, username="generator-1403", hashed_password="secret"))
-        session.add(
-            NovelProject(
-                id="generation-worker-project",
-                user_id=1403,
-                title="生成持久任务项目",
-                initial_prompt="测试",
-            )
-        )
-        await session.commit()
-        task = await JobService(session).enqueue_job(
-            user_id=1403,
-            project_id="generation-worker-project",
-            job_type="chapter_generation",
-            title="生成第一章正文",
-            payload={
-                "project_id": "generation-worker-project",
-                "chapter_number": 1,
-                "writing_notes": "这是私有写作指令",
-                "flow_config": {"preset": "basic", "enable_rag": True},
-                "from_node_key": None,
-            },
-            payload_version=1,
-        )
-        task_id = task.id
-
-    monkeypatch.setattr(
-        PipelineOrchestrator,
-        "generate_chapter",
-        AsyncMock(
-            return_value={
-                "project_id": "generation-worker-project",
-                "chapter_number": 1,
-                "preset": "basic",
-                "best_version_index": 0,
-                "variants": [{"content": "完整生成正文", "debug_metadata": {"prompt": "私有"}}],
-                "review_summaries": {"version1": "评审"},
-                "debug_metadata": {"prompt": "私有"},
-            }
-        ),
-    )
-    worker = JobWorker(
-        session_factory=db_session_factory,
-        registry=build_job_handler_registry(),
-        worker_id="generation-worker",
-        lease_seconds=30,
-        heartbeat_interval_seconds=5,
-    )
-    assert await worker.run_once() is True
-
-    async with db_session_factory() as session:
-        task = await JobService(session).get_job(task_id)
-
-    assert task is not None
-    assert task.status == "succeeded"
-    assert task.result == {
-        "project_id": "generation-worker-project",
-        "chapter_number": 1,
-        "preset": "basic",
-        "best_version_index": 0,
-        "variant_count": 1,
-        "review_count": 1,
-    }
-    assert "完整生成正文" not in str(task.result)
-    assert "私有" not in str(task.result)
-    public_task = _public_task_response(task, include_result=True)
-    assert public_task.payload is None
-    assert public_task.result == task.result

@@ -119,10 +119,6 @@ class Settings(BaseSettings):
         default=False,
         description="是否记录 canonical Chapter context 与旧 prompt contract 的脱敏结构差异",
     )
-    chapter_workflow_start_enabled: bool = Field(
-        default=False,
-        description="是否开放 durable Chapter workflow start API",
-    )
     redis_url: Optional[str] = Field(
         default=None,
         description="Redis 连接串（如 redis://localhost:6379/0），留空则禁用缓存与分布式会话",

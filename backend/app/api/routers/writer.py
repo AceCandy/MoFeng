@@ -135,32 +135,13 @@ async def _enqueue_chapter_generation(
     idempotency_key: Optional[str],
 ) -> BackgroundTaskResponse:
     try:
-        workflow_response = await ChapterWorkflowCompatibilityService(session).adapt_generation(
+        return await ChapterWorkflowCompatibilityService(session).adapt_generation(
             user_id=user_id,
             project_id=project_id,
             chapter_number=chapter_number,
             writing_notes=writing_notes,
             flow_config=flow_config,
             from_node_key=from_node_key,
-            idempotency_key=idempotency_key,
-            start_enabled=settings.chapter_workflow_start_enabled,
-        )
-        if workflow_response is not None:
-            return workflow_response
-        await NovelService(session).ensure_project_owner(project_id, user_id)
-        return await JobService(session).enqueue_job(
-            user_id=user_id,
-            project_id=project_id,
-            job_type="chapter_generation",
-            title=f"生成第 {chapter_number} 章正文",
-            payload={
-                "project_id": project_id,
-                "chapter_number": chapter_number,
-                "writing_notes": writing_notes,
-                "flow_config": flow_config,
-                "from_node_key": from_node_key,
-            },
-            payload_version=1,
             idempotency_key=idempotency_key,
         )
     except ChapterWorkflowCompatibilityConflictError as exc:
@@ -236,10 +217,7 @@ async def start_chapter_workflow(
     job_service: JobService = Depends(get_job_service),
     current_user: UserInDB = Depends(get_current_user),
 ) -> ChapterWorkflowStartResponse:
-    """创建或复用 durable Chapter workflow；切流前由配置显式关闭。"""
-
-    if not settings.chapter_workflow_start_enabled:
-        raise HTTPException(status_code=404, detail="章节工作流入口未启用")
+    """创建或复用 durable Chapter workflow。"""
     try:
         result = await start_service.start(
             user_id=current_user.id,
@@ -366,7 +344,7 @@ async def advanced_generate_chapter(
     session: AsyncSession = Depends(get_session),
     current_user: UserInDB = Depends(get_current_user),
 ) -> BackgroundTaskResponse:
-    """提交高级章节生成任务，具体 LangGraph 流程由独立 worker 执行。"""
+    """提交高级章节生成任务，由独立 worker 执行 durable Chapter workflow。"""
 
     return await _enqueue_chapter_generation(
         session=session,

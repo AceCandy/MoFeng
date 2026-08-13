@@ -3,7 +3,6 @@
 覆盖 L27 AC：
 - event_bus：channel 命名、未配置 Redis 时 publish 静默/subscribe 返回 None、fire-and-forget task 异常吞掉。
 - SSE：subscribe + get_message 替代每秒轮询、subscribe 前发初始态、降级 5s 轮询、aclose 退出。
-- pipeline：三处状态变更 commit 后 publish。
 """
 
 import asyncio
@@ -17,7 +16,6 @@ from app.services import event_bus
 
 ROOT = Path(__file__).resolve().parents[1]
 NOVELS_ROUTER_SOURCE = ROOT / "app/api/routers/novels.py"
-PIPELINE_SOURCE = ROOT / "app/services/pipeline_orchestrator.py"
 TASKS_ROUTER_SOURCE = ROOT / "app/api/routers/tasks.py"
 BACKGROUND_TASK_SERVICE_SOURCE = ROOT / "app/services/background_task_service.py"
 
@@ -182,10 +180,6 @@ def _novels_source() -> str:
     return NOVELS_ROUTER_SOURCE.read_text(encoding="utf-8")
 
 
-def _pipeline_source() -> str:
-    return PIPELINE_SOURCE.read_text(encoding="utf-8")
-
-
 def _tasks_source() -> str:
     return TASKS_ROUTER_SOURCE.read_text(encoding="utf-8")
 
@@ -230,13 +224,6 @@ def test_sse_closes_pubsub_on_exit() -> None:
     source = _novels_source()
     assert "finally:" in source
     assert "await pubsub.aclose()" in source
-
-
-def test_pipeline_publishes_chapter_status_on_state_changes() -> None:
-    """三处状态变更（_set/_mark_failed/_mark_failed_resume）commit 后 publish 通知。"""
-    source = _pipeline_source()
-    assert "from ..services.event_bus import publish_chapter_status" in source
-    assert source.count("await publish_chapter_status(project_id, chapter_number)") >= 3
 
 
 # ---------------- 后台任务事件总线（方案 B 扩展） ----------------

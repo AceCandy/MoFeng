@@ -45,7 +45,7 @@ class ChapterWorkflowCompatibilityConflictError(ValueError):
 
 
 class ChapterWorkflowCompatibilityService:
-    """Decide whether one legacy request is handled by workflow or legacy drain."""
+    """Map existing writer request shapes to durable Chapter workflow operations."""
 
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -63,9 +63,8 @@ class ChapterWorkflowCompatibilityService:
         flow_config: FlowConfig | dict[str, Any],
         from_node_key: Optional[str],
         idempotency_key: Optional[str],
-        start_enabled: bool,
-    ) -> Optional[BackgroundTaskResponse]:
-        """Return the workflow root response, or None when legacy drain must handle it."""
+    ) -> BackgroundTaskResponse:
+        """Start a workflow or map a legacy node retry to its durable run."""
 
         if from_node_key is not None:
             return await self._adapt_generation_retry(
@@ -76,26 +75,15 @@ class ChapterWorkflowCompatibilityService:
                 idempotency_key=idempotency_key,
             )
 
-        if start_enabled:
-            result = await ChapterWorkflowStartService(self.session).start(
-                user_id=user_id,
-                project_id=project_id,
-                chapter_number=chapter_number,
-                writing_notes=writing_notes,
-                flow_config=flow_config,
-                idempotency_key=idempotency_key,
-            )
-            return self._public_root_response(result.root_job)
-
-        located = await self._current_chapter_and_active_run(
+        result = await ChapterWorkflowStartService(self.session).start(
             user_id=user_id,
             project_id=project_id,
             chapter_number=chapter_number,
+            writing_notes=writing_notes,
+            flow_config=flow_config,
+            idempotency_key=idempotency_key,
         )
-        if located is None:
-            return None
-        _, run = located
-        return await self._root_response(run, user_id=user_id)
+        return self._public_root_response(result.root_job)
 
     async def adapt_finalize(
         self,
@@ -161,14 +149,14 @@ class ChapterWorkflowCompatibilityService:
         chapter_number: int,
         from_node_key: str,
         idempotency_key: Optional[str],
-    ) -> Optional[BackgroundTaskResponse]:
+    ) -> BackgroundTaskResponse:
         chapter = await self.novel_repo.get_owned_chapter(
             project_id=project_id,
             chapter_number=chapter_number,
             user_id=user_id,
         )
         if chapter is None:
-            return None
+            raise ChapterWorkflowCompatibilityConflictError("workflow_retry_run_not_found")
         run = await self.workflow_repo.get_active_run(
             project_id=project_id,
             chapter_number=chapter_number,
@@ -181,7 +169,7 @@ class ChapterWorkflowCompatibilityService:
                 base_revision=chapter.current_revision,
             )
         if run is None:
-            return None
+            raise ChapterWorkflowCompatibilityConflictError("workflow_retry_run_not_found")
 
         mapped_node = LEGACY_RETRY_NODE_MAP.get(from_node_key)
         if mapped_node is None:
@@ -364,21 +352,6 @@ class ChapterWorkflowCompatibilityService:
                 ) from exc
             raise
         job = await self.job_service.get_job(root_job_id)
-        if job is None:
-            raise RuntimeError("workflow run 缺少 root JobRun")
-        return self._public_root_response(job)
-
-    async def _root_response(
-        self,
-        run: ChapterWorkflowRun,
-        *,
-        user_id: int,
-    ) -> BackgroundTaskResponse:
-        snapshot = await self.job_service.get_chapter_workflow_snapshot(
-            run.id,
-            user_id=user_id,
-        )
-        job = await self.job_service.get_job(snapshot.root_job_id)
         if job is None:
             raise RuntimeError("workflow run 缺少 root JobRun")
         return self._public_root_response(job)

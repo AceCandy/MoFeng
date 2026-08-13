@@ -2,6 +2,7 @@
 
 > 日期：2026-07-19 ｜ 方法：6 模块并行审查 + 每条发现独立对抗验证过滤误报
 > 审查范围：backend（api/services/data/core-config-utils）+ frontend 全量 + 配置/文件/文档
+> 本文保留审计发生时的代码路径；其中 `PipelineOrchestrator` 已于 2026-08-13 退役，不代表当前生产架构。
 
 ## 概览
 
