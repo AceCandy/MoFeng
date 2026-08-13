@@ -1244,3 +1244,24 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Status
 
 [OK] **Completed**
+
+
+## Session 40: 修复 durable 优选版本投影
+
+**Date**: 2026-08-13
+**Task**: 修复 durable 优选版本投影
+**Branch**: `main`
+
+### Summary
+
+从 durable review.best_ordinal 持久化唯一优选标记，补充主链回归测试与跨层规范，确保人工确认仅展示润色后的优选版本。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a789429` | (see git log) |
+
+### Status
+
+[OK] **Completed**
