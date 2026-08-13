@@ -170,18 +170,62 @@ class LLMService:
         return min(delay + jitter, LLM_RETRY_MAX_DELAY_SECONDS)
 
     @classmethod
-    def _raise_llm_stream_error(
-        cls, exc: Exception, config: Dict[str, Any], user_id: Optional[int]
+    def _safe_llm_error_reason(cls, exc: Exception) -> str:
+        status_code = cls._get_llm_error_status_code(exc)
+        if isinstance(exc, PermissionDeniedError) or status_code == 403:
+            return "AI 服务拒绝访问"
+        if isinstance(exc, (httpx.ReadTimeout, APITimeoutError)) or status_code == 408:
+            return "AI 服务响应超时"
+        if isinstance(exc, (httpx.RemoteProtocolError, APIConnectionError)):
+            return "AI 服务连接失败"
+        if status_code == 400:
+            return "AI 服务请求参数错误"
+        if status_code == 401:
+            return "AI 服务认证失败"
+        if status_code == 404:
+            return "AI 服务端点或模型不存在"
+        if status_code == 409:
+            return "AI 服务请求冲突"
+        if status_code == 429:
+            return "AI 服务请求频率或并发超限"
+        if status_code is not None and status_code >= 500:
+            return "AI 服务上游故障"
+        return "AI 服务 API 调用失败"
+
+    @classmethod
+    def _log_llm_call_failure(
+        cls,
+        exc: Exception,
+        config: Dict[str, Any],
+        *,
+        user_id: Optional[int],
+        stage: str,
     ) -> None:
+        logger.error(
+            "LLM call failed: stage=%s provider=%s provider_type=%s model=%s "
+            "status_code=%s reason=%s error_type=%s user_id=%s",
+            stage,
+            config.get("provider_name") or "unknown",
+            config.get("provider_type") or "unknown",
+            config.get("model") or "unknown",
+            cls._get_llm_error_status_code(exc) or "unknown",
+            cls._safe_llm_error_reason(exc),
+            type(exc).__name__,
+            user_id,
+        )
+
+    @classmethod
+    def _raise_llm_stream_error(
+        cls,
+        exc: Exception,
+        config: Dict[str, Any],
+        user_id: Optional[int],
+        *,
+        stage: str,
+    ) -> None:
+        cls._log_llm_call_failure(exc, config, user_id=user_id, stage=stage)
         if isinstance(exc, InternalServerError):
             detail = cls._extract_llm_error_detail(exc, "AI 服务内部错误，请稍后重试")
-            logger.error(
-                "LLM stream internal error: model=%s user_id=%s detail=%s",
-                config.get("model"),
-                user_id,
-                detail,
-                exc_info=True,
-            )
             raise HTTPException(status_code=503, detail=detail) from exc
 
         if isinstance(
@@ -193,35 +237,14 @@ class LLMService:
                 detail = "AI 服务响应超时，请稍后重试"
             else:
                 detail = "无法连接到 AI 服务，请稍后重试"
-            logger.error(
-                "LLM stream failed: model=%s user_id=%s detail=%s",
-                config.get("model"),
-                user_id,
-                detail,
-                exc_info=True,
-            )
             raise HTTPException(status_code=503, detail=detail) from exc
 
         if isinstance(exc, PermissionDeniedError):
             detail = "AI 服务拒绝访问（可能被上游安全策略拦截），请稍后重试或更换可用 API 地址"
-            logger.error(
-                "LLM stream permission denied: model=%s user_id=%s detail=%s",
-                config.get("model"),
-                user_id,
-                detail,
-                exc_info=True,
-            )
             raise HTTPException(status_code=503, detail=detail) from exc
 
         if cls._is_retryable_llm_error(exc):
             detail = cls._extract_llm_error_detail(exc, "AI 服务繁忙，请稍后重试")
-            logger.error(
-                "LLM stream upstream error: model=%s user_id=%s detail=%s",
-                config.get("model"),
-                user_id,
-                detail,
-                exc_info=True,
-            )
             raise HTTPException(status_code=503, detail=detail) from exc
 
         raise exc
@@ -817,20 +840,24 @@ class LLMService:
                 except Exception as exc:
                     if attempt < LLM_RETRY_MAX_ATTEMPTS and self._is_retryable_llm_error(exc):
                         delay = self._llm_retry_delay_seconds(exc, attempt)
-                        detail = self._extract_llm_error_detail(exc, exc.__class__.__name__)
                         logger.warning(
-                            "LLM stream retry: model=%s user_id=%s stage=%s attempt=%s/%s delay=%.2fs detail=%s",
-                            config.get("model"),
-                            user_id,
+                            "LLM stream retry: stage=%s provider=%s provider_type=%s model=%s "
+                            "status_code=%s reason=%s error_type=%s user_id=%s attempt=%s/%s delay=%.2fs",
                             stage,
+                            config.get("provider_name") or "unknown",
+                            config.get("provider_type") or "unknown",
+                            config.get("model"),
+                            self._get_llm_error_status_code(exc) or "unknown",
+                            self._safe_llm_error_reason(exc),
+                            type(exc).__name__,
+                            user_id,
                             attempt,
                             LLM_RETRY_MAX_ATTEMPTS,
                             delay,
-                            detail,
                         )
                         await asyncio.sleep(delay)
                         continue
-                    self._raise_llm_stream_error(exc, config, user_id)
+                    self._raise_llm_stream_error(exc, config, user_id, stage=stage)
         finally:
             await client.aclose()
 
@@ -958,6 +985,7 @@ class LLMService:
             "model": model.model_name,
             "model_id": model.id,
             "stage": stage,
+            "provider_name": provider.name,
             "provider_type": provider.provider_type,
             "input_price_per_million": model.input_price_per_million,
             "output_price_per_million": model.output_price_per_million,

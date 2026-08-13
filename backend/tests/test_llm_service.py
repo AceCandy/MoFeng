@@ -1,3 +1,4 @@
+import logging
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -340,6 +341,7 @@ async def test_resolve_llm_config_uses_stage_route_model(monkeypatch):
     assert config["base_url"] == "https://api.stage.test/v1"
     assert config["stage"] == "chapter_writing"
     assert config["model_id"] == 42
+    assert config["provider_name"] == "Stage Provider"
     assert config["input_price_per_million"] == 2
     assert config["output_price_per_million"] == 8
     assert config["pricing_currency"] == "USD"
@@ -607,6 +609,59 @@ async def test_stream_and_collect_does_not_retry_non_retryable_errors(monkeypatc
 
     assert FakeLLMClient.attempts == 1
     assert sleep_calls == []
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_stream_failure_log_identifies_stage_provider_model_and_safe_reason(
+    monkeypatch,
+    app_caplog: pytest.LogCaptureFixture,
+):
+    class RateLimitFailure(RuntimeError):
+        status_code = 429
+
+    class FakeLLMClient:
+        def __init__(self, *, api_key, base_url, provider_type):
+            pass
+
+        async def aclose(self) -> None:
+            pass
+
+        async def stream_chat(self, **kwargs):
+            raise RateLimitFailure("rate limited: SECRET_TOKEN")
+            yield {"content": "", "finish_reason": None}
+
+    async def fake_sleep(_delay):
+        return None
+
+    app_caplog.set_level(logging.WARNING, logger="app.services.llm_service")
+    service = LLMService(AsyncMock())
+    monkeypatch.setattr("app.services.llm_service.LLMClient", FakeLLMClient)
+    monkeypatch.setattr("asyncio.sleep", fake_sleep)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await service._stream_and_collect_with_config_result(
+            [{"role": "user", "content": "hello"}],
+            config={
+                "api_key": "test-key",
+                "base_url": "https://api.example.test/v1",
+                "model": "gpt-test",
+                "provider_name": "Primary OpenAI",
+                "provider_type": "openai_compatible",
+            },
+            temperature=0.2,
+            user_id=7,
+            timeout=30.0,
+            stage="chapter_mission",
+        )
+
+    assert exc_info.value.status_code == 503
+    assert "stage=chapter_mission" in app_caplog.text
+    assert "provider=Primary OpenAI" in app_caplog.text
+    assert "provider_type=openai_compatible" in app_caplog.text
+    assert "model=gpt-test" in app_caplog.text
+    assert "status_code=429" in app_caplog.text
+    assert "reason=AI 服务请求频率或并发超限" in app_caplog.text
+    assert "SECRET_TOKEN" not in app_caplog.text
 
 
 @pytest.mark.asyncio(loop_scope="session")
