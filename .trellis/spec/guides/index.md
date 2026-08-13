@@ -39,6 +39,8 @@ These guides help you ask the right questions before coding.
 - [ ] A Read schema reads a relation — is it eager-loaded in the repository?
 - [ ] Error messages stop surfacing in the UI — does the router raise them in `detail`?
 - [ ] A Celery task needs DB access — does it reuse `AsyncSessionLocal`?
+- [ ] Legacy and replacement producers coexist — does the test execute the currently
+      enabled producer through persistence, rather than hand-build compatibility data?
 
 → Read [Cross-Layer Thinking Guide](./cross-layer-thinking-guide.md)
 

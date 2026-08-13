@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 from test_chapter_workflow_context import _start_and_claim
 
 from app.models import (
@@ -14,6 +15,7 @@ from app.models import (
     Chapter,
     ChapterEvaluation,
     ChapterGenerationTrace,
+    ChapterOutline,
     ChapterVersion,
     JobActivity,
     JobEvent,
@@ -39,6 +41,7 @@ from app.services.chapter_workflow_persistence import (
 from app.services.job_registry import SideEffectClass
 from app.services.job_service import LeaseLostError
 from app.services.job_worker import JobExecutionContext
+from app.services.novel_service import NovelService
 
 
 def _ref(execution) -> ChapterWorkflowActivityRef:
@@ -237,6 +240,59 @@ async def test_persist_candidates_is_atomic_private_and_replayable(isolated_pg):
         "activity_refs": {"persist_candidates": first.activity_key},
         "result_refs": {"persist_candidates": first.result.result_hash},
     }
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_durable_best_version_is_the_only_public_confirmation_candidate(isolated_pg):
+    started, execution, request = await _build_inputs(
+        isolated_pg,
+        user_id=4410,
+        project_id="workflow-best-confirmation",
+    )
+
+    persisted = await ChapterWorkflowCandidatePersistenceService(execution).execute(request)
+
+    async with isolated_pg.session_factory() as session:
+        result = await session.execute(
+            select(Chapter)
+            .options(
+                selectinload(Chapter.versions),
+                selectinload(Chapter.evaluations),
+            )
+            .where(Chapter.id == started.run.chapter_id)
+        )
+        chapter = result.scalars().one()
+        outline = await session.scalar(
+            select(ChapterOutline).where(
+                ChapterOutline.project_id == started.run.project_id,
+                ChapterOutline.chapter_number == started.run.chapter_number,
+            )
+        )
+        schema = NovelService(session)._build_chapter_schema_from_entities(
+            chapter_number=started.run.chapter_number,
+            outline=outline,
+            chapter=chapter,
+        )
+
+        candidate_versions = [
+            version
+            for version in chapter.versions
+            if version.id in persisted.result.candidate_version_ids
+        ]
+        assert [version.metadata["ai_review"]["is_best"] for version in candidate_versions] == [
+            False,
+            True,
+        ]
+        assert schema.versions == ["PRIVATE_CANDIDATE_1", "PRIVATE_REFINED_CANDIDATE_2"]
+        assert schema.version_selections is not None
+        assert [(item.id, item.content) for item in schema.version_selections] == [
+            (candidate_versions[1].id, "PRIVATE_REFINED_CANDIDATE_2")
+        ]
+        assert any(
+            evaluation.version_id == candidate_versions[1].id
+            and evaluation.decision == "ai_review"
+            for evaluation in chapter.evaluations
+        )
 
 
 @pytest.mark.asyncio(loop_scope="session")

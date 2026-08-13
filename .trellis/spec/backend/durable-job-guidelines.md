@@ -723,8 +723,9 @@ Apply when a Chapter read exposes candidates while `Chapter.status` is
 #### 2. Signatures
 
 `Chapter.versions` is the full readable version collection.
-`Chapter.version_selections` is the actionable confirmation collection. Compatibility
-AI review provenance is `ChapterVersion.metadata_["ai_review"]["is_best"]`.
+`Chapter.version_selections` is the actionable confirmation collection. Persisted AI
+review provenance is `ChapterVersion.metadata_["ai_review"]["is_best"]`; both durable
+workflow persistence and compatibility generation must emit this shared read fact.
 
 #### 3. Contracts
 
@@ -733,6 +734,10 @@ AI review provenance is `ChapterVersion.metadata_["ai_review"]["is_best"]`.
 - When exactly one candidate has the strict boolean marker `is_best is True`, expose
   only that version in `version_selections`; this is the reviewed and post-review
   refined result.
+- Durable candidate persistence derives the marker only from the already validated
+  `ChapterWorkflowReviewOutput.best_ordinal` and writes it in the same transactional
+  outcome as candidate content, evaluation, and `waiting_for_confirm` state. Do not
+  copy private review reports into public provenance.
 - When zero or multiple candidates carry the marker, preserve the full candidate set.
   Never guess by array order, label, natural-language review text, or truthy values.
 - Confirmation submits the real `ChapterVersion.id`. A single candidate is a confirm
@@ -757,8 +762,10 @@ AI review provenance is `ChapterVersion.metadata_["ai_review"]["is_best"]`.
 
 #### 6. Tests Required
 
-- Persist two versions with the second marked best; assert `versions` has two entries,
-  `version_selections` has one entry, and its id/content belong to the second version.
+- Execute durable candidate, review (`best_ordinal=2`), post-review, and transactional
+  persistence activities; then assert persisted strict markers are `[false, true]`,
+  `versions` has both contents, and `version_selections` contains only the refined
+  second version with its real id.
 - Cover missing-marker compatibility and frontend submission of the real version id.
 - Keep multi-candidate keyboard behavior for compatibility fallback.
 

@@ -400,6 +400,10 @@ class ChapterWorkflowCandidatePersistenceService:
         versions: list[ChapterVersion] = []
         for draft in drafts:
             metadata = deepcopy(draft.metadata)
+            if review is not None:
+                metadata["ai_review"] = {
+                    "is_best": draft.ordinal == review.best_ordinal,
+                }
             metadata["_chapter_workflow"] = {
                 "run_id": payload.run_id,
                 "ordinal": draft.ordinal,

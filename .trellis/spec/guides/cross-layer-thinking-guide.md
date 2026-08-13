@@ -121,6 +121,11 @@ Legacy Celery tasks must reuse `app.db.session.AsyncSessionLocal` and `settings.
 - **Ideal-only model payload tests** — testing plain JSON while missing fenced JSON, nested payloads, or a whole response escaped one additional time. Normalize at the storage boundary and keep a shared read-side cleaner for already persisted data; regression tests must cover all four shapes and prove ordinary prose with literal escape sequences remains unchanged.
 - **Guessed external artifact paths** — writing `jq` assertions from documentation or field names without inspecting a real artifact produced by the pinned version. Capture a redacted representative shape, verify every required field path against it, and add a contract test that rejects known obsolete paths. A producer option such as `provenance: mode=max` proves intent, not the emitted schema.
 - **JSON defaults inside shell expansion** — `${value:-{}}` can leave a literal closing brace when `value` is non-empty. Pass JSON unchanged to `jq`, let empty input represent absence when the query supports it, and execute the actual workflow line in a contract test.
+- **Compatibility-path false confidence** — when legacy and replacement producers coexist,
+  a read-side test with hand-built legacy metadata proves only the reader fallback. Trace
+  the production entry to the currently enabled producer and keep one integration test
+  across producer → persistence → public projection. A compatibility-path fixture cannot
+  stand in for the replacement workflow's emitted data.
 
 ---
 
@@ -140,6 +145,9 @@ After implementation:
 - [ ] Tested null / missing / empty / invalid at each boundary.
 - [ ] Confirmed error messages flow through `detail` and surface in the UI.
 - [ ] Confirmed the value survives a round-trip (create → read → update → read).
+- [ ] When old and new producers coexist, exercised the currently enabled production
+  producer through persistence and the public consumer; compatibility fixtures remain
+  separate evidence.
 - [ ] For a field add: model + Alembic revision/test + backend schema + both generated
   artifacts + affected consumers all updated.
 - [ ] For a path/field rename: every call site + legacy redirect updated.
