@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 40
+- **Total Sessions**: 41
 - **Last Active**: 2026-08-13
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1267 | Active |
+| `journal-1.md` | ~1288 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 41 | 2026-08-13 | Retire PipelineOrchestrator | `5b42ce8` | `main` |
 | 40 | 2026-08-13 | 修复 durable 优选版本投影 | `a789429` | `main` |
 | 39 | 2026-08-13 | 修复润色后重复选版 | `e862e92` | `main` |
 | 38 | 2026-08-12 | 完成增量审计整改 | `bc43e84`, `0f249b4`, `f4c5167`, `6a69c2b`, `62e59a0`, `6b33235`, `b8767f5`, `478f7b0`, `5f410bb`, `b2e4e91`, `69c1e87`, `d7c1070`, `cfd1e82`, `f54d18e`, `1ee4849`, `c582696`, `cbee73b`, `cb63508`, `82b2311`, `f909723`, `d1a0abf`, `c587ed8`, `5cb3c20` | `main` |

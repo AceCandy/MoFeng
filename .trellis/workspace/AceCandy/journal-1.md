@@ -1265,3 +1265,24 @@ L27 SSE 章节状态改事件驱动（Redis pub-sub，方案 A/A/A）：新增 e
 ### Status
 
 [OK] **Completed**
+
+
+## Session 41: Retire PipelineOrchestrator
+
+**Date**: 2026-08-13
+**Task**: Retire PipelineOrchestrator
+**Branch**: `main`
+
+### Summary
+
+Retired the legacy chapter generation pipeline, routed every generation entry through the durable Chapter workflow, removed the start gate and legacy job registration, migrated contracts/tests/docs, and verified targeted backend/frontend checks plus independent review.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5b42ce8` | (see git log) |
+
+### Status
+
+[OK] **Completed**
