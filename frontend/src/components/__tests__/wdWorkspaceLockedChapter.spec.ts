@@ -89,6 +89,29 @@ const mountWorkspace = async (
 }
 
 describe('WDWorkspace locked chapter state', () => {
+  it('恢复章节历史状态时不显示瞬时工作流面板', async () => {
+    const project: NovelProject = {
+      id: 'novel-booting',
+      title: '全网退役',
+      initial_prompt: '',
+      conversation_history: [],
+      blueprint: {
+        chapter_outline: [
+          { chapter_number: 1, title: '一招', summary: '林拓重新站上擂台。' },
+        ],
+      },
+      chapters: [],
+    }
+
+    const rendered = await mountWorkspace(project, 1, { workflowPhase: 'booting' })
+    try {
+      expect(rendered.host.querySelector('.chapter-workflow')).toBeNull()
+      expect(rendered.host.textContent).not.toContain('正在恢复章节状态')
+    } finally {
+      rendered.unmount()
+    }
+  })
+
   it('仅已定稿章节空闲时不显示尚未开始生成', async () => {
     const project: NovelProject = {
       id: 'novel-finalized',

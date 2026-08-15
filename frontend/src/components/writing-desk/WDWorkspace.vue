@@ -477,7 +477,8 @@ const workflowPanelAllowedCommands = computed(() =>
 )
 
 const shouldRenderWorkflowPanel = computed(() =>
-  !(props.workflowPhase === 'idle' && hasFinalizedChapterContent.value)
+  props.workflowPhase !== 'booting'
+  && !(props.workflowPhase === 'idle' && hasFinalizedChapterContent.value)
   && (!hasInlineExternalRetry.value || workflowPanelAllowedCommands.value.length > 0),
 )
 
