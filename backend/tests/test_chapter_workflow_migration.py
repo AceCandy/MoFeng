@@ -46,7 +46,7 @@ from app.models.job import JobWorkerHeartbeat
 from app.schemas.chapter_context import stable_digest
 from app.schemas.chapter_workflow import (
     ChapterWorkflowCommandEnvelope,
-    ChapterWorkflowStateV1,
+    ChapterWorkflowState,
 )
 from app.schemas.job import (
     ChapterProjectionJobPayload,
@@ -70,11 +70,11 @@ from app.services.chapter_workflow_activities import (
     ChapterWorkflowReviewOutput,
 )
 from app.services.chapter_workflow_graph import (
-    ChapterWorkflowGraphBindingsV1,
+    ChapterWorkflowGraphBindings,
     build_chapter_workflow_graph_registry,
     chapter_workflow_graph_config,
 )
-from app.services.chapter_workflow_handler import ChapterWorkflowBindingAssemblerV1
+from app.services.chapter_workflow_handler import ChapterWorkflowBindingAssembler
 from app.services.chapter_workflow_reconciler import (
     ChapterWorkflowReconcileCandidate,
     ChapterWorkflowReconciler,
@@ -134,7 +134,7 @@ def _downgrade(connection, database_url: str) -> None:
 
 def _checkpoint_smoke_bindings(
     calls: list[str] | None = None,
-) -> ChapterWorkflowGraphBindingsV1:
+) -> ChapterWorkflowGraphBindings:
     async def empty(state):
         if calls is not None:
             calls.append(state.node_key)
@@ -142,7 +142,7 @@ def _checkpoint_smoke_bindings(
 
     async def persist(_state):
         if calls is not None:
-            calls.append("persist_candidates")
+            calls.append("persist_drafts")
         return {"candidate_version_ids": [1]}
 
     async def selection_resume(_state, resume_value):
@@ -165,16 +165,24 @@ def _checkpoint_smoke_bindings(
             calls.append("finalize_revision")
         return {"target_chapter_revision": 1}
 
-    return ChapterWorkflowGraphBindingsV1(
-        freeze_context=empty,
-        plan_and_direct=empty,
-        generate_candidates=empty,
+    return ChapterWorkflowGraphBindings(
+        freeze_base_context=empty,
+        retrieve_context=empty,
+        plan_chapter=empty,
+        generate_candidate_1=empty,
+        generate_candidate_2=empty,
         review_candidates=empty,
-        persist_candidates=persist,
+        refine_candidate=empty,
+        enhance_content=empty,
+        repair_consistency=empty,
+        optimize_style=empty,
+        enrich_content=empty,
+        compress_candidate=empty,
+        persist_drafts=persist,
         apply_selection_resume=selection_resume,
         finalize_revision=finalize,
         apply_projection_resume=projection_resume,
-        observe_projection=empty,
+        reconcile_projections=empty,
     )
 
 
@@ -346,11 +354,11 @@ def _run_production_workflow_worker_process(
 
             if pause_before_review is not None:
                 blocker = asyncio.Event()
-                review_candidates = ChapterWorkflowBindingAssemblerV1.review_candidates
+                review_candidates = ChapterWorkflowBindingAssembler.review_candidates
 
                 async def pause_review(
-                    _assembler: ChapterWorkflowBindingAssemblerV1,
-                    _state: ChapterWorkflowStateV1,
+                    _assembler: ChapterWorkflowBindingAssembler,
+                    _state: ChapterWorkflowState,
                 ) -> dict[str, object]:
                     pause_before_review.set()
                     if resume_after_review is None:
@@ -368,7 +376,7 @@ def _run_production_workflow_worker_process(
                     return typed_result
 
                 setattr(
-                    ChapterWorkflowBindingAssemblerV1,
+                    ChapterWorkflowBindingAssembler,
                     "review_candidates",
                     pause_review,
                 )
@@ -477,7 +485,7 @@ async def _wait_for_checkpoint_node(
     run_id: str,
     node_key: str,
     timeout: float = 30,
-) -> tuple[str, ChapterWorkflowStateV1]:
+) -> tuple[str, ChapterWorkflowState]:
     reader = PostgresChapterWorkflowCheckpointReader(database_url)
     candidate = ChapterWorkflowReconcileCandidate(
         run_id=run_id,
@@ -697,11 +705,11 @@ async def test_workflow_migration_installs_pinned_checkpoint_schema() -> None:
                     "checkpoint_writes": {"checkpoint_writes_thread_id_idx"},
                 }
 
-                workflow_state = ChapterWorkflowStateV1.initial(
+                workflow_state = ChapterWorkflowState.initial(
                     run_id=str(uuid4()),
                     context_hash="a" * 64,
                 )
-                sentinel_state = ChapterWorkflowStateV1.initial(
+                sentinel_state = ChapterWorkflowState.initial(
                     run_id=str(uuid4()),
                     context_hash="b" * 64,
                 )
@@ -719,8 +727,8 @@ async def test_workflow_migration_installs_pinned_checkpoint_schema() -> None:
                     )
                     snapshot = await app.aget_state(config)
                     assert result["__interrupt__"][0].value["kind"] == "selection"
-                    assert snapshot.values["node_key"] == "waiting_for_selection"
-                    assert snapshot.next == ("waiting_for_selection",)
+                    assert snapshot.values["node_key"] == "wait_for_selection"
+                    assert snapshot.next == ("wait_for_selection",)
                     assert snapshot.config["configurable"]["thread_id"] == workflow_state.run_id
                     assert snapshot.config["configurable"]["checkpoint_id"]
                     sentinel_result = await app.ainvoke(
@@ -857,11 +865,11 @@ async def test_retention_service_deletes_only_target_checkpoint_thread() -> None
                         chapter_number=1,
                         flow_config={"preset": "basic", "enable_rag": False},
                     )
-                    target_state = ChapterWorkflowStateV1.initial(
+                    target_state = ChapterWorkflowState.initial(
                         run_id=started.run.id,
                         context_hash=started.run.context_hash,
                     )
-                    sentinel_state = ChapterWorkflowStateV1.initial(
+                    sentinel_state = ChapterWorkflowState.initial(
                         run_id=str(uuid4()),
                         context_hash="f" * 64,
                     )
@@ -1477,12 +1485,12 @@ async def test_production_handler_runs_selection_finalize_and_projection_resume(
                 assert job.result is None
                 assert run is not None
                 assert run.status == "waiting_for_selection"
-                assert run.node_key == "waiting_for_selection"
+                assert run.node_key == "wait_for_selection"
                 assert run.checkpoint_id
                 assert run.is_active is True
                 assert len(versions) == 1
                 assert versions[0].content == "候选正文-1-已润色"
-                assert len(activities) == 6
+                assert len(activities) == 7
                 assert all(activity.status == "succeeded" for activity in activities)
                 assert projection_batch.projected_traces > 0
                 assert trace_count > 0
@@ -1579,7 +1587,7 @@ async def test_production_handler_runs_selection_finalize_and_projection_resume(
                 assert job is not None and job.status == "waiting"
                 assert run is not None
                 assert run.status == "projection_pending"
-                assert run.node_key == "projection_pending"
+                assert run.node_key == "wait_for_projections"
                 assert run.checkpoint_id and run.checkpoint_id != selection_checkpoint_id
                 assert chapter is not None
                 assert chapter.status == ChapterGenerationStatus.FINALIZING.value
@@ -1590,7 +1598,7 @@ async def test_production_handler_runs_selection_finalize_and_projection_resume(
                 assert command_row.result_payload["marker_checkpoint_id"] == run.checkpoint_id
                 assert len(dispatcher_jobs) == 1
                 assert dispatcher_jobs[0].status == "queued"
-                assert len(activities) == 7
+                assert len(activities) == 8
                 assert all(activity.status == "succeeded" for activity in activities)
                 assert provider_calls == [
                     "plan",
@@ -1710,10 +1718,10 @@ async def test_production_handler_runs_selection_finalize_and_projection_resume(
                 assert revision_count == 1
                 assert len(outboxes) == 2
                 assert all(outbox.workflow_stream_id == started.run.id for outbox in outboxes)
-                assert len(activities) == 7
+                assert len(activities) == 8
                 assert all(activity.status == "succeeded" for activity in activities)
-                assert len({activity.activity_key for activity in activities}) == 7
-                assert len({activity.provider_request_key for activity in activities}) == 7
+                assert len({activity.activity_key for activity in activities}) == 8
+                assert len({activity.provider_request_key for activity in activities}) == 8
                 assert command_count == 1
                 assert [(trace.node_key, trace.status) for trace in traces] == [
                     ("finalize_revision", "running"),
@@ -1777,10 +1785,11 @@ async def test_production_workflow_recovers_across_process_kills_redis_off_and_r
                 candidate_checkpoint_id, candidate_state = await _wait_for_checkpoint_node(
                     database_url,
                     run_id=started.run.id,
-                    node_key="review_candidates",
+                    node_key="generate_candidate_1",
                 )
                 assert candidate_state.run_id == started.run.id
                 assert set(candidate_state.activity_refs) == {
+                    "base_context",
                     "retrieval_context",
                     "plan",
                     "candidate:1",
@@ -1840,7 +1849,7 @@ async def test_production_workflow_recovers_across_process_kills_redis_off_and_r
                 assert rollout.reassigned_waiting_jobs == 1
                 assert rollout_probe.status == "queued"
                 assert rollout_probe.executor_generation == 2
-                assert len(activities) == 3
+                assert len(activities) == 4
                 assert all(activity.status == "succeeded" for activity in activities)
 
                 reclaimed_pause = process_context.Event()
@@ -1985,7 +1994,7 @@ async def test_production_workflow_recovers_across_process_kills_redis_off_and_r
                 assert reclaimed_root.fencing_token == 2
                 assert reclaimed_root.lease_expires_at is not None
                 assert reclaimed_root.lease_expires_at > datetime.now(timezone.utc)
-                assert activity_count_before_stale == 3
+                assert activity_count_before_stale == 4
                 assert version_count_before_stale == 0
                 assert (
                     sum(
@@ -2050,13 +2059,13 @@ async def test_production_workflow_recovers_across_process_kills_redis_off_and_r
                     run_id=started.run.id,
                     root_job_id=started.root_job.id,
                     run_status="waiting_for_selection",
-                    node_key="waiting_for_selection",
+                    node_key="wait_for_selection",
                     root_status="waiting",
                 )
                 selection_checkpoint_id, selection_state = await _wait_for_checkpoint_node(
                     database_url,
                     run_id=started.run.id,
-                    node_key="waiting_for_selection",
+                    node_key="wait_for_selection",
                 )
                 assert selection_checkpoint_id != candidate_checkpoint_id
                 assert selection_state.run_id == started.run.id
@@ -2089,14 +2098,14 @@ async def test_production_workflow_recovers_across_process_kills_redis_off_and_r
                 assert run is not None and run.checkpoint_id == selection_checkpoint_id
                 assert len(versions) == 1
                 assert versions[0].content == "候选正文-1-已润色"
-                assert len(activities) == 6
+                assert len(activities) == 7
                 assert all(activity.status == "succeeded" for activity in activities)
 
                 await _terminate_worker_process(selection_worker)
                 persisted_selection_checkpoint, _ = await _wait_for_checkpoint_node(
                     database_url,
                     run_id=started.run.id,
-                    node_key="waiting_for_selection",
+                    node_key="wait_for_selection",
                 )
                 assert persisted_selection_checkpoint == selection_checkpoint_id
 
@@ -2141,13 +2150,13 @@ async def test_production_workflow_recovers_across_process_kills_redis_off_and_r
                     run_id=started.run.id,
                     root_job_id=started.root_job.id,
                     run_status="projection_pending",
-                    node_key="projection_pending",
+                    node_key="wait_for_projections",
                     root_status="waiting",
                 )
                 projection_checkpoint_id, projection_state = await _wait_for_checkpoint_node(
                     database_url,
                     run_id=started.run.id,
-                    node_key="projection_pending",
+                    node_key="wait_for_projections",
                 )
                 assert projection_checkpoint_id != selection_checkpoint_id
                 assert projection_state.run_id == started.run.id
@@ -2181,14 +2190,14 @@ async def test_production_workflow_recovers_across_process_kills_redis_off_and_r
                 assert command_row.result_payload["marker_checkpoint_id"] == (
                     projection_checkpoint_id
                 )
-                assert len(activities) == 7
+                assert len(activities) == 8
                 assert all(activity.status == "succeeded" for activity in activities)
 
                 await _terminate_worker_process(projection_worker)
                 persisted_projection_checkpoint, _ = await _wait_for_checkpoint_node(
                     database_url,
                     run_id=started.run.id,
-                    node_key="projection_pending",
+                    node_key="wait_for_projections",
                 )
                 assert persisted_projection_checkpoint == projection_checkpoint_id
 
@@ -2349,8 +2358,8 @@ async def test_production_workflow_recovers_across_process_kills_redis_off_and_r
                 assert len(versions) == 1
                 assert len(outboxes) == 2
                 assert all(outbox.workflow_stream_id == started.run.id for outbox in outboxes)
-                assert len(activities) == 7
-                assert len({activity.activity_key for activity in activities}) == 7
+                assert len(activities) == 8
+                assert len({activity.activity_key for activity in activities}) == 8
                 assert all(activity.status == "succeeded" for activity in activities)
                 running_events = [
                     event
@@ -2406,7 +2415,7 @@ async def test_workflow_active_slot_and_command_identity_are_database_enforced()
                 "context_hash": "a" * 64,
                 "runtime_input_hash": "b" * 64,
                 "status": "queued",
-                "node_key": "freeze_context",
+                "node_key": "freeze_base_context",
                 "is_active": True,
             }
             try:

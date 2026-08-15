@@ -17,7 +17,10 @@ from ..models.novel import Chapter, ChapterEvaluation, ChapterVersion
 from ..repositories.chapter_workflow_repository import ChapterWorkflowRepository
 from ..repositories.job_repository import JobRepository
 from ..schemas.chapter_context import stable_digest
-from ..schemas.job import ChapterWorkflowJobPayload
+from ..schemas.job import (
+    ChapterWorkflowJobPayload,
+    validate_chapter_workflow_job_payload,
+)
 from ..schemas.novel import ChapterGenerationStatus
 from .chapter_workflow_activities import (
     ChapterWorkflowActivityRef,
@@ -29,7 +32,7 @@ from .chapter_workflow_activities import (
 from .job_registry import SideEffectClass
 from .job_worker import JobExecutionContext
 
-PERSIST_CANDIDATES_REF = "persist_candidates"
+PERSIST_DRAFTS_REF = "persist_drafts"
 
 
 class ChapterWorkflowPersistCandidatesInput(BaseModel):
@@ -100,10 +103,10 @@ class ChapterWorkflowPersistCandidatesExecution:
 
     def state_update(self) -> dict[str, object]:
         return {
-            "node_key": "waiting_for_selection",
+            "node_key": "wait_for_selection",
             "candidate_version_ids": self.result.candidate_version_ids,
-            "activity_refs": {PERSIST_CANDIDATES_REF: self.activity_key},
-            "result_refs": {PERSIST_CANDIDATES_REF: self.result.result_hash},
+            "activity_refs": {PERSIST_DRAFTS_REF: self.activity_key},
+            "result_refs": {PERSIST_DRAFTS_REF: self.result.result_hash},
         }
 
 
@@ -132,11 +135,11 @@ class ChapterWorkflowCandidatePersistenceService:
             "workflow_version": payload.workflow_version,
             "state_schema_version": payload.state_schema_version,
             "run_id": payload.run_id,
-            "node_key": "persist_candidates",
+            "node_key": "persist_drafts",
             "base_revision": payload.base_revision,
             "input_hash": input_hash,
         }
-        activity_key = f"wf:persist_candidates:{stable_digest(canonical_request)}"
+        activity_key = f"wf:{canonical_request['node_key']}:{stable_digest(canonical_request)}"
         activity = await self.execution.begin_activity(
             activity_key,
             side_effect_class=SideEffectClass.TRANSACTIONAL,
@@ -185,9 +188,12 @@ class ChapterWorkflowCandidatePersistenceService:
         ChapterWorkflowReviewOutput | None,
     ]:
         lease = self.execution.lease
-        if lease.job_type != "chapter_workflow" or lease.payload_version != 1:
+        if lease.job_type != "chapter_workflow":
             raise ValueError("workflow root job 类型或版本不匹配")
-        payload = ChapterWorkflowJobPayload.model_validate(lease.payload)
+        payload = validate_chapter_workflow_job_payload(
+            lease.payload_version,
+            lease.payload,
+        )
         async with self.execution.session_factory() as session:
             run = await ChapterWorkflowRepository(session).get_user_run(
                 payload.run_id,

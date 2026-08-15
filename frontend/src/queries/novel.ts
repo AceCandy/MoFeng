@@ -598,6 +598,19 @@ export function useDeleteChapterMutation(projectId: ProjectIdSource) {
   })
 }
 
+export function useResetChapterMutation(projectId: ProjectIdSource) {
+  const { setProjectCache, refreshProjectQueries } = useNovelMutationRefresh(projectId)
+
+  return useMutation<NovelProject, Error, number>({
+    mutationFn: (chapterNumber) =>
+      NovelAPI.resetChapter(requireProjectId(projectId), chapterNumber),
+    onSuccess: async (project) => {
+      setProjectCache(project)
+      await refreshProjectQueries(project.id)
+    },
+  })
+}
+
 export function useGenerateChapterOutlineMutation(projectId: ProjectIdSource) {
   const queryClient = useQueryClient()
 

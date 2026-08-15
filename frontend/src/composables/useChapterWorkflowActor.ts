@@ -1,6 +1,6 @@
 // AIMETA P=WritingDesk章节工作流Vue_actor|R=scope生命周期_SSE恢复_命令关联与实体失效|NR=不调用fetch_不创建QueryClient_不持有Project或Chapter实体|E=composable:chapter-workflow-actor|X=internal|A=useChapterWorkflowActor|D=@xstate/vue,vue|S=state,net|RD=./README.ai
 import { useMachine } from '@xstate/vue'
-import { computed, onScopeDispose, toValue, watch, type MaybeRefOrGetter } from 'vue'
+import { computed, onScopeDispose, ref, toValue, watch, type MaybeRefOrGetter } from 'vue'
 
 import {
   ChapterWorkflowContractError,
@@ -128,6 +128,7 @@ export function useChapterWorkflowActor(
   const { snapshot, send, actorRef } = useMachine(chapterWorkflowMachine, {
     input: initialScope,
   })
+  const resyncing = ref(false)
   const phase = computed<ChapterWorkflowActorPhase>(() => {
     const value = snapshot.value
     if (value.matches('booting')) return 'booting'
@@ -754,14 +755,25 @@ export function useChapterWorkflowActor(
     return true
   }
 
-  const resync = () => {
-    if (!snapshot.value.matches('fatal')) return
+  const resync = async () => {
+    if (!snapshot.value.matches('fatal') || resyncing.value) return false
     const scope = currentScope()
-    if (scope === null) return
+    if (scope === null) return false
+    resyncing.value = true
     stopScopeResources()
     send({ type: 'RESYNC_REQUESTED' })
     const scopeEpoch = snapshot.value.context.scopeEpoch
-    void lookupAndApply(scope, scopeEpoch, 'bootstrap', snapshot.value.context.connectionEpoch)
+    try {
+      await lookupAndApply(
+        scope,
+        scopeEpoch,
+        'bootstrap',
+        snapshot.value.context.connectionEpoch,
+      )
+    } finally {
+      resyncing.value = false
+    }
+    return true
   }
 
   let initialized = false
@@ -803,5 +815,6 @@ export function useChapterWorkflowActor(
     start,
     submitCommand,
     resync,
+    resyncing,
   }
 }

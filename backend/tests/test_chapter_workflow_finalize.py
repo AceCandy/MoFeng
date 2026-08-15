@@ -19,7 +19,7 @@ from app.models import (
     JobActivity,
 )
 from app.schemas.chapter_context import stable_digest
-from app.schemas.chapter_workflow import ChapterWorkflowStateV1
+from app.schemas.chapter_workflow import ChapterWorkflowState
 from app.schemas.job import ChapterOutboxDispatchJobPayload, ChapterProjectionJobPayload
 from app.schemas.novel import ChapterGenerationStatus
 from app.services.chapter_finalize_service import ChapterFinalizeSubmissionService
@@ -34,8 +34,8 @@ from app.services.chapter_workflow_finalize import (
     ChapterWorkflowFinalizeService,
 )
 from app.services.chapter_workflow_handler import (
-    ChapterWorkflowBindingAssemblerV1,
-    ChapterWorkflowProvidersV1,
+    ChapterWorkflowBindingAssembler,
+    ChapterWorkflowProviders,
 )
 from app.services.chapter_workflow_start import ChapterWorkflowStartService
 from app.services.job_registry import SideEffectClass
@@ -110,11 +110,11 @@ async def test_finalize_activity_atomically_writes_canonical_lineage_and_replays
 
     first = await service.execute(request)
     replay = await service.execute(request)
-    binding_replay = await ChapterWorkflowBindingAssemblerV1(
+    binding_replay = await ChapterWorkflowBindingAssembler(
         execution,
-        cast(ChapterWorkflowProvidersV1, object()),
+        cast(ChapterWorkflowProviders, object()),
     ).finalize_revision(
-        ChapterWorkflowStateV1(
+        ChapterWorkflowState(
             run_id=started.run.id,
             node_key="finalize_revision",
             context_hash=started.run.context_hash,

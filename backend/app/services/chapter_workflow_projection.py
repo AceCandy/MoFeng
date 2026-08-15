@@ -18,8 +18,11 @@ from ..models.chapter_projection import (
 from ..models.novel import Chapter
 from ..repositories.chapter_workflow_repository import ChapterWorkflowRepository
 from ..schemas.chapter_context import stable_digest
-from ..schemas.chapter_workflow import ChapterWorkflowStateV1
-from ..schemas.job import ChapterWorkflowJobPayload
+from ..schemas.chapter_workflow import ChapterWorkflowState
+from ..schemas.job import (
+    ChapterWorkflowJobPayload,
+    validate_chapter_workflow_job_payload,
+)
 from ..schemas.novel import ChapterGenerationStatus
 from .chapter_projection_contract import FINALIZE_EVENT_TYPE
 from .chapter_projection_ops import (
@@ -61,7 +64,7 @@ class ChapterWorkflowProjectionService:
 
     async def retry_failed(
         self,
-        state: ChapterWorkflowStateV1,
+        state: ChapterWorkflowState,
         *,
         command_id: str,
     ) -> ChapterWorkflowProjectionRetryResult:
@@ -72,7 +75,7 @@ class ChapterWorkflowProjectionService:
             "workflow_version": payload.workflow_version,
             "state_schema_version": payload.state_schema_version,
             "run_id": payload.run_id,
-            "node_key": "projection_pending",
+            "node_key": "wait_for_projections",
             "command_id": command_id,
             "target_chapter_revision": target_revision,
         }
@@ -118,7 +121,10 @@ class ChapterWorkflowProjectionService:
             ChapterWorkflowProjectionRetryResult.model_validate(completed.result_payload),
         )
 
-    async def observe_completed(self, state: ChapterWorkflowStateV1) -> None:
+    async def observe_completed(
+        self,
+        state: ChapterWorkflowState,
+    ) -> None:
         """验证 projection reconciler 已完成当前 canonical revision。"""
 
         payload = self._payload(state)
@@ -194,8 +200,8 @@ class ChapterWorkflowProjectionService:
             or chapter.chapter_number != payload.chapter_number
             or not run.is_active
             or run.status != "running"
-            or run.node_key != "projection_pending"
-            or state.node_key != "observe_projection"
+            or run.node_key != "wait_for_projections"
+            or state.node_key != "reconcile_projections"
         ):
             raise ValueError("workflow projection observation identity 不一致")
         if (
@@ -322,17 +328,25 @@ class ChapterWorkflowProjectionService:
         result_payload["job_ids"] = job_ids
         result_payload["result_hash"] = stable_digest(result_payload)
 
-    def _payload(self, state: ChapterWorkflowStateV1) -> ChapterWorkflowJobPayload:
+    def _payload(
+        self,
+        state: ChapterWorkflowState,
+    ) -> ChapterWorkflowJobPayload:
         lease = self.execution.lease
-        if lease.job_type != "chapter_workflow" or lease.payload_version != 1:
-            raise ValueError("JobLease 不是 Chapter workflow v1 root")
-        payload = ChapterWorkflowJobPayload.model_validate(lease.payload)
+        if lease.job_type != "chapter_workflow":
+            raise ValueError("JobLease 不是 Chapter workflow root")
+        payload = validate_chapter_workflow_job_payload(
+            lease.payload_version,
+            lease.payload,
+        )
         if state.run_id != payload.run_id:
             raise ValueError("workflow projection state 与 root payload 不一致")
         return payload
 
     @staticmethod
-    def _target_revision(state: ChapterWorkflowStateV1) -> int:
+    def _target_revision(
+        state: ChapterWorkflowState,
+    ) -> int:
         if state.target_chapter_revision is None:
             raise ValueError("workflow projection checkpoint 缺少目标 revision")
         return state.target_chapter_revision

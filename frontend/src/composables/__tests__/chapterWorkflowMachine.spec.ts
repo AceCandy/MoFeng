@@ -38,7 +38,7 @@ const snapshot = (
   context_schema_version: 1,
   status: 'running',
   root_job_status: 'running',
-  node_key: 'generate_candidates',
+  node_key: 'generate_candidate_1',
   checkpoint_id: 'checkpoint-3',
   progress: 40,
   row_revision: 4,
@@ -102,7 +102,7 @@ describe('chapterWorkflowMachine', () => {
       expect(actor.getSnapshot().value).toEqual(readyValue(phase, 'disconnected'))
       expect(actor.getSnapshot().context).toMatchObject({
         runId: RUN_ID,
-        nodeKey: 'generate_candidates',
+        nodeKey: 'generate_candidate_1',
         progress: 40,
         rowRevision: 4,
         chapterRevision: 2,
@@ -118,11 +118,11 @@ describe('chapterWorkflowMachine', () => {
       status: 'needs_attention',
       root_job_status: 'needs_attention',
       allowed_commands: ['retry_external', 'cancel'],
-      retry_activity_key: 'wf:generate_candidates:stable-key',
+      retry_activity_key: 'wf:generate_candidate_1:stable-key',
     }))
 
     expect(actor.getSnapshot().context.retryActivityKey)
-      .toBe('wf:generate_candidates:stable-key')
+      .toBe('wf:generate_candidate_1:stable-key')
   })
 
   it.each(CHAPTER_WORKFLOW_COMMAND_VALUES)(
@@ -407,7 +407,7 @@ describe('chapterWorkflowMachine', () => {
         run_id: RUN_ID_2,
         status: 'waiting_for_selection',
         root_job_status: 'waiting',
-        node_key: 'waiting_for_selection',
+        node_key: 'wait_for_selection',
         progress: 60,
         row_revision: 1,
       }),
@@ -418,7 +418,7 @@ describe('chapterWorkflowMachine', () => {
     )
     expect(actor.getSnapshot().context).toMatchObject({
       runId: RUN_ID_2,
-      nodeKey: 'waiting_for_selection',
+      nodeKey: 'wait_for_selection',
       progress: 60,
       connectionEpoch: oldConnectionEpoch + 1,
     })
@@ -476,7 +476,7 @@ describe('chapterWorkflowMachine', () => {
     lookupSnapshot(actor, snapshot({
       status: 'waiting_for_selection',
       root_job_status: 'waiting',
-      node_key: 'waiting_for_selection',
+      node_key: 'wait_for_selection',
       allowed_commands: ['select'],
     }))
     const envelope = createChapterWorkflowCommandEnvelope(

@@ -68,7 +68,9 @@
               @workflow-retry-external="retryExternalChapterWorkflow"
               @workflow-retry-projection="retryProjectionChapterWorkflow"
               @workflow-cancel="cancelChapterWorkflow"
-              @workflow-resync="chapterWorkflow.resync"
+              @workflow-resync="resyncChapterWorkflow"
+              @workflow-reset="resetSelectedChapterWorkflow"
+              @workflow-delete="deleteSelectedBrokenChapter"
               @select-chapter="selectChapter"
               @show-version-detail="showVersionDetail"
               @show-evaluation-detail="openEvaluationDetailModal"
@@ -315,6 +317,16 @@ const chapterWorkflow = useChapterWorkflowActor(
   selectedChapterNumber,
   workflowPorts,
 )
+const {
+  deleteChapter,
+  resetChapter,
+  deleteBrokenChapter,
+  recoveryPending,
+} = useWritingDeskChapterOps({
+  projectId: () => props.id,
+  selectedChapterNumber,
+  latestCompletedChapterNumber,
+})
 const workflowPhase = chapterWorkflow.phase
 const workflowTransport = chapterWorkflow.transport
 const workflowRunId = computed(() => chapterWorkflow.snapshot.value.context.runId)
@@ -324,7 +336,9 @@ const workflowAllowedCommands = computed(
   () => chapterWorkflow.snapshot.value.context.allowedCommands,
 )
 const workflowPending = computed(
-  () => chapterWorkflow.snapshot.value.context.pendingCommandId !== null,
+  () => chapterWorkflow.snapshot.value.context.pendingCommandId !== null
+    || chapterWorkflow.resyncing.value
+    || recoveryPending.value,
 )
 const workflowError = computed(
   () => chapterWorkflow.snapshot.value.context.lastContractError
@@ -342,7 +356,7 @@ const workflowCandidates = computed(() => {
 })
 
 const startChapterWorkflow = () => {
-  void chapterWorkflow.start()
+  void chapterWorkflow.start({ flow_config: { preset: 'ultimate' } })
 }
 
 const selectWorkflowVersion = (versionId: number) => {
@@ -368,11 +382,36 @@ const cancelChapterWorkflow = () => {
   void chapterWorkflow.submitCommand('cancel')
 }
 
-const { deleteChapter } = useWritingDeskChapterOps({
-  projectId: () => props.id,
-  selectedChapterNumber,
-  latestCompletedChapterNumber,
-})
+const resyncChapterWorkflow = () => {
+  void chapterWorkflow.resync()
+}
+
+const resetSelectedChapterWorkflow = async () => {
+  const chapterNumber = selectedChapterNumber.value
+  if (chapterNumber === null) return
+  if (await resetChapter(chapterNumber)) {
+    await chapterWorkflow.resync()
+  }
+}
+
+const deleteSelectedBrokenChapter = async () => {
+  const chapterNumber = selectedChapterNumber.value
+  if (chapterNumber === null) return
+  const chaptersByNumber = new Map(
+    (project.value?.chapters ?? []).map((chapter) => [chapter.chapter_number, chapter]),
+  )
+  const deleteNumbers = [chapterNumber]
+  const laterOutlineNumbers = (project.value?.blueprint?.chapter_outline ?? [])
+    .map((outline) => outline.chapter_number)
+    .filter((number) => number > chapterNumber)
+    .sort((left, right) => left - right)
+  for (const number of laterOutlineNumbers) {
+    const chapter = chaptersByNumber.get(number)
+    if (chapter && chapter.generation_status !== 'not_generated') break
+    deleteNumbers.push(number)
+  }
+  await deleteBrokenChapter(chapterNumber, deleteNumbers)
+}
 
 </script>
 

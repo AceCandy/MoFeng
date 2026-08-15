@@ -8,7 +8,7 @@ import pytest
 
 from app.models import BackgroundTask, ChapterWorkflowRun, JobEvent, NovelProject
 from app.models.user import User
-from app.schemas.chapter_workflow import ChapterWorkflowStateV1
+from app.schemas.chapter_workflow import ChapterWorkflowState
 from app.services.chapter_workflow_observability import (
     ChapterWorkflowObservabilityService,
 )
@@ -91,8 +91,8 @@ async def _create_workflow(
     return job, run
 
 
-def _state(run: ChapterWorkflowRun) -> ChapterWorkflowStateV1:
-    return ChapterWorkflowStateV1(
+def _state(run: ChapterWorkflowRun) -> ChapterWorkflowState:
+    return ChapterWorkflowState(
         run_id=run.id,
         node_key=run.node_key,
         context_hash=run.context_hash,
@@ -107,7 +107,7 @@ async def test_workflow_metrics_are_bounded_and_alert_on_durable_lag(isolated_pg
             ordinal=1,
             now=now,
             status="waiting_for_selection",
-            node_key="waiting_for_selection",
+            node_key="wait_for_selection",
             job_status="waiting",
             checkpoint_id="checkpoint-old",
             age_seconds=120,
@@ -117,7 +117,7 @@ async def test_workflow_metrics_are_bounded_and_alert_on_durable_lag(isolated_pg
             ordinal=2,
             now=now,
             status="projection_pending",
-            node_key="projection_pending",
+            node_key="wait_for_projections",
             job_status="waiting",
             checkpoint_id="checkpoint-projection",
             age_seconds=600,
@@ -127,7 +127,7 @@ async def test_workflow_metrics_are_bounded_and_alert_on_durable_lag(isolated_pg
             ordinal=3,
             now=now,
             status="needs_attention",
-            node_key="generate_candidates",
+            node_key="generate_candidate_1",
             job_status="needs_attention",
             checkpoint_id="checkpoint-attention",
             age_seconds=300,
@@ -137,7 +137,7 @@ async def test_workflow_metrics_are_bounded_and_alert_on_durable_lag(isolated_pg
             ordinal=4,
             now=now,
             status="queued",
-            node_key="freeze_context",
+            node_key="freeze_base_context",
             job_status="queued",
             checkpoint_id=None,
             age_seconds=30,
@@ -147,7 +147,7 @@ async def test_workflow_metrics_are_bounded_and_alert_on_durable_lag(isolated_pg
             ordinal=5,
             now=now,
             status="projection_pending",
-            node_key="projection_pending",
+            node_key="wait_for_projections",
             job_status="queued",
             checkpoint_id="checkpoint-mismatch",
             age_seconds=45,

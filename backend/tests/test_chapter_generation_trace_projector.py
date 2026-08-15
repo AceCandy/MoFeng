@@ -98,7 +98,7 @@ async def test_projector_is_atomic_idempotent_private_and_rebuildable(isolated_p
                     "workflow": {
                         "run_id": started.run.id,
                         "row_revision": 1,
-                        "node_key": "generate_candidates",
+                        "node_key": "generate_candidate_1",
                         "status": "running",
                         "checkpoint_id": "checkpoint-public-id",
                         "progress": 35,
@@ -164,8 +164,8 @@ async def test_projector_is_atomic_idempotent_private_and_rebuildable(isolated_p
     assert committed.projected_traces == 3
     assert replay.projected_traces == 0
     assert [trace.node_key for trace in traces] == [
-        "freeze_context",
-        "generate_candidates",
+        "freeze_base_context",
+        "generate_candidate_1",
         "workflow",
     ]
     assert all(
@@ -311,7 +311,7 @@ async def test_concurrent_projector_skips_the_locked_checkpoint(isolated_pg):
                     "workflow": {
                         "run_id": started.run.id,
                         "row_revision": 1,
-                        "node_key": "plan_and_direct",
+                        "node_key": "plan_chapter",
                         "status": "running",
                         "checkpoint_id": "concurrent-checkpoint",
                         "progress": 15,
@@ -334,7 +334,7 @@ async def test_concurrent_projector_skips_the_locked_checkpoint(isolated_pg):
             .select_from(ChapterGenerationTrace)
             .where(
                 ChapterGenerationTrace.source_run_id == started.run.id,
-                ChapterGenerationTrace.node_key == "plan_and_direct",
+                ChapterGenerationTrace.node_key == "plan_chapter",
             )
         )
 

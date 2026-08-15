@@ -14,7 +14,10 @@ from ..models.background_task import BackgroundTask
 from ..models.novel import Chapter, ChapterVersion
 from ..repositories.chapter_workflow_repository import ChapterWorkflowRepository
 from ..schemas.chapter_context import stable_digest
-from ..schemas.job import ChapterWorkflowJobPayload
+from ..schemas.job import (
+    ChapterWorkflowJobPayload,
+    validate_chapter_workflow_job_payload,
+)
 from ..schemas.novel import ChapterGenerationStatus
 from .chapter_finalize_service import ChapterFinalizeSubmissionService
 from .job_registry import SideEffectClass
@@ -155,9 +158,12 @@ class ChapterWorkflowFinalizeService:
         request: ChapterWorkflowFinalizeInput,
     ) -> _FinalizeIdentity:
         lease = self.execution.lease
-        if lease.job_type != "chapter_workflow" or lease.payload_version != 1:
+        if lease.job_type != "chapter_workflow":
             raise ValueError("workflow root job 类型或版本不匹配")
-        payload = ChapterWorkflowJobPayload.model_validate(lease.payload)
+        payload = validate_chapter_workflow_job_payload(
+            lease.payload_version,
+            lease.payload,
+        )
         if request.run_id != payload.run_id:
             raise ValueError("workflow finalize run identity 不一致")
 

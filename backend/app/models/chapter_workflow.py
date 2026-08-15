@@ -25,6 +25,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from ..db.base import Base
 
+CHAPTER_WORKFLOW_CHECKPOINT_DELETE_PENDING = "__retention_pending__"
+CHAPTER_WORKFLOW_RESET_CHECKPOINT_DELETE_PENDING = "__chapter_reset_pending__"
+
 
 class ChapterWorkflowRun(Base):
     """One durable graph run; JobRun remains the execution authority."""
@@ -35,8 +38,7 @@ class ChapterWorkflowRun(Base):
         CheckConstraint("chapter_number > 0", name="ck_chapter_workflow_chapter_number"),
         CheckConstraint("base_revision >= 0", name="ck_chapter_workflow_base_revision"),
         CheckConstraint(
-            "workflow_version >= 1 AND state_schema_version >= 1 "
-            "AND context_schema_version >= 1",
+            "workflow_version >= 1 AND state_schema_version >= 1 AND context_schema_version >= 1",
             name="ck_chapter_workflow_schema_versions",
         ),
         CheckConstraint("row_revision >= 0", name="ck_chapter_workflow_row_revision"),

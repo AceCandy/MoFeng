@@ -7,16 +7,44 @@ from uuid import UUID, uuid4
 import httpx
 import pytest
 from pydantic import ValidationError
-from sqlalchemy import update
+from sqlalchemy import select, update
 
+from app.api.routers.writer import get_chapter_workflow_checkpoint_cleaner
 from app.core.dependencies import get_current_user
 from app.db.session import get_session
 from app.main import app
-from app.models import ChapterOutline, ChapterWorkflowRun, NovelProject
+from app.models import (
+    Chapter,
+    ChapterEvaluation,
+    ChapterGenerationTrace,
+    ChapterOutline,
+    ChapterVersion,
+    ChapterWorkflowCommand,
+    ChapterWorkflowRun,
+    JobActivity,
+    JobEvent,
+    NovelProject,
+)
 from app.models.background_task import BackgroundTask
 from app.models.user import User
 from app.schemas.chapter_workflow import ChapterWorkflowSnapshot
 from app.schemas.user import UserInDB
+from app.services.job_service import JobService, LeaseLostError
+
+
+class _CheckpointCleaner:
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, ...]] = []
+
+    async def delete_threads(self, run_ids) -> None:
+        self.calls.append(tuple(run_ids))
+
+
+class _FailOnceCheckpointCleaner(_CheckpointCleaner):
+    async def delete_threads(self, run_ids) -> None:
+        await super().delete_threads(run_ids)
+        if len(self.calls) == 1:
+            raise RuntimeError("checkpoint delete unavailable")
 
 
 async def _seed_users_and_project(session) -> None:
@@ -45,7 +73,7 @@ async def _seed_users_and_project(session) -> None:
 
 
 @asynccontextmanager
-async def _client(isolated_pg, *, user_id: int):
+async def _client(isolated_pg, *, user_id: int, checkpoint_cleaner=None):
     async def override_session():
         async with isolated_pg.session_factory() as session:
             yield session
@@ -62,6 +90,10 @@ async def _client(isolated_pg, *, user_id: int):
 
     app.dependency_overrides[get_session] = override_session
     app.dependency_overrides[get_current_user] = override_user
+    if checkpoint_cleaner is not None:
+        app.dependency_overrides[get_chapter_workflow_checkpoint_cleaner] = lambda: (
+            checkpoint_cleaner
+        )
     try:
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app),
@@ -108,7 +140,7 @@ def _snapshot_payload() -> dict[str, object]:
         "context_schema_version": 1,
         "status": "queued",
         "root_job_status": "queued",
-        "node_key": "freeze_context",
+        "node_key": "freeze_base_context",
         "checkpoint_id": None,
         "progress": 0,
         "row_revision": 0,
@@ -125,8 +157,8 @@ def _snapshot_payload() -> dict[str, object]:
 @pytest.mark.parametrize(
     ("field", "value"),
     [
-        ("workflow_version", 2),
-        ("state_schema_version", 2),
+        ("workflow_version", 3),
+        ("state_schema_version", 3),
         ("context_schema_version", 2),
         ("status", "unknown"),
         ("root_job_status", "unknown"),
@@ -151,6 +183,273 @@ def test_workflow_snapshot_requires_bounded_retry_activity_key():
     invalid["retry_activity_key"] = "x" * 129
     with pytest.raises(ValidationError):
         ChapterWorkflowSnapshot.model_validate(invalid)
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_reset_chapter_fences_worker_clears_state_and_allows_delete(isolated_pg):
+    async with isolated_pg.session_factory() as session:
+        await _seed_users_and_project(session)
+    cleaner = _CheckpointCleaner()
+
+    async with _client(
+        isolated_pg,
+        user_id=6101,
+        checkpoint_cleaner=cleaner,
+    ) as client:
+        started = await client.post("/api/writer/chapter-workflows", json=_start_payload())
+    assert started.status_code == 202
+    snapshot = started.json()["snapshot"]
+    run_id = snapshot["run_id"]
+
+    async with isolated_pg.session_factory() as session:
+        lease = await JobService(session).claim_next(
+            worker_id="workflow-reset-stale-worker",
+            lease_seconds=60,
+        )
+        assert lease is not None
+        run = await session.get(ChapterWorkflowRun, run_id)
+        assert run is not None and run.chapter_id is not None
+        chapter = await session.get(Chapter, run.chapter_id)
+        assert chapter is not None
+        chapter.status = "waiting_for_confirm"
+        version = ChapterVersion(
+            chapter_id=chapter.id,
+            content="应被重置的候选正文",
+            metadata={"_chapter_workflow": {"run_id": run_id, "ordinal": 1}},
+        )
+        session.add(version)
+        await session.flush()
+        session.add_all(
+            [
+                ChapterEvaluation(
+                    chapter_id=chapter.id,
+                    version_id=version.id,
+                    feedback="应被重置的评审",
+                ),
+                ChapterGenerationTrace(
+                    chapter_id=chapter.id,
+                    project_id=run.project_id,
+                    chapter_number=run.chapter_number,
+                    node_key="generate_candidate_1",
+                    node_label="生成候选版本 1",
+                    status="success",
+                    source_run_id=run_id,
+                    source_event_cursor=999_001,
+                ),
+                ChapterWorkflowCommand(
+                    id=str(uuid4()),
+                    run_id=run_id,
+                    type="retry",
+                    payload_version=1,
+                    payload={"private": "command"},
+                    actor_user_id=run.user_id,
+                    expected_run_revision=run.row_revision,
+                    expected_chapter_revision=0,
+                    expected_checkpoint_id=None,
+                    status="pending",
+                    result_payload={"private": "command result"},
+                ),
+                JobActivity(
+                    id=str(uuid4()),
+                    job_id=lease.job_id,
+                    activity_key="wf:generate_candidate_1:reset-test",
+                    side_effect_class="ambiguous_external",
+                    status="started",
+                    provider_request_key=str(uuid4()),
+                    attempt=lease.attempt,
+                    fencing_token=lease.fencing_token,
+                    request_payload={"private": "activity request"},
+                    result_payload={"private": "activity result"},
+                    started_at=datetime.now(timezone.utc),
+                ),
+            ]
+        )
+        run.checkpoint_id = "__retention_pending__"
+        await session.commit()
+
+    async with _client(
+        isolated_pg,
+        user_id=6101,
+        checkpoint_cleaner=cleaner,
+    ) as client:
+        reset = await client.post("/api/writer/novels/workflow-http-project/chapters/1/reset")
+        current = await client.get(
+            "/api/writer/chapter-workflows/current",
+            params={"project_id": "workflow-http-project", "chapter_number": 1},
+        )
+
+    assert reset.status_code == 200
+    reset_chapter = reset.json()["chapters"][0]
+    assert reset_chapter["generation_status"] == "not_generated"
+    assert current.status_code == 200
+    assert current.json() is None
+    assert cleaner.calls == [(run_id,)]
+
+    async with isolated_pg.session_factory() as session:
+        run = await session.get(ChapterWorkflowRun, run_id)
+        assert run is not None
+        job = await session.get(BackgroundTask, run.root_job_id)
+        chapter = await session.get(Chapter, run.chapter_id)
+        assert job is not None and chapter is not None
+        assert (job.status, job.lease_owner, job.fencing_token) == (
+            "cancelled",
+            None,
+            lease.fencing_token + 1,
+        )
+        assert (run.status, run.is_active, run.checkpoint_id) == ("cancelled", False, None)
+        assert (chapter.status, chapter.generation_progress, chapter.current_revision) == (
+            "not_generated",
+            0,
+            0,
+        )
+        assert (
+            list(
+                (
+                    await session.execute(
+                        select(ChapterVersion).where(ChapterVersion.chapter_id == chapter.id)
+                    )
+                ).scalars()
+            )
+            == []
+        )
+        assert (
+            list(
+                (
+                    await session.execute(
+                        select(ChapterEvaluation).where(ChapterEvaluation.chapter_id == chapter.id)
+                    )
+                ).scalars()
+            )
+            == []
+        )
+        assert (
+            list(
+                (
+                    await session.execute(
+                        select(ChapterGenerationTrace).where(
+                            ChapterGenerationTrace.chapter_id == chapter.id
+                        )
+                    )
+                ).scalars()
+            )
+            == []
+        )
+        command = (
+            await session.execute(
+                select(ChapterWorkflowCommand).where(ChapterWorkflowCommand.run_id == run_id)
+            )
+        ).scalar_one()
+        activity = (
+            await session.execute(select(JobActivity).where(JobActivity.job_id == job.id))
+        ).scalar_one()
+        assert (
+            command.status,
+            command.rejection_code,
+            command.payload,
+            command.result_payload,
+        ) == (
+            "rejected",
+            "chapter_reset",
+            {},
+            None,
+        )
+        assert (activity.request_payload, activity.result_payload) == ({}, None)
+        assert (
+            await session.execute(
+                select(JobEvent).where(
+                    JobEvent.stream_id == run_id,
+                    JobEvent.event_type == "workflow.completed",
+                )
+            )
+        ).scalars().first() is not None
+
+    async with isolated_pg.session_factory() as session:
+        with pytest.raises(LeaseLostError):
+            await JobService(session).mark_succeeded(lease)
+
+    async with _client(
+        isolated_pg,
+        user_id=6101,
+        checkpoint_cleaner=cleaner,
+    ) as client:
+        deleted = await client.post(
+            "/api/writer/novels/workflow-http-project/chapters/delete",
+            json={"chapter_numbers": [1]},
+        )
+        current_after_delete = await client.get(
+            "/api/writer/chapter-workflows/current",
+            params={"project_id": "workflow-http-project", "chapter_number": 1},
+        )
+
+    assert deleted.status_code == 200
+    assert deleted.json()["chapters"] == []
+    assert current_after_delete.status_code == 200
+    assert current_after_delete.json() is None
+    async with isolated_pg.session_factory() as session:
+        assert (
+            await session.execute(
+                select(ChapterOutline).where(
+                    ChapterOutline.project_id == "workflow-http-project",
+                    ChapterOutline.chapter_number == 1,
+                )
+            )
+        ).scalars().first() is None
+        assert await session.get(ChapterWorkflowRun, run_id) is not None
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_reset_chapter_retries_checkpoint_delete_after_committed_reset(isolated_pg):
+    async with isolated_pg.session_factory() as session:
+        await _seed_users_and_project(session)
+    cleaner = _FailOnceCheckpointCleaner()
+
+    async with _client(
+        isolated_pg,
+        user_id=6101,
+        checkpoint_cleaner=cleaner,
+    ) as client:
+        started = await client.post("/api/writer/chapter-workflows", json=_start_payload())
+    run_id = started.json()["snapshot"]["run_id"]
+
+    async with _client(
+        isolated_pg,
+        user_id=6101,
+        checkpoint_cleaner=cleaner,
+    ) as client:
+        with pytest.raises(RuntimeError, match="checkpoint delete unavailable"):
+            await client.post("/api/writer/novels/workflow-http-project/chapters/1/reset")
+
+    async with isolated_pg.session_factory() as session:
+        run = await session.get(ChapterWorkflowRun, run_id)
+        assert run is not None
+        assert (run.status, run.is_active, run.checkpoint_id) == (
+            "cancelled",
+            False,
+            "__chapter_reset_pending__",
+        )
+
+    async with _client(
+        isolated_pg,
+        user_id=6101,
+        checkpoint_cleaner=cleaner,
+    ) as client:
+        restarted = await client.post("/api/writer/chapter-workflows", json=_start_payload())
+        restarted_run_id = restarted.json()["snapshot"]["run_id"]
+        retried = await client.post("/api/writer/novels/workflow-http-project/chapters/1/reset")
+
+    assert restarted.status_code == 202
+    assert retried.status_code == 200
+    assert cleaner.calls == [(run_id,), (run_id,), (restarted_run_id,)]
+    async with isolated_pg.session_factory() as session:
+        run = await session.get(ChapterWorkflowRun, run_id)
+        restarted_run = await session.get(ChapterWorkflowRun, restarted_run_id)
+        assert run is not None and run.checkpoint_id is None
+        assert restarted_run is not None
+        assert (restarted_run.status, restarted_run.is_active, restarted_run.checkpoint_id) == (
+            "cancelled",
+            False,
+            None,
+        )
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -289,7 +588,7 @@ async def test_current_lookup_uses_full_order_and_excludes_successor_predecessor
 
         first.is_active = True
         first.status = "queued"
-        first.node_key = "freeze_context"
+        first.node_key = "freeze_base_context"
         first.base_revision = 2
         first.successor_run_id = None
         first_job.status = "queued"
@@ -347,6 +646,7 @@ async def test_current_lookup_uses_full_order_and_excludes_successor_predecessor
         first_job = await session.get(BackgroundTask, first.root_job_id)
         second_job = await session.get(BackgroundTask, second.root_job_id)
         assert first_job is not None and second_job is not None
+        assert first.chapter_id is not None
 
         first.is_active = False
         first.status = "failed"
@@ -357,6 +657,9 @@ async def test_current_lookup_uses_full_order_and_excludes_successor_predecessor
         second.status = "cancelled"
         second.node_key = "cancelled"
         second_job.status = "cancelled"
+        await session.execute(
+            update(Chapter).where(Chapter.id == first.chapter_id).values(status="failed")
+        )
 
         earlier = datetime(2026, 1, 1, tzinfo=timezone.utc)
         later = earlier + timedelta(hours=1)
@@ -434,6 +737,19 @@ async def test_current_lookup_uses_full_order_and_excludes_successor_predecessor
             await session.commit()
             assert await current_run_id() == second_id
 
+            await session.execute(
+                update(Chapter).where(Chapter.id == first.chapter_id).values(status="not_generated")
+            )
+            await session.commit()
+            reset_current = await client.get(
+                "/api/writer/chapter-workflows/current",
+                params={
+                    "project_id": "workflow-http-project",
+                    "chapter_number": 1,
+                },
+            )
+            assert reset_current.status_code == 200
+            assert reset_current.json() is None
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -451,7 +767,7 @@ async def test_stale_command_returns_409_with_complete_current_snapshot(isolated
         job = await session.get(BackgroundTask, run.root_job_id)
         assert job is not None
         run.status = "waiting_for_selection"
-        run.node_key = "waiting_for_selection"
+        run.node_key = "wait_for_selection"
         run.checkpoint_id = "checkpoint-http"
         job.status = "waiting"
         await session.commit()

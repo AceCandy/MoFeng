@@ -18,7 +18,7 @@ const mountChapterGenerating = async (
     chapterTitle: '第三章',
     chapterSummary: '主角进入新冲突。',
     status: 'generating',
-    generationStep: traces[0]?.node_key ?? 'context_prep',
+    generationStep: traces[0]?.node_key ?? 'freeze_base_context',
     generationStepIndex: 1,
     generationStepTotal: 7,
     generationTraces: traces,
@@ -52,8 +52,8 @@ describe('ChapterGenerating timing inspector', () => {
     const rendered = await mountChapterGenerating(
       {
         id: 99,
-        node_key: 'context_prep',
-        node_label: '整理前文',
+        node_key: 'freeze_base_context',
+        node_label: '冻结基础上下文',
         status: 'running',
         uses_llm: false,
         metadata: {},
@@ -76,8 +76,8 @@ describe('ChapterGenerating timing inspector', () => {
     const pending = await mountChapterGenerating(
       {
         id: 100,
-        node_key: 'context_prep',
-        node_label: '整理前文',
+        node_key: 'freeze_base_context',
+        node_label: '冻结基础上下文',
         status: 'running',
         uses_llm: false,
         metadata: {},
@@ -95,8 +95,8 @@ describe('ChapterGenerating timing inspector', () => {
   it('marks the incoming connector and current node for running motion', async () => {
     const rendered = await mountChapterGenerating({
       id: 101,
-      node_key: 'quality_review',
-      node_label: 'AI评审',
+      node_key: 'refine_candidate',
+      node_label: '润色推荐版本',
       status: 'running',
       uses_llm: true,
       metadata: {},
@@ -104,7 +104,7 @@ describe('ChapterGenerating timing inspector', () => {
 
     try {
       const current = rendered.host.querySelector('.chapter-console__pipeline-item.is-in-progress')
-      expect(current?.textContent).toContain('AI评审')
+      expect(current?.textContent).toContain('润色推荐版本')
       expect(current?.previousElementSibling?.classList.contains('is-leading-to-current')).toBe(true)
       expect(current?.classList.contains('is-leading-to-current')).toBe(false)
       expect(rendered.host.querySelector('.chapter-console__pipeline-card')
@@ -114,11 +114,68 @@ describe('ChapterGenerating timing inspector', () => {
     }
   })
 
+  it('renders the projection fan-out without treating sibling branches as serial', async () => {
+    const rendered = await mountChapterGenerating(
+      [
+        {
+          id: 201,
+          node_key: 'freeze_base_context',
+          node_label: '冻结基础上下文',
+          status: 'success',
+          uses_llm: false,
+          metadata: {},
+        },
+        {
+          id: 202,
+          node_key: 'project_memory',
+          node_label: '更新记忆快照',
+          status: 'success',
+          uses_llm: false,
+          metadata: {},
+        },
+        {
+          id: 203,
+          node_key: 'project_foreshadowing',
+          node_label: '同步伏笔',
+          status: 'success',
+          uses_llm: false,
+          metadata: {},
+        },
+      ],
+      {
+        status: 'finalizing',
+        generationStep: 'wait_for_projections',
+      },
+    )
+
+    try {
+      const projectionGroup = rendered.host.querySelector('[data-group="projections"]')
+      expect(projectionGroup?.getAttribute('data-mode')).toBe('parallel')
+      expect(projectionGroup?.textContent).toContain('更新记忆快照')
+      expect(projectionGroup?.textContent).toContain('写入章节索引')
+      expect(projectionGroup?.textContent).toContain('同步伏笔')
+
+      const ragStep = Array.from(
+        projectionGroup?.querySelectorAll('.chapter-console__pipeline-item') || [],
+      ).find((item) => item.textContent?.includes('写入章节索引'))
+      expect(ragStep?.classList.contains('is-skipped')).toBe(true)
+      expect(ragStep?.textContent).toContain('已跳过')
+
+      const waitingStep = Array.from(
+        rendered.host.querySelectorAll('.chapter-console__pipeline-item'),
+      ).find((item) => item.textContent?.includes('等待投影完成'))
+      expect(waitingStep?.classList.contains('is-control')).toBe(true)
+      expect(waitingStep?.classList.contains('is-in-progress')).toBe(true)
+    } finally {
+      rendered.unmount()
+    }
+  })
+
   it('keeps the displayed recommendation aligned with the structured winner', () => {
     const output = formatAiReviewOutputs({
       id: 0,
-      node_key: 'quality_review',
-      node_label: 'AI评审',
+      node_key: 'review_candidates',
+      node_label: '评审候选版本',
       status: 'success',
       uses_llm: true,
       metadata: {
@@ -149,9 +206,9 @@ describe('ChapterGenerating timing inspector', () => {
   it('shows recorded system duration from the active generation trace', async () => {
     const rendered = await mountChapterGenerating({
       id: 1,
-      node_key: 'context_prep',
-      node_label: '整理前文',
-      stage: 'context_prep',
+      node_key: 'freeze_base_context',
+      node_label: '冻结基础上下文',
+      stage: 'freeze_base_context',
       status: 'success',
       uses_llm: false,
       metadata: {
@@ -171,12 +228,12 @@ describe('ChapterGenerating timing inspector', () => {
   })
 
   it('shows the full failed trace error in the failure card after refresh', async () => {
-    const fullError = '修复润色失败：模型返回 JSON 解析错误，真实错误需要完整保留给前端查看'
+    const fullError = '润色推荐版本失败：模型返回 JSON 解析错误，真实错误需要完整保留给前端查看'
     const rendered = await mountChapterGenerating(
       {
         id: 2,
-        node_key: 'review_refinement',
-        node_label: '修复润色',
+        node_key: 'refine_candidate',
+        node_label: '润色推荐版本',
         stage: 'chapter_optimization',
         status: 'failed',
         uses_llm: true,
@@ -191,7 +248,7 @@ describe('ChapterGenerating timing inspector', () => {
       },
       {
         status: 'failed',
-        generationStep: 'failed|error=修复润色失败：模型返回 JSON 解析错误',
+        generationStep: 'failed|error=润色推荐版本失败：模型返回 JSON 解析错误',
       },
     )
 
@@ -208,8 +265,8 @@ describe('ChapterGenerating timing inspector', () => {
     const rendered = await mountChapterGenerating(
       {
         id: 3,
-        node_key: 'quality_review',
-        node_label: 'AI评审',
+        node_key: 'review_candidates',
+        node_label: '评审候选版本',
         stage: 'version_review',
         status: 'success',
         uses_llm: true,
@@ -229,10 +286,10 @@ describe('ChapterGenerating timing inspector', () => {
 
     try {
       const failedStep = rendered.host.querySelector('.chapter-console__pipeline-item.is-failed')
-      expect(failedStep?.textContent).toContain('AI评审')
+      expect(failedStep?.textContent).toContain('评审候选版本')
       expect(failedStep?.textContent).toContain('失败')
       expect(failedStep?.querySelector('.chapter-console__pipeline-select')?.getAttribute('aria-label'))
-        .toContain('AI评审失败')
+        .toContain('评审候选版本失败')
       expect(rendered.host.textContent).toContain('状态：失败')
       expect(rendered.host.textContent).toContain('评审节点未返回更具体的失败原因')
       expect(rendered.host.textContent).not.toContain('状态：成功')
@@ -245,12 +302,12 @@ describe('ChapterGenerating timing inspector', () => {
     const rendered = await mountChapterGenerating(
       {
         id: 4,
-        node_key: 'quality_review',
-        node_label: 'AI评审',
+        node_key: 'review_candidates',
+        node_label: '评审候选版本',
         stage: 'version_review',
         status: 'failed',
         uses_llm: true,
-        error: 'AI评审失败：模型返回空结果',
+        error: '评审候选版本失败：模型返回空结果',
         metadata: {
           duration_ms: 1600,
           actions: ['调用评审模型'],
@@ -278,12 +335,12 @@ describe('ChapterGenerating timing inspector', () => {
     const rendered = await mountChapterGenerating(
       {
         id: 5,
-        node_key: 'quality_review',
-        node_label: 'AI评审',
+        node_key: 'review_candidates',
+        node_label: '评审候选版本',
         stage: 'version_review',
         status: 'failed',
         uses_llm: true,
-        error: 'AI评审失败：模型返回空结果',
+        error: '评审候选版本失败：模型返回空结果',
         metadata: {
           duration_ms: 1600,
           actions: ['调用评审模型'],
@@ -301,7 +358,7 @@ describe('ChapterGenerating timing inspector', () => {
     try {
       expect(rendered.host.querySelector('.chapter-console__actions')).toBeNull()
       expect(rendered.host.querySelector('.chapter-console__pipeline-retry')).toBeNull()
-      expect(rendered.host.textContent).not.toContain('重新 AI评审')
+      expect(rendered.host.textContent).not.toContain('重新 评审候选版本')
       expect(rendered.host.textContent).not.toContain('放弃本轮草稿并重新生成')
       expect(rendered.host.textContent).not.toContain('重新生成本章')
       expect(rendered.host.textContent).not.toContain('重试生成本章')
@@ -311,12 +368,12 @@ describe('ChapterGenerating timing inspector', () => {
   })
 
   it('keeps failed evaluation traces inspectable without legacy regeneration actions', async () => {
-    const fullError = 'AI评审失败：模型返回空结果'
+    const fullError = '评审候选版本失败：模型返回空结果'
     const rendered = await mountChapterGenerating(
       {
         id: 6,
-        node_key: 'quality_review',
-        node_label: 'AI评审',
+        node_key: 'review_candidates',
+        node_label: '评审候选版本',
         stage: 'version_review',
         status: 'failed',
         uses_llm: true,
@@ -336,7 +393,7 @@ describe('ChapterGenerating timing inspector', () => {
     )
 
     try {
-      await clickPipelineStep(rendered.host, 'AI评审')
+      await clickPipelineStep(rendered.host, '评审候选版本')
       expect(rendered.host.textContent).toContain('状态：失败')
       expect(rendered.host.textContent).toContain(fullError)
       expect(rendered.host.textContent).not.toContain('放弃本轮草稿并重新生成')
@@ -355,8 +412,8 @@ describe('ChapterGenerating timing inspector', () => {
     const traces: ChapterGenerationTrace[] = [
       {
         id: 60,
-        node_key: 'draft_generation',
-        node_label: '生成正文',
+        node_key: 'generate_candidate_1',
+        node_label: '候选版本 1',
         stage: 'chapter_writing',
         status: 'failed',
         uses_llm: true,
@@ -365,12 +422,12 @@ describe('ChapterGenerating timing inspector', () => {
       },
       {
         id: 61,
-        node_key: 'quality_review',
-        node_label: 'AI评审',
+        node_key: 'review_candidates',
+        node_label: '评审候选版本',
         stage: 'version_review',
         status: 'failed',
         uses_llm: true,
-        error: 'AI评审失败：外部模型返回结果不确定',
+        error: '评审候选版本失败：外部模型返回结果不确定',
         metadata: {
           duration_ms: 1600,
           actions: ['调用评审模型'],
@@ -387,15 +444,15 @@ describe('ChapterGenerating timing inspector', () => {
 
     try {
       expect(rendered.host.querySelector('[data-action="retry-external-node"]')).toBeNull()
-      await clickPipelineStep(rendered.host, 'AI评审')
+      await clickPipelineStep(rendered.host, '评审候选版本')
       const retryButton = rendered.host.querySelector<HTMLButtonElement>(
         '[data-action="retry-external-node"]',
       )
       expect(retryButton?.textContent).toContain('重试')
-      expect(retryButton?.getAttribute('aria-label')).toBe('使用上一节点结果重试AI评审')
+      expect(retryButton?.getAttribute('aria-label')).toBe('使用上一节点结果重试评审候选版本')
       expect(retryButton?.disabled).toBe(false)
       expect(retryButton?.closest('.chapter-console__pipeline-item')?.textContent)
-        .toContain('AI评审')
+        .toContain('评审候选版本')
       expect(retryButton?.closest('.chapter-console__pipeline-card')
         ?.classList.contains('has-node-retry')).toBe(true)
 
@@ -415,7 +472,7 @@ describe('ChapterGenerating timing inspector', () => {
       await vi.waitFor(() => expect(onRetryExternal)
         .toHaveBeenCalledWith('wf:review_candidates:stable-key'))
 
-      await clickPipelineStep(rendered.host, '生成正文')
+      await clickPipelineStep(rendered.host, '候选版本 1')
       await vi.waitFor(() => {
         expect(rendered.host.querySelector('[data-action="retry-external-node"]')).toBeNull()
       })
@@ -434,7 +491,7 @@ describe('ChapterGenerating timing inspector', () => {
         ...props,
       })
       try {
-        await clickPipelineStep(unavailable.host, 'AI评审')
+        await clickPipelineStep(unavailable.host, '评审候选版本')
         expect(unavailable.host.querySelector('[data-action="retry-external-node"]')).toBeNull()
       } finally {
         unavailable.unmount()
@@ -449,7 +506,7 @@ describe('ChapterGenerating timing inspector', () => {
       pending: true,
     })
     try {
-      await clickPipelineStep(pending.host, 'AI评审')
+      await clickPipelineStep(pending.host, '评审候选版本')
       expect(pending.host.querySelector<HTMLButtonElement>(
         '[data-action="retry-external-node"]',
       )?.disabled).toBe(true)
@@ -463,8 +520,8 @@ describe('ChapterGenerating timing inspector', () => {
       [
         {
           id: 7,
-          node_key: 'draft_generation',
-          node_label: '生成正文',
+          node_key: 'generate_candidate_1',
+          node_label: '候选版本 1',
           stage: 'chapter_writing',
           status: 'success',
           uses_llm: true,
@@ -480,8 +537,8 @@ describe('ChapterGenerating timing inspector', () => {
         },
         {
           id: 8,
-          node_key: 'quality_review',
-          node_label: 'AI评审',
+          node_key: 'review_candidates',
+          node_label: '评审候选版本',
           stage: 'version_review',
           status: 'success',
           uses_llm: true,
@@ -506,15 +563,15 @@ describe('ChapterGenerating timing inspector', () => {
         },
         {
           id: 9,
-          node_key: 'review_refinement',
-          node_label: '修复润色',
+          node_key: 'refine_candidate',
+          node_label: '润色推荐版本',
           stage: 'chapter_optimization',
           status: 'success',
           uses_llm: true,
           cleaned_output: 'AI修复后的最终正文',
           metadata: {
             duration_ms: 1500,
-            actions: ['按评审建议修复润色'],
+            actions: ['按评审建议润色推荐版本'],
             output_payload: {
               optimization_notes: '已补强结尾钩子',
               refined_chars: 9,
@@ -526,9 +583,9 @@ describe('ChapterGenerating timing inspector', () => {
         },
         {
           id: 10,
-          node_key: 'save_draft',
-          node_label: '保存草稿',
-          stage: 'save_draft',
+          node_key: 'persist_drafts',
+          node_label: '保存候选草稿',
+          stage: 'persist_drafts',
           status: 'success',
           uses_llm: false,
           metadata: {
@@ -556,30 +613,50 @@ describe('ChapterGenerating timing inspector', () => {
         rendered.host.querySelectorAll('.chapter-console__pipeline-title'),
       ).map((item) => item.textContent?.trim())
       expect(pipelineTitles).toEqual([
-        '整理前文',
-        '规划剧情',
-        '调用设定',
-        '生成正文',
-        'AI评审',
-        '修复润色',
+        '冻结基础上下文',
+        '检索章节上下文',
+        '规划章节任务',
+        '候选版本 1',
+        '候选版本 2',
+        '评审候选版本',
+        '润色推荐版本',
+        '增强正文',
+        '修复一致性',
+        '优化文风',
+        '扩写正文',
+        '压缩超长正文',
+        '保存候选草稿',
+        '等待选择版本',
+        '定稿章节版本',
+        '生成章节梳理',
+        '更新记忆快照',
+        '写入章节索引',
+        '同步伏笔',
+        '等待投影完成',
+        '汇合投影结果',
+        '章节工作流完成',
       ])
       expect(pipelineTitles).not.toContain('待人工确认')
 
-      const refinementStep = Array.from(
-        rendered.host.querySelectorAll('.chapter-console__pipeline-item'),
-      ).find((item) => item.textContent?.includes('修复润色'))
-      expect(refinementStep?.textContent).toContain('待人工确认')
+      const candidateGroup = rendered.host.querySelector('[data-group="candidates"]')
+      expect(candidateGroup?.getAttribute('data-mode')).toBe('parallel')
+      expect(candidateGroup?.textContent).toContain('并行')
 
-      await clickPipelineStep(rendered.host, '生成正文')
+      const selectionStep = Array.from(
+        rendered.host.querySelectorAll('.chapter-console__pipeline-item'),
+      ).find((item) => item.textContent?.includes('等待选择版本'))
+      expect(selectionStep?.textContent).toContain('待人工确认')
+
+      await clickPipelineStep(rendered.host, '候选版本 1')
       expect(rendered.host.textContent).toContain('AI生成正文：')
       expect(rendered.host.textContent).toContain('AI生成初稿正文')
 
-      await clickPipelineStep(rendered.host, 'AI评审')
+      await clickPipelineStep(rendered.host, '评审候选版本')
       expect(rendered.host.textContent).toContain('评审结论：')
       expect(rendered.host.textContent).toContain('整体流畅，人物动机明确。')
       expect(rendered.host.textContent).toContain('修改建议：加强结尾钩子。')
 
-      await clickPipelineStep(rendered.host, '修复润色')
+      await clickPipelineStep(rendered.host, '润色推荐版本')
       expect(rendered.host.textContent).toContain('AI修复后正文：')
       expect(rendered.host.textContent).toContain('AI修复后的最终正文')
       expect(rendered.host.textContent).toContain('修复说明：已补强结尾钩子')

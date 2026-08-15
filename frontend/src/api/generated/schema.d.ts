@@ -1295,7 +1295,7 @@ export interface paths {
         put?: never;
         /**
          * Advanced Generate Chapter
-         * @description 提交高级章节生成任务，具体 LangGraph 流程由独立 worker 执行。
+         * @description 提交高级章节生成任务，由独立 worker 执行 durable Chapter workflow。
          */
         post: operations["advanced_generate_chapter_api_writer_advanced_generate_post"];
         delete?: never;
@@ -1315,7 +1315,7 @@ export interface paths {
         put?: never;
         /**
          * Start Chapter Workflow
-         * @description 创建或复用 durable Chapter workflow；切流前由配置显式关闭。
+         * @description 创建或复用 durable Chapter workflow。
          */
         post: operations["start_chapter_workflow_api_writer_chapter_workflows_post"];
         delete?: never;
@@ -1409,6 +1409,23 @@ export interface paths {
         put?: never;
         /** Confirm Finalize Chapter */
         post: operations["confirm_finalize_chapter_api_writer_novels__project_id__chapters__chapter_number__confirm_finalize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/writer/novels/{project_id}/chapters/{chapter_number}/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset Chapter */
+        post: operations["reset_chapter_api_writer_novels__project_id__chapters__chapter_number__reset_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2284,7 +2301,7 @@ export interface components {
             /** Is Active */
             is_active: boolean;
             /** Node Key */
-            node_key: ("freeze_context" | "plan_and_direct" | "generate_candidates" | "review_candidates" | "persist_candidates" | "waiting_for_selection" | "finalize_revision" | "projection_pending" | "observe_projection" | "successful") | ("failed" | "cancelled" | "superseded");
+            node_key: ("freeze_base_context" | "retrieve_context" | "plan_chapter" | "generate_candidate_1" | "generate_candidate_2" | "review_candidates" | "refine_candidate" | "enhance_content" | "repair_consistency" | "optimize_style" | "enrich_content" | "compress_candidate" | "persist_drafts" | "wait_for_selection" | "finalize_revision" | "wait_for_projections" | "reconcile_projections" | "successful") | ("failed" | "cancelled" | "superseded");
             /** Progress */
             progress: number;
             /** Project Id */
@@ -6673,6 +6690,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BackgroundTaskResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_chapter_api_writer_novels__project_id__chapters__chapter_number__reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                chapter_number: number;
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NovelProject"];
                 };
             };
             /** @description Validation Error */

@@ -9,8 +9,13 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 from ..models.background_task import BackgroundTask
 from ..models.chapter_projection import ChapterOutboxEvent
-from ..models.chapter_workflow import ChapterWorkflowCommand, ChapterWorkflowRun
+from ..models.chapter_workflow import (
+    CHAPTER_WORKFLOW_RESET_CHECKPOINT_DELETE_PENDING,
+    ChapterWorkflowCommand,
+    ChapterWorkflowRun,
+)
 from ..models.job import JobActivity, JobEvent
+from ..models.novel import Chapter
 from .base import BaseRepository
 
 
@@ -65,6 +70,12 @@ class ChapterWorkflowRepository(BaseRepository[ChapterWorkflowRun]):
     ) -> Optional[ChapterWorkflowRun]:
         """返回 owner scope 内可恢复的当前 run，不暴露 successor predecessor。"""
 
+        terminal_chapter_exists = exists(
+            select(Chapter.id).where(
+                Chapter.id == ChapterWorkflowRun.chapter_id,
+                Chapter.status != "not_generated",
+            )
+        )
         result = await self.session.execute(
             select(ChapterWorkflowRun)
             .where(
@@ -77,6 +88,7 @@ class ChapterWorkflowRepository(BaseRepository[ChapterWorkflowRun]):
                         ChapterWorkflowRun.is_active.is_(False),
                         ChapterWorkflowRun.status.in_(("successful", "failed", "cancelled")),
                         ChapterWorkflowRun.successor_run_id.is_(None),
+                        terminal_chapter_exists,
                     ),
                 ),
             )
@@ -85,6 +97,33 @@ class ChapterWorkflowRepository(BaseRepository[ChapterWorkflowRun]):
                 ChapterWorkflowRun.base_revision.desc(),
                 ChapterWorkflowRun.updated_at.desc(),
                 ChapterWorkflowRun.created_at.desc(),
+                ChapterWorkflowRun.id.desc(),
+            )
+            .limit(1)
+        )
+        return result.scalars().first()
+
+    async def get_checkpoint_delete_pending_user_run(
+        self,
+        *,
+        user_id: int,
+        project_id: str,
+        chapter_number: int,
+    ) -> Optional[ChapterWorkflowRun]:
+        """返回重置已生效、但 checkpoint thread 仍待幂等删除的 run。"""
+
+        result = await self.session.execute(
+            select(ChapterWorkflowRun)
+            .where(
+                ChapterWorkflowRun.user_id == user_id,
+                ChapterWorkflowRun.project_id == project_id,
+                ChapterWorkflowRun.chapter_number == chapter_number,
+                ChapterWorkflowRun.checkpoint_id
+                == CHAPTER_WORKFLOW_RESET_CHECKPOINT_DELETE_PENDING,
+            )
+            .order_by(
+                ChapterWorkflowRun.base_revision.desc(),
+                ChapterWorkflowRun.updated_at.desc(),
                 ChapterWorkflowRun.id.desc(),
             )
             .limit(1)

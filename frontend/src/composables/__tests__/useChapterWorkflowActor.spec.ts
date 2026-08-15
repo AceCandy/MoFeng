@@ -2,11 +2,12 @@
 import { createApp, defineComponent, nextTick, ref, type App, type Ref } from 'vue'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type {
-  ChapterWorkflowCommandConflictDetail,
-  ChapterWorkflowConnection,
-  ChapterWorkflowSnapshot,
-  ChapterWorkflowStartResponse,
+import {
+  ChapterWorkflowContractError,
+  type ChapterWorkflowCommandConflictDetail,
+  type ChapterWorkflowConnection,
+  type ChapterWorkflowSnapshot,
+  type ChapterWorkflowStartResponse,
 } from '@/api/chapterWorkflow'
 import type { BackgroundTaskEvent } from '@/api/tasks'
 import {
@@ -37,7 +38,7 @@ const workflowSnapshot = (
   context_schema_version: 1,
   status: 'running',
   root_job_status: 'running',
-  node_key: 'generate_candidates',
+  node_key: 'generate_candidate_1',
   checkpoint_id: 'checkpoint-3',
   progress: 40,
   row_revision: 1,
@@ -221,6 +222,30 @@ describe('useChapterWorkflowActor', () => {
     expect(stream.subscriptions).toHaveLength(0)
   })
 
+  it('fatal 再次检查串行执行，并在查询为空后恢复 idle', async () => {
+    const retriedLookup = deferred<ChapterWorkflowConnection | null>()
+    const lookup = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new ChapterWorkflowContractError('unsupported_version', 'workflow_version'),
+      )
+      .mockImplementationOnce(() => retriedLookup.promise)
+    const { ports } = createPorts({ lookup })
+    const { actor } = mountActor(ports)
+    await vi.waitFor(() => expect(actor.phase.value).toBe('fatal'))
+
+    const first = actor.resync()
+    const duplicate = actor.resync()
+    expect(actor.resyncing.value).toBe(true)
+    await expect(duplicate).resolves.toBe(false)
+    expect(lookup).toHaveBeenCalledTimes(2)
+
+    retriedLookup.resolve(null)
+    await expect(first).resolves.toBe(true)
+    expect(actor.resyncing.value).toBe(false)
+    expect(actor.phase.value).toBe('idle')
+  })
+
   it('rehydrate 后只在 SSE HTTP 建立时进入 connected', async () => {
     const { ports, stream } = createPorts({
       lookup: vi.fn(async () => connection()),
@@ -280,7 +305,7 @@ describe('useChapterWorkflowActor', () => {
       .mockResolvedValueOnce(connection({
         status: 'waiting_for_selection',
         root_job_status: 'waiting',
-        node_key: 'waiting_for_selection',
+        node_key: 'wait_for_selection',
         row_revision: 2,
         resume_cursor: 6,
       }))
@@ -322,7 +347,7 @@ describe('useChapterWorkflowActor', () => {
     secondRefetch.resolve(connection({
       status: 'waiting_for_selection',
       root_job_status: 'waiting',
-      node_key: 'waiting_for_selection',
+      node_key: 'wait_for_selection',
       row_revision: 3,
       resume_cursor: 8,
     }))
@@ -373,7 +398,7 @@ describe('useChapterWorkflowActor', () => {
     const polled = connection({
       status: 'waiting_for_selection',
       root_job_status: 'waiting',
-      node_key: 'waiting_for_selection',
+      node_key: 'wait_for_selection',
       row_revision: 2,
     })
     const lookup = vi
@@ -414,7 +439,7 @@ describe('useChapterWorkflowActor', () => {
       .mockResolvedValueOnce(connection({
         status: 'waiting_for_selection',
         root_job_status: 'waiting',
-        node_key: 'waiting_for_selection',
+        node_key: 'wait_for_selection',
         row_revision: 4,
         allowed_commands: ['select'],
         resume_cursor: 12,
@@ -463,7 +488,7 @@ describe('useChapterWorkflowActor', () => {
       .mockResolvedValueOnce(connection({
         status: 'waiting_for_selection',
         root_job_status: 'waiting',
-        node_key: 'waiting_for_selection',
+        node_key: 'wait_for_selection',
         row_revision: 4,
         allowed_commands: ['select'],
         resume_cursor: 12,
@@ -512,14 +537,14 @@ describe('useChapterWorkflowActor', () => {
       .mockResolvedValueOnce(connection({
         status: 'waiting_for_selection',
         root_job_status: 'waiting',
-        node_key: 'waiting_for_selection',
+        node_key: 'wait_for_selection',
         row_revision: 2,
         resume_cursor: 6,
       }))
       .mockResolvedValueOnce(connection({
         status: 'waiting_for_selection',
         root_job_status: 'waiting',
-        node_key: 'waiting_for_selection',
+        node_key: 'wait_for_selection',
         row_revision: 3,
         resume_cursor: 7,
       }))

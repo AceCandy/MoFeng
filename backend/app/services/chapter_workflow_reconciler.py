@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.chapter_workflow_checkpointer import open_chapter_workflow_checkpointer
 from ..repositories.chapter_workflow_repository import ChapterWorkflowRepository
-from ..schemas.chapter_workflow import ChapterWorkflowStateV1
+from ..schemas.chapter_workflow import ChapterWorkflowState
 from .chapter_workflow_graph import chapter_workflow_graph_config
 from .job_service import (
     ChapterWorkflowCheckpointEvidence,
@@ -65,7 +65,8 @@ class PostgresChapterWorkflowCheckpointReader:
         evidence: dict[str, ChapterWorkflowCheckpointEvidence] = {}
         async with open_chapter_workflow_checkpointer(self.database_url) as saver:
             for candidate in candidates:
-                if candidate.workflow_version != 1 or candidate.state_schema_version != 1:
+                state_type = self._state_type(candidate)
+                if state_type is None:
                     evidence[candidate.run_id] = ChapterWorkflowCheckpointEvidence(
                         checkpoint_id=None,
                         state=None,
@@ -90,6 +91,7 @@ class PostgresChapterWorkflowCheckpointReader:
                 evidence[candidate.run_id] = self._parse_tuple(
                     candidate,
                     checkpoint_tuple,
+                    state_type=state_type,
                 )
         return evidence
 
@@ -97,7 +99,16 @@ class PostgresChapterWorkflowCheckpointReader:
     def _parse_tuple(
         candidate: ChapterWorkflowReconcileCandidate,
         checkpoint_tuple: object,
+        *,
+        state_type: type[ChapterWorkflowState] | None = None,
     ) -> ChapterWorkflowCheckpointEvidence:
+        state_type = state_type or PostgresChapterWorkflowCheckpointReader._state_type(candidate)
+        if state_type is None:
+            return ChapterWorkflowCheckpointEvidence(
+                checkpoint_id=None,
+                state=None,
+                reason_code="checkpoint_version_unknown",
+            )
         if checkpoint_tuple is None:
             return ChapterWorkflowCheckpointEvidence(
                 checkpoint_id=None,
@@ -122,10 +133,10 @@ class PostgresChapterWorkflowCheckpointReader:
                 raise ValueError("checkpoint identity drift")
             state_values = {
                 key: channel_values[key]
-                for key in ChapterWorkflowStateV1.model_fields
+                for key in state_type.model_fields
                 if key in channel_values
             }
-            state = ChapterWorkflowStateV1.model_validate(state_values)
+            state = state_type.model_validate(state_values)
         except (KeyError, TypeError, ValueError, ValidationError):
             logger.warning(
                 "Chapter workflow checkpoint 无法验证: run_id=%s reason=%s",
@@ -140,6 +151,17 @@ class PostgresChapterWorkflowCheckpointReader:
         return ChapterWorkflowCheckpointEvidence(
             checkpoint_id=checkpoint_id,
             state=state,
+        )
+
+    @staticmethod
+    def _state_type(
+        candidate: ChapterWorkflowReconcileCandidate,
+    ) -> type[ChapterWorkflowState] | None:
+        versions: dict[tuple[int, int], type[ChapterWorkflowState]] = {
+            (1, 1): ChapterWorkflowState,
+        }
+        return versions.get(
+            (candidate.workflow_version, candidate.state_schema_version)
         )
 
 

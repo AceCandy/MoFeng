@@ -4,8 +4,10 @@ from __future__ import annotations
 import json
 import logging
 from copy import deepcopy
+from typing import cast
 from uuid import uuid4
 
+import httpx
 import pytest
 from pydantic import ValidationError
 from sqlalchemy import select
@@ -21,7 +23,7 @@ from app.models import (
 from app.schemas.chapter_context import ChapterContext
 from app.schemas.chapter_workflow import (
     ChapterWorkflowCommandEnvelope,
-    ChapterWorkflowStateV1,
+    ChapterWorkflowState,
 )
 from app.services.chapter_workflow_activities import (
     ChapterWorkflowActivityRef,
@@ -34,16 +36,17 @@ from app.services.chapter_workflow_activities import (
     ChapterWorkflowPostReviewOutput,
     ChapterWorkflowReviewInput,
     ChapterWorkflowReviewOutput,
+    _ambiguous_public_message,
 )
 from app.services.chapter_workflow_context import ChapterWorkflowContextService
 from app.services.chapter_workflow_handler import (
-    ChapterWorkflowBindingAssemblerV1,
-    ChapterWorkflowLLMProvidersV1,
+    ChapterWorkflowBindingAssembler,
+    ChapterWorkflowLLMProviders,
 )
 from app.services.job_registry import SideEffectClass
 from app.services.job_service import AmbiguousActivityError, JobService
 from app.services.job_worker import JobExecutionContext
-from app.services.llm_service import LLMService
+from app.services.llm_service import LLMService, get_llm_failure_diagnostic
 from app.services.model_response_parser import parse_chapter_content_response
 from app.utils.ai_telemetry import AICallResult, TokenUsage
 
@@ -53,6 +56,37 @@ def _activity_ref(execution) -> ChapterWorkflowActivityRef:
         activity_key=execution.activity_key,
         result_hash=execution.result.result_hash,
     )
+
+
+def test_ambiguous_public_message_reports_timeout_without_fabricating_http_status():
+    error = LLMService._llm_http_exception(
+        detail="AI 服务响应超时，请稍后重试",
+        source=httpx.ReadTimeout("PRIVATE_UPSTREAM_DETAIL"),
+        config={
+            "provider_name": "IKunCode",
+            "model": "claude-opus-4-6",
+        },
+    )
+
+    assert _ambiguous_public_message("enhanced_review", error) == (
+        "增强正文调用供应商 IKunCode 的模型 claude-opus-4-6 失败："
+        "AI 服务响应超时。未获得可确认的结果，请确认后重试当前节点"
+    )
+    assert _ambiguous_public_message("enhanced_review", RuntimeError("SECRET")) == (
+        "章节工作流 enhanced_review 外部调用结果未知，需要人工确认"
+    )
+
+    unsafe_identity = LLMService._llm_http_exception(
+        detail="AI 服务响应超时，请稍后重试",
+        source=httpx.ReadTimeout("PRIVATE_UPSTREAM_DETAIL"),
+        config={
+            "provider_name": "https://private-provider.example/v1",
+            "model": "sk-private-model-name",
+        },
+    )
+    unsafe_message = _ambiguous_public_message("enhanced_review", unsafe_identity)
+    assert "https://" not in unsafe_message
+    assert "sk-private" not in unsafe_message
 
 
 @pytest.mark.parametrize(
@@ -195,37 +229,143 @@ async def test_configured_version_count_drives_two_candidate_activities(isolated
                 content=f"候选正文 {request.ordinal}",
             )
 
-    assembler = ChapterWorkflowBindingAssemblerV1(execution, Providers())
-    state = ChapterWorkflowStateV1.initial(
+    assembler = ChapterWorkflowBindingAssembler(execution, Providers())
+    state = ChapterWorkflowState.initial(
         run_id=started.run.id,
         context_hash=started.run.context_hash,
+        candidate_count=2,
     )
-    context_update = await assembler.freeze_context(state)
-    state = state.model_copy(
-        update={
-            **context_update,
-            "node_key": "plan_and_direct",
-        }
-    )
-    plan_update = await assembler.plan_and_direct(state)
-    state = state.model_copy(
-        update={
-            "node_key": "generate_candidates",
-            "activity_refs": {
-                **state.activity_refs,
-                **plan_update["activity_refs"],
-            },
-            "result_refs": {
-                **state.result_refs,
-                **plan_update["result_refs"],
-            },
-        }
-    )
+    for node_key, operation in (
+        ("retrieve_context", assembler.freeze_base_context),
+        ("plan_chapter", assembler.retrieve_context),
+        ("generate_candidate_1", assembler.plan_chapter),
+        ("generate_candidate_2", assembler.generate_candidate_1),
+    ):
+        update = await operation(state)
+        state = state.model_copy(
+            update={
+                **update,
+                "node_key": node_key,
+                "activity_refs": {
+                    **state.activity_refs,
+                    **cast(dict[str, str], update.get("activity_refs", {})),
+                },
+                "result_refs": {
+                    **state.result_refs,
+                    **cast(dict[str, str], update.get("result_refs", {})),
+                },
+            }
+        )
 
-    candidate_update = await assembler.generate_candidates(state)
+    candidate_update = await assembler.generate_candidate_2(state)
 
     assert candidate_ordinals == [1, 2]
-    assert set(candidate_update["activity_refs"]) == {"candidate:1", "candidate:2"}
+    assert set(state.activity_refs) | set(candidate_update["activity_refs"]) >= {
+        "candidate:1",
+        "candidate:2",
+    }
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_assembler_keeps_review_and_refinement_as_separate_activities(
+    isolated_pg,
+):
+    started, execution = await _start_and_claim(
+        isolated_pg,
+        user_id=4308,
+        project_id="workflow-node-boundaries",
+    )
+    calls: list[str] = []
+
+    class Providers:
+        async def plan(self, _request, *, provider_request_key):
+            assert provider_request_key
+            calls.append("plan")
+            return ChapterWorkflowPlanOutput(mission={"goal": "推进冲突"})
+
+        async def candidate(self, request, *, provider_request_key):
+            assert provider_request_key
+            calls.append(f"candidate:{request.ordinal}")
+            return ChapterWorkflowCandidateOutput(
+                ordinal=request.ordinal,
+                content=f"候选正文 {request.ordinal}",
+            )
+
+        async def review(self, request, *, provider_request_key):
+            assert provider_request_key
+            calls.append("review")
+            return ChapterWorkflowReviewOutput(
+                best_ordinal=request.candidates[0].ordinal,
+                report={"result": "采用首版"},
+            )
+
+        async def post_review(self, request, *, provider_request_key):
+            assert provider_request_key
+            calls.append(f"post:{request.stage}")
+            return ChapterWorkflowPostReviewOutput(
+                stage=request.stage,
+                content="润色正文",
+            )
+
+    assembler = ChapterWorkflowBindingAssembler(execution, Providers())
+    state = ChapterWorkflowState.initial(
+        run_id=started.run.id,
+        context_hash=started.run.context_hash,
+        candidate_count=1,
+    )
+
+    async def advance(node_key, operation):
+        nonlocal state
+        update = await operation(state)
+        state = state.model_copy(
+            update={
+                **update,
+                "node_key": node_key,
+                "activity_refs": {
+                    **state.activity_refs,
+                    **cast(dict[str, str], update.get("activity_refs", {})),
+                },
+                "result_refs": {
+                    **state.result_refs,
+                    **cast(dict[str, str], update.get("result_refs", {})),
+                },
+            }
+        )
+
+    await advance("retrieve_context", assembler.freeze_base_context)
+    await advance("plan_chapter", assembler.retrieve_context)
+    await advance("generate_candidate_1", assembler.plan_chapter)
+    await advance("review_candidates", assembler.generate_candidate_1)
+    await advance("refine_candidate", assembler.review_candidates)
+
+    assert calls == ["plan", "candidate:1", "review"]
+
+    await advance("enhance_content", assembler.refine_candidate)
+
+    assert calls == [
+        "plan",
+        "candidate:1",
+        "review",
+        "post:review_guided_refinement",
+    ]
+    async with isolated_pg.session_factory() as session:
+        node_keys = list(
+            (
+                await session.execute(
+                    select(JobActivity.request_payload["node_key"].as_string()).where(
+                        JobActivity.job_id == started.root_job.id
+                    )
+                )
+            ).scalars()
+        )
+    assert {
+        "freeze_base_context",
+        "retrieve_context",
+        "plan_chapter",
+        "generate_candidate_1",
+        "review_candidates",
+        "refine_candidate",
+    }.issubset(set(node_keys))
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -239,20 +379,38 @@ async def test_production_llm_providers_forward_stable_provider_request_keys(
         project_id="workflow-production-provider-keys",
     )
     calls: list[tuple[str, str | None]] = []
+    prompt_names: list[str] = []
+    request_payloads: list[dict[str, object]] = []
     responses = {
         "chapter_mission": '{"mission":{"goal":"推进冲突"}}',
         "chapter_writing": '{"content":"候选正文"}',
         "version_review": '{"best_ordinal":1}',
-        "chapter_optimization": '{"content":"修订正文"}',
+        "chapter_optimization": (
+            '{"optimized_content":"修订正文","optimization_notes":"按阶段修订"}'
+        ),
+        "chapter_compression": "压缩正文",
     }
 
     async def fake_prompt(_self, name, *, fallback=None):
+        prompt_names.append(name)
         return f"prompt:{name}:{fallback or ''}"
 
-    async def fake_detached(*, stage, provider_request_key=None, **_kwargs):
+    async def fake_detached(
+        *,
+        stage,
+        provider_request_key=None,
+        conversation_history,
+        system_prompt,
+        **_kwargs,
+    ):
         calls.append((stage, provider_request_key))
+        request_payloads.append(json.loads(conversation_history[0]["content"]))
         return AICallResult(
-            value=responses[stage],
+            value=(
+                responses["chapter_compression"]
+                if system_prompt.startswith("prompt:chapter_compression:")
+                else responses[stage]
+            ),
             provider_type="openai_compatible",
             model="test-model",
             model_id=None,
@@ -269,15 +427,16 @@ async def test_production_llm_providers_forward_stable_provider_request_keys(
             cost_amount=None,
             cost_currency=None,
             cost_unknown_reason="pricing_unconfigured",
+            provider_name="IKunCode",
         )
 
-    monkeypatch.setattr(ChapterWorkflowLLMProvidersV1, "_prompt", fake_prompt)
+    monkeypatch.setattr(ChapterWorkflowLLMProviders, "_prompt", fake_prompt)
     monkeypatch.setattr(
         LLMService,
         "get_llm_response_result_detached",
         staticmethod(fake_detached),
     )
-    provider = ChapterWorkflowLLMProvidersV1(execution)
+    provider = ChapterWorkflowLLMProviders(execution)
     common_input = {
         "context_snapshot": context.result.context_snapshot,
         "context_activity_key": context.activity_key,
@@ -308,14 +467,36 @@ async def test_production_llm_providers_forward_stable_provider_request_keys(
         provider_request_key="provider-key-review",
     )
     assert isinstance(review, AICallResult)
+    revision_stages = [
+        "enhanced_review",
+        "consistency",
+        "optimizer",
+        "enrichment",
+    ]
+    revisions = []
+    for stage in revision_stages:
+        revisions.append(
+            await provider.post_review(
+                ChapterWorkflowPostReviewInput(
+                    **common_input,
+                    source_candidate=candidate.value,
+                    review=review.value,
+                    stage=stage,
+                ),
+                provider_request_key=f"provider-key-{stage}",
+            )
+        )
     await provider.post_review(
         ChapterWorkflowPostReviewInput(
             **common_input,
-            source_candidate=candidate.value,
+            source_candidate=ChapterWorkflowCandidateOutput(
+                ordinal=1,
+                content="超" * 3500,
+            ),
             review=review.value,
-            stage="consistency",
+            stage="compression",
         ),
-        provider_request_key="provider-key-post-review",
+        provider_request_key="provider-key-compression",
     )
 
     single_review = await provider.review(
@@ -331,10 +512,68 @@ async def test_production_llm_providers_forward_stable_provider_request_keys(
         ("chapter_mission", "provider-key-plan"),
         ("chapter_writing", "provider-key-candidate"),
         ("version_review", "provider-key-review"),
-        ("chapter_optimization", "provider-key-post-review"),
+        *[
+            ("chapter_optimization", f"provider-key-{stage}")
+            for stage in revision_stages
+        ],
+        ("chapter_optimization", "provider-key-compression"),
     ]
+    assert prompt_names == [
+        "chapter_plan",
+        "writing_v2",
+        "editor_review",
+        *["optimize_recommended_version"] * len(revision_stages),
+        "chapter_compression",
+    ]
+    assert request_payloads[1]["word_count"] == {
+        "target": 3000,
+        "minimum": 2200,
+        "maximum": 3300,
+        "requirement": "目标字数：约 3000 字，不得少于 2200 字，不得超过 3300 字。超出上限必须压缩，禁止继续扩写。",
+    }
+    for stage, revision, payload in zip(
+        revision_stages,
+        revisions,
+        request_payloads[3:7],
+        strict=True,
+    ):
+        assert revision.value.stage == stage
+        assert revision.value.content == "修订正文"
+        assert payload["source_content"] == "候选正文"
+        assert payload["version_number"] == 1
+        assert payload["version_review"] == review.value.report
+        assert "目标字数：约 3000 字" in payload["review_summary"]
+    assert request_payloads[7]["current_word_count"] == 3500
+    assert request_payloads[7]["maximum_word_count"] == 3300
     assert single_review.best_ordinal == 1
     assert single_review.report["mode"] == "single"
+
+    responses["chapter_optimization"] = '{"report":{"status":"missing content"}}'
+    with pytest.raises(ValueError) as exc_info:
+        await provider.post_review(
+            ChapterWorkflowPostReviewInput(
+                **common_input,
+                source_candidate=ChapterWorkflowCandidateOutput(
+                    ordinal=1,
+                    content="待增强正文",
+                ),
+                review=review.value,
+                stage="enhanced_review",
+            ),
+            provider_request_key="provider-key-invalid-post-review",
+        )
+
+    assert get_llm_failure_diagnostic(exc_info.value) == {
+        "provider": "IKunCode",
+        "model": "test-model",
+        "status_code": None,
+        "reason": "模型只返回了说明信息，没有返回章节正文",
+    }
+    assert _ambiguous_public_message("enhanced_review", exc_info.value) == (
+        "增强正文调用供应商 IKunCode 的模型 test-model 失败："
+        "模型只返回了说明信息，没有返回章节正文。"
+        "本次结果未保存，请重试当前节点"
+    )
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -462,10 +701,45 @@ async def test_model_activities_replay_by_stable_ordinal_and_stage_with_private_
     post = await service.execute_post_review(post_input, post_provider)
     assert await service.execute_post_review(post_input, post_provider) == post
 
-    assert calls == {"plan": 1, "candidate": 2, "review": 1, "post": 1}
+    compression_input = ChapterWorkflowPostReviewInput(
+        context_snapshot=context.result.context_snapshot,
+        context_activity_key=context.activity_key,
+        context_result_hash=context.result.result_hash,
+        upstream_refs={
+            "candidate:2": _activity_ref(candidate_two),
+            "review:version_review": _activity_ref(review),
+            "post_review:consistency": _activity_ref(post),
+        },
+        source_candidate=candidate_two.result.output,
+        review=review.result.output,
+        stage="compression",
+        prior_stage_results=[post.result.output],
+    )
+
+    async def compression_provider(request, *, provider_request_key):
+        assert provider_request_key
+        calls["post"] += 1
+        return ChapterWorkflowPostReviewOutput(
+            stage=request.stage,
+            content="压" * 2200,
+            report={"compressed": True},
+        )
+
+    compression = await service.execute_post_review(
+        compression_input,
+        compression_provider,
+        node_key="compress_candidate",
+    )
+    assert await service.execute_post_review(
+        compression_input,
+        compression_provider,
+        node_key="compress_candidate",
+    ) == compression
+
+    assert calls == {"plan": 1, "candidate": 2, "review": 1, "post": 2}
     assert candidate_one.activity_key != candidate_two.activity_key
 
-    executions = [plan, candidate_one, candidate_two, review, post]
+    executions = [plan, candidate_one, candidate_two, review, post, compression]
     for execution in executions:
         state_update = execution.state_update()
         assert set(state_update) == {"activity_refs", "result_refs"}
@@ -480,7 +754,7 @@ async def test_model_activities_replay_by_stable_ordinal_and_stage_with_private_
                     .where(
                         JobActivity.job_id == started.root_job.id,
                         JobActivity.activity_key.like("wf:%"),
-                        JobActivity.activity_key.not_like("wf:freeze_context:%"),
+                        JobActivity.activity_key.not_like("wf:retrieve_context:%"),
                     )
                     .order_by(JobActivity.activity_key)
                 )
@@ -494,7 +768,7 @@ async def test_model_activities_replay_by_stable_ordinal_and_stage_with_private_
             ).scalars()
         )
 
-    assert len(activities) == 5
+    assert len(activities) == 6
     assert all(
         activity.side_effect_class == SideEffectClass.AMBIGUOUS_EXTERNAL.value
         for activity in activities
@@ -525,13 +799,25 @@ async def test_model_activity_provider_uncertainty_stops_run_without_automatic_r
     )
     calls = 0
 
+    class GatewayFailure(RuntimeError):
+        status_code = 502
+
     async def uncertain_provider(_request, *, provider_request_key):
         nonlocal calls
         assert provider_request_key
         calls += 1
-        raise RuntimeError("provider response may have been delivered: SECRET_TOKEN")
+        LLMService._raise_llm_stream_error(
+            GatewayFailure("provider response may have been delivered: SECRET_TOKEN"),
+            {
+                "provider_name": "IKunCode",
+                "provider_type": "anthropic",
+                "model": "claude-opus-4-6",
+            },
+            4302,
+            stage="chapter_optimization",
+        )
 
-    with pytest.raises(AmbiguousActivityError, match="结果未知"):
+    with pytest.raises(AmbiguousActivityError, match="调用供应商 IKunCode 的模型"):
         await service.execute_plan(request, uncertain_provider)
 
     async with isolated_pg.session_factory() as session:
@@ -539,7 +825,7 @@ async def test_model_activity_provider_uncertainty_stops_run_without_automatic_r
             await session.execute(
                 select(JobActivity).where(
                     JobActivity.job_id == started.root_job.id,
-                    JobActivity.activity_key.like("wf:plan_and_direct:%"),
+                    JobActivity.activity_key.like("wf:plan_chapter:%"),
                 )
             )
         ).scalar_one()
@@ -552,9 +838,15 @@ async def test_model_activity_provider_uncertainty_stops_run_without_automatic_r
     assert job is not None and job.status == "needs_attention"
     assert run is not None and run.status == "needs_attention" and run.is_active is True
     assert "SECRET_TOKEN" not in (job.error or "")
+    assert job.error == (
+        "章节规划调用供应商 IKunCode 的模型 claude-opus-4-6 失败："
+        "AI 服务上游故障（HTTP 502）。"
+        "未获得可确认的结果，请确认后重试当前节点"
+    )
     assert "failure_phase=provider" in app_caplog.text
     assert "stage=plan_and_direct" in app_caplog.text
-    assert "error_type=RuntimeError" in app_caplog.text
+    assert "error_type=GatewayFailure" in app_caplog.text
+    assert "error_type=HTTPException" in app_caplog.text
     assert "SECRET_TOKEN" not in app_caplog.text
 
 
@@ -720,7 +1012,7 @@ async def test_retry_external_does_not_replay_uncertain_manual_activity(
             await session.execute(
                 select(JobActivity).where(
                     JobActivity.job_id == started.root_job.id,
-                    JobActivity.activity_key.like("wf:plan_and_direct:%"),
+                    JobActivity.activity_key.like("wf:plan_chapter:%"),
                 )
             )
         ).scalar_one()
@@ -851,7 +1143,7 @@ async def test_model_activity_rejects_unledgered_enriched_context_before_intent(
             await session.execute(
                 select(JobActivity).where(
                     JobActivity.job_id == started.root_job.id,
-                    JobActivity.activity_key.like("wf:plan_and_direct:%"),
+                    JobActivity.activity_key.like("wf:plan_chapter:%"),
                 )
             )
         ).scalar_one_or_none()
@@ -899,7 +1191,7 @@ async def test_candidate_activity_rejects_unledgered_plan_before_intent(isolated
             await session.execute(
                 select(JobActivity).where(
                     JobActivity.job_id == started.root_job.id,
-                    JobActivity.activity_key.like("wf:generate_candidates:%"),
+                    JobActivity.activity_key.like("wf:generate_candidate_1:%"),
                 )
             )
         ).scalar_one_or_none()

@@ -1,39 +1,19 @@
-# AIMETA P=章节工作流持久状态与HTTP契约|R=checkpoint校验_start_snapshot_command响应|NR=不含正文_prompt_运行时对象|E=ChapterWorkflowStateV1_ChapterWorkflowSnapshot|X=http,internal|A=pydantic_contract|D=pydantic|S=none|RD=./README.ai
+# AIMETA P=章节工作流持久状态与HTTP契约|R=checkpoint校验_start_snapshot_command响应|NR=不含正文_prompt_运行时对象|E=ChapterWorkflowState_ChapterWorkflowSnapshot|X=http,internal|A=pydantic_contract|D=pydantic|S=none|RD=./README.ai
 """Serializable state and HTTP contracts for durable Chapter workflows."""
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal, Optional
+from typing import Annotated, Any, Literal, Mapping, Optional
 from uuid import UUID
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
 
 from .novel import FlowConfig
 
-CHAPTER_WORKFLOW_VERSION_V1 = 1
-CHAPTER_WORKFLOW_STATE_SCHEMA_VERSION_V1 = 1
-CHAPTER_WORKFLOW_CONTEXT_SCHEMA_VERSION_V1 = 1
+CHAPTER_WORKFLOW_VERSION = 1
+CHAPTER_WORKFLOW_STATE_SCHEMA_VERSION = 1
+CHAPTER_WORKFLOW_CONTEXT_SCHEMA_VERSION = 1
 
-ChapterWorkflowNodeKeyV1 = Literal[
-    "freeze_context",
-    "plan_and_direct",
-    "generate_candidates",
-    "review_candidates",
-    "persist_candidates",
-    "waiting_for_selection",
-    "finalize_revision",
-    "projection_pending",
-    "observe_projection",
-    "successful",
-]
-ChapterWorkflowSnapshotNodeKeyV1 = (
-    ChapterWorkflowNodeKeyV1
-    | Literal[
-        "failed",
-        "cancelled",
-        "superseded",
-    ]
-)
 ChapterWorkflowRunStatus = Literal[
     "queued",
     "running",
@@ -58,17 +38,53 @@ ChapterWorkflowRootJobStatus = Literal[
     "needs_attention",
     "cancelled",
 ]
-CHAPTER_WORKFLOW_NODE_KEYS_V1: tuple[ChapterWorkflowNodeKeyV1, ...] = (
-    "freeze_context",
-    "plan_and_direct",
-    "generate_candidates",
+ChapterWorkflowNodeKey = Literal[
+    "freeze_base_context",
+    "retrieve_context",
+    "plan_chapter",
+    "generate_candidate_1",
+    "generate_candidate_2",
     "review_candidates",
-    "persist_candidates",
-    "waiting_for_selection",
+    "refine_candidate",
+    "enhance_content",
+    "repair_consistency",
+    "optimize_style",
+    "enrich_content",
+    "compress_candidate",
+    "persist_drafts",
+    "wait_for_selection",
     "finalize_revision",
-    "projection_pending",
-    "observe_projection",
+    "wait_for_projections",
+    "reconcile_projections",
     "successful",
+]
+CHAPTER_WORKFLOW_NODE_KEYS: tuple[ChapterWorkflowNodeKey, ...] = (
+    "freeze_base_context",
+    "retrieve_context",
+    "plan_chapter",
+    "generate_candidate_1",
+    "generate_candidate_2",
+    "review_candidates",
+    "refine_candidate",
+    "enhance_content",
+    "repair_consistency",
+    "optimize_style",
+    "enrich_content",
+    "compress_candidate",
+    "persist_drafts",
+    "wait_for_selection",
+    "finalize_revision",
+    "wait_for_projections",
+    "reconcile_projections",
+    "successful",
+)
+ChapterWorkflowSnapshotNodeKey = (
+    ChapterWorkflowNodeKey
+    | Literal[
+        "failed",
+        "cancelled",
+        "superseded",
+    ]
 )
 
 ReferenceKey = Annotated[str, Field(min_length=1, max_length=255)]
@@ -82,6 +98,15 @@ ChapterWorkflowCommandType = Literal[
     "cancel",
 ]
 ChapterWorkflowCommandStatus = Literal["pending", "applied", "rejected"]
+
+
+def merge_workflow_reference_maps(
+    current: dict[str, str],
+    update: dict[str, str],
+) -> dict[str, str]:
+    """合并并行候选分支的引用型 checkpoint 更新。"""
+
+    return {**current, **update}
 
 
 def validate_chapter_workflow_run_id(value: str) -> str:
@@ -103,21 +128,26 @@ ChapterWorkflowRunId = Annotated[
 ]
 
 
-class ChapterWorkflowStateV1(BaseModel):
-    """Graph V1 checkpoint；只持久化身份、hash、marker 与结果引用。"""
+class ChapterWorkflowState(BaseModel):
+    """Graph checkpoint；只保存身份、阶段引用及可恢复路由状态。"""
 
     model_config = ConfigDict(extra="forbid")
-
     workflow_version: Literal[1] = 1
     state_schema_version: Literal[1] = 1
     run_id: ChapterWorkflowRunId
-    node_key: ChapterWorkflowNodeKeyV1
+    node_key: ChapterWorkflowNodeKey
     context_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
-    activity_refs: dict[ReferenceKey, ReferenceValue] = Field(
+    activity_refs: Annotated[
+        dict[ReferenceKey, ReferenceValue],
+        merge_workflow_reference_maps,
+    ] = Field(
         default_factory=dict,
         max_length=100,
     )
-    result_refs: dict[ReferenceKey, ReferenceValue] = Field(
+    result_refs: Annotated[
+        dict[ReferenceKey, ReferenceValue],
+        merge_workflow_reference_maps,
+    ] = Field(
         default_factory=dict,
         max_length=100,
     )
@@ -126,6 +156,20 @@ class ChapterWorkflowStateV1(BaseModel):
         max_length=100,
     )
     selected_version_id: Optional[int] = Field(default=None, ge=1)
+    candidate_count: int = Field(default=1, ge=1, le=2)
+    optional_stages: dict[
+        Literal[
+            "enhance_content",
+            "repair_consistency",
+            "optimize_style",
+            "enrich_content",
+        ],
+        bool,
+    ] = Field(default_factory=dict)
+    skipped_stages: Annotated[
+        dict[str, str],
+        merge_workflow_reference_maps,
+    ] = Field(default_factory=dict, max_length=20)
     last_applied_command_id: Optional[str] = Field(
         default=None,
         min_length=36,
@@ -135,13 +179,22 @@ class ChapterWorkflowStateV1(BaseModel):
     error_category: Optional[str] = Field(default=None, min_length=1, max_length=64)
 
     @classmethod
-    def initial(cls, *, run_id: str, context_hash: str) -> "ChapterWorkflowStateV1":
-        """从 durable run 身份构造首个 freeze_context checkpoint。"""
+    def initial(
+        cls,
+        *,
+        run_id: str,
+        context_hash: str,
+        candidate_count: int = 1,
+        optional_stages: Mapping[str, bool] | None = None,
+    ) -> "ChapterWorkflowState":
+        """从 durable run 身份构造首个 checkpoint。"""
 
         return cls(
             run_id=run_id,
-            node_key="freeze_context",
+            node_key="freeze_base_context",
             context_hash=context_hash,
+            candidate_count=candidate_count,
+            optional_stages=dict(optional_stages or {}),
         )
 
 
@@ -211,7 +264,7 @@ class ChapterWorkflowSnapshot(BaseModel):
     context_schema_version: Literal[1]
     status: ChapterWorkflowRunStatus
     root_job_status: ChapterWorkflowRootJobStatus
-    node_key: ChapterWorkflowSnapshotNodeKeyV1
+    node_key: ChapterWorkflowSnapshotNodeKey
     checkpoint_id: Optional[str] = Field(default=None, max_length=512)
     progress: int = Field(ge=0, le=100)
     row_revision: int = Field(ge=0)
@@ -222,7 +275,6 @@ class ChapterWorkflowSnapshot(BaseModel):
     allowed_commands: list[ChapterWorkflowCommandType]
     retry_activity_key: Optional[str] = Field(max_length=128)
     resume_cursor: int = Field(ge=0)
-
 
 class ChapterWorkflowStartRequest(BaseModel):
     """创建或复用当前章节 active workflow 的公开输入。"""

@@ -1830,15 +1830,23 @@
             "anyOf": [
               {
                 "enum": [
-                  "freeze_context",
-                  "plan_and_direct",
-                  "generate_candidates",
+                  "freeze_base_context",
+                  "retrieve_context",
+                  "plan_chapter",
+                  "generate_candidate_1",
+                  "generate_candidate_2",
                   "review_candidates",
-                  "persist_candidates",
-                  "waiting_for_selection",
+                  "refine_candidate",
+                  "enhance_content",
+                  "repair_consistency",
+                  "optimize_style",
+                  "enrich_content",
+                  "compress_candidate",
+                  "persist_drafts",
+                  "wait_for_selection",
                   "finalize_revision",
-                  "projection_pending",
-                  "observe_projection",
+                  "wait_for_projections",
+                  "reconcile_projections",
                   "successful"
                 ],
                 "type": "string"
@@ -9808,7 +9816,7 @@
     },
     "/api/writer/advanced/generate": {
       "post": {
-        "description": "提交高级章节生成任务，具体 LangGraph 流程由独立 worker 执行。",
+        "description": "提交高级章节生成任务，由独立 worker 执行 durable Chapter workflow。",
         "operationId": "advanced_generate_chapter_api_writer_advanced_generate_post",
         "parameters": [
           {
@@ -9873,7 +9881,7 @@
     },
     "/api/writer/chapter-workflows": {
       "post": {
-        "description": "创建或复用 durable Chapter workflow；切流前由配置显式关闭。",
+        "description": "创建或复用 durable Chapter workflow。",
         "operationId": "start_chapter_workflow_api_writer_chapter_workflows_post",
         "requestBody": {
           "content": {
@@ -10740,6 +10748,63 @@
           }
         ],
         "summary": "Confirm Finalize Chapter",
+        "tags": [
+          "Writer"
+        ]
+      }
+    },
+    "/api/writer/novels/{project_id}/chapters/{chapter_number}/reset": {
+      "post": {
+        "operationId": "reset_chapter_api_writer_novels__project_id__chapters__chapter_number__reset_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "chapter_number",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Chapter Number",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NovelProject"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Reset Chapter",
         "tags": [
           "Writer"
         ]

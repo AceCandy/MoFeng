@@ -41,7 +41,7 @@ const snapshot = (
   context_schema_version: 1,
   status: 'waiting_for_selection',
   root_job_status: 'waiting',
-  node_key: 'waiting_for_selection',
+  node_key: 'wait_for_selection',
   checkpoint_id: 'checkpoint-3',
   progress: 60,
   row_revision: 4,
@@ -98,7 +98,14 @@ describe('ChapterWorkflow API contract', () => {
       'superseded',
     ])
     expect(CHAPTER_WORKFLOW_ROOT_JOB_STATUS_VALUES).toHaveLength(9)
-    expect(CHAPTER_WORKFLOW_NODE_KEY_VALUES).toHaveLength(13)
+    expect(CHAPTER_WORKFLOW_NODE_KEY_VALUES).toHaveLength(21)
+    expect(CHAPTER_WORKFLOW_NODE_KEY_VALUES).toEqual(expect.arrayContaining([
+      'freeze_base_context',
+      'generate_candidate_2',
+      'compress_candidate',
+      'wait_for_selection',
+      'reconcile_projections',
+    ]))
     expect(CHAPTER_WORKFLOW_COMMAND_VALUES).toEqual([
       'select',
       'retry',

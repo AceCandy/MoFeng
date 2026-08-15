@@ -62,11 +62,31 @@
           v-if="phase === 'fatal'"
           type="button"
           class="md-btn md-btn-filled md-ripple"
+          data-action="reset"
+          :disabled="pending"
+          @click="emit('reset')"
+        >
+          {{ pending ? '正在处理...' : '重置本章' }}
+        </button>
+        <button
+          v-if="phase === 'fatal'"
+          type="button"
+          class="md-btn md-btn-outlined md-ripple"
           data-action="resync"
           :disabled="pending"
           @click="emit('resync')"
         >
-          重新同步
+          再次检查
+        </button>
+        <button
+          v-if="phase === 'fatal'"
+          type="button"
+          class="md-btn md-btn-outlined md-ripple chapter-workflow__delete"
+          data-action="delete"
+          :disabled="pending"
+          @click="emit('delete')"
+        >
+          删除章节
         </button>
         <button
           v-if="canCancel"
@@ -168,6 +188,8 @@ const emit = defineEmits<{
   (event: 'retryProjection'): void
   (event: 'cancel'): void
   (event: 'resync'): void
+  (event: 'reset'): void
+  (event: 'delete'): void
   /** 选中候选且其携带正文时向工作区发出描红预览文本；清空时传 null */
   (event: 'preview-candidate', content: string | null): void
 }>()
@@ -202,9 +224,15 @@ const stateCopy = computed(() => {
     case 'superseded':
       return { title: '正在切换到最新运行', description: '本轮已被后续运行替代。' }
     case 'fatal':
-      return { title: '章节状态暂不可信', description: '无法确认当前工作流事实，请重新同步。' }
+      return {
+        title: '章节运行无法读取',
+        description: '再次检查不会改写数据；若问题持续，请重置本章后重新生成，或删除章节。',
+      }
   }
-  return { title: '章节状态暂不可信', description: '无法确认当前工作流事实，请重新同步。' }
+  return {
+    title: '章节运行无法读取',
+    description: '再次检查不会改写数据；若问题持续，请重置本章后重新生成，或删除章节。',
+  }
 })
 
 const tone = computed(() => {
@@ -400,6 +428,16 @@ watch(
 .chapter-workflow__select {
   min-height: 40px;
   white-space: normal;
+}
+
+.chapter-workflow__delete {
+  border-color: var(--md-error);
+  color: var(--md-error-text);
+}
+
+.chapter-workflow__delete:hover,
+.chapter-workflow__delete:focus-visible {
+  background: var(--md-error-container);
 }
 
 .chapter-workflow__selection {

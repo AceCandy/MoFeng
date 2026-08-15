@@ -24,105 +24,133 @@
         取消本轮
       </button>
     </header>
-    <ol class="chapter-console__pipeline">
-      <li
-        v-for="(item, index) in pipelineSteps"
-        :key="item.key"
-        :class="[
-          'chapter-console__pipeline-item',
-          `is-${stepState(item.key, index).tone}`,
-          { 'is-current': stepState(item.key, index).tone === 'in-progress' },
-          { 'is-leading-to-current': isLeadingToCurrent(index) },
-          { 'is-selected': activeStepKey === item.key },
-          { 'is-clickable': stepState(item.key, index).tone !== 'waiting' },
-          { 'has-retry-action': canRetryActiveStep && activeStepKey === item.key },
-        ]"
+    <div class="chapter-console__pipeline-groups">
+      <section
+        v-for="group in pipelineGroups"
+        :key="group.key"
+        class="chapter-console__pipeline-group"
+        :data-group="group.key"
+        :data-mode="group.mode"
+        :aria-label="group.label || undefined"
       >
-        <Transition name="chapter-node-retry">
-          <Tooltip
-            v-if="canRetryActiveStep && activeStepKey === item.key"
-            text="使用上一节点的结果重新执行当前节点"
-            :show-delay="240"
-            class="chapter-console__pipeline-node-retry-trigger"
+        <div v-if="group.label" class="chapter-console__pipeline-group-header">
+          <span>{{ group.label }}</span>
+          <span v-if="group.mode === 'parallel'" class="chapter-console__pipeline-mode">并行</span>
+        </div>
+        <ol
+          class="chapter-console__pipeline"
+          :class="{ 'is-parallel': group.mode === 'parallel' }"
+        >
+          <li
+            v-for="item in group.steps"
+            :key="item.key"
+            :class="[
+              'chapter-console__pipeline-item',
+              `is-${stepState(item.key, item.index).tone}`,
+              `is-${item.kind || 'execution'}`,
+              { 'is-current': stepState(item.key, item.index).tone === 'in-progress' },
+              { 'is-leading-to-current': isLeadingToCurrent(item.index) },
+              { 'is-selected': activeStepKey === item.key },
+              { 'is-clickable': stepState(item.key, item.index).tone !== 'waiting' },
+              { 'has-retry-action': canRetryActiveStep && activeStepKey === item.key },
+            ]"
           >
+            <Transition name="chapter-node-retry">
+              <Tooltip
+                v-if="canRetryActiveStep && activeStepKey === item.key"
+                text="使用上一节点的结果重新执行当前节点"
+                :show-delay="240"
+                class="chapter-console__pipeline-node-retry-trigger"
+              >
+                <button
+                  type="button"
+                  class="md-btn md-ripple chapter-console__pipeline-node-retry"
+                  data-action="retry-external-node"
+                  :aria-label="`使用上一节点结果重试${item.label}`"
+                  :disabled="pending"
+                  @click.stop="emit('retryExternal')"
+                >
+                  <svg
+                    class="chapter-console__pipeline-node-retry-icon"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M3 12a9 9 0 1 0 3-6.7" />
+                    <path d="M3 4v6h6" />
+                  </svg>
+                  <span>{{ pending ? '提交' : '重试' }}</span>
+                </button>
+              </Tooltip>
+            </Transition>
             <button
               type="button"
-              class="md-btn md-ripple chapter-console__pipeline-node-retry"
-              data-action="retry-external-node"
-              :aria-label="`使用上一节点结果重试${item.label}`"
-              :disabled="pending"
-              @click.stop="emit('retryExternal')"
+              class="chapter-console__pipeline-select"
+              :aria-label="stepTooltipText(item.key, item.index)"
+              :aria-current="activeStepKey === item.key ? 'step' : undefined"
+              :disabled="stepState(item.key, item.index).tone === 'waiting'"
+              @click="emit('select', item.key, item.index)"
             >
-              <svg
-                class="chapter-console__pipeline-node-retry-icon"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
+              <Tooltip
+                :text="canRetryActiveStep && activeStepKey === item.key ? undefined : stepTooltipText(item.key, item.index)"
+                :show-delay="150"
+                class="chapter-console__pipeline-tooltip-wrapper"
               >
-                <path d="M3 12a9 9 0 1 0 3-6.7" />
-                <path d="M3 4v6h6" />
-              </svg>
-              <span>{{ pending ? '提交' : '重试' }}</span>
+                <div class="chapter-console__pipeline-marker">
+                  <span class="chapter-console__dot"></span>
+                </div>
+                <div class="chapter-console__pipeline-content">
+                  <div class="chapter-console__pipeline-header">
+                    <span class="chapter-console__pipeline-title">{{ item.label }}</span>
+                    <span
+                      v-if="item.kind === 'control' || item.kind === 'terminal'"
+                      class="chapter-console__pipeline-badge chapter-console__pipeline-badge--kind"
+                    >
+                      {{ item.kind === 'terminal' ? '终态' : '控制' }}
+                    </span>
+                    <span
+                      v-if="shouldShowManualConfirmBadge(item.key)"
+                      class="chapter-console__pipeline-badge chapter-console__pipeline-badge--manual-confirm"
+                    >
+                      待人工确认
+                    </span>
+                    <span
+                      v-if="stepState(item.key, item.index).tone === 'in-progress'"
+                      class="chapter-console__pipeline-badge"
+                    >
+                      进行中
+                    </span>
+                    <span
+                      v-else-if="stepState(item.key, item.index).tone === 'failed'"
+                      class="chapter-console__pipeline-badge chapter-console__pipeline-badge--failed"
+                    >
+                      失败
+                    </span>
+                    <span
+                      v-else-if="stepState(item.key, item.index).tone === 'skipped'"
+                      class="chapter-console__pipeline-badge chapter-console__pipeline-badge--skipped"
+                    >
+                      已跳过
+                    </span>
+                  </div>
+                </div>
+              </Tooltip>
             </button>
-          </Tooltip>
-        </Transition>
-        <button
-          type="button"
-          class="chapter-console__pipeline-select"
-          :aria-label="stepTooltipText(item.key, index)"
-          :aria-current="activeStepKey === item.key ? 'step' : undefined"
-          :disabled="stepState(item.key, index).tone === 'waiting'"
-          @click="emit('select', item.key, index)"
-        >
-          <Tooltip
-            :text="canRetryActiveStep && activeStepKey === item.key ? undefined : stepTooltipText(item.key, index)"
-            :show-delay="150"
-            class="chapter-console__pipeline-tooltip-wrapper"
-          >
-            <div class="chapter-console__pipeline-marker">
-              <span class="chapter-console__dot"></span>
-            </div>
-            <div class="chapter-console__pipeline-content">
-              <div class="chapter-console__pipeline-header">
-                <span class="chapter-console__pipeline-title">{{ item.label }}</span>
-                <span
-                  v-if="shouldShowManualConfirmBadge(item.key)"
-                  class="chapter-console__pipeline-badge chapter-console__pipeline-badge--manual-confirm"
-                >
-                  待人工确认
-                </span>
-                <span
-                  v-if="stepState(item.key, index).tone === 'in-progress'"
-                  class="chapter-console__pipeline-badge"
-                >
-                  进行中
-                </span>
-                <span
-                  v-else-if="stepState(item.key, index).tone === 'failed'"
-                  class="chapter-console__pipeline-badge chapter-console__pipeline-badge--failed"
-                >
-                  失败
-                </span>
-              </div>
-            </div>
-          </Tooltip>
-        </button>
-      </li>
-    </ol>
+          </li>
+        </ol>
+      </section>
+    </div>
   </article>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import Tooltip from '@/components/Tooltip.vue'
-
-interface PipelineStep {
-  key: string
-  label: string
-}
+import type { PipelineStep } from '@/utils/generationTrace'
 
 interface Props {
   pipelineSteps: PipelineStep[]
@@ -139,6 +167,30 @@ const props = withDefaults(defineProps<Props>(), {
   canRetryActiveStep: false,
   canCancel: false,
   pending: false,
+})
+
+const pipelineGroups = computed(() => {
+  const groups: Array<{
+    key: string
+    label: string
+    mode: 'serial' | 'parallel'
+    steps: Array<PipelineStep & { index: number }>
+  }> = []
+  props.pipelineSteps.forEach((step, index) => {
+    const key = step.group || 'pipeline'
+    let group = groups[groups.length - 1]
+    if (!group || group.key !== key) {
+      group = {
+        key,
+        label: step.groupLabel || '',
+        mode: step.groupMode || 'serial',
+        steps: [],
+      }
+      groups.push(group)
+    }
+    group.steps.push({ ...step, index })
+  })
+  return groups
 })
 
 const isLeadingToCurrent = (index: number) => {
@@ -237,8 +289,51 @@ const emit = defineEmits<{
   opacity: 0.5;
 }
 
-.chapter-console__pipeline {
+.chapter-console__pipeline-groups {
   margin: var(--md-spacing-4) 0 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.chapter-console__pipeline-group {
+  display: grid;
+  grid-template-columns: minmax(92px, 0.18fr) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--md-spacing-3);
+  padding: var(--md-spacing-3) 0;
+  border-top: 1px solid var(--md-outline-variant);
+}
+
+.chapter-console__pipeline-group:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.chapter-console__pipeline-group:has(> .chapter-console__pipeline:first-child) {
+  display: block;
+}
+
+.chapter-console__pipeline-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-spacing-2);
+  color: var(--md-on-surface);
+  font-size: var(--md-label-medium);
+  font-weight: 700;
+}
+
+.chapter-console__pipeline-mode {
+  padding: 1px 5px;
+  border: 1px solid var(--md-outline);
+  border-radius: var(--md-radius-xs);
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-small);
+  font-weight: 600;
+}
+
+.chapter-console__pipeline {
+  margin: 0;
   padding: 0;
   list-style: none;
   display: flex;
@@ -247,6 +342,10 @@ const emit = defineEmits<{
   align-items: flex-start;
   gap: var(--md-spacing-2);
   overflow: visible !important;
+}
+
+.chapter-console__pipeline.is-parallel .chapter-console__pipeline-item::after {
+  display: none;
 }
 
 .chapter-console__pipeline-item {
@@ -361,6 +460,18 @@ const emit = defineEmits<{
   border: 1px solid color-mix(in srgb, var(--md-error) 28%, transparent);
 }
 
+.chapter-console__pipeline-badge--kind {
+  border: 1px solid var(--md-outline);
+  background: var(--md-surface-container-low);
+  color: var(--md-on-surface-variant);
+}
+
+.chapter-console__pipeline-badge--skipped {
+  border: 1px dashed var(--md-outline);
+  background: transparent;
+  color: var(--md-on-surface-variant);
+}
+
 .chapter-console__pipeline-badge--manual-confirm {
   color: var(--md-on-secondary);
   background-color: var(--md-secondary);
@@ -376,6 +487,28 @@ const emit = defineEmits<{
 
 .chapter-console__pipeline-item.is-done .chapter-console__pipeline-title {
   color: var(--md-on-surface-variant);
+}
+
+.chapter-console__pipeline-item.is-skipped .chapter-console__dot {
+  border: 2px dashed var(--md-outline);
+  background: var(--md-surface);
+}
+
+.chapter-console__pipeline-item.is-skipped .chapter-console__pipeline-title {
+  color: var(--md-on-surface-variant);
+}
+
+.chapter-console__pipeline-item.is-control .chapter-console__dot {
+  border-radius: 2px;
+}
+
+.chapter-console__pipeline-item.is-terminal .chapter-console__dot {
+  border-radius: 2px;
+  transform: rotate(45deg);
+}
+
+.chapter-console__pipeline-item.is-terminal.is-in-progress .chapter-console__dot {
+  transform: rotate(45deg) scale(1.2);
 }
 
 .chapter-console__pipeline-item.is-in-progress .chapter-console__dot {
@@ -460,7 +593,7 @@ const emit = defineEmits<{
    原父级 .chapter-console--read-only 后代选择器选不到子组件内部元素，
    故子组件收 readOnly prop 自绑 is-read-only 类，在此自管覆写。
    根级 border-radius/box-shadow/padding/bg 覆写仍由父级管理（子根继承父 data-v 命中） */
-.chapter-console__pipeline-card.is-read-only .chapter-console__pipeline {
+.chapter-console__pipeline-card.is-read-only .chapter-console__pipeline-groups {
   margin-top: var(--md-spacing-3);
 }
 
@@ -559,7 +692,7 @@ const emit = defineEmits<{
 
 @media (hover: hover) and (min-width: 834px) {
   .chapter-console__pipeline-card.is-read-only.has-node-retry .chapter-console__pipeline {
-    margin-top: calc(var(--md-spacing-3) + 36px);
+    margin-top: 36px;
   }
 
   .chapter-console__pipeline-tooltip-wrapper {
@@ -616,6 +749,15 @@ const emit = defineEmits<{
 }
 
 @media (max-width: 833px) {
+  .chapter-console__pipeline-group {
+    display: block;
+    padding: var(--md-spacing-3) 0;
+  }
+
+  .chapter-console__pipeline-group-header {
+    margin-bottom: var(--md-spacing-2);
+  }
+
   .chapter-console__pipeline {
     flex-direction: column;
     gap: 0;

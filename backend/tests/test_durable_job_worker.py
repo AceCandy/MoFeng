@@ -235,7 +235,7 @@ async def test_worker_wait_outcome_releases_workflow_lease_without_marking_succe
         return JobWaitOutcome(
             workflow_transition=ChapterWorkflowTransition(
                 status="waiting_for_selection",
-                node_key="waiting_for_selection",
+                node_key="wait_for_selection",
                 checkpoint_id="checkpoint-selection",
                 progress=60,
             ),
@@ -283,7 +283,7 @@ async def test_worker_wait_outcome_releases_workflow_lease_without_marking_succe
     assert job.result is None
     assert run is not None
     assert run.status == "waiting_for_selection"
-    assert run.node_key == "waiting_for_selection"
+    assert run.node_key == "wait_for_selection"
     assert run.checkpoint_id == "checkpoint-selection"
     assert run.progress == 60
     assert run.is_active is True

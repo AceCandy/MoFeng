@@ -37,6 +37,7 @@ from ..utils.ai_telemetry import (
 from ..utils.llm_tool import ChatMessage, LLMClient
 
 logger = logging.getLogger(__name__)
+_LLM_FAILURE_DIAGNOSTIC_ATTR = "_llm_failure_diagnostic"
 LLM_RETRY_MAX_ATTEMPTS = 3
 LLM_RETRY_BASE_DELAY_SECONDS = 1.0
 LLM_RETRY_MAX_DELAY_SECONDS = 8.0
@@ -60,6 +61,35 @@ LLM_NON_RETRYABLE_ERROR_KEYWORDS = (
     "model_not_found",
     "model not found",
 )
+
+
+def get_llm_failure_diagnostic(exc: BaseException) -> Optional[Dict[str, Any]]:
+    """读取仅含脱敏事实的模型调用失败诊断。"""
+
+    value = getattr(exc, _LLM_FAILURE_DIAGNOSTIC_ATTR, None)
+    return dict(value) if isinstance(value, dict) else None
+
+
+def set_llm_failure_diagnostic(
+    exc: BaseException,
+    *,
+    provider: Optional[str],
+    model: Optional[str],
+    status_code: Optional[int],
+    reason: str,
+) -> None:
+    """附加可进入公开错误文案的脱敏模型调用事实。"""
+
+    setattr(
+        exc,
+        _LLM_FAILURE_DIAGNOSTIC_ATTR,
+        {
+            "provider": provider,
+            "model": model,
+            "status_code": status_code,
+            "reason": reason,
+        },
+    )
 
 try:  # pragma: no cover - 运行环境未安装时兼容
     from ollama import AsyncClient as OllamaAsyncClient
@@ -215,6 +245,24 @@ class LLMService:
         )
 
     @classmethod
+    def _llm_http_exception(
+        cls,
+        *,
+        detail: str,
+        source: Exception,
+        config: Dict[str, Any],
+    ) -> HTTPException:
+        error = HTTPException(status_code=503, detail=detail)
+        set_llm_failure_diagnostic(
+            error,
+            provider=config.get("provider_name"),
+            model=config.get("model"),
+            status_code=cls._get_llm_error_status_code(source),
+            reason=cls._safe_llm_error_reason(source),
+        )
+        return error
+
+    @classmethod
     def _raise_llm_stream_error(
         cls,
         exc: Exception,
@@ -226,7 +274,11 @@ class LLMService:
         cls._log_llm_call_failure(exc, config, user_id=user_id, stage=stage)
         if isinstance(exc, InternalServerError):
             detail = cls._extract_llm_error_detail(exc, "AI 服务内部错误，请稍后重试")
-            raise HTTPException(status_code=503, detail=detail) from exc
+            raise cls._llm_http_exception(
+                detail=detail,
+                source=exc,
+                config=config,
+            ) from exc
 
         if isinstance(
             exc, (httpx.RemoteProtocolError, httpx.ReadTimeout, APIConnectionError, APITimeoutError)
@@ -237,15 +289,27 @@ class LLMService:
                 detail = "AI 服务响应超时，请稍后重试"
             else:
                 detail = "无法连接到 AI 服务，请稍后重试"
-            raise HTTPException(status_code=503, detail=detail) from exc
+            raise cls._llm_http_exception(
+                detail=detail,
+                source=exc,
+                config=config,
+            ) from exc
 
         if isinstance(exc, PermissionDeniedError):
             detail = "AI 服务拒绝访问（可能被上游安全策略拦截），请稍后重试或更换可用 API 地址"
-            raise HTTPException(status_code=503, detail=detail) from exc
+            raise cls._llm_http_exception(
+                detail=detail,
+                source=exc,
+                config=config,
+            ) from exc
 
         if cls._is_retryable_llm_error(exc):
             detail = cls._extract_llm_error_detail(exc, "AI 服务繁忙，请稍后重试")
-            raise HTTPException(status_code=503, detail=detail) from exc
+            raise cls._llm_http_exception(
+                detail=detail,
+                source=exc,
+                config=config,
+            ) from exc
 
         raise exc
 

@@ -77,7 +77,7 @@ async def _create_ambiguous_workflow(
         context_hash="a" * 64,
         runtime_input_hash="b" * 64,
         status="queued",
-        node_key="generate_candidates",
+        node_key="generate_candidate_1",
         checkpoint_id="checkpoint-before-provider",
     )
     session.add(run)
@@ -92,14 +92,14 @@ async def _create_ambiguous_workflow(
     assert lease is not None
     execution = await service.begin_activity(
         lease,
-        activity_key="wf:generate_candidates:input-hash",
+        activity_key="wf:generate_candidate_1:input-hash",
         side_effect_class=SideEffectClass.AMBIGUOUS_EXTERNAL,
         request_payload={
             "schema_version": 1,
             "workflow_version": 1,
             "state_schema_version": 1,
             "run_id": run_id,
-            "node_key": "generate_candidates",
+            "node_key": "generate_candidate_1",
             "stage": "candidate",
             "input_hash": "c" * 64,
         },
@@ -107,7 +107,7 @@ async def _create_ambiguous_workflow(
     )
     await service.mark_activity_ambiguous(
         lease,
-        activity_key="wf:generate_candidates:input-hash",
+        activity_key="wf:generate_candidate_1:input-hash",
         provider_request_key=execution.provider_request_key,
         public_message="provider 结果未知",
         now=started_at + timedelta(seconds=1),
@@ -116,7 +116,7 @@ async def _create_ambiguous_workflow(
         await session.execute(
             select(JobActivity).where(
                 JobActivity.job_id == job.id,
-                JobActivity.activity_key == "wf:generate_candidates:input-hash",
+                JobActivity.activity_key == "wf:generate_candidate_1:input-hash",
             )
         )
     ).scalar_one()
@@ -209,7 +209,7 @@ async def _create_waiting_workflow(
         context_hash="a" * 64,
         runtime_input_hash="b" * 64,
         status="queued",
-        node_key="freeze_context",
+        node_key="freeze_base_context",
     )
     session.add(run)
     await session.commit()
@@ -224,7 +224,7 @@ async def _create_waiting_workflow(
         lease,
         workflow_transition=ChapterWorkflowTransition(
             status="waiting_for_selection",
-            node_key="waiting_for_selection",
+            node_key="wait_for_selection",
             checkpoint_id="checkpoint-selection",
             progress=60,
         ),
@@ -345,7 +345,7 @@ async def test_submit_select_command_is_idempotent_and_requeues_waiting_root(iso
     assert persisted_job.lease_expires_at is None
     assert persisted_job.heartbeat_at is None
     assert persisted_run is not None and persisted_run.status == "queued"
-    assert persisted_run.node_key == "waiting_for_selection"
+    assert persisted_run.node_key == "wait_for_selection"
     assert persisted_run.row_revision == expected_run_revision + 1
     assert len(commands) == 1
     accepted = [event for event in events if event.event_type == "workflow.command.accepted"]

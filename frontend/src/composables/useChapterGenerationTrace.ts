@@ -4,7 +4,7 @@ import {
   STEP_DETAILS,
   PIPELINE_LABELS,
   TRACE_STATUS_LABELS,
-  normalizePipelineStepKey,
+  resolvePipelineStepKey,
   traceMetadata,
   resolveTraceDurationMs,
   formatSystemDuration,
@@ -14,6 +14,7 @@ import {
   formatTraceOutputs,
   resolveTraceCallType,
   type ActiveStepDetails,
+  type PipelineStep,
 } from '@/utils/generationTrace'
 
 // useChapterGenerationTrace 只消费的 props 子集（结构同构于 ChapterGenerating 的 Props）
@@ -25,6 +26,7 @@ interface GenerationTraceProps {
 // activeStepKey/currentStepKey 定位当前节点，isFailureStatus/terminalFailedTrace/failureReason/
 // failureScenario 提供失败兜底与原因。
 interface TraceDeps {
+  pipelineSteps: ComputedRef<PipelineStep[]>
   activeStepKey: Ref<string | null>
   currentStepKey: ComputedRef<string>
   isFailureStatus: ComputedRef<boolean>
@@ -40,12 +42,21 @@ interface TraceDeps {
  * 分析来自调用方透传，纯响应式组装，零自身状态。activeStepTraces/activeTrace 为内部中间量。
  */
 export function useChapterGenerationTrace(props: GenerationTraceProps, deps: TraceDeps) {
-  const { activeStepKey, currentStepKey, isFailureStatus, terminalFailedTrace, failureReason, failureScenario } =
-    deps
+  const {
+    pipelineSteps,
+    activeStepKey,
+    currentStepKey,
+    isFailureStatus,
+    terminalFailedTrace,
+    failureReason,
+    failureScenario,
+  } = deps
 
   const activeStepTraces = computed(() => {
     const key = activeStepKey.value || currentStepKey.value
-    return props.generationTraces.filter((trace) => normalizePipelineStepKey(trace.node_key) === key)
+    return props.generationTraces.filter(
+      (trace) => resolvePipelineStepKey(trace.node_key, pipelineSteps.value) === key,
+    )
   })
 
   const activeTrace = computed(() => {

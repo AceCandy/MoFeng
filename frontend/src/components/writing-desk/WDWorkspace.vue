@@ -89,6 +89,8 @@
               @retry-projection="emit('workflowRetryProjection')"
               @cancel="onWorkflowCancel"
               @resync="emit('workflowResync')"
+              @reset="emit('workflowReset')"
+              @delete="emit('workflowDelete')"
               @preview-candidate="onCandidatePreview"
             />
 
@@ -202,6 +204,8 @@ const emit = defineEmits<{
   (event: 'workflowRetryProjection'): void
   (event: 'workflowCancel'): void
   (event: 'workflowResync'): void
+  (event: 'workflowReset'): void
+  (event: 'workflowDelete'): void
   (event: 'selectChapter', chapterNumber: number): void
   (event: 'showVersionDetail', versionIndex: number): void
   (event: 'showEvaluationDetail'): void

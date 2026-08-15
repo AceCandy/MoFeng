@@ -139,7 +139,7 @@ async def _build_inputs(isolated_pg, *, user_id: int, project_id: str):
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_persist_candidates_is_atomic_private_and_replayable(isolated_pg):
+async def test_persist_drafts_is_atomic_private_and_replayable(isolated_pg):
     started, execution, request = await _build_inputs(
         isolated_pg,
         user_id=4401,
@@ -235,10 +235,10 @@ async def test_persist_candidates_is_atomic_private_and_replayable(isolated_pg):
     assert "PRIVATE" not in str(activity.result_payload)
     assert all("PRIVATE" not in str(event.payload) for event in events)
     assert first.state_update() == {
-        "node_key": "waiting_for_selection",
+        "node_key": "wait_for_selection",
         "candidate_version_ids": first.result.candidate_version_ids,
-        "activity_refs": {"persist_candidates": first.activity_key},
-        "result_refs": {"persist_candidates": first.result.result_hash},
+        "activity_refs": {"persist_drafts": first.activity_key},
+        "result_refs": {"persist_drafts": first.result.result_hash},
     }
 
 
@@ -296,7 +296,7 @@ async def test_durable_best_version_is_the_only_public_confirmation_candidate(is
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_persist_candidates_rolls_back_domain_rows_with_activity(isolated_pg):
+async def test_persist_drafts_rolls_back_domain_rows_with_activity(isolated_pg):
     started, execution, request = await _build_inputs(
         isolated_pg,
         user_id=4402,
@@ -321,7 +321,7 @@ async def test_persist_candidates_rolls_back_domain_rows_with_activity(isolated_
             await session.execute(
                 select(JobActivity).where(
                     JobActivity.job_id == started.root_job.id,
-                    JobActivity.activity_key.like("wf:persist_candidates:%"),
+                    JobActivity.activity_key.like("wf:persist_drafts:%"),
                 )
             )
         ).scalar_one()
@@ -334,7 +334,7 @@ async def test_persist_candidates_rolls_back_domain_rows_with_activity(isolated_
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_persist_candidates_rejects_revision_drift_before_intent(isolated_pg):
+async def test_persist_drafts_rejects_revision_drift_before_intent(isolated_pg):
     started, execution, request = await _build_inputs(
         isolated_pg,
         user_id=4403,
@@ -353,14 +353,14 @@ async def test_persist_candidates_rejects_revision_drift_before_intent(isolated_
         persist_count = await session.scalar(
             select(func.count(JobActivity.id)).where(
                 JobActivity.job_id == started.root_job.id,
-                JobActivity.activity_key.like("wf:persist_candidates:%"),
+                JobActivity.activity_key.like("wf:persist_drafts:%"),
             )
         )
     assert persist_count == 0
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_persist_candidates_rejects_cross_wired_review_before_intent(isolated_pg):
+async def test_persist_drafts_rejects_cross_wired_review_before_intent(isolated_pg):
     started, execution, request = await _build_inputs(
         isolated_pg,
         user_id=4406,
@@ -399,14 +399,14 @@ async def test_persist_candidates_rejects_cross_wired_review_before_intent(isola
         persist_count = await session.scalar(
             select(func.count(JobActivity.id)).where(
                 JobActivity.job_id == started.root_job.id,
-                JobActivity.activity_key.like("wf:persist_candidates:%"),
+                JobActivity.activity_key.like("wf:persist_drafts:%"),
             )
         )
     assert persist_count == 0
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_persist_candidates_concurrent_replay_writes_one_version_set(isolated_pg):
+async def test_persist_drafts_concurrent_replay_writes_one_version_set(isolated_pg):
     started, execution, request = await _build_inputs(
         isolated_pg,
         user_id=4404,
@@ -438,7 +438,7 @@ async def test_persist_candidates_concurrent_replay_writes_one_version_set(isola
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_persist_candidates_rejects_stale_fence_and_ignores_trace(isolated_pg):
+async def test_persist_drafts_rejects_stale_fence_and_ignores_trace(isolated_pg):
     started, execution, request = await _build_inputs(
         isolated_pg,
         user_id=4405,

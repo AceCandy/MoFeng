@@ -93,7 +93,7 @@ async def test_retrieval_activity_persists_enriched_snapshot_and_returns_only_re
     assert restored.rag.fallback == ContextFallback.UNAVAILABLE
     assert replay == first
     assert first.state_update() == {
-        "node_key": "plan_and_direct",
+        "node_key": "plan_chapter",
         "context_hash": restored.input_hash,
         "activity_refs": {"retrieval_context": activity.activity_key},
         "result_refs": {"retrieval_context": persisted["result_hash"]},

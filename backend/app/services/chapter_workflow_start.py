@@ -14,16 +14,26 @@ from ..models.background_task import BackgroundTask
 from ..models.chapter_workflow import ChapterWorkflowRun
 from ..repositories.chapter_workflow_repository import ChapterWorkflowRepository
 from ..repositories.novel_repository import NovelRepository
+from ..repositories.system_config_repository import SystemConfigRepository
 from ..schemas.chapter_context import stable_digest
 from ..schemas.chapter_workflow import (
-    CHAPTER_WORKFLOW_CONTEXT_SCHEMA_VERSION_V1,
-    CHAPTER_WORKFLOW_STATE_SCHEMA_VERSION_V1,
-    CHAPTER_WORKFLOW_VERSION_V1,
+    CHAPTER_WORKFLOW_CONTEXT_SCHEMA_VERSION,
+    CHAPTER_WORKFLOW_STATE_SCHEMA_VERSION,
+    CHAPTER_WORKFLOW_VERSION,
 )
-from ..schemas.job import ChapterWorkflowJobPayload, ChapterWorkflowRuntimeInputs
+from ..schemas.job import (
+    ChapterWorkflowJobPayload,
+    ChapterWorkflowRuntimeInputs,
+    resolve_chapter_workflow_optional_stages,
+    validate_chapter_workflow_job_payload,
+)
 from ..schemas.novel import FlowConfig
 from .chapter_context_resolver import ChapterContextResolver
 from .chapter_version_settings import resolve_chapter_version_count
+from .chapter_word_count_settings import (
+    resolve_maximum_word_count,
+    resolve_word_count_requirements,
+)
 from .chapter_workflow_context import build_chapter_workflow_retrieval_inputs
 from .event_bus import publish_background_task
 from .job_service import JobService
@@ -80,7 +90,6 @@ class ChapterWorkflowStartService:
             raise ValueError("project_id 不能为空")
         if chapter_number < 1:
             raise ValueError("chapter_number 必须大于等于 1")
-
         project = await self.novel_repo.get_by_id(project_id)
         if project is None or project.user_id != user_id:
             await self.session.rollback()
@@ -136,6 +145,9 @@ class ChapterWorkflowStartService:
                 writing_notes=writing_notes,
                 rag_enabled=False,
             )
+            target_word_count, minimum_word_count = await resolve_word_count_requirements(
+                SystemConfigRepository(self.session)
+            )
             runtime_inputs = ChapterWorkflowRuntimeInputs(
                 project_id=project_id,
                 chapter_number=chapter_number,
@@ -146,10 +158,15 @@ class ChapterWorkflowStartService:
                     flow_config=normalized_flow,
                     resolver=resolver,
                 ),
+                target_word_count=target_word_count,
+                minimum_word_count=minimum_word_count,
+                maximum_word_count=resolve_maximum_word_count(target_word_count),
             )
             runtime_input_payload = runtime_inputs.model_dump(mode="json")
             runtime_input_hash = stable_digest(runtime_input_payload)
             run_id = str(uuid4())
+            candidate_count = max(1, min(2, normalized_flow.versions or 1))
+            optional_stages = resolve_chapter_workflow_optional_stages(normalized_flow)
             payload = ChapterWorkflowJobPayload(
                 run_id=run_id,
                 project_id=project_id,
@@ -159,6 +176,8 @@ class ChapterWorkflowStartService:
                 context_hash=context.input_hash,
                 runtime_input_hash=runtime_input_hash,
                 runtime_inputs=runtime_inputs,
+                candidate_count=candidate_count,
+                optional_stages=optional_stages,
             )
             root_job = await self.job_service.enqueue_job_in_transaction(
                 user_id=user_id,
@@ -181,14 +200,14 @@ class ChapterWorkflowStartService:
                 chapter_number=chapter_number,
                 base_revision=base_revision,
                 root_job_id=root_job.id,
-                workflow_version=CHAPTER_WORKFLOW_VERSION_V1,
-                state_schema_version=CHAPTER_WORKFLOW_STATE_SCHEMA_VERSION_V1,
-                context_schema_version=CHAPTER_WORKFLOW_CONTEXT_SCHEMA_VERSION_V1,
+                workflow_version=CHAPTER_WORKFLOW_VERSION,
+                state_schema_version=CHAPTER_WORKFLOW_STATE_SCHEMA_VERSION,
+                context_schema_version=CHAPTER_WORKFLOW_CONTEXT_SCHEMA_VERSION,
                 context_snapshot=context.snapshot_payload(),
                 context_hash=context.input_hash,
                 runtime_input_hash=runtime_input_hash,
                 status="queued",
-                node_key="freeze_context",
+                node_key="freeze_base_context",
             )
             await self.workflow_repo.add(run)
             await self.job_service.append_workflow_started_in_transaction(
@@ -253,7 +272,10 @@ class ChapterWorkflowStartService:
         )
         if existing_job is None:
             return None
-        payload = ChapterWorkflowJobPayload.model_validate(existing_job.payload)
+        payload = validate_chapter_workflow_job_payload(
+            existing_job.payload_version,
+            existing_job.payload,
+        )
         requested_flow = FlowConfig.model_validate(flow_config or {})
         if requested_flow.versions is None:
             requested_flow = requested_flow.model_copy(

@@ -42,6 +42,10 @@ import { useGenerationFailure } from '@/composables/useGenerationFailure'
 import { useGenerationPipeline } from '@/composables/useGenerationPipeline'
 import { useChapterGenerationTrace } from '@/composables/useChapterGenerationTrace'
 import { globalAlert } from '@/composables/useAlert'
+import {
+  PIPELINE_LABELS,
+  type PipelineStep,
+} from '@/utils/generationTrace'
 
 interface Props {
   chapterNumber: number | null
@@ -91,22 +95,45 @@ const selectStep = (key: string, index: number) => {
   }
 }
 
-const pipelineSteps = computed(() => {
-  if (props.status === 'finalizing') {
-    return [
-      { key: 'real_summary', label: '生成章节梳理' },
-      { key: 'finalize_memory', label: '更新记忆快照' },
-      { key: 'chapter_ingest', label: '写入章节索引' },
-      { key: 'foreshadowing_sync', label: '同步伏笔' },
-    ]
-  }
+const pipelineStep = (
+  key: string,
+  group: string,
+  groupLabel: string,
+  options: Partial<PipelineStep> = {},
+): PipelineStep => ({
+  key,
+  label: PIPELINE_LABELS[key] || key,
+  kind: 'execution',
+  group,
+  groupLabel,
+  groupMode: 'serial',
+  ...options,
+})
+
+const pipelineSteps = computed<PipelineStep[]>(() => {
   return [
-    { key: 'context_prep', label: '整理前文' },
-    { key: 'director_mission', label: '规划剧情' },
-    { key: 'rag_retrieval', label: '调用设定' },
-    { key: 'draft_generation', label: '生成正文' },
-    { key: 'quality_review', label: 'AI评审' },
-    { key: 'review_refinement', label: '修复润色' },
+    pipelineStep('freeze_base_context', 'context', '上下文与规划'),
+    pipelineStep('retrieve_context', 'context', '上下文与规划'),
+    pipelineStep('plan_chapter', 'context', '上下文与规划'),
+    pipelineStep('generate_candidate_1', 'candidates', '候选版本', { groupMode: 'parallel' }),
+    pipelineStep('generate_candidate_2', 'candidates', '候选版本', { groupMode: 'parallel', optional: true }),
+    pipelineStep('review_candidates', 'revision', '评审与修订'),
+    pipelineStep('refine_candidate', 'revision', '评审与修订'),
+    pipelineStep('enhance_content', 'revision', '评审与修订', { optional: true }),
+    pipelineStep('repair_consistency', 'revision', '评审与修订', { optional: true }),
+    pipelineStep('optimize_style', 'revision', '评审与修订', { optional: true }),
+    pipelineStep('enrich_content', 'revision', '评审与修订', { optional: true }),
+    pipelineStep('compress_candidate', 'revision', '评审与修订', { optional: true }),
+    pipelineStep('persist_drafts', 'selection', '草稿与选择'),
+    pipelineStep('wait_for_selection', 'selection', '草稿与选择', { kind: 'control' }),
+    pipelineStep('finalize_revision', 'finalize', '正式定稿'),
+    pipelineStep('generate_summary', 'summary', '章节梳理'),
+    pipelineStep('project_memory', 'projections', '并行投影', { groupMode: 'parallel' }),
+    pipelineStep('project_rag', 'projections', '并行投影', { groupMode: 'parallel', optional: true }),
+    pipelineStep('project_foreshadowing', 'projections', '并行投影', { groupMode: 'parallel' }),
+    pipelineStep('wait_for_projections', 'completion', '汇合与完成', { kind: 'control' }),
+    pipelineStep('reconcile_projections', 'completion', '汇合与完成', { kind: 'control' }),
+    pipelineStep('successful', 'completion', '汇合与完成', { kind: 'terminal' }),
   ]
 })
 
@@ -141,6 +168,7 @@ watch(
 )
 
 const { activeStepDetails } = useChapterGenerationTrace(props, {
+  pipelineSteps,
   activeStepKey,
   currentStepKey,
   isFailureStatus,

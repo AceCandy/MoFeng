@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi import HTTPException
 
-from app.services.llm_service import LLMService
+from app.services.llm_service import LLMService, get_llm_failure_diagnostic
 
 
 def _disable_model_routes(service: LLMService) -> None:
@@ -655,6 +655,12 @@ async def test_stream_failure_log_identifies_stage_provider_model_and_safe_reaso
         )
 
     assert exc_info.value.status_code == 503
+    assert get_llm_failure_diagnostic(exc_info.value) == {
+        "provider": "Primary OpenAI",
+        "model": "gpt-test",
+        "status_code": 429,
+        "reason": "AI 服务请求频率或并发超限",
+    }
     assert "stage=chapter_mission" in app_caplog.text
     assert "provider=Primary OpenAI" in app_caplog.text
     assert "provider_type=openai_compatible" in app_caplog.text

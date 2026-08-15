@@ -663,7 +663,7 @@ class NovelService:
                 chapter_id=chapter.id,
                 content=text_content,
                 metadata=extra,  # ✅ 落盘 metadata
-                version_label=f"v{index+1}",
+                version_label=f"v{index + 1}",
             )
             self.session.add(version)
             versions.append(version)
@@ -743,6 +743,59 @@ class NovelService:
         await self.session.commit()
         await self.session.refresh(chapter)
         await self._touch_project(chapter.project_id)
+
+    async def reset_chapter_without_workflow(
+        self,
+        project_id: str,
+        chapter_number: int,
+    ) -> None:
+        """清理没有 durable run 的未定稿章节，同时保留章节大纲。"""
+
+        outline = await self.get_outline(project_id, chapter_number)
+        if outline is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="章节大纲不存在")
+        chapter = await self.repo.get_chapter_for_update(
+            project_id=project_id,
+            chapter_number=chapter_number,
+        )
+        if chapter is None:
+            await self.session.rollback()
+            return
+        if chapter.selected_version_id is not None or int(chapter.current_revision or 0) > 0:
+            await self.session.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="已完成章节不能重置，请使用删除章节",
+            )
+
+        try:
+            await self.session.execute(
+                delete(ChapterEvaluation).where(ChapterEvaluation.chapter_id == chapter.id)
+            )
+            await self.session.execute(
+                delete(ChapterVersion).where(ChapterVersion.chapter_id == chapter.id)
+            )
+            await self.session.execute(
+                delete(ChapterGenerationTrace).where(
+                    ChapterGenerationTrace.chapter_id == chapter.id
+                )
+            )
+            chapter.status = ChapterGenerationStatus.NOT_GENERATED.value
+            chapter.generation_progress = 0
+            chapter.generation_step = None
+            chapter.generation_step_index = 0
+            chapter.generation_step_total = 0
+            chapter.generation_started_at = None
+            chapter.real_summary = None
+            chapter.word_count = 0
+            chapter.source_hash = None
+            chapter.required_projection_snapshot = []
+            chapter.projection_generation = None
+            await self.session.commit()
+        except Exception:
+            await self.session.rollback()
+            raise
+        await self._touch_project(project_id)
 
     async def delete_chapters(
         self,

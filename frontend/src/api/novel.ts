@@ -592,6 +592,15 @@ export class NovelAPI {
     })
   }
 
+  static async resetChapter(
+    projectId: string,
+    chapterNumber: number
+  ): Promise<NovelProject> {
+    return request(`${WRITER_BASE}/${projectId}/chapters/${chapterNumber}/reset`, {
+      method: 'POST'
+    })
+  }
+
   static async generateChapterOutline(
     projectId: string,
     startChapter: number,

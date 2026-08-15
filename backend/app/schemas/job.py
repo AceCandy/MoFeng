@@ -4,12 +4,7 @@ from typing import Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .chapter_context import stable_digest
-from .chapter_workflow import (
-    CHAPTER_WORKFLOW_CONTEXT_SCHEMA_VERSION_V1,
-    CHAPTER_WORKFLOW_STATE_SCHEMA_VERSION_V1,
-    CHAPTER_WORKFLOW_VERSION_V1,
-    ChapterWorkflowRunId,
-)
+from .chapter_workflow import ChapterWorkflowRunId
 from .novel import FlowConfig
 
 
@@ -165,7 +160,7 @@ class ChapterTombstoneJobPayload(BaseModel):
 
 
 class ChapterWorkflowRetrievalInputs(BaseModel):
-    """freeze_context activity 使用的规范化检索输入。"""
+    """retrieve_context activity 使用的规范化检索输入。"""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -187,10 +182,23 @@ class ChapterWorkflowRuntimeInputs(BaseModel):
     writing_notes: Optional[str] = None
     flow_config: FlowConfig = Field(default_factory=FlowConfig)
     retrieval_inputs: ChapterWorkflowRetrievalInputs
+    target_word_count: int = Field(default=3000, ge=2200)
+    minimum_word_count: int = Field(default=2200, ge=2200)
+    maximum_word_count: int = Field(default=3300, ge=2200)
+
+    @model_validator(mode="after")
+    def validate_word_count_contract(self) -> "ChapterWorkflowRuntimeInputs":
+        if not (
+            self.minimum_word_count
+            <= self.target_word_count
+            <= self.maximum_word_count
+        ):
+            raise ValueError("workflow 字数上下限与目标不一致")
+        return self
 
 
 class ChapterWorkflowJobPayload(BaseModel):
-    """durable Chapter workflow root job v1 的冻结启动参数。"""
+    """durable Chapter workflow root job 的冻结启动参数。"""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -199,9 +207,9 @@ class ChapterWorkflowJobPayload(BaseModel):
     chapter_id: int = Field(ge=1)
     chapter_number: int = Field(ge=1)
     base_revision: int = Field(ge=0)
-    workflow_version: Literal[1] = CHAPTER_WORKFLOW_VERSION_V1
-    state_schema_version: Literal[1] = CHAPTER_WORKFLOW_STATE_SCHEMA_VERSION_V1
-    context_schema_version: Literal[1] = CHAPTER_WORKFLOW_CONTEXT_SCHEMA_VERSION_V1
+    workflow_version: Literal[1] = 1
+    state_schema_version: Literal[1] = 1
+    context_schema_version: Literal[1] = 1
     context_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     runtime_input_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
     runtime_inputs: ChapterWorkflowRuntimeInputs
@@ -217,3 +225,58 @@ class ChapterWorkflowJobPayload(BaseModel):
         if self.runtime_input_hash != expected_hash:
             raise ValueError("workflow runtime input hash 与冻结 payload 不一致")
         return self
+    candidate_count: int = Field(default=1, ge=1, le=2)
+    optional_stages: dict[
+        Literal[
+            "enhance_content",
+            "repair_consistency",
+            "optimize_style",
+            "enrich_content",
+        ],
+        bool,
+    ] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_graph_options(self) -> "ChapterWorkflowJobPayload":
+        flow = self.runtime_inputs.flow_config
+        expected_count = max(1, min(2, flow.versions or 1))
+        expected_optional = resolve_chapter_workflow_optional_stages(flow)
+        enabled_optional = {
+            key: enabled for key, enabled in self.optional_stages.items() if enabled
+        }
+        if self.candidate_count != expected_count or enabled_optional != expected_optional:
+            raise ValueError("graph options 与冻结 flow config 不一致")
+        return self
+
+
+def resolve_chapter_workflow_optional_stages(flow: FlowConfig) -> dict[str, bool]:
+    """把 preset 与显式覆盖归一为唯一的可选节点集合。"""
+
+    ultimate = flow.preset == "ultimate"
+    return {
+        key: True
+        for key, enabled in {
+            "enhance_content": flow.preset in {"enhanced", "ultimate"},
+            "repair_consistency": (
+                ultimate if flow.enable_consistency is None else flow.enable_consistency
+            ),
+            "optimize_style": (
+                ultimate if flow.enable_optimizer is None else flow.enable_optimizer
+            ),
+            "enrich_content": (
+                ultimate if flow.enable_enrichment is None else flow.enable_enrichment
+            ),
+        }.items()
+        if enabled
+    }
+
+
+def validate_chapter_workflow_job_payload(
+    payload_version: int,
+    payload: object,
+) -> ChapterWorkflowJobPayload:
+    """按 root Job payload version 精确解析，未知版本禁止回退。"""
+
+    if payload_version == 1:
+        return ChapterWorkflowJobPayload.model_validate(payload)
+    raise ValueError(f"不支持的 Chapter workflow payload version: {payload_version}")

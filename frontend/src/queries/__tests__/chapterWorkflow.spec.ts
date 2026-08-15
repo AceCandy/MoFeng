@@ -46,7 +46,7 @@ const snapshot = (
   context_schema_version: 1,
   status: 'waiting_for_selection',
   root_job_status: 'waiting',
-  node_key: 'waiting_for_selection',
+  node_key: 'wait_for_selection',
   checkpoint_id: 'checkpoint-3',
   progress: 60,
   row_revision: 4,

@@ -19,7 +19,7 @@ import re
 from datetime import datetime
 from typing import NoReturn, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -75,6 +75,10 @@ from ...services.chapter_workflow_compatibility import (
     ChapterWorkflowCompatibilityConflictError,
     ChapterWorkflowCompatibilityService,
 )
+from ...services.chapter_workflow_retention import (
+    ChapterWorkflowCheckpointCleaner,
+    PostgresChapterWorkflowCheckpointCleaner,
+)
 from ...services.chapter_workflow_start import ChapterWorkflowStartService
 from ...services.job_service import ChapterWorkflowCommandRejectedError, JobService
 from ...services.llm_service import LLMService
@@ -93,6 +97,10 @@ def get_chapter_workflow_start_service(
 
 def get_job_service(session: AsyncSession = Depends(get_session)) -> JobService:
     return JobService(session)
+
+
+def get_chapter_workflow_checkpoint_cleaner() -> ChapterWorkflowCheckpointCleaner:
+    return PostgresChapterWorkflowCheckpointCleaner(settings.sqlalchemy_database_uri)
 
 
 async def _load_project_schema(
@@ -809,6 +817,36 @@ async def delete_chapters(
         delete_artifacts_confirmed=request.delete_artifacts_confirmed,
         confirmation_text=request.confirmation_text,
     )
+    return await _load_project_schema(novel_service, project_id, current_user.id)
+
+
+@router.post(
+    "/novels/{project_id}/chapters/{chapter_number}/reset",
+    response_model=NovelProjectSchema,
+)
+async def reset_chapter(
+    project_id: str,
+    chapter_number: int = Path(ge=1),
+    session: AsyncSession = Depends(get_session),
+    current_user: UserInDB = Depends(get_current_user),
+    checkpoint_cleaner: ChapterWorkflowCheckpointCleaner = Depends(
+        get_chapter_workflow_checkpoint_cleaner
+    ),
+) -> NovelProjectSchema:
+    novel_service = NovelService(session)
+    await novel_service.ensure_project_owner(project_id, current_user.id)
+
+    try:
+        workflow_reset = await JobService(session).reset_chapter_workflow(
+            user_id=current_user.id,
+            project_id=project_id,
+            chapter_number=chapter_number,
+            delete_checkpoint_threads=checkpoint_cleaner.delete_threads,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if not workflow_reset:
+        await novel_service.reset_chapter_without_workflow(project_id, chapter_number)
     return await _load_project_schema(novel_service, project_id, current_user.id)
 
 

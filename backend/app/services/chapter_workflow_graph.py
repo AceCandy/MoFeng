@@ -1,50 +1,64 @@
-# AIMETA P=章节工作流Graph版本注册表|R=V1编译_精确版本路由_稳定thread配置|NR=不执行activity_不管理DB事务|E=build_chapter_workflow_graph_registry|X=internal|A=registry|D=langgraph,pydantic|S=checkpoint|RD=./README.ai
+# AIMETA P=章节工作流Graph版本注册表|R=图编译_精确版本路由_稳定thread配置|NR=不执行activity_不管理DB事务|E=build_chapter_workflow_graph_registry|X=internal|A=registry|D=langgraph,pydantic|S=checkpoint|RD=./README.ai
 """Versioned Chapter workflow graph definitions and checkpoint identity."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from inspect import isawaitable
-from typing import Any, Awaitable, Callable
+from typing import Any, Awaitable, Callable, Literal, TypeAlias
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import interrupt
 
 from ..schemas.chapter_workflow import (
-    CHAPTER_WORKFLOW_STATE_SCHEMA_VERSION_V1,
-    CHAPTER_WORKFLOW_VERSION_V1,
-    ChapterWorkflowStateV1,
+    CHAPTER_WORKFLOW_STATE_SCHEMA_VERSION,
+    CHAPTER_WORKFLOW_VERSION,
+    ChapterWorkflowState,
     validate_chapter_workflow_run_id,
 )
 
 GraphStateUpdate = dict[str, object]
-GraphNode = Callable[
-    [ChapterWorkflowStateV1],
+GraphNode: TypeAlias = Callable[
+    [ChapterWorkflowState],
     GraphStateUpdate | Awaitable[GraphStateUpdate],
 ]
-GraphResumeNode = Callable[
-    [ChapterWorkflowStateV1, object],
+GraphResumeNode: TypeAlias = Callable[
+    [ChapterWorkflowState, object],
     GraphStateUpdate | Awaitable[GraphStateUpdate],
 ]
 
 
 @dataclass(frozen=True)
-class ChapterWorkflowGraphBindingsV1:
+class ChapterWorkflowGraphBindings:
     """Graph 外部业务节点；运行时依赖只存在于 handler 内存。"""
 
-    freeze_context: GraphNode
-    plan_and_direct: GraphNode
-    generate_candidates: GraphNode
+    freeze_base_context: GraphNode
+    retrieve_context: GraphNode
+    plan_chapter: GraphNode
+    generate_candidate_1: GraphNode
+    generate_candidate_2: GraphNode
     review_candidates: GraphNode
-    persist_candidates: GraphNode
+    refine_candidate: GraphNode
+    enhance_content: GraphNode
+    repair_consistency: GraphNode
+    optimize_style: GraphNode
+    enrich_content: GraphNode
+    compress_candidate: GraphNode
+    persist_drafts: GraphNode
     apply_selection_resume: GraphResumeNode
     finalize_revision: GraphNode
     apply_projection_resume: GraphResumeNode
-    observe_projection: GraphNode
+    reconcile_projections: GraphNode
 
 
-GraphCompiler = Callable[[Any, ChapterWorkflowGraphBindingsV1], Any]
+GraphCompiler: TypeAlias = Callable[[Any, ChapterWorkflowGraphBindings], Any]
+OptionalStageKey: TypeAlias = Literal[
+    "enhance_content",
+    "repair_consistency",
+    "optimize_style",
+    "enrich_content",
+]
 
 
 _IMMUTABLE_STATE_FIELDS = {
@@ -56,96 +70,67 @@ _IMMUTABLE_STATE_FIELDS = {
 }
 
 
-async def _execute_node(
-    state: ChapterWorkflowStateV1,
-    node: GraphNode,
-    *,
-    next_node: str,
-) -> GraphStateUpdate:
-    update = node(state)
-    if isawaitable(update):
-        update = await update
-    return _validated_update(state, update, next_node=next_node)
+def _compile_graph(checkpointer: Any, bindings: ChapterWorkflowGraphBindings) -> Any:
+    builder = StateGraph(ChapterWorkflowState)
+    ordered = [
+        ("freeze_base_context", bindings.freeze_base_context, "retrieve_context"),
+        ("retrieve_context", bindings.retrieve_context, "plan_chapter"),
+        ("plan_chapter", bindings.plan_chapter, "generate_candidate_1"),
+        ("review_candidates", bindings.review_candidates, "refine_candidate"),
+        ("refine_candidate", bindings.refine_candidate, "enhance_content"),
+        ("compress_candidate", bindings.compress_candidate, "persist_drafts"),
+        ("persist_drafts", bindings.persist_drafts, "wait_for_selection"),
+        ("finalize_revision", bindings.finalize_revision, "wait_for_projections"),
+        ("reconcile_projections", bindings.reconcile_projections, "successful"),
+    ]
+    for key, node, next_key in ordered:
+        builder.add_node(key, _bound_node(node, next_node=next_key))
 
+    def optional_node(key: OptionalStageKey, node: GraphNode, next_key: str) -> None:
+        async def execute(state: ChapterWorkflowState) -> GraphStateUpdate:
+            if not state.optional_stages.get(key, False):
+                return _validated_update(
+                    state,
+                    {"skipped_stages": {key: "disabled"}},
+                    next_node=next_key,
+                )
+            return await _execute_node(state, node, next_node=next_key)
 
-async def _execute_resume_node(
-    state: ChapterWorkflowStateV1,
-    node: GraphResumeNode,
-    resume_value: object,
-    *,
-    next_node: str,
-) -> GraphStateUpdate:
-    update = node(state, resume_value)
-    if isawaitable(update):
-        update = await update
-    return _validated_update(state, update, next_node=next_node)
+        builder.add_node(key, execute)
 
+    optional_node("enhance_content", bindings.enhance_content, "repair_consistency")
+    optional_node("repair_consistency", bindings.repair_consistency, "optimize_style")
+    optional_node("optimize_style", bindings.optimize_style, "enrich_content")
+    optional_node("enrich_content", bindings.enrich_content, "compress_candidate")
 
-def _validated_update(
-    state: ChapterWorkflowStateV1,
-    update: GraphStateUpdate,
-    *,
-    next_node: str,
-) -> GraphStateUpdate:
-    if not isinstance(update, dict):
-        raise TypeError("workflow graph binding 必须返回 dict")
-    immutable = _IMMUTABLE_STATE_FIELDS.intersection(update)
-    if immutable:
-        raise ValueError(f"workflow graph binding 不可修改字段: {sorted(immutable)}")
+    async def candidate_1(state: ChapterWorkflowState) -> GraphStateUpdate:
+        return await _execute_node(
+            state,
+            bindings.generate_candidate_1,
+            next_node=None,
+        )
 
-    merged = dict(update)
-    for field in ("activity_refs", "result_refs"):
-        if field in update:
-            value = update[field]
-            if not isinstance(value, dict):
-                raise TypeError(f"workflow graph binding 的 {field} 必须是 dict")
-            merged[field] = {**getattr(state, field), **value}
-    merged["node_key"] = next_node
-    ChapterWorkflowStateV1.model_validate({**state.model_dump(mode="json"), **merged})
-    return merged
+    builder.add_node("generate_candidate_1", candidate_1)
 
+    async def candidate_2(state: ChapterWorkflowState) -> GraphStateUpdate:
+        if state.candidate_count < 2:
+            return _validated_update(
+                state,
+                {"skipped_stages": {"generate_candidate_2": "single_candidate"}},
+                next_node=None,
+            )
+        return await _execute_node(
+            state,
+            bindings.generate_candidate_2,
+            next_node=None,
+        )
 
-def _bound_node(
-    node: GraphNode,
-    *,
-    next_node: str,
-) -> GraphNode:
-    async def execute(state: ChapterWorkflowStateV1) -> GraphStateUpdate:
-        return await _execute_node(state, node, next_node=next_node)
+    builder.add_node("generate_candidate_2", candidate_2)
 
-    return execute
-
-
-def _compile_graph_v1(
-    checkpointer: Any,
-    bindings: ChapterWorkflowGraphBindingsV1,
-) -> Any:
-    builder = StateGraph(ChapterWorkflowStateV1)
-    builder.add_node(
-        "freeze_context",
-        _bound_node(bindings.freeze_context, next_node="plan_and_direct"),
-    )
-    builder.add_node(
-        "plan_and_direct",
-        _bound_node(bindings.plan_and_direct, next_node="generate_candidates"),
-    )
-    builder.add_node(
-        "generate_candidates",
-        _bound_node(bindings.generate_candidates, next_node="review_candidates"),
-    )
-    builder.add_node(
-        "review_candidates",
-        _bound_node(bindings.review_candidates, next_node="persist_candidates"),
-    )
-    builder.add_node(
-        "persist_candidates",
-        _bound_node(bindings.persist_candidates, next_node="waiting_for_selection"),
-    )
-
-    async def wait_for_selection(state: ChapterWorkflowStateV1) -> GraphStateUpdate:
+    async def wait_selection(state: ChapterWorkflowState) -> GraphStateUpdate:
         if not state.candidate_version_ids:
-            raise ValueError("waiting_for_selection 缺少候选版本")
-        resume_value = interrupt(
+            raise ValueError("wait_for_selection 缺少候选版本")
+        value = interrupt(
             {
                 "kind": "selection",
                 "run_id": state.run_id,
@@ -155,20 +140,16 @@ def _compile_graph_v1(
         return await _execute_resume_node(
             state,
             bindings.apply_selection_resume,
-            resume_value,
+            value,
             next_node="finalize_revision",
         )
 
-    builder.add_node("waiting_for_selection", wait_for_selection)
-    builder.add_node(
-        "finalize_revision",
-        _bound_node(bindings.finalize_revision, next_node="projection_pending"),
-    )
+    builder.add_node("wait_for_selection", wait_selection)
 
-    async def wait_for_projection(state: ChapterWorkflowStateV1) -> GraphStateUpdate:
+    async def wait_projections(state: ChapterWorkflowState) -> GraphStateUpdate:
         if state.target_chapter_revision is None:
-            raise ValueError("projection_pending 缺少目标 Chapter revision")
-        resume_value = interrupt(
+            raise ValueError("wait_for_projections 缺少目标 Chapter revision")
+        value = interrupt(
             {
                 "kind": "projection",
                 "run_id": state.run_id,
@@ -176,42 +157,102 @@ def _compile_graph_v1(
             }
         )
         next_node = (
-            "projection_pending"
-            if isinstance(resume_value, dict) and set(resume_value) == {"command_id"}
-            else "observe_projection"
+            "wait_for_projections"
+            if isinstance(value, dict) and set(value) == {"command_id"}
+            else "reconcile_projections"
         )
         return await _execute_resume_node(
             state,
             bindings.apply_projection_resume,
-            resume_value,
+            value,
             next_node=next_node,
         )
 
-    builder.add_node("projection_pending", wait_for_projection)
-    builder.add_node(
-        "observe_projection",
-        _bound_node(bindings.observe_projection, next_node="successful"),
-    )
+    builder.add_node("wait_for_projections", wait_projections)
     builder.add_node("successful", lambda _state: {})
-    builder.add_edge(START, "freeze_context")
-    builder.add_edge("freeze_context", "plan_and_direct")
-    builder.add_edge("plan_and_direct", "generate_candidates")
-    builder.add_edge("generate_candidates", "review_candidates")
-    builder.add_edge("review_candidates", "persist_candidates")
-    builder.add_edge("persist_candidates", "waiting_for_selection")
-    builder.add_edge("waiting_for_selection", "finalize_revision")
-    builder.add_edge("finalize_revision", "projection_pending")
+    builder.add_edge(START, "freeze_base_context")
+    builder.add_edge("freeze_base_context", "retrieve_context")
+    builder.add_edge("retrieve_context", "plan_chapter")
+    builder.add_edge("plan_chapter", "generate_candidate_1")
+    builder.add_edge("plan_chapter", "generate_candidate_2")
+    builder.add_edge(["generate_candidate_1", "generate_candidate_2"], "review_candidates")
+    builder.add_edge("review_candidates", "refine_candidate")
+    builder.add_edge("refine_candidate", "enhance_content")
+    builder.add_edge("enhance_content", "repair_consistency")
+    builder.add_edge("repair_consistency", "optimize_style")
+    builder.add_edge("optimize_style", "enrich_content")
+    builder.add_edge("enrich_content", "compress_candidate")
+    builder.add_edge("compress_candidate", "persist_drafts")
+    builder.add_edge("persist_drafts", "wait_for_selection")
+    builder.add_edge("wait_for_selection", "finalize_revision")
+    builder.add_edge("finalize_revision", "wait_for_projections")
     builder.add_conditional_edges(
-        "projection_pending",
+        "wait_for_projections",
         lambda state: state.node_key,
         {
-            "projection_pending": "projection_pending",
-            "observe_projection": "observe_projection",
+            "wait_for_projections": "wait_for_projections",
+            "reconcile_projections": "reconcile_projections",
         },
     )
-    builder.add_edge("observe_projection", "successful")
+    builder.add_edge("reconcile_projections", "successful")
     builder.add_edge("successful", END)
     return builder.compile(checkpointer=checkpointer)
+
+
+async def _execute_node(
+    state: ChapterWorkflowState,
+    node: GraphNode,
+    *,
+    next_node: str | None,
+) -> GraphStateUpdate:
+    update = node(state)
+    if isawaitable(update):
+        update = await update
+    return _validated_update(state, update, next_node=next_node)
+
+async def _execute_resume_node(
+    state: ChapterWorkflowState,
+    node: GraphResumeNode,
+    value: object,
+    *,
+    next_node: str,
+) -> GraphStateUpdate:
+    update = node(state, value)
+    if isawaitable(update):
+        update = await update
+    return _validated_update(state, update, next_node=next_node)
+
+def _validated_update(
+    state: ChapterWorkflowState,
+    update: GraphStateUpdate,
+    *,
+    next_node: str | None,
+) -> GraphStateUpdate:
+    if not isinstance(update, dict):
+        raise TypeError("workflow graph binding 必须返回 dict")
+    immutable = _IMMUTABLE_STATE_FIELDS.intersection(update)
+    if immutable:
+        raise ValueError(f"workflow graph binding 不可修改字段: {sorted(immutable)}")
+    merged = dict(update)
+    if next_node is not None:
+        merged["node_key"] = next_node
+    validation_update = dict(merged)
+    for field in ("activity_refs", "result_refs", "skipped_stages"):
+        if field in update:
+            value = update[field]
+            if not isinstance(value, dict):
+                raise TypeError(f"workflow graph binding 的 {field} 必须是 dict")
+            validation_update[field] = {**getattr(state, field), **value}
+    ChapterWorkflowState.model_validate(
+        {**state.model_dump(mode="json"), **validation_update}
+    )
+    return merged
+
+def _bound_node(node: GraphNode, *, next_node: str) -> GraphNode:
+    async def execute(state: ChapterWorkflowState) -> GraphStateUpdate:
+        return await _execute_node(state, node, next_node=next_node)
+
+    return execute
 
 
 @dataclass(frozen=True)
@@ -220,7 +261,7 @@ class ChapterWorkflowGraphDefinition:
 
     workflow_version: int
     state_schema_version: int
-    state_type: type[ChapterWorkflowStateV1]
+    state_type: type[ChapterWorkflowState]
     compiler: GraphCompiler
 
 
@@ -251,7 +292,7 @@ class ChapterWorkflowGraphRegistry:
         workflow_version: int,
         *,
         checkpointer: Any,
-        bindings: ChapterWorkflowGraphBindingsV1,
+        bindings: ChapterWorkflowGraphBindings,
     ) -> Any:
         definition = self.get(workflow_version)
         if definition is None:
@@ -263,10 +304,10 @@ def build_chapter_workflow_graph_registry() -> ChapterWorkflowGraphRegistry:
     registry = ChapterWorkflowGraphRegistry()
     registry.register(
         ChapterWorkflowGraphDefinition(
-            workflow_version=CHAPTER_WORKFLOW_VERSION_V1,
-            state_schema_version=CHAPTER_WORKFLOW_STATE_SCHEMA_VERSION_V1,
-            state_type=ChapterWorkflowStateV1,
-            compiler=_compile_graph_v1,
+            workflow_version=CHAPTER_WORKFLOW_VERSION,
+            state_schema_version=CHAPTER_WORKFLOW_STATE_SCHEMA_VERSION,
+            state_type=ChapterWorkflowState,
+            compiler=_compile_graph,
         )
     )
     return registry

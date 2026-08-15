@@ -13,12 +13,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..repositories.chapter_workflow_repository import ChapterWorkflowRepository
 from ..repositories.job_repository import JobRepository
 from ..schemas.chapter_context import ChapterContext, stable_digest
-from ..schemas.job import ChapterWorkflowJobPayload
+from ..schemas.job import (
+    ChapterWorkflowJobPayload,
+    validate_chapter_workflow_job_payload,
+)
 from ..utils.ai_telemetry import AICallResult
+from .chapter_word_count_settings import count_chapter_words
 from .chapter_workflow_context import ChapterWorkflowRetrievalActivityResult
+from .job_public_projection import sanitize_public_text
 from .job_registry import SideEffectClass
 from .job_service import LeaseLostError
 from .job_worker import JobExecutionContext
+from .llm_service import get_llm_failure_diagnostic
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +36,7 @@ ChapterWorkflowPostReviewStage = Literal[
     "consistency",
     "optimizer",
     "enrichment",
+    "compression",
 ]
 ChapterWorkflowModelStage = Literal[
     "plan_and_direct",
@@ -42,7 +49,67 @@ ChapterWorkflowModelStage = Literal[
     "consistency",
     "optimizer",
     "enrichment",
+    "compression",
 ]
+
+_STAGE_PUBLIC_NAMES = {
+    "plan_and_direct": "章节规划",
+    "generate_candidate": "生成候选正文",
+    "version_review": "候选版本评审",
+    "review_guided_refinement": "按评审修订正文",
+    "enhanced_review": "增强正文",
+    "self_critique": "自我审校",
+    "reader_simulator": "读者模拟",
+    "consistency": "修复一致性",
+    "optimizer": "优化正文",
+    "enrichment": "扩写正文",
+    "compression": "压缩正文",
+}
+
+
+def _public_model_identity(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    normalized = " ".join(value.split()).strip()
+    lowered = normalized.lower()
+    if (
+        not normalized
+        or "://" in normalized
+        or lowered.startswith(("bearer ", "sk-"))
+    ):
+        return None
+    return normalized[:128]
+
+
+def _ambiguous_public_message(stage: ChapterWorkflowModelStage, exc: Exception) -> str:
+    diagnostic = get_llm_failure_diagnostic(exc)
+    if not diagnostic:
+        return f"章节工作流 {stage} 外部调用结果未知，需要人工确认"
+
+    provider = _public_model_identity(diagnostic.get("provider"))
+    model = _public_model_identity(diagnostic.get("model"))
+    target = ""
+    if provider:
+        target = f"供应商 {provider}"
+    if model:
+        target = f"{target} 的模型 {model}" if target else f"模型 {model}"
+
+    reason = diagnostic.get("reason")
+    reason_text = reason if isinstance(reason, str) and reason else "AI 服务调用失败"
+    status_code = diagnostic.get("status_code")
+    if isinstance(status_code, int):
+        reason_text = f"{reason_text}（HTTP {status_code}）"
+
+    stage_name = _STAGE_PUBLIC_NAMES.get(stage, stage)
+    target_text = f"{target} " if target else ""
+    recovery_text = (
+        "本次结果未保存，请重试当前节点"
+        if reason_text.startswith("模型")
+        else "未获得可确认的结果，请确认后重试当前节点"
+    )
+    return sanitize_public_text(
+        f"{stage_name}调用{target_text}失败：{reason_text}。{recovery_text}",
+    )
 
 
 class ChapterWorkflowActivityRef(BaseModel):
@@ -92,6 +159,19 @@ class ChapterWorkflowCandidateInput(_PrivateInput):
     ordinal: int = Field(ge=1, le=100)
     style_hint: str | None = Field(default=None, max_length=2000)
     generation_options: dict[str, Any] = Field(default_factory=dict)
+    target_word_count: int = Field(default=3000, ge=2200)
+    minimum_word_count: int = Field(default=2200, ge=2200)
+    maximum_word_count: int = Field(default=3300, ge=2200)
+
+    @model_validator(mode="after")
+    def validate_word_count_contract(self):
+        if not (
+            self.minimum_word_count
+            <= self.target_word_count
+            <= self.maximum_word_count
+        ):
+            raise ValueError("candidate 字数上下限与目标不一致")
+        return self
 
 
 class ChapterWorkflowCandidateOutput(BaseModel):
@@ -138,6 +218,9 @@ class ChapterWorkflowPostReviewInput(_PrivateInput):
         default_factory=list,
         max_length=20,
     )
+    target_word_count: int = Field(default=3000, ge=2200)
+    minimum_word_count: int = Field(default=2200, ge=2200)
+    maximum_word_count: int = Field(default=3300, ge=2200)
 
     @model_validator(mode="after")
     def validate_prior_stages(self):
@@ -146,6 +229,12 @@ class ChapterWorkflowPostReviewInput(_PrivateInput):
             raise ValueError("post-review 前序 stage 不可重复")
         if self.stage in stages:
             raise ValueError("post-review 当前 stage 不可出现在前序结果中")
+        if not (
+            self.minimum_word_count
+            <= self.target_word_count
+            <= self.maximum_word_count
+        ):
+            raise ValueError("post-review 字数上下限与目标不一致")
         return self
 
 
@@ -238,9 +327,11 @@ class ChapterWorkflowModelActivityService:
         self,
         request: ChapterWorkflowPlanInput,
         provider: ModelProvider[ChapterWorkflowPlanOutput],
+        *,
+        node_key: Literal["plan_chapter"] = "plan_chapter",
     ) -> ChapterWorkflowModelActivityExecution:
         return await self._execute(
-            node_key="plan_and_direct",
+            node_key=node_key,
             stage="plan_and_direct",
             ref_name="plan",
             request=request,
@@ -252,9 +343,14 @@ class ChapterWorkflowModelActivityService:
         self,
         request: ChapterWorkflowCandidateInput,
         provider: ModelProvider[ChapterWorkflowCandidateOutput],
+        *,
+        node_key: Literal[
+            "generate_candidate_1",
+            "generate_candidate_2",
+        ] = "generate_candidate_1",
     ) -> ChapterWorkflowModelActivityExecution:
         execution = await self._execute(
-            node_key="generate_candidates",
+            node_key=node_key,
             stage="generate_candidate",
             ref_name=f"candidate:{request.ordinal}",
             request=request,
@@ -270,9 +366,11 @@ class ChapterWorkflowModelActivityService:
         self,
         request: ChapterWorkflowReviewInput,
         provider: ModelProvider[ChapterWorkflowReviewOutput],
+        *,
+        node_key: Literal["review_candidates"] = "review_candidates",
     ) -> ChapterWorkflowModelActivityExecution:
         execution = await self._execute(
-            node_key="review_candidates",
+            node_key=node_key,
             stage="version_review",
             ref_name="review:version_review",
             request=request,
@@ -288,11 +386,21 @@ class ChapterWorkflowModelActivityService:
         self,
         request: ChapterWorkflowPostReviewInput,
         provider: ModelProvider[ChapterWorkflowPostReviewOutput],
+        *,
+        node_key: Literal[
+            "refine_candidate",
+            "enhance_content",
+            "repair_consistency",
+            "optimize_style",
+            "enrich_content",
+            "compress_candidate",
+        ] = "refine_candidate",
+        ref_name: str | None = None,
     ) -> ChapterWorkflowModelActivityExecution:
         execution = await self._execute(
-            node_key="review_candidates",
+            node_key=node_key,
             stage=request.stage,
-            ref_name=f"post_review:{request.stage}",
+            ref_name=ref_name or f"post_review:{request.stage}",
             request=request,
             output_type=ChapterWorkflowPostReviewOutput,
             provider=provider,
@@ -306,9 +414,16 @@ class ChapterWorkflowModelActivityService:
         self,
         *,
         node_key: Literal[
-            "plan_and_direct",
-            "generate_candidates",
+            "plan_chapter",
+            "generate_candidate_1",
+            "generate_candidate_2",
             "review_candidates",
+            "refine_candidate",
+            "enhance_content",
+            "repair_consistency",
+            "optimize_style",
+            "enrich_content",
+            "compress_candidate",
         ],
         stage: ChapterWorkflowModelStage,
         ref_name: str,
@@ -388,7 +503,7 @@ class ChapterWorkflowModelActivityService:
             await self.execution.mark_activity_ambiguous(
                 execution_activity_key,
                 provider_request_key=activity.provider_request_key,
-                public_message=(f"章节工作流 {stage} 外部调用结果未知，需要人工确认"),
+                public_message=_ambiguous_public_message(stage, exc),
             )
             raise AssertionError("mark_activity_ambiguous 必须终止当前执行")
 
@@ -409,9 +524,12 @@ class ChapterWorkflowModelActivityService:
         request: _PrivateInput,
     ) -> ChapterWorkflowJobPayload:
         lease = self.execution.lease
-        if lease.job_type != "chapter_workflow" or lease.payload_version != 1:
+        if lease.job_type != "chapter_workflow":
             raise ValueError("workflow root job 类型或版本不匹配")
-        payload = ChapterWorkflowJobPayload.model_validate(lease.payload)
+        payload = validate_chapter_workflow_job_payload(
+            lease.payload_version,
+            lease.payload,
+        )
         context = ChapterContext.model_validate(request.context_snapshot)
         async with self.execution.session_factory() as session:
             run = await ChapterWorkflowRepository(session).get_user_run(
@@ -440,11 +558,18 @@ class ChapterWorkflowModelActivityService:
             )
             if not frozen_identity:
                 raise ValueError("workflow model activity 与冻结身份不一致")
+            retrieval_node_key = (
+                retrieval_activity.request_payload.get("node_key")
+                if retrieval_activity is not None
+                and isinstance(retrieval_activity.request_payload, dict)
+                else None
+            )
             if (
                 retrieval_activity is None
                 or retrieval_activity.status != "succeeded"
                 or retrieval_activity.side_effect_class != SideEffectClass.IDEMPOTENT_EXTERNAL.value
-                or not retrieval_activity.activity_key.startswith("wf:freeze_context:")
+                or retrieval_node_key != "retrieve_context"
+                or not retrieval_activity.activity_key.startswith(f"wf:{retrieval_node_key}:")
             ):
                 raise ValueError("workflow retrieval activity 不存在或未完成")
             retrieval_payload = retrieval_activity.result_payload
@@ -571,3 +696,11 @@ class ChapterWorkflowModelActivityService:
             and output.stage != request.stage
         ):
             raise ValueError("post-review stage 与请求不一致")
+        if (
+            isinstance(request, ChapterWorkflowPostReviewInput)
+            and request.stage == "compression"
+            and isinstance(output, ChapterWorkflowPostReviewOutput)
+        ):
+            word_count = count_chapter_words(output.content or "")
+            if not request.minimum_word_count <= word_count <= request.maximum_word_count:
+                raise ValueError("压缩正文未满足冻结字数合同")

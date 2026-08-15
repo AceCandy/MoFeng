@@ -328,7 +328,7 @@ class ChapterWorkflowObservabilityService:
                     item.reason_code == "checkpoint_missing"
                     and run.checkpoint_id is None
                     and run.status in {"queued", "retry_wait"}
-                    and run.node_key == "freeze_context"
+                    and run.node_key == "freeze_base_context"
                 )
                 if not initial_without_checkpoint:
                     problem = _normalized_label(item.reason_code, _CHECKPOINT_PROBLEMS)

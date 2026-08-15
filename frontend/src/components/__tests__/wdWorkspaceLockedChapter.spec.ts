@@ -187,7 +187,7 @@ describe('WDWorkspace locked chapter state', () => {
       availableVersions: [{ content: '上一轮遗留草稿' }],
       workflowPhase: 'running',
       workflowRunId: 'current-run',
-      workflowNodeKey: 'freeze_context',
+      workflowNodeKey: 'freeze_base_context',
       workflowAllowedCommands: ['cancel'],
     })
     try {
@@ -205,7 +205,7 @@ describe('WDWorkspace locked chapter state', () => {
       availableVersions: [{ content: '上一轮遗留草稿' }],
       workflowPhase: 'running',
       workflowRunId: 'current-run',
-      workflowNodeKey: 'generate_candidates',
+      workflowNodeKey: 'generate_candidate_1',
       workflowCandidates: [
         {
           id: 601,
@@ -445,24 +445,26 @@ describe('WDWorkspace locked chapter state', () => {
           generation_traces: [
             {
               id: 101,
-              node_key: 'context_prep',
-              node_label: '整理前文',
+              node_key: 'freeze_base_context',
+              node_label: '冻结基础上下文',
               status: 'success',
               uses_llm: false,
               metadata: {
+                run_id: 'run-1',
                 duration_ms: 1300,
                 input_payload: { chapter_number: 1 },
-                actions: ['读取前文章节与项目记忆'],
-                output_payload: { summary: '前文上下文整理完成' },
+                actions: ['冻结章节基础上下文'],
+                output_payload: { summary: '基础上下文冻结完成' },
               },
             },
             {
               id: 102,
-              node_key: 'save_draft',
-              node_label: '保存草稿',
+              node_key: 'persist_drafts',
+              node_label: '保存候选草稿',
               status: 'success',
               uses_llm: false,
               metadata: {
+                run_id: 'run-1',
                 duration_ms: 900,
                 actions: ['写入候选版本并保留待确认状态'],
                 output_payload: { status: 'waiting_for_confirm' },
@@ -475,6 +477,8 @@ describe('WDWorkspace locked chapter state', () => {
 
     const rendered = await mountWorkspace(project, 1, {
       workflowPhase: 'waitingForSelection',
+      workflowRunId: 'run-1',
+      workflowNodeKey: 'wait_for_selection',
       workflowAllowedCommands: ['select', 'cancel'],
       workflowCandidates: [
         {
@@ -494,7 +498,7 @@ describe('WDWorkspace locked chapter state', () => {
 
     try {
       expect(rendered.host.textContent).toContain('待选版本')
-      expect(rendered.host.textContent).toContain('请选择候选版本')
+      expect(rendered.host.textContent).toContain('确认润色结果')
       expect(rendered.host.textContent).not.toContain('确认定稿')
       expect(rendered.host.textContent).toContain('退役冠军林拓站在商业直播表演赛的灯下')
       expect(rendered.host.querySelector('.chapter-paper')).not.toBeNull()
@@ -502,7 +506,7 @@ describe('WDWorkspace locked chapter state', () => {
       expect(rendered.host.querySelector('[data-provenance="ink"]')).toBeNull()
       expect(rendered.host.querySelector('.chapter-jiege-divider')).toBeNull()
       expect(rendered.host.textContent).toContain('生成进度')
-      expect(rendered.host.textContent).toContain('整理前文')
+      expect(rendered.host.textContent).toContain('冻结基础上下文')
       expect(rendered.host.textContent).toContain('待人工确认')
       expect(rendered.host.textContent).not.toContain('转入后台生成')
       expect(rendered.host.textContent).not.toContain('取消生成')
@@ -512,20 +516,20 @@ describe('WDWorkspace locked chapter state', () => {
       const pipelineTitles = Array.from(
         rendered.host.querySelectorAll('.chapter-console__pipeline-title'),
       ).map((item) => item.textContent?.trim())
-      expect(pipelineTitles[pipelineTitles.length - 1]).toBe('修复润色')
+      expect(pipelineTitles[pipelineTitles.length - 1]).toBe('章节工作流完成')
       expect(pipelineTitles).not.toContain('待人工确认')
 
       const contextStep = Array.from(
         rendered.host.querySelectorAll('.chapter-console__pipeline-item'),
-      ).find((item) => item.textContent?.includes('整理前文'))
+      ).find((item) => item.textContent?.includes('冻结基础上下文'))
       expect(contextStep).toBeTruthy()
 
       contextStep?.querySelector<HTMLButtonElement>('.chapter-console__pipeline-select')?.click()
       await nextTick()
 
       expect(rendered.host.textContent).toContain('节点详情')
-      expect(rendered.host.textContent).toContain('读取前文章节与项目记忆')
-      expect(rendered.host.textContent).toContain('前文上下文整理完成')
+      expect(rendered.host.textContent).toContain('冻结章节基础上下文')
+      expect(rendered.host.textContent).toContain('基础上下文冻结完成')
     } finally {
       rendered.unmount()
     }
@@ -556,7 +560,7 @@ describe('WDWorkspace locked chapter state', () => {
           generation_traces: [
             {
               id: 202,
-              node_key: 'waiting_for_selection',
+              node_key: 'wait_for_selection',
               node_label: '等待选择版本',
               status: 'success',
               uses_llm: false,
@@ -574,7 +578,7 @@ describe('WDWorkspace locked chapter state', () => {
             },
             {
               id: 204,
-              node_key: 'freeze_context',
+              node_key: 'freeze_base_context',
               node_label: '冻结章节上下文',
               status: 'running',
               uses_llm: false,
@@ -600,7 +604,7 @@ describe('WDWorkspace locked chapter state', () => {
       {
         workflowPhase: 'running',
         workflowRunId: 'current-run',
-        workflowNodeKey: 'freeze_context',
+        workflowNodeKey: 'freeze_base_context',
         workflowProgress: 0,
       },
     ] as const) {
@@ -609,17 +613,17 @@ describe('WDWorkspace locked chapter state', () => {
       try {
         const contextStep = Array.from(
           rendered.host.querySelectorAll('.chapter-console__pipeline-item'),
-        ).find((item) => item.textContent?.includes('整理前文'))
+        ).find((item) => item.textContent?.includes('冻结基础上下文'))
 
         expect(contextStep?.classList.contains('is-in-progress')).toBe(true)
         expect(rendered.host.textContent).not.toContain('待人工确认')
         expect(rendered.host.textContent).not.toContain('这是无法确认归属的上一轮轨迹')
         if (workflow.workflowRunId === null) {
-          expect(rendered.host.textContent).toContain('暂未收到 整理前文 的真实运行记录')
+          expect(rendered.host.textContent).toContain('暂未收到 冻结基础上下文 的真实运行记录')
         } else {
           expect(rendered.host.textContent).toContain('开始执行冻结章节上下文')
           expect(rendered.host.textContent).toContain('正在检索章节上下文')
-          expect(rendered.host.textContent).not.toContain('暂未收到 整理前文 的真实运行记录')
+          expect(rendered.host.textContent).not.toContain('暂未收到 冻结基础上下文 的真实运行记录')
         }
       } finally {
         rendered.unmount()

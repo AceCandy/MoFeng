@@ -86,6 +86,10 @@ async def test_start_freezes_identity_and_reuses_active_run(isolated_pg):
     assert duplicate.root_job.id == created.root_job.id
     assert created.run.id == created.root_job.stream_id
     assert created.root_job.payload["run_id"] == created.run.id
+    assert created.root_job.payload_version == 1
+    assert created.run.workflow_version == 1
+    assert created.run.state_schema_version == 1
+    assert created.run.node_key == "freeze_base_context"
     assert created.root_job.payload["runtime_input_hash"] == created.run.runtime_input_hash
     assert created.run.runtime_input_hash == stable_digest(
         created.root_job.payload["runtime_inputs"]
@@ -164,6 +168,38 @@ async def test_start_freezes_configured_version_count_and_preserves_explicit_ove
     assert replay.created is False
     assert replay.root_job.payload["runtime_inputs"]["flow_config"]["versions"] == 2
     assert explicit.root_job.payload["runtime_inputs"]["flow_config"]["versions"] == 1
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_start_freezes_word_count_and_expands_ultimate_preset(isolated_pg):
+    async with isolated_pg.session_factory() as session:
+        await _seed_project(session, user_id=4108, project_id="workflow-ultimate")
+        session.add(
+            SystemConfig(
+                key="writer.chapter_word_limit",
+                value="4000",
+                description="章节目标字数",
+            )
+        )
+        await session.commit()
+
+        started = await ChapterWorkflowStartService(session).start(
+            user_id=4108,
+            project_id="workflow-ultimate",
+            chapter_number=1,
+            flow_config={"preset": "ultimate"},
+        )
+
+    runtime_inputs = started.root_job.payload["runtime_inputs"]
+    assert runtime_inputs["target_word_count"] == 4000
+    assert runtime_inputs["minimum_word_count"] == 3200
+    assert runtime_inputs["maximum_word_count"] == 4400
+    assert started.root_job.payload["optional_stages"] == {
+        "enhance_content": True,
+        "repair_consistency": True,
+        "optimize_style": True,
+        "enrich_content": True,
+    }
 
 
 @pytest.mark.asyncio(loop_scope="session")

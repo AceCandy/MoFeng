@@ -1,12 +1,11 @@
 import { computed, type ComputedRef } from 'vue'
 import type { Chapter, ChapterGenerationTrace } from '@/api/novel'
 import { formatChapterGenerationError } from '@/utils/chapter'
-import { normalizePipelineStepKey, parseStepPayload } from '@/utils/generationTrace'
-
-interface PipelineStep {
-  key: string
-  label: string
-}
+import {
+  parseStepPayload,
+  resolvePipelineStepKey,
+  type PipelineStep,
+} from '@/utils/generationTrace'
 
 // 章节生成状态（供子组件复用类型，避免直接 import @/api/novel）
 export type GenerationStatus = Chapter['generation_status']
@@ -55,7 +54,10 @@ export function useGenerationFailure(
     let rawError = step
     if (parsed.meta.error) {
       rawError = parsed.meta.error
-    } else if (parsed.baseKey && stepExists(normalizePipelineStepKey(parsed.baseKey))) {
+    } else if (
+      parsed.baseKey
+      && stepExists(resolvePipelineStepKey(parsed.baseKey, pipelineSteps.value))
+    ) {
       const pipeIdx = step.indexOf('|')
       if (pipeIdx >= 0) {
         rawError = step.slice(pipeIdx + 1)

@@ -18,7 +18,7 @@ from app.models import (
     NovelProject,
 )
 from app.models.user import User
-from app.schemas.chapter_workflow import ChapterWorkflowStateV1
+from app.schemas.chapter_workflow import ChapterWorkflowState
 from app.services import chapter_workflow_reconciler as reconciler_module
 from app.services.chapter_workflow_reconciler import (
     ChapterWorkflowReconcileCandidate,
@@ -90,7 +90,7 @@ async def _create_workflow(session) -> tuple[BackgroundTask, ChapterWorkflowRun,
         context_hash="a" * 64,
         runtime_input_hash="b" * 64,
         status="queued",
-        node_key="freeze_context",
+        node_key="freeze_base_context",
     )
     session.add(run)
     await session.commit()
@@ -104,8 +104,8 @@ def _state(
     command_id: str | None = None,
     selected_version_id: int | None = None,
     target_revision: int | None = None,
-) -> ChapterWorkflowStateV1:
-    return ChapterWorkflowStateV1(
+) -> ChapterWorkflowState:
+    return ChapterWorkflowState(
         run_id=run.id,
         node_key=node_key,
         context_hash=run.context_hash,
@@ -186,7 +186,7 @@ async def test_reconciler_supersedes_revision_drift(isolated_pg) -> None:
         job, run, chapter = await _create_workflow(session)
         job.status = "waiting"
         run.status = "waiting_for_selection"
-        run.node_key = "waiting_for_selection"
+        run.node_key = "wait_for_selection"
         run.checkpoint_id = "checkpoint-selection"
         chapter.current_revision = 1
         await session.commit()
@@ -195,7 +195,7 @@ async def test_reconciler_supersedes_revision_drift(isolated_pg) -> None:
         {
             run.id: ChapterWorkflowCheckpointEvidence(
                 checkpoint_id="checkpoint-selection",
-                state=_state(run, node_key="waiting_for_selection"),
+                state=_state(run, node_key="wait_for_selection"),
             )
         }
     )
@@ -218,7 +218,7 @@ async def test_reconciler_fails_closed_on_missing_checkpoint_once(isolated_pg) -
         job, run, _chapter = await _create_workflow(session)
         job.status = "waiting"
         run.status = "waiting_for_selection"
-        run.node_key = "waiting_for_selection"
+        run.node_key = "wait_for_selection"
         run.checkpoint_id = "missing-checkpoint"
         await session.commit()
 
@@ -294,7 +294,7 @@ async def test_reconciler_preserves_ambiguous_external_attention(isolated_pg) ->
 async def test_reconciler_applies_checkpointed_pending_command(isolated_pg) -> None:
     async with isolated_pg.session_factory() as session:
         job, run, chapter = await _create_workflow(session)
-        run.node_key = "waiting_for_selection"
+        run.node_key = "wait_for_selection"
         run.checkpoint_id = "checkpoint-before-command"
         run.row_revision = 1
         command_id = str(uuid4())
@@ -351,7 +351,7 @@ async def test_reconciler_rejects_invalid_checkpoint_command_marker(
 ) -> None:
     async with isolated_pg.session_factory() as session:
         job, run, chapter = await _create_workflow(session)
-        run.node_key = "waiting_for_selection"
+        run.node_key = "wait_for_selection"
         run.checkpoint_id = "checkpoint-before-command"
         run.row_revision = 1
         command_id = str(uuid4())
@@ -369,7 +369,7 @@ async def test_reconciler_rejects_invalid_checkpoint_command_marker(
         elif invalid_case == "run_revision":
             expected_run_revision = run.row_revision
         elif invalid_case == "node":
-            marker_node = "waiting_for_selection"
+            marker_node = "wait_for_selection"
         command_payload: dict[str, object] = {"selected_version_id": 1}
         if invalid_case == "payload":
             command_payload = {"selected_version_id": "1"}
@@ -432,7 +432,7 @@ async def test_reconciler_rejects_invalid_checkpoint_command_marker(
 async def test_reconciler_applies_checkpointed_retry_projection_command(isolated_pg) -> None:
     async with isolated_pg.session_factory() as session:
         job, run, chapter = await _create_workflow(session)
-        run.node_key = "projection_pending"
+        run.node_key = "wait_for_projections"
         run.checkpoint_id = "checkpoint-before-projection-retry"
         run.row_revision = 1
         command_id = str(uuid4())
@@ -456,7 +456,7 @@ async def test_reconciler_applies_checkpointed_retry_projection_command(isolated
         {
             run.id: ChapterWorkflowCheckpointEvidence(
                 checkpoint_id="checkpoint-after-projection-retry",
-                state=_state(run, node_key="projection_pending", command_id=command_id),
+                state=_state(run, node_key="wait_for_projections", command_id=command_id),
             )
         }
     )
@@ -532,7 +532,7 @@ async def test_projection_success_requeues_and_prepares_automatic_resume(isolate
         job, run, chapter = await _create_workflow(session)
         job.status = "waiting"
         run.status = "projection_pending"
-        run.node_key = "projection_pending"
+        run.node_key = "wait_for_projections"
         run.checkpoint_id = "checkpoint-projection"
         chapter.current_revision = 1
         chapter.status = "successful"
@@ -544,7 +544,7 @@ async def test_projection_success_requeues_and_prepares_automatic_resume(isolate
                 checkpoint_id="checkpoint-projection",
                 state=_state(
                     run,
-                    node_key="projection_pending",
+                    node_key="wait_for_projections",
                     target_revision=1,
                 ),
             )
@@ -559,7 +559,7 @@ async def test_projection_success_requeues_and_prepares_automatic_resume(isolate
         assert repaired_run is not None
         assert (repaired_run.status, repaired_run.node_key) == (
             "queued",
-            "projection_pending",
+            "wait_for_projections",
         )
 
         lease = await JobService(session).claim_next(
@@ -614,7 +614,7 @@ async def test_checkpoint_tuple_parser_ignores_internal_langgraph_channels() -> 
         state_schema_version=1,
         is_active=True,
     )
-    state = ChapterWorkflowStateV1.initial(run_id=run_id, context_hash="a" * 64)
+    state = ChapterWorkflowState.initial(run_id=run_id, context_hash="a" * 64)
 
     class TupleValue:
         config = {
@@ -647,13 +647,13 @@ async def test_reconcile_waits_on_root_lock_then_observes_committed_revision(
         job, run, _chapter = await _create_workflow(seed_session)
         job.status = "waiting"
         run.status = "waiting_for_selection"
-        run.node_key = "waiting_for_selection"
+        run.node_key = "wait_for_selection"
         run.checkpoint_id = "checkpoint-selection"
         await seed_session.commit()
 
     evidence = ChapterWorkflowCheckpointEvidence(
         checkpoint_id="checkpoint-selection",
-        state=_state(run, node_key="waiting_for_selection"),
+        state=_state(run, node_key="wait_for_selection"),
     )
     async with (
         isolated_pg.session_factory() as blocker,

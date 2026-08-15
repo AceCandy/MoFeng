@@ -5,22 +5,29 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Protocol, TypeVar, cast
+from typing import Any, Awaitable, Callable, Literal, Protocol, TypeVar, cast
 
 from pydantic import BaseModel
 from sqlalchemy.engine import URL
 
 from ..models.job import JobActivity
 from ..repositories.job_repository import JobRepository
-from ..schemas.chapter_context import ChapterContext
-from ..schemas.chapter_workflow import ChapterWorkflowStateV1
-from ..schemas.job import ChapterWorkflowJobPayload
+from ..schemas.chapter_context import ChapterContext, stable_digest
+from ..schemas.chapter_workflow import ChapterWorkflowState
+from ..schemas.job import (
+    ChapterWorkflowJobPayload,
+    validate_chapter_workflow_job_payload,
+)
 from ..utils.ai_telemetry import AICallResult
 from ..utils.json_utils import (
     remove_think_tags,
     unwrap_markdown_json,
 )
 from .chapter_context_adapters import GenerationContextAdapter, ReviewContextAdapter
+from .chapter_word_count_settings import (
+    build_word_count_requirement_text,
+    count_chapter_words,
+)
 from .chapter_workflow_activities import (
     ChapterWorkflowActivityRef,
     ChapterWorkflowCandidateInput,
@@ -44,7 +51,9 @@ from .chapter_workflow_finalize import (
     ChapterWorkflowFinalizeInput,
     ChapterWorkflowFinalizeService,
 )
-from .chapter_workflow_graph import ChapterWorkflowGraphBindingsV1
+from .chapter_workflow_graph import (
+    ChapterWorkflowGraphBindings,
+)
 from .chapter_workflow_persistence import (
     ChapterWorkflowCandidatePersistenceService,
     ChapterWorkflowPersistCandidatesInput,
@@ -54,7 +63,7 @@ from .chapter_workflow_runtime import ChapterWorkflowRuntime
 from .job_registry import SideEffectClass
 from .job_service import ChapterWorkflowAutomaticResume, JobService
 from .job_worker import JobExecutionContext, JobOutcome, JobWaitOutcome
-from .llm_service import LLMService
+from .llm_service import LLMService, set_llm_failure_diagnostic
 from .model_response_parser import parse_chapter_content_response
 from .prompt_service import PromptService
 
@@ -62,7 +71,7 @@ OutputT = TypeVar("OutputT", bound=BaseModel)
 WorkflowHandler = Callable[[JobExecutionContext], Awaitable[JobOutcome | JobWaitOutcome]]
 
 
-class ChapterWorkflowProvidersV1(Protocol):
+class ChapterWorkflowProviders(Protocol):
     async def plan(
         self,
         request: ChapterWorkflowPlanInput,
@@ -92,7 +101,7 @@ class ChapterWorkflowProvidersV1(Protocol):
     ) -> ChapterWorkflowPostReviewOutput | AICallResult[ChapterWorkflowPostReviewOutput]: ...
 
 
-ProviderFactory = Callable[[JobExecutionContext], ChapterWorkflowProvidersV1]
+ProviderFactory = Callable[[JobExecutionContext], ChapterWorkflowProviders]
 
 
 def _json_payload(raw: str) -> dict[str, Any]:
@@ -103,8 +112,20 @@ def _json_payload(raw: str) -> dict[str, Any]:
     return value
 
 
+_REVISION_STAGE_INSTRUCTIONS: dict[ChapterWorkflowPostReviewStage, str] = {
+    "review_guided_refinement": "根据评审意见修订完整正文，保留已经成立的优点。",
+    "enhanced_review": "增强场景、动作、情绪和关键细节，不改变核心剧情、人物关系和时间顺序。",
+    "self_critique": "审校并修复正文中的明显问题，不改变核心剧情。",
+    "reader_simulator": "从读者体验出发优化信息清晰度、节奏和阅读吸引力。",
+    "consistency": "修复人物、设定、时间线和前后文一致性问题，不改变核心剧情。",
+    "optimizer": "优化语言、节奏和可读性，保留原文风格和关键信息。",
+    "enrichment": "在不改变主线、人物关系、时间顺序和结尾钩子的前提下扩写必要细节。",
+    "compression": "压缩正文并保留核心剧情、人物关系和关键信息。",
+}
+
+
 @dataclass(frozen=True)
-class ChapterWorkflowLLMProvidersV1:
+class ChapterWorkflowLLMProviders:
     """Use the existing prompt/model routing without retaining database sessions."""
 
     execution: JobExecutionContext
@@ -173,6 +194,14 @@ class ChapterWorkflowLLMProvidersV1:
             },
             "style_hint": request.style_hint,
             "generation_options": request.generation_options,
+            "word_count": {
+                "target": request.target_word_count,
+                "minimum": request.minimum_word_count,
+                "maximum": request.maximum_word_count,
+                "requirement": build_word_count_requirement_text(
+                    request.target_word_count
+                ),
+            },
         }
         call = await LLMService.get_llm_response_result_detached(
             system_prompt=prompt,
@@ -263,9 +292,9 @@ class ChapterWorkflowLLMProvidersV1:
         provider_request_key: str,
     ) -> AICallResult[ChapterWorkflowPostReviewOutput]:
         prompt_name = (
-            "optimize_recommended_version"
-            if request.stage in {"review_guided_refinement", "optimizer"}
-            else "evaluation"
+            "chapter_compression"
+            if request.stage == "compression"
+            else "optimize_recommended_version"
         )
         prompt = await self._prompt(prompt_name)
         source_content = request.source_candidate.content
@@ -278,31 +307,63 @@ class ChapterWorkflowLLMProvidersV1:
                 ),
                 source_content,
             )
+        user_payload = (
+            {
+                "target_word_count": request.target_word_count,
+                "maximum_word_count": request.maximum_word_count,
+                "current_word_count": count_chapter_words(source_content),
+                "content": source_content,
+            }
+            if request.stage == "compression"
+            else {
+                "source_content": source_content,
+                "review_summary": " ".join(
+                    (
+                        _REVISION_STAGE_INSTRUCTIONS[request.stage],
+                        build_word_count_requirement_text(request.target_word_count),
+                    )
+                ),
+                "version_number": request.source_candidate.ordinal,
+                "version_review": request.review.report,
+            }
+        )
         call = await LLMService.get_llm_response_result_detached(
             system_prompt=prompt,
             conversation_history=[
                 {
                     "role": "user",
-                    "content": json.dumps(
-                        {
-                            "stage": request.stage,
-                            "source_content": source_content,
-                            "review": request.review.report,
-                            "instruction": "返回完整修订正文，并以 JSON object 表达。",
-                        },
-                        ensure_ascii=False,
-                    ),
+                    "content": json.dumps(user_payload, ensure_ascii=False),
                 }
             ],
             session_factory=self.execution.session_factory,
-            temperature=0.7,
+            temperature=0.3 if request.stage == "compression" else 0.7,
             user_id=self.execution.lease.user_id,
             timeout=600.0,
             response_format=None,
             stage="chapter_optimization",
             provider_request_key=provider_request_key,
         )
-        content, report = parse_chapter_content_response(call.value)
+        try:
+            content, report = parse_chapter_content_response(call.value)
+        except ValueError as exc:
+            reason = {
+                "模型返回的结构化正文无法解析": "模型返回不完整，未能提取章节正文",
+                "模型返回的结构化正文缺少有效正文": (
+                    "模型只返回了说明信息，没有返回章节正文"
+                ),
+                "模型返回的结构化正文存在循环包装": (
+                    "模型返回内容异常，未能提取章节正文"
+                ),
+                "模型未返回有效正文": "模型没有返回可用的章节正文",
+            }.get(str(exc), "模型返回内容无法识别为完整章节正文")
+            set_llm_failure_diagnostic(
+                exc,
+                provider=call.provider_name or call.provider_type,
+                model=call.model,
+                status_code=None,
+                reason=reason,
+            )
+            raise
         return call.with_value(
             ChapterWorkflowPostReviewOutput(
                 stage=request.stage,
@@ -322,182 +383,22 @@ class ChapterWorkflowLLMProvidersV1:
         return str(prompt)
 
 
-class ChapterWorkflowBindingAssemblerV1:
+class _ChapterWorkflowBindingAssemblerBase:
     """Rebuild private activity inputs from durable references for each graph node."""
 
     def __init__(
         self,
         execution: JobExecutionContext,
-        providers: ChapterWorkflowProvidersV1,
+        providers: ChapterWorkflowProviders,
     ) -> None:
         self.execution = execution
         self.providers = providers
         self.model_activities = ChapterWorkflowModelActivityService(execution)
 
-    def bindings(self) -> ChapterWorkflowGraphBindingsV1:
-        return ChapterWorkflowGraphBindingsV1(
-            freeze_context=self.freeze_context,
-            plan_and_direct=self.plan_and_direct,
-            generate_candidates=self.generate_candidates,
-            review_candidates=self.review_candidates,
-            persist_candidates=self.persist_candidates,
-            apply_selection_resume=self.apply_selection_resume,
-            finalize_revision=self.finalize_revision,
-            apply_projection_resume=self.apply_projection_resume,
-            observe_projection=self.observe_projection,
-        )
-
-    async def freeze_context(self, _state: ChapterWorkflowStateV1) -> dict[str, object]:
-        result = await ChapterWorkflowContextService(self.execution).execute_retrieval_activity()
-        update = result.state_update()
-        return {
-            "activity_refs": update["activity_refs"],
-            "result_refs": update["result_refs"],
-        }
-
-    async def plan_and_direct(self, state: ChapterWorkflowStateV1) -> dict[str, object]:
-        context_key, context_result = await self._context(state)
-        execution = await self.model_activities.execute_plan(
-            ChapterWorkflowPlanInput(
-                context_snapshot=context_result.context_snapshot,
-                context_activity_key=context_key,
-                context_result_hash=context_result.result_hash,
-                planning_options={
-                    "flow_config": self._payload().runtime_inputs.flow_config.model_dump(
-                        mode="json", exclude_none=True
-                    )
-                },
-            ),
-            self.providers.plan,
-        )
-        return cast(dict[str, object], execution.state_update())
-
-    async def generate_candidates(self, state: ChapterWorkflowStateV1) -> dict[str, object]:
-        context_key, context_result = await self._context(state)
-        plan_execution = await self._model_execution(state, "plan", ChapterWorkflowPlanOutput)
-        plan = cast(ChapterWorkflowPlanOutput, plan_execution.result.output)
-        flow_config = self._payload().runtime_inputs.flow_config
-        version_count = max(1, min(2, flow_config.versions or 1))
-        style_hints = (
-            "情绪更细腻，节奏更慢，多写内心戏和感官描写",
-            "冲突更强，节奏更快，多写动作和对话",
-        )
-        updates: dict[str, dict[str, str]] = {"activity_refs": {}, "result_refs": {}}
-        for ordinal in range(1, version_count + 1):
-            execution = await self.model_activities.execute_candidate(
-                ChapterWorkflowCandidateInput(
-                    context_snapshot=context_result.context_snapshot,
-                    context_activity_key=context_key,
-                    context_result_hash=context_result.result_hash,
-                    upstream_refs={"plan": self._ref(plan_execution)},
-                    plan=plan,
-                    ordinal=ordinal,
-                    style_hint=style_hints[ordinal - 1],
-                    generation_options=flow_config.model_dump(mode="json", exclude_none=True),
-                ),
-                self.providers.candidate,
-            )
-            self._merge_updates(updates, execution.state_update())
-        return {
-            "activity_refs": updates["activity_refs"],
-            "result_refs": updates["result_refs"],
-        }
-
-    async def review_candidates(self, state: ChapterWorkflowStateV1) -> dict[str, object]:
-        context_key, context_result = await self._context(state)
-        plan_execution = await self._model_execution(state, "plan", ChapterWorkflowPlanOutput)
-        plan = cast(ChapterWorkflowPlanOutput, plan_execution.result.output)
-        candidates = await self._candidate_executions(state)
-        candidate_outputs = [
-            cast(ChapterWorkflowCandidateOutput, execution.result.output)
-            for execution in candidates
-        ]
-        upstream_refs = {"plan": self._ref(plan_execution)}
-        upstream_refs.update({execution.ref_name: self._ref(execution) for execution in candidates})
-        review = await self.model_activities.execute_review(
-            ChapterWorkflowReviewInput(
-                context_snapshot=context_result.context_snapshot,
-                context_activity_key=context_key,
-                context_result_hash=context_result.result_hash,
-                upstream_refs=upstream_refs,
-                plan=plan,
-                candidates=candidate_outputs,
-            ),
-            self.providers.review,
-        )
-        updates: dict[str, dict[str, str]] = {"activity_refs": {}, "result_refs": {}}
-        self._merge_updates(updates, review.state_update())
-
-        review_output = cast(ChapterWorkflowReviewOutput, review.result.output)
-        selected = next(
-            item
-            for item in candidates
-            if cast(ChapterWorkflowCandidateOutput, item.result.output).ordinal
-            == review_output.best_ordinal
-        )
-        prior_results: list[ChapterWorkflowPostReviewOutput] = []
-        post_refs = {
-            selected.ref_name: self._ref(selected),
-            review.ref_name: self._ref(review),
-        }
-        for stage in self._post_review_stages():
-            execution = await self.model_activities.execute_post_review(
-                ChapterWorkflowPostReviewInput(
-                    context_snapshot=context_result.context_snapshot,
-                    context_activity_key=context_key,
-                    context_result_hash=context_result.result_hash,
-                    upstream_refs=dict(post_refs),
-                    source_candidate=cast(
-                        ChapterWorkflowCandidateOutput,
-                        selected.result.output,
-                    ),
-                    review=review_output,
-                    stage=stage,
-                    prior_stage_results=list(prior_results),
-                ),
-                self.providers.post_review,
-            )
-            post_output = cast(ChapterWorkflowPostReviewOutput, execution.result.output)
-            prior_results.append(post_output)
-            post_refs[execution.ref_name] = self._ref(execution)
-            self._merge_updates(updates, execution.state_update())
-        return cast(dict[str, object], updates)
-
-    async def persist_candidates(self, state: ChapterWorkflowStateV1) -> dict[str, object]:
-        candidates = await self._candidate_executions(state)
-        review = await self._model_execution(
-            state,
-            "review:version_review",
-            ChapterWorkflowReviewOutput,
-        )
-        post_review_refs: dict[int, list[ChapterWorkflowActivityRef]] = {}
-        for ref_name in sorted(state.activity_refs):
-            if not ref_name.startswith("post_review:"):
-                continue
-            execution = await self._model_execution(
-                state,
-                ref_name,
-                ChapterWorkflowPostReviewOutput,
-            )
-            ordinal = execution.result.subject_ordinal
-            if ordinal is None:
-                raise ValueError("post-review activity 缺少 subject ordinal")
-            post_review_refs.setdefault(ordinal, []).append(self._ref(execution))
-        persisted = await ChapterWorkflowCandidatePersistenceService(self.execution).execute(
-            ChapterWorkflowPersistCandidatesInput(
-                candidate_refs=[self._ref(item) for item in candidates],
-                review_ref=self._ref(review),
-                post_review_refs=post_review_refs,
-            )
-        )
-        update = persisted.state_update()
-        return {
-            "candidate_version_ids": update["candidate_version_ids"],
-            "activity_refs": update["activity_refs"],
-            "result_refs": update["result_refs"],
-        }
-
-    async def finalize_revision(self, state: ChapterWorkflowStateV1) -> dict[str, object]:
+    async def finalize_revision(
+        self,
+        state: ChapterWorkflowState,
+    ) -> dict[str, object]:
         if state.selected_version_id is None:
             raise ValueError("workflow finalize checkpoint 缺少选中版本")
         finalized = await ChapterWorkflowFinalizeService(self.execution).execute(
@@ -511,7 +412,7 @@ class ChapterWorkflowBindingAssemblerV1:
 
     async def _context(
         self,
-        state: ChapterWorkflowStateV1,
+        state: ChapterWorkflowState,
     ) -> tuple[str, ChapterWorkflowRetrievalActivityResult]:
         ref_name = "retrieval_context"
         activity = await self._activity(state, ref_name)
@@ -522,7 +423,7 @@ class ChapterWorkflowBindingAssemblerV1:
 
     async def _candidate_executions(
         self,
-        state: ChapterWorkflowStateV1,
+        state: ChapterWorkflowState,
     ) -> list[ChapterWorkflowModelActivityExecution]:
         names = sorted(
             (name for name in state.activity_refs if name.startswith("candidate:")),
@@ -537,7 +438,7 @@ class ChapterWorkflowBindingAssemblerV1:
 
     async def _model_execution(
         self,
-        state: ChapterWorkflowStateV1,
+        state: ChapterWorkflowState,
         ref_name: str,
         output_type: type[OutputT],
     ) -> ChapterWorkflowModelActivityExecution:
@@ -554,7 +455,7 @@ class ChapterWorkflowBindingAssemblerV1:
 
     async def _activity(
         self,
-        state: ChapterWorkflowStateV1,
+        state: ChapterWorkflowState,
         ref_name: str,
     ) -> JobActivity:
         activity_key = state.activity_refs.get(ref_name)
@@ -577,21 +478,11 @@ class ChapterWorkflowBindingAssemblerV1:
             raise ValueError(f"workflow activity side effect class 不匹配: {ref_name}")
         return activity
 
-    def _post_review_stages(self) -> tuple[ChapterWorkflowPostReviewStage, ...]:
-        flow = self._payload().runtime_inputs.flow_config
-        stages: list[ChapterWorkflowPostReviewStage] = ["review_guided_refinement"]
-        if flow.preset == "enhanced":
-            stages.append("enhanced_review")
-        if flow.enable_consistency:
-            stages.append("consistency")
-        if flow.enable_optimizer:
-            stages.append("optimizer")
-        if flow.enable_enrichment:
-            stages.append("enrichment")
-        return tuple(stages)
-
     def _payload(self) -> ChapterWorkflowJobPayload:
-        return ChapterWorkflowJobPayload.model_validate(self.execution.lease.payload)
+        return validate_chapter_workflow_job_payload(
+            self.execution.lease.payload_version,
+            self.execution.lease.payload,
+        )
 
     @staticmethod
     def _ref(
@@ -612,7 +503,7 @@ class ChapterWorkflowBindingAssemblerV1:
 
     @staticmethod
     async def apply_selection_resume(
-        _state: ChapterWorkflowStateV1,
+        _state: ChapterWorkflowState,
         resume_value: object,
     ) -> dict[str, object]:
         if not isinstance(resume_value, dict):
@@ -628,7 +519,7 @@ class ChapterWorkflowBindingAssemblerV1:
 
     async def apply_projection_resume(
         self,
-        state: ChapterWorkflowStateV1,
+        state: ChapterWorkflowState,
         resume_value: object,
     ) -> dict[str, object]:
         if not isinstance(resume_value, dict):
@@ -654,27 +545,404 @@ class ChapterWorkflowBindingAssemblerV1:
             return {}
         raise ValueError("projection resume payload shape 无效")
 
-    async def observe_projection(
+    async def reconcile_projections(
         self,
-        state: ChapterWorkflowStateV1,
+        state: ChapterWorkflowState,
     ) -> dict[str, object]:
         await ChapterWorkflowProjectionService(self.execution).observe_completed(state)
         return {}
 
 
+class ChapterWorkflowBindingAssembler(_ChapterWorkflowBindingAssemblerBase):
+    """将每个真实产物边界绑定到独立 durable activity。"""
+
+    _STAGE_REFS: tuple[tuple[str, ChapterWorkflowPostReviewStage], ...] = (
+        ("refine_candidate", "review_guided_refinement"),
+        ("enhance_content", "enhanced_review"),
+        ("repair_consistency", "consistency"),
+        ("optimize_style", "optimizer"),
+        ("enrich_content", "enrichment"),
+        ("compress_candidate", "compression"),
+    )
+
+    def bindings(self) -> ChapterWorkflowGraphBindings:
+        return ChapterWorkflowGraphBindings(
+            freeze_base_context=self.freeze_base_context,
+            retrieve_context=self.retrieve_context,
+            plan_chapter=self.plan_chapter,
+            generate_candidate_1=self.generate_candidate_1,
+            generate_candidate_2=self.generate_candidate_2,
+            review_candidates=self.review_candidates,
+            refine_candidate=self.refine_candidate,
+            enhance_content=self.enhance_content,
+            repair_consistency=self.repair_consistency,
+            optimize_style=self.optimize_style,
+            enrich_content=self.enrich_content,
+            compress_candidate=self.compress_candidate,
+            persist_drafts=self.persist_drafts,
+            apply_selection_resume=self.apply_selection_resume,
+            finalize_revision=self.finalize_revision,
+            apply_projection_resume=self.apply_projection_resume,
+            reconcile_projections=self.reconcile_projections,
+        )
+
+    async def freeze_base_context(
+        self,
+        state: ChapterWorkflowState,
+    ) -> dict[str, object]:
+        payload = self._payload()
+        if state.context_hash != payload.context_hash:
+            raise ValueError("base context checkpoint 与冻结 payload 不一致")
+        request_payload = {
+            "schema_version": 1,
+            "workflow_version": payload.workflow_version,
+            "state_schema_version": payload.state_schema_version,
+            "run_id": payload.run_id,
+            "node_key": "freeze_base_context",
+            "context_hash": payload.context_hash,
+        }
+        activity_key = f"wf:freeze_base_context:{stable_digest(request_payload)}"
+        activity = await self.execution.begin_activity(
+            activity_key,
+            side_effect_class=SideEffectClass.TRANSACTIONAL,
+            request_payload=request_payload,
+        )
+        if activity.should_execute:
+            result_payload = {
+                "schema_version": 1,
+                "context_hash": payload.context_hash,
+            }
+            result_payload["result_hash"] = stable_digest(result_payload)
+            completed = await self.execution.complete_activity(
+                activity_key,
+                provider_request_key=activity.provider_request_key,
+                result=result_payload,
+            )
+            result = completed.result_payload
+        else:
+            result = activity.result
+        if (
+            not isinstance(result, dict)
+            or result.get("context_hash") != payload.context_hash
+            or result.get("result_hash")
+            != stable_digest({key: value for key, value in result.items() if key != "result_hash"})
+        ):
+            raise ValueError("base context activity result 无效")
+        return {
+            "activity_refs": {"base_context": activity_key},
+            "result_refs": {"base_context": str(result["result_hash"])},
+        }
+
+    async def retrieve_context(
+        self,
+        _state: ChapterWorkflowState,
+    ) -> dict[str, object]:
+        result = await ChapterWorkflowContextService(
+            self.execution
+        ).execute_retrieval_activity(node_key="retrieve_context")
+        update = result.state_update()
+        return {
+            "activity_refs": update["activity_refs"],
+            "result_refs": update["result_refs"],
+        }
+
+    async def plan_chapter(self, state: ChapterWorkflowState) -> dict[str, object]:
+        context_key, context_result = await self._context(state)
+        execution = await self.model_activities.execute_plan(
+            ChapterWorkflowPlanInput(
+                context_snapshot=context_result.context_snapshot,
+                context_activity_key=context_key,
+                context_result_hash=context_result.result_hash,
+                planning_options={
+                    "flow_config": self._payload().runtime_inputs.flow_config.model_dump(
+                        mode="json",
+                        exclude_none=True,
+                    )
+                },
+            ),
+            self.providers.plan,
+            node_key="plan_chapter",
+        )
+        return cast(dict[str, object], execution.state_update())
+
+    async def generate_candidate_1(
+        self,
+        state: ChapterWorkflowState,
+    ) -> dict[str, object]:
+        return await self._generate_candidate(state, ordinal=1)
+
+    async def generate_candidate_2(
+        self,
+        state: ChapterWorkflowState,
+    ) -> dict[str, object]:
+        return await self._generate_candidate(state, ordinal=2)
+
+    async def _generate_candidate(
+        self,
+        state: ChapterWorkflowState,
+        *,
+        ordinal: Literal[1, 2],
+    ) -> dict[str, object]:
+        context_key, context_result = await self._context(state)
+        plan_execution = await self._model_execution(
+            state,
+            "plan",
+            ChapterWorkflowPlanOutput,
+        )
+        runtime_inputs = self._payload().runtime_inputs
+        flow_config = runtime_inputs.flow_config
+        style_hints = (
+            "情绪更细腻，节奏更慢，多写内心戏和感官描写",
+            "冲突更强，节奏更快，多写动作和对话",
+        )
+        node_key: Literal["generate_candidate_1", "generate_candidate_2"] = (
+            "generate_candidate_1" if ordinal == 1 else "generate_candidate_2"
+        )
+        execution = await self.model_activities.execute_candidate(
+            ChapterWorkflowCandidateInput(
+                context_snapshot=context_result.context_snapshot,
+                context_activity_key=context_key,
+                context_result_hash=context_result.result_hash,
+                upstream_refs={"plan": self._ref(plan_execution)},
+                plan=cast(ChapterWorkflowPlanOutput, plan_execution.result.output),
+                ordinal=ordinal,
+                style_hint=style_hints[ordinal - 1],
+                generation_options=flow_config.model_dump(mode="json", exclude_none=True),
+                target_word_count=runtime_inputs.target_word_count,
+                minimum_word_count=runtime_inputs.minimum_word_count,
+                maximum_word_count=runtime_inputs.maximum_word_count,
+            ),
+            self.providers.candidate,
+            node_key=node_key,
+        )
+        return cast(dict[str, object], execution.state_update())
+
+    async def review_candidates(
+        self,
+        state: ChapterWorkflowState,
+    ) -> dict[str, object]:
+        context_key, context_result = await self._context(state)
+        plan_execution = await self._model_execution(
+            state,
+            "plan",
+            ChapterWorkflowPlanOutput,
+        )
+        candidates = await self._candidate_executions(state)
+        execution = await self.model_activities.execute_review(
+            ChapterWorkflowReviewInput(
+                context_snapshot=context_result.context_snapshot,
+                context_activity_key=context_key,
+                context_result_hash=context_result.result_hash,
+                upstream_refs={
+                    "plan": self._ref(plan_execution),
+                    **{item.ref_name: self._ref(item) for item in candidates},
+                },
+                plan=cast(ChapterWorkflowPlanOutput, plan_execution.result.output),
+                candidates=[
+                    cast(ChapterWorkflowCandidateOutput, item.result.output)
+                    for item in candidates
+                ],
+            ),
+            self.providers.review,
+        )
+        return cast(dict[str, object], execution.state_update())
+
+    async def refine_candidate(self, state: ChapterWorkflowState) -> dict[str, object]:
+        return await self._execute_stage(
+            state,
+            node_key="refine_candidate",
+            stage="review_guided_refinement",
+        )
+
+    async def enhance_content(self, state: ChapterWorkflowState) -> dict[str, object]:
+        return await self._execute_stage(
+            state,
+            node_key="enhance_content",
+            stage="enhanced_review",
+        )
+
+    async def repair_consistency(
+        self,
+        state: ChapterWorkflowState,
+    ) -> dict[str, object]:
+        return await self._execute_stage(
+            state,
+            node_key="repair_consistency",
+            stage="consistency",
+        )
+
+    async def optimize_style(self, state: ChapterWorkflowState) -> dict[str, object]:
+        return await self._execute_stage(
+            state,
+            node_key="optimize_style",
+            stage="optimizer",
+        )
+
+    async def enrich_content(self, state: ChapterWorkflowState) -> dict[str, object]:
+        return await self._execute_stage(
+            state,
+            node_key="enrich_content",
+            stage="enrichment",
+        )
+
+    async def compress_candidate(self, state: ChapterWorkflowState) -> dict[str, object]:
+        runtime_inputs = self._payload().runtime_inputs
+        content = await self._recommended_content(state, before_node="compress_candidate")
+        word_count = count_chapter_words(content)
+        if word_count <= runtime_inputs.maximum_word_count:
+            return {"skipped_stages": {"compress_candidate": "within_word_limit"}}
+        return await self._execute_stage(
+            state,
+            node_key="compress_candidate",
+            stage="compression",
+        )
+
+    async def _recommended_content(
+        self,
+        state: ChapterWorkflowState,
+        *,
+        before_node: str,
+    ) -> str:
+        candidates = await self._candidate_executions(state)
+        review = await self._model_execution(
+            state,
+            "review:version_review",
+            ChapterWorkflowReviewOutput,
+        )
+        review_output = cast(ChapterWorkflowReviewOutput, review.result.output)
+        selected = next(
+            item
+            for item in candidates
+            if cast(ChapterWorkflowCandidateOutput, item.result.output).ordinal
+            == review_output.best_ordinal
+        )
+        content = cast(ChapterWorkflowCandidateOutput, selected.result.output).content
+        for prior_node, prior_stage in self._STAGE_REFS:
+            if prior_node == before_node:
+                break
+            ref_name = f"post_review:{prior_stage}"
+            if ref_name not in state.activity_refs:
+                continue
+            execution = await self._model_execution(
+                state,
+                ref_name,
+                ChapterWorkflowPostReviewOutput,
+            )
+            output = cast(ChapterWorkflowPostReviewOutput, execution.result.output)
+            if output.content:
+                content = output.content
+        return content
+
+    async def _execute_stage(
+        self,
+        state: ChapterWorkflowState,
+        *,
+        node_key: str,
+        stage: ChapterWorkflowPostReviewStage,
+    ) -> dict[str, object]:
+        context_key, context_result = await self._context(state)
+        candidates = await self._candidate_executions(state)
+        review = await self._model_execution(
+            state,
+            "review:version_review",
+            ChapterWorkflowReviewOutput,
+        )
+        review_output = cast(ChapterWorkflowReviewOutput, review.result.output)
+        selected = next(
+            item
+            for item in candidates
+            if cast(ChapterWorkflowCandidateOutput, item.result.output).ordinal
+            == review_output.best_ordinal
+        )
+        prior_executions = []
+        for prior_node, prior_stage in self._STAGE_REFS:
+            if prior_node == node_key:
+                break
+            ref_name = f"post_review:{prior_stage}"
+            if ref_name in state.activity_refs:
+                prior_executions.append(
+                    await self._model_execution(
+                        state,
+                        ref_name,
+                        ChapterWorkflowPostReviewOutput,
+                    )
+                )
+        runtime_inputs = self._payload().runtime_inputs
+        execution = await self.model_activities.execute_post_review(
+            ChapterWorkflowPostReviewInput(
+                context_snapshot=context_result.context_snapshot,
+                context_activity_key=context_key,
+                context_result_hash=context_result.result_hash,
+                upstream_refs={
+                    selected.ref_name: self._ref(selected),
+                    review.ref_name: self._ref(review),
+                    **{item.ref_name: self._ref(item) for item in prior_executions},
+                },
+                source_candidate=cast(
+                    ChapterWorkflowCandidateOutput,
+                    selected.result.output,
+                ),
+                review=review_output,
+                stage=stage,
+                prior_stage_results=[
+                    cast(ChapterWorkflowPostReviewOutput, item.result.output)
+                    for item in prior_executions
+                ],
+                target_word_count=runtime_inputs.target_word_count,
+                minimum_word_count=runtime_inputs.minimum_word_count,
+                maximum_word_count=runtime_inputs.maximum_word_count,
+            ),
+            self.providers.post_review,
+            node_key=cast(Any, node_key),
+            ref_name=f"post_review:{stage}",
+        )
+        return cast(dict[str, object], execution.state_update())
+
+    async def persist_drafts(self, state: ChapterWorkflowState) -> dict[str, object]:
+        candidates = await self._candidate_executions(state)
+        review = await self._model_execution(
+            state,
+            "review:version_review",
+            ChapterWorkflowReviewOutput,
+        )
+        review_output = cast(ChapterWorkflowReviewOutput, review.result.output)
+        post_refs: list[ChapterWorkflowActivityRef] = []
+        for _node_key, stage in self._STAGE_REFS:
+            ref_name = f"post_review:{stage}"
+            if ref_name in state.activity_refs:
+                execution = await self._model_execution(
+                    state,
+                    ref_name,
+                    ChapterWorkflowPostReviewOutput,
+                )
+                post_refs.append(self._ref(execution))
+        persisted = await ChapterWorkflowCandidatePersistenceService(self.execution).execute(
+            ChapterWorkflowPersistCandidatesInput(
+                candidate_refs=[self._ref(item) for item in candidates],
+                review_ref=self._ref(review),
+                post_review_refs={review_output.best_ordinal: post_refs},
+            )
+        )
+        update = persisted.state_update()
+        return {
+            "candidate_version_ids": update["candidate_version_ids"],
+            "activity_refs": update["activity_refs"],
+            "result_refs": update["result_refs"],
+        }
+
 def build_chapter_workflow_production_bindings(
     execution: JobExecutionContext,
     *,
-    provider_factory: ProviderFactory = ChapterWorkflowLLMProvidersV1,
-) -> ChapterWorkflowGraphBindingsV1:
+    provider_factory: ProviderFactory = ChapterWorkflowLLMProviders,
+) -> ChapterWorkflowGraphBindings:
     providers = provider_factory(execution)
-    return ChapterWorkflowBindingAssemblerV1(execution, providers).bindings()
+    return ChapterWorkflowBindingAssembler(execution, providers).bindings()
 
 
 def build_chapter_workflow_job_handler(
     database_url: str | URL,
     *,
-    provider_factory: ProviderFactory = ChapterWorkflowLLMProvidersV1,
+    provider_factory: ProviderFactory = ChapterWorkflowLLMProviders,
 ) -> WorkflowHandler:
     async def handle(context: JobExecutionContext) -> JobOutcome | JobWaitOutcome:
         async with context.session_factory() as session:
@@ -711,9 +979,9 @@ def build_chapter_workflow_job_handler(
 
 
 __all__ = [
-    "ChapterWorkflowBindingAssemblerV1",
-    "ChapterWorkflowLLMProvidersV1",
-    "ChapterWorkflowProvidersV1",
+    "ChapterWorkflowBindingAssembler",
+    "ChapterWorkflowLLMProviders",
+    "ChapterWorkflowProviders",
     "ProviderFactory",
     "build_chapter_workflow_job_handler",
     "build_chapter_workflow_production_bindings",

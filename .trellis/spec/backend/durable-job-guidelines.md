@@ -59,7 +59,7 @@ await ChapterWorkflowCandidatePersistenceService(execution).execute(
 ```
 
 Its state update contains only `node_key`, `candidate_version_ids`, and the
-`persist_candidates` activity/result references.
+`persist_drafts` activity/result references.
 
 Model response adapters expose one shared terminal and content boundary:
 
@@ -234,6 +234,11 @@ if payload_size > settings.job_payload_max_bytes:
   structured output, an unparseable response or a parsed object without a supported正文
   field fails before activity completion. Candidate prompts that allow plain text preserve
   it unchanged; a leading `[` or `{` alone is not proof of JSON.
+- A model activity's selected prompt, serialized request fields, declared output shape,
+  and response parser form one contract. A content-producing node must not select an
+  evaluation-only prompt. Route tests execute every stage through prompt selection,
+  assert the serialized request keys, and parse a representative response from that
+  prompt's documented output shape.
 - API optimization, review-guided refinement, and Pipeline dimension optimization use
   the same optimizer response parser. Mandatory refinement propagates parse failure;
   optional dimensions retain their prior正文 rather than adopting the raw response.
@@ -342,6 +347,9 @@ if payload_size > settings.job_payload_max_bytes:
   orphan field fragments, mixed explanatory text, unclosed fences, leading bracketed
   prose, leading version-heading removal, optional-transform preservation, and trace
   recovery without `cleaned_output` fallback.
+- Workflow prompt-route tests cover every content-transform stage and assert prompt name,
+  serialized request fields, and successful parsing of the prompt's documented response
+  shape; parser-only fixtures do not prove the route contract.
 - Workflow candidate persistence: real PostgreSQL tests cover outcome-writer rollback, commit-before-checkpoint replay, concurrent replay producing one candidate set, stale fence/base revision rejection, cross-wired provenance rejection, current canonical preservation, and absence of正文/review reports from activity request/result, JobEvent, and checkpoint updates.
 - Enqueue: concurrent identical keys return one canonical row/outcome; mismatched canonical inputs fail without a duplicate.
 - Event log: state/event atomicity, global cursor order, stream-local sequence uniqueness, owner filtering, retention cleanup, and reset watermark.
@@ -417,7 +425,7 @@ Apply these additional rules when a Chapter generation run uses LangGraph persis
 - A workflow transition locks `BackgroundTask -> ChapterWorkflowRun -> Chapter`, updates the root job and workflow run, and appends its allowlisted workflow event in one service-owned transaction. Projection consumers do not reverse this order; a separate resumer reacquires the root job before waking a projection-pending run.
 - A graph checkpoint contains only versioned serializable identifiers, hashes, state markers, and activity/result references. It never contains an ORM object, database session, provider client, service, prompt or Chapter正文. The frozen canonical context remains on the workflow run and follows the Chapter context contract.
 - Every side-effecting graph node uses the existing `JobActivity` ledger with a stable logical input hash. A successful activity is reused. A transactional outcome and its activity result commit together under the root job fence.
-- Model-backed `plan_and_direct`, each candidate ordinal, `version_review`, and every enabled post-review stage are separate `ambiguous_external` activities. Their canonical request metadata contains only workflow/schema identity, node/stage, and the complete private input hash; prompt, context snapshot, mission, candidate content, and review reports remain in the private activity result.
+- Model-backed `plan_chapter`, each candidate ordinal, `review_candidates`, and every enabled post-review stage are separate `ambiguous_external` activities. Their canonical request metadata contains only workflow/schema identity, node/stage, and the complete private input hash; prompt, context snapshot, mission, candidate content, and review reports remain in the private activity result.
 - Production model adapters pass the activity's stable provider request key unchanged to
   the provider transport. The key supports correlation and provider-side deduplication
   when available; it does not turn an `ambiguous_external` call into an exactly-once
@@ -425,12 +433,123 @@ Apply these additional rules when a Chapter generation run uses LangGraph persis
   provider-specific contract can verify the remote outcome.
 - A model activity input carries `context_activity_key`, `context_result_hash`, and the exact `upstream_refs: {ref_name: {activity_key, result_hash}}` required by its stage. Before creating a new intent, the service rereads those activities under the same root job and verifies `succeeded` status, expected stage, content-addressed result, and exact private output equality. Same-project/same-chapter data is not sufficient evidence of frozen identity.
 - A model activity result records the non-sensitive `subject_ordinal` and `upstream_result_hashes`. Candidate persistence accepts references only, reconstructs private candidate/review/post-review outputs from the ledger, and rejects a review or post-review result that is not bound to the exact candidate result hashes being persisted.
-- `persist_candidates` is a `transactional` activity. Its outcome writer runs after the root JobRun, workflow run, and Chapter locks; it validates the base revision again, locks existing ChapterVersion rows by ascending id, preserves the current selected version and every historical `ChapterRevision.selected_version_id`, writes candidate/evaluation rows, and completes the activity/event in the same transaction. It never reads generation trace or calls `clear_from_node`.
+- `persist_drafts` is a `transactional` activity. Its outcome writer runs after the root JobRun, workflow run, and Chapter locks; it validates the base revision again, locks existing ChapterVersion rows by ascending id, preserves the current selected version and every historical `ChapterRevision.selected_version_id`, writes candidate/evaluation rows, and completes the activity/event in the same transaction. It never reads generation trace or calls `clear_from_node`.
 - A provider may return the typed output or `AICallResult[typed output]`. Telemetry is persisted with the private result and the existing `AIUsageRecord` in the activity completion transaction; replay neither calls the provider nor writes a second usage row.
 - An unresolved `ambiguous_external` activity is immutable and moves the root job plus workflow run to `needs_attention`; worker reclaim, graph replay, and ordinary retry must not invoke the provider again. Only a persisted `retry_external` command with actor audit and `acknowledge_possible_duplicate=true` may derive one new activity intent from its command id. Replaying that command returns the same intent. Unknown provider results cannot be injected manually.
 - Durable commands are `select`, `retry`, `retry_external`, `retry_projection`, and `cancel`. The inbox validates command id, payload version, expected workflow row revision, expected Chapter revision, and expected checkpoint id. A stale command is rejected without graph resume and exposes the current snapshot; a checkpoint-applied command marker is reconciled before any repeated resume.
-- Graph V1 uses stable node keys `freeze_context`, `plan_and_direct`, `generate_candidates`, `review_candidates`, `persist_candidates`, `waiting_for_selection`, `finalize_revision`, `projection_pending`, `observe_projection`, and `successful`. Existing writer `from_node_key` values are request-shape adapters only: they may submit `retry` to a matching durable run, but must return a conflict when no matching run exists. They never become checkpoint inputs or fall back to another generation runtime.
+- Graph V1 uses the stable node keys defined below. Existing writer `from_node_key` values are request-shape adapters only: they may submit `retry` to a matching durable run, but must return a conflict when no matching run exists. They never become checkpoint inputs or fall back to another generation runtime.
 - Finalize and every projection child job inherit the original workflow stream. The workflow may observe projection completion, but only the projection reconciler may move the current Chapter revision to `successful`.
+
+### Versioned Chapter workflow node boundaries
+
+#### 1. Scope / Trigger
+
+Apply when adding, renaming, routing, retrying, or presenting a Chapter workflow node.
+The split DAG is the only formal V1 contract. The system was not released with the
+pre-split graph, so runtime compatibility for those development checkpoints is not kept.
+
+#### 2. Signatures
+
+```python
+ChapterWorkflowStartService.start(
+    ...,
+) -> ChapterWorkflowStartResult
+
+validate_chapter_workflow_job_payload(
+    payload_version: int,
+    payload: object,
+) -> ChapterWorkflowJobPayload
+```
+
+V1 execution nodes are `freeze_base_context`, `retrieve_context`, `plan_chapter`,
+`generate_candidate_1`, conditional `generate_candidate_2`, `review_candidates`,
+`refine_candidate`, optional `enhance_content`, `repair_consistency`, `optimize_style`,
+and `enrich_content`, conditional `compress_candidate`, then transactional
+`persist_drafts` and `finalize_revision`.
+Control nodes are `wait_for_selection`, `wait_for_projections`, and
+`reconcile_projections`; `successful` is terminal.
+
+#### 3. Contracts
+
+- Root payload version, workflow version, state schema version, registry compiler, and
+  checkpoint state type are one exact identity. Unknown or mismatched versions fail
+  closed; no parser or registry guesses another version.
+- Root payload, graph, and state use the single `Literal[1]` contract. Schema, payload,
+  bindings, compiler, and handler symbols have no version suffix or union fallback.
+- Every V1 execution node owns one durable activity/result boundary and stable node key.
+  Review does not execute refinement or optional rewrites in the same activity.
+- `plan_chapter` fans out to both candidate nodes. The graph uses a barrier edge from
+  both branches to `review_candidates`; candidate branches do not write `node_key`, and
+  `activity_refs`, `result_refs`, and `skipped_stages` use merge reducers so concurrent
+  updates preserve both branches.
+- Candidate 2 is skipped with `single_candidate`; disabled optional stages are skipped
+  with `disabled`. Skip reasons merge into checkpoint `skipped_stages` and survive
+  selection/projection resumes.
+- The root runtime payload freezes `target_word_count`, `minimum_word_count`, and
+  `maximum_word_count` under its content-addressed runtime input. Candidate and rewrite
+  prompts receive that contract. After all enabled rewrites, `compress_candidate`
+  records `within_word_limit` when no compression is needed; otherwise it calls the
+  compression activity and accepts only output within the frozen minimum/maximum range.
+  `persist_drafts` never receives a recommended正文 above the frozen maximum.
+- `wait_for_selection`, `wait_for_projections`, and `successful` never masquerade as
+  content-producing activities. Projection jobs remain independent; summary precedes
+  the memory/RAG/foreshadowing fan-out, and workflow success waits for reconciliation.
+- Public traces expose allowlisted node kind, actual LLM usage, call type, references,
+  duration, and bounded output metadata. They never expose prompts,正文, provider
+  responses, command payloads, checkpoint state, tokens, or secrets.
+
+#### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|-----------|-----------------|
+| A caller or stored row presents a workflow/state version other than `1` | Reject before graph execution |
+| Root payload version is unknown | Reject before parsing the payload model |
+| Payload workflow/state version differs from run or registry | Reject before graph execution |
+| Candidate count differs from frozen `FlowConfig.versions` | Reject payload validation |
+| Optional-stage flags differ from frozen flow config | Reject payload validation |
+| Frozen word-count values are unordered or below the supported floor | Reject payload validation |
+| Recommended正文 exceeds the frozen maximum after rewrites | Run `compress_candidate` before persistence |
+| Compression output remains outside the frozen minimum/maximum range | Fail the activity; do not persist drafts |
+| Selection references a candidate absent from the checkpoint | Reject command resume |
+| Required projection is failed, stale, or identity-drifted | Remain projection-pending or needs-attention; do not enter `successful` |
+
+#### 5. Good / Base / Bad Cases
+
+- Good: a V1 run generates two independently referenced candidates in parallel, waits
+  for both branches before review, records each enabled rewrite separately, compresses
+  an over-limit recommendation, waits for a valid selection, then reconciles parallel
+  projection children before success.
+- Base: a V1 single-candidate/basic run records `generate_candidate_2=single_candidate`
+  and disabled optional stages, then resumes from both interrupts without losing them.
+- Bad: guess an unknown payload version, attach mismatched bindings/state, rerun review when
+  only refinement failed, or draw projection children as a fixed serial pipeline.
+
+#### 6. Tests Required
+
+- Graph tests assert single/two-candidate call sets, two-branch barrier behavior, merged
+  references and skip reasons, selection and projection interrupts, retry back-edge,
+  and terminal reconciliation.
+- PostgreSQL handler tests assert distinct activity keys/results for review, refinement,
+  each enabled rewrite, compression, persistence, finalize, and replay without duplicate
+  model calls; word-count tests cover exact maximum, over-limit compression, and invalid
+  compression output.
+- Process tests start the formal V1 and prove its checkpoints recover across reclaim;
+  default-start tests assert payload/run/state identity is exactly version `1`.
+- API/frontend tests assert the generated node union contains only formal V1 keys,
+  projection trace mappings are one-to-one, optional skips are visible, and unknown
+  versions are rejected.
+
+#### 7. Wrong vs Correct
+
+```python
+# Wrong: silently accepts an unknown version through a default branch.
+payload = ChapterWorkflowJobPayload.model_validate(raw_payload)
+
+# Correct: validate the registered root payload version before parsing.
+if payload_version != 1:
+    raise ValueError("unsupported chapter workflow payload version")
+payload = ChapterWorkflowJobPayload.model_validate(raw_payload)
+```
 
 ### Ambiguous external activity command recovery
 
@@ -591,7 +710,7 @@ that run's `row_revision` increases.
 
 #### 5. Good / Base / Bad Cases
 
-- Good: candidate generation starts, the run moves to `generate_candidates` with an
+- Good: candidate generation starts, the run moves to `generate_candidate_1` with an
   increased revision, and the UI can inspect a running trace before provider return.
 - Base: a non-workflow or compatibility activity lacks `node_key`; its existing event
   behavior remains unchanged.
@@ -789,7 +908,7 @@ await self._append_event(job, "job.cancelled", now=now)
 ### Interrupt checkpoint and root wait handshake
 
 1. **Scope / Trigger**: apply whenever a graph node reaches `waiting_for_selection` or `projection_pending`, or a reclaimed worker observes one of those persisted interrupt checkpoints.
-2. **Signatures**: business nodes are supplied through `ChapterWorkflowGraphBindingsV1`; `ChapterWorkflowRuntime.execute(resume_value=...)` returns `JobWaitOutcome` or `JobOutcome`; `JobWorker` converts `JobWaitOutcome` through `JobService.wait_for_resume(lease, workflow_transition=...)` and must not call `mark_succeeded` afterward.
+2. **Signatures**: business nodes are supplied through `ChapterWorkflowGraphBindings`; `ChapterWorkflowRuntime.execute(resume_value=...)` returns `JobWaitOutcome` or `JobOutcome`; `JobWorker` converts `JobWaitOutcome` through `JobService.wait_for_resume(lease, workflow_transition=...)` and must not call `mark_succeeded` afterward.
 3. **Contracts**: graph bindings may return only serializable state updates and cannot change workflow/schema/run/context/node identity. The graph owns `node_key` advancement. `interrupt()` runs before a resume binding, so node re-execution has no pre-interrupt side effect. The wait outcome carries only status, node key, checkpoint id, and bounded progress. Command submission validates the pre-resume Chapter revision. After the same-thread saver proves `last_applied_command_id`, its runtime callback is the only production caller allowed to persist the marker: `select` must have advanced exactly to `expected_chapter_revision + 1` and selected the command's version, while `retry_projection` must leave the revision unchanged. Pending-command preparation accepts the pre-resume state or that exact type-specific post-state so a crash between checkpoint commit and inbox apply can finish the marker without issuing a second resume.
 4. **Validation & Error Matrix**: no checkpoint on resume -> reject; checkpoint not at a recognized interrupt -> reject; pending graph task and state `node_key` disagree -> fail closed; interrupt lacks checkpoint id -> fail closed; wait fence is stale -> `LeaseLostError` and no run/event update; `select` marker without the exact `revision + 1` and selected version -> reject; `retry_projection` marker after any revision change -> reject; marker callback whose checkpoint state does not contain the same command id -> do not call the inbox apply service.
 5. **Good / Base / Bad**: good is a new saver/process reading the same `thread_id`, seeing the existing interrupt, and returning the same wait outcome without executing earlier bindings. Good is also a reclaimed select turn observing its already-committed finalize and only marking the inbox command applied. Base is the first invocation writing the checkpoint and then atomically releasing the root lease. Bad is returning an ordinary `JobOutcome`, holding a heartbeat while waiting for a human, applying a caller-supplied marker outside the verified runtime callback, or comparing every command to the pre-resume Chapter revision after `select` legitimately finalized a new revision.
@@ -814,7 +933,7 @@ assert chapter.selected_version_id == command.payload["selected_version_id"]
 
 The PostgreSQL checkpoint and SQLAlchemy root-wait transaction are separate commits. If the process stops after the checkpoint commit but before root waiting commits, a reclaimed runtime must detect the already-persisted interrupt and return the same `JobWaitOutcome`; it must not invoke the graph or reconstruct position from trace.
 
-Graph V1 checkpoint state is a versioned object with these keys only: `workflow_version`, `state_schema_version`, `run_id`, `node_key`, `context_hash`, `activity_refs`, `result_refs`, `candidate_version_ids`, `selected_version_id`, `last_applied_command_id`, `target_chapter_revision`, and a bounded public `error_category`. Optional values are explicit `null` or empty collections; adding or changing a required key creates a new state schema and graph definition.
+Graph V1 checkpoint state is a versioned object with these keys only: `workflow_version`, `state_schema_version`, `run_id`, `node_key`, `context_hash`, `activity_refs`, `result_refs`, `candidate_version_ids`, `selected_version_id`, `candidate_count`, `optional_stages`, `skipped_stages`, `last_applied_command_id`, `target_chapter_revision`, and a bounded public `error_category`. Optional values are explicit `null` or empty collections; adding or changing a required key creates a new state schema and graph definition.
 
 Model activity references use these stable names: `plan`, `candidate:<ordinal>`, `review:version_review`, and `post_review:<stage>`. Their Graph update contains only the matching `activity_refs` and `result_refs` entries. Full typed outputs never enter the checkpoint.
 
@@ -1186,4 +1305,117 @@ locked_run = await lock_run_again(run.id)
 if locked_run.checkpoint_id == "__retention_pending__":
     locked_run.checkpoint_id = None
 await session.commit()
+```
+
+## 12. Immediate Chapter Workflow Reset
+
+### 1. Scope / Trigger
+
+Apply when an unfinalized Chapter must recover from an unreadable, incompatible, or
+otherwise abandoned workflow run. Reset is an explicit user action that preserves the
+outline; it is not a snapshot refresh and does not add compatibility for an old graph.
+
+### 2. Signatures
+
+```text
+POST /api/writer/novels/{project_id}/chapters/{chapter_number}/reset
+  -> NovelProjectSchema
+```
+
+```python
+await JobService(session).reset_chapter_workflow(
+    *,
+    user_id: int,
+    project_id: str,
+    chapter_number: int,
+    delete_checkpoint_threads: Callable[[list[str]], Awaitable[None]],
+) -> bool
+
+await NovelService(session).reset_chapter_without_workflow(
+    project_id: str,
+    chapter_number: int,
+) -> None
+```
+
+### 3. Contracts
+
+- Reset is owner-scoped and allowed only while `selected_version_id is None` and
+  `current_revision == 0`. A finalized Chapter must use the existing deletion policy.
+- Lock the root `BackgroundTask -> ChapterWorkflowRun -> Chapter` transition before
+  mutation. Increment the root fencing token, clear lease identity, cancel the job and
+  run, reject pending commands, and clear command/activity private payloads.
+- Reuse terminal cancelled cleanup to delete this run's unconfirmed versions,
+  evaluations, and compatibility traces and to restore Chapter generation fields to
+  `not_generated`. Preserve the outline, workflow/job/command/activity identity,
+  `JobEvent`, AI usage/cost, revisions, outbox, and projection audit.
+- Checkpoint deletion uses the reset-only recoverable marker
+  `CHAPTER_WORKFLOW_RESET_CHECKPOINT_DELETE_PENDING`. It must not reuse the retention
+  marker because pending retention cleanup does not prove that Chapter reset ran.
+  Commit the cancelled state and marker
+  before calling the saver, then clear the unchanged marker in a second transaction.
+  A repeated reset first completes any owner-scoped pending checkpoint deletion, then
+  continues to look up and reset a newer current run; old cleanup must not short-circuit
+  a run started after the earlier reset commit.
+- Current-run lookup must not expose an inactive terminal run after its Chapter is
+  `not_generated`; otherwise a refreshed client would immediately re-enter the same
+  fatal boundary.
+- If no durable run exists, reset only the unfinalized Chapter's versions,
+  evaluations, trace, summary, projection identity, and generation fields. Fatal
+  deletion first resets, then invokes the existing tail-contiguous Chapter deletion.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|-----------|-----------------|
+| Project is missing or belongs to another user | Preserve normal 404 owner boundary |
+| Chapter outline is missing | Return 404; create nothing |
+| Chapter is finalized | Return 400; preserve canonical state |
+| Root job/run/Chapter identity differs | Roll back and fail closed |
+| A worker submits with the pre-reset fence | Raise lease-lost behavior; commit nothing |
+| Saver deletion fails after reset commit | Preserve the pending marker for retry |
+| The same reset is repeated with a pending marker | Retry thread deletion, then clear only that marker |
+| A newer run exists after pending cleanup | Continue and reset the newer current run in the same request |
+| The run carries the retention cleanup marker | Execute the full reset; do not report reset success from retention cleanup alone |
+| No durable run and no Chapter row exists | Succeed as an outline-preserving no-op |
+| Reset succeeded and current run is queried | Return no current run for the `not_generated` Chapter |
+
+### 5. Good / Base / Bad Cases
+
+- Good: an incompatible active run is cancelled under a higher fence, its private and
+  unconfirmed state is cleared, its checkpoint thread is deleted, and the preserved
+  outline can start a new run.
+- Base: saver deletion fails once; the Chapter remains safely reset and a repeated
+  request deletes the same thread idempotently before clearing the marker.
+- Bad: implement reset as a refetch, delete a checkpoint before fencing the root job,
+  remove durable audit identity, or let a terminal old run become current again.
+
+### 6. Tests Required
+
+- HTTP/PostgreSQL integration claims the root job, resets the Chapter, and asserts the
+  fence increments; the stale lease cannot succeed; run/job are cancelled; Chapter is
+  `not_generated`; versions, evaluations, traces, and private payloads are empty.
+- Inject saver failure after the first transaction. Assert the pending marker remains,
+  repeat the request, and assert the same thread is retried and the marker clears.
+- Query current workflow after reset and assert no run is returned. Then delete the
+  reset Chapter through the normal tail policy and assert the outline disappears while
+  durable workflow audit identity remains.
+- Frontend tests assert fatal reset/check/delete actions, serialized recheck, shared
+  pending disablement, and reset-before-delete ordering.
+
+### 7. Wrong vs Correct
+
+```python
+# Wrong: reading the same incompatible row cannot recover it.
+snapshot = await get_current_run(project_id, chapter_number)
+```
+
+```python
+# Correct: fence and commit recoverable cleanup intent before deleting the checkpoint.
+job.fencing_token += 1
+job.status = "cancelled"
+run.checkpoint_id = CHAPTER_WORKFLOW_RESET_CHECKPOINT_DELETE_PENDING
+await session.commit()
+
+await checkpoint_cleaner.delete_threads([run.id])
+await clear_unchanged_checkpoint_marker(run.id)
 ```

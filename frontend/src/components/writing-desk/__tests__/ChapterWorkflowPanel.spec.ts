@@ -197,7 +197,7 @@ describe('ChapterWorkflowPanel', () => {
       phase: 'failed',
       allowedCommands: ['retry_external', 'cancel'],
       error: '外部模型返回结果不确定',
-      retryActivityKey: 'wf:generate_candidates:stable-key',
+      retryActivityKey: 'wf:generate_candidate_1:stable-key',
       candidates: [],
     }, { onRetryExternal })
 
@@ -208,19 +208,39 @@ describe('ChapterWorkflowPanel', () => {
     vi.mocked(globalAlert.showConfirm).mockResolvedValue(true)
     host.querySelector<HTMLButtonElement>('[data-action="retry-external"]')?.click()
     await vi.waitFor(() => expect(onRetryExternal)
-      .toHaveBeenCalledWith('wf:generate_candidates:stable-key'))
+      .toHaveBeenCalledWith('wf:generate_candidate_1:stable-key'))
   })
 
-  it('fatal 使用 alert 语义并提供重新同步', () => {
+  it('fatal 使用 alert 语义并提供检查、重置与删除出口', () => {
+    const onReset = vi.fn()
+    const onDelete = vi.fn()
     const host = mountPanel({
       phase: 'fatal',
       allowedCommands: [],
       error: '章节工作流数据格式无效',
       candidates: [],
-    })
+    }, { onReset, onDelete })
 
     expect(host.querySelector('[role="alert"]')?.textContent)
-      .toContain('章节状态暂不可信')
+      .toContain('章节运行无法读取')
     expect(host.querySelector('[data-action="resync"]')).not.toBeNull()
+    host.querySelector<HTMLButtonElement>('[data-action="reset"]')?.click()
+    host.querySelector<HTMLButtonElement>('[data-action="delete"]')?.click()
+    expect(onReset).toHaveBeenCalledOnce()
+    expect(onDelete).toHaveBeenCalledOnce()
+  })
+
+  it('fatal 恢复处理中禁用全部动作', () => {
+    const host = mountPanel({
+      phase: 'fatal',
+      allowedCommands: [],
+      pending: true,
+      candidates: [],
+    })
+
+    expect(
+      [...host.querySelectorAll<HTMLButtonElement>('[data-action]')]
+        .every((button) => button.disabled),
+    ).toBe(true)
   })
 })

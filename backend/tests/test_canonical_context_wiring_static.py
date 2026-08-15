@@ -29,8 +29,8 @@ def test_review_and_workflow_entrypoints_receive_canonical_context() -> None:
     )
     workflow_provider = _block(
         "app/services/chapter_workflow_handler.py",
-        "class ChapterWorkflowLLMProvidersV1:",
-        "class ChapterWorkflowBindingAssemblerV1:",
+        "class ChapterWorkflowLLMProviders:",
+        "class ChapterWorkflowBindingAssembler:",
     )
     review_service = _block(
         "app/services/six_dimension_review_service.py",

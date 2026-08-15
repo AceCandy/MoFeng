@@ -24,15 +24,15 @@ from .chapter_workflow_start import ChapterWorkflowStartService
 from .job_public_projection import public_job_snapshot
 from .job_service import ChapterWorkflowCommandRejectedError, JobService
 
-LEGACY_RETRY_NODE_MAP = {
-    "context_prep": "freeze_context",
-    "rag_retrieval": "freeze_context",
-    "director_mission": "plan_and_direct",
-    "draft_generation": "generate_candidates",
+RETRY_NODE_MAP = {
+    "context_prep": "freeze_base_context",
+    "rag_retrieval": "retrieve_context",
+    "director_mission": "plan_chapter",
+    "draft_generation": "generate_candidate_1",
     "quality_review": "review_candidates",
-    "review_refinement": "review_candidates",
-    "persist_versions": "persist_candidates",
-    "save_draft": "persist_candidates",
+    "review_refinement": "refine_candidate",
+    "persist_versions": "persist_drafts",
+    "save_draft": "persist_drafts",
 }
 
 
@@ -171,7 +171,7 @@ class ChapterWorkflowCompatibilityService:
         if run is None:
             raise ChapterWorkflowCompatibilityConflictError("workflow_retry_run_not_found")
 
-        mapped_node = LEGACY_RETRY_NODE_MAP.get(from_node_key)
+        mapped_node = RETRY_NODE_MAP.get(from_node_key)
         if mapped_node is None:
             raise ChapterWorkflowCompatibilityConflictError("workflow_retry_node_unsupported")
         if mapped_node != run.node_key:

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-import json
+import asyncio
+from dataclasses import replace
 from uuid import uuid4
 
 import pytest
@@ -14,10 +15,10 @@ from sqlalchemy.engine import make_url
 from app.db.chapter_workflow_checkpointer import psycopg_dsn_from_sqlalchemy_url
 from app.schemas.chapter_context import stable_digest
 from app.schemas.chapter_workflow import (
-    CHAPTER_WORKFLOW_NODE_KEYS_V1,
-    CHAPTER_WORKFLOW_STATE_SCHEMA_VERSION_V1,
-    CHAPTER_WORKFLOW_VERSION_V1,
-    ChapterWorkflowStateV1,
+    CHAPTER_WORKFLOW_NODE_KEYS,
+    CHAPTER_WORKFLOW_STATE_SCHEMA_VERSION,
+    CHAPTER_WORKFLOW_VERSION,
+    ChapterWorkflowState,
 )
 from app.schemas.job import (
     ChapterWorkflowJobPayload,
@@ -25,50 +26,31 @@ from app.schemas.job import (
     ChapterWorkflowRuntimeInputs,
 )
 from app.services.chapter_workflow_graph import (
-    ChapterWorkflowGraphBindingsV1,
+    ChapterWorkflowGraphBindings,
     build_chapter_workflow_graph_registry,
     chapter_workflow_graph_config,
 )
 
 
-def _initial_state() -> ChapterWorkflowStateV1:
-    return ChapterWorkflowStateV1.initial(
-        run_id=str(uuid4()),
-        context_hash="a" * 64,
-    )
-
-
-def _graph_bindings(calls: list[str]) -> ChapterWorkflowGraphBindingsV1:
+def _graph_bindings(calls: list[str]) -> ChapterWorkflowGraphBindings:
     async def node(name: str, update: dict[str, object] | None = None):
         calls.append(name)
         return update or {}
 
-    async def freeze(_state):
-        return await node("freeze_context")
+    async def named(name: str, _state):
+        return await node(name)
 
-    async def plan(_state):
+    async def candidate(name: str, ordinal: int, _state):
         return await node(
-            "plan_and_direct",
-            {"activity_refs": {"plan": "activity-plan"}},
-        )
-
-    async def generate(_state):
-        return await node(
-            "generate_candidates",
-            {"activity_refs": {"candidate:1": "activity-candidate-1"}},
-        )
-
-    async def review(_state):
-        return await node(
-            "review_candidates",
-            {"result_refs": {"review": "a" * 64}},
+            name,
+            {
+                "activity_refs": {f"candidate:{ordinal}": f"activity-candidate-{ordinal}"},
+                "result_refs": {f"candidate:{ordinal}": str(ordinal) * 64},
+            },
         )
 
     async def persist(_state):
-        return await node(
-            "persist_candidates",
-            {"candidate_version_ids": [101, 102]},
-        )
+        return await node("persist_drafts", {"candidate_version_ids": [101, 102]})
 
     async def select(_state, resume_value):
         calls.append("apply_selection_resume")
@@ -78,10 +60,7 @@ def _graph_bindings(calls: list[str]) -> ChapterWorkflowGraphBindingsV1:
         }
 
     async def finalize(_state):
-        return await node(
-            "finalize_revision",
-            {"target_chapter_revision": 1},
-        )
+        return await node("finalize_revision", {"target_chapter_revision": 1})
 
     async def projection_resume(_state, resume_value):
         await node("apply_projection_resume")
@@ -89,161 +68,178 @@ def _graph_bindings(calls: list[str]) -> ChapterWorkflowGraphBindingsV1:
             return {"last_applied_command_id": resume_value["command_id"]}
         return {}
 
-    async def observe(_state):
-        return await node("observe_projection")
-
-    return ChapterWorkflowGraphBindingsV1(
-        freeze_context=freeze,
-        plan_and_direct=plan,
-        generate_candidates=generate,
-        review_candidates=review,
-        persist_candidates=persist,
+    return ChapterWorkflowGraphBindings(
+        freeze_base_context=lambda state: named("freeze_base_context", state),
+        retrieve_context=lambda state: named("retrieve_context", state),
+        plan_chapter=lambda state: named("plan_chapter", state),
+        generate_candidate_1=lambda state: candidate("generate_candidate_1", 1, state),
+        generate_candidate_2=lambda state: candidate("generate_candidate_2", 2, state),
+        review_candidates=lambda state: named("review_candidates", state),
+        refine_candidate=lambda state: named("refine_candidate", state),
+        enhance_content=lambda state: named("enhance_content", state),
+        repair_consistency=lambda state: named("repair_consistency", state),
+        optimize_style=lambda state: named("optimize_style", state),
+        enrich_content=lambda state: named("enrich_content", state),
+        compress_candidate=lambda _state: node(
+            "compress_candidate",
+            {"skipped_stages": {"compress_candidate": "within_word_limit"}},
+        ),
+        persist_drafts=persist,
         apply_selection_resume=select,
         finalize_revision=finalize,
         apply_projection_resume=projection_resume,
-        observe_projection=observe,
+        reconcile_projections=lambda state: named("reconcile_projections", state),
     )
-
-
-def test_graph_v1_state_is_a_strict_serializable_reference_contract() -> None:
-    state = _initial_state()
-    payload = state.model_dump(mode="json")
-
-    assert set(payload) == {
-        "workflow_version",
-        "state_schema_version",
-        "run_id",
-        "node_key",
-        "context_hash",
-        "activity_refs",
-        "result_refs",
-        "candidate_version_ids",
-        "selected_version_id",
-        "last_applied_command_id",
-        "target_chapter_revision",
-        "error_category",
-    }
-    assert json.loads(json.dumps(payload)) == payload
-    assert payload["node_key"] == "freeze_context"
-    assert tuple(CHAPTER_WORKFLOW_NODE_KEYS_V1) == (
-        "freeze_context",
-        "plan_and_direct",
-        "generate_candidates",
-        "review_candidates",
-        "persist_candidates",
-        "waiting_for_selection",
-        "finalize_revision",
-        "projection_pending",
-        "observe_projection",
-        "successful",
-    )
-
-    with pytest.raises(ValidationError, match="prompt"):
-        ChapterWorkflowStateV1.model_validate({**payload, "prompt": "private body"})
-    with pytest.raises(ValidationError, match="activity_refs"):
-        ChapterWorkflowStateV1.model_validate({**payload, "activity_refs": {"generate": object()}})
 
 
 @pytest.mark.asyncio
-async def test_graph_registry_routes_v1_without_version_fallback() -> None:
+async def test_graph_routes_real_nodes_and_preserves_skip_reasons() -> None:
     registry = build_chapter_workflow_graph_registry()
     calls: list[str] = []
     bindings = _graph_bindings(calls)
-    definition = registry.get(CHAPTER_WORKFLOW_VERSION_V1)
+    definition = registry.get(CHAPTER_WORKFLOW_VERSION)
 
     assert definition is not None
-    assert definition.workflow_version == CHAPTER_WORKFLOW_VERSION_V1
-    assert definition.state_schema_version == CHAPTER_WORKFLOW_STATE_SCHEMA_VERSION_V1
-    assert definition.state_type is ChapterWorkflowStateV1
-    assert registry.get(999) is None
-    with pytest.raises(ValueError, match="workflow version"):
-        registry.compile(999, checkpointer=InMemorySaver(), bindings=bindings)
+    assert definition.state_schema_version == CHAPTER_WORKFLOW_STATE_SCHEMA_VERSION
+    assert definition.state_type is ChapterWorkflowState
+    assert tuple(CHAPTER_WORKFLOW_NODE_KEYS)[-3:] == (
+        "wait_for_projections",
+        "reconcile_projections",
+        "successful",
+    )
 
-    state = _initial_state()
+    state = ChapterWorkflowState.initial(
+        run_id=str(uuid4()),
+        context_hash="a" * 64,
+        candidate_count=1,
+        optional_stages={"enhance_content": True},
+    )
     app = registry.compile(
-        CHAPTER_WORKFLOW_VERSION_V1,
+        CHAPTER_WORKFLOW_VERSION,
         checkpointer=InMemorySaver(),
         bindings=bindings,
     )
     config = chapter_workflow_graph_config(state.run_id)
     first_result = await app.ainvoke(state.model_dump(mode="json"), config)
-    selection_snapshot = await app.aget_state(config)
 
-    assert first_result["__interrupt__"][0].value == {
-        "kind": "selection",
-        "run_id": state.run_id,
-        "candidate_version_ids": [101, 102],
+    assert first_result["__interrupt__"][0].value["kind"] == "selection"
+    assert first_result["skipped_stages"] == {
+        "generate_candidate_2": "single_candidate",
+        "repair_consistency": "disabled",
+        "optimize_style": "disabled",
+        "enrich_content": "disabled",
+        "compress_candidate": "within_word_limit",
     }
-    assert selection_snapshot.values["node_key"] == "waiting_for_selection"
-    assert selection_snapshot.next == ("waiting_for_selection",)
-    assert selection_snapshot.config["configurable"]["thread_id"] == state.run_id
-    assert selection_snapshot.config["configurable"]["checkpoint_id"]
     assert calls == [
-        "freeze_context",
-        "plan_and_direct",
-        "generate_candidates",
+        "freeze_base_context",
+        "retrieve_context",
+        "plan_chapter",
+        "generate_candidate_1",
         "review_candidates",
-        "persist_candidates",
+        "refine_candidate",
+        "enhance_content",
+        "compress_candidate",
+        "persist_drafts",
     ]
 
-    command_id = str(uuid4())
-    second_result = await app.ainvoke(
+    selection_command_id = str(uuid4())
+    await app.ainvoke(
         Command(
             resume={
-                "command_id": command_id,
+                "command_id": selection_command_id,
                 "selected_version_id": 101,
             }
         ),
         config,
     )
-    projection_snapshot = await app.aget_state(config)
-
-    assert second_result["__interrupt__"][0].value == {
-        "kind": "projection",
-        "run_id": state.run_id,
-        "target_chapter_revision": 1,
-    }
-    assert projection_snapshot.values["node_key"] == "projection_pending"
-    assert projection_snapshot.next == ("projection_pending",)
-    assert calls[-2:] == ["apply_selection_resume", "finalize_revision"]
-
-    projection_command_id = str(uuid4())
+    retry_command_id = str(uuid4())
     retry_result = await app.ainvoke(
-        Command(resume={"command_id": projection_command_id}),
+        Command(resume={"command_id": retry_command_id}),
         config,
     )
     retry_snapshot = await app.aget_state(config)
 
-    assert retry_result["__interrupt__"][0].value == {
-        "kind": "projection",
-        "run_id": state.run_id,
-        "target_chapter_revision": 1,
-    }
-    assert retry_snapshot.values["node_key"] == "projection_pending"
-    assert retry_snapshot.values["last_applied_command_id"] == projection_command_id
-    assert retry_snapshot.next == ("projection_pending",)
-    assert calls[-1] == "apply_projection_resume"
-    assert "observe_projection" not in calls
+    assert retry_result["__interrupt__"][0].value["kind"] == "projection"
+    assert retry_snapshot.values["node_key"] == "wait_for_projections"
+    assert retry_snapshot.next == ("wait_for_projections",)
+    assert "reconcile_projections" not in calls
 
     final_result = await app.ainvoke(Command(resume={"ready": True}), config)
-    final_snapshot = await app.aget_state(config)
-
     assert final_result["node_key"] == "successful"
-    assert final_result["selected_version_id"] == 101
-    assert final_result["last_applied_command_id"] == projection_command_id
-    assert final_snapshot.next == ()
-    assert calls == [
-        "freeze_context",
-        "plan_and_direct",
-        "generate_candidates",
-        "review_candidates",
-        "persist_candidates",
-        "apply_selection_resume",
-        "finalize_revision",
-        "apply_projection_resume",
-        "apply_projection_resume",
-        "observe_projection",
-    ]
+    assert calls[-2:] == ["apply_projection_resume", "reconcile_projections"]
+
+
+@pytest.mark.asyncio
+async def test_graph_generates_second_candidate_when_requested() -> None:
+    calls: list[str] = []
+    state = ChapterWorkflowState.initial(
+        run_id=str(uuid4()),
+        context_hash="b" * 64,
+        candidate_count=2,
+    )
+    app = build_chapter_workflow_graph_registry().compile(
+        CHAPTER_WORKFLOW_VERSION,
+        checkpointer=InMemorySaver(),
+        bindings=_graph_bindings(calls),
+    )
+
+    result = await app.ainvoke(
+        state.model_dump(mode="json"),
+        chapter_workflow_graph_config(state.run_id),
+    )
+
+    assert "generate_candidate_2" in calls
+    assert "generate_candidate_2" not in result["skipped_stages"]
+
+
+@pytest.mark.asyncio
+async def test_graph_generates_candidates_concurrently_before_review() -> None:
+    calls: list[str] = []
+    both_started = asyncio.Event()
+    release = asyncio.Event()
+    started: set[int] = set()
+
+    async def candidate(ordinal: int):
+        started.add(ordinal)
+        if len(started) == 2:
+            both_started.set()
+        await release.wait()
+        calls.append(f"generate_candidate_{ordinal}")
+        return {
+            "activity_refs": {f"candidate:{ordinal}": f"activity-candidate-{ordinal}"},
+            "result_refs": {f"candidate:{ordinal}": str(ordinal) * 64},
+        }
+
+    bindings = replace(
+        _graph_bindings(calls),
+        generate_candidate_1=lambda _state: candidate(1),
+        generate_candidate_2=lambda _state: candidate(2),
+    )
+    state = ChapterWorkflowState.initial(
+        run_id=str(uuid4()),
+        context_hash="c" * 64,
+        candidate_count=2,
+    )
+    app = build_chapter_workflow_graph_registry().compile(
+        CHAPTER_WORKFLOW_VERSION,
+        checkpointer=InMemorySaver(),
+        bindings=bindings,
+    )
+
+    invocation = asyncio.create_task(
+        app.ainvoke(
+            state.model_dump(mode="json"),
+            chapter_workflow_graph_config(state.run_id),
+        )
+    )
+    await asyncio.wait_for(both_started.wait(), timeout=1)
+    assert "review_candidates" not in calls
+    release.set()
+    result = await asyncio.wait_for(invocation, timeout=1)
+
+    assert "review_candidates" in calls
+    assert result["activity_refs"]["candidate:1"] == "activity-candidate-1"
+    assert result["activity_refs"]["candidate:2"] == "activity-candidate-2"
 
 
 def test_graph_config_uses_run_id_for_thread_and_optional_checkpoint() -> None:

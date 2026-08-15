@@ -22,7 +22,7 @@ from app.models import (
 )
 from app.schemas.chapter_workflow import (
     ChapterWorkflowCommandEnvelope,
-    ChapterWorkflowStateV1,
+    ChapterWorkflowState,
 )
 from app.schemas.job import ChapterOutboxDispatchJobPayload, ChapterProjectionJobPayload
 from app.schemas.novel import ChapterGenerationStatus
@@ -38,8 +38,8 @@ from app.services.chapter_projection_runtime import (
 )
 from app.services.chapter_workflow_finalize import ChapterWorkflowFinalizeService
 from app.services.chapter_workflow_handler import (
-    ChapterWorkflowBindingAssemblerV1,
-    ChapterWorkflowProvidersV1,
+    ChapterWorkflowBindingAssembler,
+    ChapterWorkflowProviders,
 )
 from app.services.chapter_workflow_projection import ChapterWorkflowProjectionService
 from app.services.job_service import JobService
@@ -97,7 +97,7 @@ async def test_retry_projection_replays_failed_run_once_and_keeps_root_waiting(
         root.lease_owner = None
         root.lease_expires_at = None
         run.status = "projection_pending"
-        run.node_key = "projection_pending"
+        run.node_key = "wait_for_projections"
         run.checkpoint_id = checkpoint_id
         run.progress = 90
         failed_run.status = "failed"
@@ -139,17 +139,17 @@ async def test_retry_projection_replays_failed_run_once_and_keeps_root_waiting(
         side_effect_class=_execution.side_effect_class,
         session_factory=isolated_pg.session_factory,
     )
-    state = ChapterWorkflowStateV1(
+    state = ChapterWorkflowState(
         run_id=started.run.id,
-        node_key="projection_pending",
+        node_key="wait_for_projections",
         context_hash=started.run.context_hash,
         candidate_version_ids=request.candidate_version_ids,
         selected_version_id=request.selected_version_id,
         target_chapter_revision=finalized.result.target_chapter_revision,
     )
-    binding = ChapterWorkflowBindingAssemblerV1(
+    binding = ChapterWorkflowBindingAssembler(
         retry_execution,
-        cast(ChapterWorkflowProvidersV1, object()),
+        cast(ChapterWorkflowProviders, object()),
     )
     update = await binding.apply_projection_resume(state, {"command_id": command_id})
     replay = await ChapterWorkflowProjectionService(retry_execution).retry_failed(
@@ -225,7 +225,7 @@ async def test_projection_retry_lock_queue_has_no_reverse_root_edge(isolated_pg)
         root.lease_owner = None
         root.lease_expires_at = None
         run.status = "projection_pending"
-        run.node_key = "projection_pending"
+        run.node_key = "wait_for_projections"
         run.checkpoint_id = checkpoint_id
         run.progress = 90
         failed_run.status = "failed"
@@ -257,9 +257,9 @@ async def test_projection_retry_lock_queue_has_no_reverse_root_edge(isolated_pg)
         )
     assert lease is not None and lease.job_id == started.root_job.id
 
-    state = ChapterWorkflowStateV1(
+    state = ChapterWorkflowState(
         run_id=started.run.id,
-        node_key="projection_pending",
+        node_key="wait_for_projections",
         context_hash=started.run.context_hash,
         candidate_version_ids=request.candidate_version_ids,
         selected_version_id=request.selected_version_id,
@@ -440,7 +440,7 @@ async def test_observer_accepts_only_successful_canonical_projection_lineage(
         revision = await session.get(ChapterRevision, finalized.result.chapter_revision_id)
         assert chapter is not None and run is not None and revision is not None
         run.status = "running"
-        run.node_key = "projection_pending"
+        run.node_key = "wait_for_projections"
         summary_run = (
             await session.execute(
                 select(ChapterProjectionRun).where(
@@ -493,9 +493,9 @@ async def test_observer_accepts_only_successful_canonical_projection_lineage(
         revision.lifecycle = "successful"
         await session.commit()
 
-    state = ChapterWorkflowStateV1(
+    state = ChapterWorkflowState(
         run_id=started.run.id,
-        node_key="observe_projection",
+        node_key="reconcile_projections",
         context_hash=started.run.context_hash,
         candidate_version_ids=request.candidate_version_ids,
         selected_version_id=request.selected_version_id,

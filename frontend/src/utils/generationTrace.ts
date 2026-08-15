@@ -35,6 +35,18 @@ export type ActiveStepDetails = {
   outputs: string
 }
 
+export type PipelineStepKind = 'execution' | 'control' | 'terminal'
+
+export type PipelineStep = {
+  key: string
+  label: string
+  kind?: PipelineStepKind
+  group?: string
+  groupLabel?: string
+  groupMode?: 'serial' | 'parallel'
+  optional?: boolean
+}
+
 export const PIPELINE_LABELS: Record<string, string> = {
   context_prep: '整理前文',
   director_mission: '规划剧情',
@@ -54,6 +66,28 @@ export const PIPELINE_LABELS: Record<string, string> = {
   foreshadowing_sync: '同步伏笔',
   finalized: '定稿完成',
   finalization_error: '定稿失败',
+  freeze_base_context: '冻结基础上下文',
+  retrieve_context: '检索章节上下文',
+  plan_chapter: '规划章节任务',
+  generate_candidate_1: '候选版本 1',
+  generate_candidate_2: '候选版本 2',
+  review_candidates: '评审候选版本',
+  refine_candidate: '润色推荐版本',
+  enhance_content: '增强正文',
+  repair_consistency: '修复一致性',
+  optimize_style: '优化文风',
+  enrich_content: '扩写正文',
+  compress_candidate: '压缩超长正文',
+  persist_drafts: '保存候选草稿',
+  wait_for_selection: '等待选择版本',
+  finalize_revision: '定稿章节版本',
+  generate_summary: '生成章节梳理',
+  project_memory: '更新记忆快照',
+  project_rag: '写入章节索引',
+  project_foreshadowing: '同步伏笔',
+  wait_for_projections: '等待投影完成',
+  reconcile_projections: '汇合投影结果',
+  successful: '章节工作流完成',
 }
 
 export const TRACE_CALL_TYPE_LABELS: Record<string, string> = {
@@ -177,6 +211,148 @@ export const STEP_DETAILS: Record<string, StepDetail> = {
     outputs: '错误详情',
     next: '修改后重试',
   },
+  freeze_base_context: {
+    summary: '校验并引用本轮启动时冻结的基础上下文。',
+    inputs: '章节身份 + 基础上下文 hash',
+    outputs: '基础上下文引用',
+    next: '检索章节上下文',
+  },
+  retrieve_context: {
+    summary: '按冻结配置检索设定、历史片段和相关伏笔。',
+    inputs: '基础上下文 + 检索配置',
+    outputs: '检索快照引用',
+    next: '规划章节任务',
+  },
+  plan_chapter: {
+    summary: '形成本章冲突、节奏和人物推进方案。',
+    inputs: '检索上下文 + 章节大纲',
+    outputs: '章节任务方案',
+    next: '并行生成候选版本',
+  },
+  generate_candidate_1: {
+    summary: '生成第一个独立候选正文。',
+    inputs: '章节任务方案 + 上下文',
+    outputs: '候选正文 1',
+    next: '等待候选汇合后进入评审',
+  },
+  generate_candidate_2: {
+    summary: '按配置生成第二个独立候选正文。',
+    inputs: '章节任务方案 + 上下文',
+    outputs: '候选正文 2',
+    next: '等待候选汇合后进入评审',
+  },
+  review_candidates: {
+    summary: '跨候选比较并给出推荐版本和修改意见。',
+    inputs: '候选正文集合',
+    outputs: '评审报告 + 推荐版本',
+    next: '润色推荐版本',
+  },
+  refine_candidate: {
+    summary: '根据评审意见生成推荐版本的润色正文。',
+    inputs: '推荐正文 + 评审报告',
+    outputs: '润色正文',
+    next: '执行已启用的正文处理',
+  },
+  enhance_content: {
+    summary: '按增强配置继续改善正文表现。',
+    inputs: '上一阶段正文',
+    outputs: '增强后的正文',
+    next: '一致性修复',
+  },
+  repair_consistency: {
+    summary: '修复人物、情节和设定的一致性问题。',
+    inputs: '上一阶段正文 + 评审报告',
+    outputs: '一致性修订正文',
+    next: '优化文风',
+  },
+  optimize_style: {
+    summary: '按当前写作配置优化语言和节奏。',
+    inputs: '上一阶段正文',
+    outputs: '文风优化正文',
+    next: '扩写正文',
+  },
+  enrich_content: {
+    summary: '在不改变章节目标的前提下补充正文细节。',
+    inputs: '上一阶段正文',
+    outputs: '扩写正文',
+    next: '保存候选草稿',
+  },
+  compress_candidate: {
+    summary: '推荐正文超过冻结字数上限时删减冗余内容。',
+    inputs: '最终修订正文 + 冻结字数合同',
+    outputs: '满足字数上限的推荐正文',
+    next: '保存候选草稿',
+  },
+  persist_drafts: {
+    summary: '事务写入候选版本、推荐结果和评审元数据。',
+    inputs: '候选与修订引用',
+    outputs: '候选版本 ID',
+    next: '等待选择版本',
+  },
+  wait_for_selection: {
+    summary: '候选草稿已保存，等待人工选择定稿版本。',
+    inputs: '候选版本 ID',
+    outputs: '人工选择命令',
+    next: '定稿章节版本',
+  },
+  finalize_revision: {
+    summary: '原子写入正式 revision、outbox 和投影派发身份。',
+    inputs: '选中版本',
+    outputs: '正式章节 revision',
+    next: '生成定稿投影',
+  },
+  generate_summary: {
+    summary: '基于正式正文生成章节梳理。',
+    inputs: '正式正文',
+    outputs: '章节真实梳理',
+    next: '并行派发下游投影',
+  },
+  project_memory: {
+    summary: '更新项目记忆和章节快照。',
+    inputs: '正式正文 + 章节梳理',
+    outputs: '记忆投影',
+    next: '等待投影汇合',
+  },
+  project_rag: {
+    summary: '写入后续章节检索所需的章节索引。',
+    inputs: '正式正文 + 章节梳理',
+    outputs: '检索索引或跳过原因',
+    next: '等待投影汇合',
+  },
+  project_foreshadowing: {
+    summary: '同步新伏笔及历史伏笔状态。',
+    inputs: '正式正文 + 活跃伏笔',
+    outputs: '伏笔投影',
+    next: '等待投影汇合',
+  },
+  wait_for_projections: {
+    summary: '等待本轮要求的定稿投影全部完成。',
+    inputs: '目标 revision + 投影任务',
+    outputs: '投影完成信号',
+    next: '汇合投影结果',
+  },
+  reconcile_projections: {
+    summary: '校验投影来源、revision、generation 和任务身份。',
+    inputs: '全部必需投影结果',
+    outputs: '投影汇合结论',
+    next: '章节工作流完成',
+  },
+  successful: {
+    summary: '生成、选择、定稿和必需投影均已完成。',
+    inputs: '工作流终态',
+    outputs: 'successful',
+    next: '进入正文查看',
+  },
+}
+
+export const resolvePipelineStepKey = (
+  key: string | null | undefined,
+  pipelineSteps: readonly PipelineStep[],
+) => {
+  const raw = (key || '').trim()
+  if (!raw) return ''
+  if (pipelineSteps.some((item) => item.key === raw)) return raw
+  return ''
 }
 
 export const parseStepPayload = (rawStep?: string | null): ParsedStepPayload => {
@@ -211,24 +387,7 @@ export const parseBackendTimestampToMs = (raw?: string | null): number | null =>
 }
 
 export const normalizePipelineStepKey = (key?: string | null) => {
-  const normalized = (key || '').trim()
-  if (normalized === 'freeze_context') return 'context_prep'
-  if (normalized === 'plan_and_direct') return 'director_mission'
-  if (normalized === 'generate_candidates') return 'draft_generation'
-  if (normalized === 'review_candidates') return 'quality_review'
-  if (normalized === 'persist_candidates' || normalized === 'waiting_for_selection') {
-    return 'review_refinement'
-  }
-  if (normalized === 'finalize_revision') return 'real_summary'
-  if (normalized === 'projection_pending') return 'chapter_ingest'
-  if (normalized === 'observe_projection') return 'foreshadowing_sync'
-  if (normalized === 'successful') return 'finalized'
-  if (normalized === 'persist_versions') return 'save_draft'
-  if (normalized === 'evaluation_failed' || normalized === 'evaluating') return 'quality_review'
-  if (normalized === 'auto_optimizing') return 'review_refinement'
-  if (normalized === 'optimization_done') return 'review_refinement'
-  if (normalized === 'failed') return ''
-  return normalized
+  return (key || '').trim()
 }
 
 export const isPlainTraceObject = (value: unknown): value is TraceMetadata => {
@@ -511,16 +670,23 @@ export const formatTraceOutputs = (trace: ChapterGenerationTrace) => {
   }
   const normalizedNodeKey = normalizePipelineStepKey(trace.node_key)
   if (!sections.length) {
-    if (normalizedNodeKey === 'draft_generation') {
+    if (normalizedNodeKey === 'generate_candidate_1' || normalizedNodeKey === 'generate_candidate_2') {
       return formatDraftGenerationOutputs(trace)
     }
-    if (normalizedNodeKey === 'quality_review') {
+    if (normalizedNodeKey === 'review_candidates') {
       return formatAiReviewOutputs(trace)
     }
-    if (normalizedNodeKey === 'review_refinement') {
+    if (
+      normalizedNodeKey === 'refine_candidate'
+      || normalizedNodeKey === 'enhance_content'
+      || normalizedNodeKey === 'repair_consistency'
+      || normalizedNodeKey === 'optimize_style'
+      || normalizedNodeKey === 'enrich_content'
+      || normalizedNodeKey === 'compress_candidate'
+    ) {
       return formatReviewRefinementOutputs(trace)
     }
-    if (normalizedNodeKey === 'save_draft') {
+    if (normalizedNodeKey === 'persist_drafts' || normalizedNodeKey === 'wait_for_selection') {
       return formatManualConfirmationOutputs(trace)
     }
   }

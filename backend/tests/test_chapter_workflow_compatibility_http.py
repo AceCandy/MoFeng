@@ -282,7 +282,7 @@ async def test_writer_and_workflow_http_share_one_owner(
         run_id=snapshot["run_id"],
         run_status="waiting_for_selection",
         job_status="waiting",
-        node_key="waiting_for_selection",
+        node_key="wait_for_selection",
         checkpoint_id="shared-owner-checkpoint",
         chapter_status="waiting_for_confirm",
     )
@@ -377,7 +377,7 @@ async def test_active_workflow_select_is_idempotent_and_never_enqueues_finalize(
         run_id=snapshot["run_id"],
         run_status="waiting_for_selection",
         job_status="waiting",
-        node_key="waiting_for_selection",
+        node_key="wait_for_selection",
         checkpoint_id="compat-select-checkpoint",
     )
 
@@ -421,7 +421,7 @@ async def test_existing_routes_share_active_owner_without_duplicate_outcome(
         run_id=snapshot["run_id"],
         run_status="waiting_for_selection",
         job_status="waiting",
-        node_key="waiting_for_selection",
+        node_key="wait_for_selection",
         checkpoint_id="existing-routes-checkpoint",
         chapter_status="waiting_for_confirm",
     )
@@ -494,7 +494,7 @@ async def test_active_workflow_rejects_unrepresentable_finalize_options(
         run_id=snapshot["run_id"],
         run_status="waiting_for_selection",
         job_status="waiting",
-        node_key="waiting_for_selection",
+        node_key="wait_for_selection",
         checkpoint_id="compat-finalize-checkpoint",
     )
 
@@ -525,7 +525,7 @@ async def test_active_workflow_from_node_maps_only_to_matching_retry(
         run_id=snapshot["run_id"],
         run_status="retry_wait",
         job_status="retry_wait",
-        node_key="generate_candidates",
+        node_key="generate_candidate_1",
         checkpoint_id="compat-retry-checkpoint",
     )
 

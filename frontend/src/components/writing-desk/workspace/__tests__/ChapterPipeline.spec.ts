@@ -7,7 +7,7 @@ import ChapterPipeline from '@/components/writing-desk/workspace/ChapterPipeline
 const mounted: Array<{ app: App; host: HTMLDivElement }> = []
 const states: Record<string, string> = { plan: 'done', draft: 'in-progress', review: 'waiting' }
 
-const mountPipeline = () => {
+const mountPipeline = (overrides: Record<string, unknown> = {}) => {
   const host = document.createElement('div')
   document.body.append(host)
   const onSelect = vi.fn()
@@ -23,6 +23,7 @@ const mountPipeline = () => {
       shouldShowManualConfirmBadge: () => false,
       activeStepKey: 'draft',
       onSelect,
+      ...overrides,
     }),
   })
   app.mount(host)
@@ -50,5 +51,37 @@ describe('ChapterPipeline', () => {
     buttons[2]?.click()
     expect(onSelect).toHaveBeenCalledOnce()
     expect(onSelect).toHaveBeenCalledWith('plan', 0)
+  })
+
+  it('展示候选分组、并行投影以及控制和终态类型', () => {
+    const v2States: Record<string, string> = {
+      generate_candidate_1: 'done',
+      generate_candidate_2: 'skipped',
+      project_memory: 'done',
+      project_rag: 'skipped',
+      project_foreshadowing: 'done',
+      wait_for_projections: 'in-progress',
+      successful: 'waiting',
+    }
+    const { host } = mountPipeline({
+      pipelineSteps: [
+        { key: 'generate_candidate_1', label: '候选版本 1', group: 'candidates', groupLabel: '候选版本' },
+        { key: 'generate_candidate_2', label: '候选版本 2', group: 'candidates', groupLabel: '候选版本', optional: true },
+        { key: 'project_memory', label: '更新记忆快照', group: 'projections', groupLabel: '并行投影', groupMode: 'parallel' },
+        { key: 'project_rag', label: '写入章节索引', group: 'projections', groupLabel: '并行投影', groupMode: 'parallel', optional: true },
+        { key: 'project_foreshadowing', label: '同步伏笔', group: 'projections', groupLabel: '并行投影', groupMode: 'parallel' },
+        { key: 'wait_for_projections', label: '等待投影完成', kind: 'control', group: 'completion', groupLabel: '汇合与完成' },
+        { key: 'successful', label: '章节工作流完成', kind: 'terminal', group: 'completion', groupLabel: '汇合与完成' },
+      ],
+      stepState: (key: string) => ({ tone: v2States[key], label: v2States[key] }),
+      activeStepKey: 'wait_for_projections',
+    })
+
+    expect(host.querySelector('[data-group="candidates"]')?.textContent).toContain('候选版本 2')
+    expect(host.querySelector('[data-group="projections"]')?.getAttribute('data-mode')).toBe('parallel')
+    expect(host.querySelector('[data-group="projections"]')?.textContent).toContain('并行')
+    expect(host.querySelector('.is-skipped')?.textContent).toContain('已跳过')
+    expect(host.querySelector('.is-control')?.textContent).toContain('控制')
+    expect(host.querySelector('.is-terminal')?.textContent).toContain('终态')
   })
 })

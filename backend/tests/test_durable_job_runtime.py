@@ -1410,7 +1410,7 @@ async def test_workflow_transition_adapter_syncs_wait_resume_retry_and_success(
             first_lease,
             workflow_transition=ChapterWorkflowTransition(
                 status="waiting_for_selection",
-                node_key="waiting_for_selection",
+                node_key="wait_for_selection",
                 checkpoint_id="checkpoint-waiting",
                 progress=60,
             ),
@@ -1428,7 +1428,7 @@ async def test_workflow_transition_adapter_syncs_wait_resume_retry_and_success(
             expected_fencing_token=waiting.fencing_token,
             workflow_transition=ChapterWorkflowTransition(
                 status="queued",
-                node_key="waiting_for_selection",
+                node_key="wait_for_selection",
                 checkpoint_id="checkpoint-waiting",
                 progress=60,
             ),
@@ -1561,11 +1561,11 @@ async def test_workflow_activity_updates_snapshot_and_records_trace(isolated_pg)
         assert lease is not None
         activity = await service.begin_activity(
             lease,
-            activity_key="wf:generate_candidates:test",
+            activity_key="wf:generate_candidate_1:test",
             side_effect_class=SideEffectClass.AMBIGUOUS_EXTERNAL,
             request_payload={
                 "run_id": "workflow-activity-progress",
-                "node_key": "generate_candidates",
+                "node_key": "generate_candidate_1",
                 "stage": "generate_candidate",
             },
             now=started_at + timedelta(seconds=1),
@@ -1589,10 +1589,10 @@ async def test_workflow_activity_updates_snapshot_and_records_trace(isolated_pg)
         ).scalar_one()
 
         assert run is not None
-        assert run.node_key == "generate_candidates"
-        assert run.progress == 30
+        assert run.node_key == "generate_candidate_1"
+        assert run.progress == 25
         assert run.row_revision == 2
-        assert started_event.payload["workflow"]["node_key"] == "generate_candidates"
+        assert started_event.payload["workflow"]["node_key"] == "generate_candidate_1"
         assert started_event.payload["workflow"]["row_revision"] == 2
         assert started_trace.status == "running"
         assert started_trace.metadata["run_id"] == "workflow-activity-progress"
@@ -1600,7 +1600,7 @@ async def test_workflow_activity_updates_snapshot_and_records_trace(isolated_pg)
 
         await service.complete_activity(
             lease,
-            activity_key="wf:generate_candidates:test",
+            activity_key="wf:generate_candidate_1:test",
             provider_request_key=activity.provider_request_key,
             result={
                 "schema_version": 1,
@@ -1630,15 +1630,15 @@ async def test_workflow_activity_updates_snapshot_and_records_trace(isolated_pg)
             )
         ).scalar_one()
 
-        assert run.node_key == "generate_candidates"
-        assert run.progress == 45
+        assert run.node_key == "generate_candidate_1"
+        assert run.progress == 44
         assert run.row_revision == 3
-        assert succeeded_event.payload["workflow"]["progress"] == 45
+        assert succeeded_event.payload["workflow"]["progress"] == 44
         assert succeeded_trace.status == "success"
         assert succeeded_trace.metadata["run_id"] == "workflow-activity-progress"
         assert succeeded_trace.metadata["output_payload"]["content"] == "这是正常正文。"
         assert succeeded_trace.metadata["uses_llm"] is True
-        assert succeeded_trace.metadata["actions"] == ["完成生成候选版本"]
+        assert succeeded_trace.metadata["actions"] == ["完成生成候选版本 1"]
 
 
 @pytest.mark.asyncio(loop_scope="session")

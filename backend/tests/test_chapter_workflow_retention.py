@@ -23,7 +23,7 @@ from app.models import (
 )
 from app.models.user import User
 from app.repositories.chapter_workflow_repository import ChapterWorkflowRepository
-from app.schemas.chapter_workflow import ChapterWorkflowStateV1
+from app.schemas.chapter_workflow import ChapterWorkflowState
 from app.services.chapter_workflow_reconciler import ChapterWorkflowReconcileCandidate
 from app.services.chapter_workflow_retention import ChapterWorkflowRetentionService
 from app.services.job_service import ChapterWorkflowCheckpointEvidence, JobService
@@ -119,7 +119,7 @@ async def _create_workflow(
         context_hash="a" * 64,
         runtime_input_hash="b" * 64,
         status="queued",
-        node_key="freeze_context",
+        node_key="freeze_base_context",
     )
     session.add(run)
     await session.commit()
@@ -142,10 +142,10 @@ def _terminalize(
     run.checkpoint_id = checkpoint_id
 
 
-def _state(run: ChapterWorkflowRun, *, target_revision: int | None) -> ChapterWorkflowStateV1:
-    return ChapterWorkflowStateV1(
+def _state(run: ChapterWorkflowRun, *, target_revision: int | None) -> ChapterWorkflowState:
+    return ChapterWorkflowState(
         run_id=run.id,
-        node_key="observe_projection",
+        node_key="reconcile_projections",
         context_hash=run.context_hash,
         target_chapter_revision=target_revision,
     )
@@ -193,7 +193,7 @@ async def test_retention_scrubs_private_payload_and_preserves_audit(isolated_pg)
             project_id=run.project_id,
             provider_type="openai",
             model_name="audit-model",
-            stage="generate_candidates",
+            stage="generate_candidate_1",
             input_tokens=10,
             output_tokens=20,
             total_tokens=30,
@@ -369,7 +369,7 @@ async def test_retention_protects_current_pending_successor_active_and_recent(is
         active_job, active_run, _ = await _create_workflow(session, ordinal=5)
         active_job.status = "needs_attention"
         active_run.status = "needs_attention"
-        active_run.node_key = "generate_candidates"
+        active_run.node_key = "generate_candidate_1"
         active_run.checkpoint_id = "attention"
         protected.append(active_run)
 

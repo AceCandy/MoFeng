@@ -14,6 +14,7 @@ from ..schemas.chapter_context import ChapterContext, ContextFallback, stable_di
 from ..schemas.job import (
     ChapterWorkflowJobPayload,
     ChapterWorkflowRetrievalInputs,
+    validate_chapter_workflow_job_payload,
 )
 from ..schemas.novel import FlowConfig
 from .chapter_context_resolver import ChapterContextResolver
@@ -58,7 +59,7 @@ class ChapterWorkflowContextResult:
 
     def state_update(self) -> dict[str, Any]:
         return {
-            "node_key": "plan_and_direct",
+            "node_key": "plan_chapter",
             "context_hash": self.result.context_hash,
             "activity_refs": {RETRIEVAL_ACTIVITY_REF: self.activity_key},
             "result_refs": {
@@ -115,18 +116,22 @@ class ChapterWorkflowContextService:
         self.execution = execution
         self.resolver_factory = resolver_factory
 
-    async def execute_retrieval_activity(self) -> ChapterWorkflowContextResult:
+    async def execute_retrieval_activity(
+        self,
+        *,
+        node_key: Literal["retrieve_context"] = "retrieve_context",
+    ) -> ChapterWorkflowContextResult:
         payload, base_context = await self._load_base_context()
         request_payload = {
             "workflow_version": payload.workflow_version,
             "state_schema_version": payload.state_schema_version,
             "context_schema_version": payload.context_schema_version,
             "run_id": payload.run_id,
-            "node_key": "freeze_context",
+            "node_key": node_key,
             "base_context_hash": payload.context_hash,
             "retrieval_inputs": payload.runtime_inputs.retrieval_inputs.model_dump(mode="json"),
         }
-        activity_key = f"wf:freeze_context:{stable_digest(request_payload)}"
+        activity_key = f"wf:{node_key}:{stable_digest(request_payload)}"
         activity = await self.execution.begin_activity(
             activity_key,
             # Retrieval providers are read-only; replay does not need an
@@ -190,9 +195,12 @@ class ChapterWorkflowContextService:
         self,
     ) -> tuple[ChapterWorkflowJobPayload, ChapterContext]:
         lease = self.execution.lease
-        if lease.job_type != "chapter_workflow" or lease.payload_version != 1:
+        if lease.job_type != "chapter_workflow":
             raise ValueError("workflow root job 类型或版本不匹配")
-        payload = ChapterWorkflowJobPayload.model_validate(lease.payload)
+        payload = validate_chapter_workflow_job_payload(
+            lease.payload_version,
+            lease.payload,
+        )
         async with self.execution.session_factory() as session:
             run = await ChapterWorkflowRepository(session).get_user_run(
                 payload.run_id,

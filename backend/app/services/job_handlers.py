@@ -16,7 +16,7 @@ from .chapter_projection_handlers import (
     handle_chapter_trace_projection,
 )
 from .chapter_workflow_handler import (
-    ChapterWorkflowLLMProvidersV1,
+    ChapterWorkflowLLMProviders,
     ProviderFactory,
     build_chapter_workflow_job_handler,
 )
@@ -27,7 +27,7 @@ def register_job_handlers(
     registry: JobHandlerRegistry,
     *,
     database_url: str | URL,
-    chapter_workflow_provider_factory: ProviderFactory = ChapterWorkflowLLMProvidersV1,
+    chapter_workflow_provider_factory: ProviderFactory = ChapterWorkflowLLMProviders,
 ) -> JobHandlerRegistry:
     """注册生产 worker 支持的全部版本化业务任务。"""
 
@@ -112,7 +112,7 @@ def register_job_handlers(
 def build_job_handler_registry(
     *,
     database_url: str | URL | None = None,
-    chapter_workflow_provider_factory: ProviderFactory = ChapterWorkflowLLMProvidersV1,
+    chapter_workflow_provider_factory: ProviderFactory = ChapterWorkflowLLMProviders,
 ) -> JobHandlerRegistry:
     return register_job_handlers(
         JobHandlerRegistry(),

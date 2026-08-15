@@ -18,7 +18,11 @@ from ..core.config import settings
 from ..models.background_task import BackgroundTask
 from ..models.chapter_generation_trace import ChapterGenerationTrace
 from ..models.chapter_projection import ChapterProjectionRun, ChapterRevision
-from ..models.chapter_workflow import ChapterWorkflowCommand, ChapterWorkflowRun
+from ..models.chapter_workflow import (
+    CHAPTER_WORKFLOW_RESET_CHECKPOINT_DELETE_PENDING,
+    ChapterWorkflowCommand,
+    ChapterWorkflowRun,
+)
 from ..models.job import AIUsageRecord, JobActivity, JobEvent, JobWorkerHeartbeat
 from ..models.novel import Chapter, ChapterEvaluation, ChapterVersion
 from ..repositories.chapter_workflow_repository import ChapterWorkflowRepository
@@ -27,9 +31,11 @@ from ..schemas.chapter_workflow import (
     ChapterWorkflowCommandEnvelope,
     ChapterWorkflowCommandType,
     ChapterWorkflowSnapshot,
-    ChapterWorkflowStateV1,
+    ChapterWorkflowState,
 )
-from ..schemas.job import ChapterWorkflowJobPayload
+from ..schemas.job import (
+    validate_chapter_workflow_job_payload,
+)
 from ..utils.ai_telemetry import AICallResult
 from .chapter_projection_state import retryable_projection_names
 from .chapter_workflow_transition import (
@@ -165,7 +171,7 @@ class ChapterWorkflowCheckpointEvidence:
     """在 SQLAlchemy 锁事务之前读取的 latest checkpoint 只读证据。"""
 
     checkpoint_id: Optional[str]
-    state: Optional[ChapterWorkflowStateV1]
+    state: Optional[ChapterWorkflowState]
     reason_code: Optional[str] = None
 
 
@@ -374,12 +380,14 @@ class JobService:
         """失败关闭任何 root job、run、冻结输入之间的身份漂移。"""
 
         try:
-            payload = ChapterWorkflowJobPayload.model_validate(job.payload)
+            payload = validate_chapter_workflow_job_payload(
+                job.payload_version,
+                job.payload,
+            )
         except (TypeError, ValueError) as exc:
             raise ValueError("workflow root JobRun payload 无效") from exc
         if (
             job.task_type != "chapter_workflow"
-            or job.payload_version != 1
             or job.stream_type != "workflow"
             or job.stream_id != run.id
             or job.id != run.root_job_id
@@ -437,7 +445,7 @@ class JobService:
         except (TypeError, ValueError) as exc:
             raise ValueError("payload 必须是 JSON 可序列化对象") from exc
         if payload_size_bytes > settings.job_payload_max_bytes:
-            raise ValueError("payload 大小不能超过 " f"{settings.job_payload_max_bytes} 字节")
+            raise ValueError(f"payload 大小不能超过 {settings.job_payload_max_bytes} 字节")
         if normalized_key is not None:
             existing = await self.repo.get_by_idempotency_key(
                 user_id=user_id,
@@ -830,7 +838,7 @@ class JobService:
         expected_initial_without_checkpoint = (
             run.checkpoint_id is None
             and run.status in {"queued", "retry_wait"}
-            and run.node_key == "freeze_context"
+            and run.node_key == "freeze_base_context"
         )
         if checkpoint_reason is not None and not (
             checkpoint_reason == "checkpoint_missing" and expected_initial_without_checkpoint
@@ -917,7 +925,7 @@ class JobService:
                 run=run,
                 transition=ChapterWorkflowTransition(
                     status="queued",
-                    node_key="projection_pending",
+                    node_key=run.node_key,
                     checkpoint_id=run.checkpoint_id,
                     progress=run.progress,
                     reason_code="projection_completed",
@@ -967,7 +975,7 @@ class JobService:
     def _workflow_checkpoint_state_reason(
         *,
         run: ChapterWorkflowRun,
-        state: ChapterWorkflowStateV1,
+        state: ChapterWorkflowState,
     ) -> Optional[str]:
         if state.run_id != run.id or state.context_hash != run.context_hash:
             return "checkpoint_identity_mismatch"
@@ -1215,11 +1223,11 @@ class JobService:
         valid_nodes = {
             "select": {
                 "finalize_revision",
-                "projection_pending",
-                "observe_projection",
+                "wait_for_projections",
+                "reconcile_projections",
                 "successful",
             },
-            "retry_projection": {"projection_pending"},
+            "retry_projection": {"wait_for_projections"},
         }
         return node_key in valid_nodes.get(command_type, set())
 
@@ -1691,6 +1699,125 @@ class JobService:
         await publish_background_task(job.user_id)
         return job
 
+    async def reset_chapter_workflow(
+        self,
+        *,
+        user_id: int,
+        project_id: str,
+        chapter_number: int,
+        delete_checkpoint_threads: Callable[[list[str]], Awaitable[None]],
+        now: Optional[datetime] = None,
+    ) -> bool:
+        """废止当前未定稿 run，并清除其可再生私有状态与 checkpoint。"""
+
+        pending = await self.workflow_repo.get_checkpoint_delete_pending_user_run(
+            user_id=user_id,
+            project_id=project_id,
+            chapter_number=chapter_number,
+        )
+        if pending is not None:
+            pending_run_id = pending.id
+            pending_root_job_id = pending.root_job_id
+            await self.session.rollback()
+            await delete_checkpoint_threads([pending_run_id])
+            job = await self.repo.get_for_update(pending_root_job_id)
+            if job is None:
+                await self.session.rollback()
+                raise ValueError("待清理 workflow 绑定的 root JobRun 不存在")
+            run = await self.workflow_repo.get_by_root_job_for_update(job.id)
+            if (
+                run is not None
+                and run.id == pending_run_id
+                and run.checkpoint_id == CHAPTER_WORKFLOW_RESET_CHECKPOINT_DELETE_PENDING
+            ):
+                run.checkpoint_id = None
+            await self.session.commit()
+
+        run_ref = await self.workflow_repo.get_current_user_run(
+            user_id=user_id,
+            project_id=project_id,
+            chapter_number=chapter_number,
+        )
+        if run_ref is None:
+            await self.session.rollback()
+            return False
+
+        reset_at = now or _utc_now()
+        job = await self.repo.get_for_update(run_ref.root_job_id)
+        if job is None:
+            await self.session.rollback()
+            raise ValueError("workflow 绑定的 root JobRun 不存在")
+        workflow_context = await self.workflow_transitions.lock_for_job(job)
+        if (
+            workflow_context is None
+            or workflow_context.run.id != run_ref.id
+            or workflow_context.run.project_id != project_id
+            or workflow_context.run.chapter_number != chapter_number
+        ):
+            await self.session.rollback()
+            raise ValueError("workflow 与待重置章节身份不一致")
+        chapter = workflow_context.chapter
+        if chapter.selected_version_id is not None or int(chapter.current_revision or 0) > 0:
+            await self.session.rollback()
+            raise ValueError("已完成章节不能重置，请使用删除章节")
+
+        commands = await self.workflow_repo.list_commands_for_update(run_ref.id)
+        activities = await self.repo.list_activities_for_update(job_id=job.id)
+        for command in commands:
+            if command.status == "pending":
+                command.status = "rejected"
+                command.rejection_code = "chapter_reset"
+            command.payload = {}
+            command.result_payload = None
+        for activity in activities:
+            activity.request_payload = {}
+            activity.result_payload = None
+
+        job.status = "cancelled"
+        job.fencing_token += 1
+        job.cancel_requested_at = reset_at
+        job.completed_at = reset_at
+        job.lease_owner = None
+        job.lease_expires_at = None
+        job.heartbeat_at = None
+        job.result = None
+        job.error = "章节已重置"
+        job.error_category = "chapter_reset"
+        job.log_entries = [
+            *(job.log_entries or []),
+            _log_entry("章节已重置，旧运行停止使用", level="warning", now=reset_at),
+        ]
+        await self._append_event(
+            job,
+            "job.cancelled",
+            now=reset_at,
+            workflow_context=workflow_context,
+            workflow_transition=ChapterWorkflowTransition(
+                status="cancelled",
+                node_key="cancelled",
+                checkpoint_id=CHAPTER_WORKFLOW_RESET_CHECKPOINT_DELETE_PENDING,
+                progress=workflow_context.run.progress,
+                reason_code="chapter_reset",
+            ),
+        )
+        await self.session.commit()
+        await publish_background_task(job.user_id)
+
+        await delete_checkpoint_threads([run_ref.id])
+        locked_job = await self.repo.get_for_update(job.id)
+        if locked_job is None:
+            await self.session.rollback()
+            raise ValueError("已重置 workflow 的 root JobRun 不存在")
+        locked_run = await self.workflow_repo.get_by_root_job_for_update(locked_job.id)
+        if (
+            locked_run is not None
+            and locked_run.id == run_ref.id
+            and locked_run.checkpoint_id == CHAPTER_WORKFLOW_RESET_CHECKPOINT_DELETE_PENDING
+        ):
+            locked_run.checkpoint_id = None
+        await self.session.commit()
+        return True
+
     async def submit_chapter_workflow_command(
         self,
         run_id: str,
@@ -1914,7 +2041,7 @@ class JobService:
             if not commands:
                 run = workflow_context.run
                 chapter = workflow_context.chapter
-                if run.node_key == "projection_pending" and chapter.status == "successful":
+                if run.node_key == "wait_for_projections" and chapter.status == "successful":
                     pending_projection = ChapterWorkflowAutomaticResume(
                         resume_value={
                             "reason": "projection_completed",
@@ -1946,7 +2073,7 @@ class JobService:
                     or isinstance(selected_version_id, bool)
                     or not isinstance(selected_version_id, int)
                     or selected_version_id < 1
-                    or run.node_key != "waiting_for_selection"
+                    or run.node_key != "wait_for_selection"
                 ):
                     raise ValueError("pending select command payload 或 checkpoint node 无效")
                 if not self._checkpoint_command_chapter_state_matches(
@@ -1960,7 +2087,7 @@ class JobService:
                     "selected_version_id": selected_version_id,
                 }
             elif command.type == "retry_projection":
-                if payload or run.node_key != "projection_pending":
+                if payload or run.node_key != "wait_for_projections":
                     raise ValueError(
                         "pending retry_projection command payload 或 checkpoint node 无效"
                     )
@@ -2588,7 +2715,18 @@ class JobService:
             and request_payload.get("state_schema_version") == run.state_schema_version
             and request_payload.get("run_id") == run.id
             and request_payload.get("node_key")
-            in {"plan_and_direct", "generate_candidates", "review_candidates"}
+            in {
+                "plan_chapter",
+                "generate_candidate_1",
+                "generate_candidate_2",
+                "review_candidates",
+                "refine_candidate",
+                "enhance_content",
+                "repair_consistency",
+                "optimize_style",
+                "enrich_content",
+                "compress_candidate",
+            }
             and isinstance(request_payload.get("stage"), str)
             and bool(str(request_payload["stage"]).strip())
             and isinstance(input_hash, str)
@@ -3856,14 +3994,23 @@ class JobService:
         node_key = str(request_payload["node_key"])
         node_label = CHAPTER_WORKFLOW_NODE_LABELS[node_key]
         uses_llm = node_key in {
-            "plan_and_direct",
-            "generate_candidates",
             "review_candidates",
+            "plan_chapter",
+            "generate_candidate_1",
+            "generate_candidate_2",
+            "refine_candidate",
+            "enhance_content",
+            "repair_consistency",
+            "optimize_style",
+            "enrich_content",
+            "compress_candidate",
         }
         status = (
             "success"
             if event.event_type == "activity.succeeded"
-            else "failed" if error is not None else "running"
+            else "failed"
+            if error is not None
+            else "running"
         )
         output_payload: Optional[dict[str, Any]] = None
         if result_payload is not None:
@@ -3891,11 +4038,31 @@ class JobService:
             "failed": "执行失败",
         }[status]
         call_type = {
-            "freeze_context": "rag_retrieval",
-            "plan_and_direct": "chat_llm",
-            "generate_candidates": "chat_llm",
+            "freeze_base_context": "database_write",
+            "retrieve_context": "rag_retrieval",
+            "plan_chapter": "chat_llm",
+            "generate_candidate_1": "chat_llm",
+            "generate_candidate_2": "chat_llm",
             "review_candidates": "chat_llm",
+            "refine_candidate": "chat_llm",
+            "enhance_content": "chat_llm",
+            "repair_consistency": "chat_llm",
+            "optimize_style": "chat_llm",
+            "enrich_content": "chat_llm",
+            "compress_candidate": "chat_llm",
         }.get(node_key, "database_write")
+        node_kind = (
+            "terminal"
+            if node_key == "successful"
+            else "control"
+            if node_key
+            in {
+                "wait_for_selection",
+                "wait_for_projections",
+                "reconcile_projections",
+            }
+            else "execution"
+        )
         metadata: dict[str, Any] = {
             "source": "job_activity",
             "event_cursor": event.cursor,
@@ -3907,6 +4074,7 @@ class JobService:
             "summary": f"{node_label}{summary_status}",
             "uses_llm": uses_llm,
             "call_type": call_type,
+            "node_kind": node_kind,
         }
         if output_payload is not None:
             metadata["output_payload"] = output_payload

@@ -11,7 +11,11 @@ from sqlalchemy.engine import URL
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db.chapter_workflow_checkpointer import open_chapter_workflow_checkpointer
-from ..models.chapter_workflow import ChapterWorkflowCommand, ChapterWorkflowRun
+from ..models.chapter_workflow import (
+    CHAPTER_WORKFLOW_CHECKPOINT_DELETE_PENDING,
+    ChapterWorkflowCommand,
+    ChapterWorkflowRun,
+)
 from ..models.novel import Chapter
 from ..repositories.chapter_workflow_repository import ChapterWorkflowRepository
 from ..repositories.job_repository import JobRepository
@@ -23,7 +27,6 @@ from .chapter_workflow_reconciler import (
 
 _RUN_TERMINAL_STATUSES = frozenset({"successful", "failed", "cancelled", "superseded"})
 _JOB_TERMINAL_STATUSES = frozenset({"succeeded", "failed", "dead_letter", "cancelled"})
-_RETENTION_PENDING_CHECKPOINT = "__retention_pending__"
 
 
 class ChapterWorkflowCheckpointCleaner(Protocol):
@@ -130,7 +133,7 @@ class ChapterWorkflowRetentionService:
                         is_active=False,
                     )
                     for item in candidates
-                    if item.checkpoint_id not in {None, _RETENTION_PENDING_CHECKPOINT}
+                    if item.checkpoint_id not in {None, CHAPTER_WORKFLOW_CHECKPOINT_DELETE_PENDING}
                 ]
             )
             prepared: list[_RetentionCandidate] = []
@@ -173,7 +176,7 @@ class ChapterWorkflowRetentionService:
                     activity.request_payload == {} and activity.result_payload is None
                     for activity in activities
                 )
-                if candidate.checkpoint_id == _RETENTION_PENDING_CHECKPOINT:
+                if candidate.checkpoint_id == CHAPTER_WORKFLOW_CHECKPOINT_DELETE_PENDING:
                     if not payloads_scrubbed:
                         checkpoint_unavailable += 1
                         continue
@@ -206,7 +209,7 @@ class ChapterWorkflowRetentionService:
                         activity.request_payload = {}
                         activity.result_payload = None
                         scrubbed_activities += 1
-                run.checkpoint_id = _RETENTION_PENDING_CHECKPOINT
+                run.checkpoint_id = CHAPTER_WORKFLOW_CHECKPOINT_DELETE_PENDING
                 prepared.append(candidate)
 
             await self.session.commit()
@@ -219,7 +222,10 @@ class ChapterWorkflowRetentionService:
                     if job is None:
                         continue
                     run = await self.workflow_repo.get_by_root_job_for_update(job.id)
-                    if run is not None and run.checkpoint_id == _RETENTION_PENDING_CHECKPOINT:
+                    if (
+                        run is not None
+                        and run.checkpoint_id == CHAPTER_WORKFLOW_CHECKPOINT_DELETE_PENDING
+                    ):
                         run.checkpoint_id = None
                 await self.session.commit()
                 cleaned_runs += len(prepared)

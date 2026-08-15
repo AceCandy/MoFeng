@@ -240,6 +240,7 @@ class AICallResult(Generic[T]):
     cost_amount: Optional[str]
     cost_currency: Optional[str]
     cost_unknown_reason: Optional[str]
+    provider_name: Optional[str] = None
 
     @classmethod
     def from_config(
@@ -263,10 +264,16 @@ class AICallResult(Generic[T]):
             cost_amount=amount,
             cost_currency=currency,
             cost_unknown_reason=unknown_reason,
+            provider_name=(
+                str(config["provider_name"])
+                if config.get("provider_name") is not None
+                else None
+            ),
         )
 
     def telemetry_dict(self) -> dict[str, Any]:
         return {
+            "provider_name": self.provider_name,
             "provider_type": self.provider_type,
             "model": self.model,
             "model_id": self.model_id,
@@ -293,6 +300,7 @@ class AICallResult(Generic[T]):
             cost_amount=self.cost_amount,
             cost_currency=self.cost_currency,
             cost_unknown_reason=self.cost_unknown_reason,
+            provider_name=self.provider_name,
         )
 
 
@@ -307,9 +315,22 @@ def combine_ai_call_results(
         raise ValueError("AI 调用聚合至少需要一个结果")
 
     first = items[0]
-    identity = (first.provider_type, first.model, first.model_id, first.stage)
+    identity = (
+        first.provider_name,
+        first.provider_type,
+        first.model,
+        first.model_id,
+        first.stage,
+    )
     if any(
-        (item.provider_type, item.model, item.model_id, item.stage) != identity
+        (
+            item.provider_name,
+            item.provider_type,
+            item.model,
+            item.model_id,
+            item.stage,
+        )
+        != identity
         for item in items[1:]
     ):
         raise ValueError("AI 调用聚合的 provider/model/stage 必须一致")
@@ -348,6 +369,7 @@ def combine_ai_call_results(
         cost_amount=amount,
         cost_currency=currency,
         cost_unknown_reason=unknown_reason,
+        provider_name=first.provider_name,
     )
 
 
