@@ -89,6 +89,52 @@ const mountWorkspace = async (
 }
 
 describe('WDWorkspace locked chapter state', () => {
+  it('仅已定稿章节空闲时不显示尚未开始生成', async () => {
+    const project: NovelProject = {
+      id: 'novel-finalized',
+      title: '全网退役',
+      initial_prompt: '',
+      conversation_history: [],
+      blueprint: {
+        chapter_outline: [
+          { chapter_number: 1, title: '一招', summary: '林拓重新站上擂台。' },
+        ],
+      },
+      chapters: [
+        {
+          chapter_number: 1,
+          title: '一招',
+          summary: '林拓重新站上擂台。',
+          real_summary: null,
+          content: '林拓抬起拳架。',
+          versions: null,
+          evaluation: null,
+          generation_status: 'successful',
+        },
+      ],
+    }
+
+    const rendered = await mountWorkspace(project, 1)
+    try {
+      expect(rendered.host.querySelector('.chapter-workflow')).toBeNull()
+      expect(rendered.host.textContent).not.toContain('尚未开始生成')
+    } finally {
+      rendered.unmount()
+    }
+
+    project.chapters[0]!.content = null
+    project.chapters[0]!.generation_status = 'not_generated'
+    const draft = await mountWorkspace(project, 1, {
+      availableVersions: [{ content: '尚未定稿的候选正文' }],
+    })
+    try {
+      expect(draft.host.querySelector('.chapter-workflow')).not.toBeNull()
+      expect(draft.host.textContent).toContain('尚未开始生成')
+    } finally {
+      draft.unmount()
+    }
+  })
+
   it('keeps workflow status mounted and isolates live draft preview to the current run', async () => {
     const project: NovelProject = {
       id: 'novel-running-preview',
