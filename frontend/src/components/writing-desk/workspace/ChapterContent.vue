@@ -791,38 +791,6 @@ defineExpose({
   min-height: 100%; /* 纵向和高度完全铺满红框 */
 }
 
-.chapter-paper__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--md-spacing-3);
-  margin-bottom: var(--md-spacing-5);
-}
-
-.chapter-paper__title {
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--md-on-surface);
-  text-align: left;
-  cursor: pointer;
-  appearance: none;
-  font-family: var(--md-font-serif);
-  font-size: var(--md-headline-small);
-  letter-spacing: 0.08em;
-  transition: color var(--md-duration-short) var(--md-easing-standard);
-}
-
-.chapter-paper__title:hover:not(:disabled) {
-  color: var(--md-primary-dark);
-}
-
-.chapter-paper__title:focus-visible {
-  outline: 2px solid var(--md-primary);
-  outline-offset: 3px;
-  border-radius: var(--md-radius-xs);
-}
-
 .m3-optimizer-dialog {
   max-width: min(720px, calc(100vw - 32px));
   max-height: calc(var(--app-viewport-unit) - 32px);

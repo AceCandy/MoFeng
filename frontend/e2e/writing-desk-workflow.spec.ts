@@ -135,12 +135,12 @@ test('旧 cursor 事件不会覆盖已接受的新事实', async ({ page, reques
   await resetScenario(request, 'stale-event')
   const panel = await openWritingDesk(page)
   await emitFixtureEvent(request, 'stale-success')
-  await expectStatus(panel, '章节工作流已完成')
+  await expect(panel).toHaveCount(0)
   const currentRequests = (await readStats(request)).currentRequests
 
   await emitFixtureEvent(request, 'stale-event')
   await page.waitForTimeout(150)
-  await expectStatus(panel, '章节工作流已完成')
+  await expect(panel).toHaveCount(0)
   expect((await readStats(request)).currentRequests).toBe(currentRequests)
 })
 

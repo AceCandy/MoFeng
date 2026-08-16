@@ -1330,8 +1330,9 @@ await session.commit()
 
 ### 1. Scope / Trigger
 
-Apply when an unfinalized Chapter must recover from an unreadable, incompatible, or
-otherwise abandoned workflow run. Reset is an explicit user action that preserves the
+Apply when any Chapter workflow that has not entered `successful` must be abandoned,
+including runs that already wrote canonical正文 but have incomplete or failed projections.
+Reset is an explicit user action that clears the whole Chapter while preserving the
 outline; it is not a snapshot refresh and does not add compatibility for an old graph.
 
 ### 2. Signatures
@@ -1358,15 +1359,25 @@ await NovelService(session).reset_chapter_without_workflow(
 
 ### 3. Contracts
 
-- Reset is owner-scoped and allowed only while `selected_version_id is None` and
-  `current_revision == 0`. A finalized Chapter must use the existing deletion policy.
-- Lock the root `BackgroundTask -> ChapterWorkflowRun -> Chapter` transition before
-  mutation. Increment the root fencing token, clear lease identity, cancel the job and
-  run, reject pending commands, and clear command/activity private payloads.
-- Reuse terminal cancelled cleanup to delete this run's unconfirmed versions,
-  evaluations, and compatibility traces and to restore Chapter generation fields to
-  `not_generated`. Preserve the outline, workflow/job/command/activity identity,
-  `JobEvent`, AI usage/cost, revisions, outbox, and projection audit.
+- Reset is owner-scoped. `ChapterWorkflowRun.status == "successful"` is the only workflow
+  state that rejects reset; queued, running, selection, finalizing, projection-pending,
+  failed, needs-attention, cancelled, and fatal contract boundaries remain resettable.
+- Lock the root task, then the same workflow stream's sibling dispatcher/projection tasks
+  in stable id order, then the `ChapterWorkflowRun -> Chapter` transition. This keeps all
+  task rows ahead of Chapter while fencing every worker that can still write the run.
+  Cancel every nonterminal sibling and the root under a higher fencing token, reject
+  pending commands, and clear private payloads from root and sibling activities.
+- When `current_revision > tombstone_revision`, or selected/projection identity still
+  marks canonical正文 active, call `ChapterProjectionService.create_tombstone_job` with
+  `ChapterRevisionSuperseded`. The same transaction appends a monotonically increasing
+  tombstone revision/outbox fact and makes the current revision's projection runs stale.
+  A repeated reset whose current revision is already the tombstone must not append an
+  empty tombstone merely because its revision number is nonzero.
+- Delete every user-visible `ChapterVersion`, `ChapterEvaluation`, and
+  `ChapterGenerationTrace` for the Chapter, clear selected正文, summary and generation /
+  projection identity, and restore Chapter status to `not_generated`. Preserve the
+  outline, workflow/job/command/activity identity, `JobEvent`, AI usage/cost, immutable
+  revisions/outbox, and projection audit rows.
 - Checkpoint deletion uses the reset-only recoverable marker
   `CHAPTER_WORKFLOW_RESET_CHECKPOINT_DELETE_PENDING`. It must not reuse the retention
   marker because pending retention cleanup does not prove that Chapter reset ran.
@@ -1388,7 +1399,9 @@ await NovelService(session).reset_chapter_without_workflow(
 |-----------|-----------------|
 | Project is missing or belongs to another user | Preserve normal 404 owner boundary |
 | Chapter outline is missing | Return 404; create nothing |
-| Chapter is finalized | Return 400; preserve canonical state |
+| Current workflow status is `successful` | Return 400; preserve canonical state |
+| Current workflow is not `successful`, but canonical正文 already exists | Fence all stream workers, append a superseding tombstone, then clear the whole Chapter |
+| Current revision already equals the tombstone watermark | Reset the newer run without appending another empty tombstone |
 | Root job/run/Chapter identity differs | Roll back and fail closed |
 | A worker submits with the pre-reset fence | Raise lease-lost behavior; commit nothing |
 | Saver deletion fails after reset commit | Preserve the pending marker for retry |
@@ -1400,13 +1413,14 @@ await NovelService(session).reset_chapter_without_workflow(
 
 ### 5. Good / Base / Bad Cases
 
-- Good: an incompatible active run is cancelled under a higher fence, its private and
-  unconfirmed state is cleared, its checkpoint thread is deleted, and the preserved
-  outline can start a new run.
+- Good: a projection-pending run with canonical正文 is cancelled under higher root and
+  sibling fences; its revision/outbox audit remains, a superseding tombstone becomes the
+  new base revision, all visible Chapter content is cleared, and the outline starts a new run.
 - Base: saver deletion fails once; the Chapter remains safely reset and a repeated
   request deletes the same thread idempotently before clearing the marker.
-- Bad: implement reset as a refetch, delete a checkpoint before fencing the root job,
-  remove durable audit identity, or let a terminal old run become current again.
+- Bad: implement reset as a refetch, cancel only the root while projection workers keep
+  their leases, delete immutable revision/outbox rows, restore an older正文, reset revision
+  to zero, or let a terminal old run become current again.
 
 ### 6. Tests Required
 
@@ -1418,20 +1432,33 @@ await NovelService(session).reset_chapter_without_workflow(
 - Query current workflow after reset and assert no run is returned. Then delete the
   reset Chapter through the normal tail policy and assert the outline disappears while
   durable workflow audit identity remains.
-- Frontend tests assert fatal reset/check/delete actions, serialized recheck, shared
-  pending disablement, and reset-before-delete ordering.
+- Finalize正文 and dispatch projection jobs, then reset before reconciliation. Assert root
+  and sibling fences invalidate a stale lease, current projection runs are stale,
+  revisions/outbox remain, the new tombstone revision is the next workflow's base, a
+  repeated no-content reset adds no tombstone, and `successful` reset returns 400.
+- Frontend tests assert reset visibility for every established non-successful phase,
+  absence for successful/superseded, shared pending disablement, Chapter + Project cache
+  invalidation, fatal check/delete actions, and reset-before-delete ordering.
 
 ### 7. Wrong vs Correct
 
 ```python
-# Wrong: reading the same incompatible row cannot recover it.
-snapshot = await get_current_run(project_id, chapter_number)
+# Wrong: clearing the Chapter while projection workers and canonical reads remain active.
+chapter.selected_version_id = None
+chapter.current_revision = 0
 ```
 
 ```python
-# Correct: fence and commit recoverable cleanup intent before deleting the checkpoint.
+# Correct: fence the whole stream and supersede canonical visibility before clearing正文.
 job.fencing_token += 1
 job.status = "cancelled"
+await cancel_and_fence_sibling_jobs(run.id)
+await projection_service.create_tombstone_job(
+    chapter=chapter,
+    user_id=user_id,
+    reason="chapter_workflow_reset",
+    event_type="ChapterRevisionSuperseded",
+)
 run.checkpoint_id = CHAPTER_WORKFLOW_RESET_CHECKPOINT_DELETE_PENDING
 await session.commit()
 

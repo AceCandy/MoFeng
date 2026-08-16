@@ -59,7 +59,7 @@
           {{ pending ? '正在提交...' : '重试同步' }}
         </button>
         <button
-          v-if="phase === 'fatal'"
+          v-if="canReset"
           type="button"
           class="md-btn md-btn-filled md-ripple"
           data-action="reset"
@@ -177,6 +177,7 @@ interface Props {
   error: string | null
   retryActivityKey: string | null
   candidates: ChapterVersionSelection[]
+  canReset: boolean
 }
 
 const props = defineProps<Props>()
@@ -255,6 +256,7 @@ const hasActions = computed(() =>
   props.phase === 'idle'
   || props.phase === 'cancelled'
   || props.phase === 'fatal'
+  || props.canReset
   || canRetry.value
   || canRetryProjection.value
   || canRetryExternal.value

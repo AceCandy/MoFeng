@@ -56,14 +56,6 @@ body .chapter-prose p {
   margin-bottom: 1.25em;
 }
 
-/* 章节正文标题 */
-body .chapter-paper__title {
-  font-family: var(--md-font-display);
-  letter-spacing: 0.06em;
-  font-weight: 600;
-  color: var(--md-primary);
-}
-
 /* 编辑章节文本域（笺格写字板）：横向描红行线底纹，还原落笔书笺的意境 */
 body .md-textarea {
   border-radius: var(--md-radius-xs);

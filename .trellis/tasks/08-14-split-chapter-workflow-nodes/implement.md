@@ -43,6 +43,16 @@
 
 验证：旧 lease 无法提交、未确认产物与私有 payload 被清除、checkpoint 删除失败可重试、current run 返回空、重置后章节可删除；前端动作、类型、lint 与 API artifact check 通过。
 
+## Phase 6：未成功工作流的彻底重置
+
+1. 扩展 reset service 的准入条件：只拒绝 `successful` workflow；对 finalizing/projection pending/failed/cancelled 等状态继续持有 root/run/chapter 锁并 fence 当前 stream 的迟到 worker。
+2. 已产生 canonical revision 时复用精确 tombstone，失活本 revision 的 projection runs 和可见派生产物；保留 immutable revision/outbox/audit，并以 tombstone revision 作为新基线。
+3. 清除该章全部版本、评审、trace 与 Chapter 用户可见生成字段，保留大纲；重复 reset 只补做 checkpoint/tombstone 派发清理。
+4. 前端将“重置本章”扩展到所有已建立且未 `successful` 的 workflow phase，复用现有确认交互；成功后同时失效 Project、Chapter 和 current workflow 缓存并清空本地预览快照。
+5. 增加聚焦测试，覆盖首次生成与已有正式章重生成、finalize 后 projection pending/部分投影成功、迟到 worker、重复 reset、checkpoint 删除失败、successful 拒绝、前端按钮 phase 矩阵和缓存刷新。
+
+验证：聚焦 backend reset/projection/job fencing 测试通过；前端 ChapterWorkflowPanel、chapter ops、query cache 测试通过；TypeScript 类型检查、相关 lint 与 API artifact check 通过。按项目约定不默认运行 backend 全量测试或全量编译。
+
 ## 回滚点
 
 - 代码与生成 artifacts 作为一个整体回滚。

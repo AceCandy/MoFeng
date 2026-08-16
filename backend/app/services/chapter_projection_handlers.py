@@ -544,6 +544,8 @@ async def handle_chapter_rag_projection(context) -> JobOutcome:
             revision=payload.revision,
             artifact_generation=payload.artifact_generation,
             projection_run_id=payload.projection_run_id,
+            expected_source_hash=payload.source_hash,
+            expected_source_generation=payload.source_generation,
             prepared=prepared,
             activate=payload.execution_mode == "active",
         )

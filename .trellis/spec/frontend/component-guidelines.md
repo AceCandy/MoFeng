@@ -106,6 +106,13 @@ Rule: for transient user feedback, use `useAlert()` (the project convention); re
 - Keep list semantics (`ol`/`ul` with `li`) separate from interaction semantics. Put a native `button type="button"` inside each interactive item; use `disabled` for unavailable items and `aria-current="step"` for the active pipeline step.
 - Browser accessibility tests must wait for page and drawer opacity transitions to reach their stable state before running axe. Scope axe to the component or surface owned by the task so unrelated historical debt does not hide regressions in the changed area.
 
+## Durable workflow status rendering
+
+- A parent Job `running` state must not make every semantic child node look active. Only the currently running remote activity gets motion; a system persistence node stays in a static waiting state while its preceding activity is running, and wait/interrupt nodes always use a static waiting state.
+- Missing trace data is always waiting, never skipped. Render a skipped state only from an explicit backend fact, with a Chinese business reason on the node and in its accessible tooltip; translate backend reason codes at the workflow presentation boundary.
+- Parallel projection branches cannot advance one another. Summary, memory, RAG, and foreshadowing derive progress only from traces in the same branch; the projection wait gate is not evidence that any branch has started or completed.
+- Regression fixtures for projection status must combine the parent projection Job, its running child activity, the current wait gate, and untouched sibling branches. Assert that only the remote activity has running motion and untouched branches remain waiting.
+
 ---
 
 ## Anti-patterns to avoid

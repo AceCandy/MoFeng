@@ -1754,7 +1754,7 @@ class JobService:
         delete_checkpoint_threads: Callable[[list[str]], Awaitable[None]],
         now: Optional[datetime] = None,
     ) -> bool:
-        """废止当前未定稿 run，并清除其可再生私有状态与 checkpoint。"""
+        """废止当前未成功 run，并清空章节可见内容与可再生私有状态。"""
 
         pending = await self.workflow_repo.get_checkpoint_delete_pending_user_run(
             user_id=user_id,
@@ -1793,6 +1793,11 @@ class JobService:
         if job is None:
             await self.session.rollback()
             raise ValueError("workflow 绑定的 root JobRun 不存在")
+        sibling_jobs = await self.repo.list_sibling_stream_jobs_for_update(
+            stream_type="workflow",
+            stream_id=run_ref.id,
+            root_job_id=job.id,
+        )
         workflow_context = await self.workflow_transitions.lock_for_job(job)
         if (
             workflow_context is None
@@ -1803,12 +1808,15 @@ class JobService:
             await self.session.rollback()
             raise ValueError("workflow 与待重置章节身份不一致")
         chapter = workflow_context.chapter
-        if chapter.selected_version_id is not None or int(chapter.current_revision or 0) > 0:
+        if workflow_context.run.status == "successful":
             await self.session.rollback()
-            raise ValueError("已完成章节不能重置，请使用删除章节")
+            raise ValueError("已完成章节不能重置")
 
         commands = await self.workflow_repo.list_commands_for_update(run_ref.id)
-        activities = await self.repo.list_activities_for_update(job_id=job.id)
+        jobs_to_scrub = [job, *sibling_jobs]
+        activities = []
+        for stream_job in jobs_to_scrub:
+            activities.extend(await self.repo.list_activities_for_update(job_id=stream_job.id))
         for command in commands:
             if command.status == "pending":
                 command.status = "rejected"
@@ -1818,6 +1826,46 @@ class JobService:
         for activity in activities:
             activity.request_payload = {}
             activity.result_payload = None
+
+        terminal_job_statuses = {"succeeded", "failed", "dead_letter", "cancelled"}
+        for sibling_job in sibling_jobs:
+            if sibling_job.status in terminal_job_statuses:
+                continue
+            sibling_job.status = "cancelled"
+            sibling_job.fencing_token += 1
+            sibling_job.cancel_requested_at = reset_at
+            sibling_job.completed_at = reset_at
+            sibling_job.lease_owner = None
+            sibling_job.lease_expires_at = None
+            sibling_job.heartbeat_at = None
+            sibling_job.result = None
+            sibling_job.error = "章节已重置"
+            sibling_job.error_category = "chapter_reset"
+            sibling_job.log_entries = [
+                *(sibling_job.log_entries or []),
+                _log_entry("章节已重置，关联任务停止使用", level="warning", now=reset_at),
+            ]
+            await self._sync_projection_run_status(
+                sibling_job,
+                status="stale",
+                error_category="chapter_reset",
+            )
+            await self._append_event(sibling_job, "job.cancelled", now=reset_at)
+
+        if (
+            chapter.selected_version_id is not None
+            or chapter.projection_generation is not None
+            or chapter.source_hash is not None
+            or int(chapter.current_revision or 0) > int(chapter.tombstone_revision or 0)
+        ):
+            from .chapter_projection_service import ChapterProjectionService
+
+            await ChapterProjectionService(self.session).create_tombstone_job(
+                chapter=chapter,
+                user_id=user_id,
+                reason="chapter_workflow_reset",
+                event_type="ChapterRevisionSuperseded",
+            )
 
         job.status = "cancelled"
         job.fencing_token += 1
@@ -1846,6 +1894,28 @@ class JobService:
                 reason_code="chapter_reset",
             ),
         )
+        await self.session.execute(
+            delete(ChapterEvaluation).where(ChapterEvaluation.chapter_id == chapter.id)
+        )
+        await self.session.execute(
+            delete(ChapterVersion).where(ChapterVersion.chapter_id == chapter.id)
+        )
+        await self.session.execute(
+            delete(ChapterGenerationTrace).where(ChapterGenerationTrace.chapter_id == chapter.id)
+        )
+        chapter.selected_version_id = None
+        chapter.selected_version = None
+        chapter.status = "not_generated"
+        chapter.generation_progress = 0
+        chapter.generation_step = None
+        chapter.generation_step_index = 0
+        chapter.generation_step_total = 0
+        chapter.generation_started_at = None
+        chapter.real_summary = None
+        chapter.word_count = 0
+        chapter.source_hash = None
+        chapter.required_projection_snapshot = []
+        chapter.projection_generation = None
         await self.session.commit()
         await publish_background_task(job.user_id)
 

@@ -85,7 +85,7 @@ export const useWritingDeskChapterOps = ({
   const resetChapter = async (chapterNumber: number) => {
     if (recoveryPending.value) return false
     const confirmed = await globalAlert.showConfirm(
-      `确定重置第 ${chapterNumber} 章吗？本章大纲会保留，当前未确认正文、版本、评审、生成记录和旧工作流状态会被清除。`,
+      `确定重置第 ${chapterNumber} 章吗？本章大纲会保留；正文、版本、评审、摘要、生成记录和旧工作流状态都会被清空。此操作无法撤销。`,
       '重置章节',
     )
     if (!confirmed) return false

@@ -1,1 +1,4 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file":".trellis/spec/backend/durable-job-guidelines.md","reason":"章节工作流 reset、job fencing、activity 私有 payload 与 checkpoint 两阶段删除合同"}
+{"file":".trellis/spec/backend/chapter-projection-contract.md","reason":"canonical revision/outbox 不可变、projection generation 与 tombstone 精确清理合同"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"工作流重置按钮的 Vue props/emits、确认交互与可访问性约定"}
+{"file":".trellis/spec/frontend/hook-guidelines.md","reason":"reset mutation 后 Project、Chapter 与 workflow server cache 失效约定"}

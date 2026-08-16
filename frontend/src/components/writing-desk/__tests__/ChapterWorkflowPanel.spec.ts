@@ -38,6 +38,7 @@ const mountPanel = (
       error: null,
       retryActivityKey: null,
       candidates,
+      canReset: false,
       ...overrides,
       ...listeners,
     }),
@@ -219,6 +220,7 @@ describe('ChapterWorkflowPanel', () => {
       allowedCommands: [],
       error: '章节工作流数据格式无效',
       candidates: [],
+      canReset: true,
     }, { onReset, onDelete })
 
     expect(host.querySelector('[role="alert"]')?.textContent)
@@ -236,11 +238,32 @@ describe('ChapterWorkflowPanel', () => {
       allowedCommands: [],
       pending: true,
       candidates: [],
+      canReset: true,
     })
 
     expect(
       [...host.querySelectorAll<HTMLButtonElement>('[data-action]')]
         .every((button) => button.disabled),
     ).toBe(true)
+  })
+
+  it.each([
+    'running',
+    'waitingForSelection',
+    'finalizing',
+    'projectionPending',
+    'failed',
+    'cancelled',
+    'fatal',
+  ])('%s 阶段允许彻底重置时显示入口', (phase) => {
+    const host = mountPanel({ phase, candidates: [], canReset: true })
+
+    expect(host.querySelector('[data-action="reset"]')).not.toBeNull()
+  })
+
+  it.each(['succeeded', 'superseded'])('%s 阶段不显示彻底重置入口', (phase) => {
+    const host = mountPanel({ phase, candidates: [], canReset: false })
+
+    expect(host.querySelector('[data-action="reset"]')).toBeNull()
   })
 })

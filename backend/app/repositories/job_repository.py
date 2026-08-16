@@ -74,6 +74,26 @@ class JobRepository(BaseRepository[BackgroundTask]):
         )
         return result.scalars().first()
 
+    async def list_sibling_stream_jobs_for_update(
+        self,
+        *,
+        stream_type: str,
+        stream_id: str,
+        root_job_id: str,
+    ) -> list[BackgroundTask]:
+        result = await self.session.execute(
+            select(BackgroundTask)
+            .where(
+                BackgroundTask.stream_type == stream_type,
+                BackgroundTask.stream_id == stream_id,
+                BackgroundTask.id != root_job_id,
+            )
+            .order_by(BackgroundTask.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        return list(result.scalars())
+
     async def get_user_job(
         self,
         job_id: str,

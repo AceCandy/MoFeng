@@ -71,7 +71,18 @@ For one-shot reads outside a hook (e.g. router guard session restore), use `quer
 
 - Define mutations in `queries/<domain>.ts` via `useMutation`. Call the typed `src/api/<domain>.ts` function in `mutationFn`.
 - On success, invalidate via the affected domains' key factories. Cross-domain invalidation imports the other domain's `xxxQueryKeys` (there is intentionally no central key index).
+- If a destructive mutation returns the canonical entity that is currently mounted by a
+  detail query, replace that exact detail cache with `setQueryData` before refreshing
+  broader lists. Invalidation alone is insufficient: a failed or coordinating refetch
+  retains the previous `data`, so stale正文 can keep overriding the updated parent cache.
+- Hierarchical key invalidation also matches child keys unless `exact: true` is supplied.
+  Do not invalidate a parent detail prefix after installing a canonical child response;
+  refresh only the broader list that the mutation response did not replace.
 - Surface mutation errors through the mutation's own state + `useAlert()`, not via `try/catch` + manual fetch.
+
+Mutation regression tests must mount the affected query observer, seed the old entity,
+execute the mutation, and assert the observer's reactive `data` changes immediately.
+Asserting only that `invalidateQueries` was called does not verify user-visible state.
 
 ---
 

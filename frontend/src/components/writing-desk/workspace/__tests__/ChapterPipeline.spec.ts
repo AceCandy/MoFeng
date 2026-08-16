@@ -73,14 +73,17 @@ describe('ChapterPipeline', () => {
         { key: 'wait_for_projections', label: '等待投影完成', kind: 'control', group: 'completion', groupLabel: '汇合与完成' },
         { key: 'successful', label: '章节工作流完成', kind: 'terminal', group: 'completion', groupLabel: '汇合与完成' },
       ],
-      stepState: (key: string) => ({ tone: v2States[key], label: v2States[key] }),
+      stepState: (key: string) => ({
+        tone: v2States[key],
+        label: key === 'generate_candidate_2' ? '仅生成一个候选' : v2States[key],
+      }),
       activeStepKey: 'wait_for_projections',
     })
 
     expect(host.querySelector('[data-group="candidates"]')?.textContent).toContain('候选版本 2')
     expect(host.querySelector('[data-group="projections"]')?.getAttribute('data-mode')).toBe('parallel')
     expect(host.querySelector('[data-group="projections"]')?.textContent).toContain('并行')
-    expect(host.querySelector('.is-skipped')?.textContent).toContain('已跳过')
+    expect(host.querySelector('.is-skipped')?.textContent).toContain('仅生成一个候选')
     expect(host.querySelector('.is-control')?.textContent).toContain('控制')
     expect(host.querySelector('.is-terminal')?.textContent).toContain('终态')
   })

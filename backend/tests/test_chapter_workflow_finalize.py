@@ -39,7 +39,7 @@ from app.services.chapter_workflow_handler import (
 )
 from app.services.chapter_workflow_start import ChapterWorkflowStartService
 from app.services.job_registry import SideEffectClass
-from app.services.job_service import JobService
+from app.services.job_service import JobService, LeaseLostError
 from app.services.job_worker import JobExecutionContext
 
 
@@ -405,3 +405,173 @@ async def test_finalize_projection_jobs_keep_workflow_stream_until_reconciler(
         for job in jobs
         if job.task_type != "chapter_outbox_dispatch"
     )
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_reset_finalizing_chapter_tombstones_content_and_fences_projection_jobs(
+    isolated_pg,
+):
+    content = "重置后不可见的 canonical 正文"
+    started, execution, request = await _start_claim_with_candidate(
+        isolated_pg,
+        user_id=4705,
+        project_id="workflow-finalize-reset",
+        content=content,
+    )
+    finalized = await ChapterWorkflowFinalizeService(execution).execute(request)
+
+    async with isolated_pg.session_factory() as session:
+        dispatcher = await session.get(BackgroundTask, finalized.result.dispatcher_job_id)
+        assert dispatcher is not None
+        dispatched = await ChapterOutboxDispatcher(session).dispatch(
+            command=ChapterOutboxDispatchJobPayload.model_validate(dispatcher.payload),
+            user_id=4705,
+        )
+        await session.commit()
+
+    async with isolated_pg.session_factory() as session:
+        stale_lease = await JobService(session).claim_next(
+            worker_id="finalize-reset-stale-worker",
+            lease_seconds=60,
+        )
+    assert stale_lease is not None
+    assert stale_lease.job_id in {finalized.result.dispatcher_job_id, *dispatched["job_ids"]}
+
+    checkpoint_deletes: list[tuple[str, ...]] = []
+
+    async def delete_checkpoints(run_ids: list[str]) -> None:
+        checkpoint_deletes.append(tuple(run_ids))
+
+    async with isolated_pg.session_factory() as session:
+        reset = await JobService(session).reset_chapter_workflow(
+            user_id=4705,
+            project_id=started.run.project_id,
+            chapter_number=1,
+            delete_checkpoint_threads=delete_checkpoints,
+        )
+    assert reset is True
+    assert checkpoint_deletes == [(started.run.id,)]
+
+    async with isolated_pg.session_factory() as session:
+        chapter = await session.get(Chapter, started.run.chapter_id)
+        revisions = list(
+            (
+                await session.execute(
+                    select(ChapterRevision)
+                    .where(ChapterRevision.chapter_id == started.run.chapter_id)
+                    .order_by(ChapterRevision.revision)
+                )
+            ).scalars()
+        )
+        outbox_events = list(
+            (
+                await session.execute(
+                    select(ChapterOutboxEvent)
+                    .where(ChapterOutboxEvent.chapter_id == started.run.chapter_id)
+                    .order_by(ChapterOutboxEvent.revision)
+                )
+            ).scalars()
+        )
+        stream_jobs = list(
+            (
+                await session.execute(
+                    select(BackgroundTask).where(BackgroundTask.stream_id == started.run.id)
+                )
+            ).scalars()
+        )
+        projection_runs = list(
+            (
+                await session.execute(
+                    select(ChapterProjectionRun).where(
+                        ChapterProjectionRun.chapter_id == started.run.chapter_id,
+                        ChapterProjectionRun.revision == 1,
+                    )
+                )
+            ).scalars()
+        )
+        versions = list(
+            (
+                await session.execute(
+                    select(ChapterVersion).where(ChapterVersion.chapter_id == started.run.chapter_id)
+                )
+            ).scalars()
+        )
+
+    assert chapter is not None
+    assert (
+        chapter.status,
+        chapter.selected_version_id,
+        chapter.current_revision,
+        chapter.source_hash,
+        chapter.real_summary,
+        chapter.word_count,
+    ) == ("not_generated", None, 2, None, None, 0)
+    assert versions == []
+    assert [(revision.revision, revision.lifecycle) for revision in revisions] == [
+        (1, "superseded"),
+        (2, "tombstone"),
+    ]
+    assert revisions[0].source_content == content
+    assert len(outbox_events) == 2
+    assert [event.event_type for event in outbox_events] == [
+        "ChapterFinalizationRequested",
+        "ChapterRevisionSuperseded",
+    ]
+    assert stream_jobs and all(job.status == "cancelled" for job in stream_jobs)
+    assert projection_runs and all(
+        run.status == "stale" and run.is_active is False for run in projection_runs
+    )
+
+    async with isolated_pg.session_factory() as session:
+        with pytest.raises(LeaseLostError):
+            await JobService(session).mark_succeeded(stale_lease)
+
+    async with isolated_pg.session_factory() as session:
+        restarted = await ChapterWorkflowStartService(session).start(
+            user_id=4705,
+            project_id=started.run.project_id,
+            chapter_number=1,
+            flow_config={"preset": "basic", "enable_rag": False},
+        )
+        assert restarted.created is True
+        assert restarted.run.base_revision == 2
+
+    async with isolated_pg.session_factory() as session:
+        assert await JobService(session).reset_chapter_workflow(
+            user_id=4705,
+            project_id=started.run.project_id,
+            chapter_number=1,
+            delete_checkpoint_threads=delete_checkpoints,
+        ) is True
+        revision_count = await session.scalar(
+            select(func.count(ChapterRevision.id)).where(
+                ChapterRevision.chapter_id == started.run.chapter_id
+            )
+        )
+        assert revision_count == 2
+
+    async with isolated_pg.session_factory() as session:
+        protected = await ChapterWorkflowStartService(session).start(
+            user_id=4705,
+            project_id=started.run.project_id,
+            chapter_number=1,
+            flow_config={"preset": "basic", "enable_rag": False},
+        )
+        assert protected.created is True
+        assert protected.run.base_revision == 2
+        chapter = await session.get(Chapter, started.run.chapter_id)
+        assert chapter is not None
+        protected.run.status = "successful"
+        protected.run.is_active = False
+        protected.root_job.status = "succeeded"
+        chapter.status = "successful"
+        await session.commit()
+
+    async with isolated_pg.session_factory() as session:
+        with pytest.raises(ValueError, match="已完成章节不能重置"):
+            await JobService(session).reset_chapter_workflow(
+                user_id=4705,
+                project_id=started.run.project_id,
+                chapter_number=1,
+                delete_checkpoint_threads=delete_checkpoints,
+            )

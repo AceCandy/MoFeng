@@ -1,1 +1,4 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file":".trellis/spec/backend/durable-job-guidelines.md","reason":"复核 reset 的锁序、fencing、幂等和 checkpoint 重试语义"}
+{"file":".trellis/spec/backend/chapter-projection-contract.md","reason":"复核 immutable audit 保留、tombstone 与迟到 projection 隔离"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"复核危险操作反馈、聚焦测试、类型与静态检查"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"复核 UI→mutation→router→service→revision/projection 的完整数据流"}

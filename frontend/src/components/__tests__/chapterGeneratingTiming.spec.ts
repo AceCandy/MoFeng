@@ -127,6 +127,22 @@ describe('ChapterGenerating timing inspector', () => {
         },
         {
           id: 202,
+          node_key: 'generate_summary',
+          node_label: '生成章节梳理',
+          status: 'running',
+          uses_llm: true,
+          metadata: {},
+        },
+        {
+          id: 203,
+          node_key: 'commit_summary_projection',
+          node_label: '保存章节梳理',
+          status: 'running',
+          uses_llm: false,
+          metadata: {},
+        },
+        {
+          id: 204,
           node_key: 'commit_memory_projection',
           node_label: '写入章节记忆',
           status: 'success',
@@ -134,7 +150,7 @@ describe('ChapterGenerating timing inspector', () => {
           metadata: {},
         },
         {
-          id: 203,
+          id: 205,
           node_key: 'commit_foreshadowing_projection',
           node_label: '写入伏笔同步结果',
           status: 'success',
@@ -150,6 +166,7 @@ describe('ChapterGenerating timing inspector', () => {
 
     try {
       const memoryGroup = rendered.host.querySelector('[data-group="memory"]')
+      const summaryGroup = rendered.host.querySelector('[data-group="summary"]')
       const ragGroup = rendered.host.querySelector('[data-group="rag"]')
       const foreshadowingGroup = rendered.host.querySelector('[data-group="foreshadowing"]')
       expect(memoryGroup?.getAttribute('data-mode')).toBe('serial')
@@ -160,17 +177,33 @@ describe('ChapterGenerating timing inspector', () => {
       expect(foreshadowingGroup?.textContent).toContain('筛选新增伏笔')
       expect(foreshadowingGroup?.textContent).toContain('写入伏笔同步结果')
 
+      const summarySteps = summaryGroup?.querySelectorAll('.chapter-console__pipeline-item') || []
+      expect(summarySteps[0]?.classList.contains('is-in-progress')).toBe(true)
+      expect(summarySteps[1]?.classList.contains('is-pending')).toBe(true)
+      expect(summarySteps[1]?.textContent).toContain('等待生成结果')
+
       const ragStep = Array.from(
         ragGroup?.querySelectorAll('.chapter-console__pipeline-item') || [],
       ).find((item) => item.textContent?.includes('生成章节索引向量'))
-      expect(ragStep?.classList.contains('is-skipped')).toBe(true)
-      expect(ragStep?.textContent).toContain('已跳过')
+      expect(ragStep?.classList.contains('is-pending')).toBe(true)
+      expect(ragStep?.classList.contains('is-skipped')).toBe(false)
+      expect(ragStep?.textContent).toContain('等待执行')
+
+      const candidateStep = Array.from(
+        foreshadowingGroup?.querySelectorAll('.chapter-console__pipeline-item') || [],
+      ).find((item) => item.textContent?.includes('筛选新增伏笔'))
+      const statusStep = Array.from(
+        foreshadowingGroup?.querySelectorAll('.chapter-console__pipeline-item') || [],
+      ).find((item) => item.textContent?.includes('判断伏笔状态'))
+      expect(candidateStep?.classList.contains('is-done')).toBe(true)
+      expect(statusStep?.classList.contains('is-done')).toBe(true)
 
       const waitingStep = Array.from(
         rendered.host.querySelectorAll('.chapter-console__pipeline-item'),
       ).find((item) => item.textContent?.includes('等待投影完成'))
       expect(waitingStep?.classList.contains('is-control')).toBe(true)
-      expect(waitingStep?.classList.contains('is-in-progress')).toBe(true)
+      expect(waitingStep?.classList.contains('is-pending')).toBe(true)
+      expect(waitingStep?.textContent).toContain('等待各投影')
     } finally {
       rendered.unmount()
     }

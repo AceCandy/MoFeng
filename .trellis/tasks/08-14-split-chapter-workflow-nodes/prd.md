@@ -54,7 +54,13 @@
 
 ### R7. 不可读运行恢复
 
-当当前章节运行因未知版本、checkpoint 漂移或契约错误进入 fatal 边界时，重新检查只能重新读取事实；页面必须同时提供“重置本章”和“删除章节”。重置保留章节大纲，仅允许未定稿章节，必须先递增 root job fencing token 并终止旧 job/run，再清除未确认版本、评审、trace、command/activity 私有 payload 和 checkpoint。checkpoint 使用独立于 retention 的可重试两阶段删除 marker；重置完成后，历史 terminal run 不再作为该 `not_generated` 章节的 current run。删除异常章节复用“先重置、再按既有尾部章节规则删除”的链路。
+当当前章节运行因未知版本、checkpoint 漂移或契约错误进入 fatal 边界时，重新检查只能重新读取事实；页面必须同时提供“重置本章”和“删除章节”。重置遵守 R8 的彻底清空语义，必须先递增 root job fencing token 并终止旧 job/run，再清理当前章节与旧运行。checkpoint 使用独立于 retention 的可重试两阶段删除 marker；重置完成后，历史 terminal run 不再作为该 `not_generated` 章节的 current run。删除异常章节复用“先重置、再按既有尾部章节规则删除”的链路。
+
+### R8. 未成功工作流的彻底重置
+
+只要章节工作流尚未进入 `successful`，页面都必须提供“重置本章”，包括正文已经写入 canonical revision、但摘要、记忆、RAG 或伏笔投影仍在执行或失败的阶段。重置必须 fence 当前 run 及其 dispatcher/projection worker，清除本 run 的未确认候选、评审、trace、私有 payload 和 checkpoint，并通过精确 tombstone 撤销本 run 已产生的投影产物；canonical `ChapterRevision`、outbox、projection run 和 durable 审计只允许失活或 supersede，不得物理删除。重置后保留章节大纲，旧 terminal run 不再作为 current run，章节可以重新生成。
+
+若当前 run 启动前已有正式正文，重置也不恢复旧正文：章节的用户可见正文、版本、评审、摘要和所有自动投影均清空，只保留章节大纲。历史 canonical revision 仍作为不可变审计保留，但不得继续成为章节读取入口；重置以新的 tombstone revision 作为后续生成的 revision 基线，不能把 revision 号归零或复用。
 
 ## Out of Scope
 
@@ -62,6 +68,7 @@
 - 不拆分 canonical finalize 的 prepare/apply/事务写入内部步骤。
 - 不改变章节正文、记忆、伏笔或索引的业务算法，只调整其执行边界、状态和展示契约。
 - 不引入新的队列、缓存或工作流框架。
+- 不物理删除 canonical revision、outbox、projection run、JobEvent 或 command/activity 审计；“清空整章”是用户可见状态和活跃派生产物的清空，不是抹除审计历史。
 
 ## Acceptance Criteria
 
@@ -72,6 +79,7 @@
 - [ ] 定稿投影按真实依赖并行派发；RAG 跳过可解释；汇合节点仅在 required projections 全部成功后进入成功态。
 - [ ] 前端节点列表、状态、trace 详情、重试入口与后端 activity 一致；只有真实 LLM/Embedding 远程调用节点可重试，本地执行与控制节点只展示状态。
 - [ ] fatal 章节可重新检查、保留大纲重置或删除；重置会 fence 旧 worker，checkpoint 删除失败可重试，且旧 terminal run 不会再次触发 fatal。
+- [ ] 任意尚未 `successful` 的工作流都可从页面重置；即使 canonical revision 已写入，也会停止迟到 worker、撤销本 run 的投影可见结果，清空旧正式正文且只保留章节大纲，并恢复为可重新生成状态。
 - [ ] 现有 durable job、当前 checkpoint、outbox、projection、SSE 和生成失败语义没有未覆盖的回归。
 - [ ] 聚焦 backend/frontend 测试、类型检查和静态检查通过；未改变的全量环境限制在验证记录中明确说明。
 
@@ -81,7 +89,5 @@
 - 系统尚未上线，不存在生产旧运行；当前拆分 DAG 直接成为唯一正式 V1。开发环境旧 workflow/checkpoint 数据需清理，不允许被新 schema 猜测解析。
 - “删除异常章节”由重置与既有删除两个请求组成；若第二个请求失败，章节停留在已安全重置、保留大纲的可恢复状态，可再次删除。
 - 每个新增节点都会增加 checkpoint、activity 和测试面；因此只按独立产物拆分，不按内部函数或日志事件拆分。
-
-## Open Questions
-
-暂无阻塞性产品问题；实现阶段需基于现有 workflow version/migration 机制确定具体迁移落点，并在设计文档中记录。
+- 未成功 run 已写入 canonical revision 时，重置使用补偿式 tombstone，而不是回滚或物理删除不可变事实；迟到 worker 必须同时受 job fencing 与 revision/generation 身份校验阻止。
+- 清空后以 tombstone revision 继续单调递增，避免新生成与历史 revision 唯一键冲突。

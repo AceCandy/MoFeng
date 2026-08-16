@@ -82,6 +82,7 @@
               :error="workflowError"
               :retry-activity-key="workflowRetryActivityKey"
               :candidates="workflowCandidates"
+              :can-reset="canResetWorkflow"
               @start="emit('workflowStart')"
               @select-version="emit('workflowSelectVersion', $event)"
               @retry="emit('workflowRetry')"
@@ -404,6 +405,11 @@ const onWorkflowCancel = () => {
 watch(
   () => props.workflowPhase,
   (phase, prevPhase) => {
+    if (phase === 'idle') {
+      miaohongPreviewContent.value = null
+      clearLuomoSignature()
+      return
+    }
     const isLuomoMoment = prevPhase === 'waitingForSelection'
       && (phase === 'submitting' || phase === 'finalizing' || phase === 'succeeded')
     if (!isLuomoMoment) return
@@ -482,10 +488,24 @@ const workflowPanelAllowedCommands = computed(() =>
   ),
 )
 
+const canResetWorkflow = computed(() =>
+  props.workflowPhase === 'fatal'
+  || (
+    props.workflowRunId !== null
+    && props.workflowPhase !== 'succeeded'
+    && props.workflowPhase !== 'superseded'
+  ),
+)
+
 const shouldRenderWorkflowPanel = computed(() =>
   props.workflowPhase !== 'booting'
+  && props.workflowPhase !== 'succeeded'
   && !(props.workflowPhase === 'idle' && hasFinalizedChapterContent.value)
-  && (!hasInlineExternalRetry.value || workflowPanelAllowedCommands.value.length > 0),
+  && (
+    !hasInlineExternalRetry.value
+    || workflowPanelAllowedCommands.value.length > 0
+    || canResetWorkflow.value
+  ),
 )
 
 const workflowGenerationStatus = computed<Chapter['generation_status'] | null>(() => {

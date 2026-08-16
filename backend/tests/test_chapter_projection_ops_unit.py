@@ -684,6 +684,7 @@ async def test_rag_handler_aggregates_all_embedding_telemetry(monkeypatch) -> No
         cost_unknown_reason=None,
     )
     second = first.with_value([0.2])
+    apply_calls: list[dict[str, object]] = []
 
     class FakeIngestionService:
         async def prepare_chapter(self, *, embedding_provider, **_kwargs):
@@ -695,6 +696,9 @@ async def test_rag_handler_aggregates_all_embedding_telemetry(monkeypatch) -> No
                 chunk_records=[{"embedding": chunk_embedding}],
                 summary_records=[{"embedding": summary_embedding}],
             )
+
+        async def apply_prepared(self, _session, **kwargs) -> None:
+            apply_calls.append(kwargs)
 
     monkeypatch.setattr(
         projection_handlers,
@@ -717,8 +721,11 @@ async def test_rag_handler_aggregates_all_embedding_telemetry(monkeypatch) -> No
         "get_embedding_result_detached",
         embedding_call,
     )
+    monkeypatch.setattr(projection_handlers, "complete_projection", AsyncMock())
+    monkeypatch.setattr(projection_handlers, "maybe_enqueue_reconciler", AsyncMock())
 
     outcome = await projection_handlers.handle_chapter_rag_projection(context)
+    await outcome.outcome_writer(SimpleNamespace())
 
     assert embedding_call.await_count == 2
     assert outcome.result["chunk_count"] == 1
@@ -727,6 +734,8 @@ async def test_rag_handler_aggregates_all_embedding_telemetry(monkeypatch) -> No
     assert isinstance(recorded, AICallResult)
     assert recorded.usage == TokenUsage(20, 0, 20, 0, 0, 0, True)
     assert recorded.cost_amount == "0.000004"
+    assert apply_calls[0]["expected_source_hash"] == "a" * 64
+    assert apply_calls[0]["expected_source_generation"] == GENERATION
 
 
 @pytest.mark.asyncio

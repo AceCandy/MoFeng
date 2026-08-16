@@ -158,6 +158,45 @@ describe('WDWorkspace locked chapter state', () => {
     }
   })
 
+  it('已完成章节只展示上方章节标题与正文，不显示工作流完成提示', async () => {
+    const project: NovelProject = {
+      id: 'novel-succeeded',
+      title: '全网退役',
+      initial_prompt: '',
+      conversation_history: [],
+      blueprint: {
+        chapter_outline: [
+          { chapter_number: 1, title: '一招', summary: '林拓重新站上擂台。' },
+        ],
+      },
+      chapters: [
+        {
+          chapter_number: 1,
+          title: '一招',
+          summary: '林拓重新站上擂台。',
+          real_summary: null,
+          content: '林拓抬起拳架。',
+          versions: null,
+          evaluation: null,
+          generation_status: 'successful',
+        },
+      ],
+    }
+
+    const rendered = await mountWorkspace(project, 1, {
+      workflowPhase: 'succeeded',
+      workflowRunId: 'run-succeeded',
+    })
+    try {
+      expect(rendered.host.querySelector('.chapter-workflow')).toBeNull()
+      expect(rendered.host.textContent).not.toContain('章节工作流已完成')
+      expect(rendered.host.querySelectorAll('.writing-workspace__chapter-title-line')).toHaveLength(1)
+      expect(rendered.host.querySelector('.chapter-paper')?.textContent).toContain('林拓抬起拳架。')
+    } finally {
+      rendered.unmount()
+    }
+  })
+
   it('keeps workflow status mounted and isolates live draft preview to the current run', async () => {
     const project: NovelProject = {
       id: 'novel-running-preview',
@@ -329,7 +368,7 @@ describe('WDWorkspace locked chapter state', () => {
     }
   })
 
-  it('replaces the redundant failed panel with retry on the selected failed node', async () => {
+  it('keeps chapter reset while retry stays on the selected failed node', async () => {
     const project: NovelProject = {
       id: 'novel-1',
       title: '全网退役',
@@ -381,8 +420,9 @@ describe('WDWorkspace locked chapter state', () => {
     })
 
     try {
-      expect(rendered.host.querySelector('.chapter-workflow')).toBeNull()
-      expect(rendered.host.textContent).not.toContain('本轮需要处理')
+      expect(rendered.host.querySelector('.chapter-workflow')).not.toBeNull()
+      expect(rendered.host.querySelector('[data-action="reset"]')).not.toBeNull()
+      expect(rendered.host.querySelector('[data-action="retry-external"]')).toBeNull()
       expect(rendered.host.querySelector('[data-action="retry-external-node"]')).toBeNull()
 
       const failedStep = Array.from(
@@ -740,6 +780,7 @@ describe('WDWorkspace locked chapter state', () => {
     })
 
     try {
+      expect(rendered.host.querySelector('[data-action="reset"]')).toBeNull()
       const tabs = Array.from(rendered.host.querySelectorAll<HTMLButtonElement>(
         '.writing-workspace__tab-btn',
       ))

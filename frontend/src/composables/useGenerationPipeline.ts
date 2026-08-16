@@ -77,8 +77,12 @@ export function useGenerationPipeline(
 
   const hasReachedLaterStep = (step: PipelineStep, index: number) => {
     const laterSteps = pipelineSteps.value.slice(index + 1)
+    const isProjectionStep = ['summary', 'memory', 'rag', 'foreshadowing'].includes(
+      step.group || '',
+    )
     return laterSteps.some((laterStep) => {
       if (step.groupMode === 'parallel' && laterStep.group === step.group) return false
+      if (isProjectionStep && laterStep.group !== step.group) return false
       if (latestTraceByStep.value.has(laterStep.key)) return true
       return laterStep.key === currentStepKey.value
     })
@@ -90,10 +94,39 @@ export function useGenerationPipeline(
       && latestTraceByStep.value.get(candidate.key)?.status === 'failed',
     )
 
+  const skipLabel = (key: string) => {
+    if (key === 'project_rag' || key === 'commit_rag_projection') return '未启用索引'
+    if (key === 'foreshadowing_candidate_review') return '无新增伏笔'
+    if (key === 'foreshadowing_status_judge') return '无活跃伏笔'
+    if (key === 'generate_candidate_2') return '仅生成一个候选'
+    if (key === 'compress_candidate') return '正文未超字数'
+    return '本轮未启用'
+  }
+
+  const previousRemoteStepRunning = (step: PipelineStep, index: number) =>
+    step.kind === 'system'
+    && pipelineSteps.value.slice(0, index).some((candidate) =>
+      candidate.group === step.group
+      && candidate.kind === 'execution'
+      && latestTraceByStep.value.get(candidate.key)?.status === 'running',
+    )
+
   const stepState = (key: string, index: number) => {
     const step = pipelineSteps.value[index]
     const trace = latestTraceByStep.value.get(key)
     if (trace?.status === 'failed') return { tone: 'failed', label: '失败' }
+    if (
+      (key === 'wait_for_selection' || key === 'wait_for_projections')
+      && (trace?.status === 'running' || key === currentStepKey.value)
+    ) {
+      return {
+        tone: 'pending',
+        label: key === 'wait_for_selection' ? '等待你确认' : '等待各投影',
+      }
+    }
+    if (trace?.status === 'running' && step && previousRemoteStepRunning(step, index)) {
+      return { tone: 'pending', label: '等待生成结果' }
+    }
     if (trace?.status === 'running') return { tone: 'in-progress', label: '进行中' }
     if (
       key === currentStepKey.value
@@ -101,16 +134,10 @@ export function useGenerationPipeline(
     ) {
       return { tone: 'failed', label: '失败' }
     }
-    if (
-      key === currentStepKey.value
-      && (key === 'wait_for_selection' || key === 'wait_for_projections')
-    ) {
-      return { tone: 'in-progress', label: '进行中' }
-    }
     if (trace?.status === 'success') {
       const skipped = Boolean(traceMetadata(trace).skip_reason)
       return skipped
-        ? { tone: 'skipped', label: '已跳过' }
+        ? { tone: 'skipped', label: skipLabel(key) }
         : { tone: 'done', label: '已完成' }
     }
     if (key === currentStepKey.value) {
@@ -124,8 +151,14 @@ export function useGenerationPipeline(
         return { tone: 'waiting', label: '状态待确认' }
       }
       return step?.optional
-        ? { tone: 'skipped', label: '已跳过' }
+        ? { tone: 'skipped', label: skipLabel(key) }
         : { tone: 'done', label: '已完成' }
+    }
+    if (
+      currentStepKey.value === 'wait_for_projections'
+      && ['summary', 'memory', 'rag', 'foreshadowing'].includes(step?.group || '')
+    ) {
+      return { tone: 'pending', label: '等待执行' }
     }
     return { tone: 'waiting', label: '等待中' }
   }
@@ -141,9 +174,10 @@ export function useGenerationPipeline(
       return `${label}已完成：当前待人工确认，可人工编辑草稿或确认定稿。`
     }
     if (state.tone === 'skipped') {
-      const trace = latestTraceByStep.value.get(key)
-      const reason = trace ? traceMetadata(trace).skip_reason : ''
-      return `${label}已跳过：${reason || '本轮配置未启用该节点。'}`
+      return `${label}已跳过：${state.label}。`
+    }
+    if (state.tone === 'pending') {
+      return `${label}：${state.label}。`
     }
     return STEP_DETAILS[key]?.summary || ''
   }

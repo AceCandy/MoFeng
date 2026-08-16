@@ -599,14 +599,23 @@ export function useDeleteChapterMutation(projectId: ProjectIdSource) {
 }
 
 export function useResetChapterMutation(projectId: ProjectIdSource) {
-  const { setProjectCache, refreshProjectQueries } = useNovelMutationRefresh(projectId)
+  const { queryClient, setProjectCache, refreshProjects } = useNovelMutationRefresh(projectId)
 
   return useMutation<NovelProject, Error, number>({
     mutationFn: (chapterNumber) =>
       NovelAPI.resetChapter(requireProjectId(projectId), chapterNumber),
-    onSuccess: async (project) => {
+    onSuccess: async (project, chapterNumber) => {
       setProjectCache(project)
-      await refreshProjectQueries(project.id)
+      const chapterKey = novelQueryKeys.chapter(project.id, chapterNumber)
+      const chapter = (project.chapters ?? []).find(
+        (item) => item.chapter_number === chapterNumber,
+      )
+      if (chapter) {
+        queryClient.setQueryData(chapterKey, chapter)
+      } else {
+        queryClient.removeQueries({ queryKey: chapterKey, exact: true })
+      }
+      await refreshProjects()
     },
   })
 }

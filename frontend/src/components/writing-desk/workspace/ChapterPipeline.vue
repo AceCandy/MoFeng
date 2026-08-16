@@ -48,7 +48,7 @@
               'chapter-console__pipeline-item',
               `is-${stepState(item.key, item.index).tone}`,
               `is-${item.kind || 'execution'}`,
-              { 'is-current': stepState(item.key, item.index).tone === 'in-progress' },
+              { 'is-current': ['in-progress', 'pending'].includes(stepState(item.key, item.index).tone) },
               { 'is-leading-to-current': isLeadingToCurrent(item.index) },
               { 'is-selected': activeStepKey === item.key },
               { 'is-clickable': stepState(item.key, item.index).tone !== 'waiting' },
@@ -134,7 +134,13 @@
                       v-else-if="stepState(item.key, item.index).tone === 'skipped'"
                       class="chapter-console__pipeline-badge chapter-console__pipeline-badge--skipped"
                     >
-                      已跳过
+                      {{ stepState(item.key, item.index).label }}
+                    </span>
+                    <span
+                      v-else-if="stepState(item.key, item.index).tone === 'pending'"
+                      class="chapter-console__pipeline-badge chapter-console__pipeline-badge--pending"
+                    >
+                      {{ stepState(item.key, item.index).label }}
                     </span>
                   </div>
                 </div>
@@ -470,6 +476,17 @@ const emit = defineEmits<{
   border: 1px dashed var(--md-outline);
   background: transparent;
   color: var(--md-on-surface-variant);
+}
+
+.chapter-console__pipeline-badge--pending {
+  border: 1px solid var(--md-outline);
+  background: var(--md-surface-container-low);
+  color: var(--md-on-surface-variant);
+}
+
+.chapter-console__pipeline-item.is-pending .chapter-console__dot {
+  border: 2px solid var(--md-outline);
+  background: var(--md-surface);
 }
 
 .chapter-console__pipeline-badge--manual-confirm {
