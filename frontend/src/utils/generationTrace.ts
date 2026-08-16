@@ -35,7 +35,8 @@ export type ActiveStepDetails = {
   outputs: string
 }
 
-export type PipelineStepKind = 'execution' | 'control' | 'terminal'
+export type PipelineStepKind = 'execution' | 'system' | 'control' | 'terminal'
+export type PipelineRetryCommand = 'retry' | 'retry_external' | 'retry_projection'
 
 export type PipelineStep = {
   key: string
@@ -45,6 +46,7 @@ export type PipelineStep = {
   groupLabel?: string
   groupMode?: 'serial' | 'parallel'
   optional?: boolean
+  retryCommand?: PipelineRetryCommand
 }
 
 export const PIPELINE_LABELS: Record<string, string> = {
@@ -82,9 +84,17 @@ export const PIPELINE_LABELS: Record<string, string> = {
   wait_for_selection: '等待选择版本',
   finalize_revision: '定稿章节版本',
   generate_summary: '生成章节梳理',
-  project_memory: '更新记忆快照',
-  project_rag: '写入章节索引',
-  project_foreshadowing: '同步伏笔',
+  commit_summary_projection: '保存章节梳理',
+  memory_global_summary: '更新全局剧情记忆',
+  memory_character_state: '更新角色状态记忆',
+  memory_plot_arcs: '更新剧情线记忆',
+  memory_chapter_summary: '更新章节记忆摘要',
+  commit_memory_projection: '写入章节记忆',
+  project_rag: '生成章节索引向量',
+  commit_rag_projection: '写入章节索引',
+  foreshadowing_candidate_review: '筛选新增伏笔',
+  foreshadowing_status_judge: '判断伏笔状态',
+  commit_foreshadowing_projection: '写入伏笔同步结果',
   wait_for_projections: '等待投影完成',
   reconcile_projections: '汇合投影结果',
   successful: '章节工作流完成',
@@ -307,21 +317,69 @@ export const STEP_DETAILS: Record<string, StepDetail> = {
     outputs: '章节真实梳理',
     next: '并行派发下游投影',
   },
-  project_memory: {
-    summary: '更新项目记忆和章节快照。',
+  commit_summary_projection: {
+    summary: '保存章节梳理并派发后续投影。',
+    inputs: '章节梳理结果',
+    outputs: '已保存的章节梳理',
+    next: '并行派发下游投影',
+  },
+  memory_global_summary: {
+    summary: '调用模型更新全局剧情记忆。',
+    inputs: '正式正文 + 原全局记忆',
+    outputs: '新的全局剧情记忆',
+    next: '继续更新记忆',
+  },
+  memory_character_state: {
+    summary: '调用模型更新角色状态记忆。',
+    inputs: '正式正文 + 原角色状态',
+    outputs: '新的角色状态记忆',
+    next: '继续更新记忆',
+  },
+  memory_plot_arcs: {
+    summary: '调用模型更新剧情线记忆。',
+    inputs: '正式正文 + 原剧情线',
+    outputs: '新的剧情线记忆',
+    next: '继续更新记忆',
+  },
+  memory_chapter_summary: {
+    summary: '调用模型生成供记忆快照使用的章节摘要。',
     inputs: '正式正文 + 章节梳理',
+    outputs: '章节记忆摘要',
+    next: '写入章节记忆',
+  },
+  commit_memory_projection: {
+    summary: '将已经生成的记忆结果写入本地存储。',
+    inputs: '各项记忆调用结果',
     outputs: '记忆投影',
     next: '等待投影汇合',
   },
   project_rag: {
-    summary: '写入后续章节检索所需的章节索引。',
+    summary: '调用向量模型生成章节索引向量。',
     inputs: '正式正文 + 章节梳理',
+    outputs: '章节分块与摘要向量',
+    next: '写入章节索引',
+  },
+  commit_rag_projection: {
+    summary: '将已经生成的向量写入章节索引。',
+    inputs: '章节分块与摘要向量',
     outputs: '检索索引或跳过原因',
     next: '等待投影汇合',
   },
-  project_foreshadowing: {
-    summary: '同步新伏笔及历史伏笔状态。',
+  foreshadowing_candidate_review: {
+    summary: '有新增伏笔候选时，调用模型筛选有效候选。',
+    inputs: '规则候选 + 正文片段',
+    outputs: '新增伏笔候选',
+    next: '判断伏笔状态',
+  },
+  foreshadowing_status_judge: {
+    summary: '有活跃历史伏笔时，调用模型判断其最新状态。',
     inputs: '正式正文 + 活跃伏笔',
+    outputs: '伏笔状态判断',
+    next: '写入伏笔同步结果',
+  },
+  commit_foreshadowing_projection: {
+    summary: '将规则计算与模型判断结果写入伏笔记录。',
+    inputs: '伏笔计算结果',
     outputs: '伏笔投影',
     next: '等待投影汇合',
   },

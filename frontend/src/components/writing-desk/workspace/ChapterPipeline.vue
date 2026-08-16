@@ -68,7 +68,7 @@
                   data-action="retry-external-node"
                   :aria-label="`使用上一节点结果重试${item.label}`"
                   :disabled="pending"
-                  @click.stop="emit('retryExternal')"
+                  @click.stop="emit('retryActiveStep')"
                 >
                   <svg
                     class="chapter-console__pipeline-node-retry-icon"
@@ -107,10 +107,10 @@
                   <div class="chapter-console__pipeline-header">
                     <span class="chapter-console__pipeline-title">{{ item.label }}</span>
                     <span
-                      v-if="item.kind === 'control' || item.kind === 'terminal'"
+                      v-if="item.kind === 'system' || item.kind === 'control' || item.kind === 'terminal'"
                       class="chapter-console__pipeline-badge chapter-console__pipeline-badge--kind"
                     >
-                      {{ item.kind === 'terminal' ? '终态' : '控制' }}
+                      {{ item.kind === 'terminal' ? '终态' : item.kind === 'system' ? '系统' : '控制' }}
                     </span>
                     <span
                       v-if="shouldShowManualConfirmBadge(item.key)"
@@ -201,7 +201,7 @@ const isLeadingToCurrent = (index: number) => {
 const emit = defineEmits<{
   select: [key: string, index: number]
   cancel: []
-  retryExternal: []
+  retryActiveStep: []
 }>()
 </script>
 

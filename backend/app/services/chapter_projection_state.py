@@ -39,7 +39,7 @@ def retryable_projection_names(
     """只返回当前修订中最新且确定失败的 canonical projection。"""
 
     required = set(required_projections)
-    retryable_names = required | {"summary", "reconcile"}
+    retryable_names = required | {"summary"}
     latest = latest_projection_runs(runs)
     return tuple(
         sorted(

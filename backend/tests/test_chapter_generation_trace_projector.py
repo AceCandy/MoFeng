@@ -13,6 +13,7 @@ from app.models import (
     JobEvent,
     NovelProject,
 )
+from app.models.job import JobActivity
 from app.models.user import User
 from app.repositories.chapter_generation_trace_projection_repository import (
     CHAPTER_GENERATION_TRACE_PROJECTOR_NAME,
@@ -252,6 +253,75 @@ async def test_projector_is_atomic_idempotent_private_and_rebuildable(isolated_p
     assert legacy.source_event_cursor is None
     assert persisted_run is not None and persisted_run.status == "queued"
     assert chapter is not None and chapter.status == chapter_status_before
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_projection_activity_projects_embedding_as_remote_retry_leaf(
+    isolated_pg,
+):
+    session_factory = isolated_pg.session_factory
+    async with session_factory() as session:
+        started = await _start_workflow(
+            session,
+            user_id=4703,
+            project_id="workflow-projection-activity-trace",
+        )
+        child_job = await JobService(session).enqueue_job(
+            user_id=4703,
+            project_id=started.run.project_id,
+            job_type="chapter_projection_rag",
+            title="索引投影",
+            payload={
+                "chapter_id": started.run.chapter_id,
+                "chapter_number": 1,
+                "workflow_stream_id": started.run.id,
+            },
+            payload_version=1,
+            stream_type="workflow",
+            stream_id=started.run.id,
+        )
+        activity = JobActivity(
+            id="47030000-0000-0000-0000-000000000001",
+            job_id=child_job.id,
+            activity_key="rag_embedding",
+            side_effect_class="ambiguous_external",
+            status="retryable_failed",
+            provider_request_key="47030000-0000-0000-0000-000000000002",
+            attempt=1,
+            fencing_token=1,
+            request_payload={"stage": "rag_embedding"},
+            started_at=datetime.now(timezone.utc) - timedelta(seconds=1),
+            updated_at=datetime.now(timezone.utc),
+        )
+        session.add(activity)
+        event = await session.scalar(
+            select(JobEvent)
+            .where(JobEvent.job_id == child_job.id)
+            .order_by(JobEvent.cursor.desc())
+            .limit(1)
+        )
+        assert event is not None
+        JobService(session)._add_projection_activity_trace(
+            event=event,
+            job=child_job,
+            activity=activity,
+            result_payload=None,
+            error="provider_timeout",
+            now=datetime.now(timezone.utc),
+        )
+        await session.commit()
+
+        trace = await session.scalar(
+            select(ChapterGenerationTrace).where(
+                ChapterGenerationTrace.source_run_id == started.run.id,
+                ChapterGenerationTrace.node_key == "project_rag",
+            )
+        )
+
+    assert trace is not None
+    assert trace.status == "failed"
+    assert trace.metadata["remote_call"] is True
+    assert trace.metadata["call_type"] == "embedding"
 
 
 @pytest.mark.asyncio(loop_scope="session")

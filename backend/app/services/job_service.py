@@ -49,6 +49,49 @@ from .event_bus import publish_background_task
 from .job_public_projection import public_job_snapshot, sanitize_public_text
 from .job_registry import SideEffectClass
 
+_PROJECTION_ACTIVITY_NODES = {
+    ("chapter_finalize", 2, "summary_generation"): (
+        "generate_summary",
+        "生成章节梳理",
+        "chat_llm",
+    ),
+    ("chapter_projection_memory", 1, "memory_global_summary"): (
+        "memory_global_summary",
+        "更新全局剧情记忆",
+        "chat_llm",
+    ),
+    ("chapter_projection_memory", 1, "memory_character_state"): (
+        "memory_character_state",
+        "更新角色状态记忆",
+        "chat_llm",
+    ),
+    ("chapter_projection_memory", 1, "memory_plot_arcs"): (
+        "memory_plot_arcs",
+        "更新剧情线记忆",
+        "chat_llm",
+    ),
+    ("chapter_projection_memory", 1, "memory_chapter_summary"): (
+        "memory_chapter_summary",
+        "更新章节记忆摘要",
+        "chat_llm",
+    ),
+    ("chapter_projection_rag", 1, "rag_embedding"): (
+        "project_rag",
+        "生成章节索引向量",
+        "embedding",
+    ),
+    ("chapter_projection_foreshadowing", 1, "foreshadowing_candidate_review"): (
+        "foreshadowing_candidate_review",
+        "筛选新增伏笔",
+        "chat_llm",
+    ),
+    ("chapter_projection_foreshadowing", 1, "foreshadowing_status_judge"): (
+        "foreshadowing_status_judge",
+        "判断伏笔状态",
+        "chat_llm",
+    ),
+}
+
 
 class LeaseLostError(RuntimeError):
     """worker 的 lease 或 fencing token 已失效。"""
@@ -636,7 +679,10 @@ class JobService:
         if workflow_context is None or workflow_context.run.id != run_id:
             await self.session.rollback()
             raise ValueError("workflow run 与 root JobRun 身份不一致")
-        ambiguous_activities = await self.repo.list_ambiguous_activities(job_id=job.id)
+        ambiguous_activities = await self.repo.list_stream_ambiguous_activities(
+            stream_type="workflow",
+            stream_id=run_id,
+        )
         projection_retry_available = await self._has_retryable_workflow_projection(workflow_context)
         stream_snapshot = await self.repo.get_user_stream_snapshot(
             user_id=user_id,
@@ -1874,7 +1920,10 @@ class JobService:
         self.session.add(command)
         await self.session.flush()
 
-        ambiguous_activities = await self.repo.list_ambiguous_activities(job_id=job.id)
+        ambiguous_activities = await self.repo.list_stream_ambiguous_activities(
+            stream_type="workflow",
+            stream_id=run_id,
+        )
         projection_retry_available = await self._has_retryable_workflow_projection(workflow_context)
         applied_retry = None
         if command.type == "retry":
@@ -2261,20 +2310,18 @@ class JobService:
         payload = command.payload if isinstance(command.payload, dict) else {}
         if command.type in {"retry_external", "cancel"} and payload:
             activity_key = payload.get("activity_key")
-            matching = next(
-                (
-                    activity
-                    for activity in ambiguous_activities
-                    if activity.activity_key == activity_key
-                ),
-                None,
-            )
+            matches = [
+                activity
+                for activity in ambiguous_activities
+                if activity.activity_key == activity_key
+            ]
+            matching = matches[0] if len(matches) == 1 else None
             if matching is None:
                 return "ambiguous_activity_required"
             if (
                 command.type == "retry_external"
-                and not JobService._is_canonical_workflow_provider_request(
-                    matching.request_payload,
+                and not JobService._is_retryable_workflow_activity(
+                    matching,
                     workflow_context=workflow_context,
                 )
             ):
@@ -2294,11 +2341,13 @@ class JobService:
         if job.status == "waiting" and run.status == "waiting_for_selection":
             allowed.append("select")
         if (
-            job.status == "needs_attention"
-            and run.status == "needs_attention"
+            (
+                (job.status == "needs_attention" and run.status == "needs_attention")
+                or (job.status == "waiting" and run.status == "projection_pending")
+            )
             and any(
-                JobService._is_canonical_workflow_provider_request(
-                    activity.request_payload,
+                JobService._is_retryable_workflow_activity(
+                    activity,
                     workflow_context=workflow_context,
                 )
                 for activity in ambiguous_activities
@@ -2335,8 +2384,8 @@ class JobService:
             (
                 activity.activity_key
                 for activity in ambiguous_activities
-                if JobService._is_canonical_workflow_provider_request(
-                    activity.request_payload,
+                if JobService._is_retryable_workflow_activity(
+                    activity,
                     workflow_context=workflow_context,
                 )
             ),
@@ -2733,6 +2782,32 @@ class JobService:
             and re.fullmatch(r"[0-9a-f]{64}", input_hash) is not None
         )
 
+    @staticmethod
+    def _is_retryable_workflow_activity(
+        activity: JobActivity,
+        *,
+        workflow_context: LockedChapterWorkflowTransition,
+    ) -> bool:
+        if JobService._is_canonical_workflow_provider_request(
+            activity.request_payload,
+            workflow_context=workflow_context,
+        ):
+            return activity.job_id == workflow_context.run.root_job_id
+        return (
+            workflow_context.run.status == "projection_pending"
+            and activity.activity_key
+            in {
+                "summary_generation",
+                "memory_global_summary",
+                "memory_character_state",
+                "memory_plot_arcs",
+                "memory_chapter_summary",
+                "rag_embedding",
+                "foreshadowing_candidate_review",
+                "foreshadowing_status_judge",
+            }
+        )
+
     async def _apply_retry_external_command(
         self,
         *,
@@ -2742,7 +2817,35 @@ class JobService:
         workflow_context: LockedChapterWorkflowTransition,
         applied_at: datetime,
     ) -> None:
-        """以 command id 创建唯一人工重试 intent，并恢复 root job。"""
+        """以 command id 创建唯一人工重试 intent，并恢复对应远程调用 Job。"""
+
+        target_job = await self.repo.get_for_update(original.job_id)
+        if (
+            target_job is None
+            or target_job.status != "needs_attention"
+            or target_job.stream_type != "workflow"
+            or target_job.stream_id != workflow_context.run.id
+            or target_job.user_id != workflow_context.run.user_id
+        ):
+            raise ValueError("ambiguous activity 绑定的 JobRun 身份无效")
+        if target_job.id != job.id:
+            expected_job_type = {
+                "summary_generation": "chapter_finalize",
+                "memory_global_summary": "chapter_projection_memory",
+                "memory_character_state": "chapter_projection_memory",
+                "memory_plot_arcs": "chapter_projection_memory",
+                "memory_chapter_summary": "chapter_projection_memory",
+                "rag_embedding": "chapter_projection_rag",
+                "foreshadowing_candidate_review": "chapter_projection_foreshadowing",
+                "foreshadowing_status_judge": "chapter_projection_foreshadowing",
+            }.get(original.activity_key)
+            target_payload = target_job.payload if isinstance(target_job.payload, dict) else {}
+            if (
+                target_job.task_type != expected_job_type
+                or target_payload.get("chapter_id") != workflow_context.chapter.id
+                or target_payload.get("revision") != workflow_context.chapter.current_revision
+            ):
+                raise ValueError("ambiguous projection activity 身份无效")
 
         manual_activity_key = f"manual_retry:{command.id}"
         provider_request_key = str(
@@ -2763,20 +2866,20 @@ class JobService:
             },
         }
         activity = await self.repo.get_activity_for_update(
-            job_id=job.id,
+            job_id=target_job.id,
             activity_key=manual_activity_key,
         )
         if activity is None:
             activity = await self.repo.add_activity(
                 JobActivity(
                     id=str(uuid5(NAMESPACE_URL, f"mofeng:job-activity:{command.id}")),
-                    job_id=job.id,
+                    job_id=target_job.id,
                     activity_key=manual_activity_key,
                     side_effect_class=SideEffectClass.AMBIGUOUS_EXTERNAL.value,
                     status="manual_retry_pending",
                     provider_request_key=provider_request_key,
-                    attempt=job.attempt,
-                    fencing_token=job.fencing_token,
+                    attempt=target_job.attempt,
+                    fencing_token=target_job.fencing_token,
                     request_payload=manual_request,
                     result_payload=None,
                     started_at=applied_at,
@@ -2792,23 +2895,31 @@ class JobService:
             await self.session.rollback()
             raise ValueError("command 派生的 manual retry intent 身份冲突")
 
-        job.status = "queued"
-        job.available_at = applied_at
-        job.completed_at = None
-        job.error = None
-        job.error_category = None
-        job.lease_owner = None
-        job.lease_expires_at = None
-        job.heartbeat_at = None
-        job.log_entries = [
-            *(job.log_entries or []),
+        target_job.status = "queued"
+        target_job.available_at = applied_at
+        target_job.completed_at = None
+        target_job.error = None
+        target_job.error_category = None
+        target_job.lease_owner = None
+        target_job.lease_expires_at = None
+        target_job.heartbeat_at = None
+        target_job.log_entries = [
+            *(target_job.log_entries or []),
             _log_entry("已确认外部调用可能重复，任务重新排队", level="warning", now=applied_at),
         ]
+        projection_run = await self.session.scalar(
+            select(ChapterProjectionRun)
+            .where(ChapterProjectionRun.job_id == target_job.id)
+            .with_for_update()
+        )
+        if projection_run is not None:
+            projection_run.status = "queued"
+            projection_run.error_category = None
         await self._append_event(
-            job,
-            "workflow.phase_changed",
+            target_job,
+            "workflow.phase_changed" if target_job.id == job.id else "job.queued",
             now=applied_at,
-            workflow_context=workflow_context,
+            workflow_context=workflow_context if target_job.id == job.id else None,
         )
         command.status = "applied"
         command.rejection_code = None
@@ -2819,6 +2930,7 @@ class JobService:
             "activity_key": activity.activity_key,
             "provider_request_key": activity.provider_request_key,
             "replaces_activity_id": original.id,
+            "target_job_id": target_job.id,
         }
         command.applied_at = applied_at
 
@@ -2872,10 +2984,15 @@ class JobService:
         if command.type == "retry_external":
             activity_key = result.get("activity_key")
             provider_request_key = result.get("provider_request_key")
-            if not isinstance(activity_key, str) or not isinstance(provider_request_key, str):
+            target_job_id = result.get("target_job_id", job.id)
+            if (
+                not isinstance(activity_key, str)
+                or not isinstance(provider_request_key, str)
+                or not isinstance(target_job_id, str)
+            ):
                 raise ValueError("已应用 retry_external command 缺少稳定 intent identity")
             activity = await self.repo.get_activity_for_update(
-                job_id=job.id,
+                job_id=target_job_id,
                 activity_key=activity_key,
             )
             if (
@@ -2894,7 +3011,7 @@ class JobService:
         self,
         *,
         job: BackgroundTask,
-        workflow_context: LockedChapterWorkflowTransition,
+        workflow_context: Optional[LockedChapterWorkflowTransition],
         original: JobActivity,
         canonical_request: dict[str, Any],
     ) -> Optional[JobActivity]:
@@ -2926,7 +3043,8 @@ class JobService:
             command is None
             or command.type != "retry_external"
             or command.status != "applied"
-            or command.run_id != workflow_context.run.id
+            or command.run_id
+            != (workflow_context.run.id if workflow_context is not None else job.stream_id)
             or manual.activity_key != f"manual_retry:{command.id}"
             or command_result.get("activity_id") != manual.id
             or command_result.get("activity_key") != manual.activity_key
@@ -2999,8 +3117,7 @@ class JobService:
         )
         is_manual_retry = False
         if (
-            workflow_context is not None
-            and activity is not None
+            activity is not None
             and activity.status == "ambiguous"
             and side_effect_class == SideEffectClass.AMBIGUOUS_EXTERNAL
         ):
@@ -3334,6 +3451,14 @@ class JobService:
         activity.attempt = lease.attempt
         activity.fencing_token = lease.fencing_token
         activity.updated_at = recorded_at
+        await self._append_activity_event(
+            job,
+            "activity.ambiguous",
+            activity=activity,
+            now=recorded_at,
+            workflow_context=workflow_context,
+            error=safe_message,
+        )
         job.status = "needs_attention"
         job.error_category = "ambiguous_external_result"
         job.error = safe_message
@@ -3978,7 +4103,105 @@ class JobService:
                 error=error,
                 now=now,
             )
+        elif workflow_context is None:
+            self._add_projection_activity_trace(
+                event=event,
+                job=job,
+                activity=activity,
+                result_payload=result_payload,
+                error=error,
+                now=now,
+            )
         return event
+
+    def _add_projection_activity_trace(
+        self,
+        *,
+        event: JobEvent,
+        job: BackgroundTask,
+        activity: JobActivity,
+        result_payload: Optional[dict[str, Any]],
+        error: Optional[str],
+        now: datetime,
+    ) -> None:
+        """把投影 Job 内的真实远程 activity 投影为用户可重试叶子节点。"""
+
+        node = _PROJECTION_ACTIVITY_NODES.get(
+            (job.task_type, job.payload_version, activity.activity_key)
+        )
+        payload = job.payload if isinstance(job.payload, dict) else {}
+        chapter_id = payload.get("chapter_id")
+        chapter_number = payload.get("chapter_number")
+        if (
+            node is None
+            or not isinstance(chapter_id, int)
+            or isinstance(chapter_id, bool)
+            or not isinstance(chapter_number, int)
+            or isinstance(chapter_number, bool)
+            or job.project_id is None
+            or job.stream_type != "workflow"
+            or not job.stream_id
+        ):
+            return
+
+        node_key, node_label, call_type = node
+        status = (
+            "success"
+            if event.event_type == "activity.succeeded"
+            else "failed"
+            if error is not None
+            else "running"
+        )
+        duration_ms = None
+        if status != "running" and activity.started_at is not None:
+            duration_ms = max(0, round((now - activity.started_at).total_seconds() * 1000))
+        action = {"running": "开始调用", "success": "调用完成", "failed": "调用失败"}[
+            status
+        ]
+        metadata: dict[str, Any] = {
+            "source": "job_activity",
+            "event_cursor": event.cursor,
+            "event_type": event.event_type,
+            "run_id": job.stream_id,
+            "activity_key": activity.activity_key,
+            "actions": [f"{action}{node_label}"],
+            "summary": f"{node_label}{'已完成' if status == 'success' else '执行失败' if status == 'failed' else '进行中'}",
+            "uses_llm": call_type == "chat_llm",
+            "remote_call": True,
+            "call_type": call_type,
+            "node_kind": "execution",
+            "model_calls": [
+                {
+                    "call_type": call_type,
+                    "stage": str((activity.request_payload or {}).get("stage") or node_key)[:64],
+                    "status": status,
+                }
+            ],
+        }
+        if duration_ms is not None:
+            metadata["duration_ms"] = duration_ms
+        self.session.add(
+            ChapterGenerationTrace(
+                chapter_id=chapter_id,
+                project_id=job.project_id,
+                chapter_number=chapter_number,
+                node_key=node_key,
+                node_label=node_label,
+                stage=str((activity.request_payload or {}).get("stage") or node_key)[:64],
+                status=status,
+                system_prompt=None,
+                user_prompt=None,
+                raw_response=None,
+                cleaned_output=None,
+                error=sanitize_public_text(error) if error is not None else None,
+                metadata=metadata,
+                source_run_id=job.stream_id,
+                source_event_cursor=event.cursor,
+                started_at=activity.started_at,
+                ended_at=now if status != "running" else None,
+                created_at=now,
+            )
+        )
 
     def _add_activity_trace(
         self,
@@ -4073,6 +4296,7 @@ class JobService:
             "actions": [f"{action}{node_label}"],
             "summary": f"{node_label}{summary_status}",
             "uses_llm": uses_llm,
+            "remote_call": node_key == "retrieve_context" or uses_llm,
             "call_type": call_type,
             "node_kind": node_kind,
         }

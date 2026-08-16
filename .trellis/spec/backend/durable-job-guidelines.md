@@ -461,11 +461,15 @@ validate_chapter_workflow_job_payload(
 ) -> ChapterWorkflowJobPayload
 ```
 
-V1 execution nodes are `freeze_base_context`, `retrieve_context`, `plan_chapter`,
-`generate_candidate_1`, conditional `generate_candidate_2`, `review_candidates`,
-`refine_candidate`, optional `enhance_content`, `repair_consistency`, `optimize_style`,
-and `enrich_content`, conditional `compress_candidate`, then transactional
-`persist_drafts` and `finalize_revision`.
+V1 remote execution nodes are `retrieve_context`, `plan_chapter`,
+`generate_candidate_1`, conditional `generate_candidate_2`, conditionally remote
+`review_candidates`, `refine_candidate`, optional `enhance_content`,
+`repair_consistency`, `optimize_style`, and `enrich_content`, plus conditional
+`compress_candidate`. Projection remote leaves are `summary_generation`, the four
+`memory_*` activities, `rag_embedding`, `foreshadowing_candidate_review`, and
+`foreshadowing_status_judge`.
+Local/system nodes are `freeze_base_context`, `persist_drafts`, `finalize_revision`,
+and each projection commit. They may be displayed but do not expose node retry.
 Control nodes are `wait_for_selection`, `wait_for_projections`, and
 `reconcile_projections`; `successful` is terminal.
 
@@ -476,8 +480,18 @@ Control nodes are `wait_for_selection`, `wait_for_projections`, and
   closed; no parser or registry guesses another version.
 - Root payload, graph, and state use the single `Literal[1]` contract. Schema, payload,
   bindings, compiler, and handler symbols have no version suffix or union fallback.
-- Every V1 execution node owns one durable activity/result boundary and stable node key.
-  Review does not execute refinement or optional rewrites in the same activity.
+- Every V1 remote execution node owns one durable activity/result boundary and stable
+  node key. Review does not execute refinement or optional rewrites in the same
+  activity. A local shortcut or database outcome remains a system trace, not a
+  retryable remote leaf.
+- Node-level retry is available only for a real LLM, Embedding, retrieval, or other
+  remote activity. `retry_external` replaces one ambiguous activity after explicit
+  acknowledgement; determinate retry requeues the same root/projection Job and reuses
+  all successful upstream activities. It never creates a replacement ProjectionRun or
+  repeats a successful provider call.
+- Local persistence, dispatch, waiting, reconciliation, and terminal steps may expose
+  status and bounded errors, but must not expose a node retry command. Their recovery is
+  driven by the owning durable Job after its failed remote leaf is retried.
 - `plan_chapter` fans out to both candidate nodes. The graph uses a barrier edge from
   both branches to `review_candidates`; candidate branches do not write `node_key`, and
   `activity_refs`, `result_refs`, and `skipped_stages` use merge reducers so concurrent
@@ -512,6 +526,8 @@ Control nodes are `wait_for_selection`, `wait_for_projections`, and
 | Compression output remains outside the frozen minimum/maximum range | Fail the activity; do not persist drafts |
 | Selection references a candidate absent from the checkpoint | Reject command resume |
 | Required projection is failed, stale, or identity-drifted | Remain projection-pending or needs-attention; do not enter `successful` |
+| A client requests node retry for a local/system/control/terminal trace | Reject or omit the command; do not manufacture a remote activity |
+| Projection retry would create a new Job/ProjectionRun or repeat a succeeded activity | Reject; requeue the existing identity and reuse its ledger result |
 
 #### 5. Good / Base / Bad Cases
 
@@ -538,6 +554,9 @@ Control nodes are `wait_for_selection`, `wait_for_projections`, and
 - API/frontend tests assert the generated node union contains only formal V1 keys,
   projection trace mappings are one-to-one, optional skips are visible, and unknown
   versions are rejected.
+- Projection retry tests assert the same Job and ProjectionRun ids are requeued,
+  succeeded activities remain unchanged, ambiguous leaf retry validates stream/user/
+  task/chapter/revision identity, and local/system nodes render without retry actions.
 
 #### 7. Wrong vs Correct
 

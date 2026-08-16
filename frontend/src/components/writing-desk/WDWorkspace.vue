@@ -103,7 +103,9 @@
               :pending="workflowPending"
               :retry-activity-key="workflowRetryActivityKey"
               @cancel="onWorkflowCancel"
+              @retry="emit('workflowRetry')"
               @retry-external="emit('workflowRetryExternal', $event)"
+              @retry-projection="emit('workflowRetryProjection')"
             />
 
             <ChapterContent

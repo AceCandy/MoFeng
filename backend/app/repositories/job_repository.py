@@ -448,6 +448,28 @@ class JobRepository(BaseRepository[BackgroundTask]):
         )
         return list(result.scalars())
 
+    async def list_stream_ambiguous_activities(
+        self,
+        *,
+        stream_type: str,
+        stream_id: str,
+    ) -> list[JobActivity]:
+        """返回同一 durable stream 中仍待人工确认的远程活动。"""
+
+        result = await self.session.execute(
+            select(JobActivity)
+            .join(BackgroundTask, BackgroundTask.id == JobActivity.job_id)
+            .where(
+                BackgroundTask.stream_type == stream_type,
+                BackgroundTask.stream_id == stream_id,
+                BackgroundTask.status == "needs_attention",
+                JobActivity.side_effect_class == "ambiguous_external",
+                JobActivity.status == "ambiguous",
+            )
+            .order_by(JobActivity.updated_at.desc(), JobActivity.id.desc())
+        )
+        return list(result.scalars())
+
     async def add_activity(self, activity: JobActivity) -> JobActivity:
         self.session.add(activity)
         await self.session.flush()

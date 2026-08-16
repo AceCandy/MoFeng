@@ -126,5 +126,5 @@ export function useChapterGenerationTrace(props: GenerationTraceProps, deps: Tra
     }
   })
 
-  return { activeStepDetails }
+  return { activeStepDetails, activeTrace }
 }

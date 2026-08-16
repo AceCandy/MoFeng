@@ -25,16 +25,13 @@ from ..schemas.job import (
 )
 from ..schemas.novel import ChapterGenerationStatus
 from .chapter_projection_contract import FINALIZE_EVENT_TYPE
-from .chapter_projection_ops import (
-    ChapterProjectionOpsService,
-    ChapterProjectionReplayRequest,
-)
+from .chapter_projection_state import latest_projection_runs, retryable_projection_names
 from .job_registry import SideEffectClass
 from .job_worker import JobExecutionContext
 
 
 class ChapterWorkflowProjectionRetryResult(BaseModel):
-    """Projection retry activity 只保存 command 与新 durable identity。"""
+    """Projection retry activity 保存 command 与复用的 durable identity。"""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -263,6 +260,21 @@ class ChapterWorkflowProjectionService:
             .scalars()
             .first()
         )
+        revision = (
+            (
+                await session.execute(
+                    select(ChapterRevision)
+                    .where(
+                        ChapterRevision.chapter_id == payload.chapter_id,
+                        ChapterRevision.revision == target_revision,
+                    )
+                    .with_for_update()
+                    .execution_options(populate_existing=True)
+                )
+            )
+            .scalars()
+            .first()
+        )
         outbox = (
             (
                 await session.execute(
@@ -283,6 +295,7 @@ class ChapterWorkflowProjectionService:
             run is None
             or command is None
             or chapter is None
+            or revision is None
             or outbox is None
             or run.id != payload.run_id
             or run.root_job_id != self.execution.lease.job_id
@@ -299,31 +312,63 @@ class ChapterWorkflowProjectionService:
         ):
             raise ValueError("workflow projection retry identity 已漂移")
 
-        responses = await ChapterProjectionOpsService(
-            session
-        ).enqueue_failed_replays_in_transaction(
-            request=ChapterProjectionReplayRequest(
-                project_id=payload.project_id,
-                chapter_id=payload.chapter_id,
-                revision=target_revision,
-                projection_name="summary",
-                idempotency_key=f"chapter-workflow:{run.id}:projection-retry:{command_id}",
-                reason="workflow projection retry",
-                outbox_event_id=outbox.id,
-            ),
-            job_idempotency_key_prefix=(f"chapter-workflow:{run.id}:projection-retry:{command_id}"),
-            checkpoint={"workflow_command_id": command_id},
+        projection_runs = list(
+            (
+                await session.execute(
+                    select(ChapterProjectionRun)
+                    .where(ChapterProjectionRun.chapter_revision_id == revision.id)
+                    .with_for_update()
+                    .execution_options(populate_existing=True)
+                )
+            ).scalars()
         )
-        projection_run_ids = {
-            response.projection_name: response.projection_run_id
-            for response in responses
-            if response.projection_run_id is not None
-        }
-        job_ids = {
-            response.projection_name: response.job_id
-            for response in responses
-            if response.job_id is not None
-        }
+        names = retryable_projection_names(
+            projection_runs,
+            required_projections=revision.required_projections or [],
+        )
+        latest = latest_projection_runs(projection_runs)
+        selected = [latest[name] for name in names if name in latest]
+        job_ids_to_lock = [item.job_id for item in selected if item.job_id is not None]
+        jobs = list(
+            (
+                await session.execute(
+                    select(BackgroundTask)
+                    .where(BackgroundTask.id.in_(job_ids_to_lock))
+                    .with_for_update()
+                    .execution_options(populate_existing=True)
+                )
+            ).scalars()
+        )
+        jobs_by_id = {job.id: job for job in jobs}
+        projection_run_ids: dict[str, str] = {}
+        job_ids: dict[str, str] = {}
+        for projection_run in selected:
+            projection_job = jobs_by_id.get(projection_run.job_id or "")
+            if (
+                projection_job is None
+                or projection_job.status not in {"failed", "dead_letter"}
+                or projection_run.status not in {"failed", "dead_letter"}
+                or projection_job.stream_type != "workflow"
+                or projection_job.stream_id != run.id
+            ):
+                raise ValueError("workflow projection retry job identity 已漂移")
+            projection_job.status = "queued"
+            projection_job.available_at = command.created_at
+            projection_job.completed_at = None
+            projection_job.dead_lettered_at = None
+            projection_job.error = None
+            projection_job.error_category = None
+            projection_job.lease_owner = None
+            projection_job.lease_expires_at = None
+            projection_job.heartbeat_at = None
+            projection_run.status = "queued"
+            projection_run.error_category = None
+            projection_run.checkpoint = {
+                **(projection_run.checkpoint or {}),
+                "workflow_command_id": command_id,
+            }
+            projection_run_ids[projection_run.projection_name] = projection_run.id
+            job_ids[projection_run.projection_name] = projection_job.id
         result_payload["projection_run_ids"] = projection_run_ids
         result_payload["job_ids"] = job_ids
         result_payload["result_hash"] = stable_digest(result_payload)

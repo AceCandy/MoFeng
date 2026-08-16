@@ -31,8 +31,6 @@ RETRY_NODE_MAP = {
     "draft_generation": "generate_candidate_1",
     "quality_review": "review_candidates",
     "review_refinement": "refine_candidate",
-    "persist_versions": "persist_drafts",
-    "save_draft": "persist_drafts",
 }
 
 

@@ -10,12 +10,12 @@
       :step-tooltip-text="stepTooltipText"
       :should-show-manual-confirm-badge="shouldShowManualConfirmBadge"
       :active-step-key="activeStepKey"
-      :can-retry-active-step="canRetryExternal"
+      :can-retry-active-step="canRetryActiveStep"
       :can-cancel="canCancel"
       :pending="pending || retryConfirming"
       @select="selectStep"
       @cancel="emit('cancel')"
-      @retry-external="confirmExternalRetry"
+      @retry-active-step="retryActiveStep"
     />
 
     <ChapterDraftPreview
@@ -44,6 +44,7 @@ import { useChapterGenerationTrace } from '@/composables/useChapterGenerationTra
 import { globalAlert } from '@/composables/useAlert'
 import {
   PIPELINE_LABELS,
+  traceMetadata,
   type PipelineStep,
 } from '@/utils/generationTrace'
 
@@ -81,7 +82,9 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   cancel: []
+  retry: []
   retryExternal: [activityKey: string]
+  retryProjection: []
 }>()
 
 const activeStepKey = ref<string | null>(null)
@@ -112,25 +115,33 @@ const pipelineStep = (
 
 const pipelineSteps = computed<PipelineStep[]>(() => {
   return [
-    pipelineStep('freeze_base_context', 'context', '上下文与规划'),
-    pipelineStep('retrieve_context', 'context', '上下文与规划'),
-    pipelineStep('plan_chapter', 'context', '上下文与规划'),
-    pipelineStep('generate_candidate_1', 'candidates', '候选版本', { groupMode: 'parallel' }),
-    pipelineStep('generate_candidate_2', 'candidates', '候选版本', { groupMode: 'parallel', optional: true }),
-    pipelineStep('review_candidates', 'revision', '评审与修订'),
-    pipelineStep('refine_candidate', 'revision', '评审与修订'),
-    pipelineStep('enhance_content', 'revision', '评审与修订', { optional: true }),
-    pipelineStep('repair_consistency', 'revision', '评审与修订', { optional: true }),
-    pipelineStep('optimize_style', 'revision', '评审与修订', { optional: true }),
-    pipelineStep('enrich_content', 'revision', '评审与修订', { optional: true }),
-    pipelineStep('compress_candidate', 'revision', '评审与修订', { optional: true }),
-    pipelineStep('persist_drafts', 'selection', '草稿与选择'),
+    pipelineStep('freeze_base_context', 'context', '上下文与规划', { kind: 'system' }),
+    pipelineStep('retrieve_context', 'context', '上下文与规划', { retryCommand: 'retry' }),
+    pipelineStep('plan_chapter', 'context', '上下文与规划', { retryCommand: 'retry_external' }),
+    pipelineStep('generate_candidate_1', 'candidates', '候选版本', { groupMode: 'parallel', retryCommand: 'retry_external' }),
+    pipelineStep('generate_candidate_2', 'candidates', '候选版本', { groupMode: 'parallel', optional: true, retryCommand: 'retry_external' }),
+    pipelineStep('review_candidates', 'revision', '评审与修订', { retryCommand: 'retry_external' }),
+    pipelineStep('refine_candidate', 'revision', '评审与修订', { retryCommand: 'retry_external' }),
+    pipelineStep('enhance_content', 'revision', '评审与修订', { optional: true, retryCommand: 'retry_external' }),
+    pipelineStep('repair_consistency', 'revision', '评审与修订', { optional: true, retryCommand: 'retry_external' }),
+    pipelineStep('optimize_style', 'revision', '评审与修订', { optional: true, retryCommand: 'retry_external' }),
+    pipelineStep('enrich_content', 'revision', '评审与修订', { optional: true, retryCommand: 'retry_external' }),
+    pipelineStep('compress_candidate', 'revision', '评审与修订', { optional: true, retryCommand: 'retry_external' }),
+    pipelineStep('persist_drafts', 'selection', '草稿与选择', { kind: 'system' }),
     pipelineStep('wait_for_selection', 'selection', '草稿与选择', { kind: 'control' }),
-    pipelineStep('finalize_revision', 'finalize', '正式定稿'),
-    pipelineStep('generate_summary', 'summary', '章节梳理'),
-    pipelineStep('project_memory', 'projections', '并行投影', { groupMode: 'parallel' }),
-    pipelineStep('project_rag', 'projections', '并行投影', { groupMode: 'parallel', optional: true }),
-    pipelineStep('project_foreshadowing', 'projections', '并行投影', { groupMode: 'parallel' }),
+    pipelineStep('finalize_revision', 'finalize', '正式定稿', { kind: 'system' }),
+    pipelineStep('generate_summary', 'summary', '章节梳理', { retryCommand: 'retry_projection' }),
+    pipelineStep('commit_summary_projection', 'summary', '章节梳理', { kind: 'system' }),
+    pipelineStep('memory_global_summary', 'memory', '并行投影 · 记忆', { retryCommand: 'retry_projection' }),
+    pipelineStep('memory_character_state', 'memory', '并行投影 · 记忆', { retryCommand: 'retry_projection' }),
+    pipelineStep('memory_plot_arcs', 'memory', '并行投影 · 记忆', { retryCommand: 'retry_projection' }),
+    pipelineStep('memory_chapter_summary', 'memory', '并行投影 · 记忆', { retryCommand: 'retry_projection' }),
+    pipelineStep('commit_memory_projection', 'memory', '并行投影 · 记忆', { kind: 'system' }),
+    pipelineStep('project_rag', 'rag', '并行投影 · 索引', { optional: true, retryCommand: 'retry_projection' }),
+    pipelineStep('commit_rag_projection', 'rag', '并行投影 · 索引', { kind: 'system', optional: true }),
+    pipelineStep('foreshadowing_candidate_review', 'foreshadowing', '并行投影 · 伏笔', { optional: true, retryCommand: 'retry_projection' }),
+    pipelineStep('foreshadowing_status_judge', 'foreshadowing', '并行投影 · 伏笔', { optional: true, retryCommand: 'retry_projection' }),
+    pipelineStep('commit_foreshadowing_projection', 'foreshadowing', '并行投影 · 伏笔', { kind: 'system' }),
     pipelineStep('wait_for_projections', 'completion', '汇合与完成', { kind: 'control' }),
     pipelineStep('reconcile_projections', 'completion', '汇合与完成', { kind: 'control' }),
     pipelineStep('successful', 'completion', '汇合与完成', { kind: 'terminal' }),
@@ -167,7 +178,7 @@ watch(
   { immediate: true }
 )
 
-const { activeStepDetails } = useChapterGenerationTrace(props, {
+const { activeStepDetails, activeTrace } = useChapterGenerationTrace(props, {
   pipelineSteps,
   activeStepKey,
   currentStepKey,
@@ -177,23 +188,56 @@ const { activeStepDetails } = useChapterGenerationTrace(props, {
   failureScenario,
 })
 
-const canRetryExternal = computed(() =>
-  retryStepKey.value === currentStepKey.value
-  && activeStepKey.value === currentStepKey.value
-  && activeStepDetails.value?.status === '失败'
-  && props.allowedCommands.includes('retry_external')
-  && props.retryActivityKey !== null,
+const activeRetryCommand = computed(() =>
+  pipelineSteps.value.find((step) => step.key === activeStepKey.value)?.retryCommand ?? null,
 )
 
-const confirmExternalRetry = async () => {
+const resolvedRetryCommand = computed(() => {
+  if (activeRetryCommand.value !== 'retry_projection') return activeRetryCommand.value
+  const metadata = activeTrace.value ? traceMetadata(activeTrace.value) : {}
   if (
-    !canRetryExternal.value
-    || props.retryActivityKey === null
+    props.allowedCommands.includes('retry_external')
+    && props.retryActivityKey !== null
+    && metadata.activity_key === props.retryActivityKey
+  ) return 'retry_external'
+  return activeRetryCommand.value
+})
+
+const canRetryActiveStep = computed(() => {
+  const command = resolvedRetryCommand.value
+  if (
+    command === null
+    || retryStepKey.value !== activeStepKey.value
+    || activeStepDetails.value?.status !== '失败'
+    || !props.allowedCommands.includes(command)
+  ) return false
+  if (command === 'retry_external') {
+    return props.retryActivityKey !== null
+      && (activeRetryCommand.value === 'retry_projection'
+        || activeStepKey.value === currentStepKey.value)
+  }
+  if (command === 'retry') return activeStepKey.value === currentStepKey.value
+  const metadata = activeTrace.value ? traceMetadata(activeTrace.value) : {}
+  return metadata.remote_call !== false
+})
+
+const retryActiveStep = async () => {
+  if (
+    !canRetryActiveStep.value
     || props.pending
     || retryConfirming.value
   ) return
   retryConfirming.value = true
   try {
+    if (resolvedRetryCommand.value === 'retry') {
+      emit('retry')
+      return
+    }
+    if (resolvedRetryCommand.value === 'retry_projection') {
+      emit('retryProjection')
+      return
+    }
+    if (props.retryActivityKey === null) return
     const confirmed = await globalAlert.showConfirm(
       '上一次外部模型调用可能已经发生。再次提交可能产生重复调用与费用，确认承担该风险后重试吗？',
       '确认外部重试风险',

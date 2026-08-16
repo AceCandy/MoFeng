@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from typing import cast
 from uuid import uuid4
 
@@ -42,6 +43,7 @@ from app.services.chapter_workflow_handler import (
     ChapterWorkflowProviders,
 )
 from app.services.chapter_workflow_projection import ChapterWorkflowProjectionService
+from app.services.job_registry import SideEffectClass
 from app.services.job_service import JobService
 from app.services.job_worker import JobExecutionContext
 
@@ -68,7 +70,7 @@ async def _finalized_projection_scope(isolated_pg, *, user_id: int, project_id: 
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_retry_projection_replays_failed_run_once_and_keeps_root_waiting(
+async def test_retry_projection_requeues_same_run_and_reuses_completed_activity(
     isolated_pg,
 ) -> None:
     started, _execution, request, finalized = await _finalized_projection_scope(
@@ -93,6 +95,8 @@ async def test_retry_projection_replays_failed_run_once_and_keeps_root_waiting(
         failed_job = await session.get(BackgroundTask, failed_run.job_id)
         assert root is not None and run is not None and chapter is not None
         assert failed_job is not None
+        failed_run_id = failed_run.id
+        failed_job_id = failed_job.id
         root.status = "waiting"
         root.lease_owner = None
         root.lease_expires_at = None
@@ -104,6 +108,23 @@ async def test_retry_projection_replays_failed_run_once_and_keeps_root_waiting(
         failed_run.error_category = "projection_failed"
         failed_job.status = "failed"
         failed_job.error_category = "projection_failed"
+        session.add(
+            JobActivity(
+                id=str(uuid4()),
+                job_id=failed_job.id,
+                activity_key="summary_generation",
+                side_effect_class="ambiguous_external",
+                status="succeeded",
+                provider_request_key=str(uuid4()),
+                attempt=1,
+                fencing_token=1,
+                request_payload={"revision": 1},
+                result_payload={"response": "已生成的章节梳理"},
+                started_at=datetime.now(timezone.utc),
+                completed_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+            )
+        )
         await session.commit()
 
     command_id = str(uuid4())
@@ -183,18 +204,178 @@ async def test_retry_projection_replays_failed_run_once_and_keeps_root_waiting(
             )
         )
         command = await session.get(ChapterWorkflowCommand, command_id)
+        preserved_activity = await session.scalar(
+            select(JobActivity).where(
+                JobActivity.job_id == failed_job_id,
+                JobActivity.activity_key == "summary_generation",
+            )
+        )
 
     assert update == {"last_applied_command_id": command_id}
     assert set(replay.projection_run_ids) == {"summary"}
-    assert len(replay_runs) == 2
+    assert len(replay_runs) == 1
     assert len(replay_jobs) == 1
-    replay_run = next(item for item in replay_runs if item.id in replay.projection_run_ids.values())
-    original_run = next(item for item in replay_runs if item.id != replay_run.id)
-    assert replay_run.replay_of_run_id == original_run.id
+    assert replay_runs[0].id == failed_run_id
+    assert replay_runs[0].status == "queued"
+    assert replay_jobs[0].id == failed_job_id
+    assert replay_jobs[0].status == "queued"
     assert all(job.stream_id == started.run.id for job in replay_jobs)
     assert all(job.payload["workflow_stream_id"] == started.run.id for job in replay_jobs)
+    assert preserved_activity is not None
+    assert preserved_activity.status == "succeeded"
+    assert preserved_activity.result_payload == {"response": "已生成的章节梳理"}
     assert activity_count == 1
     assert command is not None and command.status == "pending"
+
+
+@pytest.mark.asyncio(loop_scope="session")
+async def test_ambiguous_projection_activity_can_retry_same_remote_leaf(isolated_pg) -> None:
+    started, _execution, _request, finalized = await _finalized_projection_scope(
+        isolated_pg,
+        user_id=4804,
+        project_id="workflow-projection-ambiguous-retry",
+    )
+    checkpoint_id = "checkpoint-projection-ambiguous"
+    request_payload = {
+        "project_id": started.run.project_id,
+        "chapter_id": started.run.chapter_id,
+        "revision": finalized.result.target_chapter_revision,
+        "source_hash": finalized.result.source_hash,
+    }
+    async with isolated_pg.session_factory() as session:
+        root = await session.get(BackgroundTask, started.root_job.id)
+        run = await session.get(ChapterWorkflowRun, started.run.id)
+        chapter = await session.get(Chapter, started.run.chapter_id)
+        projection_run = await session.scalar(
+            select(ChapterProjectionRun).where(
+                ChapterProjectionRun.chapter_revision_id == finalized.result.chapter_revision_id,
+                ChapterProjectionRun.projection_name == "summary",
+            )
+        )
+        assert root is not None and run is not None and chapter is not None
+        assert projection_run is not None and projection_run.job_id is not None
+        projection_job = await session.get(BackgroundTask, projection_run.job_id)
+        assert projection_job is not None
+        root.status = "waiting"
+        root.lease_owner = None
+        root.lease_expires_at = None
+        run.status = "projection_pending"
+        run.node_key = "wait_for_projections"
+        run.checkpoint_id = checkpoint_id
+        run.progress = 90
+        projection_run.status = "needs_attention"
+        projection_job.status = "needs_attention"
+        projection_job.error_category = "ambiguous_external_result"
+        projection_job.payload = {
+            **projection_job.payload,
+            "revision": finalized.result.target_chapter_revision + 1,
+        }
+        original = JobActivity(
+            id=str(uuid4()),
+            job_id=projection_job.id,
+            activity_key="summary_generation",
+            side_effect_class="ambiguous_external",
+            status="ambiguous",
+            provider_request_key=str(uuid4()),
+            attempt=1,
+            fencing_token=1,
+            request_payload=request_payload,
+            started_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+        session.add(original)
+        await session.commit()
+        projection_job_id = projection_job.id
+
+    invalid_command_id = str(uuid4())
+    async with isolated_pg.session_factory() as session:
+        snapshot = await JobService(session).get_chapter_workflow_snapshot(
+            started.run.id,
+            user_id=started.run.user_id,
+        )
+        with pytest.raises(ValueError, match="ambiguous projection activity 身份无效"):
+            await JobService(session).submit_chapter_workflow_command(
+                started.run.id,
+                actor_user_id=started.run.user_id,
+                envelope=ChapterWorkflowCommandEnvelope(
+                    command_id=invalid_command_id,
+                    type="retry_external",
+                    payload={
+                        "activity_key": "summary_generation",
+                        "acknowledge_possible_duplicate": True,
+                    },
+                    expected_run_revision=snapshot.row_revision,
+                    expected_chapter_revision=snapshot.current_chapter_revision,
+                    expected_checkpoint_id=snapshot.checkpoint_id,
+                ),
+            )
+        await session.rollback()
+
+    async with isolated_pg.session_factory() as session:
+        projection_job = await session.get(BackgroundTask, projection_job_id)
+        assert projection_job is not None
+        projection_job.payload = {
+            **projection_job.payload,
+            "revision": finalized.result.target_chapter_revision,
+        }
+        await session.commit()
+
+    command_id = str(uuid4())
+    async with isolated_pg.session_factory() as session:
+        snapshot = await JobService(session).get_chapter_workflow_snapshot(
+            started.run.id,
+            user_id=started.run.user_id,
+        )
+        assert "retry_external" in snapshot.allowed_commands
+        assert snapshot.retry_activity_key == "summary_generation"
+        command = await JobService(session).submit_chapter_workflow_command(
+            started.run.id,
+            actor_user_id=started.run.user_id,
+            envelope=ChapterWorkflowCommandEnvelope(
+                command_id=command_id,
+                type="retry_external",
+                payload={
+                    "activity_key": "summary_generation",
+                    "acknowledge_possible_duplicate": True,
+                },
+                expected_run_revision=snapshot.row_revision,
+                expected_chapter_revision=snapshot.current_chapter_revision,
+                expected_checkpoint_id=snapshot.checkpoint_id,
+            ),
+        )
+        assert command.status == "applied"
+        projection_job = await session.get(BackgroundTask, projection_job_id)
+        projection_run = await session.scalar(
+            select(ChapterProjectionRun).where(ChapterProjectionRun.job_id == projection_job_id)
+        )
+        manual = await session.scalar(
+            select(JobActivity).where(
+                JobActivity.job_id == projection_job_id,
+                JobActivity.activity_key == f"manual_retry:{command_id}",
+            )
+        )
+        assert projection_job is not None and projection_job.status == "queued"
+        assert projection_run is not None and projection_run.status == "queued"
+        assert manual is not None and manual.status == "manual_retry_pending"
+        replayed = await JobService(session).apply_ambiguous_activity_command(command_id)
+        assert replayed.status == "applied"
+        lease = await JobService(session).claim_next(
+            worker_id="workflow-projection-ambiguous-retry",
+            lease_seconds=60,
+        )
+
+    assert lease is not None and lease.job_id == projection_job_id
+    execution = JobExecutionContext(
+        lease=lease,
+        side_effect_class=SideEffectClass.AMBIGUOUS_EXTERNAL,
+        session_factory=isolated_pg.session_factory,
+    )
+    resumed = await execution.begin_activity(
+        "summary_generation",
+        request_payload=request_payload,
+    )
+    assert resumed.should_execute is True
+    assert resumed.activity_key == f"manual_retry:{command_id}"
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -419,8 +600,10 @@ async def test_projection_retry_lock_queue_has_no_reverse_root_edge(isolated_pg)
         )
 
     assert set(replay.projection_run_ids) == {"summary"}
-    assert len(replay_runs) == 2
+    assert len(replay_runs) == 1
     assert len(replay_jobs) == 1
+    assert replay_runs[0].status == "queued"
+    assert replay_jobs[0].status == "queued"
     assert replay_jobs[0].stream_id == started.run.id
     assert replay_jobs[0].payload["workflow_stream_id"] == started.run.id
 

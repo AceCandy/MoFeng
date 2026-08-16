@@ -99,6 +99,7 @@ _ACTIVITY_EVENT_TYPES = {
     "activity.succeeded",
     "activity.retryable_failed",
     "activity.failed",
+    "activity.ambiguous",
 }
 
 

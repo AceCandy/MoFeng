@@ -114,7 +114,7 @@ describe('ChapterGenerating timing inspector', () => {
     }
   })
 
-  it('renders the projection fan-out without treating sibling branches as serial', async () => {
+  it('separates parallel projection branches from their serial remote calls', async () => {
     const rendered = await mountChapterGenerating(
       [
         {
@@ -127,16 +127,16 @@ describe('ChapterGenerating timing inspector', () => {
         },
         {
           id: 202,
-          node_key: 'project_memory',
-          node_label: '更新记忆快照',
+          node_key: 'commit_memory_projection',
+          node_label: '写入章节记忆',
           status: 'success',
           uses_llm: false,
           metadata: {},
         },
         {
           id: 203,
-          node_key: 'project_foreshadowing',
-          node_label: '同步伏笔',
+          node_key: 'commit_foreshadowing_projection',
+          node_label: '写入伏笔同步结果',
           status: 'success',
           uses_llm: false,
           metadata: {},
@@ -149,15 +149,20 @@ describe('ChapterGenerating timing inspector', () => {
     )
 
     try {
-      const projectionGroup = rendered.host.querySelector('[data-group="projections"]')
-      expect(projectionGroup?.getAttribute('data-mode')).toBe('parallel')
-      expect(projectionGroup?.textContent).toContain('更新记忆快照')
-      expect(projectionGroup?.textContent).toContain('写入章节索引')
-      expect(projectionGroup?.textContent).toContain('同步伏笔')
+      const memoryGroup = rendered.host.querySelector('[data-group="memory"]')
+      const ragGroup = rendered.host.querySelector('[data-group="rag"]')
+      const foreshadowingGroup = rendered.host.querySelector('[data-group="foreshadowing"]')
+      expect(memoryGroup?.getAttribute('data-mode')).toBe('serial')
+      expect(memoryGroup?.textContent).toContain('更新全局剧情记忆')
+      expect(memoryGroup?.textContent).toContain('写入章节记忆')
+      expect(ragGroup?.textContent).toContain('生成章节索引向量')
+      expect(ragGroup?.textContent).toContain('写入章节索引')
+      expect(foreshadowingGroup?.textContent).toContain('筛选新增伏笔')
+      expect(foreshadowingGroup?.textContent).toContain('写入伏笔同步结果')
 
       const ragStep = Array.from(
-        projectionGroup?.querySelectorAll('.chapter-console__pipeline-item') || [],
-      ).find((item) => item.textContent?.includes('写入章节索引'))
+        ragGroup?.querySelectorAll('.chapter-console__pipeline-item') || [],
+      ).find((item) => item.textContent?.includes('生成章节索引向量'))
       expect(ragStep?.classList.contains('is-skipped')).toBe(true)
       expect(ragStep?.textContent).toContain('已跳过')
 
@@ -515,6 +520,131 @@ describe('ChapterGenerating timing inspector', () => {
     }
   })
 
+  it('retries a failed embedding leaf but not its local persistence step', async () => {
+    const onRetryProjection = vi.fn()
+    const rendered = await mountChapterGenerating(
+      [
+        {
+          id: 70,
+          node_key: 'project_rag',
+          node_label: '生成章节索引向量',
+          stage: 'rag_embedding',
+          status: 'failed',
+          uses_llm: false,
+          error: '向量服务超时',
+          metadata: { remote_call: true, call_type: 'embedding' },
+        },
+        {
+          id: 71,
+          node_key: 'commit_rag_projection',
+          node_label: '写入章节索引',
+          stage: 'projection_job',
+          status: 'failed',
+          uses_llm: false,
+          error: '索引写入失败',
+          metadata: { remote_call: false, call_type: 'database_write' },
+        },
+      ],
+      {
+        status: 'finalizing',
+        generationStep: 'wait_for_projections',
+        allowedCommands: ['retry_projection'],
+        onRetryProjection,
+      },
+    )
+
+    try {
+      await clickPipelineStep(rendered.host, '生成章节索引向量')
+      const retryButton = rendered.host.querySelector<HTMLButtonElement>(
+        '[data-action="retry-external-node"]',
+      )
+      expect(retryButton).not.toBeNull()
+      retryButton?.click()
+      await nextTick()
+      expect(onRetryProjection).toHaveBeenCalledTimes(1)
+
+      await clickPipelineStep(rendered.host, '写入章节索引')
+      await vi.waitFor(() => {
+        expect(rendered.host.querySelector('[data-action="retry-external-node"]')).toBeNull()
+      })
+    } finally {
+      rendered.unmount()
+    }
+  })
+
+  it('does not infer a missing embedding trace as skipped when its branch failed', async () => {
+    const rendered = await mountChapterGenerating(
+      {
+        id: 72,
+        node_key: 'commit_rag_projection',
+        node_label: '写入章节索引',
+        stage: 'projection_job',
+        status: 'failed',
+        uses_llm: false,
+        error: '索引投影失败',
+        metadata: { remote_call: false, call_type: 'database_write' },
+      },
+      {
+        status: 'finalizing',
+        generationStep: 'wait_for_projections',
+      },
+    )
+
+    try {
+      const ragGroup = rendered.host.querySelector('[data-group="rag"]')
+      const embeddingStep = Array.from(
+        ragGroup?.querySelectorAll('.chapter-console__pipeline-item') || [],
+      ).find((item) => item.textContent?.includes('生成章节索引向量'))
+      const commitStep = Array.from(
+        ragGroup?.querySelectorAll('.chapter-console__pipeline-item') || [],
+      ).find((item) => item.textContent?.includes('写入章节索引'))
+      expect(embeddingStep?.classList.contains('is-skipped')).toBe(false)
+      expect(commitStep?.classList.contains('is-failed')).toBe(true)
+    } finally {
+      rendered.unmount()
+    }
+  })
+
+  it('confirms risk before retrying an ambiguous projection activity', async () => {
+    const onRetryExternal = vi.fn()
+    const confirmSpy = vi.spyOn(globalAlert, 'showConfirm').mockResolvedValue(true)
+    const rendered = await mountChapterGenerating(
+      {
+        id: 73,
+        node_key: 'project_rag',
+        node_label: '生成章节索引向量',
+        stage: 'rag_embedding',
+        status: 'failed',
+        uses_llm: false,
+        error: '向量调用结果未知',
+        metadata: {
+          remote_call: true,
+          call_type: 'embedding',
+          activity_key: 'rag_embedding',
+        },
+      },
+      {
+        status: 'finalizing',
+        generationStep: 'wait_for_projections',
+        allowedCommands: ['retry_external'],
+        retryActivityKey: 'rag_embedding',
+        onRetryExternal,
+      },
+    )
+
+    try {
+      await clickPipelineStep(rendered.host, '生成章节索引向量')
+      rendered.host.querySelector<HTMLButtonElement>(
+        '[data-action="retry-external-node"]',
+      )?.click()
+      await vi.waitFor(() => expect(onRetryExternal).toHaveBeenCalledWith('rag_embedding'))
+      expect(confirmSpy).toHaveBeenCalledTimes(1)
+    } finally {
+      confirmSpy.mockRestore()
+      rendered.unmount()
+    }
+  })
+
   it('shows stage-specific business outputs for draft, review, refinement and manual confirmation', async () => {
     const rendered = await mountChapterGenerating(
       [
@@ -629,9 +759,17 @@ describe('ChapterGenerating timing inspector', () => {
         '等待选择版本',
         '定稿章节版本',
         '生成章节梳理',
-        '更新记忆快照',
+        '保存章节梳理',
+        '更新全局剧情记忆',
+        '更新角色状态记忆',
+        '更新剧情线记忆',
+        '更新章节记忆摘要',
+        '写入章节记忆',
+        '生成章节索引向量',
         '写入章节索引',
-        '同步伏笔',
+        '筛选新增伏笔',
+        '判断伏笔状态',
+        '写入伏笔同步结果',
         '等待投影完成',
         '汇合投影结果',
         '章节工作流完成',

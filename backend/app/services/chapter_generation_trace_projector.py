@@ -16,6 +16,13 @@ from .chapter_workflow_transition import CHAPTER_WORKFLOW_NODE_LABELS
 
 _PROJECTABLE_EVENT_TYPES = frozenset(
     {
+        "job.started",
+        "job.reclaimed",
+        "job.retry_scheduled",
+        "job.needs_attention",
+        "job.succeeded",
+        "job.failed",
+        "job.dead_lettered",
         "workflow.started",
         "workflow.phase_changed",
         "workflow.waiting",
@@ -28,6 +35,16 @@ _PROJECTABLE_EVENT_TYPES = frozenset(
     }
 )
 _FAILED_WORKFLOW_STATUSES = frozenset({"failed", "needs_attention"})
+_PROJECTION_JOB_NODES = {
+    "chapter_finalize": ("commit_summary_projection", "保存章节梳理"),
+    "chapter_projection_memory": ("commit_memory_projection", "写入章节记忆"),
+    "chapter_projection_rag": ("commit_rag_projection", "写入章节索引"),
+    "chapter_projection_foreshadowing": (
+        "commit_foreshadowing_projection",
+        "写入伏笔同步结果",
+    ),
+    "chapter_projection_reconcile": ("reconcile_projections", "汇合章节投影"),
+}
 
 
 @dataclass(frozen=True)
@@ -103,7 +120,9 @@ def _trace_row(
     ):
         return None
     workflow = event.payload.get("workflow")
-    if not isinstance(workflow, dict) or workflow.get("run_id") != run.id:
+    if not isinstance(workflow, dict):
+        return _projection_trace_row(event, run)
+    if workflow.get("run_id") != run.id:
         return None
 
     raw_node_key = workflow.get("node_key")
@@ -136,6 +155,60 @@ def _trace_row(
         "source_event_cursor": event.cursor,
         "started_at": event.created_at,
         "ended_at": event.created_at,
+        "created_at": event.created_at,
+    }
+
+
+def _projection_trace_row(
+    event: JobEvent,
+    run: ChapterWorkflowRun,
+) -> dict[str, object] | None:
+    task = event.payload.get("task") if isinstance(event.payload, dict) else None
+    if not isinstance(task, dict):
+        return None
+    task_type = task.get("task_type")
+    node = _PROJECTION_JOB_NODES.get(task_type) if isinstance(task_type, str) else None
+    if node is None:
+        return None
+    node_key, node_label = node
+    task_status = task.get("status")
+    failed = task_status == "failed" or event.event_type in {
+        "job.needs_attention",
+        "job.failed",
+        "job.dead_lettered",
+    }
+    completed = task_status == "successful" or event.event_type == "job.succeeded"
+    error = _bounded_string(task.get("error"), max_length=512)
+    metadata: dict[str, object] = {
+        "projection_schema_version": 1,
+        "source": "projection_job_event",
+        "event_cursor": event.cursor,
+        "event_sequence": event.sequence,
+        "event_type": event.event_type,
+        "run_id": run.id,
+        "uses_llm": False,
+        "remote_call": False,
+        "call_type": "database_write",
+        "node_kind": "system",
+    }
+    return {
+        "chapter_id": run.chapter_id,
+        "project_id": run.project_id,
+        "chapter_number": run.chapter_number,
+        "node_key": node_key,
+        "node_label": node_label,
+        "stage": "projection_job",
+        "status": "failed" if failed else "success" if completed else "running",
+        "system_prompt": None,
+        "user_prompt": None,
+        "raw_response": None,
+        "cleaned_output": None,
+        "error": error,
+        "metadata": metadata,
+        "source_run_id": run.id,
+        "source_event_cursor": event.cursor,
+        "started_at": event.created_at,
+        "ended_at": event.created_at if failed or completed else None,
         "created_at": event.created_at,
     }
 

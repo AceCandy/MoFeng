@@ -28,8 +28,8 @@ interface FailureAnalysis {
 
 /**
  * 章节生成步骤状态机：从 status/step 推导当前步骤键（currentStepKey，含失败节点定位），
- * 据此计算各步骤运行态（stepState）、节点级重试可达性（canRetryFromNode）、tooltip 文案
- * （stepTooltipText）。stepExists 与失败 trace 来自 useGenerationFailure，故收 failure 入参。
+ * 据此计算各步骤运行态（stepState）和 tooltip 文案（stepTooltipText）。节点重试能力由
+ * 调用方根据真实远程 activity 与服务端 allowed command 决定。
  */
 export function useGenerationPipeline(
   props: GenerationPipelineProps,
@@ -84,6 +84,12 @@ export function useGenerationPipeline(
     })
   }
 
+  const stepGroupFailed = (step: PipelineStep) =>
+    Boolean(step.group) && pipelineSteps.value.some((candidate) =>
+      candidate.group === step.group
+      && latestTraceByStep.value.get(candidate.key)?.status === 'failed',
+    )
+
   const stepState = (key: string, index: number) => {
     const step = pipelineSteps.value[index]
     const trace = latestTraceByStep.value.get(key)
@@ -114,19 +120,14 @@ export function useGenerationPipeline(
       return { tone: 'in-progress', label: '进行中' }
     }
     if (props.status === 'successful' || (step && hasReachedLaterStep(step, index))) {
+      if (step?.optional && props.status !== 'successful' && stepGroupFailed(step)) {
+        return { tone: 'waiting', label: '状态待确认' }
+      }
       return step?.optional
         ? { tone: 'skipped', label: '已跳过' }
         : { tone: 'done', label: '已完成' }
     }
     return { tone: 'waiting', label: '等待中' }
-  }
-
-  // 失败态下，已完成或失败的节点允许作为节点级重试起点
-  const canRetryFromNode = (key: string, index: number) => {
-    if (props.readOnly) return false
-    if (props.status !== 'failed' && props.status !== 'evaluation_failed') return false
-    const tone = stepState(key, index).tone
-    return tone === 'failed' || tone === 'done'
   }
 
   const stepTooltipText = (key: string, index: number) => {
@@ -150,7 +151,6 @@ export function useGenerationPipeline(
   return {
     currentStepKey,
     stepState,
-    canRetryFromNode,
     shouldShowManualConfirmBadge,
     stepTooltipText,
   }
