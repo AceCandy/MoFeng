@@ -1286,3 +1286,24 @@ Retired the legacy chapter generation pipeline, routed every generation entry th
 ### Status
 
 [OK] **Completed**
+
+
+## Session 42: 完成章节工作流节点重构
+
+**Date**: 2026-08-16
+**Task**: 完成章节工作流节点重构
+**Branch**: `main`
+
+### Summary
+
+完成章节未成功工作流重置、投影进度展示与完成态界面精简，补充聚焦回归测试并归档任务。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4c65b96` | (see git log) |
+
+### Status
+
+[OK] **Completed**
