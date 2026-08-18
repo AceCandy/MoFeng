@@ -781,11 +781,13 @@ describe('WDWorkspace locked chapter state', () => {
 
     try {
       expect(rendered.host.querySelector('[data-action="reset"]')).toBeNull()
+      expect(rendered.host.querySelector('[aria-label="朗读"]')).not.toBeNull()
       const tabs = Array.from(rendered.host.querySelectorAll<HTMLButtonElement>(
         '.writing-workspace__tab-btn',
       ))
       tabs.find((button) => button.textContent?.includes('查看版本'))?.click()
       await nextTick()
+      expect(rendered.host.querySelector('[aria-label="朗读"]')).toBeNull()
 
       const versionDetailButton = Array.from(rendered.host.querySelectorAll<HTMLButtonElement>(
         'button',
@@ -796,6 +798,7 @@ describe('WDWorkspace locked chapter state', () => {
 
       tabs.find((button) => button.textContent?.includes('AI 评审反馈'))?.click()
       await nextTick()
+      expect(rendered.host.querySelector('[aria-label="朗读"]')).toBeNull()
 
       const evaluationDetailButton = Array.from(rendered.host.querySelectorAll<HTMLButtonElement>(
         'button',
@@ -851,7 +854,7 @@ describe('WDWorkspace locked chapter state', () => {
     expect(source).toContain('--chapter-locked-action-bg: rgba(250, 246, 237, 0.64);')
   })
 
-  it('shows the reading control only for finalized chapter content', async () => {
+  it('hides the reading control until the current workflow completes', async () => {
     const project: NovelProject = {
       id: 'novel-1',
       title: '全网退役',
@@ -888,7 +891,7 @@ describe('WDWorkspace locked chapter state', () => {
       ],
     })
     try {
-      expect(rendered.host.querySelector('[aria-label="朗读"]')).not.toBeNull()
+      expect(rendered.host.querySelector('[aria-label="朗读"]')).toBeNull()
       expect(rendered.host.querySelector('[data-provenance="ink"]')).not.toBeNull()
       expect(rendered.host.querySelector('[data-provenance="ai"]')).not.toBeNull()
     } finally {

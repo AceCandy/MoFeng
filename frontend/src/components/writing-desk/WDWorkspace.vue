@@ -38,7 +38,12 @@
 
       <div class="writing-workspace__content">
         <ChapterReaderBar
-          v-if="hasFinalizedChapterContent"
+          v-if="
+            hasFinalizedChapterContent
+              && isChapterContentView
+              && (workflowPhase === 'succeeded'
+                || (workflowPhase === 'idle' && selectedChapter?.generation_status === 'successful'))
+          "
           :status="readerStatus"
           :isBrowserFallback="readerIsBrowserFallback"
           :hasModelTTS="readerHasModelTTS"
