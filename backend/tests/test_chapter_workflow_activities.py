@@ -173,10 +173,13 @@ def test_content_from_response_rejects_invalid_structured_payload(raw):
         ("## 版本 2\r\n正文", "正文"),
         ("### 版本三：\n正文", "正文"),
         ("普通正文\n# 版本一", "普通正文\n# 版本一"),
-        ("# 第一章\n正文", "# 第一章\n正文"),
+        ("# 第一章\n正文", "正文"),
+        ("# 第三场没有对手\n\n---\n\n正文", "正文"),
+        ("# 第七章 第三场没有对手\n\n正文", "正文"),
+        ("正文第一段\n\n## 正文中的小标题", "正文第一段\n\n## 正文中的小标题"),
     ],
 )
-def test_content_from_response_removes_only_leading_version_heading(raw, expected):
+def test_content_from_response_removes_leading_heading(raw, expected):
     content, _report = parse_chapter_content_response(raw)
 
     assert content == expected

@@ -15,10 +15,8 @@ _STRUCTURED_RESPONSE_PREFIX_RE = re.compile(
     r'\{[ \t\r\n]*"?(?:content|optimized_content|revised_content|chapter_content|'
     r'chapter_text|text|body|story|optimization_notes|report)"?[ \t\r\n]*:'
 )
-_VERSION_HEADING_RE = re.compile(
-    r"\A#{1,6}[ \t]+版本[ \t]*(?:\d+|[零〇一二三四五六七八九十百两]+)"
-    r"[ \t]*(?:[：:][ \t]*)?(?:\r?\n+|$)"
-)
+_LEADING_HEADING_RE = re.compile(r"\A#{1,6}[ \t]+[^\r\n]+(?:\r?\n+|$)")
+_LEADING_SEPARATOR_RE = re.compile(r"\A[ \t]*(?:-{3,}|_{3,}|\*{3,})[ \t]*(?:\r?\n+|$)")
 _CHAPTER_CONTENT_KEYS = (
     "content",
     "optimized_content",
@@ -84,8 +82,9 @@ def _chapter_text_from_payload(payload: object) -> str | None:
     return None
 
 
-def _strip_version_heading(content: str) -> str:
-    return _VERSION_HEADING_RE.sub("", content, count=1)
+def _strip_leading_heading(content: str) -> str:
+    content = _LEADING_HEADING_RE.sub("", content, count=1)
+    return _LEADING_SEPARATOR_RE.sub("", content, count=1)
 
 
 def parse_chapter_content_response(raw_response: str) -> tuple[str, dict[str, Any]]:
@@ -115,7 +114,7 @@ def parse_chapter_content_response(raw_response: str) -> tuple[str, dict[str, An
     else:
         raise ValueError("模型返回的结构化正文存在循环包装")
 
-    content = _strip_version_heading(content)
+    content = _strip_leading_heading(content)
     if content:
         return content, report
     raise ValueError("模型未返回有效正文")
