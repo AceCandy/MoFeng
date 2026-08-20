@@ -1328,3 +1328,24 @@ Retired the legacy chapter generation pipeline, routed every generation entry th
 ### Status
 
 [OK] **Completed**
+
+
+## Session 44: 提高章节正文输出上限
+
+**Date**: 2026-08-20
+**Task**: 提高章节正文输出上限
+**Branch**: `main`
+
+### Summary
+
+将正文候选、修订与压缩调用的输出上限统一为 20000，并补充参数回归断言；聚焦测试通过。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2882fe7` | (see git log) |
+
+### Status
+
+[OK] **Completed**
