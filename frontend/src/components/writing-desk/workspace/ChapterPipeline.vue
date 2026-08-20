@@ -686,37 +686,6 @@ const emit = defineEmits<{
   display: inline;
 }
 
-.chapter-console__pipeline-select.is-retry-action:hover:not(:disabled),
-.chapter-console__pipeline-select.is-retry-action:focus-visible {
-  border-color: var(--md-warning);
-  background-color: var(--md-warning-container);
-}
-
-.chapter-console__pipeline-select.is-retry-action:hover:not(:disabled) .chapter-console__dot,
-.chapter-console__pipeline-select.is-retry-action:focus-visible .chapter-console__dot {
-  border-color: var(--md-warning);
-  background-color: var(--md-warning-container);
-  box-shadow: none;
-}
-
-.chapter-console__pipeline-select.is-retry-action:hover:not(:disabled)
-  .chapter-console__dot::before,
-.chapter-console__pipeline-select.is-retry-action:focus-visible .chapter-console__dot::before,
-.chapter-console__pipeline-select.is-retry-action:hover:not(:disabled)
-  .chapter-console__pipeline-title,
-.chapter-console__pipeline-select.is-retry-action:focus-visible .chapter-console__pipeline-title {
-  color: var(--md-warning-text);
-}
-
-.chapter-console__pipeline-select.is-retry-action:hover:not(:disabled)
-  .chapter-console__pipeline-badge--failed,
-.chapter-console__pipeline-select.is-retry-action:focus-visible
-  .chapter-console__pipeline-badge--failed {
-  border-color: var(--md-warning);
-  background-color: var(--md-warning-container);
-  color: var(--md-warning-text);
-}
-
 .chapter-console__pipeline-select.is-retry-action:hover:not(:disabled)
   .chapter-console__pipeline-failed-label,
 .chapter-console__pipeline-select.is-retry-action:focus-visible
