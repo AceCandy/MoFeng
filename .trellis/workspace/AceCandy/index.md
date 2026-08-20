@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 42
-- **Last Active**: 2026-08-16
+- **Total Sessions**: 43
+- **Last Active**: 2026-08-20
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1309 | Active |
+| `journal-1.md` | ~1330 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 43 | 2026-08-20 | 正文节点模型路由 | `4f81041` | `main` |
 | 42 | 2026-08-16 | 完成章节工作流节点重构 | `4c65b96` | `main` |
 | 41 | 2026-08-13 | Retire PipelineOrchestrator | `5b42ce8` | `main` |
 | 40 | 2026-08-13 | 修复 durable 优选版本投影 | `a789429` | `main` |

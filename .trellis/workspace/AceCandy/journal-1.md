@@ -1307,3 +1307,24 @@ Retired the legacy chapter generation pipeline, routed every generation entry th
 ### Status
 
 [OK] **Completed**
+
+
+## Session 43: 正文节点模型路由
+
+**Date**: 2026-08-20
+**Task**: 正文节点模型路由
+**Branch**: `main`
+
+### Summary
+
+统一正文 DAG 路由展示，拆分两个候选写作模型路由，并增加 general_chat 通用路由。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4f81041` | (see git log) |
+
+### Status
+
+[OK] **Completed**
