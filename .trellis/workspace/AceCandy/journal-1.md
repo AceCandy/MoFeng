@@ -1370,3 +1370,24 @@ Retired the legacy chapter generation pipeline, routed every generation entry th
 ### Status
 
 [OK] **Completed**
+
+
+## Session 46: 统一节点重试反馈
+
+**Date**: 2026-08-20
+**Task**: 统一节点重试反馈
+**Branch**: `main`
+
+### Summary
+
+移除失败节点重试的黄色整节点强调，使其与人工确认节点一致，仅在悬停或聚焦时切换操作文案。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cdb85b0` | (see git log) |
+
+### Status
+
+[OK] **Completed**
