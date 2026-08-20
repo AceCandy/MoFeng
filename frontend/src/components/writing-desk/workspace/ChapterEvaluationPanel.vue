@@ -32,6 +32,12 @@
                   <p class="font-semibold" style="color: var(--md-on-surface)">综合评价:</p>
                   <p style="color: var(--md-on-surface-variant)">{{ item.result.overall_review }}</p>
                 </div>
+                <dl v-if="item.result.scores && Object.keys(item.result.scores).length" class="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
+                  <div v-for="(score, key) in item.result.scores" :key="key" class="flex items-baseline justify-between gap-2 border-b border-[var(--md-outline-variant)] py-1">
+                    <dt class="min-w-0 break-words text-xs" style="color: var(--md-on-surface-variant)">{{ key }}</dt>
+                    <dd class="shrink-0 font-semibold" style="color: var(--md-primary)">{{ score }} 分</dd>
+                  </div>
+                </dl>
                 <div v-if="item.result.pros && item.result.pros.length">
                   <p class="font-semibold" style="color: var(--md-on-surface)">优点:</p>
                   <ul class="list-disc pl-5 space-y-1" style="color: var(--md-on-surface-variant)">
@@ -146,6 +152,7 @@ interface EvaluationVersionResult {
   overall_review?: string
   pros?: string[]
   cons?: string[]
+  scores?: Record<string, string | number>
 }
 
 interface EvaluationDimension {
@@ -183,6 +190,15 @@ const stringList = (value: unknown): string[] | undefined => {
   return value.filter((item): item is string => typeof item === 'string')
 }
 
+const decodeScores = (value: unknown): Record<string, string | number> | undefined => {
+  if (!isRecord(value)) return undefined
+  const scores: Record<string, string | number> = {}
+  for (const [key, score] of Object.entries(value)) {
+    if (typeof score === 'string' || typeof score === 'number') scores[key] = score
+  }
+  return scores
+}
+
 const decodeEvaluationPayload = (value: unknown): EvaluationPayload | null => {
   if (!isRecord(value)) return null
   const payload: EvaluationPayload = {}
@@ -203,18 +219,13 @@ const decodeEvaluationPayload = (value: unknown): EvaluationPayload | null => {
         overall_review: optionalString(rawResult.overall_review),
         pros: stringList(rawResult.pros),
         cons: stringList(rawResult.cons),
+        scores: decodeScores(rawResult.scores),
       }
     }
     payload.evaluation = evaluations
   }
 
-  if (isRecord(value.scores)) {
-    const scores: Record<string, string | number> = {}
-    for (const [key, score] of Object.entries(value.scores)) {
-      if (typeof score === 'string' || typeof score === 'number') scores[key] = score
-    }
-    payload.scores = scores
-  }
+  payload.scores = decodeScores(value.scores)
 
   if (isRecord(value.dimensions)) {
     const dimensions: Record<string, EvaluationDimension> = {}

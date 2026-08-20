@@ -435,10 +435,7 @@ class ChapterWorkflowCandidatePersistenceService:
                     version_id=review_version.id,
                     decision="ai_review",
                     feedback=json.dumps(
-                        {
-                            "best_ordinal": review.best_ordinal,
-                            "report": review.report,
-                        },
+                        review.to_evaluation_payload(),
                         ensure_ascii=False,
                         sort_keys=True,
                     ),

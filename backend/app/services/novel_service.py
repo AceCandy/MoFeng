@@ -51,6 +51,7 @@ from ..schemas.novel import (
 )
 from .chapter_projection_service import ChapterProjectionService
 from .chapter_word_count_settings import count_chapter_words
+from .chapter_workflow_activities import ChapterWorkflowReviewOutput
 from .event_bus import publish_background_task
 
 _PREFERRED_CONTENT_KEYS: tuple[str, ...] = (
@@ -65,6 +66,25 @@ _PREFERRED_CONTENT_KEYS: tuple[str, ...] = (
     "real_summary",
     "summary",
 )
+
+
+def _normalize_chapter_evaluation_feedback(feedback: str) -> str:
+    """将已持久化的旧工作流评审包装转换为当前公开展示结构。"""
+    try:
+        payload = json.loads(feedback)
+    except json.JSONDecodeError:
+        return feedback
+    if not isinstance(payload, dict) or "best_choice" in payload:
+        return feedback
+    best_ordinal = payload.get("best_ordinal")
+    report = payload.get("report")
+    if not isinstance(best_ordinal, int) or not isinstance(report, dict):
+        return feedback
+    try:
+        review = ChapterWorkflowReviewOutput(best_ordinal=best_ordinal, report=report)
+    except ValueError:
+        return feedback
+    return json.dumps(review.to_evaluation_payload(), ensure_ascii=False, sort_keys=True)
 
 
 def _normalize_version_content(raw_content: Any, metadata: Any) -> str:
@@ -1331,7 +1351,11 @@ class NovelService:
                     ]
                 if loaded_evaluations:
                     latest = sorted(loaded_evaluations, key=lambda item: item.created_at)[-1]
-                    evaluation_text = latest.feedback or latest.decision
+                    evaluation_text = (
+                        _normalize_chapter_evaluation_feedback(latest.feedback)
+                        if latest.feedback
+                        else latest.decision
+                    )
 
         return ChapterSchema(
             chapter_number=chapter_number,

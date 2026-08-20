@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from copy import deepcopy
 from pathlib import Path
 
@@ -94,7 +95,26 @@ async def _build_inputs(isolated_pg, *, user_id: int, project_id: str):
         assert provider_request_key
         return ChapterWorkflowReviewOutput(
             best_ordinal=2,
-            report={"summary": "PRIVATE_REVIEW"},
+            report={
+                "overall_evaluation": "PRIVATE_REVIEW",
+                "final_recommendation": "PRIVATE_PICK_2",
+                "version_reviews": [
+                    {
+                        "version_number": 1,
+                        "pros": ["PRIVATE_PRO_1"],
+                        "cons": ["PRIVATE_CON_1"],
+                        "overall_review": "PRIVATE_VERSION_1",
+                        "scores": {"coherence": 78},
+                    },
+                    {
+                        "version_number": 2,
+                        "pros": ["PRIVATE_PRO_2"],
+                        "cons": ["PRIVATE_CON_2"],
+                        "overall_review": "PRIVATE_VERSION_2",
+                        "scores": {"coherence": 86},
+                    },
+                ],
+            },
         )
 
     review_input = ChapterWorkflowReviewInput(
@@ -230,6 +250,16 @@ async def test_persist_drafts_is_atomic_private_and_replayable(isolated_pg):
         evaluation.version_id == candidate_versions[1].id and evaluation.decision == "ai_review"
         for evaluation in evaluations
     )
+    workflow_evaluation = next(
+        evaluation for evaluation in evaluations if evaluation.decision == "ai_review"
+    )
+    evaluation_payload = json.loads(workflow_evaluation.feedback or "")
+    assert evaluation_payload["best_choice"] == 2
+    assert evaluation_payload["reason_for_choice"] == "PRIVATE_PICK_2"
+    assert evaluation_payload["evaluation"]["version2"]["overall_review"] == (
+        "PRIVATE_VERSION_2"
+    )
+    assert evaluation_payload["report"]["overall_evaluation"] == "PRIVATE_REVIEW"
     assert activity.side_effect_class == SideEffectClass.TRANSACTIONAL.value
     assert "PRIVATE" not in str(activity.request_payload)
     assert "PRIVATE" not in str(activity.result_payload)
@@ -288,6 +318,34 @@ async def test_durable_best_version_is_the_only_public_confirmation_candidate(is
         assert [(item.id, item.content) for item in schema.version_selections] == [
             (candidate_versions[1].id, "PRIVATE_REFINED_CANDIDATE_2")
         ]
+        workflow_evaluation = next(
+            evaluation
+            for evaluation in chapter.evaluations
+            if evaluation.version_id == candidate_versions[1].id
+            and evaluation.decision == "ai_review"
+        )
+        assert schema.evaluation is not None
+        evaluation_payload = json.loads(schema.evaluation)
+        assert evaluation_payload["best_choice"] == 2
+        assert evaluation_payload["reason_for_choice"] == "PRIVATE_PICK_2"
+        assert evaluation_payload["evaluation"]["version2"]["overall_review"] == (
+            "PRIVATE_VERSION_2"
+        )
+
+        workflow_evaluation.feedback = json.dumps(
+            {
+                "best_ordinal": evaluation_payload["best_choice"],
+                "report": evaluation_payload["report"],
+            },
+            ensure_ascii=False,
+        )
+        legacy_schema = NovelService(session)._build_chapter_schema_from_entities(
+            chapter_number=started.run.chapter_number,
+            outline=outline,
+            chapter=chapter,
+        )
+        assert legacy_schema.evaluation is not None
+        assert json.loads(legacy_schema.evaluation) == evaluation_payload
         assert any(
             evaluation.version_id == candidate_versions[1].id
             and evaluation.decision == "ai_review"

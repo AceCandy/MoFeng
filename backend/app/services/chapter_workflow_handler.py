@@ -272,12 +272,25 @@ class ChapterWorkflowLLMProviders:
             provider_request_key=provider_request_key,
         )
         payload = _json_payload(call.value)
-        raw_best = payload.get("best_ordinal", payload.get("best_version_index"))
+        best_field = next(
+            (
+                field
+                for field in ("best_ordinal", "best_version_number", "best_version_index")
+                if field in payload
+            ),
+            None,
+        )
+        raw_best = payload.get(best_field) if best_field else None
         if isinstance(raw_best, bool) or not isinstance(raw_best, (int, str)):
             raise ValueError("版本评审缺少合法 best ordinal")
-        best_ordinal = int(raw_best)
-        if "best_ordinal" not in payload:
+        try:
+            best_ordinal = int(raw_best)
+        except ValueError as exc:
+            raise ValueError("版本评审缺少合法 best ordinal") from exc
+        if best_field == "best_version_index":
             best_ordinal += 1
+        if best_ordinal not in {candidate.ordinal for candidate in request.candidates}:
+            raise ValueError("版本评审推荐 ordinal 不在候选集合中")
         return call.with_value(
             ChapterWorkflowReviewOutput(
                 best_ordinal=best_ordinal,

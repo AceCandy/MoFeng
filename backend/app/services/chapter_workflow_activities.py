@@ -207,6 +207,47 @@ class ChapterWorkflowReviewOutput(BaseModel):
     best_ordinal: int = Field(ge=1, le=100)
     report: dict[str, Any]
 
+    def to_evaluation_payload(self) -> dict[str, Any]:
+        """转换为写作台评审面板使用的结构，并保留原始评审报告。"""
+        evaluation: dict[str, dict[str, Any]] = {}
+        raw_reviews = self.report.get("version_reviews")
+        if isinstance(raw_reviews, list):
+            for raw_review in raw_reviews:
+                if not isinstance(raw_review, dict):
+                    continue
+                version_number = raw_review.get("version_number")
+                if not isinstance(version_number, int) or not 1 <= version_number <= 100:
+                    continue
+                pros = raw_review.get("pros")
+                cons = raw_review.get("cons")
+                scores = raw_review.get("scores")
+                overall_review = raw_review.get("overall_review")
+                evaluation[f"version{version_number}"] = {
+                    "pros": [item for item in pros if isinstance(item, str)]
+                    if isinstance(pros, list)
+                    else [],
+                    "cons": [item for item in cons if isinstance(item, str)]
+                    if isinstance(cons, list)
+                    else [],
+                    "overall_review": overall_review
+                    if isinstance(overall_review, str)
+                    else "",
+                    "scores": scores if isinstance(scores, dict) else {},
+                }
+
+        reason = ""
+        for key in ("final_recommendation", "overall_evaluation", "summary"):
+            value = self.report.get(key)
+            if isinstance(value, str) and value.strip():
+                reason = value.strip()
+                break
+        return {
+            "best_choice": self.best_ordinal,
+            "reason_for_choice": reason,
+            "evaluation": evaluation,
+            "report": self.report,
+        }
+
 
 class ChapterWorkflowPostReviewInput(_PrivateInput):
     """一个稳定 post-review stage 的私有输入。"""

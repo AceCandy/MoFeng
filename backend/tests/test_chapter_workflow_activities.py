@@ -548,6 +548,46 @@ async def test_production_llm_providers_forward_stable_provider_request_keys(
     assert single_review.best_ordinal == 1
     assert single_review.report["mode"] == "single"
 
+    compatibility_review_request = ChapterWorkflowReviewInput(
+        **common_input,
+        plan=plan.value,
+        candidates=[
+            candidate.value,
+            ChapterWorkflowCandidateOutput(ordinal=2, content="候选正文二"),
+        ],
+    )
+
+    responses["version_review"] = '{"best_ordinal":1}'
+    ordinal_review = await provider.review(
+        compatibility_review_request,
+        provider_request_key="provider-key-review-ordinal",
+    )
+    assert isinstance(ordinal_review, AICallResult)
+    assert ordinal_review.value.best_ordinal == 1
+
+    responses["version_review"] = '{"best_version_number":2}'
+    number_review = await provider.review(
+        compatibility_review_request,
+        provider_request_key="provider-key-review-number",
+    )
+    assert isinstance(number_review, AICallResult)
+    assert number_review.value.best_ordinal == 2
+
+    responses["version_review"] = '{"best_version_index":1}'
+    index_review = await provider.review(
+        compatibility_review_request,
+        provider_request_key="provider-key-review-index",
+    )
+    assert isinstance(index_review, AICallResult)
+    assert index_review.value.best_ordinal == 2
+
+    responses["version_review"] = '{"best_version_number":3}'
+    with pytest.raises(ValueError, match="不在候选集合"):
+        await provider.review(
+            compatibility_review_request,
+            provider_request_key="provider-key-review-invalid",
+        )
+
     responses["chapter_optimization"] = '{"report":{"status":"missing content"}}'
     with pytest.raises(ValueError) as exc_info:
         await provider.post_review(
