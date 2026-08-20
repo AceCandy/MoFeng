@@ -11,6 +11,8 @@ const mountPipeline = (overrides: Record<string, unknown> = {}) => {
   const host = document.createElement('div')
   document.body.append(host)
   const onSelect = vi.fn()
+  const onRetryActiveStep = vi.fn()
+  const onConfirmManual = vi.fn()
   const app = createApp({
     render: () => h(ChapterPipeline, {
       pipelineSteps: [
@@ -23,12 +25,14 @@ const mountPipeline = (overrides: Record<string, unknown> = {}) => {
       shouldShowManualConfirmBadge: () => false,
       activeStepKey: 'draft',
       onSelect,
+      onRetryActiveStep,
+      onConfirmManual,
       ...overrides,
     }),
   })
   app.mount(host)
   mounted.push({ app, host })
-  return { host, onSelect }
+  return { host, onSelect, onRetryActiveStep, onConfirmManual }
 }
 
 afterEach(() => {
@@ -86,5 +90,84 @@ describe('ChapterPipeline', () => {
     expect(host.querySelector('.is-skipped')?.textContent).toContain('仅生成一个候选')
     expect(host.querySelector('.is-control')?.textContent).toContain('控制')
     expect(host.querySelector('.is-terminal')?.textContent).toContain('终态')
+  })
+
+  it('让可重试的失败节点直接承担重试操作', () => {
+    const { host, onSelect, onRetryActiveStep } = mountPipeline({
+      stepState: (key: string) => ({
+        tone: key === 'draft' ? 'failed' : states[key],
+        label: key === 'draft' ? '失败' : states[key],
+      }),
+      canRetryActiveStep: true,
+    })
+    const retryNode = host.querySelector<HTMLButtonElement>('[data-action="retry-failed-node"]')
+
+    expect(retryNode?.getAttribute('aria-label')).toBe('重试起草')
+    expect(retryNode?.querySelector('.chapter-console__pipeline-failed-label')?.textContent).toBe(
+      '失败',
+    )
+    expect(retryNode?.querySelector('.chapter-console__pipeline-retry-label')?.textContent).toBe(
+      '重试',
+    )
+    retryNode?.click()
+    expect(onRetryActiveStep).toHaveBeenCalledOnce()
+    expect(onSelect).not.toHaveBeenCalled()
+  })
+
+  it('提交重试时禁用失败节点，避免重复操作', () => {
+    const { host, onRetryActiveStep } = mountPipeline({
+      stepState: (key: string) => ({
+        tone: key === 'draft' ? 'failed' : states[key],
+        label: key === 'draft' ? '失败' : states[key],
+      }),
+      canRetryActiveStep: true,
+      pending: true,
+    })
+    const retryNode = host.querySelector<HTMLButtonElement>('[data-action="retry-failed-node"]')
+
+    expect(retryNode?.disabled).toBe(true)
+    expect(retryNode?.textContent).toContain('提交中')
+    retryNode?.click()
+    expect(onRetryActiveStep).not.toHaveBeenCalled()
+  })
+
+  it('待人工确认节点直接承担确认操作且不重复显示等待状态', () => {
+    const { host, onSelect, onConfirmManual } = mountPipeline({
+      activeStepKey: 'review',
+      canConfirmManual: true,
+      shouldShowManualConfirmBadge: (key: string) => key === 'review',
+      stepState: (key: string) => ({
+        tone: key === 'review' ? 'pending' : states[key],
+        label: key === 'review' ? '等待你确认' : states[key],
+      }),
+    })
+    const confirmNode = host.querySelector<HTMLButtonElement>('[data-action="confirm-manual-node"]')
+
+    expect(confirmNode?.disabled).toBe(false)
+    expect(confirmNode?.getAttribute('aria-label')).toBe('确认并继续')
+    expect(confirmNode?.textContent).toContain('待人工确认')
+    expect(confirmNode?.textContent).toContain('确认并继续')
+    expect(confirmNode?.textContent).not.toContain('等待你确认')
+    confirmNode?.click()
+    expect(onConfirmManual).toHaveBeenCalledOnce()
+    expect(onSelect).not.toHaveBeenCalled()
+  })
+
+  it('确认提交中禁用待人工确认节点', () => {
+    const { host, onConfirmManual } = mountPipeline({
+      activeStepKey: 'review',
+      canConfirmManual: true,
+      pending: true,
+      shouldShowManualConfirmBadge: (key: string) => key === 'review',
+      stepState: (key: string) => ({
+        tone: key === 'review' ? 'pending' : states[key],
+        label: states[key],
+      }),
+    })
+    const confirmNode = host.querySelector<HTMLButtonElement>('[data-action="confirm-manual-node"]')
+
+    expect(confirmNode?.disabled).toBe(true)
+    confirmNode?.click()
+    expect(onConfirmManual).not.toHaveBeenCalled()
   })
 })

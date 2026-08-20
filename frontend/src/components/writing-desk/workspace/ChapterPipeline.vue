@@ -1,11 +1,8 @@
-<!-- AIMETA P=章节工作流节点进度条|R=节点状态_节点选择_失败节点重试入口|NR=不直接调用API_不持有命令状态|E=component:ChapterPipeline|X=internal|A=workflow-pipeline|D=vue|S=dom|RD=./README.ai -->
+<!-- AIMETA P=章节工作流节点进度条|R=节点状态_节点选择_失败节点重试与人工确认入口|NR=不直接调用API_不持有命令状态|E=component:ChapterPipeline|X=internal|A=workflow-pipeline|D=vue|S=dom|RD=./README.ai -->
 <template>
   <article
     class="chapter-console__pipeline-card"
-    :class="{
-      'is-read-only': true,
-      'has-node-retry': canRetryActiveStep && activeStepKey !== null,
-    }"
+    :class="{ 'is-read-only': true }"
     aria-label="生成进度"
   >
     <header class="chapter-console__pipeline-header-main">
@@ -52,51 +49,44 @@
               { 'is-leading-to-current': isLeadingToCurrent(item.index) },
               { 'is-selected': activeStepKey === item.key },
               { 'is-clickable': stepState(item.key, item.index).tone !== 'waiting' },
-              { 'has-retry-action': canRetryActiveStep && activeStepKey === item.key },
+              { 'has-retry-action': isRetryStep(item.key) },
+              { 'has-confirm-action': isManualConfirmStep(item.key) },
             ]"
           >
-            <Transition name="chapter-node-retry">
-              <Tooltip
-                v-if="canRetryActiveStep && activeStepKey === item.key"
-                text="使用上一节点的结果重新执行当前节点"
-                :show-delay="240"
-                class="chapter-console__pipeline-node-retry-trigger"
-              >
-                <button
-                  type="button"
-                  class="md-btn md-ripple chapter-console__pipeline-node-retry"
-                  data-action="retry-external-node"
-                  :aria-label="`使用上一节点结果重试${item.label}`"
-                  :disabled="pending"
-                  @click.stop="emit('retryActiveStep')"
-                >
-                  <svg
-                    class="chapter-console__pipeline-node-retry-icon"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M3 12a9 9 0 1 0 3-6.7" />
-                    <path d="M3 4v6h6" />
-                  </svg>
-                  <span>{{ pending ? '提交' : '重试' }}</span>
-                </button>
-              </Tooltip>
-            </Transition>
             <button
               type="button"
               class="chapter-console__pipeline-select"
-              :aria-label="stepTooltipText(item.key, item.index)"
+              :class="{
+                'is-retry-action': isRetryStep(item.key),
+                'is-confirm-action': isManualConfirmStep(item.key),
+              }"
+              :data-action="
+                isRetryStep(item.key)
+                  ? 'retry-failed-node'
+                  : isManualConfirmStep(item.key) ? 'confirm-manual-node' : undefined
+              "
+              :aria-label="
+                isRetryStep(item.key)
+                  ? `重试${item.label}`
+                  : isManualConfirmStep(item.key)
+                    ? '确认并继续'
+                    : stepTooltipText(item.key, item.index)
+              "
               :aria-current="activeStepKey === item.key ? 'step' : undefined"
-              :disabled="stepState(item.key, item.index).tone === 'waiting'"
-              @click="emit('select', item.key, item.index)"
+              :disabled="
+                stepState(item.key, item.index).tone === 'waiting' ||
+                ((isRetryStep(item.key) || isManualConfirmStep(item.key)) && pending)
+              "
+              @click="handleStepClick(item.key, item.index)"
             >
               <Tooltip
-                :text="canRetryActiveStep && activeStepKey === item.key ? undefined : stepTooltipText(item.key, item.index)"
+                :text="
+                  isRetryStep(item.key)
+                    ? `点击重试${item.label}`
+                    : isManualConfirmStep(item.key)
+                      ? '确认并继续'
+                      : stepTooltipText(item.key, item.index)
+                "
                 :show-delay="150"
                 class="chapter-console__pipeline-tooltip-wrapper"
               >
@@ -116,7 +106,11 @@
                       v-if="shouldShowManualConfirmBadge(item.key)"
                       class="chapter-console__pipeline-badge chapter-console__pipeline-badge--manual-confirm"
                     >
-                      待人工确认
+                      <span class="chapter-console__pipeline-confirm-pending">待人工确认</span>
+                      <span
+                        v-if="isManualConfirmStep(item.key)"
+                        class="chapter-console__pipeline-confirm-action"
+                      >确认并继续</span>
                     </span>
                     <span
                       v-if="stepState(item.key, item.index).tone === 'in-progress'"
@@ -128,7 +122,14 @@
                       v-else-if="stepState(item.key, item.index).tone === 'failed'"
                       class="chapter-console__pipeline-badge chapter-console__pipeline-badge--failed"
                     >
-                      失败
+                      <span class="chapter-console__pipeline-failed-label">{{
+                        isRetryStep(item.key) && pending ? '提交中' : '失败'
+                      }}</span>
+                      <span
+                        v-if="isRetryStep(item.key) && !pending"
+                        class="chapter-console__pipeline-retry-label"
+                        >重试</span
+                      >
                     </span>
                     <span
                       v-else-if="stepState(item.key, item.index).tone === 'skipped'"
@@ -137,7 +138,10 @@
                       {{ stepState(item.key, item.index).label }}
                     </span>
                     <span
-                      v-else-if="stepState(item.key, item.index).tone === 'pending'"
+                      v-else-if="
+                        stepState(item.key, item.index).tone === 'pending'
+                        && !shouldShowManualConfirmBadge(item.key)
+                      "
                       class="chapter-console__pipeline-badge chapter-console__pipeline-badge--pending"
                     >
                       {{ stepState(item.key, item.index).label }}
@@ -165,12 +169,14 @@ interface Props {
   shouldShowManualConfirmBadge: (key: string) => boolean
   activeStepKey: string | null
   canRetryActiveStep?: boolean
+  canConfirmManual?: boolean
   canCancel?: boolean
   pending?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   canRetryActiveStep: false,
+  canConfirmManual: false,
   canCancel: false,
   pending: false,
 })
@@ -204,10 +210,27 @@ const isLeadingToCurrent = (index: number) => {
   return nextStep ? props.stepState(nextStep.key, index + 1).tone === 'in-progress' : false
 }
 
+const isRetryStep = (key: string) => props.canRetryActiveStep && props.activeStepKey === key
+const isManualConfirmStep = (key: string) =>
+  props.canConfirmManual && props.shouldShowManualConfirmBadge(key)
+
+const handleStepClick = (key: string, index: number) => {
+  if (isManualConfirmStep(key)) {
+    if (!props.pending) emit('confirmManual')
+    return
+  }
+  if (isRetryStep(key)) {
+    if (!props.pending) emit('retryActiveStep')
+    return
+  }
+  emit('select', key, index)
+}
+
 const emit = defineEmits<{
   select: [key: string, index: number]
   cancel: []
   retryActiveStep: []
+  confirmManual: []
 }>()
 </script>
 
@@ -600,10 +623,14 @@ const emit = defineEmits<{
   flex-direction: column;
   align-items: center;
   padding: 0;
-  border: 0;
+  border: 1px solid transparent;
+  border-radius: var(--md-radius-xs);
   background: transparent;
   color: inherit;
   font: inherit;
+  transition:
+    border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* 只读回溯模式：覆写 pipeline 内部元素（ol/item/title）的间距与字号。
@@ -637,55 +664,71 @@ const emit = defineEmits<{
   border-radius: var(--md-radius-xs);
 }
 
-.chapter-console__pipeline-item > .chapter-console__pipeline-node-retry-trigger {
-  position: absolute;
-  z-index: 4;
-  top: -36px;
-  left: 50%;
-  transform: translateX(-50%);
+.chapter-console__pipeline-retry-label {
+  display: none;
 }
 
-.chapter-console__pipeline-node-retry {
-  width: 56px;
-  min-width: 56px;
-  min-height: 28px;
-  gap: 3px;
-  padding: 0 6px;
-  border: 1px solid color-mix(in srgb, var(--md-error) 55%, var(--md-outline));
-  border-radius: var(--md-radius-xs);
-  background-color: var(--md-surface);
-  color: var(--md-error);
+.chapter-console__pipeline-confirm-action {
+  display: none;
+}
+
+.chapter-console__pipeline-select.is-confirm-action:hover:not(:disabled)
+  .chapter-console__pipeline-confirm-pending,
+.chapter-console__pipeline-select.is-confirm-action:focus-visible
+  .chapter-console__pipeline-confirm-pending {
+  display: none;
+}
+
+.chapter-console__pipeline-select.is-confirm-action:hover:not(:disabled)
+  .chapter-console__pipeline-confirm-action,
+.chapter-console__pipeline-select.is-confirm-action:focus-visible
+  .chapter-console__pipeline-confirm-action {
+  display: inline;
+}
+
+.chapter-console__pipeline-select.is-retry-action:hover:not(:disabled),
+.chapter-console__pipeline-select.is-retry-action:focus-visible {
+  border-color: var(--md-warning);
+  background-color: var(--md-warning-container);
+}
+
+.chapter-console__pipeline-select.is-retry-action:hover:not(:disabled) .chapter-console__dot,
+.chapter-console__pipeline-select.is-retry-action:focus-visible .chapter-console__dot {
+  border-color: var(--md-warning);
+  background-color: var(--md-warning-container);
   box-shadow: none;
-  font-size: var(--md-label-medium);
-  font-weight: 700;
-  letter-spacing: 0;
-  white-space: nowrap;
 }
 
-.chapter-console__pipeline-node-retry:hover:not(:disabled) {
-  border-color: var(--md-error);
-  background-color: color-mix(in srgb, var(--md-error) 8%, var(--md-surface));
+.chapter-console__pipeline-select.is-retry-action:hover:not(:disabled)
+  .chapter-console__dot::before,
+.chapter-console__pipeline-select.is-retry-action:focus-visible .chapter-console__dot::before,
+.chapter-console__pipeline-select.is-retry-action:hover:not(:disabled)
+  .chapter-console__pipeline-title,
+.chapter-console__pipeline-select.is-retry-action:focus-visible .chapter-console__pipeline-title {
+  color: var(--md-warning-text);
 }
 
-.chapter-console__pipeline-node-retry-icon {
-  width: 13px;
-  height: 13px;
-  flex: none;
+.chapter-console__pipeline-select.is-retry-action:hover:not(:disabled)
+  .chapter-console__pipeline-badge--failed,
+.chapter-console__pipeline-select.is-retry-action:focus-visible
+  .chapter-console__pipeline-badge--failed {
+  border-color: var(--md-warning);
+  background-color: var(--md-warning-container);
+  color: var(--md-warning-text);
 }
 
-.chapter-node-retry-enter-active,
-.chapter-node-retry-leave-active {
-  transition:
-    opacity 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 180ms cubic-bezier(0.22, 1, 0.36, 1);
+.chapter-console__pipeline-select.is-retry-action:hover:not(:disabled)
+  .chapter-console__pipeline-failed-label,
+.chapter-console__pipeline-select.is-retry-action:focus-visible
+  .chapter-console__pipeline-failed-label {
+  display: none;
 }
 
-.chapter-node-retry-enter-from,
-.chapter-node-retry-leave-to {
-  opacity: 0;
-  filter: blur(2px);
-  transform: translate(-50%, 6px);
+.chapter-console__pipeline-select.is-retry-action:hover:not(:disabled)
+  .chapter-console__pipeline-retry-label,
+.chapter-console__pipeline-select.is-retry-action:focus-visible
+  .chapter-console__pipeline-retry-label {
+  display: inline;
 }
 
 /* 选中节点的圆圈特效 */
@@ -708,10 +751,6 @@ const emit = defineEmits<{
 }
 
 @media (hover: hover) and (min-width: 834px) {
-  .chapter-console__pipeline-card.is-read-only.has-node-retry .chapter-console__pipeline {
-    margin-top: 36px;
-  }
-
   .chapter-console__pipeline-tooltip-wrapper {
     cursor: pointer;
   }
@@ -783,22 +822,6 @@ const emit = defineEmits<{
   .chapter-console__pipeline-item {
     padding: 10px 0 14px 0;
     flex: none;
-  }
-
-  .chapter-console__pipeline-item.has-retry-action {
-    padding-right: 68px;
-  }
-
-  .chapter-console__pipeline-item > .chapter-console__pipeline-node-retry-trigger {
-    top: 50%;
-    right: 0;
-    left: auto;
-    transform: translateY(-50%);
-  }
-
-  .chapter-node-retry-enter-from,
-  .chapter-node-retry-leave-to {
-    transform: translate(6px, -50%);
   }
 
   .chapter-console__pipeline-tooltip-wrapper {

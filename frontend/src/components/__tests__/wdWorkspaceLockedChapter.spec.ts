@@ -423,7 +423,7 @@ describe('WDWorkspace locked chapter state', () => {
       expect(rendered.host.querySelector('.chapter-workflow')).not.toBeNull()
       expect(rendered.host.querySelector('[data-action="reset"]')).not.toBeNull()
       expect(rendered.host.querySelector('[data-action="retry-external"]')).toBeNull()
-      expect(rendered.host.querySelector('[data-action="retry-external-node"]')).toBeNull()
+      expect(rendered.host.querySelector('[data-action="retry-failed-node"]')).not.toBeNull()
 
       const failedStep = Array.from(
         rendered.host.querySelectorAll('.chapter-console__pipeline-item'),
@@ -431,7 +431,7 @@ describe('WDWorkspace locked chapter state', () => {
       failedStep?.querySelector<HTMLButtonElement>('.chapter-console__pipeline-select')?.click()
       await nextTick()
 
-      expect(failedStep?.querySelector('[data-action="retry-external-node"]')).not.toBeNull()
+      expect(failedStep?.querySelector('[data-action="retry-failed-node"]')).not.toBeNull()
     } finally {
       rendered.unmount()
     }
@@ -538,7 +538,7 @@ describe('WDWorkspace locked chapter state', () => {
 
     try {
       expect(rendered.host.textContent).toContain('待选版本')
-      expect(rendered.host.textContent).toContain('确认润色结果')
+      expect(rendered.host.querySelector('.chapter-workflow')).toBeNull()
       expect(rendered.host.textContent).not.toContain('确认定稿')
       expect(rendered.host.textContent).toContain('退役冠军林拓站在商业直播表演赛的灯下')
       expect(rendered.host.querySelector('.chapter-paper')).not.toBeNull()
@@ -548,6 +548,7 @@ describe('WDWorkspace locked chapter state', () => {
       expect(rendered.host.textContent).toContain('生成进度')
       expect(rendered.host.textContent).toContain('冻结基础上下文')
       expect(rendered.host.textContent).toContain('待人工确认')
+      expect(rendered.host.textContent).not.toContain('等待你确认')
       expect(rendered.host.textContent).not.toContain('转入后台生成')
       expect(rendered.host.textContent).not.toContain('取消生成')
       const cancelButtons = rendered.host.querySelectorAll('[data-action="cancel"]')
@@ -558,6 +559,13 @@ describe('WDWorkspace locked chapter state', () => {
       ).map((item) => item.textContent?.trim())
       expect(pipelineTitles[pipelineTitles.length - 1]).toBe('章节工作流完成')
       expect(pipelineTitles).not.toContain('待人工确认')
+
+      const confirmNode = rendered.host.querySelector<HTMLButtonElement>(
+        '[data-action="confirm-manual-node"]',
+      )
+      expect(confirmNode?.getAttribute('aria-label')).toBe('确认并继续')
+      confirmNode?.click()
+      expect(rendered.selectedWorkflowVersions).toEqual([301])
 
       const contextStep = Array.from(
         rendered.host.querySelectorAll('.chapter-console__pipeline-item'),

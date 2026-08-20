@@ -112,6 +112,7 @@
               @retry="emit('workflowRetry')"
               @retry-external="emit('workflowRetryExternal', $event)"
               @retry-projection="emit('workflowRetryProjection')"
+              @confirm-manual="emit('workflowSelectVersion', $event)"
             />
 
             <ChapterContent
@@ -372,13 +373,23 @@ const { chapterInlineMeta } = useChapterInlineMeta({
   hasSelectedChapterContent,
 })
 
-// 候选版本描红预览：工作流面板选中候选时把正文接到 ChapterContent
+// 候选版本描红预览：多候选由工作流面板选中，唯一候选直接接到 ChapterContent
 const miaohongPreviewContent = ref<string | null>(null)
 const hasMiaohongPreview = computed(() => Boolean(miaohongPreviewContent.value?.trim()))
 
 const onCandidatePreview = (content: string | null) => {
   miaohongPreviewContent.value = content
 }
+
+watch(
+  () => [props.workflowPhase, props.workflowCandidates] as const,
+  ([phase, candidates]) => {
+    if (phase !== 'waitingForSelection' || candidates.length !== 1) return
+    const content = candidates[0]?.content
+    miaohongPreviewContent.value = content ? cleanVersionContent(content) : null
+  },
+  { immediate: true },
+)
 
 // 落印签名：候选描红稿被选定提交（waitingForSelection → submitting/finalizing/succeeded）时，
 // 旧稿转快照原地朱转墨（ChapterContent 渲染 260ms 过渡），标题旁钤「定」字朱砂印一瞬
@@ -475,6 +486,7 @@ const shouldShowTraceReplay = computed(() => {
     || props.workflowPhase === 'failed'
   return activePhase
     && (props.workflowPhase === 'submitting'
+      || (props.workflowPhase === 'waitingForSelection' && props.workflowCandidates.length === 1)
       || props.workflowNodeKey !== null
       || workflowGenerationTraces.value.length > 0)
 })
@@ -506,6 +518,12 @@ const shouldRenderWorkflowPanel = computed(() =>
   props.workflowPhase !== 'booting'
   && props.workflowPhase !== 'succeeded'
   && !(props.workflowPhase === 'idle' && hasFinalizedChapterContent.value)
+  && !(
+    props.workflowPhase === 'waitingForSelection'
+    && props.workflowCandidates.length === 1
+    && shouldShowTraceReplay.value
+    && activeTab.value === 'content'
+  )
   && (
     !hasInlineExternalRetry.value
     || workflowPanelAllowedCommands.value.length > 0
@@ -553,6 +571,12 @@ const traceReplayProps = computed(() => ({
   generationStartedAt: selectedChapter.value?.generation_started_at ?? null,
   statusUpdatedAt: selectedChapter.value?.status_updated_at ?? null,
   generationTraces: workflowGenerationTraces.value,
+  manualConfirmCandidateId:
+    props.workflowPhase === 'waitingForSelection'
+    && props.workflowAllowedCommands.includes('select')
+    && props.workflowCandidates.length === 1
+      ? props.workflowCandidates[0]?.id ?? null
+      : null,
   readOnly: true,
 }))
 

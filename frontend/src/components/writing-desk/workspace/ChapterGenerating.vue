@@ -1,4 +1,4 @@
-<!-- AIMETA P=章节工作流生成轨迹回溯|R=节点进度_真实trace详情_失败节点重试|NR=不直接调用API_不持有命令状态|E=component:ChapterGenerating|X=internal|A=workflow-trace|D=vue|S=dom|RD=./README.ai -->
+<!-- AIMETA P=章节工作流生成轨迹回溯|R=节点进度_真实trace详情_失败节点重试_人工确认转发|NR=不直接调用API_不持有命令状态|E=component:ChapterGenerating|X=internal|A=workflow-trace|D=vue|S=dom|RD=./README.ai -->
 <template>
   <section
     class="chapter-console"
@@ -11,11 +11,13 @@
       :should-show-manual-confirm-badge="shouldShowManualConfirmBadge"
       :active-step-key="activeStepKey"
       :can-retry-active-step="canRetryActiveStep"
+      :can-confirm-manual="manualConfirmCandidateId !== null"
       :can-cancel="canCancel"
       :pending="pending || retryConfirming"
       @select="selectStep"
       @cancel="emit('cancel')"
       @retry-active-step="retryActiveStep"
+      @confirm-manual="confirmManual"
     />
 
     <ChapterDraftPreview
@@ -66,6 +68,7 @@ interface Props {
   retryActivityKey?: string | null
   canCancel?: boolean
   pending?: boolean
+  manualConfirmCandidateId?: number | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -78,6 +81,7 @@ const props = withDefaults(defineProps<Props>(), {
   retryActivityKey: null,
   canCancel: false,
   pending: false,
+  manualConfirmCandidateId: null,
 })
 
 const emit = defineEmits<{
@@ -85,16 +89,15 @@ const emit = defineEmits<{
   retry: []
   retryExternal: [activityKey: string]
   retryProjection: []
+  confirmManual: [versionId: number]
 }>()
 
 const activeStepKey = ref<string | null>(null)
-const retryStepKey = ref<string | null>(null)
 const retryConfirming = ref(false)
 
 const selectStep = (key: string, index: number) => {
   if (stepState(key, index).tone !== 'waiting') {
     activeStepKey.value = key
-    retryStepKey.value = key
   }
 }
 
@@ -127,7 +130,6 @@ watch(
   () => currentStepKey.value,
   (newKey) => {
     activeStepKey.value = newKey
-    retryStepKey.value = null
   },
   { immediate: true }
 )
@@ -161,7 +163,6 @@ const canRetryActiveStep = computed(() => {
   const command = resolvedRetryCommand.value
   if (
     command === null
-    || retryStepKey.value !== activeStepKey.value
     || activeStepDetails.value?.status !== '失败'
     || !props.allowedCommands.includes(command)
   ) return false
@@ -172,7 +173,7 @@ const canRetryActiveStep = computed(() => {
   }
   if (command === 'retry') return activeStepKey.value === currentStepKey.value
   const metadata = activeTrace.value ? traceMetadata(activeTrace.value) : {}
-  return metadata.remote_call !== false
+  return command === 'retry_projection' || metadata.remote_call !== false
 })
 
 const retryActiveStep = async () => {
@@ -200,6 +201,11 @@ const retryActiveStep = async () => {
   } finally {
     retryConfirming.value = false
   }
+}
+
+const confirmManual = () => {
+  if (props.manualConfirmCandidateId === null || props.pending) return
+  emit('confirmManual', props.manualConfirmCandidateId)
 }
 
 </script>

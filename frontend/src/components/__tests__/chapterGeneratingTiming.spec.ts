@@ -107,8 +107,7 @@ describe('ChapterGenerating timing inspector', () => {
       expect(current?.textContent).toContain('润色推荐版本')
       expect(current?.previousElementSibling?.classList.contains('is-leading-to-current')).toBe(true)
       expect(current?.classList.contains('is-leading-to-current')).toBe(false)
-      expect(rendered.host.querySelector('.chapter-console__pipeline-card')
-        ?.classList.contains('has-node-retry')).toBe(false)
+      expect(rendered.host.querySelector('[data-action="retry-failed-node"]')).toBeNull()
     } finally {
       rendered.unmount()
     }
@@ -440,7 +439,7 @@ describe('ChapterGenerating timing inspector', () => {
     }
   })
 
-  it('retries the selected failed external node only when the snapshot allows it', async () => {
+  it('retries the current failed external node only when the snapshot allows it', async () => {
     const onRetryExternal = vi.fn()
     let resolveConfirmation: ((confirmed: boolean) => void) | undefined
     const confirmation = new Promise<boolean>((resolve) => {
@@ -481,25 +480,21 @@ describe('ChapterGenerating timing inspector', () => {
     })
 
     try {
-      expect(rendered.host.querySelector('[data-action="retry-external-node"]')).toBeNull()
-      await clickPipelineStep(rendered.host, '评审候选版本')
       const retryButton = rendered.host.querySelector<HTMLButtonElement>(
-        '[data-action="retry-external-node"]',
+        '[data-action="retry-failed-node"]',
       )
       expect(retryButton?.textContent).toContain('重试')
-      expect(retryButton?.getAttribute('aria-label')).toBe('使用上一节点结果重试评审候选版本')
+      expect(retryButton?.getAttribute('aria-label')).toBe('重试评审候选版本')
       expect(retryButton?.disabled).toBe(false)
       expect(retryButton?.closest('.chapter-console__pipeline-item')?.textContent)
         .toContain('评审候选版本')
-      expect(retryButton?.closest('.chapter-console__pipeline-card')
-        ?.classList.contains('has-node-retry')).toBe(true)
 
-      retryButton?.closest('.chapter-console__pipeline-node-retry-trigger')
+      retryButton?.querySelector('.chapter-console__pipeline-tooltip-wrapper')
         ?.dispatchEvent(new MouseEvent('mouseenter'))
-      await new Promise((resolve) => setTimeout(resolve, 260))
+      await new Promise((resolve) => setTimeout(resolve, 180))
       await nextTick()
       expect(document.body.querySelector('[role="tooltip"]')?.textContent)
-        .toContain('使用上一节点的结果重新执行当前节点')
+        .toContain('点击重试评审候选版本')
 
       retryButton?.click()
       retryButton?.click()
@@ -512,7 +507,7 @@ describe('ChapterGenerating timing inspector', () => {
 
       await clickPipelineStep(rendered.host, '候选版本 1')
       await vi.waitFor(() => {
-        expect(rendered.host.querySelector('[data-action="retry-external-node"]')).toBeNull()
+        expect(rendered.host.querySelector('[data-action="retry-failed-node"]')).toBeNull()
       })
     } finally {
       confirmSpy.mockRestore()
@@ -530,7 +525,7 @@ describe('ChapterGenerating timing inspector', () => {
       })
       try {
         await clickPipelineStep(unavailable.host, '评审候选版本')
-        expect(unavailable.host.querySelector('[data-action="retry-external-node"]')).toBeNull()
+        expect(unavailable.host.querySelector('[data-action="retry-failed-node"]')).toBeNull()
       } finally {
         unavailable.unmount()
       }
@@ -546,14 +541,14 @@ describe('ChapterGenerating timing inspector', () => {
     try {
       await clickPipelineStep(pending.host, '评审候选版本')
       expect(pending.host.querySelector<HTMLButtonElement>(
-        '[data-action="retry-external-node"]',
+        '[data-action="retry-failed-node"]',
       )?.disabled).toBe(true)
     } finally {
       pending.unmount()
     }
   })
 
-  it('retries a failed embedding leaf but not its local persistence step', async () => {
+  it('retries both a failed embedding leaf and its local persistence step', async () => {
     const onRetryProjection = vi.fn()
     const rendered = await mountChapterGenerating(
       [
@@ -589,7 +584,7 @@ describe('ChapterGenerating timing inspector', () => {
     try {
       await clickPipelineStep(rendered.host, '生成章节索引向量')
       const retryButton = rendered.host.querySelector<HTMLButtonElement>(
-        '[data-action="retry-external-node"]',
+        '[data-action="retry-failed-node"]',
       )
       expect(retryButton).not.toBeNull()
       retryButton?.click()
@@ -597,9 +592,13 @@ describe('ChapterGenerating timing inspector', () => {
       expect(onRetryProjection).toHaveBeenCalledTimes(1)
 
       await clickPipelineStep(rendered.host, '写入章节索引')
-      await vi.waitFor(() => {
-        expect(rendered.host.querySelector('[data-action="retry-external-node"]')).toBeNull()
-      })
+      const persistenceRetry = rendered.host.querySelector<HTMLButtonElement>(
+        '[data-action="retry-failed-node"]',
+      )
+      expect(persistenceRetry?.getAttribute('aria-label')).toBe('重试写入章节索引')
+      persistenceRetry?.click()
+      await nextTick()
+      expect(onRetryProjection).toHaveBeenCalledTimes(2)
     } finally {
       rendered.unmount()
     }
@@ -668,7 +667,7 @@ describe('ChapterGenerating timing inspector', () => {
     try {
       await clickPipelineStep(rendered.host, '生成章节索引向量')
       rendered.host.querySelector<HTMLButtonElement>(
-        '[data-action="retry-external-node"]',
+        '[data-action="retry-failed-node"]',
       )?.click()
       await vi.waitFor(() => expect(onRetryExternal).toHaveBeenCalledWith('rag_embedding'))
       expect(confirmSpy).toHaveBeenCalledTimes(1)
