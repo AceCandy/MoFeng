@@ -382,6 +382,7 @@ async def test_production_llm_providers_forward_stable_provider_request_keys(
         project_id="workflow-production-provider-keys",
     )
     calls: list[tuple[str, str | None]] = []
+    max_token_values: list[int | None] = []
     prompt_names: list[str] = []
     request_payloads: list[dict[str, object]] = []
     responses = {
@@ -405,9 +406,11 @@ async def test_production_llm_providers_forward_stable_provider_request_keys(
         provider_request_key=None,
         conversation_history,
         system_prompt,
+        max_tokens=None,
         **_kwargs,
     ):
         calls.append((stage, provider_request_key))
+        max_token_values.append(max_tokens)
         request_payloads.append(json.loads(conversation_history[0]["content"]))
         return AICallResult(
             value=(
@@ -530,6 +533,7 @@ async def test_production_llm_providers_forward_stable_provider_request_keys(
         ],
         ("chapter_optimization", "provider-key-compression"),
     ]
+    assert max_token_values == [None, 20000, 20000, None, *[20000] * 5]
     assert prompt_names == [
         "chapter_plan",
         "writing_v2",

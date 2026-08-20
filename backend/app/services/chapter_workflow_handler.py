@@ -69,6 +69,7 @@ from .prompt_service import PromptService
 
 OutputT = TypeVar("OutputT", bound=BaseModel)
 WorkflowHandler = Callable[[JobExecutionContext], Awaitable[JobOutcome | JobWaitOutcome]]
+_CHAPTER_CONTENT_MAX_TOKENS = 20_000
 
 
 class ChapterWorkflowProviders(Protocol):
@@ -216,7 +217,7 @@ class ChapterWorkflowLLMProviders:
             user_id=self.execution.lease.user_id,
             timeout=600.0,
             response_format=None,
-            max_tokens=7000,
+            max_tokens=_CHAPTER_CONTENT_MAX_TOKENS,
             stage=f"chapter_writing_{request.ordinal}",
             provider_request_key=provider_request_key,
         )
@@ -353,6 +354,7 @@ class ChapterWorkflowLLMProviders:
             user_id=self.execution.lease.user_id,
             timeout=600.0,
             response_format=None,
+            max_tokens=_CHAPTER_CONTENT_MAX_TOKENS,
             stage="chapter_optimization",
             provider_request_key=provider_request_key,
         )
