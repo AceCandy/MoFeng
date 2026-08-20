@@ -1349,3 +1349,24 @@ Retired the legacy chapter generation pipeline, routed every generation entry th
 ### Status
 
 [OK] **Completed**
+
+
+## Session 45: 收敛章节人工确认节点
+
+**Date**: 2026-08-20
+**Task**: 收敛章节人工确认节点
+**Branch**: `main`
+
+### Summary
+
+将单候选人工确认合并到流程节点悬停操作，保留多候选选版，并完善失败节点重试与针对性验证。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5ab31b6` | (see git log) |
+
+### Status
+
+[OK] **Completed**
