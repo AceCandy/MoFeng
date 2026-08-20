@@ -285,17 +285,27 @@ const handleClickOutside = (event: MouseEvent) => {
 
 const settingsViewRef = ref<any>(null)
 const isSavingSettings = ref(false)
+// 仅「存」按钮触发的保存才关闭弹窗；删除模型、改定价等行内自动保存也会冒泡 saved，不得关窗
+const closeSettingsOnSaved = ref(false)
 
 const triggerSettingsSave = async () => {
   if (settingsViewRef.value) {
     isSavingSettings.value = true
+    closeSettingsOnSaved.value = true
     try {
       await settingsViewRef.value.save()
     } catch (err) {
       console.error('配置保存失败:', err)
     } finally {
       isSavingSettings.value = false
+      closeSettingsOnSaved.value = false
     }
+  }
+}
+
+const handleSettingsSaved = () => {
+  if (closeSettingsOnSaved.value) {
+    showSettingsModal.value = false
   }
 }
 
@@ -730,7 +740,7 @@ onUnmounted(() => {
             存
           </button>
         </template>
-        <SettingsView ref="settingsViewRef" :is-modal="true" @saved="showSettingsModal = false" />
+        <SettingsView ref="settingsViewRef" :is-modal="true" @saved="handleSettingsSaved" />
       </GlobalModalContainer>
 
       <GlobalModalContainer
