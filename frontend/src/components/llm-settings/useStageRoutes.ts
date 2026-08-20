@@ -1,7 +1,14 @@
+// AIMETA P=阶段路由状态|R=路由同步_去重保存_脏状态|NR=不渲染路由界面|E=composable:useStageRoutes|X=internal|A=model-routing|D=vue-query|S=state|RD=./README.ai
 import { computed, reactive, ref, watch, type Ref } from 'vue'
 import type { useLLMConfigBundleQuery, useSaveStageRoutesMutation } from '@/queries/llm'
 import type { ProviderFormMode } from './modelRoutingTypes'
-import { stageGroups } from './stageDefinitions'
+import { stageRouteKeys } from './stageDefinitions'
+
+export const buildStageRoutePayload = (routeSelections: Record<string, string>) =>
+  stageRouteKeys.flatMap((stage) => {
+    const modelId = routeSelections[stage]
+    return modelId ? [{ stage, model_id: Number(modelId) }] : []
+  })
 
 interface UseStageRoutesOptions {
   bundleQuery: ReturnType<typeof useLLMConfigBundleQuery>
@@ -15,7 +22,7 @@ interface UseStageRoutesOptions {
 
 /**
  * 阶段路由状态机。从 PersonalModelRouting.vue 抽出（Slice 5）。
- * 内化 routeSelections/initialRouteSelections + chatStageGroups/allStageKeys +
+ * 内化 routeSelections/initialRouteSelections + allStageKeys +
  * syncRouteSelectionsFromBundle/saveRoutes + isDirty（含 providerFormMode 与 routes 两分支）+
  * watch(bundleQuery.data→sync, immediate)。saveRoutes 的 emit('saved') 经 onSaved 回调交父。
  */
@@ -24,10 +31,7 @@ export const useStageRoutes = (options: UseStageRoutesOptions) => {
 
   const routeSelections = reactive<Record<string, string>>({})
   const initialRouteSelections = ref<Record<string, string>>({})
-  const chatStageGroups = computed(() => stageGroups)
-  const allStageKeys = computed(() =>
-    chatStageGroups.value.flatMap((group) => group.stages.map((stage) => stage.key)),
-  )
+  const allStageKeys = computed(() => stageRouteKeys)
 
   const syncRouteSelectionsFromBundle = () => {
     const bundle = bundleQuery.data.value
@@ -44,9 +48,7 @@ export const useStageRoutes = (options: UseStageRoutesOptions) => {
   }
 
   const saveRoutes = async () => {
-    const routes = Object.entries(routeSelections)
-      .filter(([, modelId]) => modelId)
-      .map(([stage, modelId]) => ({ stage, model_id: Number(modelId) }))
+    const routes = buildStageRoutePayload(routeSelections)
 
     try {
       const savedRoutes = await saveStageRoutesMutation.mutateAsync({ routes })
@@ -96,7 +98,6 @@ export const useStageRoutes = (options: UseStageRoutesOptions) => {
 
   return {
     routeSelections,
-    chatStageGroups,
     allStageKeys,
     syncRouteSelectionsFromBundle,
     saveRoutes,

@@ -18,7 +18,7 @@ def test_core_user_facing_ai_calls_pass_stage_keys():
         ],
         "app/services/chapter_workflow_handler.py": [
             'stage="chapter_mission"',
-            'stage="chapter_writing"',
+            'stage=f"chapter_writing_{request.ordinal}"',
             'stage="version_review"',
             'stage="chapter_optimization"',
         ],

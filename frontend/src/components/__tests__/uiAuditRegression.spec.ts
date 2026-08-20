@@ -79,6 +79,7 @@ describe('UI audit regressions', () => {
     const modelPicker = readSource('src/components/llm-settings/ModelPickerDialog.vue')
 
     expect(stagesPanel).toContain(':aria-label="`${stage.label} 模型路由`"')
+    expect(stagesPanel).toContain(':aria-label="`${node.label} 模型路由`"')
     expect(modelPicker).toContain(':aria-label="`启用文本生成模型 ${modelName}`"')
     expect(modelPicker).toContain(':aria-label="`选择向量模型 ${modelName}`"')
     expect(modelPicker).not.toContain('aria-label="启用文本生成模型"')

@@ -2,6 +2,24 @@
 
 > Conventions for `src/components/llm-settings/PersonalModelRouting.vue` — the shared component behind the 乾坤万象中枢 tabs (文本生成 / 记忆检索 / 语音朗读 / 阶段路由). One provider/model store, partitioned by capability.
 
+## Stage routing mirrors the shared chapter workflow definition
+
+The chapter workflow shown in stage routing and `ChapterGenerating.vue` must both consume
+`CHAPTER_WORKFLOW_STEPS` from `src/utils/generationTrace.ts`. A workflow node may declare an
+existing `routeStage` and its `routeCapability`; nodes sharing a stage are multiple views of the
+same `routeSelections[stage]` value, not separate backend routes. Nodes without `routeStage` must
+be presented as having no model call.
+
+Candidate generation is intentionally independent: `generate_candidate_1` routes through
+`chapter_writing_1` and `generate_candidate_2` through `chapter_writing_2`. Calls that omit a
+business stage use `general_chat`; show that route only under “其他功能”, never as a chapter node.
+The obsolete `chapter_writing` key is not accepted or preserved.
+
+Keep non-chapter stages in the separate “其他功能” group. Filter each route selector by
+`routeCapability`: chat stages receive enabled chat models and `rag_embedding` receives enabled
+embedding models. The save payload is generated from the deduplicated stage key list, so shared
+workflow nodes never produce duplicate route entries.
+
 ---
 
 ## Supplier list is filtered by the active section's capability

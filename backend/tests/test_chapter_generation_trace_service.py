@@ -138,7 +138,7 @@ async def test_chapter_generation_trace_service_records_real_prompt_and_response
             chapter_number=1,
             node_key="draft_generation",
             node_label="生成正文",
-            stage="chapter_writing",
+            stage="chapter_writing_1",
             system_prompt="系统提示词",
             user_prompt="真实用户 prompt",
             raw_response="模型原始响应",
@@ -220,7 +220,7 @@ async def test_chapter_generation_trace_service_marks_whether_node_used_llm(db_s
             metadata={
                 "model_calls": [
                     {
-                        "stage": "chapter_writing",
+                        "stage": "chapter_writing_1",
                         "call_type": "chat_llm",
                         "purpose": "生成正文",
                     }
@@ -255,7 +255,7 @@ async def test_novel_service_serializes_chapter_generation_traces(db_session_fac
             chapter_number=1,
             node_key="draft_generation",
             node_label="生成正文",
-            stage="chapter_writing",
+            stage="chapter_writing_1",
             system_prompt="系统提示词",
             user_prompt="真实用户 prompt",
             raw_response="模型原始响应",
@@ -302,7 +302,7 @@ async def test_novel_service_get_chapter_schema_loads_generation_traces(db_sessi
             chapter_number=1,
             node_key="draft_generation",
             node_label="生成正文",
-            stage="chapter_writing",
+            stage="chapter_writing_1",
             user_prompt="单章接口真实 prompt",
             raw_response="单章接口真实 response",
         )

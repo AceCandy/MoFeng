@@ -1,3 +1,4 @@
+// AIMETA P=章节工作流轨迹与节点定义|R=节点映射_trace解析_展示格式化|NR=不持有响应式状态|E=util:generationTrace|X=internal|A=workflow-trace|D=typescript|S=pure|RD=../components/writing-desk/workspace/README.ai
 /**
  * 章节生成 trace 解析与格式化工具。
  *
@@ -47,6 +48,8 @@ export type PipelineStep = {
   groupMode?: 'serial' | 'parallel'
   optional?: boolean
   retryCommand?: PipelineRetryCommand
+  routeStage?: string
+  routeCapability?: 'chat' | 'embedding'
 }
 
 export const PIPELINE_LABELS: Record<string, string> = {
@@ -99,6 +102,151 @@ export const PIPELINE_LABELS: Record<string, string> = {
   reconcile_projections: '汇合投影结果',
   successful: '章节工作流完成',
 }
+
+const workflowStep = (
+  key: string,
+  group: string,
+  groupLabel: string,
+  options: Partial<PipelineStep> = {},
+): PipelineStep => ({
+  key,
+  label: PIPELINE_LABELS[key] || key,
+  kind: 'execution',
+  group,
+  groupLabel,
+  groupMode: 'serial',
+  ...options,
+})
+
+/** 正文生成页与阶段路由页共用的唯一节点定义。 */
+export const CHAPTER_WORKFLOW_STEPS: readonly PipelineStep[] = [
+  workflowStep('freeze_base_context', 'context', '上下文与规划', { kind: 'system' }),
+  workflowStep('retrieve_context', 'context', '上下文与规划', {
+    retryCommand: 'retry',
+    routeStage: 'rag_embedding',
+    routeCapability: 'embedding',
+  }),
+  workflowStep('plan_chapter', 'context', '上下文与规划', {
+    retryCommand: 'retry_external',
+    routeStage: 'chapter_mission',
+    routeCapability: 'chat',
+  }),
+  workflowStep('generate_candidate_1', 'candidates', '候选版本', {
+    groupMode: 'parallel',
+    retryCommand: 'retry_external',
+    routeStage: 'chapter_writing_1',
+    routeCapability: 'chat',
+  }),
+  workflowStep('generate_candidate_2', 'candidates', '候选版本', {
+    groupMode: 'parallel',
+    optional: true,
+    retryCommand: 'retry_external',
+    routeStage: 'chapter_writing_2',
+    routeCapability: 'chat',
+  }),
+  workflowStep('review_candidates', 'revision', '评审与修订', {
+    retryCommand: 'retry_external',
+    routeStage: 'version_review',
+    routeCapability: 'chat',
+  }),
+  workflowStep('refine_candidate', 'revision', '评审与修订', {
+    retryCommand: 'retry_external',
+    routeStage: 'chapter_optimization',
+    routeCapability: 'chat',
+  }),
+  workflowStep('enhance_content', 'revision', '评审与修订', {
+    optional: true,
+    retryCommand: 'retry_external',
+    routeStage: 'chapter_optimization',
+    routeCapability: 'chat',
+  }),
+  workflowStep('repair_consistency', 'revision', '评审与修订', {
+    optional: true,
+    retryCommand: 'retry_external',
+    routeStage: 'chapter_optimization',
+    routeCapability: 'chat',
+  }),
+  workflowStep('optimize_style', 'revision', '评审与修订', {
+    optional: true,
+    retryCommand: 'retry_external',
+    routeStage: 'chapter_optimization',
+    routeCapability: 'chat',
+  }),
+  workflowStep('enrich_content', 'revision', '评审与修订', {
+    optional: true,
+    retryCommand: 'retry_external',
+    routeStage: 'chapter_optimization',
+    routeCapability: 'chat',
+  }),
+  workflowStep('compress_candidate', 'revision', '评审与修订', {
+    optional: true,
+    retryCommand: 'retry_external',
+    routeStage: 'chapter_optimization',
+    routeCapability: 'chat',
+  }),
+  workflowStep('persist_drafts', 'selection', '草稿与选择', { kind: 'system' }),
+  workflowStep('wait_for_selection', 'selection', '草稿与选择', { kind: 'control' }),
+  workflowStep('finalize_revision', 'finalize', '正式定稿', { kind: 'system' }),
+  workflowStep('generate_summary', 'summary', '章节梳理', {
+    retryCommand: 'retry_projection',
+    routeStage: 'summary_memory',
+    routeCapability: 'chat',
+  }),
+  workflowStep('commit_summary_projection', 'summary', '章节梳理', {
+    kind: 'system',
+    retryCommand: 'retry_projection',
+  }),
+  workflowStep('memory_global_summary', 'memory', '并行投影 · 记忆', {
+    retryCommand: 'retry_projection',
+    routeStage: 'summary_memory',
+    routeCapability: 'chat',
+  }),
+  workflowStep('memory_character_state', 'memory', '并行投影 · 记忆', {
+    retryCommand: 'retry_projection',
+    routeStage: 'summary_memory',
+    routeCapability: 'chat',
+  }),
+  workflowStep('memory_plot_arcs', 'memory', '并行投影 · 记忆', {
+    retryCommand: 'retry_projection',
+    routeStage: 'summary_memory',
+    routeCapability: 'chat',
+  }),
+  workflowStep('memory_chapter_summary', 'memory', '并行投影 · 记忆', {
+    retryCommand: 'retry_projection',
+    routeStage: 'summary_memory',
+    routeCapability: 'chat',
+  }),
+  workflowStep('commit_memory_projection', 'memory', '并行投影 · 记忆', {
+    kind: 'system',
+    retryCommand: 'retry_projection',
+  }),
+  workflowStep('project_rag', 'rag', '并行投影 · 索引', {
+    retryCommand: 'retry_projection',
+    routeStage: 'rag_embedding',
+    routeCapability: 'embedding',
+  }),
+  workflowStep('commit_rag_projection', 'rag', '并行投影 · 索引', {
+    kind: 'system',
+    retryCommand: 'retry_projection',
+  }),
+  workflowStep('foreshadowing_candidate_review', 'foreshadowing', '并行投影 · 伏笔', {
+    retryCommand: 'retry_projection',
+    routeStage: 'foreshadowing',
+    routeCapability: 'chat',
+  }),
+  workflowStep('foreshadowing_status_judge', 'foreshadowing', '并行投影 · 伏笔', {
+    retryCommand: 'retry_projection',
+    routeStage: 'foreshadowing',
+    routeCapability: 'chat',
+  }),
+  workflowStep('commit_foreshadowing_projection', 'foreshadowing', '并行投影 · 伏笔', {
+    kind: 'system',
+    retryCommand: 'retry_projection',
+  }),
+  workflowStep('wait_for_projections', 'completion', '汇合与完成', { kind: 'control' }),
+  workflowStep('reconcile_projections', 'completion', '汇合与完成', { kind: 'control' }),
+  workflowStep('successful', 'completion', '汇合与完成', { kind: 'terminal' }),
+]
 
 export const TRACE_CALL_TYPE_LABELS: Record<string, string> = {
   database_context: '数据库读取',

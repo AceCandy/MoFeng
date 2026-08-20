@@ -33,13 +33,15 @@ async def test_pick_default_model_requires_capability():
 
 
 def test_stage_capability_mapping():
-    assert LLMConfigService.stage_capability("chapter_writing") == "chat"
+    assert LLMConfigService.stage_capability("chapter_writing_1") == "chat"
+    assert LLMConfigService.stage_capability("chapter_writing_2") == "chat"
+    assert LLMConfigService.stage_capability("general_chat") == "chat"
     assert LLMConfigService.stage_capability("rag_embedding") == "embedding"
 
 
 def test_stage_capability_rejects_unknown_stage():
     with pytest.raises(ValueError) as exc_info:
-        LLMConfigService.stage_capability("unknown")
+        LLMConfigService.stage_capability("chapter_writing")
 
     assert "unknown AI stage" in str(exc_info.value)
 
@@ -164,7 +166,7 @@ async def test_upsert_stage_routes_rejects_disabled_model():
     with pytest.raises(ValueError) as exc_info:
         await service.upsert_stage_routes(
             7,
-            SimpleNamespace(routes=[SimpleNamespace(stage="chapter_writing", model_id=10)]),
+            SimpleNamespace(routes=[SimpleNamespace(stage="chapter_writing_1", model_id=10)]),
         )
 
     assert "disabled" in str(exc_info.value)
@@ -187,7 +189,7 @@ async def test_upsert_stage_routes_rejects_disabled_provider():
     with pytest.raises(ValueError) as exc_info:
         await service.upsert_stage_routes(
             7,
-            SimpleNamespace(routes=[SimpleNamespace(stage="chapter_writing", model_id=10)]),
+            SimpleNamespace(routes=[SimpleNamespace(stage="general_chat", model_id=10)]),
         )
 
     assert "provider disabled" in str(exc_info.value)

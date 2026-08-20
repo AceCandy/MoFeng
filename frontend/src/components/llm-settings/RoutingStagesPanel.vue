@@ -1,74 +1,218 @@
-<!-- AIMETA P=模型路由阶段覆盖面板_阶段路由配置|R=stage select 路由选择|NR=不含路由状态归属与保存|E=component:RoutingStagesPanel|X=internal|A=模型路由阶段面板|D=vue|S=dom|RD=./README.ai -->
+<!-- AIMETA P=正文节点模型路由面板|R=工作流节点展示_stage选择_默认模型|NR=不持有路由状态与保存|E=component:RoutingStagesPanel|X=internal|A=model-routing|D=vue|S=dom|RD=./README.ai -->
 <template>
-  <!-- 阶段路由分区（routes）：为各创作阶段指定使用的文本生成模型 -->
-  <section class="model-routing__stages">
-    <div v-if="enabledChatModels.length === 0" class="model-routing__empty-state">
-      <p class="md-title-small">还不能配置阶段路由</p>
-      <p class="model-routing__empty">请先在文本生成里启用至少一个模型，并指定主模型。</p>
-      <button
-        type="button"
-        class="md-btn md-btn-tonal md-ripple"
-        @click="emit('navigate', 'llm')"
-      >
-        去配置文本生成
-      </button>
-    </div>
-
-    <div v-else class="model-routing__stage-groups">
+  <section class="model-routing__stages" aria-label="阶段路由配置">
+    <div v-if="missingCapabilities.length" class="model-routing__route-notices">
       <div
-        v-for="group in chatStageGroups"
-        :key="group.title"
-        class="model-routing__stage-group"
+        v-for="capability in missingCapabilities"
+        :key="capability"
+        class="model-routing__route-notice"
       >
-        <h4 class="md-title-small">{{ group.title }}</h4>
-        <div class="model-routing__stage-list">
-          <label
-            v-for="stage in group.stages"
-            :key="stage.key"
-            class="model-routing__stage-row"
-          >
-            <span>
-              <strong>{{ stage.label }}</strong>
-              <small>{{ stage.description }}</small>
-            </span>
-            <select
-              :value="routeSelections[stage.key]"
-              class="md-text-field-input"
-              :aria-label="`${stage.label} 模型路由`"
-              @change="onSelectStage(stage.key, $event)"
-            >
-              <option value="">使用主模型</option>
-              <option
-                v-for="model in enabledChatModels"
-                :key="model.id"
-                :value="String(model.id)"
-              >
-                {{ model.display_name }} · {{ providerName(model.provider_id) }}
-              </option>
-            </select>
-          </label>
-        </div>
+        <span>
+          {{ capability === 'chat' ? '文本生成模型尚未配置' : '向量检索模型尚未配置' }}
+        </span>
+        <button
+          type="button"
+          class="md-btn md-btn-text md-ripple"
+          @click="emit('navigate', capability === 'chat' ? 'llm' : 'embedding')"
+        >
+          去配置
+        </button>
       </div>
     </div>
+
+    <section class="model-routing__route-section" aria-labelledby="chapter-workflow-routes-title">
+      <header class="model-routing__route-section-header">
+        <h4 id="chapter-workflow-routes-title" class="md-title-small">正文工作流</h4>
+        <p>与生成正文的节点顺序一致；相同 stage 的节点共用一个模型选择。</p>
+      </header>
+
+      <div class="model-routing__workflow-groups">
+        <section
+          v-for="group in workflowGroups"
+          :key="group.key"
+          class="model-routing__workflow-group"
+          :data-group="group.key"
+          :data-mode="group.mode"
+        >
+          <header class="model-routing__workflow-group-header">
+            <h5>{{ group.label }}</h5>
+            <span v-if="group.mode === 'parallel'" class="model-routing__route-badge">并行</span>
+          </header>
+          <ol class="model-routing__workflow-list">
+            <li
+              v-for="node in group.steps"
+              :key="node.key"
+              class="model-routing__workflow-node"
+              :class="{ 'is-local': !node.routeStage }"
+              :data-node="node.key"
+            >
+              <div class="model-routing__node-copy">
+                <div class="model-routing__node-title">
+                  <strong>{{ node.label }}</strong>
+                  <span v-if="node.routeStage" class="model-routing__route-badge">
+                    {{ node.routeCapability === 'embedding' ? '向量模型' : '聊天模型' }}
+                  </span>
+                  <span
+                    v-if="node.routeStage && sharedStageCount(node.routeStage) > 1"
+                    class="model-routing__route-badge"
+                  >
+                    共用路由
+                  </span>
+                  <span v-if="node.optional" class="model-routing__route-badge">按需</span>
+                </div>
+                <small v-if="node.routeStage">
+                  {{ routeDescription(node.routeStage) }} · <code>{{ node.routeStage }}</code>
+                </small>
+                <small v-else>{{ nodeKindLabel(node.kind) }} · 无模型调用</small>
+              </div>
+
+              <select
+                v-if="node.routeStage && node.routeCapability"
+                :value="routeSelections[node.routeStage]"
+                class="md-text-field-input model-routing__route-select"
+                :data-stage="node.routeStage"
+                :aria-label="`${node.label} 模型路由`"
+                @change="onSelectStage(node.routeStage, $event)"
+              >
+                <option value="">{{ fallbackModelLabel(node.routeCapability) }}</option>
+                <option
+                  v-for="model in modelsForCapability(node.routeCapability)"
+                  :key="model.id"
+                  :value="String(model.id)"
+                >
+                  {{ model.display_name }} · {{ providerName(model.provider_id) }}
+                </option>
+              </select>
+            </li>
+          </ol>
+        </section>
+      </div>
+    </section>
+
+    <section class="model-routing__route-section" aria-labelledby="other-stage-routes-title">
+      <header class="model-routing__route-section-header">
+        <h4 id="other-stage-routes-title" class="md-title-small">其他功能</h4>
+        <p>通用调用、导入、灵感、蓝图和独立分析等不属于正文工作流的路由。</p>
+      </header>
+
+      <div class="model-routing__other-groups">
+        <section
+          v-for="group in otherStageGroups"
+          :key="group.title"
+          class="model-routing__other-group"
+        >
+          <h5>{{ group.title }}</h5>
+          <div class="model-routing__other-list">
+            <label v-for="stage in group.stages" :key="stage.key" class="model-routing__other-row">
+              <span class="model-routing__node-copy">
+                <strong>{{ stage.label }}</strong>
+                <small
+                  >{{ stage.description }} · <code>{{ stage.key }}</code></small
+                >
+              </span>
+              <select
+                :value="routeSelections[stage.key]"
+                class="md-text-field-input model-routing__route-select"
+                :aria-label="`${stage.label} 模型路由`"
+                @change="onSelectStage(stage.key, $event)"
+              >
+                <option value="">{{ fallbackModelLabel(stage.capability) }}</option>
+                <option
+                  v-for="model in modelsForCapability(stage.capability)"
+                  :key="model.id"
+                  :value="String(model.id)"
+                >
+                  {{ model.display_name }} · {{ providerName(model.provider_id) }}
+                </option>
+              </select>
+            </label>
+          </div>
+        </section>
+      </div>
+    </section>
   </section>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { UserAIModel } from '@/api/llm'
-import type { RoutingSection, StageGroup } from './modelRoutingTypes'
+import { CHAPTER_WORKFLOW_STEPS, type PipelineStepKind } from '@/utils/generationTrace'
+import { otherStageGroups, stageDefinitionByKey } from './stageDefinitions'
+import type { Capability, RoutingSection } from './modelRoutingTypes'
 
-defineProps<{
-  /** 阶段路由选择（reactive 对象，select 改动经 update-selection 事件回写父组件） */
+interface Props {
   routeSelections: Record<string, string>
-  chatStageGroups: StageGroup[]
   enabledChatModels: UserAIModel[]
+  primaryChatModel?: UserAIModel
+  enabledEmbeddingModels: UserAIModel[]
+  defaultEmbeddingModel?: UserAIModel
   providerName: (providerId: number) => string
-}>()
+}
+
+const props = defineProps<Props>()
 
 const emit = defineEmits<{
   (event: 'navigate', section: RoutingSection): void
   (event: 'update-selection', stageKey: string, value: string): void
 }>()
+
+const workflowGroups = computed(() => {
+  const groups: Array<{
+    key: string
+    label: string
+    mode: 'serial' | 'parallel'
+    steps: (typeof CHAPTER_WORKFLOW_STEPS)[number][]
+  }> = []
+  for (const step of CHAPTER_WORKFLOW_STEPS) {
+    const key = step.group || 'workflow'
+    let group = groups[groups.length - 1]
+    if (!group || group.key !== key) {
+      group = {
+        key,
+        label: step.groupLabel || '',
+        mode: step.groupMode || 'serial',
+        steps: [],
+      }
+      groups.push(group)
+    }
+    group.steps.push(step)
+  }
+  return groups
+})
+
+const stageCounts = new Map<string, number>()
+for (const step of CHAPTER_WORKFLOW_STEPS) {
+  if (step.routeStage) stageCounts.set(step.routeStage, (stageCounts.get(step.routeStage) || 0) + 1)
+}
+
+const missingCapabilities = computed<Array<'chat' | 'embedding'>>(() => {
+  const missing: Array<'chat' | 'embedding'> = []
+  if (props.enabledChatModels.length === 0) missing.push('chat')
+  if (props.enabledEmbeddingModels.length === 0) missing.push('embedding')
+  return missing
+})
+
+const sharedStageCount = (stage: string) => stageCounts.get(stage) || 0
+
+const routeDescription = (stage: string) =>
+  stageDefinitionByKey[stage]?.description || '使用该阶段的模型路由'
+
+const modelsForCapability = (capability: Capability) =>
+  capability === 'embedding' ? props.enabledEmbeddingModels : props.enabledChatModels
+
+const fallbackModelLabel = (capability: Capability) => {
+  const model = capability === 'embedding' ? props.defaultEmbeddingModel : props.primaryChatModel
+  const prefix = capability === 'embedding' ? '当前检索模型' : '主模型'
+  return model
+    ? `${prefix}：${model.display_name} · ${props.providerName(model.provider_id)}`
+    : `${prefix}：未配置`
+}
+
+const nodeKindLabel = (kind?: PipelineStepKind) => {
+  if (kind === 'control') return '控制节点'
+  if (kind === 'terminal') return '终态节点'
+  return '系统节点'
+}
 
 const onSelectStage = (stageKey: string, event: Event) => {
   emit('update-selection', stageKey, (event.target as HTMLSelectElement).value)
@@ -76,54 +220,167 @@ const onSelectStage = (stageKey: string, event: Event) => {
 </script>
 
 <style scoped>
-.model-routing__stage-groups {
+.model-routing__stages,
+.model-routing__route-section,
+.model-routing__workflow-groups,
+.model-routing__other-groups {
   display: grid;
-  gap: var(--md-spacing-3);
 }
 
-.model-routing__stage-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--md-spacing-3);
+.model-routing__stages {
+  gap: var(--md-spacing-6);
 }
 
-.model-routing__stage-group h4 {
+.model-routing__route-section {
+  gap: var(--md-spacing-4);
+}
+
+.model-routing__route-section-header {
+  display: grid;
+  gap: var(--md-spacing-1);
+}
+
+.model-routing__route-section-header h4,
+.model-routing__route-section-header p,
+.model-routing__workflow-group-header h5,
+.model-routing__other-group h5 {
   margin: 0;
+}
+
+.model-routing__route-section-header h4,
+.model-routing__workflow-group-header h5,
+.model-routing__other-group h5 {
   color: var(--md-on-surface);
-  letter-spacing: 0.03em; /* 碑拓骨力：宋体小标题拉开字距 */
+  letter-spacing: 0.03em;
 }
 
-/* .model-routing__empty / __empty-state 已收口至
-   styles/components/model-routing.css，组件内不再重复定义 */
-
-.model-routing__stage-row strong {
-  display: block;
-  font-size: var(--md-body-medium);
-}
-
-.model-routing__stage-row small {
-  display: block;
-  margin-top: 2px;
+.model-routing__route-section-header p {
   color: var(--md-on-surface-variant);
   font-size: var(--md-body-small);
 }
 
-.model-routing__stage-group {
-  display: grid;
-  gap: var(--md-spacing-3);
+.model-routing__workflow-groups,
+.model-routing__other-groups {
+  gap: var(--md-spacing-4);
 }
 
-.model-routing__stage-row {
+.model-routing__workflow-group,
+.model-routing__other-group {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
   gap: var(--md-spacing-2);
+}
+
+.model-routing__workflow-group-header {
+  display: flex;
   align-items: center;
-  padding: var(--md-spacing-3);
+  justify-content: space-between;
+  gap: var(--md-spacing-2);
+}
+
+.model-routing__workflow-list,
+.model-routing__other-list {
+  margin: 0;
+  padding: 0;
   border: 1px solid var(--md-jiege);
   border-radius: var(--md-radius-xs);
   background: var(--md-surface);
+  list-style: none;
 }
 
-/* 卡片由 auto-fit 决定宽度（约 280-400px），标签与选择框始终纵向堆叠；
-   选择框占满卡片宽度，长模型名由全局 select 规则以省略号截断，不再溢出 */
+.model-routing__workflow-node,
+.model-routing__other-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 360px);
+  gap: var(--md-spacing-3);
+  align-items: center;
+  min-width: 0;
+  padding: var(--md-spacing-3);
+}
+
+.model-routing__workflow-node + .model-routing__workflow-node,
+.model-routing__other-row + .model-routing__other-row {
+  border-top: 1px solid var(--md-jiege);
+}
+
+.model-routing__workflow-node.is-local {
+  background: var(--md-surface-container-low);
+}
+
+.model-routing__node-copy,
+.model-routing__node-copy strong,
+.model-routing__node-copy small {
+  min-width: 0;
+}
+
+.model-routing__node-copy strong,
+.model-routing__node-copy small {
+  display: block;
+}
+
+.model-routing__node-copy strong {
+  color: var(--md-on-surface);
+  font-size: var(--md-body-medium);
+}
+
+.model-routing__node-copy small {
+  margin-top: var(--md-spacing-1);
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-body-small);
+  overflow-wrap: anywhere;
+}
+
+.model-routing__node-copy code {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.model-routing__node-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--md-spacing-1) var(--md-spacing-2);
+  align-items: center;
+}
+
+.model-routing__route-badge {
+  padding: 2px var(--md-spacing-2);
+  border: 1px solid var(--md-jiege);
+  border-radius: var(--md-radius-xs);
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-small);
+  line-height: 1.4;
+}
+
+.model-routing__route-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.model-routing__route-notices {
+  display: grid;
+  gap: var(--md-spacing-2);
+}
+
+.model-routing__route-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--md-spacing-3);
+  padding: var(--md-spacing-2) var(--md-spacing-3);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-xs);
+  color: var(--md-on-surface-variant);
+  background: var(--md-surface-container-low);
+}
+
+@media (max-width: 720px) {
+  .model-routing__workflow-node,
+  .model-routing__other-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .model-routing__route-notice {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
 </style>

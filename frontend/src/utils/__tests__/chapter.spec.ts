@@ -155,10 +155,10 @@ describe('chapter generation error formatting', () => {
   })
 
   it('keeps the specific backend failure reason visible', () => {
-    const error = new Error('生成章节失败：阶段 chapter_writing 使用的供应商缺少 API Key')
+    const error = new Error('生成章节失败：阶段 chapter_writing_1 使用的供应商缺少 API Key')
 
     expect(formatChapterGenerationError(error)).toBe(
-      '阶段 chapter_writing 使用的供应商缺少 API Key',
+      '阶段 chapter_writing_1 使用的供应商缺少 API Key',
     )
   })
 

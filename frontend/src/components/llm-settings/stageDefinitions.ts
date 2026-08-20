@@ -1,9 +1,11 @@
+// AIMETA P=模型路由阶段定义|R=stage分组_能力_正文节点外阶段|NR=不持有路由选择|E=data:stageDefinitions|X=internal|A=model-routing|D=typescript|S=pure|RD=./README.ai
+import { CHAPTER_WORKFLOW_STEPS } from '@/utils/generationTrace'
 import type { StageGroup } from './modelRoutingTypes'
 
 /**
  * 创作阶段静态定义。从 PersonalModelRouting.vue 抽出（Slice 1，纯数据零依赖）。
  * 每个阶段对应一个可独立指定模型的创作环节，用于阶段路由分区（routes）的模型选择网格。
- * 当前所有阶段 capability 均为 chat。
+ * capability 决定路由可选模型；正文节点展示另复用真实 workflow 定义。
  */
 export const stageGroups: StageGroup[] = [
   {
@@ -62,10 +64,16 @@ export const stageGroups: StageGroup[] = [
         description: '预览、评估与扩写',
       },
       {
-        key: 'chapter_writing',
-        label: '正文生成',
+        key: 'chapter_writing_1',
+        label: '候选版本 1',
         capability: 'chat',
-        description: '章节正文主生成',
+        description: '生成第一份候选正文',
+      },
+      {
+        key: 'chapter_writing_2',
+        label: '候选版本 2',
+        capability: 'chat',
+        description: '生成第二份候选正文',
       },
       {
         key: 'chapter_rewrite',
@@ -138,6 +146,12 @@ export const stageGroups: StageGroup[] = [
         description: '检索查询生成和上下文过滤',
       },
       {
+        key: 'rag_embedding',
+        label: '向量检索',
+        capability: 'embedding',
+        description: '章节检索与索引的向量生成',
+      },
+      {
         key: 'foreshadowing',
         label: '伏笔处理',
         capability: 'chat',
@@ -145,4 +159,34 @@ export const stageGroups: StageGroup[] = [
       },
     ],
   },
+  {
+    title: '通用',
+    stages: [
+      {
+        key: 'general_chat',
+        label: '通用模型调用',
+        capability: 'chat',
+        description: '未明确指定业务阶段的模型调用',
+      },
+    ],
+  },
 ]
+
+export const stageRouteKeys = [
+  ...new Set(stageGroups.flatMap((group) => group.stages.map((stage) => stage.key))),
+]
+
+export const stageDefinitionByKey = Object.fromEntries(
+  stageGroups.flatMap((group) => group.stages.map((stage) => [stage.key, stage])),
+)
+
+const workflowRouteStages = new Set(
+  CHAPTER_WORKFLOW_STEPS.flatMap((step) => (step.routeStage ? [step.routeStage] : [])),
+)
+
+export const otherStageGroups = stageGroups
+  .map((group) => ({
+    ...group,
+    stages: group.stages.filter((stage) => !workflowRouteStages.has(stage.key)),
+  }))
+  .filter((group) => group.stages.length > 0)

@@ -74,7 +74,7 @@ export const useSectionMeta = (options: UseSectionMetaOptions) => {
   })
   const sectionDescription = computed(() => {
     if (activeSection.value === 'routes') {
-      return '只有特殊阶段需要覆盖；未设置的阶段会继续使用文本生成主模型。'
+      return '按正文节点查看实际路由；未覆盖的文本阶段使用主模型，向量阶段使用当前检索模型。'
     }
     if (activeSection.value === 'embedding') {
       return '记忆检索只使用一个当前向量模型，避免索引和查询维度不一致。'
@@ -89,9 +89,7 @@ export const useSectionMeta = (options: UseSectionMetaOptions) => {
       return {
         label: '阶段覆盖',
         value: `${configuredRouteCount.value}/${allStageKeys.value.length}`,
-        description: primaryChatModel.value
-          ? `未覆盖阶段使用 ${modelDisplayName(primaryChatModel.value)}`
-          : '先设置主模型，阶段路由才可用',
+        description: `文本：${modelDisplayName(primaryChatModel.value)} · 向量：${modelDisplayName(defaultEmbeddingModel.value)}`,
         tone: primaryChatModel.value ? 'success' : 'warning',
       }
     }

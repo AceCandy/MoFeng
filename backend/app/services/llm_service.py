@@ -324,7 +324,7 @@ class LLMService:
         response_format: Optional[str] = "json_object",
         max_tokens: Optional[int] = None,
         top_p: Optional[float] = None,
-        stage: str = "chapter_writing",
+        stage: str = "general_chat",
         model_id: Optional[int] = None,
     ) -> str:
         messages = [{"role": "system", "content": system_prompt}, *conversation_history]
@@ -353,7 +353,7 @@ class LLMService:
         response_format: Optional[str] = "json_object",
         max_tokens: Optional[int] = None,
         top_p: Optional[float] = None,
-        stage: str = "chapter_writing",
+        stage: str = "general_chat",
         model_id: Optional[int] = None,
     ) -> str:
         """短事务解析模型配置，关闭会话后再等待外部模型响应。"""
@@ -392,7 +392,7 @@ class LLMService:
         response_format: Optional[str] = "json_object",
         max_tokens: Optional[int] = None,
         top_p: Optional[float] = None,
-        stage: str = "chapter_writing",
+        stage: str = "general_chat",
         model_id: Optional[int] = None,
         provider_request_key: Optional[str] = None,
     ) -> AICallResult[str]:
@@ -564,7 +564,7 @@ class LLMService:
         max_tokens: Optional[int] = None,
         response_format: Optional[str] = None,
         top_p: Optional[float] = None,
-        stage: str = "chapter_writing",
+        stage: str = "general_chat",
         model_id: Optional[int] = None,
     ) -> str:
         """兼容旧版接口的文本生成入口，统一走 get_llm_response。"""
@@ -594,7 +594,7 @@ class LLMService:
         max_tokens: Optional[int] = None,
         response_format: Optional[str] = None,
         top_p: Optional[float] = None,
-        stage: str = "chapter_writing",
+        stage: str = "general_chat",
         model_id: Optional[int] = None,
     ) -> str:
         """Resolve model configuration in a short session, then call the provider."""
@@ -635,7 +635,7 @@ class LLMService:
         max_tokens: Optional[int] = None,
         response_format: Optional[str] = None,
         top_p: Optional[float] = None,
-        stage: str = "chapter_writing",
+        stage: str = "general_chat",
         model_id: Optional[int] = None,
     ) -> AICallResult[str]:
         async with session_factory() as session:
@@ -802,7 +802,7 @@ class LLMService:
         response_format: Optional[str] = None,
         max_tokens: Optional[int] = None,
         top_p: Optional[float] = None,
-        stage: str = "chapter_writing",
+        stage: str = "general_chat",
         model_id: Optional[int] = None,
     ) -> str:
         config = await self._resolve_llm_config(user_id, stage=stage, model_id=model_id)
@@ -829,7 +829,7 @@ class LLMService:
         response_format: Optional[str] = None,
         max_tokens: Optional[int] = None,
         top_p: Optional[float] = None,
-        stage: str = "chapter_writing",
+        stage: str = "general_chat",
     ) -> str:
         result = await self._stream_and_collect_with_config_result(
             messages,
@@ -855,7 +855,7 @@ class LLMService:
         response_format: Optional[str] = None,
         max_tokens: Optional[int] = None,
         top_p: Optional[float] = None,
-        stage: str = "chapter_writing",
+        stage: str = "general_chat",
         provider_request_key: Optional[str] = None,
     ) -> AICallResult[str]:
         client = LLMClient(
@@ -975,7 +975,7 @@ class LLMService:
         self,
         user_id: Optional[int],
         *,
-        stage: str = "chapter_writing",
+        stage: str = "general_chat",
         model_id: Optional[int] = None,
     ) -> Dict[str, Optional[str]]:
         return await self._resolve_llm_config_with_policy(
@@ -1063,7 +1063,7 @@ class LLMService:
         user_id: Optional[int],
         *,
         require_api_key: bool,
-        stage: str = "chapter_writing",
+        stage: str = "general_chat",
         model_id: Optional[int] = None,
     ) -> Dict[str, Optional[str]]:
         if not user_id:

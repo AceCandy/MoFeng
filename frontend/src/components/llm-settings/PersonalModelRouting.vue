@@ -43,8 +43,10 @@
     <template v-if="activeSection === 'routes'">
       <RoutingStagesPanel
         :route-selections="routeSelections"
-        :chat-stage-groups="chatStageGroups"
         :enabled-chat-models="enabledChatModels"
+        :primary-chat-model="primaryChatModel"
+        :enabled-embedding-models="enabledEmbeddingModels"
+        :default-embedding-model="defaultEmbeddingModel"
         :provider-name="providerName"
         @navigate="emit('navigate', $event)"
         @update-selection="(stageKey, value) => (routeSelections[stageKey] = value)"
@@ -229,7 +231,6 @@ const updateProviderField = (field: keyof ProviderForm, value: string | boolean)
 
 const {
   routeSelections,
-  chatStageGroups,
   allStageKeys,
   syncRouteSelectionsFromBundle,
   saveRoutes,

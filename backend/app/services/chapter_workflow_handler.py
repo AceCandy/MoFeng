@@ -217,7 +217,7 @@ class ChapterWorkflowLLMProviders:
             timeout=600.0,
             response_format=None,
             max_tokens=7000,
-            stage="chapter_writing",
+            stage=f"chapter_writing_{request.ordinal}",
             provider_request_key=provider_request_key,
         )
         content, metadata = parse_chapter_content_response(call.value)

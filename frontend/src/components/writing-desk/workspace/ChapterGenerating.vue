@@ -43,7 +43,7 @@ import { useGenerationPipeline } from '@/composables/useGenerationPipeline'
 import { useChapterGenerationTrace } from '@/composables/useChapterGenerationTrace'
 import { globalAlert } from '@/composables/useAlert'
 import {
-  PIPELINE_LABELS,
+  CHAPTER_WORKFLOW_STEPS,
   traceMetadata,
   type PipelineStep,
 } from '@/utils/generationTrace'
@@ -98,55 +98,9 @@ const selectStep = (key: string, index: number) => {
   }
 }
 
-const pipelineStep = (
-  key: string,
-  group: string,
-  groupLabel: string,
-  options: Partial<PipelineStep> = {},
-): PipelineStep => ({
-  key,
-  label: PIPELINE_LABELS[key] || key,
-  kind: 'execution',
-  group,
-  groupLabel,
-  groupMode: 'serial',
-  ...options,
-})
-
-const pipelineSteps = computed<PipelineStep[]>(() => {
-  return [
-    pipelineStep('freeze_base_context', 'context', '上下文与规划', { kind: 'system' }),
-    pipelineStep('retrieve_context', 'context', '上下文与规划', { retryCommand: 'retry' }),
-    pipelineStep('plan_chapter', 'context', '上下文与规划', { retryCommand: 'retry_external' }),
-    pipelineStep('generate_candidate_1', 'candidates', '候选版本', { groupMode: 'parallel', retryCommand: 'retry_external' }),
-    pipelineStep('generate_candidate_2', 'candidates', '候选版本', { groupMode: 'parallel', optional: true, retryCommand: 'retry_external' }),
-    pipelineStep('review_candidates', 'revision', '评审与修订', { retryCommand: 'retry_external' }),
-    pipelineStep('refine_candidate', 'revision', '评审与修订', { retryCommand: 'retry_external' }),
-    pipelineStep('enhance_content', 'revision', '评审与修订', { optional: true, retryCommand: 'retry_external' }),
-    pipelineStep('repair_consistency', 'revision', '评审与修订', { optional: true, retryCommand: 'retry_external' }),
-    pipelineStep('optimize_style', 'revision', '评审与修订', { optional: true, retryCommand: 'retry_external' }),
-    pipelineStep('enrich_content', 'revision', '评审与修订', { optional: true, retryCommand: 'retry_external' }),
-    pipelineStep('compress_candidate', 'revision', '评审与修订', { optional: true, retryCommand: 'retry_external' }),
-    pipelineStep('persist_drafts', 'selection', '草稿与选择', { kind: 'system' }),
-    pipelineStep('wait_for_selection', 'selection', '草稿与选择', { kind: 'control' }),
-    pipelineStep('finalize_revision', 'finalize', '正式定稿', { kind: 'system' }),
-    pipelineStep('generate_summary', 'summary', '章节梳理', { retryCommand: 'retry_projection' }),
-    pipelineStep('commit_summary_projection', 'summary', '章节梳理', { kind: 'system' }),
-    pipelineStep('memory_global_summary', 'memory', '并行投影 · 记忆', { retryCommand: 'retry_projection' }),
-    pipelineStep('memory_character_state', 'memory', '并行投影 · 记忆', { retryCommand: 'retry_projection' }),
-    pipelineStep('memory_plot_arcs', 'memory', '并行投影 · 记忆', { retryCommand: 'retry_projection' }),
-    pipelineStep('memory_chapter_summary', 'memory', '并行投影 · 记忆', { retryCommand: 'retry_projection' }),
-    pipelineStep('commit_memory_projection', 'memory', '并行投影 · 记忆', { kind: 'system' }),
-    pipelineStep('project_rag', 'rag', '并行投影 · 索引', { retryCommand: 'retry_projection' }),
-    pipelineStep('commit_rag_projection', 'rag', '并行投影 · 索引', { kind: 'system' }),
-    pipelineStep('foreshadowing_candidate_review', 'foreshadowing', '并行投影 · 伏笔', { retryCommand: 'retry_projection' }),
-    pipelineStep('foreshadowing_status_judge', 'foreshadowing', '并行投影 · 伏笔', { retryCommand: 'retry_projection' }),
-    pipelineStep('commit_foreshadowing_projection', 'foreshadowing', '并行投影 · 伏笔', { kind: 'system' }),
-    pipelineStep('wait_for_projections', 'completion', '汇合与完成', { kind: 'control' }),
-    pipelineStep('reconcile_projections', 'completion', '汇合与完成', { kind: 'control' }),
-    pipelineStep('successful', 'completion', '汇合与完成', { kind: 'terminal' }),
-  ]
-})
+const pipelineSteps = computed<PipelineStep[]>(() =>
+  CHAPTER_WORKFLOW_STEPS.map((step) => ({ ...step })),
+)
 
 const {
   isFailureStatus,

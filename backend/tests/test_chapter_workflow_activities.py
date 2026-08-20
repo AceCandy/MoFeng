@@ -386,8 +386,9 @@ async def test_production_llm_providers_forward_stable_provider_request_keys(
     request_payloads: list[dict[str, object]] = []
     responses = {
         "chapter_mission": '{"mission":{"goal":"推进冲突"}}',
-        "chapter_writing": '{"content":"候选正文"}',
-        "version_review": '{"best_ordinal":1}',
+        "chapter_writing_1": '{"content":"候选正文一"}',
+        "chapter_writing_2": '{"content":"候选正文二"}',
+        "version_review": '{"best_version_number":2}',
         "chapter_optimization": (
             '{"optimized_content":"修订正文","optimization_notes":"按阶段修订"}'
         ),
@@ -458,18 +459,25 @@ async def test_production_llm_providers_forward_stable_provider_request_keys(
         ),
         provider_request_key="provider-key-candidate",
     )
-    review = await provider.review(
-        ChapterWorkflowReviewInput(
+    candidate_2 = await provider.candidate(
+        ChapterWorkflowCandidateInput(
             **common_input,
             plan=plan.value,
-            candidates=[
-                candidate.value,
-                ChapterWorkflowCandidateOutput(ordinal=2, content="候选正文二"),
-            ],
+            ordinal=2,
         ),
+        provider_request_key="provider-key-candidate-2",
+    )
+    review_request = ChapterWorkflowReviewInput(
+        **common_input,
+        plan=plan.value,
+        candidates=[candidate.value, candidate_2.value],
+    )
+    review = await provider.review(
+        review_request,
         provider_request_key="provider-key-review",
     )
     assert isinstance(review, AICallResult)
+    assert review.value.best_ordinal == 2
     revision_stages = [
         "enhanced_review",
         "consistency",
@@ -513,7 +521,8 @@ async def test_production_llm_providers_forward_stable_provider_request_keys(
 
     assert calls == [
         ("chapter_mission", "provider-key-plan"),
-        ("chapter_writing", "provider-key-candidate"),
+        ("chapter_writing_1", "provider-key-candidate"),
+        ("chapter_writing_2", "provider-key-candidate-2"),
         ("version_review", "provider-key-review"),
         *[
             ("chapter_optimization", f"provider-key-{stage}")
@@ -523,6 +532,7 @@ async def test_production_llm_providers_forward_stable_provider_request_keys(
     ]
     assert prompt_names == [
         "chapter_plan",
+        "writing_v2",
         "writing_v2",
         "editor_review",
         *["optimize_recommended_version"] * len(revision_stages),
@@ -537,17 +547,17 @@ async def test_production_llm_providers_forward_stable_provider_request_keys(
     for stage, revision, payload in zip(
         revision_stages,
         revisions,
-        request_payloads[3:7],
+        request_payloads[4:8],
         strict=True,
     ):
         assert revision.value.stage == stage
         assert revision.value.content == "修订正文"
-        assert payload["source_content"] == "候选正文"
+        assert payload["source_content"] == "候选正文一"
         assert payload["version_number"] == 1
         assert payload["version_review"] == review.value.report
         assert "目标字数：约 3000 字" in payload["review_summary"]
-    assert request_payloads[7]["current_word_count"] == 3500
-    assert request_payloads[7]["maximum_word_count"] == 3300
+    assert request_payloads[8]["current_word_count"] == 3500
+    assert request_payloads[8]["maximum_word_count"] == 3300
     assert single_review.best_ordinal == 1
     assert single_review.report["mode"] == "single"
 

@@ -333,13 +333,13 @@ async def test_resolve_llm_config_uses_stage_route_model(monkeypatch):
     config = await service._resolve_llm_config_with_policy(
         7,
         require_api_key=True,
-        stage="chapter_writing",
+        stage="general_chat",
     )
 
     assert config["model"] == "stage-chat"
     assert config["api_key"] == "stage-key"
     assert config["base_url"] == "https://api.stage.test/v1"
-    assert config["stage"] == "chapter_writing"
+    assert config["stage"] == "general_chat"
     assert config["model_id"] == 42
     assert config["provider_name"] == "Stage Provider"
     assert config["input_price_per_million"] == 2
