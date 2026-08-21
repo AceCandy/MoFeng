@@ -20,7 +20,6 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.schema import CreateSchema, DropSchema
-from testcontainers.postgres import PostgresContainer
 
 import app.models  # noqa: F401  确保所有模型注册到 Base.metadata
 from app.core.config import settings
@@ -28,6 +27,16 @@ from app.db.base import Base
 from app.db.chapter_workflow_checkpointer import psycopg_dsn_from_sqlalchemy_url
 from app.models.job import JobExecutorControl
 from app.services.event_bus import shutdown_event_bus
+
+_POSTGRES_FIXTURES = frozenset({"_pg_engine", "db_session_factory", "isolated_pg"})
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """根据 PostgreSQL fixture 闭包标记真实数据库测试。"""
+    for item in items:
+        if _POSTGRES_FIXTURES.intersection(item.fixturenames):
+            item.add_marker(pytest.mark.postgres)
 
 
 @dataclass(frozen=True)
@@ -237,6 +246,8 @@ async def _pg_engine():
         async with _temporary_postgres_engine(configured_url) as engine:
             yield engine
         return
+
+    from testcontainers.community.postgres import PostgresContainer
 
     with PostgresContainer("pgvector/pgvector:pg16", driver="asyncpg") as container:
         async with _temporary_postgres_engine(container.get_connection_url()) as engine:

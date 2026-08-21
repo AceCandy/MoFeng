@@ -140,6 +140,76 @@ Rule for new tasks: reuse `app.db.session.AsyncSessionLocal` and `settings.sqlal
   every compared timestamp in the same SQL update. Reassigning the same ORM value may
   not mark it dirty, allowing `onupdate=func.now()` to replace the intended tie.
 
+## PostgreSQL pytest profiles
+
+### 1. Scope / Trigger
+
+Apply when a backend test requires the shared PostgreSQL engine, transactional session
+factory, or isolated multi-connection schema. Fast tests must remain collectable and
+runnable without Docker or Testcontainers.
+
+### 2. Signatures
+
+```bash
+pytest -m "not postgres" --strict-markers
+pytest -m postgres --strict-markers
+TEST_POSTGRES_URL="postgresql+asyncpg://..." pytest -m postgres --strict-markers
+```
+
+### 3. Contracts
+
+- Register `postgres` in `backend/pytest.ini`.
+- `pytest_collection_modifyitems` classifies the fixture closure before marker
+  filtering. Tests using `_pg_engine`, `db_session_factory`, or `isolated_pg` receive
+  the marker automatically.
+- A new independent PostgreSQL fixture must depend on `_pg_engine` or mark its tests
+  explicitly.
+- Import Testcontainers only inside `_pg_engine` when `TEST_POSTGRES_URL` is absent.
+  Fast collection must not import Testcontainers or access Docker.
+- Both PostgreSQL entry paths reuse the disposable database contract in
+  [Database Guidelines](./database-guidelines.md); the configured service database is
+  never the mutable test target.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+| --- | --- |
+| Fast profile without Docker | Collect and run non-PostgreSQL tests without importing Testcontainers |
+| PostgreSQL fixture appears in the closure | Select under `-m postgres` and deselect under `-m "not postgres"` |
+| `TEST_POSTGRES_URL` is configured | Use the external service to create a disposable database |
+| `TEST_POSTGRES_URL` is absent | Lazily import Testcontainers and start `pgvector/pgvector:pg16` |
+| Marker is misspelled or unregistered | `--strict-markers` fails collection |
+
+### 5. Good / Base / Bad Cases
+
+- Good: both profiles collect to complementary sets, and both PostgreSQL entry paths
+  pass the isolation tests.
+- Base: a unit test has ordinary fixtures only and never loads Docker dependencies.
+- Bad: importing Testcontainers at conftest module scope, moving every database test to
+  a duplicate directory tree, or replacing PostgreSQL acceptance with SQLite.
+
+### 6. Tests Required
+
+- Unit-test the fixture-name classifier with PostgreSQL and ordinary fixture names.
+- Collect both marker expressions with `--strict-markers`; their selected counts must
+  sum to the unfiltered collection count.
+- Run `test_postgres_isolation.py` once through `TEST_POSTGRES_URL` and once through the
+  container fallback; assert disposable database cleanup in both paths.
+
+### 7. Wrong vs Correct
+
+```python
+# Wrong: every pytest collection imports Docker integration code.
+from testcontainers.postgres import PostgresContainer
+
+# Correct: only the selected container fallback imports Testcontainers.
+async def _pg_engine():
+    if configured_url:
+        ...
+        return
+    from testcontainers.community.postgres import PostgresContainer
+```
+
 ## External structured artifact verification
 
 ### 1. Scope / Trigger
