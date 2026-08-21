@@ -29,13 +29,39 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   min-width: 0;
   position: relative;
   overflow: hidden;
-  /* 描红引子：淡朱 wash 底 + 界格行线（AI 侧描红稿），明暗场随令牌自适应 */
+  /* 夜色墨韵：引子透明立于夜案，底由页面夜色层承担（固定夜色，不随主题切换） */
   border-radius: var(--md-radius-xs);
-  background-color: var(--md-miaohong-wash);
+  color: var(--md-night-on);
+}
+
+/* 灯下暖晕：品牌簇后方一团纸光，名章附近叠极淡朱光（大面积低透明度，渐隐到无） */
+.auth-intro::before {
+  content: '';
+  position: absolute;
+  inset: -6%;
+  z-index: 0;
+  background:
+    radial-gradient(48% 42% at 47% 36%, var(--md-night-glow-warm) 0%, transparent 72%),
+    radial-gradient(18% 15% at 58% 34%, var(--md-night-glow-seal) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* 灯下现格：书名号正后方一小块界格发线，radial mask 渐隐到无，绝不铺满；
+   跟随品牌簇左锚（不再栏内居中），格光落在题字身后 */
+.auth-intro::after {
+  content: '';
+  position: absolute;
+  top: 6%;
+  left: clamp(40px, 10%, 160px);
+  z-index: 0;
+  width: min(70%, 440px);
+  height: 62%;
   background-image:
-    repeating-linear-gradient(0deg, var(--md-miaohong-line) 0 1px, transparent 1px 56px),
-    repeating-linear-gradient(90deg, var(--md-miaohong-line) 0 1px, transparent 1px 56px);
-  color: var(--md-on-surface);
+    repeating-linear-gradient(0deg, var(--md-night-outline) 0 1px, transparent 1px 72px),
+    repeating-linear-gradient(90deg, var(--md-night-outline) 0 1px, transparent 1px 72px);
+  -webkit-mask-image: radial-gradient(closest-side, #000 30%, transparent 78%);
+  mask-image: radial-gradient(closest-side, #000 30%, transparent 78%);
+  pointer-events: none;
 }
 
 .auth-intro__spine {
@@ -43,39 +69,38 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   top: clamp(40px, 12%, 72px);
   left: clamp(24px, 11%, 56px);
   z-index: 1;
-  color: var(--md-miaohong-strong);
+  color: var(--md-night-on-variant);
   font-family: var(--md-font-kai);
   font-size: clamp(13px, 1.1vw, 15px);
   letter-spacing: 0.18em;
   writing-mode: vertical-rl;
 }
 
-/* 品牌簇：竖排书名 + 方印 + 竖排文案，弹性居中，不依赖底图对位 */
+/* 品牌簇：竖排书名 + 方印 + 竖排题跋，左锚定位于墨碑「墨」字右下缘，
+   与出血大字错位叠压成纵深（不再栏内居中悬浮） */
 .auth-intro__brand {
   position: absolute;
-  top: clamp(72px, 18%, 108px);
-  left: 0;
-  right: 0;
+  top: clamp(84px, 19%, 148px);
+  left: clamp(88px, 16%, 220px);
   z-index: 1;
   display: flex;
   align-items: flex-start;
-  justify-content: center;
+  justify-content: flex-start;
   gap: clamp(18px, 2.2vw, 30px);
-  padding: 0 clamp(16px, 4%, 40px);
 }
 
 .auth-intro__brand h1 {
   margin: 0;
-  color: var(--md-on-surface);
+  color: var(--md-night-on);
   font-family: var(--md-font-serif);
-  font-size: clamp(54px, 5.3vw, 86px);
+  font-size: clamp(56px, 8vw, 88px); /* 展示级书名号（≤6rem 纪律） */
   font-weight: 600;
   line-height: 1.02;
-  letter-spacing: 0.06em;
+  letter-spacing: -0.02em;
   writing-mode: vertical-rl;
 }
 
-/* 名章落印：朱砂实底 + 深朱 1px 边，印章无影 */
+/* 名章落印：夜色钤印实底 + 深朱 1px 边，印章无影 */
 .auth-intro__seal {
   align-self: center;
   width: 30px;
@@ -84,15 +109,16 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--md-secondary-dark);
+  border: 1px solid var(--md-night-seal-deep);
   border-radius: var(--md-radius-xs);
-  background-color: var(--md-secondary);
-  color: var(--md-on-secondary);
+  background-color: var(--md-night-seal);
+  color: var(--md-night-seal-on);
   font-family: var(--md-font-serif);
   font-size: 18px;
   font-weight: 600;
   line-height: 1;
-  transform: rotate(-3deg);
+  /* 静息斜印 -4°，与 auth-seal-drop 落印终态一致（reduce 下直落此态） */
+  transform: rotate(-4deg);
 }
 
 .auth-intro__meta {
@@ -102,7 +128,7 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   gap: clamp(12px, 1.5vw, 22px);
 }
 
-/* 引子文案：kind 作 AI 之声（真楷描红），slogan 作作家许诺（真楷落墨） */
+/* 引子文案：kind 作 AI 之声（真楷夜色描红），slogan 作作家许诺（夜色辅文） */
 .auth-intro__kind,
 .auth-intro__slogan {
   margin: 0;
@@ -111,7 +137,7 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
 }
 
 .auth-intro__kind {
-  color: var(--md-miaohong-strong);
+  color: var(--md-night-seal);
   font-size: clamp(14px, 1.25vw, 17px);
   font-weight: 600;
   line-height: 1.7;
@@ -120,7 +146,7 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
 
 .auth-intro__slogan {
   margin-top: clamp(28px, 3.5vw, 48px);
-  color: var(--md-on-surface);
+  color: var(--md-night-on-variant);
   font-size: clamp(16px, 1.45vw, 22px);
   font-weight: 600;
   line-height: 1.82;
@@ -136,13 +162,13 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   align-items: center;
   gap: clamp(8px, 1vw, 14px);
   margin: 0;
-  color: var(--md-on-surface-variant);
+  color: var(--md-night-on-variant);
   font-family: var(--md-font-serif);
   font-size: clamp(12px, 1vw, 14px);
   letter-spacing: 0.08em;
 }
 
-/* 脚印小章：朱砂实底，印章无影 */
+/* 脚印小章：夜色钤印实底，印章无影 */
 .auth-intro__stamp {
   width: clamp(30px, 2.6vw, 38px);
   height: clamp(30px, 2.6vw, 38px);
@@ -150,10 +176,10 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--md-secondary-dark);
+  border: 1px solid var(--md-night-seal-deep);
   border-radius: var(--md-radius-xs);
-  background-color: var(--md-secondary);
-  color: var(--md-on-secondary);
+  background-color: var(--md-night-seal);
+  color: var(--md-night-seal-on);
   font-size: clamp(15px, 1.35vw, 21px);
   font-weight: 600;
   line-height: 1;
@@ -178,10 +204,6 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
     justify-content: flex-start;
     gap: 14px;
     padding: 0;
-  }
-
-  .auth-intro__brand h1 {
-    font-size: 48px;
   }
 
   .auth-intro__seal {
@@ -212,10 +234,10 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
     bottom: 14px;
     gap: 8px;
     padding: 5px 8px;
-    border: 1px solid var(--md-miaohong-line);
+    border: 1px solid var(--md-night-outline);
     border-radius: var(--md-radius-xs);
-    background: var(--md-surface);
-    font-size: 11px;
+    background: var(--md-night-surface);
+    font-size: 12px;
     letter-spacing: 0.04em;
   }
 

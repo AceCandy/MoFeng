@@ -134,7 +134,7 @@ const handleDelete = () => {
   gap: var(--md-spacing-5);
   padding: var(--md-spacing-5);
   border-radius: var(--md-radius-xs) !important; /* 去 SaaS 大圆角，木刻方直微圆角 */
-  border: 3px double var(--md-outline) !important; /* 古籍线装双边，书架书本仪式感 */
+  border: 1px solid var(--md-outline) !important; /* 平净纸卡：1px 青灰界格发线，与全局基底一致 */
   background-color: var(--md-surface) !important;
   box-shadow: none;
   touch-action: manipulation;
@@ -145,46 +145,11 @@ const handleDelete = () => {
     background-color var(--md-duration-short) var(--md-easing-standard);
 }
 
-/* Hover 态右下角金石阳刻“卷”朱砂钤印渐显，点睛之笔 */
-.project-card::after {
-  content: '卷' !important;
-  position: absolute !important;
-  right: 16px !important;
-  bottom: 60px !important;
-  font-family: var(--md-font-serif) !important;
-  font-size: 10px !important;
-  font-weight: bold !important;
-  color: var(--md-secondary) !important;
-  border: 1px solid var(--md-secondary) !important;
-  border-radius: 2px !important; /* 朱砂小方印 */
-  width: 15px !important;
-  height: 15px !important;
-  display: grid !important;
-  place-items: center !important;
-  line-height: 1 !important;
-  box-shadow: none !important; /* 印面压纸不浮起 */
-  opacity: 0;
-  transform: scale(0.7) rotate(-8deg);
-  transition:
-    background-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-    color 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
-  pointer-events: none;
-}
-
-.project-card:hover::after {
-  opacity: 0.85 !important;
-  transform: scale(1) rotate(0deg) !important;
-}
-
 .project-card:hover,
 .project-card:focus-within {
-  border-color: color-mix(in srgb, var(--md-primary) 50%, var(--md-outline-variant)) !important;
-  /* 熟宣柔影微浮 */
-  box-shadow: var(--md-elevation-paper-1) !important;
+  border-color: color-mix(in srgb, var(--md-outline) 55%, var(--md-on-surface)) !important; /* 界格发线加深 */
+  /* 纸页柔影微浮 */
+  box-shadow: var(--md-elevation-paper-2) !important;
   background-color: var(--md-surface-dim) !important; /* 宣纸微暖色 */
 }
 

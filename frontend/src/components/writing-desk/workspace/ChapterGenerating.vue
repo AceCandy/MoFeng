@@ -14,15 +14,40 @@
       :can-confirm-manual="manualConfirmCandidateId !== null"
       :can-cancel="canCancel"
       :pending="pending || retryConfirming"
+      :generation-progress="generationProgress"
+      :is-generating="isActivelyGenerating"
+      :stage-label="stageLabel"
       @select="selectStep"
       @cancel="emit('cancel')"
       @retry-active-step="retryActiveStep"
       @confirm-manual="confirmManual"
     />
 
+    <!-- 研墨舞台：生成中尚未收到正文预览时，稿纸待写行随进度逐行点亮，
+         承接全产品最长的等待「情绪谷」；内容到达后即由描红预览接棒 -->
+    <Transition name="chapter-console__stage-quiet">
+      <article
+        v-if="showDraftStage"
+        class="chapter-console__draft-stage"
+        data-provenance="ai"
+        aria-label="章节草稿研墨舞台"
+      >
+        <div class="chapter-console__draft-stage-lines" aria-hidden="true">
+          <span
+            v-for="row in DRAFT_STAGE_ROWS"
+            :key="row"
+            class="chapter-console__draft-stage-line"
+            :class="{ 'is-lit': row <= litStageRows }"
+            :style="{ transitionDelay: `${(row - 1) * 100}ms` }"
+          ></span>
+        </div>
+      </article>
+    </Transition>
+
     <ChapterDraftPreview
       v-if="props.chapterContentPreview"
       :chapter-content-preview="props.chapterContentPreview"
+      :is-generating="isActivelyGenerating"
     />
 
     <!-- 节点详情面板 -->
@@ -143,6 +168,37 @@ const { activeStepDetails, activeTrace } = useChapterGenerationTrace(props, {
   failureReason,
   failureScenario,
 })
+
+// 研墨舞台亮台条件：仅工作流活跃推进（generating/evaluating/finalizing）时呈现；
+// 待人工确认/失败/成功/空闲一律安静退场，失败与取消呈现维持 ChapterWorkflowPanel 既有契约
+const isActivelyGenerating = computed(
+  () => props.status === 'generating' || props.status === 'evaluating' || props.status === 'finalizing',
+)
+
+// 研墨进度数值：与后端 snapshot.progress 同标度（0-100 整数），钳制兜底
+const inkProgressValue = computed(() => {
+  const raw = props.generationProgress
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return 0
+  return Math.min(100, Math.max(0, Math.round(raw)))
+})
+
+// 阶段小签：取当前推进节点的数据文案（如「润色推荐版本」），缺省回落「研墨」
+const stageLabel = computed(() => {
+  const key = currentStepKey.value
+  const label = key
+    ? pipelineSteps.value.find((step) => step.key === key)?.label
+    : null
+  return label || '研墨'
+})
+
+// 待写行：固定 6 行稿纸行，点亮行数随研墨进度联动，起笔即点亮第一行
+const DRAFT_STAGE_ROWS = [1, 2, 3, 4, 5, 6]
+const showDraftStage = computed(
+  () => isActivelyGenerating.value && !(props.chapterContentPreview || '').trim(),
+)
+const litStageRows = computed(() =>
+  Math.max(1, Math.ceil((inkProgressValue.value / 100) * DRAFT_STAGE_ROWS.length)),
+)
 
 const activeRetryCommand = computed(() =>
   pipelineSteps.value.find((step) => step.key === activeStepKey.value)?.retryCommand ?? null,
@@ -330,7 +386,84 @@ const confirmManual = () => {
   border-color: color-mix(in srgb, var(--md-success) 28%, var(--md-outline-variant));
 }
 
+/* ============================================
+   研墨舞台（生成中等待区）：熟宣稿纸 + 左右朱丝栏 +
+   横向描红行线底，待写行随研墨进度逐行点亮。
+   行线只铺在本容器内（行线不出稿纸），结构面不出现。
+   ============================================ */
+.chapter-console__draft-stage {
+  --paper-line: 27px; /* 稿纸行线节奏，同 chapter-paper 行笺 */
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-sm);
+  box-shadow: var(--md-elevation-paper-1); /* 浮起纸影 */
+  background:
+    /* 左右朱丝栏竖线（各 1px 描红边栏，贴容器左右缘） */
+    linear-gradient(to bottom, var(--md-miaohong-line-strong), var(--md-miaohong-line-strong)) left top / 1px 100% no-repeat local,
+    linear-gradient(to bottom, var(--md-miaohong-line-strong), var(--md-miaohong-line-strong)) right top / 1px 100% no-repeat local,
+    /* 横向描红行线底，--paper-line 循环 */
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--paper-line) - 1px),
+      var(--md-miaohong-line) calc(var(--paper-line) - 1px),
+      var(--md-miaohong-line) var(--paper-line)
+    ) local,
+    /* 熟宣温润底色 */
+    linear-gradient(var(--md-surface), var(--md-surface));
+  background-attachment: local;
+  padding: var(--md-spacing-4) var(--md-spacing-8);
+}
+
+.chapter-console__draft-stage-lines {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 待写行：默认隐于行线底，点亮时 opacity 0→1 + translateY 4px→0，
+   行线加浓并泛 wash 微光（stagger 由各行 transition-delay 级进） */
+.chapter-console__draft-stage-line {
+  position: relative;
+  height: var(--paper-line);
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity var(--md-duration-medium) var(--md-easing-standard),
+    transform var(--md-duration-medium) var(--md-easing-standard),
+    background-color var(--md-duration-medium) var(--md-easing-standard);
+}
+
+.chapter-console__draft-stage-line::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background-color: var(--md-miaohong-line-strong);
+}
+
+.chapter-console__draft-stage-line.is-lit {
+  opacity: 1;
+  transform: translateY(0);
+  background-color: var(--md-miaohong-wash);
+}
+
+/* 舞台进退场：仅透明度淡入淡出，生成完成或空闲时安静退场 */
+.chapter-console__stage-quiet-enter-active,
+.chapter-console__stage-quiet-leave-active {
+  transition: opacity var(--md-duration-medium) var(--md-easing-standard);
+}
+
+.chapter-console__stage-quiet-enter-from,
+.chapter-console__stage-quiet-leave-to {
+  opacity: 0;
+}
+
 @media (max-width: 833px) {
+  .chapter-console__draft-stage {
+    padding: var(--md-spacing-3) var(--md-spacing-4);
+  }
+
   .chapter-console__pipeline-meta {
     margin-top: 6px;
     align-self: flex-start;
@@ -349,6 +482,15 @@ const confirmManual = () => {
 @keyframes fadeInTooltip {
   to {
     opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* 研墨舞台直落终态：静态稿纸，待写行与舞台进退场均无过渡 */
+  .chapter-console__draft-stage-line,
+  .chapter-console__stage-quiet-enter-active,
+  .chapter-console__stage-quiet-leave-active {
+    transition: none;
   }
 }
 </style>

@@ -36,3 +36,20 @@
 
 /* 3. 双胶囊之二：小说状态多维数据
    （与 phase5-navigation.css 的重复定义已合并，统一样式见该文件「胶囊二」小节） */
+
+/* 4. 写作台 (project-write) 顶栏状态胶囊收敛：页面底部全局进度条已承载完成百分比，
+   胶囊仅保留「N/M 章」，隐藏题材签段、百分比段与分隔点。
+   纯 CSS 收敛（DOM 与 aria 全量保留），由 AppShell.vue 按路由条件挂 .is-writing-mode */
+.app-shell__project-capsule.is-status.is-writing-mode .app-shell__project-tag-info,
+.app-shell__project-capsule.is-status.is-writing-mode .app-shell__project-progress-info,
+.app-shell__project-capsule.is-status.is-writing-mode .app-shell__project-divider {
+  display: none !important;
+}
+
+/* 5. ≤1199px 顶栏空间告急（1440px 已折行）：整个状态胶囊隐藏，
+   上探 phase5-responsive.css 的 960px 隐藏点至 1199px */
+@media (max-width: 1199px) {
+  .app-shell__project-capsule.is-status {
+    display: none !important;
+  }
+}

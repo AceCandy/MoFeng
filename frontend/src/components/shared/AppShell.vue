@@ -465,8 +465,12 @@ onUnmounted(() => {
              </transition>
            </div>
 
-          <!-- 胶囊二：当前作品的多维成就与状态 (始终保留常驻展示) -->
-          <div v-if="currentProject && projectStats" class="app-shell__project-capsule is-status">
+          <!-- 胶囊二：当前作品的多维成就与状态 (始终保留常驻展示；写作台 is-writing-mode 下收敛为「N/M 章」，见 topbar.css) -->
+          <div
+            v-if="currentProject && projectStats"
+            class="app-shell__project-capsule is-status"
+            :class="{ 'is-writing-mode': route.name === 'project-write' }"
+          >
             <span class="app-shell__project-tag-info">{{ projectTags }}</span>
             <span class="app-shell__project-divider">•</span>
             <span class="app-shell__project-progress-info">
@@ -583,7 +587,7 @@ onUnmounted(() => {
             @click="toggleTheme"
           >
             <span class="app-shell__action-badge" :class="isDarkTheme ? 'is-theme-light' : 'is-theme-dark'">
-              {{ isDarkTheme ? '晝' : '夜' }}
+              {{ isDarkTheme ? '昼' : '夜' }}
             </span>
           </button>
 
@@ -844,7 +848,7 @@ onUnmounted(() => {
   border-radius: var(--md-radius-full);
   background: var(--md-warning-container);
   color: var(--md-on-surface);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1;
 }
@@ -901,16 +905,18 @@ onUnmounted(() => {
   gap: 6px;
   min-height: 44px;
   padding: 0 16px;
+  white-space: nowrap; /* 治「蓝图概览」等四字竖断折行 */
   border-radius: var(--md-radius-xs) !important;
   border: 1px solid var(--md-outline) !important;
-  background-color: var(--md-primary) !important; /* 焦墨底色 */
-  color: var(--md-on-primary) !important; /* 熟宣字色 */
+  /* 导航钮保持安静：透明底焦墨字，不抢朱砂承诺钮的权责；暗场不再随 --md-primary 反转成亮块 */
+  background-color: transparent !important;
+  color: var(--md-on-surface) !important;
   font-family: var(--md-font-serif);
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.08em;
   cursor: pointer;
-  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-on-surface) 20%, transparent);
+  box-shadow: none; /* 纸页柔影是唯一的影：硬偏置投影已退役 */
   transition:
     background-color 0.2s cubic-bezier(0.2, 0, 0, 1),
     box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1),
@@ -918,9 +924,33 @@ onUnmounted(() => {
 }
 
 .app-shell__top-action-btn:hover {
-  background-color: var(--md-primary-dark) !important;
-  box-shadow: 2.5px 2.5px 0px color-mix(in srgb, var(--md-secondary) 25%, transparent) !important; /* 朱批红印重影 */
-  transform: translate(-1px, -1px);
+  background-color: var(--md-surface-container) !important;
+  border-color: var(--md-on-surface-variant) !important;
+  box-shadow: var(--md-elevation-paper-1) !important;
+}
+
+/* 暗室明纸：项目上下文顶栏的金石导航钮沉入夜色（夜色只挂模式类，普通页面不动） */
+.app-shell--project-context .app-shell__top-action-btn {
+  border-color: var(--md-night-outline) !important;
+  color: var(--md-night-on) !important;
+}
+
+.app-shell--project-context .app-shell__top-action-btn:hover {
+  background-color: rgba(236, 228, 207, 0.06) !important;
+  border-color: var(--md-night-outline-strong) !important;
+  box-shadow: none !important;
+}
+
+.app-shell--project-context .app-shell__task-button {
+  color: var(--md-night-on-variant);
+}
+
+.app-shell--project-context .app-shell__task-button:hover {
+  color: var(--md-night-on);
+}
+
+.app-shell--project-context .app-shell__task-button:focus-visible {
+  outline-color: var(--md-night-seal);
 }
 
 .app-shell__top-action-btn svg {
@@ -928,21 +958,13 @@ onUnmounted(() => {
   height: 14px;
 }
 
-/* 扫墨枯笔飞白墨迹/山水泼墨背景装饰移至组件内 */
+/* 菜单 hover 回归平净：旧世界扫墨 SVG 纹理已焚稿 */
 .app-shell__dropdown-item:hover {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' opacity='0.08'><path d='M0,10 C20,2 50,18 80,4 C90,8 95,2 100,10 Z' fill='%23b83c32'/></svg>") !important;
+  background-color: var(--md-surface-container) !important;
 }
 
 .app-shell__project-welcome-message {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 20' opacity='0.03'><path d='M0,10 C40,0 100,18 160,2 C180,6 190,2 200,10 Z' fill='%231c2022'/></svg>") !important;
-}
-
-:root[data-theme='dark'] .app-shell__dropdown-item:hover {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' opacity='0.08'><path d='M0,10 C20,2 50,18 80,4 C90,8 95,2 100,10 Z' fill='%239c332b'/></svg>") !important;
-}
-
-:root[data-theme='dark'] .app-shell__project-welcome-message {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 20' opacity='0.03'><path d='M0,10 C40,0 100,18 160,2 C180,6 190,2 200,10 Z' fill='%23e5dec9'/></svg>") !important;
+  /* 空态寄语保持素纸，不再叠泼墨纹理 */
 }
 
 /* 品牌链接与胶囊触发器样式（自模板内联样式收编） */
@@ -978,5 +1000,106 @@ onUnmounted(() => {
 .welcome-spark svg {
   width: 15px;
   height: 15px;
+}
+
+/* ==========================================================================
+   暗室明纸：项目上下文（写作台/项目详情/admin详情）顶栏沉入固定夜色
+   夜色只挂 .app-shell--project-context 模式类，普通页面顶栏保持纸色一行不动；
+   夜色为固定定值，不随明暗主题翻转；下拉弹层保持纸色世界不动。
+   scoped data-v 提权 + !important：phase5-navigation/topbar/user-tag 的全局
+   规则与暗色覆写均带 !important，这里靠更高优先级取胜
+   ========================================================================== */
+.app-shell--project-context .app-shell__topbar {
+  background: var(--md-night-bg);
+  border-bottom-color: var(--md-night-outline);
+}
+
+.app-shell--project-context .app-shell__topbar::after {
+  background-color: var(--md-night-outline);
+}
+
+.app-shell--project-context .app-shell__brand-title {
+  color: var(--md-night-on) !important;
+}
+
+/* 书卷胶囊：夜色浮层 + 发线边，撤销纸色噪点底纹与硬偏置印章影 */
+.app-shell--project-context .app-shell__topbar .app-shell__project-capsule {
+  background-color: var(--md-night-surface) !important;
+  background-image: none !important;
+  border-color: var(--md-night-outline) !important;
+  color: var(--md-night-on) !important;
+  box-shadow: none !important;
+}
+
+.app-shell--project-context .app-shell__topbar .app-shell__project-capsule.is-select:hover,
+.app-shell--project-context .app-shell__topbar .app-shell__project-capsule.is-select.is-active {
+  background-color: var(--md-night-surface-high) !important;
+  border-color: var(--md-night-outline-strong) !important;
+  box-shadow: none !important;
+}
+
+.app-shell--project-context .app-shell__topbar .app-shell__project-icon {
+  color: var(--md-night-seal) !important;
+}
+
+.app-shell--project-context .app-shell__topbar .app-shell__project-arrow {
+  color: var(--md-night-on-variant) !important;
+}
+
+/* 状态胶囊（N/M 章）：夜色薄光底 + 夜色描红虚线框 */
+.app-shell--project-context .app-shell__topbar .app-shell__project-capsule.is-status {
+  background-color: color-mix(in srgb, var(--md-night-on) 5%, transparent) !important;
+  border-color: color-mix(in srgb, var(--md-night-seal) 35%, transparent) !important;
+  color: var(--md-night-on) !important;
+  box-shadow: none !important;
+}
+
+.app-shell--project-context .app-shell__topbar .app-shell__project-tag-info {
+  color: var(--md-night-on-variant) !important;
+  border-color: var(--md-night-outline) !important;
+  background-color: color-mix(in srgb, var(--md-night-on) 5%, transparent) !important;
+}
+
+.app-shell--project-context .app-shell__topbar .app-shell__project-divider {
+  color: var(--md-night-outline-strong) !important;
+}
+
+.app-shell--project-context .app-shell__topbar .app-shell__project-progress-info,
+.app-shell--project-context .app-shell__topbar .app-shell__project-chapter-info {
+  color: var(--md-night-on-variant) !important;
+}
+
+.app-shell--project-context .app-shell__topbar .app-shell__number {
+  color: var(--md-night-seal) !important;
+}
+
+/* 阁主名签：夜色薄光底 + 发线边，撤销内凹纸纹影 */
+.app-shell--project-context .app-shell__topbar .app-shell__user-tag {
+  background-color: color-mix(in srgb, var(--md-night-on) 5%, transparent) !important;
+  border-color: var(--md-night-outline) !important;
+  box-shadow: none !important;
+}
+
+.app-shell--project-context .app-shell__topbar .app-shell__user-tag.is-trigger:hover,
+.app-shell--project-context .app-shell__topbar .app-shell__user-tag.is-trigger.is-active {
+  background-color: rgba(236, 228, 207, 0.06) !important;
+  border-color: var(--md-night-outline-strong) !important;
+}
+
+.app-shell--project-context .app-shell__topbar .app-shell__user-name {
+  color: var(--md-night-on) !important;
+}
+
+.app-shell--project-context .app-shell__topbar .app-shell__user-arrow {
+  color: var(--md-night-on-variant) !important;
+}
+
+/* 全局写作进度条：夜色轨道 + 夜色钤印红条 */
+.app-shell--project-context .app-shell__topbar .app-shell__global-progress {
+  background-color: color-mix(in srgb, var(--md-night-on) 8%, transparent) !important;
+}
+
+.app-shell--project-context .app-shell__topbar .app-shell__global-progress span {
+  background: var(--md-night-seal) !important;
 }
 </style>

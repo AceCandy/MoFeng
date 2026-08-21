@@ -211,6 +211,22 @@
     padding-bottom: var(--md-spacing-4);
   }
 
+  /* 移动端解除视口锁：project-context 页（写作台/项目详情/admin详情）回归文档流，
+     由页面整体滚动；内部 overflow:hidden 锁高会把超高内容裁成白屏 */
+  .app-shell--project-context {
+    height: auto !important;
+    max-height: none !important;
+    min-height: var(--app-viewport-unit);
+    overflow: visible !important;
+  }
+
+  .app-shell--project-context .app-shell__main,
+  .app-shell--project-context .app-shell__content {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
   .app-shell__bottom-tabs {
     display: none !important;
   }

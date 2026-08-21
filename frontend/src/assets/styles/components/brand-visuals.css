@@ -1,43 +1,35 @@
-/* AIMETA P=品牌视觉_墨风第四阶段品牌重构|R=brand-visuals 墨风品牌重构+project-card+极致中国风+dark覆写|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* AIMETA P=纸面基底_熟宣底与项目纸卡|R=熟宣大背景+project-card 平净纸卡+dark覆写|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
 /* ==========================================================================
-   墨风第四阶段「墨落惊风雨，泼墨成风」——「墨风」品牌与极致中国风大刀阔斧重构
+   描红界格时代全局基底：熟宣三段渐变底色 + 大厅项目平净纸卡
+   （第四阶段「墨落惊风雨」的狂草水印、石青书脊、装订孔、闲章、窗棂扫墨等装饰已焚稿退场；
+    同阶段残留的 background-art.css 泼墨风竹大背景亦已一并焚稿删除）
    ========================================================================== */
 
-/* 1. 全局大背景升级：注入“墨落惊风雨”狂草“墨風”二字与写意水墨云海巨幅 SVG */
+/* 1. 全局大背景：安静的三段熟宣底色过渡，无水印、无光晕、无 !important */
 body,
 .writing-desk-page {
-  background-image:
-    radial-gradient(circle at 5% 10%, color-mix(in srgb, var(--md-on-surface) 6%, transparent), transparent 45%),
-    radial-gradient(circle at 95% 85%, rgba(46, 92, 138, 0.04), transparent 50%),
-    /* 狂草“墨風”大水印、飞洒墨滴与写意风暴气流 SVG */
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><g fill='%231c2022' fill-opacity='0.016'><path d='M10,25 Q30,10 50,8 C35,20 22,25 15,30 Z M25,45 Q50,22 65,30 C45,35 35,42 30,50 Z'/><text x='12' y='98' font-family='Georgia, serif' font-size='22' font-weight='bold' fill-opacity='0.024'>墨風</text><text x='12' y='111' font-family='serif' font-size='6.5' fill-opacity='0.018'>笔落惊风雨  诗成泣鬼神</text><path d='M5,95 C40,75 80,85 110,65 C75,70 35,62 10,85 Z' fill-opacity='0.012'/></g></svg>"),
-    linear-gradient(var(--md-surface) 0%, var(--md-background) 60%, var(--md-surface-dim) 100%) !important;
+  background-image: linear-gradient(
+    var(--md-surface) 0%,
+    var(--md-background) 60%,
+    var(--md-surface-dim) 100%
+  );
 }
 
 :root[data-theme='dark'] body,
 :root[data-theme='dark'] .writing-desk-page {
-  background-image:
-    radial-gradient(circle at 5% 10%, rgba(229, 222, 201, 0.04), transparent 45%),
-    radial-gradient(circle at 95% 85%, rgba(74, 107, 83, 0.03), transparent 50%),
-    /* 暗色模式下白玉色狂草“墨風”水印 */
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'><g fill='%23e5dec9' fill-opacity='0.012'><path d='M10,25 Q30,10 50,8 C35,20 22,25 15,30 Z M25,45 Q50,22 65,30 C45,35 35,42 30,50 Z'/><text x='12' y='98' font-family='Georgia, serif' font-size='22' font-weight='bold' fill-opacity='0.018'>墨風</text><text x='12' y='111' font-family='serif' font-size='6.5' fill-opacity='0.014'>笔落惊风雨  诗成泣鬼神</text><path d='M5,95 C40,75 80,85 110,65 C75,70 35,62 10,85 Z' fill-opacity='0.01'/></g></svg>"),
-    linear-gradient(var(--md-surface) 0%, var(--md-background) 65%, var(--md-surface-dim) 100%) !important;
+  background-image: linear-gradient(
+    var(--md-surface) 0%,
+    var(--md-background) 65%,
+    var(--md-surface-dim) 100%
+  );
 }
 
-/* 3. 大厅项目卡片 .project-card 大改：重绘为古雅的“线装古籍书卷” */
+/* 2. 大厅项目卡片 .project-card：平净纸面 = 1px 青灰界格发线 + 纸页柔影 */
 body .project-card {
-  background:
-    /* 极致国风脑洞：用背景渐变优雅重绘14px石青书脊和1px分界线，完美清除粗边框AI反模式 */
-    linear-gradient(to right, var(--md-primary-container) 0px, var(--md-primary-container) 14px, var(--md-outline) 14px, var(--md-outline) 15px, transparent 15px),
-    /* 宣纸微噪底纹 */
-    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--md-on-surface) 0.5%, transparent) 1px, transparent 1px),
-    linear-gradient(var(--md-surface), var(--md-surface)) !important;
-  background-size: 100% 100%, 8px 8px, 100% 100% !important;
+  background-color: var(--md-surface) !important;
   border: 1px solid var(--md-outline) !important;
-  padding-left: 36px !important; /* 腾出书脊的物理位置 */
-  border-radius: 2px !important;
-  position: relative !important;
-  box-shadow: var(--md-elevation-paper-1) !important; /* 浮起纸影 */
+  border-radius: var(--md-radius-xs) !important;
+  box-shadow: var(--md-elevation-paper-1) !important;
   transition:
     background-color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
     border-color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
@@ -46,139 +38,23 @@ body .project-card {
     transform 0.35s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
-/* 三个红色装订孔 */
-body .project-card::before {
-  content: '• • •' !important;
-  position: absolute !important;
-  left: -10px !important;
-  top: 30px !important;
-  bottom: 30px !important;
-  writing-mode: vertical-rl !important;
-  font-size: 15px !important;
-  font-weight: bold !important;
-  color: var(--md-secondary) !important;
-  letter-spacing: 3rem !important;
-  opacity: 0.8 !important;
-  z-index: 10 !important;
-  line-height: 1 !important;
-}
-
-/* 右上角“藏書”闲章 */
-body .project-card::after {
-  content: '藏書' !important;
-  position: absolute !important;
-  right: 16px !important;
-  top: 16px !important;
-  font-family: var(--md-font-label) !important;
-  font-size: 11px !important;
-  font-weight: 800 !important;
-  color: color-mix(in srgb, var(--md-secondary) 85%, transparent) !important;
-  border: 1px solid color-mix(in srgb, var(--md-secondary) 85%, transparent) !important;
-  background-color: color-mix(in srgb, var(--md-secondary) 5%, transparent) !important;
-  padding: 2px 3px !important;
-  line-height: 1 !important;
-  border-radius: 1px !important;
-  transform: rotate(6deg) !important;
-}
-
-/* Hover 物理展开立体效果 */
+/* Hover：纸页微微拾起，界格发线加深 */
 body .project-card:hover {
   transform: translateY(-2px) translateZ(0) !important;
-  border-color: var(--md-primary-light) !important;
-  /* 上浮弹层纸影，产生实体书微微被拿起、翻开的视觉厚度 */
+  border-color: color-mix(in srgb, var(--md-outline) 55%, var(--md-on-surface)) !important;
   box-shadow: var(--md-elevation-paper-2) !important;
-  background-color: var(--md-surface-bright) !important;
 }
 
+/* 暗场适配：只收敛边框与纸影 */
 :root[data-theme='dark'] body .project-card {
-  border-left-color: var(--md-success-container) !important; /* 暗绿松针色书脊 */
   border-color: var(--md-outline-variant) !important;
-  box-shadow: var(--md-elevation-paper-1) !important; /* 浮起纸影 */
-  background: linear-gradient(var(--md-surface), var(--md-surface)) !important;
-}
-
-:root[data-theme='dark'] body .project-card::before {
-  color: var(--md-secondary) !important;
-}
-
-:root[data-theme='dark'] body .project-card::after {
-  color: var(--md-secondary-readable) !important;
-  border-color: var(--md-secondary-readable) !important;
-  background-color: color-mix(in srgb, var(--md-secondary-readable) 12%, transparent) !important;
+  box-shadow: var(--md-elevation-paper-1) !important;
 }
 
 :root[data-theme='dark'] body .project-card:hover {
+  border-color: var(--md-outline) !important;
   box-shadow: var(--md-elevation-paper-2) !important;
 }
 
-/* 4. 侧边栏大改造：背景融入“檀木冰裂纹格格窗棂”底图，菜单项 Hover 覆写为“毛笔横扫枯笔飞白墨痕” */
-body .app-shell__sidebar {
-  background-image:
-    /* 檀木雕花窗棂细线 SVG */
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' opacity='0.015'><path d='M0,0 L28,28 M28,0 L0,28 M0,14 L28,14 M14,0 L14,28' stroke='%231c2022' stroke-width='0.6'/></svg>"),
-    linear-gradient(var(--md-surface-dim), var(--md-surface-dim)) !important;
-}
-
-:root[data-theme='dark'] body .app-shell__sidebar {
-  background-image:
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' opacity='0.008'><path d='M0,0 L28,28 M28,0 L0,28 M0,14 L28,14 M14,0 L14,28' stroke='%23e5dec9' stroke-width='0.6'/></svg>"),
-    linear-gradient(var(--md-surface-dim), var(--md-surface-dim)) !important;
-}
-
-/* 菜单项 Hover 毛笔扫墨飞白效果 */
-body .app-shell__nav-item:hover {
-  background:
-    /* 毛笔扫过宣纸带有微飞白散边墨痕的 SVG (5% 极低透明度，防止花哨) */
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' opacity='0.05'><path d='M0,10 C15,3 40,17 75,4 C90,8 95,2 100,10 C85,12 55,2 0,10 Z' fill='%231c2022'/></svg>"),
-    linear-gradient(135deg, color-mix(in srgb, var(--md-on-surface) 3%, transparent), color-mix(in srgb, var(--md-on-surface) 1%, transparent)) !important;
-  border-color: color-mix(in srgb, var(--md-on-surface) 12%, transparent) !important;
-  color: var(--md-primary-dark) !important;
-}
-
-/* 激活项墨拓效果，右侧隐约带有风吹波纹 */
-body .app-shell__nav-item.is-active {
-  background:
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' opacity='0.08'><path d='M0,10 C15,3 40,17 75,4 C90,8 95,2 100,10 C85,12 55,2 0,10 Z' fill='%231c2022'/></svg>"),
-    linear-gradient(135deg, var(--md-primary-light), var(--md-primary)) !important;
-  border-color: var(--md-primary-dark) !important;
-  color: var(--md-on-primary) !important;
-  /* 墨拓选中态由底色与边框承担，静无影 */
-}
-
-:root[data-theme='dark'] body .app-shell__nav-item:hover {
-  background:
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' opacity='0.04'><path d='M0,10 C15,3 40,17 75,4 C90,8 95,2 100,10 C85,12 55,2 0,10 Z' fill='%23e5dec9'/></svg>"),
-    linear-gradient(135deg, color-mix(in srgb, var(--md-on-surface) 4%, transparent), color-mix(in srgb, var(--md-on-surface) 1%, transparent)) !important;
-  border-color: color-mix(in srgb, var(--md-on-surface) 10%, transparent) !important;
-  color: var(--md-primary-light) !important;
-}
-
-:root[data-theme='dark'] body .app-shell__nav-item.is-active {
-  background:
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' opacity='0.05'><path d='M0,10 C15,3 40,17 75,4 C90,8 95,2 100,10 C85,12 55,2 0,10 Z' fill='%23e5dec9'/></svg>"),
-    linear-gradient(135deg, var(--md-primary-light), var(--md-primary)) !important;
-  border-color: var(--md-outline) !important;
-  color: var(--md-on-primary) !important;
-}
-
-/* 5. 稿纸大改造：在 .chapter-paper 右下角通过伪元素注入淡雅书法款识“墨風·筆落惊風雨”水印 */
-body .chapter-paper::after {
-  content: '墨風·筆落惊風雨' !important;
-  position: absolute !important;
-  right: 28px !important;
-  bottom: 24px !important;
-  font-family: var(--md-font-display) !important;
-  font-size: 13.5px !important;
-  font-weight: 600 !important;
-  color: color-mix(in srgb, var(--md-on-surface) 5%, transparent) !important;
-  letter-spacing: 0.15em !important;
-  pointer-events: none !important;
-  z-index: 10 !important;
-}
-
-:root[data-theme='dark'] body .chapter-paper::after {
-  color: color-mix(in srgb, var(--md-on-surface) 4%, transparent) !important;
-}
-
-/* 6. 聊天气泡样式已收口至 ChatBubble.vue scoped（手撕毛边宣纸方案为唯一真相源），
+/* 3. 聊天气泡样式已收口至 ChatBubble.vue scoped（手撕毛边宣纸方案为唯一真相源），
    该组件仅被灵感模式 InspirationMode 消费，此处不再保留全局覆写。 */

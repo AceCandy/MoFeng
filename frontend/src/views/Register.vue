@@ -1,6 +1,12 @@
 <!-- AIMETA P=注册页_用户注册|R=注册表单|NR=不含登录功能|E=route:/register#component:Register|X=ui|A=注册表单|D=vue|S=dom,net|RD=./README.ai -->
 <template>
   <main class="register-page">
+    <!-- 墨碑排印层：出血大字衬于夜色底与品牌簇/纸卡之间（纯装饰，样式在 auth-night.css） -->
+    <div class="auth-monument" aria-hidden="true">
+      <span class="auth-monument__char auth-monument__char--mo">墨</span>
+      <span class="auth-monument__char auth-monument__char--feng">风</span>
+    </div>
+
     <section class="register-scroll" aria-labelledby="register-title">
       <AuthIntro variant="register" />
 
@@ -159,7 +165,7 @@
 
             <button
               type="submit"
-              class="md-btn md-btn-filled md-ripple register-submit"
+              class="md-btn md-btn-primary md-ripple register-submit"
               :disabled="isRegistering"
             >
               <svg v-if="isRegistering" class="register-spinner" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -370,7 +376,7 @@ onUnmounted(() => {
 <style scoped>
 .register-page {
   min-height: var(--app-viewport-unit);
-  position: relative;
+  position: relative; /* 墨碑排印层的定位上下文 */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -382,12 +388,10 @@ onUnmounted(() => {
     max(44px, env(safe-area-inset-right))
     max(30px, env(safe-area-inset-bottom))
     max(44px, env(safe-area-inset-left));
-  /* 描红界格：熟宣底 + 青灰界格发线方目（非文本装饰），明暗场随令牌自适应 */
-  background-color: var(--md-background);
-  background-image:
-    repeating-linear-gradient(0deg, var(--md-jiege) 0 1px, transparent 1px 72px),
-    repeating-linear-gradient(90deg, var(--md-jiege) 0 1px, transparent 1px 72px);
-  color: var(--md-on-surface);
+  /* 夜色墨韵：固定深夜书房底（不随明暗主题切换），边缘径向压暗至夜深处，一次绘成 */
+  background-color: var(--md-night-bg);
+  background-image: radial-gradient(118% 92% at 50% 38%, transparent 52%, var(--md-night-bg-deep) 100%);
+  color: var(--md-night-on);
 }
 
 .register-scroll {
@@ -398,7 +402,7 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(360px, 470px);
   gap: clamp(20px, 3vw, 48px);
-  color: var(--md-on-surface);
+  color: var(--md-night-on);
 }
 
 .register-panel {
@@ -409,13 +413,14 @@ onUnmounted(() => {
   justify-content: center;
   align-self: center;
   padding: clamp(28px, 3vw, 44px) clamp(24px, 3vw, 48px);
-  /* 稿纸容器：3px double 唯一合法居所 + 淡朱竖行线 */
-  border: 3px double var(--md-outline);
+  /* 夜案纸卡：熟宣定值浮于夜色，无边框（影边不叠），深影承担浮起；
+     卡内变量钉版见 auth-night.css（color-scheme: light，暗主题不混暗色控件） */
+  border: 0;
   border-radius: var(--md-radius-xs);
   background:
     repeating-linear-gradient(90deg, transparent 0 39px, var(--md-miaohong-line) 39px 40px),
-    linear-gradient(var(--md-surface), var(--md-surface));
-  box-shadow: var(--md-elevation-paper-2); /* 稿纸上浮弹层纸影 */
+    linear-gradient(var(--md-night-paper), var(--md-night-paper));
+  box-shadow: var(--md-night-elevation-2); /* 纸卡浮于夜案之上 */
   color: var(--md-on-surface);
 }
 
@@ -635,7 +640,8 @@ onUnmounted(() => {
   color: var(--md-success-text);
 }
 
-/* 落印钮：提交即钤章——朱砂实底 + 深朱 1px 边 + 宣白字，静无影 */
+/* 落印钮：提交即钤章——配色/重力链/禁用态统一收编全局 .md-btn-primary（--md-btn-seal-*），
+   此处仅保留整卷幅面与字号的版面覆写 */
 .register-submit {
   width: 100%;
   min-height: 52px;
@@ -643,34 +649,14 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  border: 1px solid var(--md-secondary-dark);
-  border-radius: var(--md-radius-xs);
-  background-color: var(--md-secondary);
-  color: var(--md-on-secondary);
   font-family: var(--md-font-serif);
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.14em;
-  box-shadow: none; /* 静无影 */
   transition:
     background-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
     transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.register-submit:hover:not(:disabled) {
-  background-color: var(--md-secondary-dark);
-  box-shadow: var(--md-elevation-paper-1); /* hover 浮起 */
-}
-
-.register-submit:active:not(:disabled) {
-  transform: translate(1px, 1px);
-  box-shadow: none; /* 按压清零 */
-}
-
-.register-submit:disabled {
-  opacity: 0.68;
-  cursor: not-allowed;
 }
 
 .register-spinner {

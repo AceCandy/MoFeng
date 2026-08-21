@@ -657,8 +657,8 @@ const parsedRelationships = computed(() => {
   left: 0;
   top: 0;
   bottom: 0;
-  width: 3.5px;
-  background-color: var(--md-primary-light); /* 松烟细描 */
+  width: 1px; /* 合规的 1px 描红界栏 */
+  background-color: var(--md-miaohong-line-strong);
 }
 
 .bp__summary-label {
@@ -717,7 +717,7 @@ const parsedRelationships = computed(() => {
   color: var(--md-primary-light); /* 松烟菱花引示 */
   font-weight: bold;
   margin-right: 6px;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .bp__world-group {

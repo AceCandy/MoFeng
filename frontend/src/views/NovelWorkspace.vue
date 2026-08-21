@@ -36,6 +36,10 @@
       :aria-busy="projectsLoading"
       aria-label="今日创作总览"
     >
+      <!-- 墨碑底纹：夜色里的巨型低透明排印（当前书名首字，无项目落「墨」），右下出血裁切，纯装饰 -->
+      <div class="workspace-hero__backdrop" aria-hidden="true">
+        <span class="workspace-hero__monolith">{{ heroMonolithChar }}</span>
+      </div>
       <div class="workspace-hero__intro">
         <p class="workspace-eyebrow">今日创作</p>
         <template v-if="projectsLoading">
@@ -60,7 +64,11 @@
           </div>
         </template>
         <template v-else>
-          <h2>{{ continueProject ? continueProject.title : '开始一段新的长篇创作' }}</h2>
+          <div class="workspace-hero__title-row">
+            <h2>{{ continueProject ? continueProject.title : '开始一段新的长篇创作' }}</h2>
+            <!-- 空状态引首章：灯下米字格衬底 + 夜色钤印「著」字，只作卷首留白装饰 -->
+            <span v-if="!continueProject" class="workspace-hero__empty-seal" aria-hidden="true">著</span>
+          </div>
           <p class="workspace-hero__summary">
             {{
               continueProject
@@ -78,14 +86,14 @@
             <button
               v-if="continueProject"
               type="button"
-              class="md-btn md-btn-filled md-ripple workspace-panel__action"
+              class="md-btn md-btn-primary md-ripple workspace-panel__action"
               @click="enterProject(continueProject)"
             >
               继续写作
             </button>
             <button
               type="button"
-              class="md-btn md-btn-tonal md-ripple workspace-panel__action"
+              class="md-btn md-btn-primary md-ripple workspace-panel__action"
               @click="goToInspiration"
             >
               新建灵感项目
@@ -96,7 +104,7 @@
 
       <div class="workspace-hero__panel">
         <div class="workspace-hero__panel-head">
-          <p>今日目标</p>
+          <p class="workspace-hero__goal-tag">今日目标</p>
           <strong v-if="projectsLoading">
             <span class="workspace-hero__loading-line workspace-hero__loading-line--panel-title"></span>
           </strong>
@@ -111,43 +119,57 @@
           </template>
           <template v-else>{{ todayGoal.description }}</template>
         </p>
-        <div class="workspace-hero__progress workspace-continue__progress">
-          <div class="workspace-hero__progress-label">
-            <span>项目推进度</span>
-            <strong v-if="projectsLoading">
-              <span class="workspace-hero__loading-line workspace-hero__loading-line--progress"></span>
-            </strong>
-            <strong v-else>{{ continueProgress }}%</strong>
-          </div>
-          <div
-            class="md-progress-linear"
-            role="progressbar"
-            aria-label="最近项目进度"
-            aria-valuemin="0"
-            aria-valuemax="100"
-            :aria-valuenow="continueProgress"
-          >
-            <div class="md-progress-linear-bar" :style="{ '--md-progress-scale': continueProgressScale }"></div>
-          </div>
+      </div>
+
+      <!-- 墨进度：通栏夜色发线轨道，灯下走墨填充，条头缀朱砂方印点 -->
+      <div class="workspace-hero__progress workspace-continue__progress">
+        <div class="workspace-hero__progress-label">
+          <span>墨进度</span>
+          <strong v-if="projectsLoading">
+            <span class="workspace-hero__loading-line workspace-hero__loading-line--progress"></span>
+          </strong>
+          <strong v-else>
+            {{ continueProgress }}%
+            <span v-if="continueProject" class="workspace-hero__progress-chapters">
+              {{ continueProject.completed_chapters }}/{{ continueProject.total_chapters }} 章
+            </span>
+          </strong>
         </div>
-        <div class="workspace-hero__snapshot" aria-label="创作快照">
-          <template v-if="projectsLoading">
-            <span class="workspace-hero__loading-line workspace-hero__loading-line--snapshot"></span>
-            <span
-              class="workspace-hero__loading-line workspace-hero__loading-line--snapshot is-short"
-            ></span>
-            <span
-              class="workspace-hero__loading-line workspace-hero__loading-line--snapshot is-shorter"
-            ></span>
-          </template>
-          <template v-else>
-            <span>创作中 <strong>{{ sortedProjects.length }}</strong> 个项目</span>
-            <span aria-hidden="true">·</span>
-            <span>待推进 <strong>{{ pendingChapters }}</strong> 章</span>
-            <span aria-hidden="true">·</span>
-            <span>最近编辑 <strong>{{ recentEditedProjects.length }}</strong> 个项目</span>
-          </template>
+        <div
+          class="md-progress-linear"
+          role="progressbar"
+          aria-label="最近项目进度"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          :aria-valuenow="continueProgress"
+          :style="{ '--md-progress-scale': continueProgressScale }"
+        >
+          <div class="md-progress-linear-bar"></div>
+          <span
+            v-if="continueProgressScale > 0"
+            class="workspace-hero__progress-seal"
+            aria-hidden="true"
+          ></span>
         </div>
+      </div>
+
+      <div class="workspace-hero__snapshot" aria-label="创作快照">
+        <template v-if="projectsLoading">
+          <span class="workspace-hero__loading-line workspace-hero__loading-line--snapshot"></span>
+          <span
+            class="workspace-hero__loading-line workspace-hero__loading-line--snapshot is-short"
+          ></span>
+          <span
+            class="workspace-hero__loading-line workspace-hero__loading-line--snapshot is-shorter"
+          ></span>
+        </template>
+        <template v-else>
+          <span>创作中 <strong>{{ sortedProjects.length }}</strong> 个项目</span>
+          <span aria-hidden="true">·</span>
+          <span>待推进 <strong>{{ pendingChapters }}</strong> 章</span>
+          <span aria-hidden="true">·</span>
+          <span>最近编辑 <strong>{{ recentEditedProjects.length }}</strong> 个项目</span>
+        </template>
       </div>
     </section>
 
@@ -209,7 +231,7 @@
         </div>
         <h3>还没有项目</h3>
         <p>创建一个项目后，这里会显示最近写作进度。</p>
-        <button @click="goToInspiration" class="md-btn md-btn-filled md-ripple">开始新灵感</button>
+        <button @click="goToInspiration" class="md-btn md-btn-primary md-ripple">开始新灵感</button>
       </div>
 
       <div v-else class="workspace-grid">
@@ -351,6 +373,12 @@ const sortedProjects = computed(() => {
 
 const continueProject = computed(() => sortedProjects.value[0] ?? null)
 
+// 墨碑底纹取当前书名首字，无项目时落「墨」字，纯装饰不参与数据流。
+const heroMonolithChar = computed(() => {
+  const title = continueProject.value?.title?.trim()
+  return title ? title.charAt(0) : '墨'
+})
+
 const continueProgress = computed(() => {
   const project = continueProject.value
   if (!project || project.total_chapters <= 0) return 0
@@ -380,6 +408,14 @@ const todayGoal = computed(() => {
     continueProject.value.total_chapters - continueProject.value.completed_chapters,
     0,
   )
+
+  // 章节骨架尚未建立（0/0 章）的项目不能落入“收尾润色”分支
+  if (continueProject.value.total_chapters <= 0) {
+    return {
+      title: '建立小说蓝图',
+      description: '先完成世界观、角色核心关系与章节骨架，再进入正文生成。',
+    }
+  }
 
   if (remaining === 0) {
     return {
@@ -464,27 +500,59 @@ onUnmounted(() => {
   gap: clamp(var(--md-spacing-6), 4vw, var(--md-spacing-10));
 }
 
+/* 夜色长卷：夜案深底 + 书名区后方暖灯光晕 + 四缘向夜深处压暗，多层 background 一次绘成；行线不长在夜色里。
+   构图：底缘下方预留落款签骑缝位（padding-bottom 加破带量，margin-bottom 预留签条下半身的落纸空间） */
 .workspace-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
-  gap: var(--md-spacing-5);
-  padding: clamp(var(--md-spacing-5), 4vw, var(--md-spacing-8));
-  border: 3px double var(--md-outline);
+  gap: var(--md-spacing-5) var(--md-spacing-8);
+  padding: clamp(var(--md-spacing-6), 3vw, var(--md-spacing-8)) clamp(var(--md-spacing-8), 5vw, var(--md-spacing-10)); /* 左右 ≥32px，案头内缩留白 */
+  padding-bottom: calc(clamp(var(--md-spacing-6), 3vw, var(--md-spacing-8)) + 40px); /* 夜色带底缘内让出骑缝签条上半身 */
+  margin-bottom: 32px; /* 签条破带下半身落纸的预留空位，防压档案区 */
   border-radius: var(--md-radius-xs) !important; /* 微直角方章 */
-  background-color: var(--md-surface-dim); /* 熟宣底色 */
-  background-image:
-    radial-gradient(circle at 10% 10%, var(--md-tint-cool), transparent 45%),
-    radial-gradient(circle at 90% 80%, color-mix(in srgb, var(--md-secondary) 2%, transparent), transparent 45%);
-  box-shadow: var(--md-elevation-paper-1); /* 熟宣柔影，不用拓片硬影 */
+  background:
+    /* 书名区后方一团暖灯晕（暖纸色径向光，大面积低透明） */
+    radial-gradient(58% 82% at 24% 30%, var(--md-night-glow-warm), transparent 70%),
+    /* 四周边缘向夜深处压暗 */
+    radial-gradient(125% 155% at 50% 42%, var(--md-night-bg) 52%, var(--md-night-bg-deep) 100%);
+  background-color: var(--md-night-bg);
+  box-shadow: var(--md-night-elevation-1); /* 夜案纯黑深影，长卷浮于案上（影边二选一，取影） */
   position: relative;
 }
 
-.workspace-hero--loading .workspace-hero__intro,
-.workspace-hero--loading .workspace-hero__panel {
+/* 墨碑衬底层：只负责出血裁切，hero 本体保持 overflow 可见以放行破带签条 */
+.workspace-hero__backdrop {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* 墨碑：真实字符排印，夜色暖纸白 6% 透明度，右下出血裁切，压在最底不抢字 */
+.workspace-hero__monolith {
+  position: absolute;
+  right: -0.16em;
+  bottom: -0.3em;
+  color: color-mix(in srgb, var(--md-night-on) 6%, transparent);
+  font-family: var(--md-font-display);
+  font-size: clamp(160px, 22vw, 300px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.workspace-hero--loading .workspace-hero__intro {
   min-height: 244px;
 }
 
-/* 题签：宋体小签，不用 eyebrow 式 uppercase 小字眉 */
+.workspace-hero--loading .workspace-hero__panel {
+  min-height: 160px; /* 课签骨架小于旧面板，按新体量稳定占位 */
+}
+
+/* 题签：宋体小签，不用 eyebrow 式 uppercase 小字眉（夜色里压为暖纸辅文色） */
 .workspace-eyebrow {
   margin: 0;
   color: var(--md-on-surface-variant);
@@ -493,17 +561,55 @@ onUnmounted(() => {
   letter-spacing: 0.04em;
 }
 
+.workspace-hero .workspace-eyebrow {
+  color: var(--md-night-on-variant);
+}
+
+.workspace-hero__title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--md-spacing-4);
+}
+
+/* 书名破顶展示级：clamp(44px, 6.5vw, 88px)，夜色暖纸白，追踪微收，灯下碑拓骨力 */
 .workspace-hero h2 {
-  margin: 10px 0 0;
-  color: var(--md-on-surface);
-  font-size: clamp(1.45rem, 2vw, 2rem);
-  line-height: 1.35;
-  letter-spacing: 0.05em;
+  margin: var(--md-spacing-2) 0 0;
+  min-width: 0;
+  color: var(--md-night-on);
+  font-size: clamp(44px, 6.5vw, 88px);
+  font-weight: 600;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+}
+
+/* 空状态引首章：放大一格成为空态主角——灯下米字格 + 夜色钤印「著」字，只作卷首留白装饰 */
+.workspace-hero__empty-seal {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: clamp(104px, 12vw, 148px);
+  aspect-ratio: 1;
+  border: 1px solid var(--md-night-outline);
+  border-radius: var(--md-radius-xs); /* 微直角方章 */
+  background-image:
+    linear-gradient(to right, transparent calc(50% - 0.5px), var(--md-night-outline) calc(50% - 0.5px), var(--md-night-outline) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    linear-gradient(to bottom, transparent calc(50% - 0.5px), var(--md-night-outline) calc(50% - 0.5px), var(--md-night-outline) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    linear-gradient(to top right, transparent calc(50% - 0.5px), var(--md-night-outline) calc(50% - 0.5px), var(--md-night-outline) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    linear-gradient(to top left, transparent calc(50% - 0.5px), var(--md-night-outline) calc(50% - 0.5px), var(--md-night-outline) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    /* 字后一团朱砂微光，灯下印色不闷 */
+    radial-gradient(circle at 50% 50%, var(--md-night-glow-seal), transparent 72%);
+  color: var(--md-night-seal); /* 夜色钤印，待作家落墨覆写 */
+  font-family: var(--md-font-kai); /* 楷体只给描红 */
+  font-size: clamp(48px, 5.6vw, 68px);
+  line-height: 1;
+  box-shadow: none; /* 印不浮 */
+  user-select: none;
 }
 
 .workspace-hero__summary {
   margin: var(--md-spacing-3) 0 0;
-  color: var(--md-on-surface-variant);
+  color: var(--md-night-on-variant);
   line-height: 1.7;
   max-width: 64ch;
 }
@@ -528,6 +634,13 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
+/* 夜色里的元信息签：夜色浮层底 + 夜色发线边 */
+.workspace-hero .workspace-chip {
+  border-color: var(--md-night-outline);
+  background-color: var(--md-night-surface);
+  color: var(--md-night-on-variant);
+}
+
 .workspace-hero__actions {
   margin-top: var(--md-spacing-5);
   display: flex;
@@ -539,6 +652,11 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: var(--md-spacing-3);
+}
+
+/* 内容层压过墨碑衬底 */
+.workspace-hero__intro {
+  position: relative;
 }
 
 .workspace-hero__loading-block--summary {
@@ -553,14 +671,15 @@ onUnmounted(() => {
   margin-top: var(--md-spacing-5);
 }
 
-.workspace-hero__loading-chip {
+/* 夜色骨架签：夜色上浮层，不带边线（须后于 chip 夜色覆写出场） */
+.workspace-hero .workspace-hero__loading-chip {
   width: 92px;
   min-width: 92px;
   border-color: transparent;
-  background-color: color-mix(in srgb, var(--md-surface-container-low) 82%, var(--md-outline-variant));
+  background-color: var(--md-night-surface-high);
 }
 
-.workspace-hero__loading-chip:last-child {
+.workspace-hero .workspace-hero__loading-chip:last-child {
   width: 112px;
   min-width: 112px;
 }
@@ -568,7 +687,7 @@ onUnmounted(() => {
 .workspace-hero__loading-line {
   display: block;
   border-radius: var(--md-radius-xs) !important; /* 纸条微直角 */
-  background: var(--md-surface-container-high) !important; /* 稳定的淡墨色 */
+  background: var(--md-night-surface-high) !important; /* 夜色上浮层，暗骨架呼吸 */
   animation: ink-skeleton-breath 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite !important;
 }
 
@@ -637,90 +756,179 @@ onUnmounted(() => {
 }
 
 .workspace-panel__action:focus-visible {
-  outline: 2px solid var(--md-primary);
+  outline: 2px solid var(--md-night-on);
   outline-offset: 2px;
 }
 
+/* 课签：夜色浮层 + dashed 夜色强发线边，压案不浮；微斜半度并右探贴住夜色带右缘，如随手别上的手作签 */
 .workspace-hero__panel {
-  border: 3px double var(--md-outline) !important; /* 双线框保留给卷首纸容器 */
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  position: relative; /* 压过墨碑衬底 */
+  margin-right: -10px; /* 右探咬住夜色带右缘（右 padding ≥32px 吸收，不出血） */
+  transform: rotate(-0.8deg); /* 手作微斜，静定不晃 */
+  border: 1px dashed var(--md-night-outline-strong);
   border-radius: var(--md-radius-xs) !important; /* 微直角方章 */
-  background-color: var(--md-surface-container-low); /* 熟宣/竹纸质感，不铺帘纹 */
+  background-color: var(--md-night-surface); /* 夜色浮层 */
   padding: var(--md-spacing-5);
   display: flex;
   flex-direction: column;
   gap: var(--md-spacing-4);
-  box-shadow: none; /* 静息无影 */
-  transition: 
-    border-color 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
-}
-
-/* Hover 时：双线框加深为焦墨色，纸面微浮 */
-.workspace-hero__panel:hover {
-  border-color: var(--md-primary) !important;
-  box-shadow: var(--md-elevation-paper-1) !important;
-}
-
-/* Active 时：钤印微沉，影清零 */
-.workspace-hero__panel:active {
-  transform: translate(1px, 1px) !important;
-  box-shadow: none !important;
+  box-shadow: none; /* 课签压案不浮 */
 }
 
 .workspace-hero__panel-head {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--md-spacing-2);
 }
 
-.workspace-hero__panel-head p {
+/* 「今日目标」夜色小签：朱砂微光 wash 底 + 夜色钤印字，12px/600、字距 0.3em */
+.workspace-hero__goal-tag {
   margin: 0;
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-label-medium);
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-night-glow-seal);
+  color: var(--md-night-seal);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3em;
 }
 
 .workspace-hero__panel-head strong {
-  color: var(--md-on-surface);
+  color: var(--md-night-on);
   font-size: var(--md-title-large);
 }
 
 .workspace-hero__goal-desc {
   margin: 0;
-  color: var(--md-on-surface-variant);
+  color: var(--md-night-on-variant);
   line-height: 1.6;
+}
+
+/* 墨进度：通栏灯下行墨，横贯夜色带底部；压过墨碑衬底 */
+.workspace-hero__progress {
+  grid-column: 1 / -1;
+  position: relative;
 }
 
 .workspace-hero__progress-label {
   margin-bottom: var(--md-spacing-2);
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  color: var(--md-on-surface-variant);
+  gap: var(--md-spacing-3);
+  color: var(--md-night-on-variant);
   font-size: var(--md-label-medium);
 }
 
+/* 百分比升展示级字级落在夜端，章数保持辅文 */
 .workspace-hero__progress-label strong {
-  color: var(--md-on-surface);
+  color: var(--md-night-on);
+  font-size: clamp(24px, 2.6vw, 34px);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
 }
 
+.workspace-hero__progress-chapters {
+  margin-left: var(--md-spacing-2);
+  font-size: var(--md-label-medium);
+  font-weight: 400;
+  color: var(--md-night-on-variant);
+}
+
+/* 通栏夜色发线轨道，灯下行墨填充，条头带暖光 */
+.workspace-hero .md-progress-linear {
+  height: 3px;
+  background-color: var(--md-night-outline);
+  border-radius: 0; /* 发线轨道不收圆 */
+  overflow: visible; /* 让条头朱砂印点得以压线而立 */
+  position: relative;
+}
+
+.workspace-hero .md-progress-linear-bar {
+  background-color: var(--md-night-on); /* 灯下走墨，不借石青 */
+  border-radius: 0;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--md-night-on) 22%, transparent); /* 灯下微光，静定 */
+}
+
+/* 数据就绪后只出场一次：填充条自左铺墨 1.2s */
+.workspace-hero:not(.workspace-hero--loading) .md-progress-linear-bar {
+  animation: workspace-hero-ink-progress 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes workspace-hero-ink-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(var(--md-progress-scale, 0));
+  }
+}
+
+/* 条头朱砂方印点：12px 微直角，缀一枚静态微光，随铺墨同步到位 */
+.workspace-hero__progress-seal {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--md-progress-scale, 0) * 100%);
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px; /* 以条头为中心钤下 */
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-night-seal); /* 夜色钤印 */
+  box-shadow:
+    0 0 0 3px var(--md-night-glow-seal), /* 印周薄晕 */
+    0 0 8px color-mix(in srgb, var(--md-night-seal) 45%, transparent); /* 灯下微光，≤8px 弥散 */
+}
+
+.workspace-hero:not(.workspace-hero--loading) .workspace-hero__progress-seal {
+  animation: workspace-hero-ink-seal 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes workspace-hero-ink-seal {
+  from {
+    left: 0;
+  }
+  to {
+    left: calc(var(--md-progress-scale, 0) * 100%);
+  }
+}
+
+/* 创作快照 = 破带者：一枚纸色落款签条骑跨夜色带底缘，上半身压夜色、下半身落纸，
+   缝合夜色长卷与下方纸色档案区；签面纸色世界，文字回落墨/辅文色 */
 .workspace-hero__snapshot {
+  position: absolute;
+  left: clamp(var(--md-spacing-8), 5vw, var(--md-spacing-10)); /* 与 hero 横 padding 对齐 */
+  right: clamp(var(--md-spacing-8), 5vw, var(--md-spacing-10));
+  bottom: 0;
+  transform: translateY(50%); /* 骑缝：一半压夜色带，一半破出落纸 */
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--md-spacing-2);
-  padding: var(--md-spacing-3);
-  border-radius: var(--md-radius-md);
-  border: 1px dashed color-mix(in srgb, var(--md-primary) 28%, var(--md-outline-variant));
-  background-color: color-mix(in srgb, var(--md-surface-container-low) 86%, var(--md-tint-cool));
+  padding: 10px var(--md-spacing-4);
+  border: 1px solid var(--md-jiege); /* 界格发线 */
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-surface); /* 熟宣签面 */
+  box-shadow: var(--md-elevation-paper-1); /* 熟宣柔影 */
   color: var(--md-on-surface-variant);
   font-size: var(--md-label-medium);
   line-height: 1.5;
 }
 
+/* 骑缝签上的数字用落墨色：破带处在纸底上必须可读 */
 .workspace-hero__snapshot strong {
-  color: var(--md-on-surface);
+  color: var(--md-luomo);
   font-size: var(--md-title-small);
+}
+
+/* 破带签落在纸世界，内部骨架条跟随纸面灰 */
+.workspace-hero .workspace-hero__snapshot .workspace-hero__loading-line {
+  background: var(--md-surface-container-high) !important;
 }
 
 .workspace-archive {
@@ -850,9 +1058,16 @@ onUnmounted(() => {
 }
 
 @media (max-width: 960px) {
+  /* 长卷收为单列：课签回落通栏不再右探，墨进度通栏，破带签仍骑底缘 */
   .workspace-hero {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--md-spacing-5);
+  }
+
+  .workspace-hero__panel {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    margin-right: 0;
   }
 }
 
@@ -861,9 +1076,12 @@ onUnmounted(() => {
     gap: var(--md-spacing-5);
   }
 
-  .workspace-hero--loading .workspace-hero__intro,
-  .workspace-hero--loading .workspace-hero__panel {
+  .workspace-hero--loading .workspace-hero__intro {
     min-height: 212px;
+  }
+
+  .workspace-hero--loading .workspace-hero__panel {
+    min-height: 140px;
   }
 
   .workspace-hero,
@@ -872,7 +1090,14 @@ onUnmounted(() => {
     border-radius: var(--md-radius-xs) !important; /* 微直角方章 */
   }
 
+  /* 破带预留随内缩 padding 重落 */
+  .workspace-hero {
+    padding-bottom: calc(var(--md-spacing-5) + 40px);
+  }
+
   .workspace-hero__snapshot {
+    left: var(--md-spacing-5);
+    right: var(--md-spacing-5);
     font-size: var(--md-label-small);
   }
 }
@@ -887,16 +1112,24 @@ onUnmounted(() => {
     padding: var(--md-spacing-4);
   }
 
+  /* 390px：破带成立但签条改竖排三行，破带预留加深 */
+  .workspace-hero {
+    padding-bottom: calc(var(--md-spacing-4) + 56px);
+    margin-bottom: 56px;
+  }
+
   .workspace-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--md-spacing-4);
   }
 
   .workspace-hero__snapshot {
+    left: var(--md-spacing-4);
+    right: var(--md-spacing-4);
     flex-direction: column;
     align-items: flex-start;
     gap: var(--md-spacing-2);
-    padding: var(--md-spacing-4);
+    padding: 10px var(--md-spacing-3);
   }
 
   .workspace-hero__snapshot [aria-hidden="true"] {
@@ -909,7 +1142,7 @@ onUnmounted(() => {
     width: 100%;
     justify-content: space-between;
     padding-bottom: var(--md-spacing-2);
-    border-bottom: 1px dashed color-mix(in srgb, var(--md-primary) 12%, var(--md-outline-variant));
+    border-bottom: 1px dashed var(--md-jiege); /* 纸签各行以界格发线相隔 */
   }
 
   .workspace-hero__snapshot span:not([aria-hidden="true"]):last-child {
@@ -933,8 +1166,10 @@ onUnmounted(() => {
   .workspace-skeleton__avatar,
   .workspace-skeleton__lines span,
   .workspace-skeleton__bar,
-  .workspace-skeleton__chips {
-    animation: none;
+  .workspace-skeleton__chips,
+  .workspace-hero .md-progress-linear-bar,
+  .workspace-hero__progress-seal {
+    animation: none; /* 铺墨与钤印直落终态 */
     background-position: 0 0;
   }
 }

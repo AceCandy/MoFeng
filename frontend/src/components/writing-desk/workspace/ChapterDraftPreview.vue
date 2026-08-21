@@ -5,15 +5,25 @@
       <span>{{ previewModeLabel }}</span>
     </header>
 
-    <div v-if="previewParagraphs.length > 0" class="chapter-console__preview-body">
+    <!-- 描红稿纸舞台（仅生成中亮台）：横向行线只铺在本容器内（行线不出稿纸）；
+         预览文字三信号齐备（淡朱色 + 真楷体 + wash 底与左缘 1px 界栏 + data-provenance="ai"），
+         段落随进度渐次浮现；完成/待确认/回溯时舞台安静退场为静态预览 -->
+    <div
+      v-if="previewParagraphs.length > 0"
+      class="chapter-console__preview-body"
+      :class="{ 'is-grinding': isGenerating }"
+      :data-provenance="isGenerating ? 'ai' : undefined"
+    >
       <p
         v-for="(paragraph, index) in previewParagraphs"
         :key="`preview-${index}`"
+        class="chapter-console__draft-paragraph"
         :class="{ 'is-streaming': index === previewParagraphs.length - 1 }"
+        :style="{ animationDelay: `${index * 100}ms` }"
       >
         {{ paragraph }}
         <span
-          v-if="index === previewParagraphs.length - 1"
+          v-if="isGenerating && index === previewParagraphs.length - 1"
           class="chapter-console__cursor"
           aria-hidden="true"
         >
@@ -38,10 +48,13 @@ import { computed } from 'vue'
 
 interface Props {
   chapterContentPreview?: string | null
+  /** 工作流是否活跃推进中：进行中段落渐次浮现 + 流光标，完成后静态落定 */
+  isGenerating?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   chapterContentPreview: '',
+  isGenerating: false,
 })
 
 const previewParagraphs = computed(() => {
@@ -109,13 +122,52 @@ const previewModeLabel = computed(() => {
   margin-top: var(--md-spacing-3);
 }
 
+/* 研墨舞台亮台（仅生成中）：横向描红行线 + 左右朱丝栏 + 熟宣底，行线只在本容器内 */
+.chapter-console__preview-body.is-grinding {
+  --paper-line: 27px; /* 稿纸行线节奏，同 chapter-paper 行笺 */
+  padding: var(--md-spacing-3) var(--md-spacing-4);
+  background:
+    /* 左右朱丝栏竖线（各 1px 描红边栏，贴容器左右缘） */
+    linear-gradient(to bottom, var(--md-miaohong-line-strong), var(--md-miaohong-line-strong)) left top / 1px 100% no-repeat local,
+    linear-gradient(to bottom, var(--md-miaohong-line-strong), var(--md-miaohong-line-strong)) right top / 1px 100% no-repeat local,
+    /* 横向描红行线底，--paper-line 循环 */
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--paper-line) - 1px),
+      var(--md-miaohong-line) calc(var(--paper-line) - 1px),
+      var(--md-miaohong-line) var(--paper-line)
+    ) local,
+    linear-gradient(var(--md-surface), var(--md-surface));
+  background-attachment: local;
+}
+
+/* 生成中预览段落 = AI 描红稿三信号（缺一不可）：淡朱色 + 真楷体 + wash 底与左缘 1px 界栏；
+   15px × 1.8 = 27px，与稿纸行线同节奏防相位漂移 */
+.chapter-console__preview-body.is-grinding .chapter-console__draft-paragraph {
+  color: var(--md-miaohong);
+  font-family: var(--md-font-kai);
+  font-size: var(--md-body-large);
+  line-height: 1.8;
+  background-color: var(--md-miaohong-wash);
+  border-left: 1px solid var(--md-miaohong-line-strong);
+  padding: 0 var(--md-spacing-2);
+  /* 段落随生成进度渐次浮现：opacity 0→1 + 微量 translateY，stagger 由各行 animation-delay 级进 */
+  animation: chapter-draft-emerge var(--md-duration-medium) var(--md-easing-standard) both;
+}
+
 .chapter-console__preview-body p.is-streaming {
   color: color-mix(in srgb, var(--md-on-surface) 92%, var(--md-primary-dark));
 }
 
+/* 正在生成的一段：描红加深一档，示“笔在此处” */
+.chapter-console__preview-body.is-grinding p.is-streaming {
+  color: var(--md-miaohong-strong);
+}
+
 .chapter-console__cursor {
   margin-left: 2px;
-  color: var(--md-primary-dark);
+  color: var(--md-miaohong-strong);
   animation: blink-cursor 1s steps(2, end) infinite;
 }
 
@@ -156,8 +208,26 @@ const previewModeLabel = computed(() => {
   }
 }
 
+/* 描红段落渐次浮现：仅 opacity + 微量 translateY */
+@keyframes chapter-draft-emerge {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .chapter-console__cursor {
+    animation: none;
+  }
+
+  /* 描红段落直落终态：静态稿纸，无浮现动效 */
+  .chapter-console__preview-body.is-grinding .chapter-console__draft-paragraph {
     animation: none;
   }
 }

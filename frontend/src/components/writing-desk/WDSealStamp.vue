@@ -9,7 +9,7 @@
     @click="$emit('toggle')"
   >
     <!-- 印信篆字 (阴刻朱砂白文) -->
-    <span class="stamp-seal-char">{{ isActive ? '閉' : '輔' }}</span>
+    <span class="stamp-seal-char">{{ isActive ? '闭' : '辅' }}</span>
   </button>
 </template>
 

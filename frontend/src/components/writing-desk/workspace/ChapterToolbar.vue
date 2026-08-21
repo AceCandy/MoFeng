@@ -42,7 +42,7 @@
             type="button"
             @click="toggleAiMenu"
             :disabled="isAiMenuDisabled"
-            class="md-btn md-btn-tonal md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--primary writing-workspace__tool-btn--hero disabled:opacity-50 disabled:cursor-not-allowed"
+            class="md-btn md-btn-tonal md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--hero disabled:opacity-50 disabled:cursor-not-allowed"
             :aria-expanded="showAiMenu ? 'true' : 'false'"
             aria-haspopup="menu"
             :aria-controls="aiMenuId"
@@ -175,6 +175,12 @@ watch(
 /* ==========================================================================
    章节工具栏（随 template 从 WDWorkspace 迁入）
    ========================================================================== */
+/* AI 菜单锚点：绝对定位面板的包含块，缺了它菜单会脱锚到遥远祖先 */
+.writing-workspace__ai-menu {
+  position: relative;
+  display: inline-block;
+}
+
 .writing-workspace__toolbar {
   margin-left: auto;
   flex-shrink: 0;
@@ -285,45 +291,41 @@ watch(
   display: none;
 }
 
+/* 夜色带安静款：透明底 + 夜色发线边 + 暖纸白字 */
 .writing-workspace__tool-btn--ghost {
-  border-color: var(--md-outline);
-  color: var(--md-on-surface-variant);
+  border-color: var(--md-night-outline);
+  color: var(--md-night-on);
   background-color: transparent;
   box-shadow: none;
 }
 
 .writing-workspace__tool-btn--ghost:hover:not(:disabled) {
-  color: var(--md-secondary);
-  border-color: var(--md-secondary);
-  background-color: color-mix(in srgb, var(--md-secondary) 2%, transparent);
-  box-shadow: var(--md-elevation-paper-1);
+  color: var(--md-night-on);
+  border-color: var(--md-night-outline-strong);
+  background-color: rgba(236, 228, 207, 0.08); /* --md-state-layer-hover 的夜底等效层 */
+  box-shadow: none;
 }
 
 .writing-workspace__tool-btn--ghost:active:not(:disabled) {
-  box-shadow: 0px 0px 0px var(--md-secondary) !important;
+  box-shadow: 0px 0px 0px var(--md-night-outline-strong) !important;
+}
+
+/* 夜色带内禁用态：压住全局 md-btn:disabled 的纸色填充，保持夜色安静款 */
+.writing-workspace__tool-btn--ghost:disabled {
+  background-color: rgba(236, 228, 207, 0.05) !important;
+  color: var(--md-night-on-variant) !important;
+  border-color: var(--md-night-outline) !important;
+}
+
+/* 全局焦墨焦点框在夜底不可见，夜色带内改暖纸白 */
+.writing-workspace__tool-btn:focus-visible {
+  outline-color: var(--md-night-on);
 }
 
 .writing-workspace__tool-btn--secondary {
   border-color: var(--md-outline) !important;
   background-color: var(--md-surface);
   color: var(--md-on-surface);
-}
-
-.writing-workspace__tool-btn--primary {
-  border-color: var(--md-secondary) !important;
-  background-color: color-mix(in srgb, var(--md-secondary) 5%, transparent);
-  color: var(--md-secondary);
-  box-shadow: var(--md-elevation-paper-1);
-}
-
-.writing-workspace__tool-btn--primary:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--md-secondary) 9%, transparent);
-  box-shadow: var(--md-elevation-paper-2);
-  border-color: var(--md-secondary) !important;
-}
-
-.writing-workspace__tool-btn--primary:active:not(:disabled) {
-  box-shadow: 0px 0px 0px var(--md-secondary) !important;
 }
 
 /* 极致国风脑洞：下拉菜单重塑为方直“折页折扇”宣纸面板 */

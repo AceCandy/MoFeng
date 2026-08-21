@@ -42,7 +42,7 @@
                     class="md-btn md-btn-text md-ripple inspiration-header-btn"
                     aria-label="退出灵感模式"
                   >
-                    <span class="inspiration-header-btn__label">[ 歸 ]</span> 退出
+                    <span class="inspiration-header-btn__label">[ 归 ]</span> 退出
                   </button>
                 </div>
               </div>
@@ -757,10 +757,8 @@ onUnmounted(() => {
   /* 精准扣除系统顶栏真实占位，使内容与浏览器视口完美等高 */
   height: calc(var(--app-viewport-unit) - var(--app-topbar-height)) !important;
   padding: var(--md-spacing-3) var(--md-spacing-5) var(--md-spacing-4) !important; /* 顶部收缩，紧贴导航 */
-  /* 采用平铺温暖熟宣纸与干燥木骨网格 */
+  /* 整页点阵底纹已焚稿退场（行线不出稿纸法则）：灵感面回归平净熟宣地 */
   background-color: var(--md-background) !important;
-  background-image: radial-gradient(var(--md-outline-variant) 1px, transparent 1px) !important;
-  background-size: 24px 24px !important;
   overflow: hidden !important;
 }
 

@@ -288,14 +288,16 @@ const risks = computed(() => {
   height: 100%;
 }
 
-/* 恢复外部边框：采用与整体框架完美呼应的淡墨单线边框，平整熟宣大底 */
+/* 暗室明纸：助手栏沉入固定夜色（不随明暗主题翻转），1px night-outline 发线分界，
+   夜色铬件无影；面板内文字一律 night-on 系，不得灰字压夜底 */
 .wd-ai__panel {
   height: 100%;
   overflow-y: auto;
-  border: 1px solid var(--md-outline);
+  border: 1px solid var(--md-night-outline);
   border-radius: var(--md-radius-sm);
-  background-color: var(--md-surface); /* 熟宣纸白底色 */
-  box-shadow: var(--md-elevation-paper-1); /* 浮起纸影 */
+  background-color: var(--md-night-surface);
+  color: var(--md-night-on);
+  box-shadow: none;
   padding: var(--md-spacing-5) var(--md-spacing-5);
 }
 
@@ -305,7 +307,7 @@ const risks = computed(() => {
 }
 
 .wd-ai__panel::-webkit-scrollbar-thumb {
-  background-color: var(--md-outline-variant);
+  background-color: var(--md-night-outline);
   border-radius: var(--md-radius-full);
 }
 
@@ -316,8 +318,8 @@ const risks = computed(() => {
   padding: 0 0 var(--md-spacing-5) 0;
   margin-bottom: var(--md-spacing-5);
   border: none;
-  border-bottom: 1px dashed color-mix(in srgb, var(--md-outline) 50%, transparent); /* 淡墨虚线栏线分割 */
-  background-color: transparent; /* 融入大底 */
+  border-bottom: 1px dashed var(--md-night-outline); /* 夜色发线虚栏分割 */
+  background-color: transparent; /* 融入夜色大底 */
   border-radius: 0;
 }
 
@@ -332,9 +334,9 @@ const risks = computed(() => {
   margin: 0;
 }
 
-/* 小标题题签：竹青细框 + 熟宣底 + 焦墨宋体，克制素雅 */
+/* 小标题题签夜色重绘：night-outline 细框 + 夜色薄光底 + night-on-variant 宋体，克制素雅 */
 .wd-ai__head p {
-  color: var(--md-primary); /* 焦墨 */
+  color: var(--md-night-on-variant);
   font-family: var(--md-font-serif); /* 碑拓宋体 */
   font-size: var(--md-label-large);
   font-weight: 700 !important;
@@ -342,16 +344,23 @@ const risks = computed(() => {
   display: flex;
   align-items: center;
   padding: var(--md-spacing-2) var(--md-spacing-3);
-  background-color: var(--md-surface-container-low); /* 竹纸熟宣底 */
-  border: 1px solid var(--md-outline); /* 竹青细框 */
+  background-color: color-mix(in srgb, var(--md-night-on) 5%, transparent);
+  border: 1px solid var(--md-night-outline);
   border-radius: var(--md-radius-xs);
   margin-bottom: var(--md-spacing-3);
+}
+
+/* 风险提醒题签用夜色描红系（第 5 个小节 = 风险提醒），夜底警示权责 */
+.wd-ai__section:nth-child(5) .wd-ai__head p {
+  color: var(--md-night-seal);
+  border-color: color-mix(in srgb, var(--md-night-seal) 45%, transparent);
+  background-color: color-mix(in srgb, var(--md-night-seal) 6%, transparent);
 }
 
 .wd-ai__head strong {
   margin-top: 8px;
   display: block;
-  color: var(--md-primary); /* 焦墨 */
+  color: var(--md-night-on);
   font-family: var(--md-font-serif);
   font-size: var(--md-body-large);
   line-height: 1.65;
@@ -360,7 +369,7 @@ const risks = computed(() => {
 
 .wd-ai__paragraph {
   margin: var(--md-spacing-3) 0 0;
-  color: var(--md-on-surface-variant);
+  color: var(--md-night-on);
   font-family: var(--md-font-serif);
   font-size: var(--md-body-medium);
   line-height: 1.8;
@@ -377,7 +386,7 @@ const risks = computed(() => {
 .wd-ai__risk-list li {
   position: relative;
   padding-left: 14px;
-  color: var(--md-on-surface-variant);
+  color: var(--md-night-on-variant);
   font-family: var(--md-font-serif);
   font-size: var(--md-body-medium);
   line-height: 1.8;
@@ -387,7 +396,7 @@ const risks = computed(() => {
   content: '※';
   position: absolute;
   left: 0;
-  color: var(--md-secondary); /* 常驻朱砂警示符 */
+  color: var(--md-night-seal); /* 夜色描红系警示符 */
   font-size: 11px;
   top: 1px;
 }
@@ -410,12 +419,12 @@ const risks = computed(() => {
   gap: 0;
 }
 
-/* 纯净书页排版，带常驻淡墨虚线栏线 */
+/* 纯净书页排版，带常驻夜色发线虚栏 */
 .wd-ai__real-summary-card {
   padding: 0 0 var(--md-spacing-5) 0;
   margin-bottom: var(--md-spacing-5);
   border: none;
-  border-bottom: 1px dashed color-mix(in srgb, var(--md-outline) 50%, transparent);
+  border-bottom: 1px dashed var(--md-night-outline);
   background-color: transparent;
   border-radius: 0;
   box-shadow: none;
@@ -427,11 +436,11 @@ const risks = computed(() => {
   padding-bottom: 0;
 }
 
-/* 模块标题题签：竹青细框 + 熟宣底 + 焦墨宋体，克制素雅 */
+/* 模块标题题签夜色重绘：night-outline 细框 + 夜色薄光底 + night-on-variant 宋体 */
 .wd-ai__real-summary-card h3 {
   margin: 0 0 var(--md-spacing-4) 0;
   padding: var(--md-spacing-2) var(--md-spacing-3);
-  color: var(--md-primary); /* 焦墨 */
+  color: var(--md-night-on-variant);
   font-family: var(--md-font-serif); /* 碑拓宋体 */
   font-size: var(--md-title-medium);
   line-height: 1.5;
@@ -439,13 +448,13 @@ const risks = computed(() => {
   font-weight: 700 !important;
   display: flex;
   align-items: center;
-  background-color: var(--md-surface-container-low); /* 竹纸熟宣底 */
-  border: 1px solid var(--md-outline); /* 竹青细框 */
+  background-color: color-mix(in srgb, var(--md-night-on) 5%, transparent);
+  border: 1px solid var(--md-night-outline);
   border-radius: var(--md-radius-xs);
 }
 
 .wd-ai__real-summary-body {
-  color: var(--md-on-surface);
+  color: var(--md-night-on);
   font-family: var(--md-font-serif);
   font-size: var(--md-body-medium);
   line-height: 1.85;
@@ -460,9 +469,9 @@ const risks = computed(() => {
   margin-bottom: 0;
 }
 
-/* 梳理正文加粗 strong：焦墨粗体楷书（朱批语感留给全局 chat-bubble 朱线，面板内不常驻朱砂） */
+/* 梳理正文加粗 strong：夜色正文暖纸白粗体楷书（面板内不常驻朱砂） */
 .wd-ai__real-summary-body :deep(strong) {
-  color: var(--md-primary) !important;
+  color: var(--md-night-on) !important;
   font-family: var(--md-font-kai) !important;
   font-weight: 700 !important;
   letter-spacing: 0.02em;
@@ -479,7 +488,7 @@ const risks = computed(() => {
 .wd-ai__real-summary-body :deep(li) {
   position: relative;
   padding-left: 14px;
-  color: var(--md-on-surface-variant);
+  color: var(--md-night-on-variant);
   line-height: 1.8;
 }
 
@@ -487,7 +496,7 @@ const risks = computed(() => {
   content: '·';
   position: absolute;
   left: 0;
-  color: var(--md-secondary); /* 常驻朱红批注点 */
+  color: var(--md-night-seal); /* 夜色批注点 */
   font-weight: bold;
   font-size: 1.4em;
   line-height: 1;
@@ -510,7 +519,7 @@ const risks = computed(() => {
 
 .wd-ai__project-stats div {
   border: none;
-  border-bottom: 1px dashed color-mix(in srgb, var(--md-outline) 50%, transparent);
+  border-bottom: 1px dashed var(--md-night-outline);
   border-radius: 0;
   background-color: transparent;
   padding: 0 0 var(--md-spacing-3) 0;
@@ -525,7 +534,7 @@ const risks = computed(() => {
 
 .wd-ai__project-stats span {
   display: block;
-  color: var(--md-secondary); /* 常驻朱砂 */
+  color: var(--md-night-seal); /* 夜色描红系小签 */
   font-family: var(--md-font-display);
   font-size: var(--md-label-small);
   font-weight: 600;
@@ -535,7 +544,7 @@ const risks = computed(() => {
 .wd-ai__project-stats strong {
   display: block;
   margin-top: 6px;
-  color: var(--md-primary);
+  color: var(--md-night-on);
   font-family: var(--md-font-serif);
   font-size: var(--md-body-large);
   letter-spacing: 0.02em;

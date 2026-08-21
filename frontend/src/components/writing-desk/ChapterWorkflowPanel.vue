@@ -21,7 +21,7 @@
         <button
           v-if="phase === 'idle' || phase === 'cancelled'"
           type="button"
-          class="md-btn md-btn-filled md-ripple"
+          class="md-btn md-btn-primary md-ripple"
           data-action="start"
           :disabled="pending"
           @click="emit('start')"

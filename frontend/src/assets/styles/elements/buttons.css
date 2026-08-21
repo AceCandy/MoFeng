@@ -1,4 +1,4 @@
-/* AIMETA P=按钮样式_Material3按钮|R=Filled/Outlined/Text/Tonal/Elevated/Icon|NR=不含表单导航|E=-|X=internal|A=基础元素|D=tailwindcss|S=dom|RD=./README.ai */
+/* AIMETA P=按钮样式_Material3按钮|R=SealPrimary/Filled/Outlined/Text/Tonal/Elevated/Icon|NR=不含表单导航|E=-|X=internal|A=基础元素|D=tailwindcss|S=dom|RD=./README.ai */
 /* ============================================
    Material 3 Button Styles
    ============================================ */
@@ -33,7 +33,7 @@
 }
 
 .md-btn:focus-visible {
-  outline: 2px solid var(--md-outline);
+  outline: 2px solid var(--md-on-surface); /* 焦墨焦点框：竹青在描红/朱砂底上不可见 */
   outline-offset: 2px;
 }
 
@@ -63,6 +63,26 @@
 .md-btn-filled:active:not(:disabled) {
   box-shadow: none;
   transform: translate(1px, 1px);
+}
+
+/* Seal Primary Button (落印主按钮：描红底熟宣字，提交/生成/保存/继续创作等主动作专用。
+   钤印重力链：静止无影 → hover 浮起纸影 → active translateY(1px) 影清零；禁用态沿用 .md-btn:disabled) */
+.md-btn-primary {
+  background-color: var(--md-btn-seal-bg);
+  color: var(--md-btn-seal-text);
+  border: 1px solid transparent;
+  border-radius: var(--md-radius-xs);
+  box-shadow: none;
+}
+
+.md-btn-primary:hover:not(:disabled) {
+  background-color: var(--md-btn-seal-bg-hover);
+  box-shadow: var(--md-elevation-paper-1);
+}
+
+.md-btn-primary:active:not(:disabled) {
+  box-shadow: none;
+  transform: translateY(1px);
 }
 
 /* Outlined Button (古籍线框按钮) */
@@ -95,7 +115,7 @@
   color: var(--md-primary);
 }
 
-/* Tonal Button (石青创意/AI主按钮，同 filled 重力链) */
+/* Tonal Button (石青辅钮：朗读与 AI 辅助协作入口专用，同 filled 重力链) */
 .md-btn-tonal {
   background-color: var(--md-primary-container);
   color: var(--md-on-primary-container);

@@ -623,7 +623,7 @@ defineExpose({ luomoAll, luomoParagraph, getMiaohongParagraphCount })
   background-color: var(--md-surface);
   color: var(--md-miaohong, #b8402f);
   font-family: var(--md-font-kai);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1.8;
   padding: 1px 6px;
   cursor: pointer;

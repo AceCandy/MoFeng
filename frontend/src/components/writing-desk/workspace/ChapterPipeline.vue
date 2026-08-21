@@ -21,6 +21,36 @@
         取消本轮
       </button>
     </header>
+    <!-- 研墨进度：生成中顶部的细线刻度（界格发线轨道 + 焦墨填充 + 端点朱砂方印），
+         生成完成/空闲时随 Transition 安静退场 -->
+    <Transition name="chapter-console__ink-quiet">
+      <div
+        v-if="isGenerating"
+        class="chapter-console__ink"
+        role="progressbar"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        :aria-valuenow="inkPercent"
+        aria-label="研墨进度"
+      >
+        <span class="chapter-console__ink-stage">
+          <span class="chapter-console__ink-dot" aria-hidden="true"></span>
+          {{ stageLabel }}
+        </span>
+        <div class="chapter-console__ink-track">
+          <div
+            class="chapter-console__ink-fill"
+            :style="{ transform: `scaleX(${inkRatio})` }"
+          ></div>
+          <span
+            class="chapter-console__ink-seal"
+            :style="{ left: `${inkPercent}%` }"
+            aria-hidden="true"
+          ></span>
+        </div>
+        <span class="chapter-console__ink-percent">{{ inkPercent }}%</span>
+      </div>
+    </Transition>
     <div class="chapter-console__pipeline-groups">
       <section
         v-for="group in pipelineGroups"
@@ -172,6 +202,12 @@ interface Props {
   canConfirmManual?: boolean
   canCancel?: boolean
   pending?: boolean
+  /** 研墨进度数值（0-100，同后端 snapshot.progress 标度），仅生成中展示 */
+  generationProgress?: number | null
+  /** 工作流是否活跃推进中（研墨舞台亮台/退场的唯一开关） */
+  isGenerating?: boolean
+  /** 阶段小签文案：来自当前推进节点的数据文案，缺省「研墨」 */
+  stageLabel?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -179,7 +215,18 @@ const props = withDefaults(defineProps<Props>(), {
   canConfirmManual: false,
   canCancel: false,
   pending: false,
+  generationProgress: null,
+  isGenerating: false,
+  stageLabel: '研墨',
 })
+
+// 研墨细线：进度钳制到 0-100，scaleX 比例与端点方印位置共用同一刻度
+const inkPercent = computed(() => {
+  const raw = props.generationProgress
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return 0
+  return Math.min(100, Math.max(0, Math.round(raw)))
+})
+const inkRatio = computed(() => inkPercent.value / 100)
 
 const pipelineGroups = computed(() => {
   const groups: Array<{
@@ -284,6 +331,105 @@ const emit = defineEmits<{
 .chapter-console__pipeline-cancel {
   min-height: 36px;
   white-space: nowrap;
+}
+
+/* ============================================
+   研墨进度（生成中顶部细线）：界格发线 2px 轨道 +
+   焦墨填充 + 端点朱砂方印点；阶段小签 12px 描红楷体，
+   前置一颗晕染墨点（沿用 ink-bloom 洇墨语言）
+   ============================================ */
+.chapter-console__ink {
+  margin-top: var(--md-spacing-3);
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-3);
+}
+
+.chapter-console__ink-stage {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  color: var(--md-miaohong);
+  font-family: var(--md-font-kai);
+  font-size: var(--md-label-medium);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* 晕染墨点：焦墨小点洇开即散，模拟研墨起笔 */
+.chapter-console__ink-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--md-luomo);
+  animation: chapter-ink-dot-spread 2.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+.chapter-console__ink-track {
+  position: relative;
+  flex: 1;
+  min-width: 48px;
+  height: 2px;
+  background-color: var(--md-jiege); /* 界格发线轨道 */
+}
+
+.chapter-console__ink-fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 50%;
+  background-color: var(--md-luomo); /* 焦墨填充，随进度沉积 */
+  transition: transform var(--md-duration-medium) var(--md-easing-standard);
+}
+
+/* 填充端点的朱砂方印点：微直角、无外投影（印不浮起） */
+.chapter-console__ink-seal {
+  position: absolute;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-secondary);
+  transform: translate(-50%, -50%);
+  transition: left var(--md-duration-medium) var(--md-easing-standard);
+}
+
+/* 进度百分比：宋体 600，落定数字不用楷体 */
+.chapter-console__ink-percent {
+  flex-shrink: 0;
+  min-width: 4ch;
+  text-align: right;
+  color: var(--md-on-surface);
+  font-family: var(--md-font-serif);
+  font-size: var(--md-label-medium);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 研墨行进退场：仅透明度淡入淡出，不突兀闪烁 */
+.chapter-console__ink-quiet-enter-active,
+.chapter-console__ink-quiet-leave-active {
+  transition: opacity var(--md-duration-medium) var(--md-easing-standard);
+}
+
+.chapter-console__ink-quiet-enter-from,
+.chapter-console__ink-quiet-leave-to {
+  opacity: 0;
+}
+
+@keyframes chapter-ink-dot-spread {
+  0% {
+    transform: scale(0.3);
+    opacity: 0.9;
+  }
+  55% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
 }
 
 .chapter-console__pipeline-meta-top {
@@ -774,6 +920,19 @@ const emit = defineEmits<{
 }
 
 @media (max-width: 833px) {
+  .chapter-console__ink {
+    flex-wrap: wrap;
+  }
+
+  .chapter-console__ink-track {
+    flex-basis: 100%;
+    order: 3;
+  }
+
+  .chapter-console__ink-percent {
+    margin-left: auto;
+  }
+
   .chapter-console__pipeline-group {
     display: block;
     padding: var(--md-spacing-3) 0;
@@ -869,6 +1028,18 @@ const emit = defineEmits<{
 
   .chapter-node-retry-enter-active,
   .chapter-node-retry-leave-active {
+    transition: none;
+  }
+
+  /* 研墨进度直落终态：墨点静止、填充与方印随进度即时落位 */
+  .chapter-console__ink-dot {
+    animation: none;
+  }
+
+  .chapter-console__ink-fill,
+  .chapter-console__ink-seal,
+  .chapter-console__ink-quiet-enter-active,
+  .chapter-console__ink-quiet-leave-active {
     transition: none;
   }
 }

@@ -240,7 +240,7 @@ body .app-shell__topbar {
 }
 
 .app-shell__dropdown-item .item-tag {
-  font-size: 10px !important;
+  font-size: 12px !important;
   background-color: color-mix(in srgb, var(--md-on-surface) 4%, transparent) !important;
   border: 1px solid var(--md-outline-variant) !important;
   padding: 1px 5px !important;

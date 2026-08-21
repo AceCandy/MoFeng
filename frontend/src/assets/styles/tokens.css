@@ -115,8 +115,9 @@
   --md-body-medium: 13.5px;
   --md-body-small: 12px;
   --md-label-large: 13px;
-  --md-label-medium: 11.5px;
-  --md-label-small: 10px;
+  /* Label 规范（DESIGN.md typography.label）底线 12px：功能小字不得低于 12px */
+  --md-label-medium: 12px;
+  --md-label-small: 12px;
 
   /* Elevation（拓片硬压印偏置投影已全站退役，统一改用下方 --md-elevation-paper-* 新纸页层级） */
   --md-elevation-0: none;
@@ -171,6 +172,12 @@
   --md-miaohong-line-strong: color-mix(in srgb, var(--md-miaohong) 38%, transparent); /* 稿纸边栏/米字主笔 */
   --md-jiege: color-mix(in srgb, var(--md-primary-light) 26%, transparent); /* 青灰界格发线（结构面） */
   --md-luomo: #1c2224; /* 落墨正文色（= --md-on-surface，语义别名） */
+
+  /* 落印主按钮（Seal Primary，.md-btn-primary 专用）：描红底 + 熟宣字，hover 转描红深。
+     提交/生成/保存/继续创作等主动作统一用此组，权责见 DESIGN.md §Buttons */
+  --md-btn-seal-bg: var(--md-miaohong);
+  --md-btn-seal-bg-hover: var(--md-miaohong-strong);
+  --md-btn-seal-text: #faf6ed; /* 熟宣字（对描红底 5.11:1、对描红深 6.69:1，AA 达标） */
   /* 注：规格 §2 的真楷体栈 --md-font-kai 已存在（上方仍为宋体别名）。
      未改造表面（设置/灵感/admin/批注等）均引用它，且有回归测试锁定现值，
      依 §6「token 演进必须加法式」此处不改值，楷体栈切换留给描红稿组件落地阶段。 */
@@ -178,6 +185,40 @@
   /* 新纸页层级（全站统一投影法则：浮起 paper-1，弹层/稿纸上浮 paper-2；旧拓片硬影令牌已退役删除） */
   --md-elevation-paper-1: 0 1px 2px rgba(28, 32, 34, 0.08), 0 2px 8px rgba(28, 32, 34, 0.06); /* 浮起纸页 */
   --md-elevation-paper-2: 0 2px 4px rgba(28, 32, 34, 0.1), 0 8px 24px rgba(28, 32, 34, 0.1); /* 弹层/稿纸上浮 */
+
+  /* ============================================
+     夜色墨韵（门面页深夜场景，增法式追加）
+     固定夜色，不随明暗主题切换：登录/注册、首页 hero、写作台案头专用。
+     权责：夜色只落在门面与案头容器，正文稿纸/批阅面保持纸色；
+     夜色容器内文字一律用 night-on 系，不得灰字压夜底。
+     ============================================ */
+  --md-night-bg: #111515; /* 夜色大底：漆黑带一丝暖绿 */
+  --md-night-bg-deep: #0a0d0d; /* 夜深处：压角与渐变远端 */
+  --md-night-surface: #1b2120; /* 夜色浮层（案头带、夜色卡片） */
+  --md-night-surface-high: #232b29; /* 夜色上浮层 */
+  --md-night-on: #ece4cf; /* 夜色正文：暖纸白（对 night-bg 12.9:1） */
+  --md-night-on-variant: #a79d86; /* 夜色辅文（对 night-bg 6.2:1，AA 达标） */
+  --md-night-outline: rgba(236, 228, 207, 0.16); /* 夜色发线 */
+  --md-night-outline-strong: rgba(236, 228, 207, 0.32);
+  /* 夜色印章红：比白昼朱砂更饱和半度，夜底上钤印不闷 */
+  --md-night-seal: #cf4a37; /* 夜色钤印（对 night-bg 4.6:1，大字/图形 AA） */
+  --md-night-seal-deep: #b23a2a;
+  --md-night-seal-on: #fbf3e4;
+  /* 纸光：暖纸色径向光晕，只作夜色里的"灯下"氛围，大面积低透明度 */
+  --md-night-glow-warm: rgba(240, 224, 188, 0.07);
+  --md-night-glow-seal: rgba(207, 74, 55, 0.08);
+  /* 夜色投影：纯黑深影，纸卡浮于夜案之上 */
+  --md-night-elevation-1: 0 2px 6px rgba(0, 0, 0, 0.5), 0 12px 40px rgba(0, 0, 0, 0.42);
+  --md-night-elevation-2: 0 4px 10px rgba(0, 0, 0, 0.55), 0 24px 64px rgba(0, 0, 0, 0.5);
+  /* 展示级字级：夜色门面的书名单字时刻（clamp 随面自定，上限 6rem 纪律） */
+  --md-display-hero: 72px;
+  /* 夜案上的纸卡：固定熟宣世界，不随明暗主题翻转（夜色门面里的表单卡专用；
+     卡片容器内应局部复写 --md-surface 系变量为本组定值，见 DESIGN.md §夜色墨韵） */
+  --md-night-paper: #faf6ed;
+  --md-night-paper-dim: #f0ead8;
+  --md-night-paper-on: #1c2224;
+  --md-night-paper-variant: #556265;
+  --md-night-paper-outline: #dcd2be;
 }
 
 /* 超大宽屏设备下，自适应拓宽页面内容容量至 1520px，彰显国风舒展大气 */
@@ -201,7 +242,7 @@
   --md-primary-light: #f5eed9;
   --md-primary-dark: #c5beaa;
   --md-on-primary: #1a1f21; /* 焦墨深灰 */
-  --md-primary-container: #2e4033; /* 暗石绿 container */
+  --md-primary-container: #33517a; /* 暗石青 container（色相权责：石青=朗读/AI 专用，暗场不得转绿；熟宣字 6.01:1、hover 深化 7.59:1，AA 达标） */
   --md-on-primary-container: #e5dec9;
 
   /* Secondary (朱砂暗化) */
@@ -266,6 +307,11 @@
   --md-miaohong-strong: #f09b8a;
   --md-miaohong-soft: #c96a58;
   --md-luomo: #e5dec9; /* = 暗场 --md-on-surface */
+  /* 暗场落印主按钮：描红实底按深夜书房重铸（暗场描红 #e8836f 过浅不宜做大底），
+     文字对比度 bg 4.60:1 / hover 5.75:1，AA 达标 */
+  --md-btn-seal-bg: #c04532;
+  --md-btn-seal-bg-hover: #ab3729;
+  --md-btn-seal-text: #fbf3e4;
   /* wash/line/line-strong 以 color-mix 自引用 --md-miaohong，暗场随上方基准自动换算，无需另写 */
   /* 暗场纸影重铸：焦墨深底上浅色纸影不可见，以更高浓度纯黑投影承担浮起/弹层层级 */
   --md-elevation-paper-1: 0 1px 2px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.35);

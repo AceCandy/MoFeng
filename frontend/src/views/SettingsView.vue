@@ -748,7 +748,7 @@ const handleLLMConfigSaved = async () => {
   }
 
   .settings-center__nav-item small {
-    font-size: 10px !important;
+    font-size: 12px !important;
   }
 
   .settings-center__nav-item::after {

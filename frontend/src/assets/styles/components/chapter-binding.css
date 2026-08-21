@@ -59,8 +59,8 @@
   top: 50%;
   transform: translateY(-50%) rotate(4deg);
   font-family: var(--md-font-display);
-  font-size: 10px;
-  line-height: 10px;
+  font-size: 12px;
+  line-height: 12px;
   font-weight: bold;
   padding: 3px 2px 2px 3px;
   background-color: var(--md-secondary);

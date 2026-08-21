@@ -420,7 +420,9 @@ const deleteSelectedBrokenChapter = async () => {
   /* 极致国风脑洞与视口自适应布局：自适应减去顶部中控台导航栏高度（宽屏 92px，窄屏 72px），彻底消除浏览器最右侧全局滚动条溢出，实现满屏高自适应 */
   height: calc(var(--app-viewport-unit) - 92px);
   min-height: calc(640px - 92px);
-  background-color: var(--md-surface-dim);
+  /* 暗室明纸：写作台页底沉入固定夜色（不随明暗主题翻转），
+     中央稿纸成为暗室里唯一被照亮的纸 */
+  background-color: var(--md-night-bg);
   color: var(--md-on-surface);
   font-family: var(--md-font-family);
   animation: m3-fade 0.6s ease-out both;
@@ -456,11 +458,24 @@ const deleteSelectedBrokenChapter = async () => {
   margin-bottom: var(--md-spacing-3);
 }
 
+/* 移动端「章节大纲」抽屉钮：夜色页底上的安静款 outlined 钮（night-outline 边 + night-on 字） */
 .writing-desk-mobile-action {
   min-height: 44px;
   padding: 0 14px;
   border-radius: var(--md-radius-sm);
   font-size: var(--md-label-medium);
+  color: var(--md-night-on);
+  border-color: var(--md-night-outline);
+}
+
+.writing-desk-mobile-action:hover:not(:disabled) {
+  color: var(--md-night-on);
+  border-color: var(--md-night-outline-strong);
+  background-color: rgba(236, 228, 207, 0.06);
+}
+
+.writing-desk-mobile-action:active:not(:disabled) {
+  background-color: rgba(236, 228, 207, 0.1);
 }
 
 .writing-desk-layout {
@@ -591,6 +606,9 @@ const deleteSelectedBrokenChapter = async () => {
   .writing-desk-page {
     height: auto;
     min-height: calc(var(--app-viewport-unit) - 104px);
+    /* 覆盖模板上的 overflow-hidden 工具类：移动端页面必须能随文档流整体滚动，
+       否则章节 scrollIntoView 会把整页内容推到视口上方裁成白屏 */
+    overflow: visible;
   }
 
   .writing-desk-main {

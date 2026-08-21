@@ -1,0 +1,82 @@
+/* AIMETA P=认证面入场动效_落印引子稿纸|R=登录/注册共享入场动画（名章落印+描红引子洇开+稿纸微浮）|NR=不含表单逻辑与布局|E=-|X=internal|A=认证面样式|D=css|S=dom|RD=./README.ai */
+/* ============================================
+   认证面入场：描红引路，落墨入场
+   —— 一次入场 ≤2s，不循环、不骚扰；
+   seal-drop 落印是唯一动效主角（引子洇开与稿纸微浮仅作铺垫，
+   墨碑排印层与光晕保持静态），动画仅挂在 no-preference 下，
+   reduce 直落终态
+   ============================================ */
+
+/* 名章落印：1.35s 单帧钤下，印面保持 rotate(-4deg) 天然斜印；
+   关键帧语言同 workspace-luomo-seal，但印章落下后常驻，不淡出 */
+@keyframes auth-seal-drop {
+  0% {
+    opacity: 0;
+    transform: rotate(-4deg) scale(1.3);
+  }
+  22% {
+    opacity: 1;
+    transform: rotate(-4deg) scale(0.96);
+  }
+  32% {
+    transform: rotate(-4deg) scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(-4deg) scale(1);
+  }
+}
+
+/* 引子洇开：研墨后字句渐次显影（opacity + 微量 translateY） */
+@keyframes auth-ink-emerge {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 稿纸微浮：面板入场浮起落位（opacity + translateY 8px→0），夜色门面中纸影由 --md-night-elevation-2 承担 */
+@keyframes auth-paper-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* 竖排引子逐句 stagger（140ms 级进）：书脊小字 → AI 之声描红 → 作家许诺落墨 → 脚印 */
+  .auth-intro__spine {
+    animation: auth-ink-emerge 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .auth-intro__kind {
+    animation: auth-ink-emerge 520ms cubic-bezier(0.22, 1, 0.36, 1) 140ms both;
+  }
+
+  .auth-intro__slogan {
+    animation: auth-ink-emerge 520ms cubic-bezier(0.22, 1, 0.36, 1) 280ms both;
+  }
+
+  .auth-intro__footmark {
+    animation: auth-ink-emerge 520ms cubic-bezier(0.22, 1, 0.36, 1) 420ms both;
+  }
+
+  /* 署名一刻：引子洇开半途，「墨」字名章钤下，钤定后常驻 */
+  .auth-intro__seal {
+    animation: auth-seal-drop 1.35s cubic-bezier(0.22, 1, 0.36, 1) 360ms both;
+  }
+
+  /* 稿纸面板错开在引子之后入场微浮；落印收束全场，此后不再有新动效 */
+  .login-panel,
+  .register-panel {
+    animation: auth-paper-rise 620ms cubic-bezier(0.22, 1, 0.36, 1) 480ms both;
+  }
+}

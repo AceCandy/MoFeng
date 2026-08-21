@@ -79,7 +79,7 @@ useDialogA11y({
             :title="`关闭${props.title}`"
             @click="handleClose"
           >
-            <span class="m3-ink-modal-close-badge">閉</span>
+            <span class="m3-ink-modal-close-badge">闭</span>
             <span class="m3-ink-modal-close-text">关闭</span>
           </button>
         </div>

@@ -144,7 +144,7 @@
 }
 
 .app-shell__user-dropdown-item .item-desc {
-  font-size: 10px !important;
+  font-size: 12px !important;
   color: var(--md-on-surface-variant) !important;
   white-space: nowrap !important;
   overflow: hidden !important;

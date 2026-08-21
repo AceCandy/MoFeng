@@ -24,10 +24,8 @@ body {
   font-weight: 500 !important; /* 提升全局默认字重至 500 Medium，避免 Regular 400 的干细缺陷 */
   line-height: 1.65;
   color: var(--md-on-background);
-  /* 国风柔和纸质微弱墨晕背景 */
+  /* 国风柔和纸质底色：纯净三段 linear，弥散光晕已随焚稿退场 */
   background:
-    radial-gradient(circle at 5% 5%, color-mix(in srgb, var(--md-info) 3.5%, transparent), transparent 40%),
-    radial-gradient(circle at 95% 15%, color-mix(in srgb, var(--md-secondary) 2%, transparent), transparent 40%),
     linear-gradient(
       180deg,
       var(--md-surface) 0%,
