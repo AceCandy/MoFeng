@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/index.md","reason":"后端测试基础设施的入口规范、预开发检查与质量门禁。"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"pytest、异步测试及 PostgreSQL 集成测试分层契约。"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"TEST_POSTGRES_URL、随机临时数据库与清理安全契约。"}
+{"file":".trellis/tasks/08-22-layer-backend-tests/research/test-layering.md","reason":"当前 fixture 调用链、依赖版本和最小 marker 方案的核验证据。"}

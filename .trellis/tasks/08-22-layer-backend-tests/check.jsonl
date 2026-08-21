@@ -1,0 +1,5 @@
+{"file":".trellis/spec/backend/index.md","reason":"复核后端质量门禁和数据库生命周期验证要求。"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"复核 pytest marker、异步测试与 PostgreSQL 集成测试边界。"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"复核外部 URL、临时数据库和失败清理行为未回归。"}
+{"file":".trellis/tasks/08-22-layer-backend-tests/research/test-layering.md","reason":"按已确认调用链和版本证据检查实现是否扩大范围。"}
+{"file":".trellis/tasks/08-22-layer-backend-tests/research/validation.md","reason":"复核已执行命令、profile 计数、数据库双路径和范围外失败。"}
