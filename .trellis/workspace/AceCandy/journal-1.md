@@ -1455,3 +1455,24 @@ Reused generated blueprint and conversation DTOs, centralized unknown-field pars
 ### Status
 
 [OK] **Completed**
+
+
+## Session 50: 收敛认证 HTTP 客户端
+
+**Date**: 2026-08-22
+**Task**: 收敛认证 HTTP 客户端
+**Branch**: `main`
+
+### Summary
+
+认证 API 删除独立 fetch/超时/错误解析边界，复用 requestJson/requestRaw；保留刷新令牌与页面提示契约，补齐认证和取消测试并同步前端规范。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b8deb1e` | (see git log) |
+
+### Status
+
+[OK] **Completed**
