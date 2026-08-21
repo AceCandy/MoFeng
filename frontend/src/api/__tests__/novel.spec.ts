@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+// AIMETA P=小说API流式与任务测试|R=SSE游标_final终止_任务提交|NR=不测试Query或页面状态|E=test:api:novel|X=internal|A=NovelAPI_readSSESubscription|D=vitest,fetch,ReadableStream|S=test|RD=../README.ai
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 
-import { NovelAPI, readSSESubscription } from '@/api/novel'
+import { NovelAPI, readSSESubscription, type ConverseResponse } from '@/api/novel'
 
 const makeTaskResponse = () => ({
   id: 'chapter-job-1',
@@ -20,6 +21,11 @@ describe('NovelAPI', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     localStorage.clear()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('解析 SSE event id 供 durable cursor 续传', async () => {
@@ -67,5 +73,30 @@ describe('NovelAPI', () => {
     expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), expect.any(Number))
     const timeoutMs = Number(setTimeoutSpy.mock.calls[0]?.[1])
     expect(timeoutMs).toBe(60_000)
+  })
+
+  it('概念对话收到 final 后不等待连接关闭', async () => {
+    const finalPayload = {
+      ai_message: '下一轮可以输入',
+      conversation_state: { step: 2 },
+      is_complete: false,
+      ready_for_blueprint: false,
+      ui_control: { type: 'text_input' },
+    } satisfies ConverseResponse
+    const cancel = vi.fn()
+    const response = new Response(new ReadableStream({
+      start(controller) {
+        controller.enqueue(
+          new TextEncoder().encode(`event: final\ndata: ${JSON.stringify(finalPayload)}\n\n`),
+        )
+      },
+      cancel,
+    }))
+    vi.stubGlobal('fetch', vi.fn(async () => response))
+
+    await expect(
+      NovelAPI.converseConceptStream('project-1', null, { step: 1 }),
+    ).resolves.toEqual(finalPayload)
+    await vi.waitFor(() => expect(cancel).toHaveBeenCalledOnce())
   })
 })

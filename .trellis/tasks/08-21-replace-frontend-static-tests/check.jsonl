@@ -1,0 +1,5 @@
+{"file":".trellis/spec/frontend/index.md","reason":"前端完整质量检查入口"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"检查测试实现、隔离与前端门禁"}
+{"file":".trellis/spec/backend/index.md","reason":"backend 测试变更的质量检查入口"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"检查 pytest 约束和收集结果"}
+{"file":".trellis/tasks/08-21-replace-frontend-static-tests/research/test-contracts.md","reason":"核对每个被删除静态断言都有运行时替代"}

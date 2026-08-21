@@ -83,6 +83,21 @@ Use the project's custom alert channel — `useAlert()` / `globalAlert` — for 
 - Colocate tests as `src/**/__tests__/*` or alongside the module.
 - Prefer testing composables and pure utils (`src/utils/`) and query/mutation behavior over snapshot tests.
 
+### Node-side config tests
+
+Vitest runs in jsdom and the shared setup requires `window`, while Vite config loading requires
+Node-native globals and a file-based `import.meta.url`. Do not inspect config source text, switch a
+single spec to the Node environment, or import `vite.config.ts` through jsdom. Run Vite's config
+loader in an isolated Node child process and assert the returned runtime behavior instead:
+
+```ts
+execFileSync(process.execPath, ['--input-type=module', '--eval', `
+  const { loadConfigFromFile } = await import('vite')
+  const loaded = await loadConfigFromFile(configEnv, 'vite.config.ts', process.cwd())
+  if (!loaded) throw new Error('Vite config did not load')
+`], { cwd: process.cwd() })
+```
+
 ### Motion verification
 
 Motion changes require real-browser evidence. An `animation` declaration or one static screenshot

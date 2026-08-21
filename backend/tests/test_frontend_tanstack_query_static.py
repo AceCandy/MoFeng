@@ -134,30 +134,6 @@ def test_inspiration_flow_uses_query_mutations_and_local_conversation_state():
     assert "novelStore." not in confirmation
 
 
-def test_inspiration_stream_unblocks_input_before_background_cache_refresh():
-    query_source = _source("queries/novel.ts")
-    stream_source = _source("api/novel.ts")
-
-    converse_block = query_source.split("export function useConverseConceptStreamMutation", 1)[
-        1
-    ].split("export function useGenerateBlueprintMutation", 1,)[0]
-
-    assert "void refreshProjectQueries().catch" in converse_block
-    assert "await refreshProjectQueries()" not in converse_block
-    assert "return finishWithFinal(message.data as T)" in stream_source
-    assert "final 事件已经包含下一轮输入控件" in stream_source
-
-
-def test_http_errors_keep_payload_for_inspiration_conflict_redirect():
-    # HttpRequestError 下沉到 @/utils/errors，确认 payload 字段保留 + http.ts 仍传递 payload
-    errors_source = _source("utils/errors.ts")
-    http_source = _source("api/http.ts")
-
-    assert "payload: unknown" in errors_source
-    assert "this.payload = options.payload" in errors_source
-    assert "payload," in http_source
-
-
 def test_detail_shell_uses_query_project_cache_for_editing_paths():
     source = (
         _source("components/shared/NovelDetailShell.vue")
