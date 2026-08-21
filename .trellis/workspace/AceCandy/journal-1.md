@@ -1433,3 +1433,25 @@ Reused generated blueprint and conversation DTOs, centralized unknown-field pars
 ### Status
 
 [OK] **Completed**
+
+
+## Session 49: 后端测试分层与技术债任务树
+
+**Date**: 2026-08-22
+**Task**: 后端测试分层与技术债任务树
+**Branch**: `main`
+
+### Summary
+
+创建全仓技术债父任务及八个有序子任务；完成后端 pytest PostgreSQL marker 分层、Testcontainers 延迟导入、双入口验证与规范沉淀。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `10f8762` | (see git log) |
+| `1fd145f` | (see git log) |
+
+### Status
+
+[OK] **Completed**

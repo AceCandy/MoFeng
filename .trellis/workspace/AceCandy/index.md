@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 48
-- **Last Active**: 2026-08-21
+- **Total Sessions**: 49
+- **Last Active**: 2026-08-22
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1435 | Active |
+| `journal-1.md` | ~1457 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 49 | 2026-08-22 | 后端测试分层与技术债任务树 | `10f8762`, `1fd145f` | `main` |
 | 48 | 2026-08-21 | 替换脆弱前端静态测试 | `349bd97` | `main` |
 | 47 | 2026-08-21 | Tighten blueprint transport boundaries | `0172809` | `main` |
 | 46 | 2026-08-20 | 统一节点重试反馈 | `cdb85b0` | `main` |
