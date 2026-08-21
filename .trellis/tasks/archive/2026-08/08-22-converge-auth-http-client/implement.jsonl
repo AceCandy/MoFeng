@@ -1,0 +1,5 @@
+{"file":".trellis/spec/frontend/index.md","reason":"前端包结构、HTTP 入口和已知认证重复边界。"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"requestJson/requestRaw、HttpRequestError、Vitest 与 AIMETA 约定。"}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"strict TypeScript 与 API 类型边界约束。"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"复用既有 HTTP 边界并禁止新增私有 wrapper。"}
+{"file":".trellis/tasks/08-22-converge-auth-http-client/research/auth-http-boundary.md","reason":"认证调用矩阵、调用方、错误行为及最小方案证据。"}

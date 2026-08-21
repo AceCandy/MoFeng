@@ -1,0 +1,5 @@
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"复核无直接 fetch、错误归一化、测试与 AIMETA。"}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"复核公开类型兼容且没有新增 any。"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"复核未新增或扩展 HTTP 抽象。"}
+{"file":".trellis/tasks/08-22-converge-auth-http-client/research/auth-http-boundary.md","reason":"按已核验请求矩阵检查行为和范围未漂移。"}
+{"file":".trellis/tasks/08-22-converge-auth-http-client/research/validation.md","reason":"复核已执行命令、完整测试结果和剩余风险。"}
