@@ -8,9 +8,11 @@ import {
   type AllSectionType,
   type Blueprint,
   type BlueprintGenerationResponse,
+  type BlueprintPatch,
   type Chapter,
   type ChapterOutline,
   type ConverseResponse,
+  type ConverseRequest,
   type DeleteNovelsResponse,
   type EmotionCurveResponse,
   type Foreshadowing,
@@ -379,8 +381,8 @@ export function useConverseConceptStreamMutation(projectId: ProjectIdSource) {
     ConverseResponse,
     Error,
     {
-      userInput: any
-      conversationState: any
+      userInput: ConverseRequest['user_input'] | null
+      conversationState: ConverseRequest['conversation_state']
       onDelta?: (delta: string) => void
     }
   >({
@@ -421,7 +423,7 @@ export function useSaveBlueprintMutation(projectId: ProjectIdSource) {
 export function useUpdateBlueprintMutation(projectId: ProjectIdSource) {
   const { setProjectCache, refreshProjectQueries } = useNovelMutationRefresh(projectId)
 
-  return useMutation<NovelProject, Error, Record<string, any>>({
+  return useMutation<NovelProject, Error, BlueprintPatch>({
     mutationFn: (data) => NovelAPI.updateBlueprint(requireProjectId(projectId), data),
     onSuccess: async (project) => {
       setProjectCache(project)

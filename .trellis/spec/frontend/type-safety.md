@@ -52,10 +52,11 @@ declaration in the same release unit. See
 - A defined interface, when you can.
 - `unknown[]` / `Record<string, unknown>` for opaque blobs, with a comment on what narrows them.
 
-Current known hotspots (~49 occurrences across ~18 files) are documented as debt, not fixed inline:
+Remaining known hotspots are documented as debt, not fixed inline:
 
-- `src/api/novel.ts`: `Blueprint.world_setting?: any`, `relationships?: any[]`, `conversation_state: any`, and `conversationState: any = {}` parameters in converse method signatures.
-- `src/components/novel-detail/ChapterOutlineSection.vue`: emit `(e: 'edit', payload: { field: string; title: string; value: any })`.
+- `src/api/novel.ts`: legacy `ChapterVersion.metadata?: Record<string, any>`.
+- `src/components/novel-detail/*Section.vue`: repeated edit payloads still use `value: any`.
+- `src/utils/chapter.ts` and `src/utils/generationTrace.ts`: legacy dynamic metadata casts.
 - `src/main.ts`: `(target as any).tagName` escape hatch.
 
 When editing those files for another reason, narrowing these is welcome.

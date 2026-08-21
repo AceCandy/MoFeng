@@ -240,7 +240,7 @@ const startAddChapter = async () => {
   await ensureProjectLoaded()
   const outline = novel.value?.blueprint?.chapter_outline || []
   const nextNumber =
-    outline.length > 0 ? Math.max(...outline.map((item: any) => item.chapter_number)) + 1 : 1
+    outline.length > 0 ? Math.max(...outline.map((item) => item.chapter_number)) + 1 : 1
   newChapterInitialTitle.value = `新章节 ${nextNumber}`
   isAddChapterModalOpen.value = true
 }
@@ -268,6 +268,7 @@ const saveNewChapter = async (payload: { title: string; summary: string }) => {
       chapter_number: nextNumber,
       title: payload.title,
       summary: payload.summary,
+      goals: '',
     },
   ]
 

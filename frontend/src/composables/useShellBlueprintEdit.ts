@@ -1,10 +1,19 @@
 import { ref, type Ref } from 'vue'
-import type { NovelProject, AllSectionType } from '@/api/novel'
+import type { AllSectionType, BlueprintPatch, NovelProject } from '@/api/novel'
 import type { useUpdateBlueprintMutation } from '@/queries/novel'
 
 type SectionKey = AllSectionType
 
 type BlueprintMutation = ReturnType<typeof useUpdateBlueprintMutation>
+type BlueprintPatchValue = BlueprintPatch[keyof BlueprintPatch]
+
+const isBlueprintPatchField = (field: string): field is keyof BlueprintPatch =>
+  field === 'one_sentence_summary'
+  || field === 'full_synopsis'
+  || field === 'world_setting'
+  || field === 'characters'
+  || field === 'relationships'
+  || field === 'chapter_outline'
 
 /**
  * NovelDetailShell 的蓝图字段编辑状态机：
@@ -47,25 +56,28 @@ export function useShellBlueprintEdit(options: {
     return 'overview'
   }
 
-  const handleSave = async (data: { field: string; content: any }) => {
+  const handleSave = async (data: { field: string; content: BlueprintPatchValue }) => {
     if (isAdmin()) return
     await ensureProjectLoaded()
     const project = novel.value
     if (!project) return
 
     const { field, content } = data
-    const payload: Record<string, any> = {}
+    let payload: BlueprintPatch
 
     if (field.includes('.')) {
       const [parentField, childField] = field.split('.')
-      payload[parentField] = {
-        ...(project.blueprint?.[parentField as keyof typeof project.blueprint] as
-          | Record<string, any>
-          | undefined),
-        [childField]: content,
+      if (parentField !== 'world_setting' || !childField) return
+      payload = {
+        world_setting: {
+          ...(project.blueprint?.world_setting ?? {}),
+          [childField]: content,
+        },
       }
+    } else if (isBlueprintPatchField(field)) {
+      payload = { [field]: content }
     } else {
-      payload[field] = content
+      return
     }
 
     try {

@@ -1,4 +1,4 @@
-// AIMETA P=管理员API客户端_管理接口调用|R=用户管理_系统配置_统计|NR=不含UI逻辑|E=api:admin|X=internal|A=adminApi对象|D=axios|S=net|RD=./README.ai
+// AIMETA P=管理员API客户端_管理接口调用|R=用户管理_系统配置_统计|NR=不含UI逻辑|E=api:admin|X=internal|A=adminApi对象|D=fetch|S=net|RD=./README.ai
 import type {
   Chapter as NovelChapter,
   NovelProject as NovelProjectContract,
@@ -13,17 +13,6 @@ export { API_BASE_URL } from './base'
 
 // API 配置
 export const ADMIN_API_PREFIX = '/api/admin'
-
-// 统一请求封装
-const request = async <T = any>(url: string, options: RequestInit = {}) =>
-  authJson<T>(url, {
-    ...options,
-    timeoutMs: 20_000,
-    fallbackErrorMessage: '管理接口请求失败',
-  })
-
-const adminRequest = <T = any>(path: string, options: RequestInit = {}) =>
-  request<T>(`${API_BASE_URL}${ADMIN_API_PREFIX}${path}`, options)
 
 // 类型定义
 export type Statistics = components['schemas']['Statistics']
@@ -44,8 +33,12 @@ export type SystemConfigUpsertPayload = Omit<components['schemas']['SystemConfig
 export type SystemConfigUpdatePayload = components['schemas']['SystemConfigUpdate']
 
 export class AdminAPI {
-  private static request<T = any>(path: string, options: RequestInit = {}) {
-    return adminRequest<T>(path, options)
+  private static request<T = unknown>(path: string, options: RequestInit = {}) {
+    return authJson<T>(`${API_BASE_URL}${ADMIN_API_PREFIX}${path}`, {
+      ...options,
+      timeoutMs: 20_000,
+      fallbackErrorMessage: '管理接口请求失败',
+    })
   }
 
   // Overview

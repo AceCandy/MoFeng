@@ -218,9 +218,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import { globalAlert } from '@/composables/useAlert'
 import type { Blueprint } from '@/api/novel'
+import {
+  parseBlueprintCharacters,
+  parseBlueprintRelationships,
+  parseBlueprintWorldSetting,
+} from '@/utils/blueprint'
 
 interface Props {
   blueprint: Blueprint | null
@@ -236,7 +241,7 @@ const emit = defineEmits<{
 
 const isSaving = ref(false)
 
-const safe = (value: any, fallback = '待补充') => value || fallback
+const safe = (value: string | null | undefined, fallback = '待补充') => value || fallback
 
 // 罗马/古典中式数字转换，增强大纲竹签/牙筹之美
 const convertToChineseNumber = (num: number): string => {
@@ -263,141 +268,15 @@ const confirmBlueprint = async () => {
   }
 }
 
-// ----------------------------------------------------
-// 【强类型数据解析清洗】：彻底废弃 v-html 字符串拼接渲染
-// ----------------------------------------------------
-
-const parsedWorldSetting = computed(() => {
-  const ws = props.blueprint?.world_setting
-  if (!ws || typeof ws !== 'object') return null
-  return {
-    coreRules: ws.core_rules || '',
-    keyLocations: ws.key_locations || [],
-    factions: ws.factions || []
-  }
-})
-
-const parsedCharacters = computed(() => {
-  const list = props.blueprint?.characters || []
-  return list.map((char: any) => {
-    if (typeof char === 'object' && char.name) {
-      const name = char.name
-
-      const fieldMappings = {
-        identity: {
-          keys: ['identity_background', 'identity', 'background', '身份背景', '身份'],
-          label: '身份背景',
-          priority: 1
-        },
-        personality: {
-          keys: ['personality_traits', 'personality', 'traits', 'character', '性格特质', '性格'],
-          label: '性格特质',
-          priority: 2
-        },
-        goal: {
-          keys: ['core_goal', 'goal', 'objectives', 'aims', '核心目标', '目标'],
-          label: '核心目标',
-          priority: 3
-        },
-        abilities: {
-          keys: ['abilities_skills', 'abilities', 'skills', 'powers', '能力技能', '能力', '技能'],
-          label: '能力技能',
-          priority: 4
-        },
-        relationship: {
-          keys: ['relationship_with_protagonist', 'relationship_to_protagonist', 'relationship', 'relation', '与主角关系', '关系'],
-          label: '与主角关系',
-          priority: 5
-        },
-        role: {
-          keys: ['role', 'character_role', 'story_role', '角色定位', '角色'],
-          label: '角色定位',
-          priority: 0
-        }
-      }
-
-      const extractedFields: Record<string, { value: any; label: string; priority: number }> = {}
-      const usedKeys = new Set(['name'])
-
-      Object.entries(fieldMappings).forEach(([fieldType, mapping]) => {
-        for (const key of mapping.keys) {
-          if (char[key] && !usedKeys.has(key)) {
-            extractedFields[fieldType] = {
-              value: char[key],
-              label: mapping.label,
-              priority: mapping.priority
-            }
-            usedKeys.add(key)
-            break
-          }
-        }
-      })
-
-      // 提取未知多余字段
-      Object.entries(char).forEach(([key, value]) => {
-        if (!usedKeys.has(key) && value && typeof value === 'string' && value.trim()) {
-          const friendlyLabel = key
-            .replace(/_/g, ' ')
-            .replace(/([A-Z])/g, ' $1')
-            .replace(/^./, str => str.toUpperCase())
-
-          extractedFields[`unknown_${key}`] = {
-            value: value,
-            label: friendlyLabel,
-            priority: 99
-          }
-          usedKeys.add(key)
-        }
-      })
-
-      const sortedFields = Object.entries(extractedFields)
-        .filter(([fieldType]) => fieldType !== 'role')
-        .sort(([, a], [, b]) => a.priority - b.priority)
-        .map(([, f]) => ({ label: f.label, value: f.value }))
-
-      const roleField = extractedFields.role?.value || undefined
-
-      return {
-        name,
-        role: roleField,
-        fields: sortedFields
-      }
-    } else if (typeof char === 'object' && char.description) {
-      const desc = char.description
-      const fields: Array<{ label: string; value: string }> = []
-      if (typeof desc === 'object') {
-        if (desc.identity) fields.push({ label: '身份', value: desc.identity })
-        if (desc.personality) fields.push({ label: '性格', value: desc.personality })
-        if (desc.relationship_to_protagonist) fields.push({ label: '关系', value: desc.relationship_to_protagonist })
-      }
-      return {
-        name: char.name || '未知角色',
-        fields,
-        description: typeof desc === 'string' ? desc : undefined
-      }
-    } else {
-      return {
-        name: char.name || '未知角色',
-        description: char.description || '无描述',
-        fields: []
-      }
-    }
-  })
-})
-
-const parsedRelationships = computed(() => {
-  const list = props.blueprint?.relationships || []
-  return list.map((rel: any) => {
-    const fromChar = rel.character_from || rel.source || '角色A'
-    const toChar = rel.character_to || rel.target || '角色B'
-    const description = rel.description || '暂无描述'
-    return {
-      from: fromChar,
-      to: toChar,
-      description
-    }
-  })
-})
+const parsedWorldSetting = computed(() =>
+  parseBlueprintWorldSetting(props.blueprint?.world_setting),
+)
+const parsedCharacters = computed(() =>
+  parseBlueprintCharacters(props.blueprint?.characters),
+)
+const parsedRelationships = computed(() =>
+  parseBlueprintRelationships(props.blueprint?.relationships),
+)
 </script>
 
 <style scoped>
@@ -1058,4 +937,3 @@ const parsedRelationships = computed(() => {
   }
 }
 </style>
-

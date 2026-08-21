@@ -1,4 +1,4 @@
-// AIMETA P=小说API客户端_小说和章节接口|R=小说CRUD_章节管理_生成|NR=不含UI逻辑|E=api:novel|X=internal|A=novelApi对象|D=axios|S=net|RD=./README.ai
+// AIMETA P=小说API客户端_小说和章节接口|R=小说CRUD_章节管理_生成|NR=不含UI逻辑|E=api:novel|X=internal|A=novelApi对象|D=fetch|S=net|RD=./README.ai
 import { API_BASE_URL, API_PREFIX } from './base'
 import { authJson, authRaw } from './client'
 import type { components } from './generated/schema'
@@ -15,7 +15,7 @@ const createIdempotencyHeaders = (): Record<string, string> | undefined => {
 }
 
 // 统一的请求处理函数
-const request = async <T = any>(url: string, options: HttpRequestOptions = {}) =>
+const request = async <T = unknown>(url: string, options: HttpRequestOptions = {}) =>
   authJson<T>(url, {
     ...options,
     timeoutMs: options.timeoutMs ?? DEFAULT_NOVEL_REQUEST_TIMEOUT_MS,
@@ -243,31 +243,9 @@ export const readSSESubscription = async (
 // 类型定义
 export type NovelProject = components['schemas']['NovelProject']
 export type NovelProjectSummary = components['schemas']['NovelProjectSummary']
-
-export interface Blueprint {
-  title?: string
-  target_audience?: string
-  genre?: string
-  style?: string
-  tone?: string
-  one_sentence_summary?: string
-  full_synopsis?: string
-  world_setting?: any
-  characters?: Character[]
-  relationships?: any[]
-  chapter_outline?: ChapterOutline[]
-}
-
-export interface Character {
-  name: string
-  description: string
-  identity?: string
-  personality?: string
-  goals?: string
-  abilities?: string
-  relationship_to_protagonist?: string
-}
-
+export type Blueprint = components['schemas']['Blueprint']
+export type BlueprintGenerationResponse = components['schemas']['BlueprintGenerationResponse']
+export type BlueprintPatch = components['schemas']['BlueprintPatch']
 export type ChapterOutline = components['schemas']['ChapterOutline']
 
 export interface ChapterVersion {
@@ -285,24 +263,9 @@ export interface ConversationMessage {
   content: string
 }
 
-export interface ConverseResponse {
-  ai_message: string
-  ui_control: UIControl
-  conversation_state: any
-  is_complete: boolean
-  ready_for_blueprint?: boolean  // 新增：表示准备生成蓝图
-}
-
-export interface BlueprintGenerationResponse {
-  blueprint: Blueprint
-  ai_message: string
-}
-
-export interface UIControl {
-  type: 'single_choice' | 'text_input'
-  options?: Array<{ id: string; label: string }>
-  placeholder?: string
-}
+export type ConverseRequest = components['schemas']['ConverseRequest']
+export type ConverseResponse = components['schemas']['ConverseResponse']
+export type UIControl = components['schemas']['UIControl']
 
 export interface ChapterGenerationResponse {
   versions: ChapterVersion[] // Renamed from chapter_versions for consistency
@@ -482,8 +445,8 @@ export class NovelAPI {
 
   static async converseConcept(
     projectId: string,
-    userInput: any,
-    conversationState: any = {}
+    userInput: ConverseRequest['user_input'] | null,
+    conversationState: ConverseRequest['conversation_state'] = {}
   ): Promise<ConverseResponse> {
     const formattedUserInput = userInput || { id: null, value: null }
     return request(`${NOVELS_BASE}/${projectId}/concept/converse`, {
@@ -497,8 +460,8 @@ export class NovelAPI {
 
   static async converseConceptStream(
     projectId: string,
-    userInput: any,
-    conversationState: any = {},
+    userInput: ConverseRequest['user_input'] | null,
+    conversationState: ConverseRequest['conversation_state'] = {},
     onDelta?: (delta: string) => void
   ): Promise<ConverseResponse> {
     const formattedUserInput = userInput || { id: null, value: null }
@@ -615,7 +578,7 @@ export class NovelAPI {
     })
   }
 
-  static async updateBlueprint(projectId: string, data: Record<string, any>): Promise<NovelProject> {
+  static async updateBlueprint(projectId: string, data: BlueprintPatch): Promise<NovelProject> {
     return request(`${NOVELS_BASE}/${projectId}/blueprint`, {
       method: 'PATCH',
       body: JSON.stringify(data)
