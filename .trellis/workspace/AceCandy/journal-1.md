@@ -1412,3 +1412,24 @@ Reused generated blueprint and conversation DTOs, centralized unknown-field pars
 ### Status
 
 [OK] **Completed**
+
+
+## Session 48: 替换脆弱前端静态测试
+
+**Date**: 2026-08-21
+**Task**: 替换脆弱前端静态测试
+**Branch**: `main`
+
+### Summary
+
+将 Vite、概念对话刷新、SSE final 与 HTTP payload 的源码字符串断言替换为运行时测试；保留其余架构静态门禁，并记录 Node 侧 Vite 配置测试约定。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `349bd97` | (see git log) |
+
+### Status
+
+[OK] **Completed**

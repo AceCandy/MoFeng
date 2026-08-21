@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 47
+- **Total Sessions**: 48
 - **Last Active**: 2026-08-21
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1414 | Active |
+| `journal-1.md` | ~1435 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 48 | 2026-08-21 | 替换脆弱前端静态测试 | `349bd97` | `main` |
 | 47 | 2026-08-21 | Tighten blueprint transport boundaries | `0172809` | `main` |
 | 46 | 2026-08-20 | 统一节点重试反馈 | `cdb85b0` | `main` |
 | 45 | 2026-08-20 | 收敛章节人工确认节点 | `5ab31b6` | `main` |
