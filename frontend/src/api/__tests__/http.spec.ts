@@ -32,4 +32,21 @@ describe('requestRaw', () => {
       payload,
     })
   })
+
+  it('区分外部取消和请求超时', async () => {
+    const controller = new AbortController()
+    controller.abort()
+    vi.stubGlobal('fetch', vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.signal?.aborted) {
+        return Promise.reject(new DOMException('Aborted', 'AbortError'))
+      }
+      return Promise.resolve(Response.json({ ok: true }))
+    }))
+
+    await expect(requestRaw('/api/cancelled', { signal: controller.signal })).rejects.toMatchObject({
+      message: '请求已取消',
+      code: 'abort',
+      url: '/api/cancelled',
+    })
+  })
 })

@@ -1,5 +1,6 @@
-// AIMETA P=认证API客户端_登录注册和用户会话接口|R=auth_options_login_me_register|NR=不含状态管理|E=api:auth|X=internal|A=authApiFunctions|D=fetch|S=net|RD=./README.ai
+// AIMETA P=认证API客户端_登录注册和用户会话接口|R=auth_options_login_me_register|NR=不含状态管理|E=api:auth|X=internal|A=authApiFunctions|D=http|S=net|RD=./README.ai
 import { API_BASE_URL } from './base'
+import { requestJson, requestRaw } from './http'
 
 const API_URL = `${API_BASE_URL}/api/auth`
 
@@ -34,12 +35,6 @@ export interface RegisterPayload {
   verification_code: string
 }
 
-interface AuthRequestOptions extends RequestInit {
-  token?: string | null
-  timeoutMs?: number
-  debugTag?: string
-}
-
 interface AuthRequestResult<T> {
   data: T
   refreshedToken: string | null
@@ -50,62 +45,12 @@ const fallbackAuthOptions: AuthOptions = {
   enable_linuxdo_login: false,
 }
 
-const readErrorMessage = async (response: Response, fallback: string) => {
-  const errorData = await response.json().catch(() => ({}))
-  return typeof errorData.detail === 'string' ? errorData.detail : fallback
-}
-
-async function authRequest<T>(
-  path: string,
-  options: AuthRequestOptions = {},
-): Promise<AuthRequestResult<T>> {
-  const { token, timeoutMs = 15000, debugTag = path, ...requestOptions } = options
-  const method = String(requestOptions.method || 'GET').toUpperCase()
-  const headers = new Headers(requestOptions.headers || {})
-  const controller = new AbortController()
-  const timeoutId = window.setTimeout(() => {
-    controller.abort()
-  }, timeoutMs)
-
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`)
-  }
-
-  try {
-    const response = await fetch(`${API_URL}${path}`, {
-      ...requestOptions,
-      headers,
-      signal: controller.signal,
-    })
-
-    if (!response.ok) {
-      throw new Error(await readErrorMessage(response, `请求失败，状态码: ${response.status}`))
-    }
-
-    const refreshedToken = response.headers.get('X-Token-Refresh')
-
-    if (response.status === 204) {
-      return { data: undefined as T, refreshedToken }
-    }
-
-    return {
-      data: (await response.json()) as T,
-      refreshedToken,
-    }
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new Error(`Request timed out after ${timeoutMs}ms: ${method} ${API_URL}${path} (${debugTag})`)
-    }
-    throw error
-  } finally {
-    window.clearTimeout(timeoutId)
-  }
-}
-
 export async function getAuthOptions(): Promise<AuthOptions> {
   try {
-    const { data } = await authRequest<AuthOptions>('/options', { timeoutMs: 10000 })
-    return data
+    return await requestJson<AuthOptions>(`${API_URL}/options`, {
+      timeoutMs: 10_000,
+      fallbackErrorMessage: '请求失败',
+    })
   } catch {
     return fallbackAuthOptions
   }
@@ -117,15 +62,13 @@ export async function loginWithPassword(credentials: LoginCredentials): Promise<
   params.append('username', credentials.username)
   params.append('password', credentials.password)
 
-  const { data } = await authRequest<{ access_token?: string; must_change_password?: boolean }>(
-    '/token',
-    {
+  const data = await requestJson<{ access_token?: string; must_change_password?: boolean }>(
+    `${API_URL}/token`, {
       method: 'POST',
       body: params,
-      timeoutMs: 15000,
-      debugTag: 'login/token',
-    },
-  )
+      timeoutMs: 15_000,
+      fallbackErrorMessage: '请求失败',
+    })
 
   if (!data?.access_token) {
     throw new Error('Missing access token in login response')
@@ -138,19 +81,20 @@ export async function loginWithPassword(credentials: LoginCredentials): Promise<
 }
 
 export async function getCurrentUser(token: string): Promise<AuthRequestResult<AuthUser>> {
-  const { data, refreshedToken } = await authRequest<{
+  const response = await requestRaw(`${API_URL}/users/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+    timeoutMs: 10_000,
+    fallbackErrorMessage: '请求失败',
+  })
+  const data = (await response.json()) as {
     id: number
     username: string
     is_admin?: boolean
     must_change_password?: boolean
-  }>('/users/me', {
-    token,
-    timeoutMs: 10000,
-    debugTag: 'fetchUser/me',
-  })
+  }
 
   return {
-    refreshedToken,
+    refreshedToken: response.headers.get('X-Token-Refresh'),
     data: {
       id: data.id,
       username: data.username,
@@ -161,15 +105,19 @@ export async function getCurrentUser(token: string): Promise<AuthRequestResult<A
 }
 
 export async function sendVerificationCode(email: string): Promise<void> {
-  await authRequest<void>(`/send-code?email=${encodeURIComponent(email)}`, {
+  await requestJson<void>(`${API_URL}/send-code?email=${encodeURIComponent(email)}`, {
     method: 'POST',
+    timeoutMs: 15_000,
+    fallbackErrorMessage: '请求失败',
   })
 }
 
 export async function registerUser(payload: RegisterPayload): Promise<void> {
-  await authRequest<void>('/users', {
+  await requestJson<void>(`${API_URL}/users`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+    timeoutMs: 15_000,
+    fallbackErrorMessage: '请求失败',
   })
 }

@@ -49,9 +49,9 @@ The existing symbol is the contract. Extend it; do not fork it.
 
 ### 1. A second HTTP wrapper
 
-**Bad** — `src/api/auth.ts` defines its own `authRequest` with timeout/abort logic. Two paths now own "how a request fails and what its error message looks like," and they drift.
+**Bad** — a domain module defines its own request helper with timeout/abort logic. Two paths then own "how a request fails and what its error message looks like," and they drift.
 
-**Good** — route everything through `src/api/http.ts` (`requestJson` / `requestRaw` / `HttpRequestError`). New domains add a typed method on top of it.
+**Good** — route everything through `src/api/http.ts` (`requestJson` / `requestRaw` / `HttpRequestError`). `src/api/auth.ts` uses `requestRaw` only for `/users/me`, where the `X-Token-Refresh` response header is part of the domain contract.
 
 ### 2. Schemas defined inside a router
 

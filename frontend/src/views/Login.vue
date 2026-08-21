@@ -147,6 +147,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthOptionsQuery, useLoginMutation } from '@/queries/auth'
+import { HttpRequestError } from '@/utils/errors'
 import AuthIntro from '@/components/auth/AuthIntro.vue'
 import AuthFeatureRail from '@/components/auth/AuthFeatureRail.vue'
 
@@ -185,7 +186,7 @@ const handleLogin = async () => {
       await router.push('/workspace')
     }
   } catch (err) {
-    if (err instanceof Error && err.message.includes('Request timed out')) {
+    if (err instanceof HttpRequestError && err.code === 'timeout') {
       error.value = '登录请求超时，请确认后端服务已启动并可访问。'
     } else if (err instanceof Error && err.message === 'Failed to initialize user session') {
       error.value = '登录成功，但获取用户信息失败，请检查后端并重试。'

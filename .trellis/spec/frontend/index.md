@@ -38,10 +38,9 @@
 ## Known cross-cutting debt (context, not a TODO list)
 
 1. Six legacy editor components use runtime-options `defineProps({...})` + untyped `defineEmits([...])`. New components use the generic forms.
-2. `src/api/auth.ts` reimplements a fetch wrapper instead of reusing `src/api/http.ts`.
-3. Remaining `any` debt is concentrated in novel-detail editor emits and a few legacy utilities/components; migrated blueprint and concept-conversation DTOs use generated aliases.
-4. Two form-validation strategies coexist (manual vs Naive `:rules`); new forms use manual validation.
-5. `src/assets/base.css` is a dead compat shim; real tokens live in `src/assets/styles/tokens.css` (imported by `main.css`).
+2. Remaining `any` debt is concentrated in novel-detail editor emits and a few legacy utilities/components; migrated blueprint and concept-conversation DTOs use generated aliases.
+3. Two form-validation strategies coexist (manual vs Naive `:rules`); new forms use manual validation.
+4. `src/assets/base.css` is a dead compat shim; real tokens live in `src/assets/styles/tokens.css` (imported by `main.css`).
 
 ---
 

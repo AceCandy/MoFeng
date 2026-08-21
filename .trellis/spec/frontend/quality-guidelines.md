@@ -12,9 +12,65 @@ All outbound requests use `requestJson<T>` / `requestRaw` from `src/api/http.ts`
 - Components consume data via `queries/` hooks, not direct API calls (read path).
 - Set the `Authorization` header from `useAuthStore().token`; on 401, call `authStore.logout()` and `router.push('/login')`.
 
-Bad example — reimplementing a fetch wrapper. `src/api/auth.ts` defines its own `authRequest` with timeout/abort logic instead of reusing `http.ts`. New modules reuse `http.ts`.
+Bad example — reimplementing a domain-local fetch wrapper with timeout/abort logic. Domain modules reuse `http.ts`.
 
 There is **no axios** in the project. Do not introduce it.
+
+### Scenario: authentication API requests
+
+#### 1. Scope / Trigger
+
+Use this contract for login, registration, auth options, verification code, and current-user requests under `src/api/auth.ts`.
+
+#### 2. Signatures
+
+- `getAuthOptions(): Promise<AuthOptions>`
+- `loginWithPassword(credentials): Promise<LoginResult>`
+- `getCurrentUser(token): Promise<{ data: AuthUser; refreshedToken: string | null }>`
+- `sendVerificationCode(email): Promise<void>`
+- `registerUser(payload): Promise<void>`
+
+#### 3. Contracts
+
+- Use `requestJson` for `/options`, `/token`, `/send-code`, and `/users`.
+- Use `requestRaw` only for `/users/me`, because it must read both JSON and `X-Token-Refresh`.
+- `/users/me` receives its explicit token argument; do not substitute the Pinia-backed `authJson` / `authRaw` wrappers.
+- Keep endpoint timeouts explicit: 10s for `/options` and `/users/me`; 15s for the other three calls.
+
+#### 4. Validation & Error Matrix
+
+| Condition | Result |
+|-----------|--------|
+| HTTP error with string `detail` | `HttpRequestError(code='http')`, preserving message/status/payload |
+| HTTP error without detail | domain fallback plus status code |
+| Network failure | `HttpRequestError(code='network')` |
+| Timeout / external cancel | distinct `timeout` / `abort` codes |
+| `/options` failure | the existing permissive auth-options fallback |
+| `/token` without `access_token` | `Missing access token in login response` |
+
+#### 5. Good / Base / Bad Cases
+
+- Good: `/users/me` returns user JSON plus `X-Token-Refresh`; the query layer stores the refreshed token.
+- Base: 204 from verification/registration resolves to `undefined` through `requestJson<void>`.
+- Bad: a domain helper calls `fetch`, owns an AbortController, or parses HTTP error bodies again.
+
+#### 6. Tests Required
+
+`src/api/__tests__/auth.spec.ts` asserts URLs, methods, bodies, headers, timeouts, refresh headers, 204, fallback, server errors, network errors, and timeout abort. `http.spec.ts` owns the external-cancel assertion.
+
+#### 7. Wrong vs Correct
+
+```ts
+// Wrong: forks the shared transport boundary.
+await fetch(url, { signal: localController.signal })
+
+// Correct: use JSON by default; use raw only when response metadata is required.
+await requestJson<AuthOptions>(url, { timeoutMs: 10_000 })
+const response = await requestRaw(meUrl, {
+  headers: { Authorization: `Bearer ${token}` },
+  timeoutMs: 10_000,
+})
+```
 
 ---
 
