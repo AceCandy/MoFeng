@@ -1391,3 +1391,24 @@ Retired the legacy chapter generation pipeline, routed every generation entry th
 ### Status
 
 [OK] **Completed**
+
+
+## Session 47: Tighten blueprint transport boundaries
+
+**Date**: 2026-08-21
+**Task**: Tighten blueprint transport boundaries
+**Branch**: `main`
+
+### Summary
+
+Reused generated blueprint and conversation DTOs, centralized unknown-field parsing with a focused regression test, simplified admin request delegation, and passed frontend quality gates.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0172809` | (see git log) |
+
+### Status
+
+[OK] **Completed**

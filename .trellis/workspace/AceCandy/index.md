@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 46
-- **Last Active**: 2026-08-20
+- **Total Sessions**: 47
+- **Last Active**: 2026-08-21
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1393 | Active |
+| `journal-1.md` | ~1414 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 47 | 2026-08-21 | Tighten blueprint transport boundaries | `0172809` | `main` |
 | 46 | 2026-08-20 | 统一节点重试反馈 | `cdb85b0` | `main` |
 | 45 | 2026-08-20 | 收敛章节人工确认节点 | `5ab31b6` | `main` |
 | 44 | 2026-08-20 | 提高章节正文输出上限 | `2882fe7` | `main` |
