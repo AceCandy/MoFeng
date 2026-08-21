@@ -1,0 +1,4 @@
+{"file":".trellis/spec/frontend/index.md","reason":"复核前端分层与已知债务边界"}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"检查 generated alias、unknown 和 any 政策"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"检查 type-check、Vitest 与前端质量门禁"}
+{"file":".trellis/spec/backend/transport-contracts.md","reason":"检查生成物所有权、api:check 与动态字典边界"}
