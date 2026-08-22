@@ -1,0 +1,4 @@
+{"file":".trellis/spec/frontend/type-safety.md","reason":"检查 any 清零、unknown 守卫和生成类型复用。"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"检查 props/emits、动态组件和遗留编辑器范围隔离。"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"检查 type-check、Vitest、ESLint 与用户行为兼容。"}
+{"file":".trellis/tasks/08-22-tighten-frontend-boundary-types/research/frontend-any-inventory.md","reason":"逐项复核 24 个命中和相邻排除项未漂移。"}
