@@ -1754,3 +1754,27 @@ Migrated deprecated Pydantic validators and class-based schema configs to v2 API
 ### Status
 
 [OK] **Completed**
+
+
+## Session 63: 完成前端依赖现代化
+
+**Date**: 2026-08-22
+**Task**: 完成前端依赖现代化
+**Branch**: `main`
+
+### Summary
+
+分四批修复前端依赖漏洞、升级兼容依赖、统一 Node 24 工具链并迁移 Vue Router 5、Pinia 4 与 marked 18；完成完整门禁、浏览器冒烟和父任务集成复核。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b208300` | (see git log) |
+| `fd5aea6` | (see git log) |
+| `ed23eee` | (see git log) |
+| `029e918` | (see git log) |
+
+### Status
+
+[OK] **Completed**
