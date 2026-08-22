@@ -15,7 +15,7 @@ Vue 3.5, TypeScript ~5.8 (`strict`), Vite 7, Pinia 3, Vue Router 4.5, `@tanstack
 ```
 src/
 ├── api/         fetch wrapper + per-domain API modules (typed functions / static classes)
-├── assets/      CSS (main.css, base.css shim, blueprint.css) + fonts/images
+├── assets/      CSS (main.css entry, styles/ partials, blueprint.css) + fonts/images
 ├── components/  PascalCase .vue, grouped by feature (admin/, novel-detail/, writing-desk/, shared/, llm-settings/)
 ├── composables/ UI-only helpers, useXxx.ts (alert, dialog a11y, responsive)
 ├── constants/   plain TS constants (promptUsage, responsive tiers)

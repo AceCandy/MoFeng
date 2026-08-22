@@ -92,8 +92,6 @@ Most-used primitives (by frequency): `n-button`, `n-form-item`, `n-tag`, `n-inpu
 - Theme tokens are CSS custom properties in `src/assets/main.css` under `:root` / `:root[data-theme='light']` and `[data-theme='dark']`, namespaced `--md-*` (design system) and `--ink-*` (ink style). Prefer these tokens over hard-coded colors.
 - Per-component `<style scoped>` is the norm (55 of 64 files). Use `:deep(...)` to override Naive UI internals — reference: `src/components/shared/MofengTable.vue` (`:deep(.n-data-table-th)`, `:deep(.n-data-table-td)`).
 
-Bad example — writing into `src/assets/base.css`. It is a stub compat shim ("全局设计变量统一由 main.css 管理"); real tokens live in `main.css`.
-
 ---
 
 ## Composition with Naive UI providers

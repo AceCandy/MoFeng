@@ -3,7 +3,7 @@
   "name": "remove-dead-base-css-shim",
   "title": "删除无引用 base.css 兼容壳",
   "description": "确认无引用后删除前端遗留 base.css 兼容壳。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

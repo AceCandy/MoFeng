@@ -39,7 +39,6 @@
 
 1. Remaining `any` debt is concentrated in a few legacy utilities/components outside the migrated blueprint editor chain; migrated blueprint and concept-conversation DTOs use generated aliases.
 2. Two form-validation strategies coexist (manual vs Naive `:rules`); new forms use manual validation.
-3. `src/assets/base.css` is a dead compat shim; real tokens live in `src/assets/styles/tokens.css` (imported by `main.css`).
 
 ---
 
