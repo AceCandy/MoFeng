@@ -1715,8 +1715,15 @@ async def test_workflow_transition_adapter_maps_ambiguity_cancel_and_failure(
         "job.queued",
         "workflow.phase_changed",
         "activity.started",
+        "activity.ambiguous",
         "workflow.needs_attention",
     ]
+    ambiguous_activity_event = ambiguous_events[-2]
+    assert set(ambiguous_activity_event.payload) == {"task"}
+    assert "payload" not in ambiguous_activity_event.payload["task"]
+    assert "result" not in ambiguous_activity_event.payload["task"]
+    assert "provider_request_key" not in str(ambiguous_activity_event.payload)
+    assert persisted_activity.provider_request_key not in str(ambiguous_activity_event.payload)
     assert ambiguous_events[-1].event_type == "workflow.needs_attention"
 
     async with session_factory() as session:

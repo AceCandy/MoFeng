@@ -3,7 +3,7 @@
   "name": "align-durable-job-ambiguity-events",
   "title": "校准 durable job 歧义事件测试",
   "description": "让 durable job 歧义事件测试覆盖正式 activity.ambiguous 审计事件。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

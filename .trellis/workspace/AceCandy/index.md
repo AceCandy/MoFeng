@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 57
+- **Total Sessions**: 58
 - **Last Active**: 2026-08-22
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1625 | Active |
+| `journal-1.md` | ~1659 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 58 | 2026-08-22 | 校准 OpenAPI 契约基线 | `47af7d8` | `main` |
 | 57 | 2026-08-22 | 全仓技术债治理集成复核 | `4a5d7bf` | `main` |
 | 56 | 2026-08-22 | 删除无引用 base.css 兼容壳 | `1ac9cd6` | `main` |
 | 55 | 2026-08-22 | 删除伏笔提醒死链 | `7c99a41` | `main` |

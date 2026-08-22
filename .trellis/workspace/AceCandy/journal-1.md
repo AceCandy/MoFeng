@@ -1623,3 +1623,37 @@ Migrated deprecated Pydantic validators and class-based schema configs to v2 API
 ### Status
 
 [OK] **Completed**
+
+
+## Session 58: 校准 OpenAPI 契约基线
+
+**Date**: 2026-08-22
+**Task**: 校准 OpenAPI 契约基线
+**Branch**: `main`
+
+### Summary
+
+校准 OpenAPI 库存测试至当前已提交契约，恢复后端快速 profile；导出、前端 API gate 与独立复核通过。
+
+### Main Changes
+
+- 更新 paths、operations 与 operation-id hash 基线
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `47af7d8` | (see git log) |
+
+### Testing
+
+- [OK] OpenAPI 目标测试 10 passed；后端快速 profile 468 passed
+- [OK] exporter check、前端 api:check、Ruff 与 Trellis validate 通过
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 规划 durable job activity.ambiguous 事件对齐
