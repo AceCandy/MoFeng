@@ -1560,3 +1560,24 @@ Migrated deprecated Pydantic validators and class-based schema configs to v2 API
 ### Status
 
 [OK] **Completed**
+
+
+## Session 55: 删除伏笔提醒死链
+
+**Date**: 2026-08-22
+**Task**: 删除伏笔提醒死链
+**Branch**: `main`
+
+### Summary
+
+删除 ForeshadowingService 中无生产调用的旧提醒闭环、专属常量与测试，保留活跃 tracker、模型、迁移和列表 API。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7c99a41` | (see git log) |
+
+### Status
+
+[OK] **Completed**
