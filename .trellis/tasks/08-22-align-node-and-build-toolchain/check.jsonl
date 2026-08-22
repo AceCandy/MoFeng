@@ -1,0 +1,2 @@
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"复核 Node 配置、测试运行器、构建和浏览器冒烟。"}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"复核 TypeScript 主版本迁移未放宽类型规则。"}

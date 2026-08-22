@@ -1,0 +1,4 @@
+{"file":".trellis/spec/frontend/index.md","reason":"确认前端技术栈、目录边界与需保持的现有框架契约。"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"执行前端完整门禁、Node 配置测试与 bundle 预算要求。"}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"保持 TypeScript strict 与 vue-tsc 类型检查契约。"}
+{"file":".trellis/tasks/08-22-modernize-frontend-dependencies/research/dependency-audit.md","reason":"使用已核验的漏洞、outdated 与 Node 兼容基线。"}

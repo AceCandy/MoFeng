@@ -1,0 +1,2 @@
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"复核同主版本更新后的测试、lint、构建与预算。"}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"复核 TypeScript 严格类型门禁。"}

@@ -1,0 +1,2 @@
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"执行安全补丁后的完整前端质量门禁。"}
+{"file":".trellis/tasks/08-22-modernize-frontend-dependencies/research/dependency-audit.md","reason":"对照修复前漏洞与 dry-run 基线。"}

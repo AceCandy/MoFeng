@@ -1,0 +1,3 @@
+{"file":".trellis/spec/frontend/index.md","reason":"确认路由、Pinia、Markdown 与编辑器所在技术边界。"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"执行框架迁移后的聚焦回归和完整门禁。"}
+{"file":".trellis/spec/frontend/state-management.md","reason":"保持 Pinia 与 Vue Query 的职责及状态行为。"}

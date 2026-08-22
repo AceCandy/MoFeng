@@ -1,0 +1,3 @@
+{"file":".trellis/spec/frontend/index.md","reason":"保持现有 Vue 前端技术边界与组件栈。"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"执行兼容依赖更新后的完整门禁。"}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"防止更新弱化 strict 与 vue-tsc 契约。"}
