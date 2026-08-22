@@ -3,7 +3,7 @@
   "name": "quality-gate-debt-followups",
   "title": "质量门禁遗留债务治理",
   "description": "按顺序修复两个测试基线漂移、密码哈希弃用预警和前端 bundle 软预警。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

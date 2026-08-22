@@ -1,1 +1,4 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file":".trellis/spec/backend/transport-contracts.md","reason":"核对 OpenAPI runtime、artifact 与前端生成类型的发布单元。"}
+{"file":".trellis/spec/backend/durable-job-guidelines.md","reason":"核对 durable event 顺序与 PostgreSQL profile 要求。"}
+{"file":".trellis/spec/backend/security-guidelines.md","reason":"核对 bcrypt 兼容与认证安全边界。"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"核对前端完整门禁与 bundle 预算统计契约。"}
