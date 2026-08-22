@@ -137,6 +137,8 @@ class Relationship(BaseModel):
 
 
 class Blueprint(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     title: str
     target_audience: str = ""
     genre: str = ""
@@ -149,11 +151,9 @@ class Blueprint(BaseModel):
     relationships: List[Relationship] = []
     chapter_outline: List[ChapterOutline] = []
 
-    class Config:
-        from_attributes = True
-
-
 class NovelProject(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     user_id: int
     title: str
@@ -161,10 +161,6 @@ class NovelProject(BaseModel):
     conversation_history: List[Dict[str, Any]] = []
     blueprint: Optional[Blueprint] = None
     chapters: List[Chapter] = []
-
-    class Config:
-        from_attributes = True
-
 
 class NovelProjectSummary(BaseModel):
     id: str

@@ -2,7 +2,7 @@
 import re
 from typing import Any, List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$")
 MAX_TITLE_LENGTH = 255
@@ -114,10 +114,9 @@ class PromptUpdate(BaseModel):
 class PromptRead(PromptBase):
     """对外暴露的 Prompt 数据结构。"""
 
-    id: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+    id: int
 
     @classmethod
     def model_validate(cls, obj: Any, *args: Any, **kwargs: Any) -> "PromptRead":  # type: ignore[override]

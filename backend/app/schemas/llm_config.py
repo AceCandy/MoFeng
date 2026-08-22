@@ -2,7 +2,7 @@
 from decimal import Decimal
 from typing import Annotated, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field, HttpUrl, StringConstraints, model_validator
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, StringConstraints, model_validator
 
 ProviderType = Literal["openai_compatible", "anthropic", "ollama", "custom"]
 TTSProtocol = Literal["mimo_chat_audio", "openai_speech"]
@@ -46,10 +46,9 @@ class LLMConfigCreate(LLMConfigBase):
 
 
 class LLMConfigRead(LLMConfigBase):
-    user_id: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+    user_id: int
 
 
 class ModelListRequest(BaseModel):

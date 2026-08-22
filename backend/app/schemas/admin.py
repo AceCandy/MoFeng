@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class Statistics(BaseModel):
@@ -12,15 +12,13 @@ class Statistics(BaseModel):
 
 
 class UpdateLogRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     content: str
     created_at: datetime
     created_by: Optional[str] = None
     is_pinned: bool
-
-    class Config:
-        from_attributes = True
-
 
 class UpdateLogBase(BaseModel):
     content: Optional[str] = None

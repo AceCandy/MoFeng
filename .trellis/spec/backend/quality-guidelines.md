@@ -28,6 +28,9 @@ Split request/response DTOs from ORM models in `app/schemas/`. The local convent
 Reference: `app/schemas/user.py`.
 
 ```python
+from pydantic import ConfigDict
+
+
 class UserBase(BaseModel):
     username: str = Field(..., description="用户名")
     email: Optional[EmailStr] = Field(default=None, description="邮箱，可选")
@@ -40,15 +43,15 @@ class UserUpdate(BaseModel):
     password: Optional[str] = Field(default=None, min_length=6)
 
 class User(UserBase):                       # the Read / response model
+    model_config = ConfigDict(from_attributes=True)
+
     id: int = Field(...)
     is_admin: bool = Field(default=False)
-    class Config:
-        from_attributes = True
 ```
 
 Rules:
 
-- Response models set `class Config: from_attributes = True` so `Model.model_validate(orm_obj)` works.
+- Response models set `model_config = ConfigDict(from_attributes=True)` so `Model.model_validate(orm_obj)` works.
 - Declare `response_model=...` on the route decorator (do not rely on return-type annotation alone). Reference: `app/api/routers/admin.py` (`response_model=UserSchema`, `status_code=201`).
 - Convert ORM → schema with `Schema.model_validate(obj)` at the router/service boundary (see `user_service.py`).
 - Aliasing: when importing both ORM `User` and schema `User` into the same file, alias the schema import (`from ...schemas.user import User as UserSchema`).
@@ -102,7 +105,7 @@ Rules for new config:
 - Compute derived values such as the DB URL as `@property`s (`sqlalchemy_database_uri`), not stored fields.
 - Consume `settings` by import, not by re-reading env vars ad hoc.
 
-> Existing quirks (do not copy, do not "fix" without a task): `env_file` references a non-existent `new-backend/.env`; some validators use the deprecated pydantic v1 `@validator` instead of `@field_validator`.
+> Existing quirk (do not copy, do not "fix" without a task): `env_file` references a non-existent `new-backend/.env`.
 
 ---
 
@@ -392,7 +395,7 @@ exit-code: "1"
 - [ ] Repository subclasses `BaseRepository` and only `flush()`es.
 - [ ] Service owns `commit()`/`rollback()`; raises `ValueError` on business failure, not `HTTPException`.
 - [ ] A flush-time SQL-expression/server-generated value is read only after an explicit awaited refresh/query; new aggregates receive derived fields before their insert flush.
-- [ ] DTOs in `app/schemas/`, `response_model=` declared, `from_attributes = True` on Read models.
+- [ ] DTOs in `app/schemas/`, `response_model=` declared, `ConfigDict(from_attributes=True)` on Read models.
 - [ ] Generated-ownership route/schema changes update both committed artifacts and pass
   exporter/type-generation byte checks plus the ownership guard.
 - [ ] Internal handler renames preserve the prior operation ID, or the public rename has

@@ -70,6 +70,33 @@ def test_standard_field_names_still_load_from_uppercase_env(monkeypatch) -> None
     assert config.job_load_test_concurrency == 42
 
 
+def test_database_url_and_logging_level_normalization_are_preserved() -> None:
+    config = Settings(
+        _env_file=None,
+        secret_key=_STRONG_SECRET,
+        database_url="  postgresql+asyncpg://user:pass@db.example/mofeng  ",
+        logging_level=" warning ",
+    )
+    whitespace_url = Settings(
+        _env_file=None,
+        secret_key=_STRONG_SECRET,
+        database_url="   ",
+    )
+
+    assert config.database_url == "postgresql+asyncpg://user:pass@db.example/mofeng"
+    assert config.logging_level == "WARNING"
+    assert whitespace_url.database_url == "   "
+
+
+def test_logging_level_rejects_unsupported_values() -> None:
+    with pytest.raises(ValueError, match="LOGGING_LEVEL 仅支持"):
+        Settings(
+            _env_file=None,
+            secret_key=_STRONG_SECRET,
+            logging_level="verbose",
+        )
+
+
 def test_assert_production_security_rejects_default_admin_password(monkeypatch) -> None:
     """生产环境使用占位符默认密码必须拒绝启动（H3）。"""
     monkeypatch.setattr(settings, "environment", "production")

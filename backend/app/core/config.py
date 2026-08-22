@@ -2,7 +2,7 @@
 from functools import lru_cache
 from typing import Optional
 
-from pydantic import AliasChoices, AnyUrl, Field, HttpUrl, validator
+from pydantic import AliasChoices, AnyUrl, Field, HttpUrl, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import URL, make_url
 
@@ -249,12 +249,14 @@ class Settings(BaseSettings):
         populate_by_name=True,
     )
 
-    @validator("database_url", pre=True, always=True)
+    @field_validator("database_url", mode="before")
+    @classmethod
     def _normalize_database_url(cls, value: Optional[str]) -> Optional[str]:
         """当环境变量中提供 DATABASE_URL 时，原样返回，便于自定义。"""
         return value.strip() if isinstance(value, str) and value.strip() else value
 
-    @validator("logging_level", pre=True)
+    @field_validator("logging_level", mode="before")
+    @classmethod
     def _normalize_logging_level(cls, value: Optional[str]) -> str:
         """规范日志级别配置。"""
         candidate = (value or "INFO").strip().upper()
@@ -263,10 +265,11 @@ class Settings(BaseSettings):
             raise ValueError("LOGGING_LEVEL 仅支持 CRITICAL/ERROR/WARNING/INFO/DEBUG/NOTSET")
         return candidate
 
-    @validator("job_load_test_concurrency")
-    def _validate_load_test_concurrency(cls, value: int, values: dict[str, object]) -> int:
+    @field_validator("job_load_test_concurrency")
+    @classmethod
+    def _validate_load_test_concurrency(cls, value: int, info: ValidationInfo) -> int:
         """确保 readiness 演练至少覆盖目标峰值的两倍。"""
-        peak = values.get("job_peak_concurrency", 20)
+        peak = info.data.get("job_peak_concurrency", 20)
         if isinstance(peak, int) and value < peak * 2:
             raise ValueError("JOB_LOAD_TEST_CONCURRENCY 必须至少是 JOB_PEAK_CONCURRENCY 的 2 倍")
         return value
