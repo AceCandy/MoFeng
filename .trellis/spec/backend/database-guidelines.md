@@ -160,6 +160,8 @@ class User(Base):
 
 Primary key types are **not uniform** across the codebase: `User.id` is `Integer`, `NovelProject.id` is `String(36)` (UUID-ish), some tables reuse a `BIGINT_PK_TYPE` alias, and `AdminSetting` uses its `key: str` as PK. When adding a new model, match the convention of the sibling models in the same aggregate; do not silently introduce a third PK style.
 
+> **Warning**: A Python `default`, a DDL `server_default`, and a Python `onupdate` are different contracts. Do not call their textual difference schema drift by itself. Before adding a migration, compare the model with the Alembic history and live PostgreSQL catalog, then trace whether production writers use ORM-generated statements or bypass them. Add or change a server default only when an existing database-side write contract or observable failure requires it.
+
 ---
 
 ## Explicit database lifecycle

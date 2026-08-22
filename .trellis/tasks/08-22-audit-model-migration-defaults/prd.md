@@ -2,33 +2,36 @@
 
 ## Goal
 
-用实际 schema 与迁移历史核对 SQLAlchemy 模型默认值，只修复会造成可观察行为或迁移漂移的已证实不一致。
+用模型定义、Alembic 历史和实际 PostgreSQL schema 三方证据判定 memory-layer 四表的默认值是否真实漂移；只修复会造成现有可观察行为或迁移不一致的已证实问题，不为形式统一制造迁移。
 
 ## Background
 
-- 已观察到 `memory_layer.py` 的 Python `created_at` default 与 Alembic server default 可能存在漂移，但尚未证明需要 schema 变更。
-- 既有 memory-layer `project_id` 长度已统一为 `String(36)`，不属于本任务。
+- 目标表为 `character_states`、`timeline_events`、`causal_chains`、`story_time_trackers`。
+- 当前模型同时存在 Python-side `default`、`onupdate` 和少量 `server_default`；三者生效边界不同，不能仅因文本不一致判定缺陷。
+- 配置 PostgreSQL 当前位于 Alembic head `c8e5f2a1d4b6`。只读 catalog 查询确认实际 schema 与迁移历史一致。
+- CodeGraph 确认生产创建路径均通过 SQLAlchemy ORM，没有对四表的直接 SQL INSERT；现有路径会触发 Python-side default。
+- 历史 `project_id` 长度问题已由 `03bb4c218e9e666ec466d0a3` 修复为 `String(36)`，不属于本任务。
 
 ## Requirements
 
-- R1. 对目标模型、Alembic 历史和实际 PostgreSQL schema 建立默认值对照表。
-- R2. 区分 Python-side default、server default 与 `onupdate` 的生效边界，先确认用户可见或迁移影响再修改。
-- R3. 仅修复证据充分的不一致；若现状正确，输出审计结论而不生成空迁移。
-- R4. 若需要迁移，迁移必须可升级、可回滚，并与模型定义一致。
+- R1. 对目标字段记录模型、迁移历史、实际 PostgreSQL `column_default`/nullability/type 和生效边界。
+- R2. `default` 仅覆盖 ORM 生成 INSERT，`server_default` 覆盖数据库省略列的 INSERT，`onupdate` 仅在 ORM 更新满足触发条件时生效；审计不得混淆三者。
+- R3. 只有现有生产路径、迁移生命周期或真实 schema 出现可观察不一致时才修改模型或新增迁移。
+- R4. 当前证据结论为无需模型或迁移修改：实际 schema 与迁移链一致，生产写入均走 ORM，未发现依赖缺失 server default 的路径。
+- R5. 用现有 PostgreSQL 测试设施验证空库升级至 head 和 memory-layer ORM 写入；测试只能使用随机临时数据库，不得对配置业务库执行写操作。
 
 ## Acceptance Criteria
 
-- [ ] 目标字段均有模型、迁移历史与实际 schema 三方对照结论。
-- [ ] 每项修改均关联明确的不一致证据和可观察影响；无证据项保持不变。
-- [ ] 如生成迁移，空 PostgreSQL 数据库 upgrade/downgrade/upgrade 与相关模型测试通过。
-- [ ] 如无需修改，PRD/研究材料记录“无需迁移”的可复核证据。
-- [ ] 不重新处理已解决的 `project_id` 长度问题。
+- [x] 四张目标表的默认值三方对照表完整，包含 Python default、server default、onupdate、实际类型和 nullability。
+- [x] 实际 PostgreSQL revision 与 catalog 结果有可复核的只读查询记录。
+- [x] 所有生产创建路径已核对；没有直接 SQL INSERT 或其他绕过 ORM default 的已知路径。
+- [x] 空临时 PostgreSQL 数据库能够升级到 head 并通过 readiness；相关 memory-layer ORM 测试通过。
+- [x] 不新增空迁移，不改写历史迁移，不重新处理已解决的 `project_id` 长度问题。
+- [x] 执行期未出现与当前证据冲突的失败，无需返回规划或创建迁移。
 
 ## Out of Scope
 
-- 推测性统一所有时间字段或重写迁移历史。
-- 与默认值无关的索引、外键、字段类型或业务逻辑调整。
-
-## Notes
-
-- 本任务按父任务顺序在遗留编辑器契约任务完成后启动；这是“先审计、后决定是否改代码”的任务。
+- 推测性统一全仓时间戳或把所有 Python default 改成 server default。
+- 与默认值无关的索引、外键、字段类型、nullability 或业务逻辑调整。
+- 重写 `a53385d06521` baseline 或 `03bb4c218e9e666ec466d0a3` 历史迁移。
+- 将配置业务库作为测试写入目标。

@@ -3,7 +3,7 @@
   "name": "audit-model-migration-defaults",
   "title": "核对并收敛模型迁移默认值",
   "description": "核对 SQLAlchemy 模型与 Alembic 默认值漂移，仅修复可验证的不一致。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

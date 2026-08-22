@@ -1,1 +1,3 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"约束 PostgreSQL 生命周期、Alembic 迁移与临时测试数据库。"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"约束 PostgreSQL 测试入口、marker 与 TEST_POSTGRES_URL。"}
+{"file":".trellis/tasks/08-22-audit-model-migration-defaults/research/default-audit.md","reason":"提供模型、迁移、实际 schema 与创建路径的审计矩阵。"}
