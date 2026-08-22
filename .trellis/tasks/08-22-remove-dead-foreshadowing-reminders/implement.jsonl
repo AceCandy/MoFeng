@@ -1,1 +1,3 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"约束后端静态检查、PostgreSQL 测试和最小回归范围。"}
+{"file":".trellis/spec/backend/logging-guidelines.md","reason":"清理死链时保留活跃方法的日志规范。"}
+{"file":".trellis/tasks/08-22-remove-dead-foreshadowing-reminders/research/dead-chain-inventory.md","reason":"提供目标符号、调用证据、孤立依赖和保留边界。"}

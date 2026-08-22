@@ -3,7 +3,7 @@
   "name": "remove-dead-foreshadowing-reminders",
   "title": "删除无调用伏笔提醒链",
   "description": "确认无生产调用后删除伏笔提醒死代码及孤立测试或模型依赖。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

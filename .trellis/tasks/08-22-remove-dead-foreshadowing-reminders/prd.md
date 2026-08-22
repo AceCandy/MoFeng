@@ -2,32 +2,34 @@
 
 ## Goal
 
-删除已确认不可达的伏笔提醒调用链和仅为该链存在的代码，减少误导性的维护面，同时保留仍在使用的伏笔追踪能力。
+删除 `ForeshadowingService` 中已确认不可达的旧提醒闭环和仅为该闭环存在的测试，减少误导性维护面，同时完整保留当前伏笔列表、自动跟踪、章节投影和数据模型能力。
 
 ## Background
 
-- `check_and_create_reminders` 当前无生产调用者。
-- `create_reminder` 只被该死链调用；`get_unresolved_foreshadowings` 仅被死链和一个测试使用，实施前仍需重新核对当前工作树。
+- CodeGraph 与全仓精确搜索确认 `check_and_create_reminders` 没有生产调用者或动态注册。
+- `create_reminder` 仅被 `check_and_create_reminders` 调用；`get_unresolved_foreshadowings` 仅被该死链和 `test_foreshadowing_service.py` 的唯一测试调用。
+- 活跃自动伏笔流程使用独立的 `ForeshadowingTrackerService`，由 `EnhancedWritingFlow` 调用，不依赖待删方法。
+- 现行伏笔列表 API 只调用 `ForeshadowingService.get_foreshadowings`；`abandon_foreshadowing` 是独立 CRUD，即使当前无 caller 也不属于本提醒链任务。
 
 ## Requirements
 
-- R1. 删除前用 CodeGraph 与磁盘搜索复核生产调用链、动态引用、API/任务注册和测试用途。
-- R2. 仅删除确定不可达的提醒函数、专属测试与由本次删除产生的孤立 import。
-- R3. 保留仍被生产路径使用的伏笔 CRUD、解析、展示和数据模型。
-- R4. 不执行数据库表或数据删除，除非后续证据证明且另行规划批准。
+- R1. 从 `backend/app/services/foreshadowing_service.py` 删除 `get_unresolved_foreshadowings`、`create_reminder`、`check_and_create_reminders`。
+- R2. 删除仅服务于上述方法的 `ACTIVE_FORESHADOWING_STATUSES`、`Dict`、`and_`、`ForeshadowingReminder` import。
+- R3. 删除只覆盖 `get_unresolved_foreshadowings` 的 `backend/tests/test_foreshadowing_service.py`；不为已删除行为保留测试壳。
+- R4. 保留 `get_foreshadowings`、`abandon_foreshadowing`、`ForeshadowingTrackerService`、现行 router、`ForeshadowingReminder` 模型/关系、迁移和数据库表。
+- R5. 删除后精确搜索不得存在三个目标方法或专属常量引用，并运行现行伏笔 API/跟踪相关回归。
 
 ## Acceptance Criteria
 
-- [ ] 目标提醒入口没有生产调用者的证据已更新并存档。
-- [ ] 死链函数及其专属测试被删除，且不存在悬空 import、注册或字符串引用。
-- [ ] 仍在使用的伏笔相关后端测试通过。
-- [ ] 未删除活跃 API、模型、迁移或用户数据。
+- [x] 三个目标方法、专属常量、孤立 import 和专属测试文件已删除。
+- [x] 全仓生产代码与测试不再引用三个目标方法或 `ACTIVE_FORESHADOWING_STATUSES`。
+- [x] `ForeshadowingService.get_foreshadowings` 与 router 测试通过。
+- [x] 活跃 `ForeshadowingTrackerService`、章节投影、伏笔模型与迁移未修改。
+- [x] 后端静态检查、目标测试和相关伏笔回归通过；独立复核无阻塞发现。
 
 ## Out of Scope
 
-- 重设计伏笔业务、提醒策略或前端展示。
-- 删除数据库表、迁移或历史数据。
-
-## Notes
-
-- 本任务按父任务顺序在模型默认值审计完成后启动；若复核发现生产调用者，应停止删除并回到规划。
+- 删除或重构 `abandon_foreshadowing` 及其他独立 CRUD。
+- 重设计提醒策略或 `ForeshadowingTrackerService`。
+- 删除 `ForeshadowingReminder` 模型、表、关系、迁移或历史数据。
+- 修改前端伏笔展示、API schema 或历史审计文档。
