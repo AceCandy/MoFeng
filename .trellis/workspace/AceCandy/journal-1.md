@@ -1602,3 +1602,24 @@ Migrated deprecated Pydantic validators and class-based schema configs to v2 API
 ### Status
 
 [OK] **Completed**
+
+
+## Session 57: 全仓技术债治理集成复核
+
+**Date**: 2026-08-22
+**Task**: 全仓技术债治理集成复核
+**Branch**: `main`
+
+### Summary
+
+完成 8 个技术债子任务的跨任务集成复核并归档父任务；前端四项门禁、后端 Ruff/Pydantic 门禁及计划内回归扫描通过，明确记录两个既有测试基线漂移、passlib crypt 弃用预警与 bundle 软预警。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4a5d7bf` | (see git log) |
+
+### Status
+
+[OK] **Completed**
