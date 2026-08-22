@@ -1,4 +1,4 @@
-# AIMETA P=认证服务_登录注册业务逻辑|R=登录_注册_令牌|NR=不含用户管理|E=AuthService|X=internal|A=服务类|D=jose,passlib|S=db|RD=./README.ai
+# AIMETA P=认证服务_登录注册业务逻辑|R=登录_注册_令牌|NR=不含用户管理|E=AuthService|X=internal|A=服务类|D=jwt,bcrypt|S=db|RD=./README.ai
 import asyncio
 import hashlib
 import logging

@@ -70,6 +70,62 @@ Rules:
 
 ## Auth hardening
 
+### Password hashing contract
+
+#### 1. Scope / Trigger
+
+Apply when changing password hashing, verification, authentication dependencies, or
+stored bcrypt compatibility.
+
+#### 2. Signatures
+
+- `hash_password(password: str) -> str`
+- `verify_password(plain_password: str, hashed_password: str) -> bool`
+
+#### 3. Contracts
+
+- Use `bcrypt>=4.3.0,<5.0.0` directly; do not reintroduce passlib or a wrapper that
+  only delegates to bcrypt.
+- Encode passwords as UTF-8, reject NUL, and generate `$2b$` hashes with 12 rounds.
+- Preserve bcrypt 4.3's 72-byte truncation so existing long-password behavior and
+  stored hashes remain compatible. A change to bcrypt 5+ requires a separate migration
+  decision because it rejects passwords longer than 72 bytes.
+- Verification must accept existing passlib-generated bcrypt hashes. Do not add batch
+  migration or login-time rehashing without a separate approved task.
+
+#### 4. Validation & Error Matrix
+
+| Condition | Required behavior |
+| --- | --- |
+| Correct password and valid existing bcrypt hash | Return `True` |
+| Wrong password and valid bcrypt hash | Return `False` |
+| Password contains NUL | Raise `ValueError` |
+| Hash is malformed or not ASCII bcrypt text | Raise `ValueError` |
+| Password differs only after byte 72 | Preserve bcrypt 4.3 truncation behavior |
+
+#### 5. Good / Base / Bad Cases
+
+- Good: a passlib-generated `$2b$12$...` fixture verifies through `bcrypt.checkpw`.
+- Base: a Unicode password round-trips after UTF-8 encoding.
+- Bad: filtering the `crypt` deprecation warning while passlib remains imported.
+
+#### 6. Tests Required
+
+- Assert new hash prefix, Unicode round-trip, wrong-password rejection, NUL rejection,
+  a fixed existing passlib hash, malformed hash handling, and the exact 72/73 UTF-8
+  byte boundary.
+- Import `app.core.security` with `DeprecationWarning` treated as an error.
+
+#### 7. Wrong vs Correct
+
+```python
+# Wrong: imports Python's deprecated crypt path through passlib.
+pwd_context = CryptContext(schemes=["bcrypt"])
+
+# Correct: one maintained implementation with explicit compatibility parameters.
+bcrypt.hashpw(password_bytes, bcrypt.gensalt(rounds=12, prefix=b"2b"))
+```
+
 ### SECRET_KEY strength gate
 
 `app/core/config.py::assert_production_security` runs at app startup (`main.py` lifespan) and before explicit data bootstrap. In `production` it refuses to proceed when `SECRET_KEY` is shorter than 32 chars or matches a known weak/default value (`ChangeMe123!`, `"secret"`, etc.).

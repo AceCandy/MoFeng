@@ -1,26 +1,36 @@
-# AIMETA P=安全模块_JWT令牌和密码处理|R=JWT生成验证_密码哈希|NR=不含用户管理|E=create_token_verify_password|X=internal|A=安全函数|D=jwt,passlib|S=none|RD=./README.ai
+# AIMETA P=安全模块_JWT令牌和密码处理|R=JWT生成验证_密码哈希|NR=不含用户管理|E=create_token_verify_password|X=internal|A=安全函数|D=jwt,bcrypt|S=none|RD=./README.ai
 from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
 
+import bcrypt
 import jwt
 from fastapi import HTTPException, status
 from jwt.exceptions import InvalidTokenError
-from passlib.context import CryptContext
 
 from .config import settings
 
-# 统一的密码哈希上下文，后续如需切换算法只需在此维护
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def _password_bytes(password: str) -> bytes:
+    encoded = password.encode("utf-8")
+    if b"\x00" in encoded:
+        raise ValueError("密码不能包含 NUL 字节")
+    return encoded
 
 
 def hash_password(password: str) -> str:
     """对用户密码进行哈希处理，任何时候都不要存储明文密码。"""
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(
+        _password_bytes(password),
+        bcrypt.gensalt(rounds=12, prefix=b"2b"),
+    ).decode("ascii")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """验证明文密码是否匹配哈希值。"""
-    return pwd_context.verify(plain_password, hashed_password)
+    return bcrypt.checkpw(
+        _password_bytes(plain_password),
+        hashed_password.encode("ascii"),
+    )
 
 
 def create_access_token(

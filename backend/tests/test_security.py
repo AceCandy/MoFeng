@@ -13,6 +13,47 @@ from app.core import security
 
 TEST_SECRET = "test-secret-with-at-least-32-bytes"
 LEGACY_SECRET = "legacy-secret-with-at-least-32-bytes"
+LEGACY_PASSLIB_HASH = "$2b$12$Q.nv2zEr.yMS2lK5K/ACMOQEN/63Vmu8GBwMw6lKhfTksSFHWxU/C"
+
+
+def test_bcrypt_password_hash_preserves_format_and_unicode_round_trip() -> None:
+    password = "test-unicode-密码"
+
+    hashed = security.hash_password(password)
+
+    assert hashed.startswith("$2b$12$")
+    assert security.verify_password(password, hashed) is True
+    assert security.verify_password("wrong-password", hashed) is False
+
+
+def test_bcrypt_password_hash_verifies_existing_passlib_hash() -> None:
+    assert security.verify_password("legacy-test-密码", LEGACY_PASSLIB_HASH) is True
+    assert security.verify_password("wrong-password", LEGACY_PASSLIB_HASH) is False
+
+
+def test_bcrypt_password_hash_rejects_nul() -> None:
+    hashed = security.hash_password("safe-password")
+
+    with pytest.raises(ValueError):
+        security.hash_password("unsafe\x00password")
+    with pytest.raises(ValueError):
+        security.verify_password("unsafe\x00password", hashed)
+
+
+def test_bcrypt_password_hash_preserves_72_byte_compatibility() -> None:
+    password_72_bytes = "密" * 24
+    password_73_bytes = f"{password_72_bytes}a"
+
+    assert len(password_72_bytes.encode("utf-8")) == 72
+    assert len(password_73_bytes.encode("utf-8")) == 73
+    hashed = security.hash_password(password_72_bytes)
+
+    assert security.verify_password(password_73_bytes, hashed) is True
+
+
+def test_bcrypt_password_hash_rejects_unknown_hash() -> None:
+    with pytest.raises(ValueError):
+        security.verify_password("test-password", "not-a-bcrypt-hash")
 
 
 def _base64url(data: bytes) -> str:
