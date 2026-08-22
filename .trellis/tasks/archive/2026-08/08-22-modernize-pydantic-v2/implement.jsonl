@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/index.md","reason":"后端 schema、配置与质量检查入口。"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Pydantic v2、pydantic-settings、测试和 Ruff 约定。"}
+{"file":".trellis/spec/backend/transport-contracts.md","reason":"内部 schema 配置迁移不得改变 OpenAPI 字段契约。"}
+{"file":".trellis/tasks/08-22-modernize-pydantic-v2/research/pydantic-v2-inventory.md","reason":"10 个命中点、版本、语义映射、测试缺口和范围证据。"}

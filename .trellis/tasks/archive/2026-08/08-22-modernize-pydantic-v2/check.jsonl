@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"复核 Pydantic v2 写法、配置行为、pytest 和 Ruff。"}
+{"file":".trellis/spec/backend/transport-contracts.md","reason":"复核字段、序列化和 OpenAPI 契约未变化。"}
+{"file":".trellis/tasks/08-22-modernize-pydantic-v2/research/pydantic-v2-inventory.md","reason":"按已核验命中清单检查范围和行为未漂移。"}
+{"file":".trellis/tasks/08-22-modernize-pydantic-v2/research/validation.md","reason":"复核聚焦门禁、快速 profile 已知失败和独立审查证据。"}
