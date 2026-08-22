@@ -21,3 +21,19 @@
 - 每个子任务实施前展示该批最终范围；提交前展示 commit 计划并等待批准。
 - 不使用 `--force`，不自动 push。
 
+## Integration Verification
+
+- 四个子任务均按安全修复 → 同主版本更新 → Node/工具链 → 框架主版本的顺序形成独立产品提交并归档。
+- 最终 `npm ci` 安装 430 个包且漏洞为 0；`npm ls --depth=0`、两种 audit、Vite config 测试、API check、type-check、lint、build 与 bundle budget 均通过。
+- 完整单测在机器高负载下默认并发启动 worker 超时；限制为单 worker 后 44 个文件、349 个测试全部通过，且各子任务此前的默认并发完整门禁已通过。
+- 最终 bundle 为 JS gzip 545.44 KB / 600 KB、CSS gzip 82.40 KB / 90 KB；框架子任务的登录、AppShell、写作台编辑器浏览器冒烟通过且服务已关闭。
+- `npm outdated` 仅剩 TypeScript 5.9.3（受 `openapi-typescript@7.13.0` 的 `^5.x` peer 限制）与 `@types/node` 24.13.3（匹配 Node 24）；独立集成复核通过。
+
+## Not Verified
+
+- 未在 GitHub 托管 runner 上实际执行三个 CI workflow，未构建完整 Docker 镜像，也未进行真实生产部署验证；已核对 workflow、Dockerfile、Node 镜像 manifest 与本地构建契约。
+
+## Remaining Risk
+
+- CI runner 与生产镜像环境仍可能暴露本地未覆盖的系统级差异。
+- 未来若为 marked 引入自定义 tokenizer/renderer，需按 marked 18 的 token 契约单独迁移和回归。

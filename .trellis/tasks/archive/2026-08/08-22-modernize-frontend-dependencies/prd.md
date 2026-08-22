@@ -31,17 +31,16 @@
 
 ## Acceptance Criteria
 
-- [ ] 4 个子任务均按顺序独立规划、批准、验证、提交和归档。
-- [ ] `npm audit` 与 `npm audit --omit=dev` 均报告 0 个漏洞。
-- [ ] 直接依赖均处于最新兼容版本；保留的非 latest 项有明确的运行时或 peer 兼容证据。
-- [ ] CI、Docker、`engines.node` 与 `@types/node` 使用一致的 Node 24 基线，最低版本满足所有依赖要求。
-- [ ] `npm ci` 可从锁文件复现安装，API artifact、类型检查、单测、lint、生产构建和 bundle 预算均通过。
-- [ ] 登录、AppShell、写作台编辑器完成浏览器冒烟，未发现依赖升级引入的可见回归。
-- [ ] 父任务完成跨批次集成复核并记录未验证项与剩余风险后才归档。
+- [x] 4 个子任务均按顺序独立规划、批准、验证、提交和归档。
+- [x] `npm audit` 与 `npm audit --omit=dev` 均报告 0 个漏洞。
+- [x] 直接依赖均处于最新兼容版本；保留的非 latest 项有明确的运行时或 peer 兼容证据。
+- [x] CI、Docker、`engines.node` 与 `@types/node` 使用一致的 Node 24 基线，最低版本满足所有依赖要求。
+- [x] `npm ci` 可从锁文件复现安装，API artifact、类型检查、单测、lint、生产构建和 bundle 预算均通过。
+- [x] 登录、AppShell、写作台编辑器完成浏览器冒烟，未发现依赖升级引入的可见回归。
+- [x] 父任务完成跨批次集成复核并记录未验证项与剩余风险后才归档。
 
 ## Out of Scope
 
 - 后端 Python 依赖、业务功能、UI 重设计或无关重构。
 - 为追求版本号最大而采用与真实 Node 运行时不匹配的类型包。
 - 自动合并所有主版本升级为一个不可分辨、不可独立回滚的变更。
-
