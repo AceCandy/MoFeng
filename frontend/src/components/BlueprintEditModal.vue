@@ -38,14 +38,14 @@
 
           <!-- Dialog Content -->
           <div class="md-dialog-content flex-1 overflow-y-auto py-4">
-            <ChapterOutlineEditor v-if="props.field === 'chapter_outline'" v-model="editableContent" />
-            <KeyLocationsEditor v-else-if="props.field === 'world_setting.key_locations'" v-model="editableContent" />
-            <CharactersEditor v-else-if="props.field === 'characters'" v-model="editableContent" />
-            <RelationshipsEditor v-else-if="props.field === 'relationships'" v-model="editableContent" />
-            <FactionsEditor v-else-if="props.field === 'world_setting.factions'" v-model="editableContent" />
+            <ChapterOutlineEditor v-if="props.field === 'chapter_outline'" v-model="chapterOutlineContent" />
+            <KeyLocationsEditor v-else-if="props.field === 'world_setting.key_locations'" v-model="keyLocationsContent" />
+            <CharactersEditor v-else-if="props.field === 'characters'" v-model="charactersContent" />
+            <RelationshipsEditor v-else-if="props.field === 'relationships'" v-model="relationshipsContent" />
+            <FactionsEditor v-else-if="props.field === 'world_setting.factions'" v-model="factionsContent" />
             <div v-else class="md-text-field">
               <textarea
-                v-model="editableContent"
+                v-model="textContent"
                 class="md-textarea w-full blueprint-edit-modal__textarea"
                 placeholder="请输入内容..."
                 :aria-label="`编辑${title ? ` ${title}` : '内容'}`"
@@ -78,28 +78,66 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, toRef } from 'vue';
+import { computed, ref, watch, toRef } from 'vue';
 import ChapterOutlineEditor from './ChapterOutlineEditor.vue';
 import KeyLocationsEditor from './KeyLocationsEditor.vue';
 import CharactersEditor from './CharactersEditorEnhanced.vue';
 import RelationshipsEditor from './RelationshipsEditor.vue';
 import FactionsEditor from './FactionsEditor.vue';
-import type { ChapterOutline } from '@/api/novel';
 import { useDialogA11y } from '@/composables/useDialogA11y'
+import type { Blueprint, BlueprintPatch, ChapterOutline } from '@/api/novel'
 
-const props = defineProps({
-  show: Boolean,
-  title: String,
-  content: {
-    type: [String, Object, Array],
-    default: ''
-  },
-  field: String
-});
+type BlueprintEditContent = string | Record<string, unknown> | unknown[]
+type BlueprintPatchValue = BlueprintPatch[keyof BlueprintPatch]
 
-const emit = defineEmits(['close', 'save']);
+interface NamedDescription extends Record<string, unknown> {
+  name: string
+  description: string
+}
 
-const editableContent = ref<any>('');
+interface Props {
+  show?: boolean
+  title?: string
+  content?: BlueprintEditContent
+  field: string
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  show: false,
+  content: '',
+})
+
+const emit = defineEmits<{
+  close: []
+  save: [payload: { field: string; content: BlueprintPatchValue }]
+}>()
+
+const editableContent = ref<BlueprintEditContent>('')
+const arrayContent = computed(() => Array.isArray(editableContent.value) ? editableContent.value : [])
+const chapterOutlineContent = computed<ChapterOutline[]>({
+  get: () => arrayContent.value as ChapterOutline[],
+  set: (value) => { editableContent.value = value },
+})
+const keyLocationsContent = computed<NamedDescription[]>({
+  get: () => arrayContent.value as NamedDescription[],
+  set: (value) => { editableContent.value = value },
+})
+const charactersContent = computed<Blueprint['characters']>({
+  get: () => arrayContent.value as Blueprint['characters'],
+  set: (value) => { editableContent.value = value },
+})
+const relationshipsContent = computed<Blueprint['relationships']>({
+  get: () => arrayContent.value as Blueprint['relationships'],
+  set: (value) => { editableContent.value = value },
+})
+const factionsContent = computed<NamedDescription[]>({
+  get: () => arrayContent.value as NamedDescription[],
+  set: (value) => { editableContent.value = value },
+})
+const textContent = computed({
+  get: () => typeof editableContent.value === 'string' ? editableContent.value : '',
+  set: (value: string) => { editableContent.value = value },
+})
 const dialogRef = ref<HTMLElement | null>(null)
 const closeButtonRef = ref<HTMLElement | null>(null)
 const dialogInstanceId = `blueprint-edit-${Math.random().toString(36).slice(2, 10)}`
@@ -123,7 +161,7 @@ watch(() => props.show, (isVisible) => {
 }, { immediate: true });
 
 const saveChanges = () => {
-  emit('save', { field: props.field, content: editableContent.value });
+  emit('save', { field: props.field, content: editableContent.value as BlueprintPatchValue });
 };
 
 useDialogA11y({

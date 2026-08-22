@@ -44,21 +44,28 @@
 import { ref, watch, nextTick } from 'vue';
 import type { ChapterOutline } from '@/api/novel';
 
-const props = defineProps({
-  modelValue: {
-    type: Array as () => ChapterOutline[],
-    default: () => []
-  }
-});
+interface Props {
+  modelValue?: ChapterOutline[]
+}
 
-const emit = defineEmits(['update:modelValue']);
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: () => [],
+})
+
+const emit = defineEmits<{
+  'update:modelValue': [value: ChapterOutline[]]
+}>()
 
 const localOutline = ref<ChapterOutline[]>([]);
 let syncing = false;
 
 const cloneOutline = <T>(value: T): T => {
   if (typeof structuredClone === 'function') {
-    return structuredClone(value)
+    try {
+      return structuredClone(value)
+    } catch {
+      // Vue reactive Proxy 不可直接 structuredClone，沿用既有 JSON 克隆降级。
+    }
   }
   return JSON.parse(JSON.stringify(value))
 }

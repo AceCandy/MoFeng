@@ -52,21 +52,28 @@ interface KeyLocation {
   description: string;
 }
 
-const props = defineProps({
-  modelValue: {
-    type: Array as () => KeyLocation[],
-    default: () => []
-  }
-});
+interface Props {
+  modelValue?: KeyLocation[]
+}
 
-const emit = defineEmits(['update:modelValue']);
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: () => [],
+})
+
+const emit = defineEmits<{
+  'update:modelValue': [value: KeyLocation[]]
+}>()
 
 const localLocations = ref<KeyLocation[]>([]);
 let syncing = false;
 
 const cloneLocations = <T>(value: T): T => {
   if (typeof structuredClone === 'function') {
-    return structuredClone(value)
+    try {
+      return structuredClone(value)
+    } catch {
+      // Vue reactive Proxy 不可直接 structuredClone，沿用既有 JSON 克隆降级。
+    }
   }
   return JSON.parse(JSON.stringify(value))
 }

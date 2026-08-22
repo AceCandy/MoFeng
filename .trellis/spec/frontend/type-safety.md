@@ -54,8 +54,7 @@ declaration in the same release unit. See
 
 Remaining known hotspots are documented as debt, not fixed inline:
 
-- Legacy editor components still use runtime props/emits contracts that permit dynamic values without generic TypeScript signatures.
-- A few isolated UI sites outside the novel-detail boundary still use local casts for dynamic component refs or evaluation records.
+- A few isolated UI sites outside the migrated blueprint editor chain still use local casts for dynamic component refs or evaluation records.
 
 Dynamic chapter/version metadata and parsed evaluation payloads now start as
 `Record<string, unknown>`; every consumer must narrow nested objects and scalar fields

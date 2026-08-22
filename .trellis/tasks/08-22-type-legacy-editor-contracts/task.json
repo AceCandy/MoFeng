@@ -3,7 +3,7 @@
   "name": "type-legacy-editor-contracts",
   "title": "收敛遗留编辑器组件契约",
   "description": "分批迁移遗留编辑器的 runtime props、字符串 emits 与相关 any。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

@@ -132,6 +132,7 @@ import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { useGenerateBlueprintMutation } from '@/queries/novel'
 import { globalAlert } from '@/composables/useAlert'
+import type { BlueprintGenerationResponse } from '@/api/novel'
 
 // 配置 marked
 marked.setOptions({
@@ -153,7 +154,7 @@ const idxToChinese = (idx: number): string => {
 }
 
 const emit = defineEmits<{
-  blueprintGenerated: [response: any]
+  blueprintGenerated: [response: BlueprintGenerationResponse]
   back: []
 }>()
 

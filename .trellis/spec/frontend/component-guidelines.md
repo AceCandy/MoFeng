@@ -38,7 +38,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 ```
 
-Bad example — runtime-options form with `Array as () => T` casts, found in six legacy editor components (`FactionsEditor.vue`, `RelationshipsEditor.vue`, `KeyLocationsEditor.vue`, `ChapterOutlineEditor.vue`, `CharactersEditorEnhanced.vue`, `BlueprintEditModal.vue`):
+Bad example — runtime-options form with `Array as () => T` casts:
 
 ```ts
 // AVOID in new code
@@ -47,7 +47,7 @@ const props = defineProps({
 })
 ```
 
-Do not copy this style into new components. If you edit one of those files for another reason, converting to the generic form is welcome but not required.
+Do not copy this style into new components.
 
 ---
 
@@ -66,6 +66,8 @@ const emit = defineEmits<{
 Bad example — untyped string-array form (`defineEmits(['update:modelValue'])`) paired with the runtime-options props above. New code uses the call-signature generic.
 
 For two-way binding on a custom v-model, name the emit `update:modelValue` (or `update:<modelName>` for named models).
+
+> **Warning**: Vue reactive proxies cannot always be passed directly to `structuredClone`; browsers may throw `DataCloneError`. When an editor deep-clones watched reactive values, catch that failure and use its existing JSON clone fallback before emitting the copied model.
 
 ---
 

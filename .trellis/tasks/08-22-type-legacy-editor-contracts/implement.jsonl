@@ -1,1 +1,4 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python3 .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"遵循 Vue generic props/emits、默认值与组件约定。"}
+{"file":".trellis/spec/frontend/type-safety.md","reason":"遵循 no-any、unknown 收窄与生成类型复用规则。"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"遵循 AIMETA、测试与前端质量门禁。"}
+{"file":".trellis/tasks/08-22-type-legacy-editor-contracts/research/editor-contract-inventory.md","reason":"提供目标组件、父调用点、行为钉点与明确排除项。"}

@@ -341,6 +341,7 @@
 
 <script setup lang="ts">
 import { ref, watch, reactive, nextTick } from 'vue'
+import type { Blueprint } from '@/api/novel'
 
 interface DNAProfile {
   childhood_trauma: string
@@ -353,27 +354,30 @@ interface DNAProfile {
   hidden_secret: string
 }
 
-interface Character {
-  name: string
-  identity: string
-  personality: string
-  goals: string
-  abilities: string
-  relationship_to_protagonist: string
+type Character = Blueprint['characters'][number] & {
+  name?: string
+  identity?: string
+  personality?: string
+  goals?: string
+  abilities?: string
+  relationship_to_protagonist?: string
   extra?: {
     dna_profile?: DNAProfile
-    [key: string]: any
+    [key: string]: unknown
   }
 }
 
-const props = defineProps({
-  modelValue: {
-    type: Array as () => Character[],
-    default: () => [],
-  },
+interface Props {
+  modelValue?: Character[]
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: () => [],
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits<{
+  'update:modelValue': [value: Character[]]
+}>()
 
 const localCharacters = ref<Character[]>([])
 const expandedDNA = reactive<Record<number, boolean>>({})
@@ -381,7 +385,11 @@ let syncing = false
 
 const cloneCharacters = <T>(value: T): T => {
   if (typeof structuredClone === 'function') {
-    return structuredClone(value)
+    try {
+      return structuredClone(value)
+    } catch {
+      // Vue reactive Proxy 不可直接 structuredClone，沿用既有 JSON 克隆降级。
+    }
   }
   return JSON.parse(JSON.stringify(value))
 }

@@ -47,28 +47,32 @@
 
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue';
+import type { Blueprint } from '@/api/novel'
 
-interface Relationship {
-  character_from: string;
-  character_to: string;
-  description: string;
+type Relationship = Blueprint['relationships'][number]
+
+interface Props {
+  modelValue?: Relationship[]
 }
 
-const props = defineProps({
-  modelValue: {
-    type: Array as () => Relationship[],
-    default: () => []
-  }
-});
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: () => [],
+})
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits<{
+  'update:modelValue': [value: Relationship[]]
+}>()
 
 const localRelationships = ref<Relationship[]>([]);
 let syncing = false;
 
 const cloneRelationships = <T>(value: T): T => {
   if (typeof structuredClone === 'function') {
-    return structuredClone(value)
+    try {
+      return structuredClone(value)
+    } catch {
+      // Vue reactive Proxy 不可直接 structuredClone，沿用既有 JSON 克隆降级。
+    }
   }
   return JSON.parse(JSON.stringify(value))
 }

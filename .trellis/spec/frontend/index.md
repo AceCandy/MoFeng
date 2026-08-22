@@ -37,10 +37,9 @@
 
 ## Known cross-cutting debt (context, not a TODO list)
 
-1. Six legacy editor components use runtime-options `defineProps({...})` + untyped `defineEmits([...])`. New components use the generic forms.
-2. Remaining `any` debt is concentrated in novel-detail editor emits and a few legacy utilities/components; migrated blueprint and concept-conversation DTOs use generated aliases.
-3. Two form-validation strategies coexist (manual vs Naive `:rules`); new forms use manual validation.
-4. `src/assets/base.css` is a dead compat shim; real tokens live in `src/assets/styles/tokens.css` (imported by `main.css`).
+1. Remaining `any` debt is concentrated in a few legacy utilities/components outside the migrated blueprint editor chain; migrated blueprint and concept-conversation DTOs use generated aliases.
+2. Two form-validation strategies coexist (manual vs Naive `:rules`); new forms use manual validation.
+3. `src/assets/base.css` is a dead compat shim; real tokens live in `src/assets/styles/tokens.css` (imported by `main.css`).
 
 ---
 
