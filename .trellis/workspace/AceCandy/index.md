@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 60
+- **Total Sessions**: 61
 - **Last Active**: 2026-08-22
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1714 | Active |
+| `journal-1.md` | ~1735 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 61 | 2026-08-22 | 收敛前端 bundle 软预警 | `c5d1be9` | `main` |
 | 60 | 2026-08-22 | 移除 passlib crypt 弃用依赖 | `c83b134` | `main` |
 | 59 | 2026-08-22 | 校准 durable job 歧义事件测试 | `50379b1` | `main` |
 | 58 | 2026-08-22 | 校准 OpenAPI 契约基线 | `47af7d8` | `main` |

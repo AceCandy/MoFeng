@@ -1712,3 +1712,24 @@ Migrated deprecated Pydantic validators and class-based schema configs to v2 API
 ### Status
 
 [OK] **Completed**
+
+
+## Session 61: 收敛前端 bundle 软预警
+
+**Date**: 2026-08-22
+**Task**: 收敛前端 bundle 软预警
+**Branch**: `main`
+
+### Summary
+
+通过 TipTap 显式扩展和不可达自有 CSS 清理，将 JS 总 gzip 与最大 CSS gzip 降至软线内，并完成全量门禁和浏览器验证。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c5d1be9` | (see git log) |
+
+### Status
+
+[OK] **Completed**
