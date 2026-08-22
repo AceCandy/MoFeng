@@ -38,13 +38,14 @@
     "@tiptap/pm": "^3.30.2",
     "@tiptap/vue-3": "^3.30.2",
     "@types/marked": "^5.0.2",
+    "@vue/devtools-api": "^8.2.1",
     "@xstate/vue": "5.0.1",
     "dompurify": "^3.4.14",
-    "marked": "^16.4.2",
+    "marked": "^18.0.10",
     "naive-ui": "^2.45.2",
-    "pinia": "^3.0.4",
+    "pinia": "^4.0.3",
     "vue": "^3.5.41",
-    "vue-router": "^4.6.4",
+    "vue-router": "^5.2.0",
     "xstate": "5.32.5"
   },
   "devDependencies": {

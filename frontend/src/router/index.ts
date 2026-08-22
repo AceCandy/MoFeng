@@ -121,7 +121,7 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to) => {
   const authStore = useAuthStore()
 
   // 有 token 但缺少用户信息时，通过 Query 缓存恢复会话。
@@ -144,17 +144,13 @@ router.beforeEach(async (to, from, next) => {
   const mustChangePassword = authStore.user?.is_admin && authStore.mustChangePassword
 
   if (requiresAuth && !isAuthenticated) {
-    next('/login')
-  } else if (requiresAdmin && !isAdmin) {
-    next('/workspace') // Redirect to a non-admin page if not an admin
-  } else if (isAuthenticated && mustChangePassword) {
-    if (to.name !== 'admin' || to.query.tab !== 'password') {
-      next({ name: 'admin', query: { tab: 'password' } })
-    } else {
-      next()
-    }
-  } else {
-    next()
+    return '/login'
+  }
+  if (requiresAdmin && !isAdmin) {
+    return '/workspace' // Redirect to a non-admin page if not an admin
+  }
+  if (isAuthenticated && mustChangePassword && (to.name !== 'admin' || to.query.tab !== 'password')) {
+    return { name: 'admin', query: { tab: 'password' } }
   }
 })
 

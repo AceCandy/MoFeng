@@ -45,4 +45,19 @@ describe('ChapterEvaluationPanel', () => {
     expect(host.textContent).toContain('伏笔衔接自然')
     expect(host.textContent).toContain('结尾略快')
   })
+
+  it('渲染并净化 Markdown 评阅反馈', () => {
+    const host = document.createElement('div')
+    document.body.append(host)
+    const app = createApp({
+      render: () => h(ChapterEvaluationPanel, {
+        evaluation: JSON.stringify({ feedback: '**综合表现最佳**<img src="x" onerror="alert(1)">' }),
+      }),
+    })
+    app.mount(host)
+    mounted.push({ app, host })
+
+    expect(host.querySelector('strong')?.textContent).toBe('综合表现最佳')
+    expect(host.querySelector('img')?.hasAttribute('onerror')).toBe(false)
+  })
 })

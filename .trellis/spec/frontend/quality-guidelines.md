@@ -84,6 +84,14 @@ All routes live in `src/router/index.ts` (single file). Conventions:
 - `meta`: `requiresAuth`, `requiresAdmin`, `layout: 'app' | 'auth'`, plus `label`/`description` for nav.
 - Legacy redirect routes (`/detail/:id`, `/novel/:id`, `/admin/novel/:id`) exist for back-compat — keep them when you rename a path.
 - `router.beforeEach` does auth gating **and** session recovery (`queryClient.fetchQuery(currentUserQueryOptions)` when a token exists but the user is missing), plus the admin password-reset redirect.
+- Vue Router 5 guards use return-value semantics: return a route location to redirect and `undefined` to continue. Do not add the deprecated `next()` callback; this keeps guards compatible with its planned removal.
+
+```ts
+router.beforeEach(async (to) => {
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) return '/login'
+  return undefined
+})
+```
 
 ---
 
