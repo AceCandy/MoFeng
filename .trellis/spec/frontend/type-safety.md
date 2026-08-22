@@ -54,12 +54,13 @@ declaration in the same release unit. See
 
 Remaining known hotspots are documented as debt, not fixed inline:
 
-- `src/api/novel.ts`: legacy `ChapterVersion.metadata?: Record<string, any>`.
-- `src/components/novel-detail/*Section.vue`: repeated edit payloads still use `value: any`.
-- `src/utils/chapter.ts` and `src/utils/generationTrace.ts`: legacy dynamic metadata casts.
-- `src/main.ts`: `(target as any).tagName` escape hatch.
+- Legacy editor components still use runtime props/emits contracts that permit dynamic values without generic TypeScript signatures.
+- A few isolated UI sites outside the novel-detail boundary still use local casts for dynamic component refs or evaluation records.
 
-When editing those files for another reason, narrowing these is welcome.
+Dynamic chapter/version metadata and parsed evaluation payloads now start as
+`Record<string, unknown>`; every consumer must narrow nested objects and scalar fields
+before reading them. Novel-detail section edit events carry `unknown` until the existing
+editor input union is checked at the modal boundary.
 
 Bad example — an API signature with `any`:
 

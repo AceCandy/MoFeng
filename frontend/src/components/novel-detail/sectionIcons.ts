@@ -1,4 +1,4 @@
-import { h } from 'vue'
+import { h, type Component } from 'vue'
 
 // 小说档案分区 key，与 @/api/novel 的 AllSectionType 对齐（新增分区需同步）。
 export type SectionKey =
@@ -13,7 +13,7 @@ export type SectionKey =
 
 // 小说档案分区导航图标（SVG 函数组件）。
 // 从 NovelDetailShell 抽出，行为逐行等价。
-const sectionIcons: Record<SectionKey, any> = {
+const sectionIcons: Record<SectionKey, Component> = {
   overview: () =>
     h('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2 }, [
       h('rect', { x: 3, y: 3, width: 18, height: 18, rx: 2 }),

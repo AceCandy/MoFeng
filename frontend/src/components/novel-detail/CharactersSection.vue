@@ -82,7 +82,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'edit', payload: { field: string; title: string; value: any }): void
+  (e: 'edit', payload: { field: string; title: string; value: unknown }): void
 }>()
 
 const characters = computed(() => props.data?.characters || [])
@@ -95,7 +95,7 @@ const characterFacts = (character: CharacterItem) =>
     { label: '与主角关系', value: character.relationship_to_protagonist },
   ].filter((fact): fact is { label: string; value: string } => Boolean(fact.value))
 
-const emitEdit = (field: string, title: string, value: any) => {
+const emitEdit = (field: string, title: string, value: unknown) => {
   if (!props.editable) return
   emit('edit', { field, title, value })
 }

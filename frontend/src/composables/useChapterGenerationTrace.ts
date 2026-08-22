@@ -82,9 +82,10 @@ export function useChapterGenerationTrace(props: GenerationTraceProps, deps: Tra
 
     if (trace) {
       const metadata = traceMetadata(trace)
+      const metadataSummary = typeof metadata.summary === 'string' ? metadata.summary : ''
       return {
         label: PIPELINE_LABELS[key] || trace.node_label || stepConfig.summary,
-        summary: metadata.summary || (trace.status === 'failed'
+        summary: metadataSummary || (trace.status === 'failed'
           ? `真实运行记录：${trace.node_label || stepConfig.summary} 执行失败`
           : `真实运行记录：${trace.node_label || stepConfig.summary}`),
         callType: resolveTraceCallType(trace),

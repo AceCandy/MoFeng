@@ -180,7 +180,7 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{
-  (e: 'edit', payload: { field: string; title: string; value: any }): void
+  (e: 'edit', payload: { field: string; title: string; value: unknown }): void
 }>()
 
 // 元信息统一在脚本层兜底，模板只负责展示，避免多个 tab 的空值样式失控。
@@ -251,7 +251,7 @@ const updatedLabel = computed(() =>
   props.data?.updated_at ? `大纲设定更新于 ${formatDateTime(props.data.updated_at)}` : '暂无大纲设定更新时间',
 )
 
-const emitEdit = (field: string, title: string, value: any) => {
+const emitEdit = (field: string, title: string, value: unknown) => {
   if (!props.editable) return
   emit('edit', { field, title, value })
 }

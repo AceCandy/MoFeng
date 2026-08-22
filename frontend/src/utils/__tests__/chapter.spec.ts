@@ -5,6 +5,7 @@ import {
   findNearestIncompleteChapterNumber,
   formatChapterGenerationError,
   isChapterCompletedStatus,
+  parseEvaluationPayload,
   resolveChapterNumberForEntry,
   resolveChapterNumberForProjectEntry,
 } from '@/utils/chapter'
@@ -52,6 +53,24 @@ describe('chapter version content cleaning', () => {
     const raw = '{"kind":"正文中的示例"}'
 
     expect(cleanVersionContent(raw)).toBe(raw)
+  })
+})
+
+describe('chapter evaluation payload parsing', () => {
+  it('accepts object payloads', () => {
+    expect(parseEvaluationPayload('{"best_choice":1}')).toEqual({ best_choice: 1 })
+  })
+
+  it('accepts object payloads encoded as a JSON string', () => {
+    expect(parseEvaluationPayload(JSON.stringify('{"best_choice":2}'))).toEqual({ best_choice: 2 })
+  })
+
+  it.each([
+    ['array payload', '[]'],
+    ['null payload', 'null'],
+    ['invalid JSON', '{'],
+  ])('rejects %s', (_label, payload) => {
+    expect(parseEvaluationPayload(payload)).toBeNull()
   })
 })
 

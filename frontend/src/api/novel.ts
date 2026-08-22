@@ -251,7 +251,7 @@ export type ChapterOutline = components['schemas']['ChapterOutline']
 export interface ChapterVersion {
   content: string
   style?: string
-  metadata?: Record<string, any> | null
+  metadata?: Record<string, unknown> | null
 }
 
 export type ChapterGenerationTrace = components['schemas']['ChapterGenerationTrace']

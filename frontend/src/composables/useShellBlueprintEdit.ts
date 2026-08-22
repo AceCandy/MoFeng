@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue'
+import { computed, ref, type Ref } from 'vue'
 import type { AllSectionType, BlueprintPatch, NovelProject } from '@/api/novel'
 import type { useUpdateBlueprintMutation } from '@/queries/novel'
 
@@ -37,10 +37,16 @@ export function useShellBlueprintEdit(options: {
   // Modal state (user mode only)
   const isModalOpen = ref(false)
   const modalTitle = ref('')
-  const modalContent = ref<any>('')
+  const modalContent = ref<unknown>('')
+  const editorModalContent = computed(() => {
+    const value = modalContent.value
+    if (typeof value === 'string' || Array.isArray(value)) return value
+    if (value && typeof value === 'object') return value as Record<string, unknown>
+    return undefined
+  })
   const modalField = ref('')
 
-  const handleSectionEdit = (payload: { field: string; title: string; value: any }) => {
+  const handleSectionEdit = (payload: { field: string; title: string; value: unknown }) => {
     if (isAdmin()) return
     modalField.value = payload.field
     modalTitle.value = payload.title
@@ -96,7 +102,7 @@ export function useShellBlueprintEdit(options: {
   return {
     isModalOpen,
     modalTitle,
-    modalContent,
+    modalContent: editorModalContent,
     modalField,
     handleSectionEdit,
     handleSave,

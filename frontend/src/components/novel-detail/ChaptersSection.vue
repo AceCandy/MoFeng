@@ -702,11 +702,26 @@ const sortedEvaluationEntries = computed(() => {
 
   // 多版本编号必须和候选版本数组一致：version1 对应章节 versions[0]。
   return Object.entries(evaluation)
-    .map(([key, result]) => ({
-      key,
-      result: result as Record<string, any>,
-      versionNumber: getVersionNumber(key),
-    }))
+    .map(([key, result]) => {
+      const record = result && typeof result === 'object' && !Array.isArray(result)
+        ? result as Record<string, unknown>
+        : {}
+      return {
+        key,
+        result: {
+          pros: Array.isArray(record.pros)
+            ? record.pros.filter((item): item is string => typeof item === 'string')
+            : [],
+          cons: Array.isArray(record.cons)
+            ? record.cons.filter((item): item is string => typeof item === 'string')
+            : [],
+          overall_review: typeof record.overall_review === 'string'
+            ? record.overall_review
+            : '',
+        },
+        versionNumber: getVersionNumber(key),
+      }
+    })
     .sort((a, b) => a.versionNumber - b.versionNumber)
 })
 

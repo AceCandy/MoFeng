@@ -22,7 +22,7 @@ export type ParsedStepPayload = {
   meta: Record<string, string>
 }
 
-export type TraceMetadata = Record<string, any>
+export type TraceMetadata = Record<string, unknown>
 
 export type ActiveStepDetails = {
   label: string

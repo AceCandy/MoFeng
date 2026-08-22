@@ -12,6 +12,11 @@ interface UseVersionResolverOptions {
   selectedVersionIndex: ComputedRef<number>
 }
 
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null
+
 /**
  * 选中章节的版本正文解析。
  *
@@ -38,8 +43,8 @@ export const useVersionResolver = ({
     }
 
     const metadataIndex = availableVersions.value.findIndex((version) => {
-      const metadata = version.metadata
-      return metadata?.ai_review?.is_best === true
+      const aiReview = asRecord(version.metadata?.ai_review)
+      return aiReview?.is_best === true
     })
     if (metadataIndex >= 0) {
       return metadataIndex
@@ -47,9 +52,11 @@ export const useVersionResolver = ({
 
     for (const version of availableVersions.value) {
       const metadata = version.metadata
+      const reviewSummaries = asRecord(metadata?.review_summaries)
+      const summaryAiReview = asRecord(reviewSummaries?.ai_review)
+      const aiReview = asRecord(metadata?.ai_review)
       const metadataBestIndex = toBoundedVersionIndex(
-        metadata?.review_summaries?.ai_review?.best_version_index ??
-          metadata?.ai_review?.best_version_index,
+        summaryAiReview?.best_version_index ?? aiReview?.best_version_index,
       )
       if (metadataBestIndex !== null) {
         return metadataBestIndex
@@ -62,12 +69,14 @@ export const useVersionResolver = ({
         continue
       }
       const metadata = traceMetadata(trace)
+      const inputPayload = asRecord(metadata.input_payload)
+      const metrics = asRecord(metadata.metrics)
       for (const candidate of [
-        metadata.input_payload?.recommended_version_index,
-        metadata.metrics?.recommended_version_index,
+        inputPayload?.recommended_version_index,
+        metrics?.recommended_version_index,
         metadata.recommended_version_index,
-        metadata.input_payload?.best_version_index,
-        metadata.metrics?.best_version_index,
+        inputPayload?.best_version_index,
+        metrics?.best_version_index,
       ]) {
         const traceIndex = toBoundedVersionIndex(candidate)
         if (traceIndex !== null) {

@@ -249,15 +249,15 @@ export function formatChapterGenerationError(error: unknown): string {
 /**
  * 解析评估报告负载
  */
-export function parseEvaluationPayload(evaluation: string | null): Record<string, any> | null {
+export function parseEvaluationPayload(evaluation: string | null): Record<string, unknown> | null {
   if (!evaluation) return null
   try {
-    let data = JSON.parse(evaluation)
+    let data: unknown = JSON.parse(evaluation)
     if (typeof data === 'string') {
       data = JSON.parse(data)
     }
     if (data && typeof data === 'object' && !Array.isArray(data)) {
-      return data as Record<string, any>
+      return data as Record<string, unknown>
     }
   } catch (error) {
     console.error('解析评审结果失败:', error)

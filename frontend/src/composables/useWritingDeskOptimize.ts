@@ -19,6 +19,9 @@ interface UseWritingDeskOptimizeOptions {
   showEvaluationDetailModal: Ref<boolean>
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value)
+
 /**
  * 写作台「评审推荐优化」流程。
  *
@@ -64,7 +67,10 @@ export const useWritingDeskOptimize = ({
       return
     }
 
-    const bestChoice = Number(evaluationPayload.best_choice)
+    const rawBestChoice = evaluationPayload.best_choice
+    const bestChoice = typeof rawBestChoice === 'string' || typeof rawBestChoice === 'number'
+      ? Number(rawBestChoice)
+      : Number.NaN
     if (!Number.isInteger(bestChoice) || bestChoice < 1) {
       globalAlert.showError('当前评审结果缺少推荐版本，无法执行优化')
       return
@@ -77,13 +83,16 @@ export const useWritingDeskOptimize = ({
       return
     }
 
-    const versionReview = evaluationPayload.evaluation?.[`version${bestChoice}`] || {}
+    const evaluations = evaluationPayload.evaluation
+    const rawVersionReview = isRecord(evaluations) ? evaluations[`version${bestChoice}`] : undefined
+    const versionReview = isRecord(rawVersionReview) ? rawVersionReview : {}
+    const reasonForChoice = evaluationPayload.reason_for_choice
     try {
       const result = await optimizeRecommendedVersionMutation.mutateAsync({
         project_id: project.value.id,
         chapter_number: selectedChapter.value.chapter_number,
         source_content: cleanVersionContent(sourceVersion.content),
-        review_summary: String(evaluationPayload.reason_for_choice || '').trim(),
+        review_summary: typeof reasonForChoice === 'string' ? reasonForChoice.trim() : '',
         version_number: bestChoice,
         version_review: versionReview,
       })
@@ -97,9 +106,11 @@ export const useWritingDeskOptimize = ({
       recommendedOptimizedContent.value = normalized.content
       recommendedOptimizeResultNotes.value = normalized.notes
       showRecommendedOptimizeResultModal.value = true
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('评审优化失败:', error)
-      globalAlert.showError(error.message || '评审优化失败，请稍后重试')
+      globalAlert.showError(error instanceof Error && error.message
+        ? error.message
+        : '评审优化失败，请稍后重试')
     }
   }
 
@@ -122,9 +133,11 @@ export const useWritingDeskOptimize = ({
       recommendedOptimizedContent.value = ''
       recommendedOptimizeResultNotes.value = ''
       await refetchChapterIntoProject(selectedChapter.value.chapter_number)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('应用评审优化失败:', error)
-      globalAlert.showError(error.message || '应用优化失败，请稍后重试')
+      globalAlert.showError(error instanceof Error && error.message
+        ? error.message
+        : '应用优化失败，请稍后重试')
     }
   }
 

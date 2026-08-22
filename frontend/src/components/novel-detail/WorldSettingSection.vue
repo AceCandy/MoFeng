@@ -129,20 +129,24 @@ interface ListItem {
 }
 
 const props = defineProps<{
-  data: Record<string, any> | null
+  data: Record<string, unknown> | null
   editable?: boolean
 }>()
 
 const emit = defineEmits<{
-  (e: 'edit', payload: { field: string; title: string; value: any }): void
+  (e: 'edit', payload: { field: string; title: string; value: unknown }): void
 }>()
 
-const worldSetting = computed(() => props.data?.world_setting || {})
+const worldSetting = computed<Record<string, unknown>>(() => {
+  const value = props.data?.world_setting
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {}
+})
 
-const normalizeList = (source: any): ListItem[] => {
-  if (!source) return []
+const normalizeList = (source: unknown): ListItem[] => {
   if (Array.isArray(source)) {
-    return source.map((item: any) => {
+    return source.map((item) => {
       if (typeof item === 'string') {
         const [title, ...rest] = item.split('：')
         return {
@@ -150,9 +154,17 @@ const normalizeList = (source: any): ListItem[] => {
           description: rest.join('：') || '暂无描述',
         }
       }
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        return { title: '未命名', description: '暂无描述' }
+      }
+      const record = item as Record<string, unknown>
       return {
-        title: item?.name || item?.title || '未命名',
-        description: item?.description || item?.details || '暂无描述',
+        title: typeof record.name === 'string' && record.name
+          || typeof record.title === 'string' && record.title
+          || '未命名',
+        description: typeof record.description === 'string' && record.description
+          || typeof record.details === 'string' && record.details
+          || '暂无描述',
       }
     })
   }
@@ -162,7 +174,7 @@ const normalizeList = (source: any): ListItem[] => {
 const locations = computed(() => normalizeList(worldSetting.value?.key_locations))
 const factions = computed(() => normalizeList(worldSetting.value?.factions))
 
-const emitEdit = (field: string, title: string, value: any) => {
+const emitEdit = (field: string, title: string, value: unknown) => {
   if (!props.editable) return
   emit('edit', { field, title, value })
 }

@@ -65,9 +65,14 @@ const setupScrollbarBehavior = () => {
       if (!target) return
 
       // 确定触发滚动的元素：如果是 document，则应用在 documentElement 上
-      const scrollEl = (target === document || target === window || (target as any).tagName === 'BODY')
+      const scrollEl = target === document
+        || target === window
+        || (target instanceof HTMLElement && target.tagName === 'BODY')
         ? document.documentElement
-        : target as HTMLElement
+        : target instanceof HTMLElement
+          ? target
+          : null
+      if (!scrollEl) return
 
       // 添加正在滚动类名
       scrollEl.classList.add('is-scrolling')
