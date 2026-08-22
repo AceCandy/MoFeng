@@ -1,4 +1,4 @@
-/* AIMETA P=表单样式_卡片与输入|R=DoubleBorderCard/Text Field/Textarea|NR=不含按钮导航|E=-|X=internal|A=基础元素|D=tailwindcss|S=dom|RD=./README.ai */
+/* AIMETA P=表单样式_卡片与输入|R=Card/Text Field/Textarea|NR=不含按钮导航|E=-|X=internal|A=基础元素|D=tailwindcss|S=dom|RD=./README.ai */
 /* ============================================
    墨风古籍线装卡片样式 (Double Border Card)
    ============================================ */
@@ -16,16 +16,6 @@
     transform var(--md-duration-medium) var(--md-easing-standard);
 }
 
-.md-card-elevated {
-  box-shadow: var(--md-elevation-paper-1); /* 浮起纸影 */
-}
-
-.md-card-elevated:hover {
-  box-shadow: var(--md-elevation-paper-2); /* hover 上浮 */
-  border-color: var(--md-primary-light);
-  transform: translateY(-1px);
-}
-
 .md-card-filled {
   background-color: var(--md-surface-container);
   border: 1px solid var(--md-outline-variant);
@@ -33,23 +23,6 @@
 
 .md-card-outlined {
   border: 3px double var(--md-outline);
-}
-
-.md-card-content {
-  padding: var(--md-spacing-6); /* 中式大气留白 */
-}
-
-.md-card-header {
-  padding: var(--md-spacing-4) var(--md-spacing-6);
-  border-bottom: 1px dashed var(--md-outline-variant); /* 虚线古风分隔 */
-}
-
-.md-card-actions {
-  padding: var(--md-spacing-3) var(--md-spacing-6);
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--md-spacing-2);
 }
 
 /* ============================================
@@ -109,19 +82,6 @@
   color: var(--md-on-surface-variant);
   opacity: 0.5;
   border-color: var(--md-outline-variant);
-}
-
-/* Filled Text Field (中式单线底面) */
-.md-text-field-filled .md-text-field-input {
-  background-color: var(--md-surface-container);
-  border: none;
-  border-bottom: 2px solid var(--md-outline);
-  border-radius: var(--md-radius-xs) var(--md-radius-xs) 0 0;
-}
-
-.md-text-field-filled .md-text-field-input:focus {
-  border-bottom-color: var(--md-primary);
-  background-color: var(--md-surface-container-high);
 }
 
 /* Textarea (中式多行草稿域) */

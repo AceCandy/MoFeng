@@ -3,7 +3,7 @@
   "name": "reduce-frontend-bundle-warnings",
   "title": "收敛前端 bundle 软预警",
   "description": "在不放宽预算的前提下降低主 CSS 和 JS 总 gzip 体积。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

@@ -9,6 +9,9 @@
 - 当前硬预算通过；主 CSS gzip 为 25.14 KB，超过 24 KB 软线、低于 26 KB 硬上限。
 - JS 总 gzip 为 580.36 KB，超过 560 KB 软线、低于 600 KB 硬上限。
 - Vite 已有手工 vendor chunk 策略，预算脚本按 manifest 统计当前构建产物，不能通过拆出未计入 manifest 的文件规避统计。
+- 路由页面已全部动态导入；继续调整 `manualChunks` 只能改变加载时机，不能降低预算脚本统计的总 gzip。
+- TipTap 当前通过 `StarterKit` 引入完整扩展集合，再在运行时关闭未使用扩展。内存替换实验仅保留 Document、Paragraph、Text、HardBreak、UndoRedo 后，JS 总 gzip 从 580.36 KB 降至 556.53 KB。
+- 自有全局 CSS 中存在无运行时引用的旧 Material、导航、FAB、card 和 bottom-tab 规则；临时副本删除这些规则及专属 keyframes 后，最大 CSS gzip 从 25.14 KB 降至 23.89 KB。Naive UI 运行时内部选择器不在删除范围。
 
 ## Requirements
 
@@ -17,20 +20,23 @@
 - R3. 不提高 24 KB/560 KB 软阈值，不降低 26 KB/600 KB 硬阈值，不排除本应计入的资产。
 - R4. 保持路由、首屏、编辑器、主题、响应式、无障碍和缓存行为；任何视觉样式删除必须有源码与浏览器证据。
 - R5. 如果达到软线必须进行高风险架构或视觉重构，停止并返回规划，不以过度拆包完成任务。
+- R6. TipTap 必须保留纯文本段落、单换行、撤销/重做、描红/落墨及只读行为；CSS 只删除源码与浏览器均不可达的规则。
 
 ## Acceptance Criteria
 
-- [ ] 生产 build 不再输出 CSS 单文件或 JS 总量软预警，且硬预算配置未放宽。
-- [ ] 体积下降有构建前后 gzip 数据和资产归属证据，manifest 统计范围保持完整。
-- [ ] `npm run type-check`、完整单测、lint、build 与 bundle budget 通过。
-- [ ] 受影响页面完成必要的浏览器视觉、主题和响应式验证；未启动的服务在结束前关闭。
-- [ ] diff 不包含无证据依赖升级、通用打包框架或范围外 UI 重构。
+- [x] 生产 build 不再输出 CSS 单文件或 JS 总量软预警，且硬预算配置未放宽。
+- [x] 体积下降有构建前后 gzip 数据和资产归属证据，manifest 统计范围保持完整。
+- [x] `npm run type-check`、完整单测、lint、build 与 bundle budget 通过。
+- [x] 受影响页面完成必要的浏览器视觉、主题和响应式验证；未启动的服务在结束前关闭。
+- [x] diff 不包含无证据依赖升级、通用打包框架或范围外 UI 重构。
+- [x] TipTap 与 CSS 的前后对比均来自相同 Vite/manifest/gzip 统计链路，删除的自有 CSS 选择器无运行时引用。
 
 ## Out of Scope
 
 - 全站视觉重设计、设计 token 重写或为指标移动但不减少字节。
 - 抬高预算阈值、隐藏 warning、排除 manifest 资产或清理无关依赖。
 
-## Notes
+## Technical Notes
 
-- 具体削减点必须等该子任务独立研究后确定。
+- TipTap 使用项目已锁定的 3.29.2 扩展包，不升级版本，不新增分析依赖。
+- 失效 bottom-tab 测试只断言 CSS 文本存在，实际 AppShell 不渲染对应 DOM；该同义反复断言随死样式一起删除。

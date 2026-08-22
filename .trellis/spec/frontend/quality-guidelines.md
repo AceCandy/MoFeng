@@ -101,6 +101,25 @@ Tailwind v4, CSS-first. `src/assets/main.css` is the entry: it pulls in Tailwind
 - Use `<style scoped>` per component; `:deep(...)` for Naive UI overrides (reference: `src/components/shared/MofengTable.vue`).
 - Do not add a `tailwind.config.js`; v4 is config-less.
 
+### Bundle-size changes
+
+- Use `npm run build-only` followed by `npm run build:budget`; compare totals from the same
+  `dist/.vite/manifest.json` chain. `manualChunks` changes chunk boundaries, not total gzip, so it
+  is not a fix for a total-size warning.
+- Import only the TipTap extensions a surface uses. Disabling StarterKit extensions at runtime does
+  not remove StarterKit's top-level imports from Rollup's module graph.
+- Delete global CSS only after confirming the project-owned selector has no runtime source reference
+  and checking the affected surface in a browser. Do not classify third-party runtime selectors
+  (for example Naive UI `.n-*` classes) as dead from a source-literal scan.
+
+```ts
+// Wrong: unused StarterKit extensions still enter the module graph.
+StarterKit.configure({ heading: false, bulletList: false })
+
+// Correct: register the schema and behavior this editor actually uses.
+extensions: [Document, Paragraph, Text, HardBreak, UndoRedo, MiaohongMark]
+```
+
 ---
 
 ## Forms and validation

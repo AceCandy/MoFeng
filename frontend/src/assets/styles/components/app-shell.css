@@ -113,62 +113,6 @@
   overflow: hidden !important;
 }
 
-.app-shell__bottom-tabs {
-  display: none;
-}
-
-.app-shell__bottom-tab {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--md-spacing-1);
-  min-width: 0;
-  padding: var(--md-spacing-1) 0;
-  border-radius: var(--md-radius-md);
-  color: var(--md-on-surface-variant);
-  text-decoration: none;
-  transition:
-    background-color var(--md-duration-short) var(--md-easing-standard),
-    color var(--md-duration-short) var(--md-easing-standard);
-}
-
-.app-shell__bottom-tab:hover {
-  color: var(--md-on-surface);
-}
-
-.app-shell__bottom-tab:focus-visible {
-  outline: 2px solid var(--md-primary);
-  outline-offset: 2px;
-}
-
-.app-shell__bottom-tab.is-active {
-  color: var(--md-primary-dark);
-  background-color: color-mix(in oklch, var(--md-primary-container) 72%, var(--md-surface));
-}
-
-.app-shell__bottom-tab-icon {
-  width: 22px;
-  height: 22px;
-  display: grid;
-  place-items: center;
-}
-
-.app-shell__bottom-tab-icon svg {
-  width: 20px;
-  height: 20px;
-}
-
-.app-shell__bottom-tab-text {
-  min-width: 0;
-  font-size: var(--md-label-small);
-  font-weight: 600;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .auth-layout {
   min-height: var(--app-viewport-unit);
   background:
@@ -225,9 +169,5 @@
     height: auto !important;
     max-height: none !important;
     overflow: visible !important;
-  }
-
-  .app-shell__bottom-tabs {
-    display: none !important;
   }
 }

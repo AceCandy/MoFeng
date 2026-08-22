@@ -58,8 +58,12 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { Document } from '@tiptap/extension-document'
+import { HardBreak } from '@tiptap/extension-hard-break'
+import { Paragraph } from '@tiptap/extension-paragraph'
+import { Text } from '@tiptap/extension-text'
+import { UndoRedo } from '@tiptap/extensions'
 import { EditorContent, useEditor } from '@tiptap/vue-3'
-import { StarterKit } from '@tiptap/starter-kit'
 import type { Editor, JSONContent } from '@tiptap/core'
 import type { Node as PMNode } from '@tiptap/pm/model'
 import { MiaohongMark } from './miaohongMark'
@@ -176,26 +180,11 @@ const editor = useEditor({
   editable: !props.readonly,
   content: textToDocJSON(props.modelValue, props.provenance === 'ai'),
   extensions: [
-    // 只保留纯文本写作所需:paragraph/text/hardBreak/undoRedo,其余块级与行内格式全部关闭
-    StarterKit.configure({
-      blockquote: false,
-      bold: false,
-      bulletList: false,
-      code: false,
-      codeBlock: false,
-      dropcursor: false,
-      gapcursor: false,
-      heading: false,
-      horizontalRule: false,
-      italic: false,
-      link: false,
-      listItem: false,
-      listKeymap: false,
-      orderedList: false,
-      strike: false,
-      trailingNode: false,
-      underline: false,
-    }),
+    Document,
+    Paragraph,
+    Text,
+    HardBreak,
+    UndoRedo,
     MiaohongMark,
   ],
   editorProps: {
