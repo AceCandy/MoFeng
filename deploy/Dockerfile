@@ -2,7 +2,7 @@
 # 第一阶段：构建前端静态资源
 # ============================================
 ARG APP_VERSION=dev
-FROM node:20-slim AS frontend-builder
+FROM node:24.15.0-slim AS frontend-builder
 
 WORKDIR /frontend
 ARG APP_VERSION

@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+    "node": "^24.15.0"
   },
   "scripts": {
     "dev": "vite",
-    "build": "run-p type-check \"build-only {@}\" -- && npm run build:budget",
+    "build": "npm run type-check && npm run build-only && npm run build:budget",
     "preview": "vite preview",
     "build-only": "vite build",
     "build:budget": "node -e \"process.env.BUNDLE_BUDGET_WARN_JS_TOTAL_GZIP_KB=560; process.env.BUNDLE_BUDGET_MAX_JS_GZIP_KB=130; process.env.BUNDLE_BUDGET_MAX_JS_TOTAL_GZIP_KB=600; process.env.BUNDLE_BUDGET_WARN_CSS_GZIP_KB=24; process.env.BUNDLE_BUDGET_MAX_CSS_GZIP_KB=26; import('./scripts/check-bundle-budget.mjs')\"",
@@ -53,25 +53,24 @@
     "@playwright/test": "1.62.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/typography": "^0.5.20",
-    "@tsconfig/node22": "^22.0.6",
-    "@types/node": "^22.20.1",
+    "@tsconfig/node24": "^24.0.5",
+    "@types/node": "^24.13.3",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vitejs/plugin-vue-jsx": "^5.1.6",
-    "@vue/tsconfig": "^0.7.0",
+    "@vue/tsconfig": "^0.9.1",
     "autoprefixer": "^10.5.4",
     "eslint": "^10.9.0",
     "eslint-plugin-vue": "^10.10.0",
-    "jsdom": "^27.0.0",
-    "npm-run-all2": "^8.0.4",
+    "jsdom": "^30.0.1",
     "openapi-typescript": "7.13.0",
     "postcss": "^8.5.26",
     "prettier": "3.9.6",
     "tailwindcss": "^4.3.3",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.67.0",
-    "vite": "^7.0.6",
+    "vite": "^8.2.2",
     "vite-plugin-vue-devtools": "^8.2.1",
-    "vitest": "^3.2.4",
+    "vitest": "^4.1.11",
     "vue-tsc": "^3.3.11"
   }
 }

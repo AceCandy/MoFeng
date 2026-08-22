@@ -158,6 +158,56 @@ Use the project's custom alert channel — `useAlert()` / `globalAlert` — for 
 - Colocate tests as `src/**/__tests__/*` or alongside the module.
 - Prefer testing composables and pure utils (`src/utils/`) and query/mutation behavior over snapshot tests.
 
+### Scenario: Node and build-toolchain upgrades
+
+#### 1. Scope / Trigger
+
+Use this contract whenever the frontend Node baseline or Vite/Vitest/jsdom/TypeScript toolchain changes.
+
+#### 2. Signatures
+
+- Runtime baseline: `frontend/package.json#engines.node`.
+- Node consumers: frontend CI workflows, transport-contract CI, Docker frontend builder, `@types/node`, and `@tsconfig/node*`.
+- Required commands run from `frontend/`: `npm ci`, `npm ls --depth=0`, audit, API check, type-check, unit tests, lint, and build.
+
+#### 3. Contracts
+
+- Keep the Node major aligned across runtime declarations, CI, Docker, Node types, and the Node tsconfig package.
+- Use npm's normal peer resolution; do not bypass incompatibilities with `--force` or `--legacy-peer-deps`.
+- Keep TypeScript at the newest version accepted by every installed peer dependency, not merely the registry latest.
+- Preserve strict checking and the existing bundle warning/hard limits.
+
+#### 4. Validation & Error Matrix
+
+| Condition | Result |
+|-----------|--------|
+| `npm ci` or `npm ls` reports peer/engine conflicts | Stop; adjust the incompatible version instead of bypassing resolution |
+| A toolchain latest requires a newer Node patch | Raise every Node consumer to that same minimum patch |
+| TypeScript latest falls outside an installed peer range | Keep the newest compatible TypeScript and record the blocker |
+| Build exceeds a bundle hard limit | Upgrade is blocked; a warning-only threshold is recorded as remaining risk |
+
+#### 5. Good / Base / Bad Cases
+
+- Good: Node runtime, types, CI, and Docker share one major; install and all quality gates pass.
+- Base: an application framework major remains outdated because it belongs to a separate migration task.
+- Bad: only `package.json` is updated, CI remains on an older Node, or peer conflicts are suppressed.
+
+#### 6. Tests Required
+
+- Assert reproducible install, zero audit findings, valid top-level dependency tree, Vite config loading, API generation consistency, type-check, complete unit suite, lint, and bundle budget.
+- Start the Vite dev server and smoke-test login, the authenticated AppShell, and the writing-desk editor; close all started services.
+- Confirm the selected Docker Node tag has a published manifest.
+
+#### 7. Wrong vs Correct
+
+```jsonc
+// Wrong: declarations drift from CI/Docker and peer conflicts are ignored.
+{ "engines": { "node": ">=24" }, "scripts": { "install": "npm ci --legacy-peer-deps" } }
+
+// Correct: pin the shared minimum and let npm enforce the dependency graph.
+{ "engines": { "node": "^24.15.0" } }
+```
+
 ### Node-side config tests
 
 Vitest runs in jsdom and the shared setup requires `window`, while Vite config loading requires
