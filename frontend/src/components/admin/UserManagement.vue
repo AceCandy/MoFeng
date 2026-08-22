@@ -159,7 +159,7 @@
                           删除
                         </n-button>
                       </template>
-                      确定要删除该用户吗？
+                      确定删除用户“{{ user.username }}”？此操作不可恢复。
                     </n-popconfirm>
                   </div>
                 </article>
@@ -241,13 +241,13 @@
           
           <div class="form-row-inline">
             <n-form-item label="权限" path="is_admin" class="form-col-inline">
-              <n-switch v-model:value="formModel.is_admin" :disabled="!isEditMode">
+              <n-switch v-model:value="formModel.is_admin" :disabled="!isEditMode" aria-label="用户管理员权限">
                 <template #checked>管理员</template>
                 <template #unchecked>普通用户</template>
               </n-switch>
             </n-form-item>
             <n-form-item label="状态" path="is_active" class="form-col-inline">
-              <n-switch v-model:value="formModel.is_active">
+              <n-switch v-model:value="formModel.is_active" aria-label="用户账号状态">
                 <template #checked>激活</template>
                 <template #unchecked>禁用</template>
               </n-switch>
@@ -277,6 +277,7 @@ import { NTag } from 'naive-ui/es/tag'
 import type { DataTableColumns, FormInst, FormRules, FormItemRule } from 'naive-ui'
 
 import type { AdminUser, UserCreatePayload, UserUpdatePayload } from '@/api/admin'
+import { globalAlert } from '@/composables/useAlert'
 import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
 import { mobileMax } from '@/constants/responsive'
 import {
@@ -325,6 +326,13 @@ const clearCardFilter = () => {
 }
 
 const handleToggleStatus = async (row: AdminUser, newValue: boolean) => {
+  const confirmed = await globalAlert.showConfirm(
+    newValue
+      ? `确定恢复用户“${row.username}”的登录权限？`
+      : `确定禁用用户“${row.username}”？其历史项目会保留，但将无法登录。`,
+    newValue ? '启用用户' : '禁用用户',
+  )
+  if (!confirmed) return
   try {
     const payload: UserUpdatePayload = {
       username: row.username,
@@ -423,6 +431,7 @@ const columns: DataTableColumns<AdminUser> = [
         NSwitch,
         {
           value: row.is_active,
+          'aria-label': `${row.username} 账号状态：${row.is_active ? '已启用' : '已禁用'}`,
           onUpdateValue: (val: boolean) => handleToggleStatus(row, val)
         }
       )
@@ -450,7 +459,7 @@ const columns: DataTableColumns<AdminUser> = [
                },
                { default: () => '删除' },
              ),
-          default: () => '确定要删除该用户吗？',
+          default: () => `确定删除用户“${row.username}”？此操作不可恢复。`,
         },
       )
     },

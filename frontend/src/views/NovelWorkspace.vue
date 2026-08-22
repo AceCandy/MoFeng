@@ -89,7 +89,7 @@
               class="md-btn md-btn-primary md-ripple workspace-panel__action"
               @click="enterProject(continueProject)"
             >
-              继续写作
+              {{ projectEntryLabel(continueProject) }}
             </button>
             <button
               type="button"
@@ -438,8 +438,12 @@ const viewProjectDetail = (projectId: string) => {
   router.push(`/projects/${projectId}/write`)
 }
 
+const isInspirationProject = (project: NovelProjectSummary) => project.title === '未命名灵感'
+const projectEntryLabel = (project: NovelProjectSummary) =>
+  isInspirationProject(project) ? '继续灵感对话' : '继续写作'
+
 const enterProject = (project: NovelProjectSummary) => {
-  if (project.title === '未命名灵感') {
+  if (isInspirationProject(project)) {
     router.push(`/inspiration?project_id=${project.id}`)
   } else {
     router.push(`/projects/${project.id}/write`)
@@ -791,7 +795,7 @@ onUnmounted(() => {
   padding: 4px 10px;
   border-radius: var(--md-radius-xs);
   background-color: var(--md-night-glow-seal);
-  color: var(--md-night-seal);
+  color: var(--md-night-on);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.3em;

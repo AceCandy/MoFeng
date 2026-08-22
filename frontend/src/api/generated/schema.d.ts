@@ -3198,15 +3198,27 @@ export interface components {
              */
             description?: string | null;
             /**
+             * Is Configured
+             * @description 配置项是否已有非空值
+             * @default false
+             */
+            is_configured: boolean;
+            /**
+             * Is Sensitive
+             * @description 是否为需要隐藏的敏感配置
+             * @default false
+             */
+            is_sensitive: boolean;
+            /**
              * Key
              * @description 配置键，需全局唯一
              */
             key: string;
             /**
              * Value
-             * @description 配置值，统一存储为字符串
+             * @description 非敏感配置值；敏感配置不回显
              */
-            value: string;
+            value?: string | null;
         };
         /** SystemConfigUpdate */
         SystemConfigUpdate: {

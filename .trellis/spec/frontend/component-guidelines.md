@@ -102,7 +102,7 @@ Rule: for transient user feedback, use `useAlert()` (the project convention); re
 
 ## Accessibility contracts
 
-- Shared modal containers put `role="dialog"`, `aria-modal="true"`, and the accessible name on the modal box rather than its overlay. Reuse `useDialogA11y` for initial focus, Tab trapping, Escape, focus restoration, and reference-counted body scroll lock.
+- Shared modal containers put `role="dialog"`, `aria-modal="true"`, and the accessible name on the modal box rather than its overlay. Reuse `useDialogA11y` for initial focus, Tab trapping, Escape, focus restoration, reference-counted body scroll lock, and background `inert`. Nested dialogs increment the same background element's retain count; closing or unmounting restores its original `inert` value only after the final dialog releases it.
 - Keep list semantics (`ol`/`ul` with `li`) separate from interaction semantics. Put a native `button type="button"` inside each interactive item; use `disabled` for unavailable items and `aria-current="step"` for the active pipeline step.
 - Browser accessibility tests must wait for page and drawer opacity transitions to reach their stable state before running axe. Scope axe to the component or surface owned by the task so unrelated historical debt does not hide regressions in the changed area.
 

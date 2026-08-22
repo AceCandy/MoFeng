@@ -27,17 +27,19 @@
       </header>
 
       <div class="model-routing__workflow-groups">
-        <section
+        <details
           v-for="group in workflowGroups"
           :key="group.key"
           class="model-routing__workflow-group"
           :data-group="group.key"
           :data-mode="group.mode"
+          :open="isGroupOpen(`workflow:${group.key}`)"
+          @toggle="onGroupToggle(`workflow:${group.key}`, $event)"
         >
-          <header class="model-routing__workflow-group-header">
+          <summary class="model-routing__workflow-group-header" :tabindex="isMobile ? 0 : -1">
             <h5>{{ group.label }}</h5>
             <span v-if="group.mode === 'parallel'" class="model-routing__route-badge">并行</span>
-          </header>
+          </summary>
           <ol class="model-routing__workflow-list">
             <li
               v-for="node in group.steps"
@@ -85,7 +87,7 @@
               </select>
             </li>
           </ol>
-        </section>
+        </details>
       </div>
     </section>
 
@@ -96,12 +98,16 @@
       </header>
 
       <div class="model-routing__other-groups">
-        <section
+        <details
           v-for="group in otherStageGroups"
           :key="group.title"
           class="model-routing__other-group"
+          :open="isGroupOpen(`other:${group.title}`)"
+          @toggle="onGroupToggle(`other:${group.title}`, $event)"
         >
-          <h5>{{ group.title }}</h5>
+          <summary class="model-routing__other-group-header" :tabindex="isMobile ? 0 : -1">
+            <h5>{{ group.title }}</h5>
+          </summary>
           <div class="model-routing__other-list">
             <label v-for="stage in group.stages" :key="stage.key" class="model-routing__other-row">
               <span class="model-routing__node-copy">
@@ -127,15 +133,17 @@
               </select>
             </label>
           </div>
-        </section>
+        </details>
       </div>
     </section>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { UserAIModel } from '@/api/llm'
+import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
+import { mobileMax } from '@/constants/responsive'
 import { CHAPTER_WORKFLOW_STEPS, type PipelineStepKind } from '@/utils/generationTrace'
 import { otherStageGroups, stageDefinitionByKey } from './stageDefinitions'
 import type { Capability, RoutingSection } from './modelRoutingTypes'
@@ -150,6 +158,10 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const viewport = useResponsiveViewport()
+const isMobile = computed(() => viewport.width.value <= mobileMax)
+const firstWorkflowGroup = CHAPTER_WORKFLOW_STEPS[0]?.group || 'workflow'
+const openMobileGroup = ref(`workflow:${firstWorkflowGroup}`)
 
 const emit = defineEmits<{
   (event: 'navigate', section: RoutingSection): void
@@ -179,6 +191,24 @@ const workflowGroups = computed(() => {
   }
   return groups
 })
+
+const isGroupOpen = (key: string) => !isMobile.value || openMobileGroup.value === key
+
+const onGroupToggle = (key: string, event: Event) => {
+  const details = event.currentTarget as HTMLDetailsElement
+  if (!isMobile.value) {
+    if (!details.open) details.open = true
+    return
+  }
+  if (!details.open) return
+  openMobileGroup.value = key
+  details
+    .closest('.model-routing__stages')
+    ?.querySelectorAll<HTMLDetailsElement>('.model-routing__workflow-group, .model-routing__other-group')
+    .forEach((group) => {
+      if (group !== details) group.open = false
+    })
+}
 
 const stageCounts = new Map<string, number>()
 for (const step of CHAPTER_WORKFLOW_STEPS) {
@@ -270,11 +300,29 @@ const onSelectStage = (stageKey: string, event: Event) => {
   gap: var(--md-spacing-2);
 }
 
-.model-routing__workflow-group-header {
+.model-routing__workflow-group-header,
+.model-routing__other-group-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--md-spacing-2);
+}
+
+.model-routing__workflow-group-header,
+.model-routing__other-group-header {
+  list-style: none;
+}
+
+.model-routing__workflow-group-header::-webkit-details-marker,
+.model-routing__other-group-header::-webkit-details-marker {
+  display: none;
+}
+
+@media (min-width: 834px) {
+  .model-routing__workflow-group-header,
+  .model-routing__other-group-header {
+    pointer-events: none;
+  }
 }
 
 .model-routing__workflow-list,
@@ -372,7 +420,27 @@ const onSelectStage = (stageKey: string, event: Event) => {
   background: var(--md-surface-container-low);
 }
 
-@media (max-width: 720px) {
+@media (max-width: 833px) {
+  .model-routing__workflow-group-header,
+  .model-routing__other-group-header {
+    min-height: 44px;
+    cursor: pointer;
+    align-items: center;
+  }
+
+  .model-routing__workflow-group-header::after,
+  .model-routing__other-group-header::after {
+    content: '展开';
+    margin-left: auto;
+    color: var(--md-on-surface-variant);
+    font-size: var(--md-label-small);
+  }
+
+  .model-routing__workflow-group[open] > .model-routing__workflow-group-header::after,
+  .model-routing__other-group[open] > .model-routing__other-group-header::after {
+    content: '收起';
+  }
+
   .model-routing__workflow-node,
   .model-routing__other-row {
     grid-template-columns: minmax(0, 1fr);

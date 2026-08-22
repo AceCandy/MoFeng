@@ -27,6 +27,7 @@ const FOCUSABLE_SELECTOR = [
 
 let bodyScrollLockCount = 0
 let originalBodyOverflow = ''
+const inertBackgroundElements = new Map<HTMLElement, { count: number; wasInert: boolean }>()
 
 const lockBodyScroll = () => {
   if (bodyScrollLockCount === 0) {
@@ -42,6 +43,41 @@ const unlockBodyScroll = () => {
   if (bodyScrollLockCount === 0) {
     document.body.style.overflow = originalBodyOverflow
   }
+}
+
+const retainInert = (element: HTMLElement) => {
+  const existing = inertBackgroundElements.get(element)
+  if (existing) {
+    existing.count += 1
+    return
+  }
+  inertBackgroundElements.set(element, { count: 1, wasInert: element.inert === true })
+  element.inert = true
+}
+
+const releaseInert = (element: HTMLElement) => {
+  const existing = inertBackgroundElements.get(element)
+  if (!existing) return
+  existing.count -= 1
+  if (existing.count > 0) return
+  element.inert = existing.wasInert
+  inertBackgroundElements.delete(element)
+}
+
+const collectBackgroundElements = (dialog: HTMLElement) => {
+  const elements = new Set<HTMLElement>()
+  let current: HTMLElement | null = dialog
+  while (current && current !== document.body) {
+    const container: HTMLElement | null = current.parentElement
+    if (!container) break
+    for (const sibling of container.children) {
+      if (sibling !== current && sibling instanceof HTMLElement) {
+        elements.add(sibling)
+      }
+    }
+    current = container
+  }
+  return [...elements]
 }
 
 const isVisible = (element: HTMLElement) => {
@@ -68,14 +104,14 @@ export const useDialogA11y = ({
 }: UseDialogA11yOptions) => {
   let previousActiveElement: HTMLElement | null = null
   let isActivated = false
+  let backgroundElements: HTMLElement[] = []
 
   const closeDialog = () => {
     onClose?.()
   }
 
   // 打开对话框后优先聚焦显式焦点元素，其次回退到第一个可聚焦元素。
-  const focusInitialTarget = async () => {
-    await nextTick()
+  const focusInitialTarget = () => {
     const dialog = dialogRef.value
     if (!dialog) return
 
@@ -98,6 +134,14 @@ export const useDialogA11y = ({
       dialog.tabIndex = -1
     }
     dialog.focus()
+  }
+
+  const prepareDialog = async () => {
+    await nextTick()
+    if (!isActivated || !dialogRef.value) return
+    backgroundElements = collectBackgroundElements(dialogRef.value)
+    backgroundElements.forEach(retainInert)
+    focusInitialTarget()
   }
 
   // 统一处理 Esc 关闭与 Tab 焦点陷阱，避免焦点逃逸到背景页面。
@@ -155,7 +199,7 @@ export const useDialogA11y = ({
       lockBodyScroll()
     }
     document.addEventListener('keydown', onDocumentKeydown)
-    void focusInitialTarget()
+    void prepareDialog()
   }
 
   const deactivate = () => {
@@ -165,6 +209,8 @@ export const useDialogA11y = ({
     if (shouldLockBodyScroll) {
       unlockBodyScroll()
     }
+    backgroundElements.forEach(releaseInert)
+    backgroundElements = []
 
     if (
       restoreFocus &&

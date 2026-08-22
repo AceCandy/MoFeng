@@ -239,7 +239,7 @@ import { NSpin } from 'naive-ui/es/spin'
 import { NTag } from 'naive-ui/es/tag'
 
 import type { PromptCreatePayload, PromptItem } from '@/api/admin'
-import { useAlert } from '@/composables/useAlert'
+import { globalAlert, useAlert } from '@/composables/useAlert'
 import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
 import { mobileMax } from '@/constants/responsive'
 import {
@@ -280,6 +280,13 @@ const editForm = reactive({
   content: '',
   tags: [] as string[]
 })
+const isEditDirty = computed(() => {
+  const prompt = selectedPrompt.value
+  if (!prompt) return false
+  return editForm.title !== (prompt.title || '')
+    || editForm.content !== prompt.content
+    || JSON.stringify(normalizeTags(editForm.tags)) !== JSON.stringify(normalizeTags(prompt.tags))
+})
 const selectedPromptContentLength = computed(() => editForm.content.trim().length)
 
 const createModalVisible = ref(false)
@@ -289,6 +296,13 @@ const createForm = reactive<PromptCreatePayload>({
   content: '',
   tags: []
 })
+const isCreateDirty = computed(() => Boolean(
+  createForm.name.trim()
+  || createForm.title?.trim()
+  || createForm.content.trim()
+  || createForm.tags?.length,
+))
+const isDirty = computed(() => isEditDirty.value || isCreateDirty.value)
 
 const viewport = useResponsiveViewport()
 const isMobile = computed(() => viewport.width.value <= mobileMax)
@@ -347,8 +361,9 @@ const validatePromptPayload = (payload: {
   return null
 }
 
-const fetchPrompts = () => {
-  promptsQuery.refetch()
+const fetchPrompts = async () => {
+  if (!(await confirmDiscardChanges())) return
+  await promptsQuery.refetch()
 }
 
 watch(
@@ -364,20 +379,20 @@ watch(
     if (selectedPrompt.value) {
       const refreshed = list.find((item) => item.id === selectedPrompt.value?.id)
       if (refreshed) {
-        selectPrompt(refreshed)
+        if (!isDirty.value) syncPrompt(refreshed)
         return
       }
       resetSelection()
       return
     }
     if (list.length) {
-      selectPrompt(list[0])
+      syncPrompt(list[0])
     }
   },
   { immediate: true },
 )
 
-const resetSelection = () => {
+function resetSelection() {
   selectedPrompt.value = null
   editForm.name = ''
   editForm.title = ''
@@ -385,12 +400,31 @@ const resetSelection = () => {
   editForm.tags = []
 }
 
-const selectPrompt = (prompt: PromptItem) => {
+function syncPrompt(prompt: PromptItem) {
   selectedPrompt.value = prompt
   editForm.name = prompt.name
   editForm.title = prompt.title || ''
   editForm.content = prompt.content
   editForm.tags = normalizeTags(prompt.tags)
+}
+
+async function confirmDiscardChanges() {
+  if (!isDirty.value) return true
+  const confirmed = await globalAlert.showConfirm(
+    '当前 Prompt 尚未保存，继续将丢失这些修改。',
+    '放弃未保存修改？',
+  )
+  if (confirmed) {
+    if (selectedPrompt.value) syncPrompt(selectedPrompt.value)
+    closeCreateModal()
+  }
+  return confirmed
+}
+
+async function selectPrompt(prompt: PromptItem) {
+  if (prompt.id === selectedPrompt.value?.id) return
+  if (!(await confirmDiscardChanges())) return
+  syncPrompt(prompt)
 }
 
 const savePrompt = async () => {
@@ -416,7 +450,7 @@ const savePrompt = async () => {
         tags: normalizedTags
       },
     })
-    selectPrompt(updated)
+    syncPrompt(updated)
     showAlert('保存成功', 'success')
   } catch (err) {
     showAlert(err instanceof Error ? err.message : '保存失败', 'error')
@@ -438,7 +472,7 @@ const openCreateModal = () => {
   createModalVisible.value = true
 }
 
-const closeCreateModal = () => {
+function closeCreateModal() {
   createModalVisible.value = false
   createForm.name = ''
   createForm.title = ''
@@ -478,13 +512,15 @@ const createPrompt = async () => {
       tags: normalizedTags.length ? normalizedTags : undefined
     })
     prompts.value.unshift(created)
-    selectPrompt(created)
+    syncPrompt(created)
     showAlert('创建成功', 'success')
     closeCreateModal()
   } catch (err) {
     showAlert(err instanceof Error ? err.message : '创建失败', 'error')
   }
 }
+
+defineExpose({ isDirty, confirmDiscardChanges })
 
 </script>
 

@@ -268,7 +268,7 @@ const validateInput = () => {
   }
 
   if (hasChinese && usernameVal.length <= 1) {
-    return '户名长度必须大于2个汉字'
+    return '用户名至少需要 2 个字符'
   }
 
   if (isAlphanumeric && !hasChinese && usernameVal.length <= 6) {

@@ -18,6 +18,7 @@ import redis
 from fastapi import HTTPException, status
 
 from ..core.config import settings
+from ..core.crypto import decrypt
 from ..core.security import create_access_token, hash_password, verify_password
 from ..core.ssrf import assert_safe_base_url
 from ..models import User
@@ -195,9 +196,9 @@ class AuthService:
         ]
         configs = {}
         for key in keys:
-            config = await self.system_config_repo.get_by_key(key)
-            if config:
-                configs[key] = config.value
+            value = await self._get_config_value(key)
+            if value is not None:
+                configs[key] = value
 
         required_keys = {"smtp.server", "smtp.port", "smtp.username", "smtp.password", "smtp.from"}
         if not required_keys.issubset(configs.keys()):
@@ -519,7 +520,7 @@ class AuthService:
 
     async def _get_config_value(self, key: str) -> Optional[str]:
         config = await self.system_config_repo.get_by_key(key)
-        return config.value if config else None
+        return decrypt(config.value) if config else None
 
     @staticmethod
     def _parse_bool(value: Optional[str], fallback: bool) -> bool:

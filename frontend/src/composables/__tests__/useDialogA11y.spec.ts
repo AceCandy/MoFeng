@@ -50,6 +50,8 @@ describe('useDialogA11y', () => {
     await nextTick()
     expect(document.activeElement).toBe(harness.first)
     expect(document.body.style.overflow).toBe('hidden')
+    expect(harness.trigger.inert).toBe(true)
+    expect(harness.host.inert).toBe(true)
 
     harness.last.focus()
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }))
@@ -64,12 +66,15 @@ describe('useDialogA11y', () => {
     await nextTick()
     expect(document.activeElement).toBe(harness.trigger)
     expect(document.body.style.overflow).toBe('')
+    expect(harness.trigger.inert).toBe(false)
+    expect(harness.host.inert).toBe(false)
   })
 
   it('多实例关闭一个时继续保持 body lock', async () => {
     const first = mountDialog()
     const second = mountDialog()
     await nextTick()
+    expect(first.dialog.inert).toBe(true)
     first.active.value = false
     await nextTick()
     first.app.unmount()

@@ -130,9 +130,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, type ComponentPublicInstance } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, ref, type ComponentPublicInstance } from 'vue'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import PersonalModelRouting from '@/components/llm-settings/PersonalModelRouting.vue'
+import { globalAlert } from '@/composables/useAlert'
 import { useLLMConfigBundleQuery } from '@/queries/llm'
 
 const props = withDefaults(
@@ -168,6 +169,8 @@ const settingsSections: SettingsSection[] = [
 ]
 
 const activeSettingsSection = ref<SettingsSectionId>('llm')
+const personalRoutingXRef = ref<InstanceType<typeof PersonalModelRouting> | null>(null)
+const isDirty = computed(() => personalRoutingXRef.value?.isDirty ?? false)
 const settingsTabRefs = ref<Record<SettingsSectionId, HTMLButtonElement | null>>({
   llm: null,
   embedding: null,
@@ -177,8 +180,16 @@ const settingsTabRefs = ref<Record<SettingsSectionId, HTMLButtonElement | null>>
 
 const activeSettingsTabId = computed(() => `settings-tab-${activeSettingsSection.value}`)
 
-const selectSettingsSection = (sectionId: SettingsSectionId) => {
+const confirmDiscardChanges = () => {
+  if (!isDirty.value) return Promise.resolve(true)
+  return globalAlert.showConfirm('当前配置尚未保存，继续将丢失这些修改。', '放弃未保存修改？')
+}
+
+const selectSettingsSection = async (sectionId: SettingsSectionId) => {
+  if (sectionId === activeSettingsSection.value) return true
+  if (!(await confirmDiscardChanges())) return false
   activeSettingsSection.value = sectionId
+  return true
 }
 
 const setSettingsTabRef = (
@@ -199,7 +210,7 @@ const focusSettingsTab = (sectionId: SettingsSectionId) => {
 }
 
 // 设置页 tabs 使用 roving tabindex 和方向键切换，保证键盘用户无需反复 Tab 扫描。
-const onSettingsTabKeydown = (sectionId: SettingsSectionId, event: KeyboardEvent) => {
+const onSettingsTabKeydown = async (sectionId: SettingsSectionId, event: KeyboardEvent) => {
   const currentIndex = settingsSections.findIndex((section) => section.id === sectionId)
   if (currentIndex === -1) return
   const lastIndex = settingsSections.length - 1
@@ -218,8 +229,9 @@ const onSettingsTabKeydown = (sectionId: SettingsSectionId, event: KeyboardEvent
   if (nextIndex === null || nextIndex === currentIndex) return
   event.preventDefault()
   const nextSectionId = settingsSections[nextIndex].id
-  selectSettingsSection(nextSectionId)
-  focusSettingsTab(nextSectionId)
+  if (await selectSettingsSection(nextSectionId)) {
+    focusSettingsTab(nextSectionId)
+  }
 }
 
 const showInspirationConfigNotice = computed(
@@ -310,22 +322,26 @@ const centerStatus = computed(() => {
   }
 })
 
-const personalRoutingXRef = ref<InstanceType<typeof PersonalModelRouting> | null>(null)
-
 const save = async () => {
   if (personalRoutingXRef.value && typeof personalRoutingXRef.value.save === 'function') {
     await personalRoutingXRef.value.save()
   }
 }
 
-const isDirty = computed(() => {
-  return personalRoutingXRef.value?.isDirty ?? false
-})
-
 defineExpose({
   save,
   isDirty,
 })
+
+const onBeforeUnload = (event: BeforeUnloadEvent) => {
+  if (!isDirty.value) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+
+onMounted(() => window.addEventListener('beforeunload', onBeforeUnload))
+onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload))
+onBeforeRouteLeave(() => confirmDiscardChanges())
 
 const handleLLMConfigSaved = async () => {
   emit('saved')

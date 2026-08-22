@@ -289,12 +289,12 @@ const providerKeyLabel = (provider: UserModelProvider): string =>
   min-height: 28px;
   padding: 0 8px;
   background: transparent;
-  color: var(--md-on-surface-variant);
+  color: var(--md-error-text);
   cursor: pointer;
   font-size: var(--md-label-small);
   font-weight: 600;
   white-space: nowrap;
-  opacity: 0.75; /* 常态可见但克制，hover/focus 全显 */
+  opacity: 1;
   transition:
     background-color var(--md-duration-short) var(--md-easing-standard),
     border-color var(--md-duration-short) var(--md-easing-standard),

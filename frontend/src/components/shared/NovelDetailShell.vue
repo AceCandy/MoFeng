@@ -8,7 +8,6 @@
     }"
   >
     <ShellTopbar
-      v-if="isAdmin"
       :title="formattedTitle"
       :is-admin="isAdmin"
       :is-sidebar-open="isSidebarOpen"
@@ -88,6 +87,7 @@ import {
   useUpdateBlueprintMutation,
 } from '@/queries/novel'
 import type { NovelProject } from '@/api/novel'
+import { useAdminNovelDetailQuery } from '@/queries/admin'
 import { desktopMin } from '@/constants/responsive'
 import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
 import { useShellSectionNavigation } from '@/composables/useShellSectionNavigation'
@@ -117,6 +117,7 @@ const router = useRouter()
 
 const projectId = route.params.id as string
 const projectQuery = useNovelProjectQuery(() => (!props.isAdmin ? projectId : null))
+const adminProjectQuery = useAdminNovelDetailQuery(() => (props.isAdmin ? projectId : null))
 const updateBlueprintMutation = useUpdateBlueprintMutation(() => projectId)
 const foreshadowingQuery = useForeshadowingQuery(() => (!props.isAdmin ? projectId : null))
 const viewport = useResponsiveViewport()
@@ -158,7 +159,9 @@ const {
 const isAddChapterModalOpen = ref(false)
 const newChapterInitialTitle = ref('')
 const novel = computed<NovelProject | null>(() =>
-  !props.isAdmin ? (projectQuery.data.value ?? null) : null,
+  props.isAdmin
+    ? (adminProjectQuery.data.value ?? null)
+    : (projectQuery.data.value ?? null),
 )
 const {
   projectStatus,
@@ -385,18 +388,16 @@ watch(
   }
 }
 
-/* ==========================================================================
-   修正非管理员视图（作者蓝图工作区）在隐藏重复头部后的满屏高度占比
-   ========================================================================== */
+/* 普通用户视图仅减去顶部栏高度，不预留管理员概览条空间。 */
 .detail-shell:not(.detail-shell--embedded) .detail-shell__body {
-  height: 100% !important;
-  max-height: 100% !important;
+  height: calc(var(--app-viewport-unit) - var(--detail-shell-topbar-height));
+  max-height: calc(var(--app-viewport-unit) - var(--detail-shell-topbar-height));
 }
 
 @media (min-width: 1200px) {
   .detail-shell:not(.detail-shell--embedded) .detail-shell__body {
-    height: 100% !important;
-    max-height: 100% !important;
+    height: calc(var(--app-viewport-unit) - var(--detail-shell-topbar-height));
+    max-height: calc(var(--app-viewport-unit) - var(--detail-shell-topbar-height));
   }
   .detail-shell:not(.detail-shell--embedded) .detail-shell__drawer {
     height: 100% !important;

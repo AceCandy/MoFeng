@@ -3,7 +3,7 @@
     <div class="detail-shell__content-wrap">
       <div class="detail-shell__content-frame">
         <!-- Material 3 Card -->
-        <section class="detail-shell__content-surface" :class="contentCardClass">
+        <section class="detail-shell__content-surface" :class="contentCardClass" tabindex="0">
           <!-- Loading State -->
           <div
             v-if="isSectionLoading"

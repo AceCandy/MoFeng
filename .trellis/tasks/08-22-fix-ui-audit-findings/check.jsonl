@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "前端类型、测试、lint 和审查清单"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "后端 focused tests 与 schema 质量检查"}
+{"file": ".trellis/spec/backend/security-guidelines.md", "reason": "验证秘密值不出现在响应或日志"}
+{"file": ".trellis/spec/backend/transport-contracts.md", "reason": "验证 OpenAPI 和生成类型一致"}

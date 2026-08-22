@@ -352,7 +352,7 @@ const risks = computed(() => {
 
 /* 风险提醒题签用夜色描红系（第 5 个小节 = 风险提醒），夜底警示权责 */
 .wd-ai__section:nth-child(5) .wd-ai__head p {
-  color: var(--md-night-seal);
+  color: var(--md-night-on);
   border-color: color-mix(in srgb, var(--md-night-seal) 45%, transparent);
   background-color: color-mix(in srgb, var(--md-night-seal) 6%, transparent);
 }

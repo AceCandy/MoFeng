@@ -320,7 +320,7 @@ const savePricing = async (model: UserAIModel) => {
 }
 
 .model-routing__text-action.is-danger {
-  color: var(--md-error);
+  color: var(--md-error-text);
 }
 
 .model-routing__text-action:focus-visible,

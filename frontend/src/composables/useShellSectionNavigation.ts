@@ -1,5 +1,5 @@
-import { computed, defineAsyncComponent, onMounted, ref, type Component } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, defineAsyncComponent, onMounted, ref, watch, type Component } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useNovelSectionQuery } from '@/queries/novel'
 import type { AllSectionType, NovelSectionType } from '@/api/novel'
 
@@ -20,6 +20,7 @@ export function useShellSectionNavigation(options: {
   onAfterSwitch?: () => void
 }) {
   const route = useRoute()
+  const router = useRouter()
   const { projectId, isAdmin, onAfterSwitch } = options
 
   const sections: Array<{ key: SectionKey; label: string }> = [
@@ -28,6 +29,7 @@ export function useShellSectionNavigation(options: {
     { key: 'characters', label: '主要角色' },
     { key: 'relationships', label: '人物关系' },
     { key: 'chapter_outline', label: '章节大纲' },
+    { key: 'chapters', label: '章节正文' },
     { key: 'emotion_curve', label: '情感曲线' },
     { key: 'foreshadowing', label: '伏笔管理' },
   ]
@@ -124,7 +126,18 @@ export function useShellSectionNavigation(options: {
     activeSection.value = section
     prefetchSectionComponent(section)
     onAfterSwitch?.()
+    void router.push({ query: { ...route.query, section } })
   }
+
+  watch(
+    () => route.query.section,
+    () => {
+      const section = resolveInitialSection()
+      if (section === activeSection.value) return
+      activeSection.value = section
+      prefetchSectionComponent(section)
+    },
+  )
 
   onMounted(() => {
     prefetchSectionComponent(activeSection.value)

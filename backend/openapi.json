@@ -4320,20 +4320,38 @@
             "description": "配置用途说明",
             "title": "Description"
           },
+          "is_configured": {
+            "default": false,
+            "description": "配置项是否已有非空值",
+            "title": "Is Configured",
+            "type": "boolean"
+          },
+          "is_sensitive": {
+            "default": false,
+            "description": "是否为需要隐藏的敏感配置",
+            "title": "Is Sensitive",
+            "type": "boolean"
+          },
           "key": {
             "description": "配置键，需全局唯一",
             "title": "Key",
             "type": "string"
           },
           "value": {
-            "description": "配置值，统一存储为字符串",
-            "title": "Value",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "非敏感配置值；敏感配置不回显",
+            "title": "Value"
           }
         },
         "required": [
-          "key",
-          "value"
+          "key"
         ],
         "title": "SystemConfigRead",
         "type": "object"

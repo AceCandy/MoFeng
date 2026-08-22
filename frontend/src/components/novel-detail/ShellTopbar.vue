@@ -18,17 +18,17 @@
       <button class="md-btn md-btn-outlined md-ripple detail-shell__back-button" @click="$emit('back')">
         返回
       </button>
-      <h2 class="detail-shell__title md-title-large truncate" style="color: var(--md-on-surface)">
+      <h1 class="detail-shell__title md-title-large truncate" style="color: var(--md-on-surface)">
         {{ title }}
-      </h2>
+      </h1>
       <span v-if="isAdmin" class="detail-shell__mode-chip">管理只读</span>
       <button
         v-if="!isAdmin"
         class="md-btn md-btn-filled md-ripple detail-shell__write-button"
         @click="$emit('goToWritingDesk')"
       >
-        <span class="detail-shell__write-label-full">进入写作台</span>
-        <span class="detail-shell__write-label-compact">写作台</span>
+        <span class="detail-shell__write-label-full">继续写作</span>
+        <span class="detail-shell__write-label-compact">续写</span>
       </button>
     </div>
   </header>

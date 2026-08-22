@@ -85,14 +85,6 @@
             </div>
           </div>
 
-          <div class="login-options">
-            <label class="login-remember">
-              <input v-model="rememberMe" type="checkbox" />
-              <span aria-hidden="true"></span>
-              记住我
-            </label>
-          </div>
-
           <Transition name="ink-fade">
             <div v-if="error" id="login-error" class="login-feedback" role="alert">
               <span class="login-feedback__stamp" aria-hidden="true">误</span>
@@ -154,7 +146,6 @@ import AuthFeatureRail from '@/components/auth/AuthFeatureRail.vue'
 const username = ref('')
 const password = ref('')
 const showPassword = ref(false)
-const rememberMe = ref(false)
 const error = ref('')
 const router = useRouter()
 const authOptionsQuery = useAuthOptionsQuery()
@@ -388,50 +379,6 @@ const handleLogin = async () => {
   color: var(--md-on-surface);
 }
 
-.login-options {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  color: var(--md-on-surface-variant);
-  font-family: var(--md-font-serif);
-  font-size: clamp(11px, 0.82vw, 13px);
-}
-
-.login-remember {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 28px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.login-remember input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  opacity: 0;
-}
-
-.login-remember span {
-  width: 14px;
-  height: 14px;
-  border: 1px solid var(--md-outline);
-  background: var(--md-surface);
-}
-
-.login-remember input:checked + span {
-  background: var(--md-secondary);
-  border-color: var(--md-secondary-dark);
-}
-
-.login-remember input:focus-visible + span {
-  outline: 2px solid var(--md-primary);
-  outline-offset: 2px;
-}
-
 .login-feedback {
   display: flex;
   align-items: flex-start;
@@ -608,11 +555,6 @@ const handleLogin = async () => {
 
   .md-text-field-input {
     height: 50px;
-  }
-
-  .login-options {
-    font-size: 12.5px;
-    gap: 10px;
   }
 
   .login-link {

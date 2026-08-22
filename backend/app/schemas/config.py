@@ -21,3 +21,7 @@ class SystemConfigUpdate(BaseModel):
 
 class SystemConfigRead(SystemConfigBase):
     model_config = ConfigDict(from_attributes=True)
+
+    value: Optional[str] = Field(default=None, description="非敏感配置值；敏感配置不回显")
+    is_sensitive: bool = Field(default=False, description="是否为需要隐藏的敏感配置")
+    is_configured: bool = Field(default=False, description="配置项是否已有非空值")

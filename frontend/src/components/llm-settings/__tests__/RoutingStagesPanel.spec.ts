@@ -68,6 +68,8 @@ afterEach(() => {
     item.app.unmount()
     item.host.remove()
   }
+  Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 })
+  window.dispatchEvent(new Event('resize'))
 })
 
 describe('RoutingStagesPanel', () => {
@@ -139,5 +141,23 @@ describe('RoutingStagesPanel', () => {
     expect(host.querySelector('[data-node="general_chat"]')).toBeNull()
     expect(host.querySelector('.model-routing__other-groups')?.textContent).toContain('通用模型调用')
     expect(host.querySelector('.model-routing__other-groups')?.textContent).toContain('general_chat')
+  })
+
+  it('移动端一次只展开一个阶段分组', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 })
+    window.dispatchEvent(new Event('resize'))
+    const { host } = mountPanel()
+    await nextTick()
+
+    const groups = [...host.querySelectorAll<HTMLDetailsElement>('.model-routing__workflow-group')]
+    expect(groups.filter((group) => group.open)).toHaveLength(1)
+
+    if (groups[1]) {
+      groups[1].open = true
+      groups[1].dispatchEvent(new Event('toggle'))
+    }
+    await nextTick()
+    expect(groups.filter((group) => group.open)).toHaveLength(1)
+    expect(groups[1]?.open).toBe(true)
   })
 })

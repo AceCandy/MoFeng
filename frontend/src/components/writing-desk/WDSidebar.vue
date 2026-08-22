@@ -398,6 +398,7 @@ const getChapterWordCount = (chapterNumber: number): number => {
 }
 
 const getChapterTag = (chapterNumber: number): string => {
+  if (isChapterCompleted(chapterNumber)) return '已完成'
   if (props.selectedChapterNumber === chapterNumber) {
     switch (props.workflowPhase) {
       case 'booting':
@@ -421,7 +422,6 @@ const getChapterTag = (chapterNumber: number): string => {
         return '待开始'
     }
   }
-  if (isChapterCompleted(chapterNumber)) return '已完成'
   if (isChapterGeneratingLike(chapterNumber)) return '创作中'
   if (isChapterEvaluating(chapterNumber)) return '待润色'
   if (isChapterSelecting(chapterNumber) || hasChapterInProgress(chapterNumber)) return '待选择'
@@ -430,6 +430,7 @@ const getChapterTag = (chapterNumber: number): string => {
 }
 
 const chapterStatusDotClass = (chapterNumber: number) => {
+  if (isChapterCompleted(chapterNumber)) return 'is-completed'
   if (props.selectedChapterNumber === chapterNumber) {
     if (props.workflowPhase === 'succeeded') return 'is-completed'
     if (props.workflowPhase === 'failed' || props.workflowPhase === 'fatal') return 'is-failed'
@@ -440,7 +441,6 @@ const chapterStatusDotClass = (chapterNumber: number) => {
       return 'is-progress'
     }
   }
-  if (isChapterCompleted(chapterNumber)) return 'is-completed'
   if (
     isChapterGeneratingLike(chapterNumber) ||
     isChapterEvaluating(chapterNumber) ||
@@ -1009,6 +1009,12 @@ watch(
 @media (max-width: 833px) {
   .writing-sidebar-shell {
     height: auto;
+  }
+
+  .writing-sidebar__chapter-row--compact-selected {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding-left: 8px !important;
   }
 }
 

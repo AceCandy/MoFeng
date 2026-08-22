@@ -200,7 +200,6 @@ defineProps<{
   color: var(--md-on-surface-variant);
   font-size: 12px;
   font-family: var(--md-font-family);
-  opacity: 0.75;
   margin-left: auto;
 }
 

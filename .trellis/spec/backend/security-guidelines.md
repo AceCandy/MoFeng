@@ -44,6 +44,70 @@ Rules:
 - Never log decrypted values. Expose only a masked `api_key_preview` to the frontend.
 - The Fernet key is derived from `SECRET_KEY`; rotating `SECRET_KEY` invalidates every stored API key. Plan a re-encryption migration before rotating.
 
+### Scenario: system configuration secrets
+
+#### 1. Scope / Trigger
+
+Apply when a key-value entry under the admin system-config API has explicit secret
+semantics, including API keys, passwords, credentials, private keys, and access or
+refresh tokens.
+
+#### 2. Signatures
+
+- `is_sensitive_config_key(key: str) -> bool`
+- `ConfigService.list_configs/get_config/upsert_config/patch_config -> SystemConfigRead`
+- `SystemConfigRead.value: str | None`
+- `SystemConfigRead.is_sensitive: bool`
+- `SystemConfigRead.is_configured: bool`
+
+#### 3. Contracts
+
+- Match complete normalized key segments, not substrings; `max_tokens` and URL keys are
+  ordinary values.
+- Encrypt sensitive writes with `crypto.encrypt` at the service boundary. Internal
+  consumers read them through `crypto.decrypt`, which preserves legacy plaintext.
+- Every GET, PUT, and PATCH response returns `value=null` for a sensitive key and uses
+  `is_configured` for the configured state. Ciphertext and plaintext never leave the
+  service boundary.
+- A sensitive PATCH that omits `value` preserves the stored value. The frontend opens
+  sensitive editors empty and omits a blank replacement value.
+- Non-sensitive entries keep their existing readable round-trip behavior.
+
+#### 4. Validation & Error Matrix
+
+| Condition | Required result |
+| --- | --- |
+| Explicit secret key with a readable stored value | `value=null`, `is_sensitive=true`, `is_configured=true` |
+| Secret key with an empty or undecryptable value | `value=null`, `is_sensitive=true`, `is_configured=false` |
+| Sensitive PATCH omits `value` | Preserve the stored value; update only supplied metadata |
+| Ordinary key such as `writer.max_tokens` | Return and edit its value normally |
+| Legacy plaintext secret | Mask the response without rewriting it during a read |
+
+#### 5. Good / Base / Bad Cases
+
+- Good: `smtp.password` is encrypted on write and only “configured” reaches the UI.
+- Base: `writer.max_tokens` remains visible and editable.
+- Bad: masking only in a Vue component while an API response still contains plaintext
+  or ciphertext.
+
+#### 6. Tests Required
+
+- Cover positive and negative key classification, encrypted persistence, legacy
+  plaintext masking, GET/list masking, PUT/upsert masking, and PATCH preservation.
+- Assert serialized responses do not contain the submitted fixture secret.
+- Run the deterministic OpenAPI export and generated TypeScript ownership checks when
+  the response fields change.
+
+#### 7. Wrong vs Correct
+
+```python
+# Wrong: the transport still owns the secret and relies on the UI to hide it.
+return SystemConfigRead.model_validate(config)
+
+# Correct: one service conversion masks every response path.
+return self._to_read(config)
+```
+
 ---
 
 ## SSRF protection for user-supplied base_url

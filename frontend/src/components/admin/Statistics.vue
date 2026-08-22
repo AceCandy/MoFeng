@@ -17,22 +17,22 @@
           <div class="admin-ops__metrics">
             <article class="admin-ops__metric">
               <p>AI 调用总量</p>
-              <strong>{{ stats?.api_request_count ?? 0 }}</strong>
+              <strong>{{ statisticsPending ? '—' : (stats?.api_request_count ?? 0) }}</strong>
               <span>累计请求次数</span>
             </article>
             <article class="admin-ops__metric">
               <p>活跃项目</p>
-              <strong>{{ activeProjects.length }}</strong>
+              <strong>{{ novelsPending ? '—' : activeProjects.length }}</strong>
               <span>最近 7 天有编辑</span>
             </article>
             <article class="admin-ops__metric">
               <p>平台用户</p>
-              <strong>{{ stats?.user_count ?? 0 }}</strong>
+              <strong>{{ statisticsPending ? '—' : (stats?.user_count ?? 0) }}</strong>
               <span>当前注册用户数</span>
             </article>
             <article class="admin-ops__metric">
               <p>项目总量</p>
-              <strong>{{ stats?.novel_count ?? 0 }}</strong>
+              <strong>{{ statisticsPending ? '—' : (stats?.novel_count ?? 0) }}</strong>
               <span>累计小说项目</span>
             </article>
           </div>
@@ -112,6 +112,8 @@ const novelQuery = useAdminNovelsQuery()
 const updateLogsQuery = useAdminUpdateLogsQuery()
 
 const stats = computed(() => statisticsQuery.data.value ?? null)
+const statisticsPending = computed(() => statisticsQuery.isPending.value)
+const novelsPending = computed(() => novelQuery.isPending.value)
 
 const loading = computed(
   () =>

@@ -49,7 +49,13 @@ from app.schemas.user import User
         (
             SystemConfigRead,
             SimpleNamespace(key="feature", value="on"),
-            {"key": "feature", "value": "on", "description": None},
+            {
+                "key": "feature",
+                "value": "on",
+                "description": None,
+                "is_sensitive": False,
+                "is_configured": False,
+            },
         ),
         (
             Blueprint,

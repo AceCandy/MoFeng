@@ -40,7 +40,7 @@
       >
         <n-message-provider>
           <keep-alive>
-            <component :is="activeComponent" />
+            <component :is="activeComponent" ref="activeComponentRef" />
           </keep-alive>
         </n-message-provider>
       </section>
@@ -52,12 +52,14 @@
 import {
   computed,
   defineAsyncComponent,
+  onBeforeUnmount,
+  onMounted,
   ref,
   watch,
   type Component,
   type ComponentPublicInstance,
 } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { NMessageProvider } from 'naive-ui/es/message'
 
 const props = withDefaults(
@@ -131,6 +133,11 @@ const resolveMenuKey = (value: unknown): MenuKey => {
 }
 
 const activeKey = ref<MenuKey>('statistics')
+type DirtyAdminPanel = ComponentPublicInstance & {
+  isDirty?: boolean
+  confirmDiscardChanges?: () => Promise<boolean>
+}
+const activeComponentRef = ref<DirtyAdminPanel | null>(null)
 const adminTabRefs = ref<Record<MenuKey, HTMLButtonElement | null>>({
   statistics: null,
   users: null,
@@ -156,11 +163,19 @@ const activeAdminTabId = computed(() => `admin-tab-${activeSection.value.key}`)
 
 const activeComponent = computed(() => components[activeSection.value.key])
 
-const selectSection = (key: MenuKey) => {
+const confirmDiscardChanges = async () => {
+  if (!activeComponentRef.value?.isDirty) return true
+  return activeComponentRef.value.confirmDiscardChanges?.() ?? false
+}
+
+const selectSection = async (key: MenuKey) => {
+  if (key === activeKey.value) return true
+  if (!(await confirmDiscardChanges())) return false
   activeKey.value = key
   if (!props.isModal) {
-    router.replace({ name: 'admin', query: { tab: key } })
+    await router.replace({ name: 'admin', query: { tab: key } })
   }
+  return true
 }
 
 const setAdminTabRef = (
@@ -181,7 +196,7 @@ const focusAdminTab = (key: MenuKey) => {
 }
 
 // 管理台 tabs 支持方向键快速切换，符合 ARIA Tabs 键盘交互习惯。
-const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
+const onAdminTabKeydown = async (key: MenuKey, event: KeyboardEvent) => {
   const currentIndex = adminSections.findIndex((section) => section.key === key)
   if (currentIndex === -1) return
   const lastIndex = adminSections.length - 1
@@ -200,9 +215,24 @@ const onAdminTabKeydown = (key: MenuKey, event: KeyboardEvent) => {
   if (nextIndex === null || nextIndex === currentIndex) return
   event.preventDefault()
   const nextKey = adminSections[nextIndex].key
-  selectSection(nextKey)
-  focusAdminTab(nextKey)
+  if (await selectSection(nextKey)) {
+    focusAdminTab(nextKey)
+  }
 }
+
+const onBeforeUnload = (event: BeforeUnloadEvent) => {
+  if (!activeComponentRef.value?.isDirty) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+
+onMounted(() => window.addEventListener('beforeunload', onBeforeUnload))
+onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload))
+onBeforeRouteUpdate((to) => {
+  if (resolveMenuKey(to.query.tab) === activeKey.value) return true
+  return confirmDiscardChanges()
+})
+onBeforeRouteLeave(() => confirmDiscardChanges())
 </script>
 
 <style scoped>

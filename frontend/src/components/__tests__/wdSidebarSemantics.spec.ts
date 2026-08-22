@@ -26,4 +26,23 @@ describe('WDSidebar semantics', () => {
     expect(source).not.toContain('<h2 class="md-title-medium font-semibold">故事蓝图</h2>')
     expect(source).not.toContain('<h4')
   })
+
+  it('keeps persisted completion ahead of transient selected workflow state', () => {
+    const sidebar = readSource('src/components/writing-desk/WDSidebar.vue')
+    const tagResolver = sidebar.split('const getChapterTag', 2)[1].split('const chapterStatusDotClass', 1)[0]
+    const dotResolver = sidebar
+      .split('const chapterStatusDotClass', 2)[1]
+      .split('// 状态印三态', 1)[0]
+    const workspace = readSource('src/components/writing-desk/WDWorkspace.vue')
+
+    expect(tagResolver.indexOf('isChapterCompleted')).toBeLessThan(
+      tagResolver.indexOf('props.selectedChapterNumber'),
+    )
+    expect(dotResolver.indexOf('isChapterCompleted')).toBeLessThan(
+      dotResolver.indexOf('props.selectedChapterNumber'),
+    )
+    expect(workspace).toContain(
+      "!(props.workflowPhase === 'idle' && hasFinalizedChapterContent.value)",
+    )
+  })
 })

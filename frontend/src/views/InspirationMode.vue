@@ -189,6 +189,7 @@ import { HttpRequestError } from '@/utils/errors'
 import {
   useConverseConceptStreamMutation,
   useCreateNovelMutation,
+  useDeleteNovelsMutation,
   useGenerateBlueprintMutation,
   useNovelProjectQuery,
   useSaveBlueprintMutation,
@@ -286,6 +287,7 @@ const currentConversationState = ref<Record<string, unknown>>({})
 
 const projectQuery = useNovelProjectQuery(activeProjectId)
 const createNovelMutation = useCreateNovelMutation()
+const deleteNovelsMutation = useDeleteNovelsMutation()
 const converseConceptStreamMutation = useConverseConceptStreamMutation(
   () => currentProject.value?.id,
 )
@@ -296,6 +298,7 @@ const llmConfigBundleQuery = useLLMConfigBundleQuery()
 const inspirationRequestPending = computed(
   () =>
     createNovelMutation.isPending.value ||
+    deleteNovelsMutation.isPending.value ||
     projectQuery.isFetching.value ||
     converseConceptStreamMutation.isPending.value ||
     generateBlueprintMutation.isPending.value ||
@@ -419,6 +422,18 @@ const handleRestart = async () => {
     '重新开始确认',
   )
   if (confirmed) {
+    const projectId = currentProject.value?.id ?? activeProjectId.value
+    if (projectId) {
+      try {
+        await deleteNovelsMutation.mutateAsync([projectId])
+      } catch (error) {
+        globalAlert.showError(
+          `无法重新开始: ${error instanceof Error ? error.message : '删除旧灵感失败'}`,
+          '重开失败',
+        )
+        return
+      }
+    }
     await startConversation()
   }
 }
@@ -912,19 +927,16 @@ onUnmounted(() => {
   border-radius: var(--md-radius-xs) !important; /* 微直角 2px */
   border: 1px solid transparent;
   background-color: transparent;
-  opacity: 0.38; /* 未激活时悬空墨淡 */
   transition:
     background-color var(--md-duration-medium) var(--md-easing-standard),
     border-color var(--md-duration-medium) var(--md-easing-standard),
     box-shadow var(--md-duration-medium) var(--md-easing-standard),
-    opacity var(--md-duration-medium) var(--md-easing-standard),
     transform var(--md-duration-medium) var(--md-easing-standard);
   transform: scale(0.97);
 }
 
 /* 激活态：红泥落地，字迹化实 */
 .ledger-item.is-active {
-  opacity: 1;
   background-color: var(--md-surface) !important; /* 变熟宣白 */
   border: 1px solid var(--md-jiege) !important; /* 界格发线 */
   box-shadow: var(--md-elevation-paper-1) !important; /* 熟宣柔影 */
@@ -990,7 +1002,7 @@ onUnmounted(() => {
   text-align: center;
   padding-top: var(--md-spacing-4);
   border-top: 1px dashed var(--md-outline-variant);
-  color: var(--md-outline);
+  color: var(--md-on-surface-variant);
   font-family: var(--md-font-kai) !important;
   font-size: 12px;
   letter-spacing: 0.08em;

@@ -1508,7 +1508,7 @@ class LLMService:
     async def _get_config_value(self, key: str) -> Optional[str]:
         record = await self.system_config_repo.get_by_key(key)
         if record:
-            return record.value
+            return decrypt(record.value)
         # 兼容环境变量，首次迁移时无需立即写入数据库
         env_key = key.upper().replace(".", "_")
         return os.getenv(env_key)

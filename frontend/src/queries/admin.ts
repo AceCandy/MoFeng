@@ -6,6 +6,7 @@ import {
   AdminAPI,
   type AdminNovelSummary,
   type AdminUser,
+  type NovelProject,
   type PromptCreatePayload,
   type PromptItem,
   type PromptUpdatePayload,
@@ -34,6 +35,7 @@ export const adminQueryKeys = {
   statistics: () => [...adminQueryKeys.all, 'statistics'] as const,
   users: () => [...adminQueryKeys.all, 'users'] as const,
   novels: () => [...adminQueryKeys.all, 'novels'] as const,
+  novelDetail: (projectId: string) => [...adminQueryKeys.novels(), projectId] as const,
   prompts: () => [...adminQueryKeys.all, 'prompts'] as const,
   updateLogs: () => [...adminQueryKeys.all, 'update-logs'] as const,
   systemConfigs: () => [...adminQueryKeys.all, 'system-configs'] as const,
@@ -91,6 +93,14 @@ export function useAdminNovelsQuery() {
   return useQuery<AdminNovelSummary[]>({
     queryKey: adminQueryKeys.novels(),
     queryFn: () => AdminAPI.listNovels(),
+  })
+}
+
+export function useAdminNovelDetailQuery(projectId: MaybeRefOrGetter<string | null | undefined>) {
+  return useQuery<NovelProject>({
+    queryKey: computed(() => adminQueryKeys.novelDetail(toValue(projectId) || '__missing__')),
+    queryFn: () => AdminAPI.getNovelDetails(toValue(projectId) || ''),
+    enabled: computed(() => Boolean(toValue(projectId))),
   })
 }
 

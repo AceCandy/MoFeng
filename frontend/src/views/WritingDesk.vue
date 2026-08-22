@@ -33,6 +33,8 @@
               'is-drawer': useSidebarDrawer,
               'is-open': isSidebarDrawerOpen,
             }"
+            :aria-hidden="useSidebarDrawer && !isSidebarDrawerOpen ? 'true' : undefined"
+            :inert="useSidebarDrawer && !isSidebarDrawerOpen"
           >
             <WDSidebar
               :project="project"
@@ -88,6 +90,8 @@
               'is-open': isAssistantDrawerOpen,
               'is-collapsed': !useAssistantDrawer && !isAssistantPanelVisible,
             }"
+            :aria-hidden="useAssistantDrawer && !isAssistantDrawerOpen ? 'true' : undefined"
+            :inert="useAssistantDrawer && !isAssistantDrawerOpen"
           >
             <WDAssistantPanel
               :project="project"
@@ -608,7 +612,8 @@ const deleteSelectedBrokenChapter = async () => {
     min-height: calc(var(--app-viewport-unit) - 104px);
     /* 覆盖模板上的 overflow-hidden 工具类：移动端页面必须能随文档流整体滚动，
        否则章节 scrollIntoView 会把整页内容推到视口上方裁成白屏 */
-    overflow: visible;
+    overflow-x: clip;
+    overflow-y: visible;
   }
 
   .writing-desk-main {

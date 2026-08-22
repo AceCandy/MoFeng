@@ -337,13 +337,16 @@ describe('UI audit regressions', () => {
     const overviewSource = readSource('src/components/novel-detail/OverviewSection.vue')
     // content-surface 的 classical 装订框已抽到 ShellContent 子组件
     const contentSource = readSource('src/components/novel-detail/ShellContent.vue')
+    const stripSource = readSource('src/components/novel-detail/OverviewStrip.vue')
 
     expect(overviewSource).toContain('archive-overview__summary-aside')
     expect(overviewSource).toContain('aria-label="蓝图资料状态"')
     expect(overviewSource).toContain('role="meter"')
     expect(overviewSource).toContain('archive-overview__readiness-card')
+    expect(contentSource).toContain('tabindex="0"')
     expect(contentSource).toContain('detail-shell__content-surface--classical')
     expect(contentSource).not.toContain('detail-shell__content-surface--flat')
+    expect(readCssBlock(stripSource, '.detail-shell__scroll-time')).not.toContain('opacity:')
   })
 
   it('keeps the mobile chapter drawer out of the focus order when closed', () => {
@@ -358,6 +361,45 @@ describe('UI audit regressions', () => {
     expect(source).toContain('aria-hidden="true"')
   })
 
+  it('keeps writing desk drawers out of the accessibility tree when closed', () => {
+    const source = readSource('src/views/WritingDesk.vue')
+
+    expect(source).toContain(":aria-hidden=\"useSidebarDrawer && !isSidebarDrawerOpen ? 'true' : undefined\"")
+    expect(source).toContain(':inert="useSidebarDrawer && !isSidebarDrawerOpen"')
+    expect(source).toContain(":aria-hidden=\"useAssistantDrawer && !isAssistantDrawerOpen ? 'true' : undefined\"")
+    expect(source).toContain(':inert="useAssistantDrawer && !isAssistantDrawerOpen"')
+    expect(source).toContain('overflow-x: clip')
+  })
+
+  it('protects unsaved model routes and prompts across navigation', () => {
+    const settingsSource = readSource('src/views/SettingsView.vue')
+    const promptSource = readSource('src/components/admin/PromptManagement.vue')
+    const adminSource = readSource('src/views/AdminView.vue')
+
+    expect(settingsSource).toContain('confirmDiscardChanges')
+    expect(settingsSource).toContain('onBeforeRouteLeave')
+    expect(settingsSource).toContain("window.addEventListener('beforeunload', onBeforeUnload)")
+    expect(promptSource).toContain('const isDirty = computed')
+    expect(promptSource).toContain('isEditDirty.value || isCreateDirty.value')
+    expect(promptSource).toContain('createForm.name.trim()')
+    expect(promptSource).toContain('defineExpose({ isDirty, confirmDiscardChanges })')
+    expect(adminSource).toContain('onBeforeRouteUpdate')
+    expect(adminSource).toContain('onBeforeRouteLeave')
+  })
+
+  it('confirms destructive account and inspiration actions before mutation', () => {
+    const usersSource = readSource('src/components/admin/UserManagement.vue')
+    const inspirationSource = readSource('src/views/InspirationMode.vue')
+    const workspaceSource = readSource('src/views/NovelWorkspace.vue')
+
+    expect(usersSource).toContain('await globalAlert.showConfirm')
+    expect(usersSource).toContain("'aria-label': `${row.username} 账号状态")
+    expect(inspirationSource).toContain('await deleteNovelsMutation.mutateAsync([projectId])')
+    expect(inspirationSource).toContain("const projectId = currentProject.value?.id ?? activeProjectId.value")
+    expect(workspaceSource).toContain('isInspirationProject(project) ? \'继续灵感对话\' : \'继续写作\'')
+    expect(workspaceSource).toContain('if (isInspirationProject(project))')
+  })
+
   it('keeps auth footer links touch-safe', () => {
     const loginSource = readSource('src/views/Login.vue')
     const registerSource = readSource('src/views/Register.vue')
@@ -366,6 +408,32 @@ describe('UI audit regressions', () => {
     expect(registerSource).toContain('register-link__cta')
     expect(loginSource).toContain('md-btn md-btn-text md-ripple')
     expect(registerSource).toContain('md-btn md-btn-text md-ripple')
+  })
+
+  it('keeps auth pages to one main landmark and omits ineffective persistence controls', () => {
+    const layoutSource = readSource('src/components/shared/AuthLayout.vue')
+    const loginSource = readSource('src/views/Login.vue')
+    const registerSource = readSource('src/views/Register.vue')
+
+    expect(layoutSource).not.toContain('<main')
+    expect(loginSource.match(/<main\b/g)).toHaveLength(1)
+    expect(registerSource.match(/<main\b/g)).toHaveLength(1)
+    expect(loginSource).not.toContain('rememberMe')
+    expect(loginSource).not.toContain('记住我')
+  })
+
+  it('keeps audited status text readable and initial statistics honest', () => {
+    const inspirationSource = readSource('src/views/InspirationMode.vue')
+    const workspaceSource = readSource('src/views/NovelWorkspace.vue')
+    const assistantSource = readSource('src/components/writing-desk/WDAssistantPanel.vue')
+    const statisticsSource = readSource('src/components/admin/Statistics.vue')
+
+    expect(readCssBlock(inspirationSource, '.ledger-item')).not.toContain('opacity: 0.38')
+    expect(readCssBlock(inspirationSource, '.ledger-footer')).toContain('color: var(--md-on-surface-variant)')
+    expect(readCssBlock(workspaceSource, '.workspace-hero__goal-tag')).toContain('color: var(--md-night-on)')
+    expect(readCssBlock(assistantSource, '.wd-ai__section:nth-child(5) .wd-ai__head p')).toContain('color: var(--md-night-on)')
+    expect(statisticsSource).toContain("statisticsPending ? '—'")
+    expect(statisticsSource).toContain("novelsPending ? '—'")
   })
 
   it('avoids layout-property animation in character dna panels', () => {

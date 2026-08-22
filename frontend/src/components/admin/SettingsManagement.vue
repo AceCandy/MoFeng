@@ -318,7 +318,7 @@
                   <dl class="settings-config-mobile-card__meta">
                     <div>
                       <dt>值</dt>
-                      <dd :title="config.value">{{ config.value || '—' }}</dd>
+                      <dd :title="configValueText(config)">{{ configValueText(config) }}</dd>
                     </div>
                     <div>
                       <dt>描述</dt>
@@ -383,8 +383,16 @@
           placeholder="请输入唯一 Key"
         />
       </n-form-item>
-      <n-form-item label="值">
-        <n-input v-model:value="configForm.value" placeholder="配置的具体值" />
+      <n-form-item :label="editingConfigIsSensitive ? '新值' : '值'">
+        <n-input
+          v-model:value="configForm.value"
+          :type="editingConfigIsSensitive ? 'password' : 'text'"
+          :show-password-on="editingConfigIsSensitive ? 'click' : undefined"
+          :placeholder="editingConfigIsSensitive ? '留空保留当前值' : '配置的具体值'"
+        />
+        <p v-if="editingConfigIsSensitive" class="form-hint config-secret-hint">
+          当前敏感值不会回显；仅在需要替换时填写新值。
+        </p>
       </n-form-item>
       <n-form-item label="描述">
         <n-input v-model:value="configForm.description" placeholder="配置项的用途说明，可选" />
@@ -497,11 +505,12 @@ const configKeyword = ref('')
 const managedOnly = ref(false)
 const managedFirst = ref(true)
 const viewport = useResponsiveViewport()
-const configForm = reactive<SystemConfig>({
+const configForm = reactive({
   key: '',
   value: '',
   description: '',
 })
+const editingConfigIsSensitive = ref(false)
 
 const rowKey = (row: SystemConfig) => row.key
 
@@ -594,6 +603,12 @@ const normalizeChapterWordLimit = (value: unknown): number => {
 
 const normalizeConfigText = (value: unknown): string => String(value ?? '').trim()
 const isManagedConfigKey = (key: string): boolean => MANAGED_CONFIG_KEYS.has(key)
+const configValueText = (config: SystemConfig): string => {
+  if (config.is_sensitive) {
+    return config.is_configured ? '已配置（内容已隐藏）' : '未配置'
+  }
+  return config.value || '—'
+}
 const getConfigDomain = (key: string): string => {
   const domain = normalizeConfigText(key).split('.')[0]
   return domain || 'general'
@@ -806,6 +821,7 @@ const saveVersionSources = async () => {
 
 const openCreateModal = () => {
   isCreateMode.value = true
+  editingConfigIsSensitive.value = false
   configForm.key = ''
   configForm.value = ''
   configForm.description = ''
@@ -814,8 +830,9 @@ const openCreateModal = () => {
 
 const openEditModal = (config: SystemConfig) => {
   isCreateMode.value = false
+  editingConfigIsSensitive.value = Boolean(config.is_sensitive)
   configForm.key = config.key
-  configForm.value = config.value
+  configForm.value = config.is_sensitive ? '' : config.value || ''
   configForm.description = config.description || ''
   configModalVisible.value = true
 }
@@ -828,7 +845,8 @@ const submitConfig = async () => {
   const normalizedKey = configForm.key.trim()
   const normalizedValue = configForm.value.trim()
 
-  if (!normalizedKey || !normalizedValue) {
+  const preservesSensitiveValue = !isCreateMode.value && editingConfigIsSensitive.value
+  if (!normalizedKey || (!normalizedValue && !preservesSensitiveValue)) {
     showAlert('Key 与 Value 均为必填项', 'error')
     return
   }
@@ -879,7 +897,7 @@ const submitConfig = async () => {
       await patchSystemConfigMutation.mutateAsync({
         key: configForm.key,
         data: {
-          value: normalizedValue,
+          ...(normalizedValue ? { value: normalizedValue } : {}),
           description: configForm.description || undefined,
         } as SystemConfigUpdatePayload,
       })
@@ -936,13 +954,14 @@ const columns: DataTableColumns<SystemConfig> = [
     title: '值',
     key: 'value',
     render(row) {
+      const valueText = configValueText(row)
       return h(
         'span',
         {
           class: 'value-text',
-          title: row.value,
+          title: valueText,
         },
-        row.value,
+        valueText,
       )
     },
   },
@@ -1117,6 +1136,10 @@ onMounted(() => {
   margin: 2px 0 12px;
   color: var(--md-on-surface-variant);
   font-size: 0.875rem;
+}
+
+.config-secret-hint {
+  margin-bottom: 0;
 }
 
 .version-compare-panel {
