@@ -9,6 +9,10 @@
 - 当前锁定 `passlib==1.7.4`、`bcrypt==3.2.2`，`backend/app/core/security.py` 使用 `CryptContext(schemes=["bcrypt"])`。
 - passlib 导入 `crypt` 会产生弃用预警，Python 3.13 将移除该标准库模块。
 - 已存用户密码是 bcrypt hash；替换封装不能导致现有用户无法登录。
+- 当前 passlib 配置与直接 bcrypt 均使用 `$2b$`、12 rounds；锁定版本的双向 hash 验证已现场确认兼容。
+- `bcrypt` 4.3.x 明确支持 Python 3.13，5.0 起会拒绝超过 72 bytes 的密码；若升级应限制 `<5` 并显式保持现有 NUL/72-byte 边界。
+- `pwdlib` 的 bcrypt hasher 仍直接委托 `bcrypt`，会增加一层 beta 依赖，当前没有额外兼容收益。
+- 已确认移除 passlib 后直接使用 `bcrypt>=4.3.0,<5.0.0`；不引入 pwdlib，不启用渐进重哈希。
 
 ## Requirements
 
@@ -20,11 +24,11 @@
 
 ## Acceptance Criteria
 
-- [ ] 导入安全模块和运行认证测试时不再产生 `crypt`/passlib 相关弃用预警。
-- [ ] 既有 bcrypt hash 可验证，错误密码被拒绝，新 hash 可被当前实现和兼容测试验证。
-- [ ] 登录、注册、改密、默认管理员密码检查等相关测试通过。
-- [ ] 后端 Ruff、快速 profile 与依赖一致性检查通过。
-- [ ] 没有明文密码、hash 或测试密钥进入日志、文档和提交材料。
+- [x] 导入安全模块和运行认证测试时不再产生 `crypt`/passlib 相关弃用预警。
+- [x] 既有 bcrypt hash 可验证，错误密码被拒绝，新 hash 可被当前实现和兼容测试验证。
+- [x] 登录、注册、改密、默认管理员密码检查等相关测试通过。
+- [x] 后端 Ruff、快速 profile 与依赖一致性检查通过。
+- [x] 没有真实明文密码、真实 hash 或真实密钥进入日志、文档和提交材料。
 
 ## Out of Scope
 
@@ -33,4 +37,4 @@
 
 ## Notes
 
-- 具体替代库和兼容策略在该子任务独立规划时确定。
+- 依赖锁继续使用项目固定的 pip 24.3.1 / pip-tools 7.6.0 生成流程。
