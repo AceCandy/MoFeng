@@ -1476,3 +1476,24 @@ Reused generated blueprint and conversation DTOs, centralized unknown-field pars
 ### Status
 
 [OK] **Completed**
+
+
+## Session 51: Modernize Pydantic v2 configuration
+
+**Date**: 2026-08-22
+**Task**: Modernize Pydantic v2 configuration
+**Branch**: `main`
+
+### Summary
+
+Migrated deprecated Pydantic validators and class-based schema configs to v2 APIs, added focused contract coverage, synchronized backend quality guidance, and recorded the existing OpenAPI inventory baseline failure.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8247ca5` | (see git log) |
+
+### Status
+
+[OK] **Completed**
