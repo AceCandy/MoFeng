@@ -1657,3 +1657,58 @@ Migrated deprecated Pydantic validators and class-based schema configs to v2 API
 ### Next Steps
 
 - 规划 durable job activity.ambiguous 事件对齐
+
+
+## Session 59: 校准 durable job 歧义事件测试
+
+**Date**: 2026-08-22
+**Task**: 校准 durable job 歧义事件测试
+**Branch**: `main`
+
+### Summary
+
+补齐 activity.ambiguous 正式审计事件顺序与公开 payload 边界，恢复完整 PostgreSQL profile。
+
+### Main Changes
+
+- 保留 workflow revision、activity attempt/fencing 与终态断言，新增歧义事件序列和防泄露校验
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `50379b1` | (see git log) |
+
+### Testing
+
+- [OK] 聚焦测试 1 passed；durable-job runtime 24 passed
+- [OK] PostgreSQL profile 237 passed；Ruff、Trellis validate 与独立复核通过
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- 规划移除 passlib crypt 弃用警告
+
+
+## Session 60: 移除 passlib crypt 弃用依赖
+
+**Date**: 2026-08-22
+**Task**: 移除 passlib crypt 弃用依赖
+**Branch**: `main`
+
+### Summary
+
+直接使用 bcrypt 4.3，保持既有密码兼容并消除 crypt 弃用预警。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c83b134` | (see git log) |
+
+### Status
+
+[OK] **Completed**
