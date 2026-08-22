@@ -3,7 +3,7 @@
   "name": "technical-debt-program",
   "title": "全仓技术债治理",
   "description": "维护已确认技术债的有序任务树，逐项规划、实现、验证和归档。",
-  "status": "planning",
+  "status": "in_progress",
   "dev_type": null,
   "scope": null,
   "package": null,

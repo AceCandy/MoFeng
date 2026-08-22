@@ -23,11 +23,11 @@
 
 ## Acceptance Criteria
 
-- [ ] `research/frontend-any-inventory.md` 中 13 个目标文件的 `rg` 门禁不再命中类型位置的 `any`，且相邻排除项仍未被顺带修改。
-- [ ] 评审 JSON 的对象、二次编码对象、数组、空值和非法 JSON 有聚焦测试；合法推荐版本仍生成相同优化请求。
-- [ ] trace/version metadata、world-setting 列表和 novel-detail 评审结果在 TypeScript 下以 `unknown` 开始，并在读取字段前完成收窄。
-- [ ] `npm run type-check`、目标 Vitest、Scoped ESLint 与前端完整单元测试通过。
-- [ ] diff 不包含生成 artifact、依赖、遗留编辑器契约或用户可见交互变更，且独立复核无阻塞发现。
+- [x] `research/frontend-any-inventory.md` 中 13 个目标文件的 `rg` 门禁不再命中类型位置的 `any`，且相邻排除项仍未被顺带修改。
+- [x] 评审 JSON 的对象、二次编码对象、数组、空值和非法 JSON 有聚焦测试；合法推荐版本仍生成相同优化请求。
+- [x] trace/version metadata、world-setting 列表和 novel-detail 评审结果在 TypeScript 下以 `unknown` 开始，并在读取字段前完成收窄。
+- [x] `npm run type-check`、目标 Vitest、Scoped ESLint 与前端完整单元测试通过。
+- [x] diff 不包含生成 artifact、依赖、遗留编辑器契约或用户可见交互变更，且独立复核无阻塞发现。
 
 ## Out of Scope
 

@@ -22,13 +22,13 @@
 
 ## Acceptance Criteria
 
-- [ ] `frontend/src/api/auth.ts` 不再直接调用 `fetch`，不再创建定时器或 AbortController，也不保有独立错误解析函数。
-- [ ] 五个认证公开函数的 URL、method、body、headers、10/15 秒超时、返回结构及 `/options` fallback 保持兼容。
-- [ ] `/users/me` 继续透传 `X-Token-Refresh`，`frontend/src/queries/auth.ts` 无需修改即可更新 store token。
-- [ ] 认证 API 测试覆盖成功、服务端 `detail`、无详情错误、非 2xx 的非 JSON/网络错误、超时中止、204、缺失 access token 和 options fallback。
-- [ ] 共享 HTTP 测试覆盖外部取消并证明 `HttpRequestError.code === 'abort'`；既有 client/http 测试通过。
-- [ ] 登录页超时用户提示保持为“登录请求超时，请确认后端服务已启动并可访问。”，不依赖错误文案字符串匹配。
-- [ ] `npm run type-check` 与相关 Vitest 测试通过；独立复核确认没有新增 HTTP 抽象或认证流程变化。
+- [x] `frontend/src/api/auth.ts` 不再直接调用 `fetch`，不再创建定时器或 AbortController，也不保有独立错误解析函数。
+- [x] 五个认证公开函数的 URL、method、body、headers、10/15 秒超时、返回结构及 `/options` fallback 保持兼容。
+- [x] `/users/me` 继续透传 `X-Token-Refresh`，`frontend/src/queries/auth.ts` 无需修改即可更新 store token。
+- [x] 认证 API 测试覆盖成功、服务端 `detail`、无详情错误、非 2xx 的非 JSON/网络错误、超时中止、204、缺失 access token 和 options fallback。
+- [x] 共享 HTTP 测试覆盖外部取消并证明 `HttpRequestError.code === 'abort'`；既有 client/http 测试通过。
+- [x] 登录页超时用户提示保持为“登录请求超时，请确认后端服务已启动并可访问。”，不依赖错误文案字符串匹配。
+- [x] `npm run type-check` 与相关 Vitest 测试通过；独立复核确认没有新增 HTTP 抽象或认证流程变化。
 
 ## Out of Scope
 
