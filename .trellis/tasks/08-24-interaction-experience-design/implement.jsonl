@@ -1,0 +1,8 @@
+{"file":".trellis/spec/frontend/state-management.md","reason":"约束服务端上下文使用 Vue Query、本地瞬时状态与 Pinia 的边界"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"约束 ConversationInput、AppShell、WDWorkspace 与 TaskLogPanel 的 Vue 组件接线"}
+{"file":".trellis/spec/frontend/task-reminders.md","reason":"保持现有任务提醒、已读持久化与无障碍状态合同"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"约束新表、迁移、事务所有权与 PostgreSQL upsert"}
+{"file":".trellis/spec/backend/transport-contracts.md","reason":"约束 OpenAPI 生成合同与任务 SSE 公开字段演进"}
+{"file":".trellis/tasks/08-24-interaction-experience-design/research/task-navigation-contract.md","reason":"注入本任务所需的任务公开投影、事件兼容与 payload 隐私边界摘录"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"覆盖数据库、API、生成类型、Vue Query 与页面恢复的跨层数据流"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"优先复用现有路由、工作流状态机、任务 SSE 与 AppShell"}

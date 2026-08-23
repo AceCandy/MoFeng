@@ -68,6 +68,98 @@ Conventions:
 
 All server data goes through `useXxxQuery` / `useXxxMutation` hooks in `src/queries/`. Components read `data` / `isLoading` / `error`; they do not mirror server entities into Pinia.
 
+## Scenario: cross-device semantic creation state
+
+### 1. Scope / Trigger
+
+Apply this contract when a creation surface persists semantic working position across
+sessions or devices, or when a child component edits one of those persisted values.
+Transient presentation state such as scroll position, drawers, dialogs, and request
+buttons stays local.
+
+### 2. Signatures
+
+```text
+GET /api/creation-contexts
+PATCH /api/creation-contexts/{project_id}
+
+surface: inspiration | archive | writing
+chapter_number: positive integer | null
+desk_section: content | versions | evaluation | null
+inspiration_draft: string | null
+inspiration_turn: non-negative integer | null
+```
+
+```vue
+<WDWorkspace
+  :active-section="activeDeskSection"
+  @update:active-section="handleDeskSectionChange"
+/>
+```
+
+### 3. Contracts
+
+- The server record is the cross-device source of truth and stays in Vue Query. Do not
+  mirror it into Pinia or give a child component a second writable copy.
+- Explicit route state wins over the remote context; the remote context wins over the
+  existing local default. Validate a restored chapter/section against current project
+  data before applying it.
+- The nearest parent that loads and persists a semantic value owns the writable `ref`.
+  Children receive a prop and emit `update:<name>`; they must not reset that value as a
+  side effect of another prop changing.
+- `localStorage` protects only an unsynchronized inspiration draft. Scope it by user,
+  project, and conversation turn, expire it after 24 hours, and delete it after a
+  successful PATCH, account change, logout, or authoritative turn advance.
+- Draft writes are serialized. Last successful write wins only within the same
+  authoritative turn; an older turn is discarded and a future turn is rejected by the
+  server without adding a conflict UI.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+| --- | --- |
+| Route contains a valid chapter | Use it and update the remote context after selection |
+| Remote chapter/section is unavailable | Fall back to the first usable chapter and `content` |
+| Child requests a section change | Parent validates, updates its ref, then PATCHes it |
+| Local draft turn equals the restored turn | Restore locally and retry synchronization |
+| Local or remote draft turn is older | Delete/ignore it; never place it in the new prompt |
+| PATCH fails or browser is offline | Keep the scoped local backup and show non-blocking status |
+| Account identity changes | Remove the prior account's local draft backups |
+
+### 5. Good / Base / Bad Cases
+
+- Good: a parent restores `versions`, passes it to the workspace, accepts the emitted
+  change to `evaluation`, and persists the same value once.
+- Base: no server context exists; the existing route/default behavior remains intact.
+- Bad: the child writes a local `activeTab` during chapter changes while the parent
+  separately owns `activeDeskSection`, or server data is copied into Pinia.
+
+### 6. Tests Required
+
+- Unit-test controlled ownership: parent prop changes update the child view, child
+  interaction emits one update, and unrelated chapter changes do not mutate the prop.
+- Cover explicit-route priority, remote restore, invalid chapter/section fallback, and
+  a refresh/new-page read after a successful PATCH.
+- Cover serialized draft writes, offline retention, successful cleanup, 24-hour expiry,
+  account cleanup, same-turn last-write wins, and stale/future turn behavior.
+- Run desktop and mobile E2E checks for the restored semantic state; do not assert
+  pixel scroll or drawer state as cross-device behavior.
+
+### 7. Wrong vs Correct
+
+```ts
+// Wrong: the child creates a competing source of truth.
+watch(selectedChapter, () => {
+  activeTab.value = 'content'
+})
+
+// Correct: the parent owns persistence; the child only requests a change.
+const activeTab = computed({
+  get: () => props.activeSection,
+  set: (section) => emit('update:activeSection', section),
+})
+```
+
 ---
 
 ## When to promote state to Pinia

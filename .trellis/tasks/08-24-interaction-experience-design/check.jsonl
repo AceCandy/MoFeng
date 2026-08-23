@@ -1,0 +1,7 @@
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"核验类型、单测、响应式、浏览器动效与减少动态效果合同"}
+{"file":".trellis/spec/frontend/task-reminders.md","reason":"复核任务状态优先级、已读行为、文案与可访问标签"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"核验异步 API、Pydantic、聚焦测试与 PostgreSQL 测试边界"}
+{"file":".trellis/spec/backend/security-guidelines.md","reason":"复核鉴权隔离、私有草稿与任务 payload 不泄漏"}
+{"file":".trellis/spec/backend/transport-contracts.md","reason":"复核 OpenAPI、生成类型、SSE decoder 与公开投影兼容"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"复核迁移链、约束、级联、upsert 与事务所有权"}
+{"file":".trellis/tasks/08-24-interaction-experience-design/research/task-navigation-contract.md","reason":"复核旧事件兼容、公开章节号白名单与 SSE 恢复语义"}

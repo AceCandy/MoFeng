@@ -12,7 +12,7 @@
 | HTTP | Custom fetch wrapper `src/api/http.ts` (`requestJson`); no axios | [directory-structure](./directory-structure.md) · [quality-guidelines](./quality-guidelines.md) |
 | Components | `<script setup lang="ts">`; generic `defineProps<Props>()` / call-signature `defineEmits`; Naive UI from deep paths | [component-guidelines](./component-guidelines.md) |
 | Data fetching | UI hooks in `composables/`, server cache in `queries/` (Vue Query + key factories) | [hook-guidelines](./hook-guidelines.md) |
-| State | Pinia = client/UI state; Vue Query = server cache | [state-management](./state-management.md) |
+| State | Pinia = client/UI state; Vue Query = server cache; semantic state has one controlled owner | [state-management](./state-management.md) |
 | Types | `strict`; migrated wire DTOs use generated aliases, legacy/domain types remain colocated; no `any` | [type-safety](./type-safety.md) |
 | Quality | Manual form validation, `useAlert()` feedback, AIMETA header, `vue-tsc` + `vitest` | [quality-guidelines](./quality-guidelines.md) |
 
