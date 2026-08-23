@@ -8,11 +8,17 @@
 
       <n-spin :show="loading">
         <div class="admin-ops">
-          <div class="admin-ops__toolbar">
-            <n-button quaternary size="small" @click="fetchStats" :loading="loading" class="admin-ops__refresh-btn">
-              刷新
-            </n-button>
-          </div>
+          <header class="admin-ops__summary">
+            <div class="admin-ops__copy">
+              <h2>系统运行总览</h2>
+              <p>集中查看调用、用户、项目与近期变更，先确认平台状态，再进入对应治理模块。</p>
+            </div>
+            <div class="admin-ops__toolbar">
+              <n-button quaternary size="small" @click="fetchStats" :loading="loading" class="admin-ops__refresh-btn">
+                刷新
+              </n-button>
+            </div>
+          </header>
 
           <div class="admin-ops__metrics">
             <article class="admin-ops__metric">

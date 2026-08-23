@@ -1,0 +1,4 @@
+{"file":".trellis/spec/frontend/index.md","reason":"前端实现总入口与 Vue/TypeScript/测试约定"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Vue SFC 结构、props/emits 与 scoped 样式约定"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"前端质量门、路由、样式与测试约定"}
+{"file":".trellis/tasks/08-23-world-class-visual-redesign/research/current-visual-audit.md","reason":"九页现状、风险、概念方向与关键出处"}

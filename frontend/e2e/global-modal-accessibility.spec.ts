@@ -68,7 +68,7 @@ test('任务日志 dialog 陷住焦点并在关闭后恢复', async ({ page }) =
   await expect(trigger).toBeFocused()
 })
 
-test('写作台暖纸主题通过 axe、触控与溢出验收', async ({ page }) => {
+test('写作台提示本主题通过 axe、触控与溢出验收', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' })
   await resetScenario(page, 'external-retry')
   await openAuthenticatedPage(page)

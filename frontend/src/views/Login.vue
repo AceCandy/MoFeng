@@ -87,7 +87,7 @@
 
           <Transition name="ink-fade">
             <div v-if="error" id="login-error" class="login-feedback" role="alert">
-              <span class="login-feedback__stamp" aria-hidden="true">误</span>
+              <span class="login-feedback__stamp" aria-hidden="true">!</span>
               <span>{{ error }}</span>
             </div>
           </Transition>

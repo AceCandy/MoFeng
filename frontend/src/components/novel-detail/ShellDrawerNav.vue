@@ -35,12 +35,14 @@
     enter-from-class="opacity-0"
     leave-to-class="opacity-0"
   >
-    <div
+    <button
       v-if="isOpen && !isDesktop"
+      type="button"
       class="detail-shell__drawer-backdrop"
+      aria-label="关闭小说档案分区导航"
       style="background-color: var(--md-scrim)"
       @click="$emit('close')"
-    ></div>
+    ></button>
   </transition>
 </template>
 
@@ -91,6 +93,9 @@ defineEmits<{
   position: fixed;
   inset: 0;
   z-index: 20;
+  width: 100%;
+  padding: 0;
+  border: 0;
 }
 
 .detail-shell__nav {

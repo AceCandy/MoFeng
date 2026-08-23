@@ -39,7 +39,7 @@
         :is-desktop="isDesktopViewport"
         @switch="switchSection"
         @prefetch="prefetchSectionComponent"
-        @close="closeSidebar"
+        @close="closeSidebar(true)"
       />
 
       <!-- Main Content Area -->
@@ -79,7 +79,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   useForeshadowingQuery,
@@ -123,14 +123,32 @@ const foreshadowingQuery = useForeshadowingQuery(() => (!props.isAdmin ? project
 const viewport = useResponsiveViewport()
 const isDesktopViewport = computed(() => viewport.width.value >= desktopMin)
 const isSidebarOpen = ref(isDesktopViewport.value)
+let sidebarTrigger: HTMLElement | null = null
 
 const toggleSidebar = () => {
+  if (!isSidebarOpen.value && !isDesktopViewport.value && document.activeElement instanceof HTMLElement) {
+    sidebarTrigger = document.activeElement
+  }
   isSidebarOpen.value = !isSidebarOpen.value
 }
 
-const closeSidebar = () => {
+const closeSidebar = (restoreFocus = false) => {
   isSidebarOpen.value = false
+  if (restoreFocus && sidebarTrigger) {
+    const trigger = sidebarTrigger
+    sidebarTrigger = null
+    void nextTick(() => trigger.focus())
+  }
 }
+
+const handleSidebarKeydown = (event: KeyboardEvent) => {
+  if (event.key !== 'Escape' || isDesktopViewport.value || !isSidebarOpen.value) return
+  event.preventDefault()
+  closeSidebar(true)
+}
+
+onMounted(() => window.addEventListener('keydown', handleSidebarKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', handleSidebarKeydown))
 
 const navigation = useShellSectionNavigation({
   projectId,

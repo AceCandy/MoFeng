@@ -1,74 +1,59 @@
 ---
 name: MoFeng (墨风)
-description: 颜色即权责的 AI 长篇小说写作台。淡朱楷体描红稿、焦墨宋体落墨、朱砂只作落印钤章。
+description: 以剧场排演提示本为视觉隐喻的长篇小说创作工作台。
 colors:
-  primary: "#B8402F"
-  primary-strong: "#9C3323"
-  primary-soft: "#CE5A47"
-  primary-wash: "color-mix(in srgb, #B8402F 5%, transparent)"
-  primary-line: "color-mix(in srgb, #B8402F 22%, transparent)"
-  primary-line-strong: "color-mix(in srgb, #B8402F 38%, transparent)"
-  secondary: "#B83C32"
-  secondary-container: "#FBEBEA"
-  on-secondary-container: "#5C120C"
-  tertiary: "#2E5C8A"
-  on-tertiary: "#FAF6ED"
-  luomo: "#1C2224"
-  luomo-soft: "#3A4648"
-  jiege: "color-mix(in srgb, #3A4648 26%, transparent)"
-  surface: "#FAF6ED"
-  surface-dim: "#F0EAD8"
-  surface-container-lowest: "#FDFDFB"
-  surface-container-low: "#FAF7E8"
-  surface-container: "#F6F0E0"
-  surface-container-high: "#EDE4D0"
-  surface-container-highest: "#DCD2BE"
-  background: "#F2ECE0"
-  on-surface: "#1C2224"
-  on-surface-variant: "#556265"
-  outline: "#C2B69D"
-  outline-variant: "#DCD2BE"
-  error: "#B85C58"
-  error-container: "#FBEBEA"
-  success: "#3B7A57"
-  success-container: "#EAF3EE"
-  warning: "#E6A23C"
-  warning-container: "#FDF6EC"
+  stage: "#1737CF"
+  stage-strong: "#102BB0"
+  stage-deep: "#0D228D"
+  stage-soft: "#DCE3FF"
+  cue: "#D62F3A"
+  cue-strong: "#A71625"
+  note: "#E6F64A"
+  success: "#0D7D5E"
+  ink: "#111525"
+  ink-muted: "#566078"
+  surface: "#FFFFFF"
+  surface-low: "#F7F8FC"
+  surface-mid: "#EEF1F8"
+  background: "#E9EDF6"
+  outline: "#8793AA"
+  outline-soft: "#D9DFEB"
+  on-accent: "#FFFFFF"
 typography:
   display:
-    fontFamily: "Noto Serif SC, Source Han Serif SC, Noto Serif CJK SC, STSong, Songti SC, SimSun, serif"
+    fontFamily: "Arial Narrow, DIN Condensed, Roboto Condensed, PingFang SC, Microsoft YaHei, sans-serif"
     fontSize: "48px"
-    fontWeight: 400
-    lineHeight: 1.2
-    letterSpacing: "0.08em"
+    fontWeight: 600
+    lineHeight: 0.95
+    letterSpacing: "-0.025em"
   headline:
-    fontFamily: "Noto Serif SC, Source Han Serif SC, Noto Serif CJK SC, STSong, Songti SC, SimSun, serif"
-    fontSize: "30px"
+    fontFamily: "Arial Narrow, DIN Condensed, Roboto Condensed, PingFang SC, Microsoft YaHei, sans-serif"
+    fontSize: "28px"
     fontWeight: 600
-    lineHeight: 1.3
-    letterSpacing: "0.05em"
+    lineHeight: 1.15
+    letterSpacing: "-0.025em"
   title:
-    fontFamily: "Noto Serif SC, Source Han Serif SC, Noto Serif CJK SC, STSong, Songti SC, SimSun, serif"
-    fontSize: "20px"
-    fontWeight: 600
-    lineHeight: 1.4
-    letterSpacing: "0.03em"
+    fontFamily: "Inter, ui-sans-serif, system-ui, PingFang SC, Microsoft YaHei, sans-serif"
+    fontSize: "18px"
+    fontWeight: 700
+    lineHeight: 1.35
+    letterSpacing: "normal"
   body:
-    fontFamily: "Noto Serif SC, Source Han Serif SC, Noto Serif CJK SC, STSong, Songti SC, SimSun, serif"
+    fontFamily: "Inter, ui-sans-serif, system-ui, PingFang SC, Microsoft YaHei, sans-serif"
     fontSize: "15px"
     fontWeight: 400
-    lineHeight: 1.8
-    letterSpacing: "0.01em"
-  miaohong:
-    fontFamily: "Kaiti SC, STKaiti, KaiTi, AR PL UKai CN, AR PL KaitiM GB, TW-Kai, Noto Serif SC, serif"
-    fontSize: "17px"
-    fontWeight: 600
-    lineHeight: 2
-    letterSpacing: "0.035em"
+    lineHeight: 1.6
+    letterSpacing: "normal"
   label:
-    fontFamily: "Noto Serif SC, Source Han Serif SC, Noto Serif CJK SC, STSong, Songti SC, SimSun, serif"
+    fontFamily: "Inter, ui-sans-serif, system-ui, PingFang SC, Microsoft YaHei, sans-serif"
+    fontSize: "13px"
+    fontWeight: 700
+    lineHeight: 1.35
+    letterSpacing: "normal"
+  cue-label:
+    fontFamily: "SFMono-Regular, Consolas, Liberation Mono, monospace"
     fontSize: "12px"
-    fontWeight: 600
+    fontWeight: 700
     lineHeight: 1.4
     letterSpacing: "0.04em"
 rounded:
@@ -77,7 +62,6 @@ rounded:
   md: "6px"
   lg: "8px"
   xl: "12px"
-  full: "9999px"
 spacing:
   xs: "4px"
   sm: "8px"
@@ -86,247 +70,194 @@ spacing:
   xl: "32px"
   xxl: "48px"
 components:
-  button-seal:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-tertiary}"
-    typography: "{typography.label}"
-    rounded: "{rounded.xs}"
-    padding: "0 24px"
-    height: "44px"
-  button-seal-hover:
-    backgroundColor: "{colors.primary-strong}"
-    textColor: "{colors.on-tertiary}"
-    typography: "{typography.label}"
-    rounded: "{rounded.xs}"
-    padding: "0 24px"
-    height: "44px"
-  button-tonal:
-    backgroundColor: "{colors.tertiary}"
-    textColor: "{colors.on-tertiary}"
-    typography: "{typography.label}"
-    rounded: "{rounded.xs}"
-    padding: "0 24px"
-    height: "44px"
-  paper:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.luomo}"
-    rounded: "{rounded.xs}"
-    padding: "32px"
-  input:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.on-surface}"
-    rounded: "{rounded.xs}"
-    padding: "16px"
-    height: "52px"
-  seal-tracing:
-    backgroundColor: "{colors.primary-wash}"
-    textColor: "{colors.primary}"
-    typography: "{typography.label}"
-    rounded: "{rounded.xs}"
-    padding: "4px 10px"
-  seal-inked:
-    backgroundColor: "transparent"
-    textColor: "{colors.luomo}"
-    typography: "{typography.label}"
-    rounded: "{rounded.xs}"
-    padding: "4px 10px"
-  seal-sealed:
-    backgroundColor: "{colors.secondary}"
-    textColor: "{colors.surface}"
-    typography: "{typography.label}"
-    rounded: "{rounded.xs}"
-    padding: "4px 10px"
-  tab-active:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.secondary}"
+  button-primary:
+    backgroundColor: "{colors.cue}"
+    textColor: "{colors.on-accent}"
     typography: "{typography.label}"
     rounded: "{rounded.sm}"
+    padding: "0 20px"
+    height: "44px"
+  button-stage:
+    backgroundColor: "{colors.stage}"
+    textColor: "{colors.on-accent}"
+    typography: "{typography.label}"
+    rounded: "{rounded.sm}"
+    padding: "0 20px"
+    height: "44px"
+  input:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    typography: "{typography.body}"
+    rounded: "{rounded.sm}"
     padding: "0 16px"
-    height: "38px"
+    height: "44px"
+  card:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.md}"
+    padding: "24px"
+  dialog:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.lg}"
+    padding: "24px"
 ---
 
 # Design System: MoFeng (墨风)
 
 ## Overview
 
-**Creative North Star: "描红界格 · 颜色即权责" (The Copybook of Red Tracing)**
+**Creative North Star: “剧场排演提示本” (The Rehearsal Cue Book)**
 
-墨风 (MoFeng) 是专为长篇虚构小说创作者打造的 AI 写作台。新视觉世界取自**书法字课传统——米字格、朱丝栏、描红簿**：AI 写的是淡朱楷体的**描红稿**，作家审定**落墨**（焦墨宋体）才算正文，**朱砂只作落印钤章**。人机权责不靠图标、不靠标签，而是由颜色与字族双信号写进每一行字——阁主回到书案，一眼辨出哪些章节是己出、哪些是待审的描红。
+墨风不是仿古书房，也不是通用白色 SaaS 面板，而是一册正在排演的长篇作品。群青搭建结构舞台，冷白承载长时工作，朱红标记必须立即理解的关键 cue，荧黄只作为极少量临时批注。作者是导演，AI 是提示与候选；界面始终先让作者认出当前作品、下一步和唯一主动作。
 
-界格不是装饰，是书写的规尺：阅读/书写面是**方格稿纸行笺**（横向描红行线 + 左右朱丝栏竖线），结构面是**青灰界格发线**（侧栏章节列表、面板分隔）。旧世界"徽墨熟宣/拓片硬影"已在全站完成换代（写作台先行，工作台首页、灵感、档案、设置、admin 及共享弹层/表格随后覆盖，登录/注册认证面最终入场——入口为「描红引路，落墨入场」：引子区真楷描红作 AI 之声，稿纸面板作家落墨，提交即朱砂落印，摄影卷轴底图与卷轴杆装饰一并退役）：拓片偏置硬投影清零，改为纸页柔影（paper 系）；熟宣底、微直角风骨作为国风内核保留，古籍双线框收敛为 1px 界格发线。2026-08 焚稿清场：旧"第四阶段·墨落惊风雨"地层（`brand-visuals.css` 的狂草"墨風"水印、项目卡石青书脊/装订孔/"藏書"闲章、`background-art.css` 风竹大背景、全局弥散墨晕）已全部删除，描红界格成为唯一视觉世界；项目卡回归平净纸卡（1px 界格发线 + 纸页柔影）。
+系统采用单一浅色皮肤。近黑只用于文字、细线与必要控件，不形成大块暗场；表达力来自严格分区、场次编号、对位线、裁切标记和高密度但有秩序的信息编排，而不是纹理、书法、印章或装饰性卡片墙。
 
 **Key Characteristics:**
-- **颜色即权责**：描红（淡朱 `#B8402F` + 真楷体 + wash 底/1px 界栏三信号，`data-provenance="ai"`）= AI 待审稿；落墨（焦墨 `#1C2224` + 宋体，`data-provenance="ink"`）= 作家审定正文；朱砂（`#B83C32`）只作落印钤章与状态印，已定正文不得见红。
-- **方格稿纸行笺**：章节阅读/编辑容器是横向描红行线稿纸（`--paper-line` 27px），左右缘各一道朱丝栏竖线，熟宣地，古籍双线框。
-- **青灰界格发线**：结构面（侧栏、面板、笺片 tab）用 1px `--md-jiege` 发线分割，不用卡片堆卡片。
-- **落墨签名交互**：候选描红稿被选定后，文字 260ms 由朱转墨（`chapter-luomo`），标题旁钤「定」字朱砂印 1.35s 单帧落印，随即退场。
 
----
+- **严格分舞台**：结构面与工作面形成清晰的面积关系，而非层层套卡片。
+- **Cue 有预算**：群青负责结构，朱红负责关键动作，荧黄负责临时提醒，三者不互相借位。
+- **连续工作面**：项目档案、章节、设置和遥测使用连续表面与 1px 对位线组织密度。
+- **状态可被读出**：颜色始终与文字、图标、形状或位置共同表达状态。
+- **概念种子**：`94f236b2`，用于确认生产构建仍属于同一视觉世界。
 
 ## Colors
 
-墨风的调色盘以熟宣为地、界格为规，三种红色各守一职：淡朱管描红权责，朱砂管落印金石，石青管朗读。
+调色盘是冷静、明亮且具有编辑权威感的四色系统；强调色的稀缺性本身就是层级。
 
 ### Primary
-- **描红** (`#B8402F`): AI 产出、待作家审定文字的正文色。熟宣上对比度 4.7:1（AA 达标）。亦是"提交/选定/保存成稿"类落印主按钮的底色。描红容器语义标注 `data-provenance="ai"`。
-- **描红深** (`#9C3323`): 描红 hover/强调态。
-- **双钩淡朱** (`#CE5A47`): 仅用于 ≥24px 大字标题、装饰与界格等非正文场景，不得用于正文小字（对比度不足）。
-- **描红 wash / 行线 / 界栏** (`color-mix` 5% / 22% / 38%): 描红块底色、稿纸横向行线、描红段落左缘 1px 界栏与朱丝栏竖线。以 `color-mix` 自引用 `--md-miaohong`，保持同一朱色基准。
+
+- **Stage Blue** (`#1737CF`)：顶栏、结构舞台、当前上下文与主要导航；不用于长文正文底。
+- **Stage Strong / Deep** (`#102BB0` / `#0D228D`)：群青交互态与高对比文字，不另造蓝色分支。
+- **Stage Soft** (`#DCE3FF`)：轻量选中面和信息容器。
 
 ### Secondary
-- **朱砂** (`#B83C32`): 落印钤章专用。章节标题旁「定」字落印、"已钤印"状态实底方印、笺片 tab 激活态描边。与描红色相相邻但权责不同：描红是"待审的稿"，朱砂是"盖下的章"。
-- **朱砂容器** (`#FBEBEA` / 字 `#5C120C`): 印章类容器底。
+
+- **Cue Red** (`#D62F3A`)：唯一关键承诺动作、错误和当前 cue。
+- **Cue Strong** (`#A71625`)：Cue Red 的 hover / pressed 态。
 
 ### Tertiary
-- **石青** (`#2E5C8A`): **朗读专用色**——朗读高亮、播放中小签、朗读控制激活态（`--md-primary-container`）。与朱砂权责严格分离：石青不表示任何"已定稿"语义。
+
+- **Prompt Yellow** (`#E6F64A`)：临时批注、提醒、全局键盘焦点与深色结构面上的高可见操作；单屏面积必须很小。
+- **Signal Green** (`#0D7D5E`)：成功、在线和正向系统状态，必须配合文本或图标。
 
 ### Neutral
-- **落墨（焦墨）** (`#1C2224`): 作家审定正文色（`--md-luomo`，`--md-on-surface` 的语义别名）。落墨容器 `data-provenance="ink"`。
-- **松烟** (`#3A4648`): 次级结构与界格发线的 mix 基准。
-- **界格发线** (`color-mix(in srgb, #3A4648 26%, transparent)`): 结构面 1px 青灰发线。
-- **熟宣** (`#FAF6ED`): 稿纸与主阅读面底色。温润淡雅，不用纯白。
-- **老宣** (`#F0EAD8`) / **素骨** (`#F2ECE0`) / **竹纸** (`#FAF7E8`): 全局底色、侧边栏与容器层级。
-- **竹青** (`#C2B69D`) / **墨晕** (`#DCD2BE`): 框线与副线。
 
-### State
-- **温丹砂** (`#B85C58`, container `#FBEBEA`): 错误、终止、强警示。
-- **石绿** (`#3B7A57`, container `#EAF3EE`): 成功与正面反馈。
-- **藤黄** (`#E6A23C`, container `#FDF6EC`): 警示与进行中。
+- **Ink** (`#111525`)：正文、标题与必要线条；不铺成大面积背景。
+- **Muted Ink** (`#566078`)：辅助说明和次级元数据。
+- **Cold White** (`#FFFFFF`)：正文、表单、列表和阅读工作面。
+- **Surface Low / Mid** (`#F7F8FC` / `#EEF1F8`)：相邻工作层与连续分区。
+- **Background** (`#E9EDF6`)：应用大底。
+- **Outline / Soft Outline** (`#8793AA` / `#D9DFEB`)：控件边界与低权重分隔线。
 
 ### Named Rules
-**The Three-Signal Rule (三信号法则).** 描红稿的渲染三个信号缺一不可：**色**（`--md-miaohong`）、**字族**（`--md-font-kai` 真楷体，与落墨宋体形成字形对比，色盲可辨）、**面**（段落底色 `--md-miaohong-wash` + 左缘 1px `--md-miaohong-line-strong` 界栏）。只改颜色不算描红，落墨后三信号同步撤去。
 
-**The Settled-Ink-Never-Red Rule (落墨不见红法则).** 朱砂 `#B83C32` 只出现在落印钤章（「定」字印、状态实底方印）与激活指示上。已定稿的正文、已落墨的段落、首字引首章一律焦墨——正文中出现红色，只有一种合法身份：待审的描红。
+**The Cue Budget Rule.** 朱红只标记页面中最需要立即理解或承诺的动作；荧黄只标记临时提醒或焦点。一个视图不能同时出现多个争夺注意力的红色主动作。
 
-**The Shiqing-Is-Reading Rule (石青朗读法则).** 石青 `#2E5C8A` 是朗读与 AI 辅助协作的专属色（高亮、播放中小签、AI 入口辅钮），不得挪用于成功态、选定态、进度轨道或任何"钤印"语义，以免与朱砂的权责混淆。线性进度条轨道用墨晕（`--md-outline-variant`）、进度条本体用焦墨，不借石青。
-
----
+**The No Black Field Rule.** `#111525` 是墨色，不是背景色。认证页、章节列表、工作台、设置和后台都不得出现大块近黑容器。
 
 ## Typography
 
-**Display Font:** Noto Serif SC, Source Han Serif SC, STSong, Songti SC (宋体字族，落墨与标题)
-**Body Font:** 同宋体字族（`--md-font-family` 已归入 serif 栈）
-**Miaohong Font:** Kaiti SC, STKaiti, KaiTi, AR PL UKai CN, AR PL KaitiM GB, TW-Kai (真楷体栈，`--md-font-kai`，描红稿与朱批批注专用)
+**Display Font:** Arial Narrow / DIN Condensed / Roboto Condensed，中文回退到系统无衬线。
 
-**Character:** 字族即权责。宋体是"碑拓骨力"的已定之字，楷体是"字课描红"的未定之稿——两种字族在同一栏稿纸上对照，作家不看颜色也能读出哪行是 AI 所拟。
+**Body Font:** Inter / 系统无衬线 / PingFang SC / Microsoft YaHei。
+
+**Cue Font:** SFMono-Regular / Consolas，用于编号、场次和机器状态，不用于长段正文。
+
+**Character:** 展示字形像剧场排演单上的压缩标题，正文则保持现代中文工具的长时可读性。页面不再使用楷体、书法字或仿古宋体制造身份。
 
 ### Hierarchy
-- **Display** (400, 48px, 1.2, letterSpacing 0.08em): 极少使用，仅空状态大字留白或书架欢迎页。
-- **Headline** (600, 30px, 1.3, letterSpacing 0.05em): 页面主标题、章节大字标题。
-- **Title** (600, 20px, 1.4, letterSpacing 0.03em): 卡片标题、弹窗头部、操作栏分组名。
-- **Body** (400, 15px, 1.8, letterSpacing 0.01em): 应用级正文基准；稿纸正文（`.chapter-prose`）为 17px / 600 / line-height 2 / letterSpacing 0.035em，行长框定 72ch，段落首行缩进 2em。
-- **Miaohong** (600, 17px, 2, letterSpacing 0.035em): 描红稿专用真楷体栈，字号行高与稿纸正文一致——同一栏内只有色与字族变了，格子不变。
-- **Label** (600, 12px, 1.4, letterSpacing 0.04em): 按钮文字、状态印、小字签（如描红区首段前"描红稿 · 待落墨"小签、同栏题签"候选描红稿"）。12px 是功能小字的硬底线：token 层 `--md-label-small` / `--md-label-medium` 均已对齐 12px，不得再出现 10px 功能文字。
+
+- **Display** (600, 48px, 0.95)：认证品牌、极少数首屏主标题；允许响应式放大。
+- **Headline** (600, 28px, 1.15)：页面和大型分区标题。
+- **Title** (700, 18px, 1.35)：连续工作面中的模块标题。
+- **Body** (400, 15px, 1.6)：默认界面正文；长文阅读可继续使用现有 serif 阅读栈，但不能渗透到应用 chrome。
+- **Label** (700, 13px, 1.35)：按钮、标签和导航。
+- **Cue Label** (700, 12px, 1.4, `0.04em`)：场次编号、计数器、运行状态与对位信息。
 
 ### Named Rules
-**The Kaishu-Means-Draft Rule (楷体即草稿法则).** 真楷体栈只服务描红稿与批注朱批；任何落定正文、标题、按钮、状态印一律宋体。落墨动效中楷→宋是离散属性，在 260ms 过渡的中点翻转，不允许渐变插值。
 
-**The Editorial Spine Rule (碑拓骨力规则).** 凡宋体标题（Display/Headline/Title）必须显式拉开字间距：小字标题 ≥0.03em，大字标题 ≥0.05em。稿纸正文 letterSpacing 0.035em 不缩。
-
----
+**The Two-Voice Rule.** 无衬线承担内容与操作，收窄展示字承担舞台标题，等宽字只承担 cue 元数据；同一元素不得混合三种声音。
 
 ## Layout
 
-写作台为固定三栏 grid（侧栏 | 工作区 | 助手抽屉），断点 833/834/1199/1200，触控尺寸 ≥44px——这是产品契约，不因视觉换代改动。
+全站以连续工作面和明确面积关系组织层级。桌面工作区采用约 `42% / 58%` 的严格分舞台构图：群青区只出现一次“继续创作”主动作，冷白区承载可快速扫读的项目档案。认证入口同样采用品牌舞台与单一表单面的不对称组合，登录与注册在桌面交换重心，避免同构。
 
-- **稿纸行笺**：章节阅读/编辑容器（`.chapter-paper`、MofengEditor 稿纸内核）铺横向描红行线，行距 `--paper-line` = 正文行高（15px × 1.8 = 27px，组件可按节奏覆写）；左右缘各一道 1px 朱丝栏竖线（`--md-miaohong-line-strong`），左右 padding ≥32px。
-- **结构面**：侧栏章节列表、面板分隔用 1px `--md-jiege` 青灰发线，不用卡片堆卡片，不用色块分区。
-- **双色同栏**：落墨正文与候选描红稿在同一栏稿纸上上下对照；两者同时在场时，以 12px 淡朱楷体题签"候选描红稿"（`.chapter-jiege-divider`，字距 0.35em，前后发线）分界，不用 eyebrow 式小字眉。
-- **行线边界**：横向行线只出现在稿纸书写/阅读容器内，绝不铺到侧栏、面板、弹窗底色。阅读面禁用米字格全覆盖底纹（伤长文阅读）；米字格只允许在空状态大字、章节卡封面等非连续阅读区出现。
-
-### Named Rules
-**The Lines-Stay-On-Paper Rule (行线不出稿纸法则).** 描红行线、朱丝栏、米字格都是"纸上的规矩"，只能长在稿纸容器里；结构面只有青灰发线一种线。
-
----
+- 内容最大宽度为 `1360px`，超宽屏扩至 `1520px`；布局边距使用 `clamp()` 保持节奏。
+- 继续遵守 `1200 / 834 / 833` 三段响应式合同。窄屏将分舞台纵向堆叠，导航变为稳定、可横向扫读的控制带。
+- 关键按钮、图标与可收放摘要的触控目标至少 `44px`。
+- 文本容器必须 `min-width: 0`，长标题、URL 和错误文案允许换行，不得制造横向溢出。
+- 结构线为 1px 群青或中性对位线；局部 3px cue 线只用于当前关键状态。
 
 ## Elevation & Depth
 
-全站（写作台、工作台首页、灵感、档案、设置、admin、登录/注册认证面及共享弹层/表格）已停用旧拓片偏置硬投影（`--md-elevation-1..5` 零模糊块影），换代为纸页柔影。层级哲学：**纸可浮，印不浮**。
+系统默认平面化。卡片、按钮、导航与连续列表在静止状态不使用阴影，通过色面、边界和错位建立层级；只有弹层、抽屉或确实脱离文档流的浮层获得柔和冷色阴影。
 
 ### Shadow Vocabulary
-- **浮起纸页 (Paper 1)** (`box-shadow: 0 1px 2px rgba(28,32,34,.08), 0 2px 8px rgba(28,32,34,.06)`): 稿纸静息、按钮 hover、输入框聚焦时的微浮。
-- **弹层稿纸上浮 (Paper 2)** (`box-shadow: 0 2px 4px rgba(28,32,34,.10), 0 8px 24px rgba(28,32,34,.10)`): 弹窗、下拉、focus 态稿纸。
-- 旧拓片硬影仅残留在全局共享按钮骨相（buttons.css `.md-btn` 系，冻结未动）等少数存量，各表面已用 scoped 覆写换代；新表面不得继承。
+
+- **Surface Lift 1** (`0 2px 6px rgba(16,24,62,.08), 0 10px 24px rgba(16,24,62,.06)`)：需要轻微脱离工作面的浮动表面。
+- **Surface Lift 2** (`0 8px 18px rgba(16,24,62,.12), 0 28px 64px rgba(16,24,62,.12)`)：弹窗和全局抽屉。
 
 ### Named Rules
-**The Pressed-Seal Rule (钤印重力法则).** 按钮的影是其重力的回声：静止无影 → hover 浮起 Paper 1 → active `translateY(1px)` 压下且影清零，如印章落纸。反向（静止带影、按下浮起）一律错误。
 
-**The Seals-Don't-Float Rule (印不浮起法则).** 状态小签与落印用印（「定」字印、三态方印）压纸不浮：不带外投影，只有描边或实底。深度只授予"纸"与"层"，不授予"印"。
-
----
-
-## 单一暖纸主题 (Single Paper Theme)
-
-全站只使用一套暖纸浅色视觉。`index.html` 在应用启动前固定 `data-theme="light"` 与 `color-scheme: light`；不读取浏览器主题偏好，不跟随系统深浅色，也不保留暗色或固定夜色分支。
-
-- **纸色分层**：页面大底用 `--md-background` / `--md-surface-dim`，侧栏与工具带用 `--md-surface-container-low` / `--md-surface-container`，阅读与表单面用 `--md-surface`。层级靠纸色、发线与 Paper 1/2 柔影区分，不使用大块近黑容器。
-- **文字与发线**：正文统一使用 `--md-on-surface`，辅文使用 `--md-on-surface-variant`；结构边界使用 `--md-outline*` / `--md-jiege`。朱砂、描红和石青继续遵守既有权责规则。
-- **门面与案头**：登录/注册、工作台 hero、项目顶栏、章节侧栏、工具带与助手面板均处于纸色世界。认证表单仍可作为浮起稿纸，写作台稿纸仍是最亮阅读面，但周边铬件不得沉为暗场。
-- **墨碑与骑缝签**：巨型真实字符可作为低透明度纸上底纹，保持 `aria-hidden` 与 `pointer-events:none`；创作快照可继续骑跨 hero 底缘，但两侧均使用纸色 token。
-- **reduced-motion**：既有入场动画只动 opacity/transform，reduce 下直落终态。
-
----
+**The Flat Work Rule.** 工作内容在同一平面上连续展开；阴影表示真实层级变化，不表示“这是一个卡片”。
 
 ## Shapes
 
-- **微直角方章**：2px（`--md-radius-xs`）微圆角是印章、稿纸、输入框、按钮的统一角语，方正如木刻。4px 仅用于笺片 tab 上缘（`4px 4px 0 0`）。禁用胶囊/pill。
-- **古籍双线框**：稿纸容器 `border: 3px double var(--md-outline)`，外粗内细的线装本双边，国风内核保留。
-- **首字引首章二分**：稿纸首段首字钤印下沉（2.85rem 大字、首行与印底齐平、天然错位斜印 `rotate(-3deg)`）。落墨区 = 焦墨磨砂底 + dashed 斑驳框斜印；描红区 = 朱砂印（`data-provenance="ai"` 覆写）。已定稿的引首章不得见红。
-- **笺片连卷**：tab 为笺片式上圆角签条，激活朱砂笺以负外边距压住底线（`margin-bottom: -1.5px`），与内容面无缝连卷。
+形态以直角模块和微圆角控制之间的张力为主。控件通常为 `4px`，卡片为 `6px`，弹层为 `8px`，只有极少数大型容器使用 `12px`。胶囊形只允许出现在既有、必须表达紧凑状态的组件中，不作为全局装饰语法。
 
----
+1px 对位线、局部裁切角、编号和短 cue 线构成识别度。禁止仿古双线框、印章、装订孔、书脊、卷轴和纸张肌理。
 
 ## Components
 
 ### Buttons
-- **Shape**: 微直角 2px（`--md-radius-xs`），方章骨相。
-- **落印主按钮 (Seal Primary)**: 所有"提交/生成/选定/保存成稿/新建与继续创作"类承诺动作 = 朱砂印纽：描红底、熟宣字，hover 转描红深，active `translateY(1px)` 压下且影清零（钤印重力反馈）。全局实现为 `.md-btn-primary`（buttons.css），配色走专用 token `--md-btn-seal-bg` / `--md-btn-seal-bg-hover` / `--md-btn-seal-text`（miaohong 系 `#B8402F`/`#9C3323` + `#FAF6ED`，对比度 ≥4.5:1）。**一次创作承诺一次落印：每个视图的主承诺动作必须用它，全站不得再出现第三套红。**
-- **Filled (焦墨次钮)**: `md-btn-filled` 焦墨底熟宣字，是次要/中性动作（重试、取消类）的默认钮，不再是"主按钮"。
-- **Tonal (石青辅钮)**: 石青底熟宣字，朗读与 AI 辅助协作入口专用（如「AI优化」），不得挪作通用主按钮。
-- **Outlined**: 透明底 1px 框线，focus 时 1px 焦墨 outline；全局 `:focus-visible` 描边为焦墨（`--md-on-surface`），确保红底按钮上焦点可见。
 
-### 方格稿纸 (Signature Container)
-- **Background**: 熟宣底 + 横向描红行线（`repeating-linear-gradient`，`--paper-line` 循环）+ 左右朱丝栏竖线，全部由多层 background 一次绘成；`background-attachment: local` 随滚动贴行。
-- **Border / Shadow**: 3px double 古籍双线框；Paper 1 柔影。
-- **附加肌理（`paper-fold` 层）**: 顶部 8px 紫檀木压纸镇尺、1/3 与 2/3 处三折物理折痕、0.8% 极微透扫墨风竹水印——只叠加在稿纸上，不进结构面。
-- **Focus**: 稿纸输入聚焦时 Paper 1 微浮 + 1px 焦墨框线。
+- **Primary Cue**：朱红底、白字、4px 圆角、最小高度 44px；hover 进入 Cue Strong 并轻移，active 下压 1px。
+- **Stage Filled**：群青底、白字，承担结构性推进或次级主要操作。
+- **Outlined / Text**：透明底、1px Outline，文字使用 Stage Deep。
+- **Focus**：所有原生交互使用 3px 荧黄 `focus-visible` outline 和 3px offset；不能只改变颜色。
 
-### 描红 / 落墨段落 (Signature Prose)
-- **描红**: 文字 `--md-miaohong` + `--md-font-kai` 楷体（挂在 `span[data-miaohong]`），段落 wash 底 + 左缘 1px 界栏（挂在 `p:has(span[data-miaohong])`）；容器 `data-provenance="ai"`，首段前 12px 淡朱小签"描红稿 · 待落墨"。
-- **落墨**: 色 `--md-luomo`、宋体、底色与界栏撤去；容器 `data-provenance="ink"`。
-- **落墨签名动效**: 候选被选定后，旧稿快照原地 260ms 由朱转墨（`chapter-luomo` keyframes：色连续过渡，楷→宋离散翻转，界栏淡出）；同时标题旁钤「定」字朱砂印（34px 方章，1.35s 单帧落印 `rotate(-4deg) scale(1.3)→1`，钤下即走）。`prefers-reduced-motion` 下两者都直落终态，不动画。
+### Cards / Continuous Surfaces
 
-### 状态印 (Status Seals)
-- **三态**: `描红中`（淡朱描边方印 + wash 底）、`已落墨`（焦墨描边方印）、`已钤印`（朱砂实底方印）。单字或双字，宋体，无外投影——印面压纸不浮起。
+- 工作面为冷白或 Surface Low，使用 1px Soft Outline，默认无阴影。
+- 项目档案、设置摘要和后台遥测优先使用连续分区与共享边界，不堆叠独立浮卡。
+- hover 只改变边界、底色或轻微位移，不整块缩放。
 
-### Tabs (笺片连卷)
-- **Style**: 笺片式上圆角签条（4px 4px 0 0），1px 界格发线描边，宋体 13.5px/600。
-- **Active**: 朱砂描边 + 朱砂字 + 熟宣底，负外边距压住底线，与内容面连卷成一体。
+### Inputs / Fields
 
-### 朗读条 (Reader Bar)
-- **Style**: 熟宣浮起小签（Paper 1），播放中以石青小签标记，石青为朗读专用色；激活控件石青描边/石青字，不借用朱砂。
+- 冷白底、4px 圆角，静止为 1px Outline 内描边。
+- `focus-within` 改为 2px Stage Blue 内描边；错误态同时提供文字说明。
+- 标签保持在输入框外，不用 placeholder 代替名称。
 
-### 编辑器内核 (MofengEditor)
-- **Core**: TipTap 稿纸内核，`MiaohongMark`（`span[data-miaohong]`）承载描红语义；`data-provenance` 承担作者归属，mark 不冗余。
-- **API**: `luomoAll()`（全文落墨）、`luomoParagraph(index)`（单段落墨）、`getMiaohongParagraphCount()`；落墨先加 `mofeng-p--luomoing` 过渡类，260ms 后摘除 mark。
+### Navigation
 
----
+- 全局顶栏为 Stage Blue；当前项目、任务、用户入口在同一 44px 控制节奏内。
+- 当前项必须同时使用位置、底面或短 cue 线表达，不只靠文字颜色。
+- 移动端保持水平可扫读，不将全部入口压入不可发现的图标菜单。
+
+### Drawers / Dialogs
+
+- 使用 Surface、1px Soft Outline、8px 圆角和 Surface Lift 2。
+- 触发器公开 `aria-expanded` 与 `aria-controls`；Escape 关闭后恢复焦点，遮罩必须是具名按钮或由共享弹层语义管理。
+
+### Rehearsal Ledger
+
+灵感页的排演脉络使用原生 `details/summary`。桌面作为并列辅助工作面；移动端收起为 44px 控制带，展开高度上限 320px，不遮蔽对话主任务。
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** 用三信号渲染描红稿：淡朱 `#B8402F` + 真楷体 `--md-font-kai` + wash 底/1px 界栏，并标 `data-provenance="ai"`。
-- **Do** 让落墨正文回到焦墨 `#1C2224` + 宋体，撤去 wash 与界栏，标 `data-provenance="ink"`。
-- **Do** 在全站各表面使用 Paper 1/2 纸页柔影，按钮遵循"静止无影 → hover 浮起 → active 压下清零"的钤印重力。
-- **Do** 用 1px 青灰界格发线（`--md-jiege`）划分侧栏与面板结构，用横向行线 + 朱丝栏构建稿纸。
-- **Do** 让状态印三态（描红中/已落墨/已钤印）以方印呈现，印不浮起。
-- **Do** 把石青 `#2E5C8A` 留给朗读，把朱砂 `#B83C32` 留给落印。
-- **Do** 让所有页面复用同一暖纸 token 层级，不新增运行时主题分支或固定暗场容器。
+
+- **Do** 让每个页面先回答“我在哪、下一步是什么、唯一主动作是什么”。
+- **Do** 把群青用于结构，把朱红用于关键 cue，把荧黄用于临时批注与焦点。
+- **Do** 使用连续工作面、1px 对位线、编号和裁切标记表达密度。
+- **Do** 在桌面和 Pixel 7 上同时验证溢出、焦点、抽屉与 44px 触控目标。
+- **Do** 在 `prefers-reduced-motion: reduce` 下直接到达终态。
 
 ### Don't:
-- **Don't** 让已定稿正文出现任何红色——落墨不见红；描红之外的红色只有朱砂钤印一种合法身份。
-- **Don't** 把楷体用于落定正文、标题、按钮或状态印——楷体即草稿。
-- **Don't** 在任何表面新增拓片偏置硬投影或 >8px 模糊的高斯弥散影；纸页柔影是唯一的影。
-- **Don't** 把稿纸行线、朱丝栏、米字格铺到稿纸容器以外的表面；阅读面禁用米字格全覆盖底纹。
-- **Don't** 用卡片堆卡片、eyebrow/kicker 小字眉、渐变文字、玻璃拟态、unicode/emoji 当图标、>1px 彩色 border-left（描红界栏是 1px，合规）。
-- **Don't** 改旧 token 变量值导致未改造表面变色——token 演进必须加法式。
+
+- **Don't** 恢复暖宣纸、书法、楷体、印章、卷轴、古籍双线框或仿纸肌理。
+- **Don't** 使用大块近黑背景、渐变文字、玻璃拟态、emoji 图标或通用 SaaS 卡片墙。
+- **Don't** 为表达状态只换颜色，也不要让多个朱红动作争夺第一优先级。
+- **Don't** 新增暗色主题、主题切换器或另一套视觉 token。
+- **Don't** 用阴影、圆角和装饰替代信息层级与明确文案。

@@ -17,6 +17,8 @@
             v-if="useSidebarDrawer"
             type="button"
             class="md-btn md-btn-outlined md-ripple writing-desk-mobile-action"
+            :aria-expanded="isSidebarDrawerOpen"
+            aria-controls="writing-desk-chapter-drawer"
             @click="toggleSidebarDrawer"
           >
             章节大纲
@@ -28,6 +30,7 @@
           :class="{ 'writing-desk-layout--assistant-hidden': !useAssistantDrawer && !isAssistantPanelVisible }"
         >
           <div
+            id="writing-desk-chapter-drawer"
             class="writing-desk-sidebar-shell"
             :class="{
               'is-drawer': useSidebarDrawer,
@@ -79,11 +82,17 @@
               @edit-chapter="editChapterContent"
             />
 
-            <WDSealStamp :is-active="assistantToggleActive" @toggle="toggleAssistantVisibility" />
+            <WDSealStamp
+              :is-active="assistantToggleActive"
+              :aria-expanded="useAssistantDrawer ? isAssistantDrawerOpen : isAssistantPanelVisible"
+              aria-controls="writing-desk-assistant-panel"
+              @toggle="toggleAssistantVisibility"
+            />
           </div>
 
           <div
             v-if="shouldRenderAssistantShell"
+            id="writing-desk-assistant-panel"
             class="writing-desk-assistant-shell"
             :class="{
               'is-drawer': useAssistantDrawer,

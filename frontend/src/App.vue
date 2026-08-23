@@ -7,15 +7,15 @@ import { globalAlert } from '@/composables/useAlert'
 
 const route = useRoute()
 
-// Naive UI 主题桥接：把国风色板与字体注入组件库，后续逐步替代 main.css 中对 .n-* 的硬覆写
+// Naive UI 主题桥接：与全局 cue-book 令牌保持同一视觉语义。
 const themeOverrides: GlobalThemeOverrides = {
   common: {
-    primaryColor: '#b83c32',
-    primaryColorHover: '#c94036',
-    primaryColorPressed: '#92221b',
-    primaryColorSuppl: '#b83c32',
-    fontFamily: '"Noto Serif SC", serif',
-    borderRadius: '6px',
+    primaryColor: '#1737cf',
+    primaryColorHover: '#102bb0',
+    primaryColorPressed: '#0d228d',
+    primaryColorSuppl: '#d62f3a',
+    fontFamily: 'Inter, ui-sans-serif, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif',
+    borderRadius: '4px',
   },
 }
 
@@ -126,16 +126,12 @@ const layoutComponent = computed(() => route.meta.layout === 'auth' ? AuthLayout
   gap: 10px;
   padding: 10px 20px;
   border-radius: var(--md-radius-md);
-  font-family: var(--md-font-serif), var(--md-font-family);
+  font-family: var(--md-font-family);
   font-size: var(--md-body-medium);
   font-weight: 500;
   box-shadow: var(--md-elevation-paper-2); /* 弹层纸影 */
-  border: 1.5px solid transparent;
-  /* 极致国风：宣纸帘纹背景，提示始终是一张熟宣便签 */
-  background-image:
-    linear-gradient(to right, rgba(247, 245, 240, 0.95), rgba(247, 245, 240, 0.95)),
-    repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.005) 0px, rgba(28, 32, 34, 0.005) 1px, transparent 1px, transparent 12px);
-  background-blend-mode: overlay;
+  border: 1px solid var(--md-outline-variant);
+  background: var(--md-surface);
   transition:
     opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1),
     transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
@@ -156,34 +152,31 @@ const layoutComponent = computed(() => route.meta.layout === 'auth' ? AuthLayout
   letter-spacing: 0.02em;
 }
 
-/* 成功 - 竹青色调 */
 .global-toast--success {
-  border-color: rgba(63, 108, 93, 0.35);
-  color: #2b5043;
-  background-color: rgba(247, 245, 240, 0.95);
+  border-color: color-mix(in srgb, var(--md-success) 38%, var(--md-outline-variant));
+  color: var(--md-success-text);
+  background-color: var(--md-success-container);
 }
 .global-toast--success .global-toast-icon {
-  color: #3f6c5d;
+  color: var(--md-success);
 }
 
-/* 错误 - 朱砂红色调 */
 .global-toast--error {
-  border-color: rgba(201, 64, 54, 0.35);
-  color: #9c2720;
-  background-color: rgba(247, 245, 240, 0.95);
+  border-color: color-mix(in srgb, var(--md-error) 38%, var(--md-outline-variant));
+  color: var(--md-error-text);
+  background-color: var(--md-error-container);
 }
 .global-toast--error .global-toast-icon {
-  color: #c94036;
+  color: var(--md-error);
 }
 
-/* 普通提示 - 水墨黛色调 */
 .global-toast--info {
-  border-color: rgba(28, 32, 34, 0.25);
-  color: #1c2022;
-  background-color: rgba(247, 245, 240, 0.95);
+  border-color: var(--md-outline-variant);
+  color: var(--md-on-surface);
+  background-color: var(--md-surface);
 }
 .global-toast--info .global-toast-icon {
-  color: #5c6265;
+  color: var(--md-primary);
 }
 
 /* 动画效果：toast-fade */

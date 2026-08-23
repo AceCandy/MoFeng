@@ -1,4 +1,4 @@
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useResponsiveViewport } from '@/composables/useResponsiveViewport'
 import { useNovelStore } from '@/stores/novel'
 import { desktopMin, mobileMax } from '@/constants/responsive'
@@ -25,6 +25,7 @@ export const useWritingDeskDrawers = ({ loadAssistantPanel }: UseWritingDeskDraw
 
   const isSidebarDrawerOpen = ref(false)
   const isAssistantDrawerOpen = ref(false)
+  let lastDrawerTrigger: HTMLElement | null = null
 
   const persistAssistantPanelVisibility = (visible: boolean) => {
     if (typeof window === 'undefined') return
@@ -70,12 +71,27 @@ export const useWritingDeskDrawers = ({ loadAssistantPanel }: UseWritingDeskDraw
   )
 
   const closeAllDrawers = () => {
+    const shouldRestoreFocus = isDrawerBackdropVisible.value
     isSidebarDrawerOpen.value = false
     isAssistantDrawerOpen.value = false
+    if (shouldRestoreFocus && lastDrawerTrigger) {
+      const trigger = lastDrawerTrigger
+      lastDrawerTrigger = null
+      void nextTick(() => trigger.focus())
+    }
+  }
+
+  const handleDrawerKeydown = (event: KeyboardEvent) => {
+    if (event.key !== 'Escape' || !isDrawerBackdropVisible.value) return
+    event.preventDefault()
+    closeAllDrawers()
   }
 
   const toggleSidebarDrawer = () => {
     if (!useSidebarDrawer.value) return
+    if (!isSidebarDrawerOpen.value && document.activeElement instanceof HTMLElement) {
+      lastDrawerTrigger = document.activeElement
+    }
     isSidebarDrawerOpen.value = !isSidebarDrawerOpen.value
     if (isSidebarDrawerOpen.value) {
       isAssistantDrawerOpen.value = false
@@ -85,6 +101,9 @@ export const useWritingDeskDrawers = ({ loadAssistantPanel }: UseWritingDeskDraw
   const toggleAssistantDrawer = () => {
     if (!useAssistantDrawer.value) return
     void loadAssistantPanel()
+    if (!isAssistantDrawerOpen.value && document.activeElement instanceof HTMLElement) {
+      lastDrawerTrigger = document.activeElement
+    }
     isAssistantDrawerOpen.value = !isAssistantDrawerOpen.value
     if (isAssistantDrawerOpen.value && useSidebarDrawer.value) {
       isSidebarDrawerOpen.value = false
@@ -124,6 +143,11 @@ export const useWritingDeskDrawers = ({ loadAssistantPanel }: UseWritingDeskDraw
 
   onMounted(() => {
     restoreAssistantPanelVisibility()
+    window.addEventListener('keydown', handleDrawerKeydown)
+  })
+
+  onBeforeUnmount(() => {
+    window.removeEventListener('keydown', handleDrawerKeydown)
   })
 
   return {

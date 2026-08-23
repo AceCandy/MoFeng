@@ -4,3 +4,5 @@
     <slot />
   </div>
 </template>
+
+<style src="../../assets/styles/components/world-class-auth.css"></style>

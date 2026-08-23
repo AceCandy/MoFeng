@@ -101,11 +101,11 @@
           </div>
 
           <!-- 右侧：文思灵感要素词笺画轴 -->
-          <aside class="inspiration-chat__ledger" aria-label="文思灵感要素词笺">
-            <div class="ledger-header border-b">
+          <details class="inspiration-chat__ledger" aria-label="排演脉络" open>
+            <summary class="ledger-header border-b">
               <span class="ledger-eyebrow">文思灵感词笺</span>
-              <span class="ledger-stamp">[ 意 ]</span>
-            </div>
+              <span class="ledger-stamp">收放</span>
+            </summary>
             
             <div class="ledger-content">
               <ul class="ledger-items">
@@ -159,7 +159,7 @@
                 <p>「笔底生墨，大纲渐润」</p>
               </div>
             </div>
-          </aside>
+          </details>
         </div>
 
         <!-- 阶段 2：蓝图确认界面 -->
@@ -902,6 +902,15 @@ onUnmounted(() => {
   position: relative;
 }
 
+.inspiration-chat__ledger:not([open]) {
+  flex-basis: 44px !important;
+  max-height: 44px !important;
+}
+
+.inspiration-chat__ledger:not([open]) > .ledger-content {
+  display: none !important;
+}
+
 .ledger-header {
   padding: var(--md-spacing-4) var(--md-spacing-5);
   display: flex;
@@ -1048,10 +1057,6 @@ onUnmounted(() => {
 @media (max-width: 1199px) {
   .inspiration-chat {
     flex-direction: column !important;
-  }
-
-  .inspiration-chat__ledger {
-    display: none !important; /* 移动端/小屏隐藏词笺画轴，保留纯净聊天 */
   }
 
   .inspiration-chat__timeline {

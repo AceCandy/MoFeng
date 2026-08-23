@@ -1,0 +1,4 @@
+{"file":".trellis/spec/frontend/index.md","reason":"全量前端规范与质量检查入口"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"类型检查、测试与审查清单"}
+{"file":".trellis/tasks/08-23-world-class-visual-redesign/prd.md","reason":"全站重设计验收标准"}
+{"file":".trellis/tasks/08-23-world-class-visual-redesign/design.md","reason":"视觉合同、边界与风险"}

@@ -89,8 +89,9 @@ Most-used primitives (by frequency): `n-button`, `n-form-item`, `n-tag`, `n-inpu
 ## Styling
 
 - Tailwind v4 (`@import 'tailwindcss';` in `src/assets/main.css`; typography via `@plugin "@tailwindcss/typography"`). No `tailwind.config.js`.
-- Theme tokens are CSS custom properties in `src/assets/styles/tokens.css` under `:root` / `:root[data-theme='light']`, namespaced `--md-*` (design system) and `--ink-*` (ink style). The product uses one warm-paper light theme; prefer these tokens over hard-coded colors.
+- Theme tokens are CSS custom properties in `src/assets/styles/tokens.css` under `:root` / `:root[data-theme='light']`, namespaced `--md-*` (design system) and `--ink-*` (compatibility aliases). The product uses one cue-book light theme: `--md-stage` owns structural blue surfaces, `--md-surface*` owns cold-white work surfaces, `--md-cue` owns the single critical action, and `--md-note` is reserved for temporary prompts/focus. Do not add a dark branch, warm-paper tokens, or large near-black surfaces.
 - Per-component `<style scoped>` is the norm (55 of 64 files). Use `:deep(...)` to override Naive UI internals — reference: `src/components/shared/MofengTable.vue` (`:deep(.n-data-table-th)`, `:deep(.n-data-table-td)`).
+- Shared cue-book overrides live in the final `main.css` partial `world-class.css`. Auth-only overrides are loaded by the async `AuthLayout.vue` through `world-class-auth.css`; keep route-exclusive CSS in that chunk so the entry stylesheet stays within its hard budget, and do not duplicate those selectors in `world-class.css`.
 
 ---
 
@@ -103,6 +104,7 @@ Rule: for transient user feedback, use `useAlert()` (the project convention); re
 ## Accessibility contracts
 
 - Shared modal containers put `role="dialog"`, `aria-modal="true"`, and the accessible name on the modal box rather than its overlay. Reuse `useDialogA11y` for initial focus, Tab trapping, Escape, focus restoration, reference-counted body scroll lock, and background `inert`. Nested dialogs increment the same background element's retain count; closing or unmounting restores its original `inert` value only after the final dialog releases it.
+- Responsive drawers expose their state from the trigger with `aria-expanded` and `aria-controls`. Escape closes the active drawer and restores focus to that trigger; a click-to-dismiss overlay must be a named native button. Keep these contracts when changing drawer layout or breakpoints.
 - Keep list semantics (`ol`/`ul` with `li`) separate from interaction semantics. Put a native `button type="button"` inside each interactive item; use `disabled` for unavailable items and `aria-current="step"` for the active pipeline step.
 - Browser accessibility tests must wait for page and drawer opacity transitions to reach their stable state before running axe. Scope axe to the component or surface owned by the task so unrelated historical debt does not hide regressions in the changed area.
 

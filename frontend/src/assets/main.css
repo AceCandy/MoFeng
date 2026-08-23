@@ -31,5 +31,6 @@
 @import './styles/components/modal-decor.css';
 @import './styles/components/select-styling.css';
 @import './styles/base.css';
+@import './styles/components/world-class.css';
 
 @plugin "@tailwindcss/typography";

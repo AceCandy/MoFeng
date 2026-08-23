@@ -20,6 +20,12 @@
             <p>开启你的创作新篇章</p>
           </div>
 
+          <ol class="register-stage-rail" aria-label="注册流程">
+            <li><span>01</span>建立身份</li>
+            <li><span>02</span>验证邮箱</li>
+            <li><span>03</span>设置口令</li>
+          </ol>
+
           <form class="register-form" novalidate @submit.prevent="handleRegister">
             <div class="md-text-field">
               <label for="username" class="md-text-field-label">用户名</label>
@@ -180,13 +186,13 @@
 
             <Transition name="ink-fade">
               <div v-if="error" id="register-error" class="register-feedback is-error" role="alert">
-                <span class="register-feedback__stamp" aria-hidden="true">误</span>
+                <span class="register-feedback__stamp" aria-hidden="true">!</span>
                 <span>{{ error }}</span>
               </div>
             </Transition>
             <Transition name="ink-fade">
               <div v-if="success" class="register-feedback is-success" role="status">
-                <span class="register-feedback__stamp" aria-hidden="true">成</span>
+                <span class="register-feedback__stamp" aria-hidden="true">✓</span>
                 <span>{{ success }}</span>
               </div>
             </Transition>

@@ -372,10 +372,24 @@ describe('UI audit regressions', () => {
 
     expect(source).toContain(":aria-hidden=\"useSidebarDrawer && !isSidebarDrawerOpen ? 'true' : undefined\"")
     expect(source).toContain(':inert="useSidebarDrawer && !isSidebarDrawerOpen"')
+    expect(source).toContain(':aria-expanded="isSidebarDrawerOpen"')
+    expect(source).toContain('aria-controls="writing-desk-chapter-drawer"')
     expect(source).toContain(":aria-hidden=\"useAssistantDrawer && !isAssistantDrawerOpen ? 'true' : undefined\"")
     expect(source).toContain(':inert="useAssistantDrawer && !isAssistantDrawerOpen"')
+    expect(source).toContain('aria-controls="writing-desk-assistant-panel"')
     expect(source).toContain('overflow-x: clip')
     expect(source).toContain('height: calc(var(--app-viewport-unit) - var(--app-topbar-height) - 88px)')
+  })
+
+  it('keeps the novel detail drawer dismissible and restores its trigger', () => {
+    const drawerSource = readSource('src/components/novel-detail/ShellDrawerNav.vue')
+    const shellSource = readSource('src/components/shared/NovelDetailShell.vue')
+
+    expect(drawerSource).toContain('aria-label="关闭小说档案分区导航"')
+    expect(drawerSource).toContain('<button')
+    expect(shellSource).toContain("event.key !== 'Escape'")
+    expect(shellSource).toContain('closeSidebar(true)')
+    expect(shellSource).toContain('trigger.focus()')
   })
 
   it('protects unsaved model routes and prompts across navigation', () => {
@@ -484,14 +498,12 @@ describe('UI audit regressions', () => {
     const bodyBlock = readCssBlock(css, 'body')
 
     expect(readLightThemeCustomProperty(css, '--md-font-serif')).toContain("'Noto Serif SC'")
-    expect(readLightThemeCustomProperty(css, '--md-font-sans')).toBe('var(--md-font-serif)')
-    // 描红界格世界：楷体是真楷栈（描红稿/朱批字族信号），不再回退宋体别名
-    expect(readLightThemeCustomProperty(css, '--md-font-kai')).toContain("'Kaiti SC'")
-    expect(readLightThemeCustomProperty(css, '--md-font-kai')).not.toBe('var(--md-font-serif)')
-    expect(readLightThemeCustomProperty(css, '--md-font-family')).toBe('var(--md-font-serif)')
-    expect(readLightThemeCustomProperty(css, '--md-font-display')).toBe('var(--md-font-serif)')
-    expect(readLightThemeCustomProperty(css, '--md-font-label')).toBe('var(--md-font-serif)')
-    expect(readLightThemeCustomProperty(css, '--md-font-mono')).toBe('var(--md-font-serif)')
+    expect(readLightThemeCustomProperty(css, '--md-font-sans')).toContain('ui-sans-serif')
+    expect(readLightThemeCustomProperty(css, '--md-font-kai')).toBe('var(--md-font-sans)')
+    expect(readLightThemeCustomProperty(css, '--md-font-family')).toBe('var(--md-font-sans)')
+    expect(readLightThemeCustomProperty(css, '--md-font-display')).toContain("'Arial Narrow'")
+    expect(readLightThemeCustomProperty(css, '--md-font-label')).toBe('var(--md-font-sans)')
+    expect(readLightThemeCustomProperty(css, '--md-font-mono')).toContain("'SFMono-Regular'")
     expect(bodyBlock).toContain('font-family: var(--md-font-family)')
     expect(css).not.toContain('var(--md-font-serif,')
     expect(css).not.toContain('var(--md-font-label,')
@@ -502,6 +514,16 @@ describe('UI audit regressions', () => {
     expect(mainSource).toContain("@fontsource/noto-serif-sc/chinese-simplified-600.css")
     expect(mainSource).not.toContain("@fontsource/noto-serif-sc/chinese-simplified-500.css")
     expect(mainSource).not.toContain("@fontsource/noto-serif-sc/chinese-simplified-700.css")
+  })
+
+  it('keeps control outlines visible on the light work surface', () => {
+    const css = readGlobalCss()
+    const outline = readLightThemeCustomProperty(css, '--md-outline')
+    const success = readLightThemeCustomProperty(css, '--md-success')
+    const surface = readLightThemeCustomProperty(css, '--md-surface')
+
+    expect(contrastRatio(outline, surface)).toBeGreaterThanOrEqual(3)
+    expect(contrastRatio(success, surface)).toBeGreaterThanOrEqual(4.5)
   })
 
   it('uses accessible semantic text tokens for light theme status copy', () => {
