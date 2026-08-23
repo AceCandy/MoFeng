@@ -41,7 +41,7 @@
 - [x] 独立复核功能 diff、视觉合同、响应式和无障碍。
 - [x] 运行 `vue-tsc`、Vitest、生产构建及相关 Playwright 两种设备项目。
 - [x] 按实际实现重写并复核 `DESIGN.md` 与 `.impeccable/design.json`。
-- [ ] 提交工作、归档任务并记录 journal。
+- [x] 提交工作、归档任务并记录 journal。
 
 ## 回滚点
 
