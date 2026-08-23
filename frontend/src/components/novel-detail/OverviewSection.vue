@@ -63,9 +63,9 @@
                 <span
                   class="archive-overview__readiness-mark"
                   :class="`is-${item.tone}`"
-                  :aria-label="item.toneLabel"
                 >
-                  {{ item.toneText }}
+                  <span aria-hidden="true">{{ item.toneText }}</span>
+                  <span class="sr-only">{{ item.toneLabel }}</span>
                 </span>
                 <div>
                   <p class="blueprint-kicker">{{ item.kicker }}</p>
@@ -142,7 +142,10 @@
           class="archive-overview__prose blueprint-prose"
           :class="{ 'archive-overview__empty-text': !data?.full_synopsis }"
         >
-          <p>{{ data?.full_synopsis || '暂无完整剧情梗概。' }}</p>
+          <p v-for="(paragraph, index) in synopsisParagraphs" :key="index">
+            {{ paragraph }}
+          </p>
+          <p v-if="synopsisParagraphs.length === 0">暂无完整剧情梗概。</p>
         </div>
       </div>
     </section>
@@ -194,6 +197,13 @@ const metadataItems = computed(() =>
     ...item,
     value: item.rawValue || '暂无',
   })),
+)
+
+const synopsisParagraphs = computed(() =>
+  (props.data?.full_synopsis ?? '')
+    .split(/\r?\n+/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean),
 )
 
 const filledMetadataCount = computed(

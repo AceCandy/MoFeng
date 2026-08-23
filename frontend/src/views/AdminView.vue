@@ -1,6 +1,7 @@
 <!-- AIMETA P=管理后台_管理员控制台|R=管理面板_子组件切换|NR=不含普通用户功能|E=route:/admin#component:AdminView|X=ui|A=管理面板|D=vue|S=dom,net|RD=./README.ai -->
 <template>
   <div class="app-page admin-console" :class="{ 'is-in-modal': props.isModal }">
+    <h1 class="sr-only">管理后台</h1>
     <section class="admin-console__tabs">
       <nav class="admin-console__nav" aria-label="管理模块切换" role="tablist">
         <button

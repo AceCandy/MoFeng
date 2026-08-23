@@ -3,7 +3,6 @@
   <div
     :class="['model-routing__readiness', `is-${summary.tone}`]"
     :title="summary.description"
-    aria-label="模型配置状态"
   >
     <span class="model-routing__readiness-label">{{ summary.label }}</span>
     <strong class="model-routing__readiness-value">{{ summary.value }}</strong>

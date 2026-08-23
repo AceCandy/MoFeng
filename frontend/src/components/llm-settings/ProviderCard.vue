@@ -77,7 +77,7 @@
           :disabled="!provider.is_enabled || providerFetchState(provider.id).isLoading"
           aria-haspopup="dialog"
           :aria-expanded="isModelPickerOpen(provider.id)"
-          :aria-controls="`model-picker-${provider.id}`"
+          :aria-controls="isModelPickerOpen(provider.id) ? `model-picker-${provider.id}` : undefined"
           @click="emit('open-picker', $event)"
         >
           {{ providerFetchState(provider.id).isLoading ? '拉取中...' : '拉取模型' }}

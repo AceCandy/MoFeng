@@ -95,8 +95,9 @@ test('waiting 先守住无候选状态，再随事实刷新提交真实候选 ID
   await expect(panel.locator('[data-action="select"]')).toHaveCount(0)
 
   await emitFixtureEvent(request, 'waiting-ready')
-  await expect(panel.getByRole('radio', { name: '候选版本 1' })).toBeVisible()
-  await panel.getByRole('button', { name: '选定并继续' }).click()
+  const console = page.getByRole('region', { name: 'AI章节生成控制台' })
+  await expect(console.getByRole('button', { name: /生成第一个独立候选正文/ })).toBeVisible()
+  await console.getByRole('button', { name: '确认并继续' }).click()
   await expectStatus(panel, '正在提交正文')
 
   const stats = await readStats(request)
@@ -160,8 +161,7 @@ test('外部重试必须确认重复调用风险并携带确认字段', async ({
   const console = page.getByRole('region', { name: 'AI章节生成控制台' })
   await expect(console).toBeVisible()
 
-  await console.getByRole('button', { name: /AI评审失败/ }).click()
-  await console.getByRole('button', { name: '使用上一节点结果重试AI评审' }).click()
+  await console.getByRole('button', { name: '重试评审候选版本' }).click()
   const dialog = page.getByRole('dialog', { name: '确认外部重试风险' })
   await expect(dialog).toBeVisible()
   await dialog.getByRole('button', { name: '确定' }).click()
@@ -170,7 +170,7 @@ test('外部重试必须确认重复调用风险并携带确认字段', async ({
   expect((await readStats(request)).commands.at(-1)).toMatchObject({
     type: 'retry_external',
     payload: {
-      activity_key: 'generate-candidates:attempt-1',
+      activity_key: 'wf:review_candidates:e2e',
       acknowledge_possible_duplicate: true,
     },
   })
@@ -196,10 +196,10 @@ test('superseded 运行自动跟随 successor', async ({ page, request }) => {
 test('不支持的契约版本进入 fatal，显式 resync 后才恢复', async ({ page, request }) => {
   await resetScenario(request, 'fatal-contract')
   const panel = await openWritingDesk(page)
-  await expectStatus(panel, '章节状态暂不可信', 'alert')
+  await expectStatus(panel, '章节运行无法读取', 'alert')
   await expect(panel).toContainText('章节工作流数据版本不受支持')
 
-  await panel.getByRole('button', { name: '重新同步' }).click()
+  await panel.getByRole('button', { name: '再次检查' }).click()
   await expectStatus(panel, '尚未开始生成')
   await expect.poll(async () => (await readStats(request)).currentRequests).toBe(2)
 })

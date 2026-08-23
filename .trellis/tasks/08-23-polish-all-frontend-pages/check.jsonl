@@ -1,0 +1,5 @@
+{"file":"PRODUCT.md","reason":"Verify the polish preserves user workflow, calm density, honest copy, and WCAG 2.1 AA."}
+{"file":"DESIGN.md","reason":"Verify all pages remain inside the single warm-paper design world and named visual rules."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Review responsive component patterns, shared accessibility, token use, and scope."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Review tests, CSS ownership, forbidden patterns, and final quality commands."}
+{"file":".trellis/tasks/archive/2026-08/08-22-fix-ui-audit-findings/implement.md","reason":"Cross-check prior nine-page fixes and browser evidence for regressions or duplicated work."}

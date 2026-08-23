@@ -165,6 +165,7 @@ Use the project's custom alert channel — `useAlert()` / `globalAlert` — for 
 - Runner: `vitest` (`npm run test:unit`). Config excluded from the build tsconfig.
 - Colocate tests as `src/**/__tests__/*` or alongside the module.
 - Prefer testing composables and pure utils (`src/utils/`) and query/mutation behavior over snapshot tests.
+- Workflow E2E fixtures must use canonical `node_key` values from `CHAPTER_WORKFLOW_NODE_KEY_VALUES` / the generated schema. Status and node names are different contracts: for example, `waiting_for_selection` maps to `wait_for_selection`, while `projection_pending` maps to `wait_for_projections`. A status literal used as `node_key` sends the UI into the intentional contract-error state and invalidates every downstream scenario.
 
 ### Scenario: Node and build-toolchain upgrades
 

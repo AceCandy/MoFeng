@@ -28,48 +28,36 @@
       </template>
 
       <template v-else>
-        <section class="wd-ai__section">
-          <header class="wd-ai__head">
-            <p>本章目标</p>
-            <strong>{{ chapterGoal }}</strong>
-          </header>
-        </section>
+        <details class="wd-ai__section" open>
+          <summary class="wd-ai__head">本章目标</summary>
+          <strong class="wd-ai__section-value">{{ chapterGoal }}</strong>
+        </details>
 
-        <section class="wd-ai__section">
-          <header class="wd-ai__head">
-            <p>情绪基调</p>
-            <strong>{{ emotionTone }}</strong>
-          </header>
-        </section>
+        <details class="wd-ai__section">
+          <summary class="wd-ai__head">情绪基调</summary>
+          <strong class="wd-ai__section-value">{{ emotionTone }}</strong>
+        </details>
 
-        <section class="wd-ai__section">
-          <header class="wd-ai__head">
-            <p>重点人物</p>
-            <strong>{{ keyCharacters }}</strong>
-          </header>
-        </section>
+        <details class="wd-ai__section">
+          <summary class="wd-ai__head">重点人物</summary>
+          <strong class="wd-ai__section-value">{{ keyCharacters }}</strong>
+        </details>
 
-        <section class="wd-ai__section">
-          <header class="wd-ai__head">
-            <p>伏笔提醒</p>
-          </header>
+        <details class="wd-ai__section">
+          <summary class="wd-ai__head">伏笔提醒</summary>
           <p class="wd-ai__paragraph">{{ foreshadowingReminder }}</p>
-        </section>
+        </details>
 
-        <section class="wd-ai__section">
-          <header class="wd-ai__head">
-            <p>风险提醒</p>
-          </header>
+        <details class="wd-ai__section wd-ai__section--risk">
+          <summary class="wd-ai__head">风险提醒</summary>
           <ul class="wd-ai__risk-list">
             <li v-for="item in risks" :key="item">{{ item }}</li>
           </ul>
-        </section>
+        </details>
 
-        <section class="wd-ai__section">
-          <header class="wd-ai__head">
-            <p>项目态势</p>
-            <strong>{{ projectStatus }}</strong>
-          </header>
+        <details class="wd-ai__section">
+          <summary class="wd-ai__head">项目态势</summary>
+          <strong class="wd-ai__section-value">{{ projectStatus }}</strong>
           <div class="wd-ai__project-stats">
             <div>
               <span>已完成章节</span>
@@ -84,7 +72,7 @@
               <strong>{{ projectStage }}</strong>
             </div>
           </div>
-        </section>
+        </details>
       </template>
     </div>
   </aside>
@@ -328,35 +316,40 @@ const risks = computed(() => {
   padding-bottom: 0;
 }
 
-.wd-ai__head p,
-.wd-ai__head strong {
+.wd-ai__head,
+.wd-ai__section-value {
   margin: 0;
 }
 
 /* 小标题题签：墨晕细框 + 焦墨薄层底 + 松烟宋体 */
-.wd-ai__head p {
+.wd-ai__head {
   color: var(--md-on-surface-variant);
   font-family: var(--md-font-serif); /* 碑拓宋体 */
   font-size: var(--md-label-large);
   font-weight: 700 !important;
   letter-spacing: 0.06em;
-  display: flex;
-  align-items: center;
+  display: list-item;
   padding: var(--md-spacing-2) var(--md-spacing-3);
   background-color: color-mix(in srgb, var(--md-on-surface) 5%, transparent);
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-radius-xs);
   margin-bottom: var(--md-spacing-3);
+  cursor: pointer;
+  list-style-position: inside;
 }
 
-/* 风险提醒题签使用描红系（第 5 个小节 = 风险提醒） */
-.wd-ai__section:nth-child(5) .wd-ai__head p {
+.wd-ai__head::marker {
+  color: var(--md-miaohong);
+}
+
+/* 风险提醒题签使用描红系 */
+.wd-ai__section--risk .wd-ai__head {
   color: var(--md-on-surface);
   border-color: color-mix(in srgb, var(--md-miaohong) 45%, transparent);
   background-color: color-mix(in srgb, var(--md-miaohong) 6%, transparent);
 }
 
-.wd-ai__head strong {
+.wd-ai__section-value {
   margin-top: 8px;
   display: block;
   color: var(--md-on-surface);

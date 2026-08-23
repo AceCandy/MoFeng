@@ -25,7 +25,7 @@ const baseSnapshot = (overrides = {}) => ({
   context_schema_version: 1,
   status: 'running',
   root_job_status: 'running',
-  node_key: 'generate_candidates',
+  node_key: 'generate_candidate_1',
   checkpoint_id: 'checkpoint-e2e',
   progress: 35,
   row_revision: 1,
@@ -45,7 +45,7 @@ const scenarioSnapshot = (scenario) => {
     return baseSnapshot({
       status: 'waiting_for_selection',
       root_job_status: 'waiting',
-      node_key: 'waiting_for_selection',
+      node_key: 'wait_for_selection',
       progress: 70,
       row_revision: 2,
       allowed_commands: [],
@@ -55,7 +55,7 @@ const scenarioSnapshot = (scenario) => {
     return baseSnapshot({
       status: 'projection_pending',
       root_job_status: 'needs_attention',
-      node_key: 'projection_pending',
+      node_key: 'wait_for_projections',
       progress: 90,
       row_revision: 3,
       allowed_commands: ['retry_projection'],
@@ -71,7 +71,7 @@ const scenarioSnapshot = (scenario) => {
       error_category: 'external_side_effect_unknown',
       public_error: '外部模型调用结果未知，需要确认风险后重试。',
       allowed_commands: ['retry_external'],
-      retry_activity_key: 'generate-candidates:attempt-1',
+      retry_activity_key: 'wf:review_candidates:e2e',
     })
   }
   if (scenario === 'cancelled-restart') {
@@ -104,8 +104,15 @@ const scenarioSnapshot = (scenario) => {
 
 const initialState = (scenario = 'current-null-start') => ({
   scenario,
+  authMode: 'user',
   snapshot: scenarioSnapshot(scenario),
   candidates: [],
+  prompts: [
+    { id: 1, name: 'concept', title: '灵感梳理', content: '梳理题材、冲突与主角动机。', tags: ['灵感', '规划'] },
+    { id: 2, name: 'outline', title: '章节大纲', content: '生成可执行的章节大纲。', tags: ['大纲'] },
+    { id: 3, name: 'draft', title: '正文起草', content: '根据章节目标起草正文。', tags: ['写作'] },
+    { id: 4, name: 'review', title: '质量复核', content: '检查连贯性、节奏与人物动机。', tags: [] },
+  ],
   stats: {
     currentRequests: 0,
     startRequests: 0,
@@ -163,16 +170,28 @@ const projectChapter = () => ({
   generation_traces: state.scenario === 'external-retry'
     ? [{
         id: 1,
-        node_key: 'quality_review',
+        node_key: 'review_candidates',
         node_label: 'AI评审',
         stage: 'version_review',
         status: 'failed',
         uses_llm: true,
         error: 'AI评审失败：外部模型返回结果不确定',
-        metadata: { run_id: runA },
+        metadata: { run_id: runA, activity_key: 'wf:review_candidates:e2e' },
       }]
     : [],
   word_count: 0,
+})
+
+const chapterOutline = () => Array.from({ length: 100 }, (_, index) => {
+  const chapterNumber = index + 1
+  return {
+    chapter_number: chapterNumber,
+    title: chapterNumber === 1 ? '归档室的回声' : `第${chapterNumber}份失真记录`,
+    summary: chapterNumber === 1
+      ? '记录员在归档室发现了一份被覆盖的旧版本。'
+      : '记录员沿着新的编号继续核对被改写的事实。',
+    goals: '确认事实来源并完成本章。',
+  }
 })
 
 const project = () => ({
@@ -188,16 +207,11 @@ const project = () => ({
     tone: '冷静',
     target_audience: '成年读者',
     one_sentence_summary: '记录员追查被覆盖的事实。',
-    full_synopsis: '记录员沿着版本痕迹，确认每一次改写留下的证据。',
+    full_synopsis: '记录员沿着版本痕迹，确认每一次改写留下的证据。\n\n随着编号不断错位，他发现被覆盖的不是一段记录，而是一整套共同记忆。\n\n最终，他必须在公开真相与保护当事人之间作出选择。',
     world_setting: {},
     characters: [],
     relationships: [],
-    chapter_outline: [{
-      chapter_number: 1,
-      title: '归档室的回声',
-      summary: '记录员在归档室发现了一份被覆盖的旧版本。',
-      goals: '确认事实来源并完成本章。',
-    }],
+    chapter_outline: chapterOutline(),
   },
   chapters: [projectChapter()],
 })
@@ -206,10 +220,41 @@ const projectSummary = () => ({
   id: projectId,
   title: '回声档案',
   genre: '悬疑',
-  total_chapters: 1,
+  total_chapters: 100,
   completed_chapters: 0,
   last_edited: '2026-07-31T00:00:00Z',
 })
+
+const adminProjectSummary = () => ({
+  ...projectSummary(),
+  owner_id: 1,
+  owner_username: 'e2e-writer',
+})
+
+const projectSection = (section) => {
+  const fixtureProject = project()
+  const blueprint = fixtureProject.blueprint
+  const data = {
+    overview: {
+      title: fixtureProject.title,
+      initial_prompt: fixtureProject.initial_prompt,
+      status: 'drafting',
+      one_sentence_summary: blueprint.one_sentence_summary,
+      target_audience: blueprint.target_audience,
+      genre: blueprint.genre,
+      style: blueprint.style,
+      tone: blueprint.tone,
+      full_synopsis: blueprint.full_synopsis,
+      updated_at: '2026-07-31T00:00:00Z',
+    },
+    world_setting: { world_setting: blueprint.world_setting },
+    characters: { characters: blueprint.characters },
+    relationships: { relationships: blueprint.relationships },
+    chapter_outline: { chapter_outline: blueprint.chapter_outline },
+    chapters: { chapters: [projectChapter()], total: 1 },
+  }[section]
+  return { section, data: data ?? {} }
+}
 
 const task = (snapshot = state.snapshot) => ({
   id: snapshot?.root_job_id ?? rootA,
@@ -280,7 +325,7 @@ const handleControlEvent = (action) => {
     state.snapshot = baseSnapshot({
       status: 'waiting_for_selection',
       root_job_status: 'waiting',
-      node_key: 'waiting_for_selection',
+      node_key: 'wait_for_selection',
       progress: 75,
       row_revision: 3,
       current_chapter_revision: 1,
@@ -330,7 +375,7 @@ const handleWorkflowStream = (request, response) => {
     state.snapshot = baseSnapshot({
       status: 'waiting_for_selection',
       root_job_status: 'waiting',
-      node_key: 'waiting_for_selection',
+      node_key: 'wait_for_selection',
       progress: 70,
       row_revision: 2,
       allowed_commands: [],
@@ -401,6 +446,12 @@ const server = createServer(async (request, response) => {
       json(response, 200, { scenario: state.scenario })
       return
     }
+    if (request.method === 'POST' && path === '/__e2e/auth') {
+      const body = await readJson(request)
+      state.authMode = ['guest', 'user', 'admin'].includes(body.mode) ? body.mode : 'user'
+      json(response, 200, { mode: state.authMode })
+      return
+    }
     if (request.method === 'POST' && path === '/__e2e/event') {
       const body = await readJson(request)
       handleControlEvent(String(body.action || ''))
@@ -412,10 +463,14 @@ const server = createServer(async (request, response) => {
       return
     }
     if (request.method === 'GET' && path === '/api/auth/users/me') {
+      if (state.authMode === 'guest') {
+        json(response, 401, { detail: '未登录' })
+        return
+      }
       json(response, 200, {
         id: 1,
         username: 'e2e-writer',
-        is_admin: false,
+        is_admin: state.authMode === 'admin',
         must_change_password: false,
       })
       return
@@ -431,8 +486,38 @@ const server = createServer(async (request, response) => {
     if (request.method === 'GET' && path === '/api/llm-config') {
       json(response, 200, {
         legacy: null,
-        providers: [],
-        models: [],
+        providers: [{
+          id: 1,
+          user_id: 1,
+          name: 'E2E 模型供应商',
+          provider_type: 'openai_compatible',
+          base_url: 'https://example.test/v1',
+          api_key_preview: 'test…key',
+          capabilities: { chat: true, embedding: true },
+          is_enabled: true,
+        }],
+        models: [{
+          id: 1,
+          user_id: 1,
+          provider_id: 1,
+          display_name: 'E2E 通用模型',
+          model_name: 'e2e-model',
+          capabilities: { chat: true, embedding: true },
+          context_window: 128000,
+          is_default_chat: true,
+          is_default_embedding: true,
+          is_default_tts: false,
+          tts_protocol: null,
+          tts_voice: null,
+          tts_speed: 1,
+          is_enabled: true,
+          sort_order: 0,
+          input_price_per_million: null,
+          output_price_per_million: null,
+          cached_input_price_per_million: null,
+          cache_write_input_price_per_million: null,
+          pricing_currency: null,
+        }],
         stage_routes: [],
       })
       return
@@ -445,8 +530,101 @@ const server = createServer(async (request, response) => {
       json(response, 200, project())
       return
     }
+    if (
+      request.method === 'GET'
+      && path.startsWith(`/api/novels/${projectId}/sections/`)
+    ) {
+      json(response, 200, projectSection(path.split('/').at(-1)))
+      return
+    }
     if (request.method === 'GET' && path === `/api/novels/${projectId}/chapters/1`) {
       json(response, 200, projectChapter())
+      return
+    }
+    if (request.method === 'GET' && path === `/api/novels/${projectId}/foreshadowings`) {
+      json(response, 200, [])
+      return
+    }
+    if (request.method === 'GET' && path === `/api/analytics/${projectId}/emotion-curve`) {
+      json(response, 200, {
+        project_id: projectId,
+        emotion_points: [],
+        summary: {},
+        emotion_distribution: {},
+      })
+      return
+    }
+    if (request.method === 'GET' && path === `/api/analytics/${projectId}/foreshadowing`) {
+      json(response, 200, {
+        project_id: projectId,
+        total_foreshadowings: 0,
+        planted_count: 0,
+        paid_off_count: 0,
+        overdue_count: 0,
+        foreshadowings: [],
+      })
+      return
+    }
+    if (request.method === 'GET' && path === '/api/admin/stats') {
+      json(response, 200, { api_request_count: 28, novel_count: 1, user_count: 2 })
+      return
+    }
+    if (request.method === 'GET' && path === '/api/admin/users') {
+      json(response, 200, [
+        { id: 1, username: 'e2e-writer', email: null, is_admin: true, is_active: true, must_change_password: false },
+        { id: 2, username: 'paper-reader', email: 'reader@example.test', is_admin: false, is_active: true, must_change_password: false },
+      ])
+      return
+    }
+    if (request.method === 'GET' && path === '/api/admin/prompts') {
+      json(response, 200, state.prompts)
+      return
+    }
+    if (request.method === 'PATCH' && /^\/api\/admin\/prompts\/\d+$/.test(path)) {
+      const id = Number(path.split('/').at(-1))
+      const body = await readJson(request)
+      const index = state.prompts.findIndex((prompt) => prompt.id === id)
+      state.prompts[index] = { ...state.prompts[index], ...body }
+      json(response, 200, state.prompts[index])
+      return
+    }
+    if (request.method === 'GET' && path === '/api/admin/novel-projects') {
+      json(response, 200, [adminProjectSummary()])
+      return
+    }
+    if (request.method === 'GET' && path === `/api/admin/novel-projects/${projectId}`) {
+      json(response, 200, project())
+      return
+    }
+    if (
+      request.method === 'GET'
+      && path.startsWith(`/api/admin/novel-projects/${projectId}/sections/`)
+    ) {
+      json(response, 200, projectSection(path.split('/').at(-1)))
+      return
+    }
+    if (
+      request.method === 'GET'
+      && path === `/api/admin/novel-projects/${projectId}/chapters/1`
+    ) {
+      json(response, 200, projectChapter())
+      return
+    }
+    if (request.method === 'GET' && path === '/api/admin/update-logs') {
+      json(response, 200, [{
+        id: 1,
+        content: '优化暖纸主题下的页面层级与移动端体验。',
+        is_pinned: true,
+        created_at: '2026-07-31T00:00:00Z',
+        created_by: 'e2e-writer',
+      }])
+      return
+    }
+    if (request.method === 'GET' && path === '/api/admin/system-configs') {
+      json(response, 200, [
+        { key: 'writer.chapter_versions', value: '2', description: '章节候选版本数', is_sensitive: false, is_configured: true },
+        { key: 'writer.chapter_word_limit', value: '2600', description: '章节目标字数', is_sensitive: false, is_configured: true },
+      ])
       return
     }
     if (request.method === 'GET' && path === '/api/tasks') {

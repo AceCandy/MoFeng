@@ -14,12 +14,17 @@
             <!-- 头部 -->
             <header class="inspiration-chat__header">
               <div class="flex justify-between items-center">
-                <div class="flex items-center gap-2">
+                <div class="inspiration-chat__heading">
                   <span
                     class="inspiration-chat__status-dot"
                     aria-hidden="true"
                   ></span>
-                  <span class="md-label-large inspiration-chat__title">与"文思"对话中...</span>
+                  <div>
+                    <span class="md-label-large inspiration-chat__title">与“文思”对话中</span>
+                    <span v-if="currentProject" class="inspiration-chat__context">
+                      《{{ currentProject.title }}》 · {{ conversationStageLabel }}
+                    </span>
+                  </div>
                 </div>
                 <div class="flex items-center gap-4">
                   <span
@@ -282,6 +287,12 @@ const isCheckingModelConfig = ref(false)
 const isAssistantResponding = ref(false)
 const activeProjectId = ref<string | null>(null)
 const currentProject = ref<NovelProject | null>(null)
+const conversationStageLabel = computed(() => {
+  if (currentTurn.value === 0) return '落笔起意'
+  if (currentTurn.value < 2) return '凝聚核心意象'
+  if (currentTurn.value < 4) return '搭建故事骨架'
+  return '确认章节蓝图'
+})
 // 【强类型守卫】：将 any 替换为未定义属性的防御性安全字典或专属类型，杜绝类型逃逸
 const currentConversationState = ref<Record<string, unknown>>({})
 
@@ -407,7 +418,7 @@ const resetInspirationMode = () => {
 
 const exitConversation = async () => {
   const confirmed = await globalAlert.showConfirm(
-    '确定要退出灵感模式吗？当前进度可能会丢失。',
+    '已发送的对话会保留在当前项目中；输入框里尚未发送的内容不会保存。确定退出吗？',
     '退出确认',
   )
   if (confirmed) {
@@ -823,6 +834,28 @@ onUnmounted(() => {
   background-color: var(--md-primary);
 }
 
+.inspiration-chat__heading {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--md-spacing-2);
+}
+
+.inspiration-chat__heading > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.inspiration-chat__context {
+  overflow: hidden;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .inspiration-chat__turn-badge {
   font-size: var(--md-label-medium);
   font-weight: 500;
@@ -1049,6 +1082,14 @@ onUnmounted(() => {
   .inspiration-chat__header > div {
     flex-wrap: wrap;
     row-gap: var(--md-spacing-2);
+  }
+
+  .inspiration-chat__heading {
+    flex: 1 1 100%;
+  }
+
+  .inspiration-chat__title {
+    font-size: var(--md-title-medium);
   }
 }
 

@@ -83,7 +83,7 @@ test('写作台暖纸主题通过 axe、触控与溢出验收', async ({ page })
   await expectAxeClean(page, '.chapter-console__pipeline-card')
 
   const contextStep = page.getByRole('button', {
-    name: /冻结基础上下文失败/,
+    name: '校验并引用本轮启动时冻结的基础上下文。',
   })
   await contextStep.focus()
   await page.keyboard.press('Enter')

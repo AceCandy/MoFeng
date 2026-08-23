@@ -1,0 +1,6 @@
+{"file":"PRODUCT.md","reason":"Product users, operational modes, brand commitments, and accessibility target for all-page refinement."}
+{"file":"DESIGN.md","reason":"Warm-paper visual system, typography, color ownership, responsive and component contracts."}
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend package convention routing."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Vue component, styling, shared modal, touch, and accessibility contracts."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"CSS ownership, testing, AIMETA, and frontend quality gates."}
+{"file":".trellis/tasks/archive/2026-08/08-22-fix-ui-audit-findings/prd.md","reason":"Prior nine-page P0/P1 scope and completed behavior that must not regress or be duplicated."}

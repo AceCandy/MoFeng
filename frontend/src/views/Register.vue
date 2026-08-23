@@ -20,24 +20,26 @@
             <p>开启你的创作新篇章</p>
           </div>
 
-          <form class="register-form" @submit.prevent="handleRegister">
+          <form class="register-form" novalidate @submit.prevent="handleRegister">
             <div class="md-text-field">
               <label for="username" class="md-text-field-label">用户名</label>
               <div class="md-text-field-wrapper">
                 <input
                   id="username"
+                  ref="usernameInputRef"
                   v-model="username"
                   name="username"
                   type="text"
                   required
-                  :aria-invalid="Boolean(error)"
-                  :aria-describedby="error ? 'register-error' : undefined"
+                  :aria-invalid="Boolean(fieldErrors.username)"
+                  :aria-describedby="fieldErrors.username ? 'username-help username-error' : 'username-help'"
                   class="md-text-field-input"
                   placeholder="请输入用户名"
                   autocomplete="username"
                   maxlength="64"
                   spellcheck="false"
                   autocapitalize="none"
+                  @input="fieldErrors.username = ''"
                 />
                 <span class="md-text-field-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
@@ -49,6 +51,12 @@
                   </svg>
                 </span>
               </div>
+              <p id="username-help" class="register-field-help">
+                中文至少 2 个字符；字母或数字组合至少 7 位，且不能为纯数字。
+              </p>
+              <p v-if="fieldErrors.username" id="username-error" class="register-field-error">
+                {{ fieldErrors.username }}
+              </p>
             </div>
 
             <div class="md-text-field">
@@ -56,18 +64,20 @@
               <div class="md-text-field-wrapper">
                 <input
                   id="email"
+                  ref="emailInputRef"
                   v-model="email"
                   name="email"
                   type="email"
                   required
-                  :aria-invalid="Boolean(error)"
-                  :aria-describedby="error ? 'register-error' : undefined"
+                  :aria-invalid="Boolean(fieldErrors.email)"
+                  :aria-describedby="fieldErrors.email ? 'email-error' : undefined"
                   class="md-text-field-input"
                   placeholder="请输入邮箱"
                   autocomplete="email"
                   maxlength="254"
                   spellcheck="false"
                   autocapitalize="none"
+                  @input="fieldErrors.email = ''"
                 />
                 <span class="md-text-field-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
@@ -80,6 +90,9 @@
                   </svg>
                 </span>
               </div>
+              <p v-if="fieldErrors.email" id="email-error" class="register-field-error">
+                {{ fieldErrors.email }}
+              </p>
             </div>
 
             <div class="register-code-row">
@@ -88,12 +101,13 @@
                 <div class="md-text-field-wrapper">
                   <input
                     id="verificationCode"
+                    ref="verificationCodeInputRef"
                     v-model="verificationCode"
                     name="verificationCode"
                     type="text"
                     required
-                    :aria-invalid="Boolean(error)"
-                    :aria-describedby="error ? 'register-error' : undefined"
+                    :aria-invalid="Boolean(fieldErrors.verificationCode)"
+                    :aria-describedby="fieldErrors.verificationCode ? 'verification-code-error' : undefined"
                     class="md-text-field-input"
                     placeholder="验证码"
                     inputmode="numeric"
@@ -101,8 +115,16 @@
                     maxlength="12"
                     spellcheck="false"
                     autocapitalize="none"
+                    @input="fieldErrors.verificationCode = ''"
                   />
                 </div>
+                <p
+                  v-if="fieldErrors.verificationCode"
+                  id="verification-code-error"
+                  class="register-field-error"
+                >
+                  {{ fieldErrors.verificationCode }}
+                </p>
               </div>
               <button
                 type="button"
@@ -120,17 +142,19 @@
               <div class="md-text-field-wrapper">
                 <input
                   id="password"
+                  ref="passwordInputRef"
                   v-model="password"
                   name="password"
                   :type="showPassword ? 'text' : 'password'"
                   required
-                  :aria-invalid="Boolean(error)"
-                  :aria-describedby="error ? 'register-error' : undefined"
+                  :aria-invalid="Boolean(fieldErrors.password)"
+                  :aria-describedby="fieldErrors.password ? 'password-help password-error' : 'password-help'"
                   class="md-text-field-input"
                   placeholder="至少 8 个字符"
                   autocomplete="new-password"
                   minlength="8"
                   maxlength="256"
+                  @input="fieldErrors.password = ''"
                 />
                 <button
                   type="button"
@@ -148,6 +172,10 @@
                   </svg>
                 </button>
               </div>
+              <p id="password-help" class="register-field-help">至少 8 个字符。</p>
+              <p v-if="fieldErrors.password" id="password-error" class="register-field-error">
+                {{ fieldErrors.password }}
+              </p>
             </div>
 
             <Transition name="ink-fade">
@@ -203,7 +231,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   useAuthOptionsQuery,
@@ -221,6 +249,16 @@ const showPassword = ref(false)
 const countdown = ref(0)
 const error = ref('')
 const success = ref('')
+const usernameInputRef = ref<HTMLInputElement | null>(null)
+const emailInputRef = ref<HTMLInputElement | null>(null)
+const verificationCodeInputRef = ref<HTMLInputElement | null>(null)
+const passwordInputRef = ref<HTMLInputElement | null>(null)
+const fieldErrors = reactive({
+  username: '',
+  email: '',
+  verificationCode: '',
+  password: '',
+})
 const router = useRouter()
 const authOptionsQuery = useAuthOptionsQuery()
 const sendCodeMutation = useSendVerificationCodeMutation()
@@ -241,46 +279,47 @@ watch(
   { immediate: true },
 )
 
+const clearFieldErrors = () => {
+  fieldErrors.username = ''
+  fieldErrors.email = ''
+  fieldErrors.verificationCode = ''
+  fieldErrors.password = ''
+}
+
 const validateInput = () => {
-  if (!username.value.trim()) {
-    return '请输入用户名'
-  }
-
-  if (!email.value.trim()) {
-    return '请输入邮箱'
-  }
-
-  if (!verificationCode.value.trim()) {
-    return '请输入验证码'
-  }
-
-  if (password.value.length < 8) {
-    return '密码必须至少8个字符'
-  }
-
-  const usernameVal = username.value
+  clearFieldErrors()
+  const usernameVal = username.value.trim()
+  const emailVal = email.value.trim()
   const hasChinese = /[\u4e00-\u9fa5]/.test(usernameVal)
   const isNumeric = /^\d+$/.test(usernameVal)
   const isAlphanumeric = /^[a-zA-Z0-9]+$/.test(usernameVal)
 
-  if (isNumeric) {
-    return '用户名不能是纯数字'
+  if (!usernameVal) fieldErrors.username = '请输入用户名'
+  else if (isNumeric) fieldErrors.username = '用户名不能是纯数字'
+  else if (hasChinese && usernameVal.length <= 1) fieldErrors.username = '用户名至少需要 2 个字符'
+  else if (isAlphanumeric && !hasChinese && usernameVal.length <= 6) {
+    fieldErrors.username = '用户名长度必须大于 6 个字母或数字'
   }
 
-  if (hasChinese && usernameVal.length <= 1) {
-    return '用户名至少需要 2 个字符'
-  }
+  if (!emailVal) fieldErrors.email = '请输入邮箱'
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) fieldErrors.email = '邮箱格式不正确'
+  if (!verificationCode.value.trim()) fieldErrors.verificationCode = '请输入验证码'
+  if (password.value.length < 8) fieldErrors.password = '密码必须至少 8 个字符'
 
-  if (isAlphanumeric && !hasChinese && usernameVal.length <= 6) {
-    return '用户名长度必须大于6个字母或数字'
-  }
+  return !Object.values(fieldErrors).some(Boolean)
+}
 
-  return null
+const focusFirstFieldError = () => {
+  if (fieldErrors.username) usernameInputRef.value?.focus()
+  else if (fieldErrors.email) emailInputRef.value?.focus()
+  else if (fieldErrors.verificationCode) verificationCodeInputRef.value?.focus()
+  else if (fieldErrors.password) passwordInputRef.value?.focus()
 }
 
 const sendCode = async () => {
   error.value = ''
   success.value = ''
+  fieldErrors.email = ''
   const normalizedEmail = email.value.trim()
 
   if (!allowRegistration.value) {
@@ -289,12 +328,14 @@ const sendCode = async () => {
   }
 
   if (!normalizedEmail) {
-    error.value = '请输入邮箱'
+    fieldErrors.email = '请输入邮箱'
+    emailInputRef.value?.focus()
     return
   }
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(normalizedEmail)) {
-    error.value = '邮箱格式不正确'
+    fieldErrors.email = '邮箱格式不正确'
+    emailInputRef.value?.focus()
     return
   }
 
@@ -327,9 +368,8 @@ const handleRegister = async () => {
   error.value = ''
   success.value = ''
 
-  const validationError = validateInput()
-  if (validationError) {
-    error.value = validationError
+  if (!validateInput()) {
+    focusFirstFieldError()
     return
   }
 
@@ -488,6 +528,21 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 7px;
+}
+
+.register-field-help,
+.register-field-error {
+  margin: 0;
+  font-size: var(--md-label-small);
+  line-height: 1.5;
+}
+
+.register-field-help {
+  color: var(--md-on-surface-variant);
+}
+
+.register-field-error {
+  color: var(--md-error-text);
 }
 
 .md-text-field-label {
@@ -745,12 +800,12 @@ onUnmounted(() => {
   }
 
   .register-panel {
-    margin-top: 12px;
-    padding: 32px 24px 30px;
+    margin-top: 8px;
+    padding: 24px 24px;
   }
 
   .register-card__header {
-    margin-bottom: 22px;
+    margin-bottom: 16px;
   }
 
   .register-card__header h2,
@@ -759,15 +814,15 @@ onUnmounted(() => {
   }
 
   .register-form {
-    gap: 14px;
+    gap: 12px;
   }
 
   .register-code-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .register-code-button {
-    width: 100%;
+    width: auto;
   }
 
   .register-link {

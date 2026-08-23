@@ -176,20 +176,20 @@
   --n-border-focus: 1px solid var(--md-primary) !important;
 }
 
-/* 2. Primary (filled 风格) */
+/* 2. Primary（共享主动作统一为朱砂落印） */
 .n-button.n-button--primary-type {
-  --n-color: var(--md-primary) !important;
-  --n-color-hover: var(--md-primary-dark) !important;
-  --n-color-pressed: var(--md-primary-dark) !important;
-  --n-color-focus: var(--md-primary) !important;
-  --n-text-color: var(--md-on-primary) !important;
-  --n-text-color-hover: var(--md-on-primary) !important;
-  --n-text-color-pressed: var(--md-on-primary) !important;
-  --n-text-color-focus: var(--md-on-primary) !important;
-  --n-border: 1px solid var(--md-outline) !important;
-  --n-border-hover: 1px solid var(--md-primary) !important;
-  --n-border-pressed: 1px solid var(--md-primary) !important;
-  --n-border-focus: 1px solid var(--md-primary) !important;
+  --n-color: var(--md-btn-seal-bg) !important;
+  --n-color-hover: var(--md-btn-seal-bg-hover) !important;
+  --n-color-pressed: var(--md-btn-seal-bg-hover) !important;
+  --n-color-focus: var(--md-btn-seal-bg) !important;
+  --n-text-color: var(--md-btn-seal-text) !important;
+  --n-text-color-hover: var(--md-btn-seal-text) !important;
+  --n-text-color-pressed: var(--md-btn-seal-text) !important;
+  --n-text-color-focus: var(--md-btn-seal-text) !important;
+  --n-border: 1px solid transparent !important;
+  --n-border-hover: 1px solid transparent !important;
+  --n-border-pressed: 1px solid transparent !important;
+  --n-border-focus: 1px solid transparent !important;
   box-shadow: var(--md-elevation-paper-1) !important;
 }
 .n-button.n-button--primary-type:active {

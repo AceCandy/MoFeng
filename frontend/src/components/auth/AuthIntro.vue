@@ -188,17 +188,17 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
 
 @media (max-width: 833px) {
   .auth-intro {
-    min-height: 276px;
+    min-height: 172px;
   }
 
   .auth-intro__spine {
-    top: 24px;
+    top: 12px;
     left: 24px;
     font-size: 13px;
   }
 
   .auth-intro__brand {
-    top: 48px;
+    top: 22px;
     left: clamp(24px, 12vw, 56px);
     right: 24px;
     justify-content: flex-start;
@@ -229,16 +229,7 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   }
 
   .auth-intro__footmark {
-    left: auto;
-    right: 16px;
-    bottom: 14px;
-    gap: 8px;
-    padding: 5px 8px;
-    border: 1px solid var(--md-outline-variant);
-    border-radius: var(--md-radius-xs);
-    background: var(--md-surface-container-low);
-    font-size: 12px;
-    letter-spacing: 0.04em;
+    display: none;
   }
 
   .auth-intro__stamp {

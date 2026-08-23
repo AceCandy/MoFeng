@@ -130,8 +130,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, type ComponentPublicInstance } from 'vue'
-import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, ref, watch, type ComponentPublicInstance } from 'vue'
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import PersonalModelRouting from '@/components/llm-settings/PersonalModelRouting.vue'
 import { globalAlert } from '@/composables/useAlert'
 import { useLLMConfigBundleQuery } from '@/queries/llm'
@@ -168,7 +168,14 @@ const settingsSections: SettingsSection[] = [
   { id: 'routes', label: '阶段路由', description: '按创作阶段覆盖主模型' },
 ]
 
-const activeSettingsSection = ref<SettingsSectionId>('llm')
+const resolveSettingsSection = (value: unknown): SettingsSectionId =>
+  typeof value === 'string' && settingsSections.some((section) => section.id === value)
+    ? value as SettingsSectionId
+    : 'llm'
+
+const activeSettingsSection = ref<SettingsSectionId>(
+  props.isModal ? 'llm' : resolveSettingsSection(route.query.tab),
+)
 const personalRoutingXRef = ref<InstanceType<typeof PersonalModelRouting> | null>(null)
 const isDirty = computed(() => personalRoutingXRef.value?.isDirty ?? false)
 const settingsTabRefs = ref<Record<SettingsSectionId, HTMLButtonElement | null>>({
@@ -189,8 +196,18 @@ const selectSettingsSection = async (sectionId: SettingsSectionId) => {
   if (sectionId === activeSettingsSection.value) return true
   if (!(await confirmDiscardChanges())) return false
   activeSettingsSection.value = sectionId
+  if (!props.isModal) {
+    await router.replace({ name: 'settings', query: { ...route.query, tab: sectionId } })
+  }
   return true
 }
+
+watch(
+  () => route.query.tab,
+  (tab) => {
+    if (!props.isModal) activeSettingsSection.value = resolveSettingsSection(tab)
+  },
+)
 
 const setSettingsTabRef = (
   sectionId: SettingsSectionId,
@@ -341,6 +358,11 @@ const onBeforeUnload = (event: BeforeUnloadEvent) => {
 
 onMounted(() => window.addEventListener('beforeunload', onBeforeUnload))
 onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload))
+onBeforeRouteUpdate((to) => {
+  const nextSection = resolveSettingsSection(to.query.tab)
+  if (props.isModal || nextSection === activeSettingsSection.value) return true
+  return confirmDiscardChanges()
+})
 onBeforeRouteLeave(() => confirmDiscardChanges())
 
 const handleLLMConfigSaved = async () => {

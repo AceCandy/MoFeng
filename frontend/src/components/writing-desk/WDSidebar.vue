@@ -34,12 +34,30 @@
                 </button>
               </div>
             </div>
+            <form class="writing-sidebar__search" @submit.prevent="jumpToExactChapter">
+              <label for="writing-sidebar-search" class="sr-only">搜索章节标题或章号</label>
+              <input
+                id="writing-sidebar-search"
+                v-model="chapterSearch"
+                type="search"
+                inputmode="search"
+                autocomplete="off"
+                placeholder="搜索标题或章号"
+              />
+              <button
+                type="submit"
+                class="md-btn md-btn-outlined"
+                :disabled="exactChapterNumber === null"
+              >
+                跳转
+              </button>
+            </form>
           </div>
 
           <div class="pl-1 pr-2 pb-6 pt-3">
-            <div v-if="project.blueprint?.chapter_outline?.length" class="writing-sidebar__tree">
+            <div v-if="filteredOutline.length" class="writing-sidebar__tree">
               <div
-                v-for="(chapter, index) in project.blueprint.chapter_outline"
+                v-for="(chapter, index) in filteredOutline"
                 :key="chapter.chapter_number"
                 class="writing-sidebar__tree-item"
                 :class="{ 'has-delete-btn': canDeleteChapter(chapter.chapter_number) }"
@@ -140,6 +158,15 @@
                 </button>
               </div>
             </div>
+            <div
+              v-else-if="project.blueprint?.chapter_outline?.length"
+              class="text-center py-8 md-body-medium md-on-surface-variant"
+            >
+              <p>未找到匹配章节</p>
+              <button type="button" class="md-btn md-btn-text" @click="chapterSearch = ''">
+                清除搜索
+              </button>
+            </div>
             <div v-else class="text-center py-8 md-body-medium md-on-surface-variant">
               <svg
                 class="w-12 h-12 mx-auto mb-3 opacity-50"
@@ -212,9 +239,32 @@ const emit = defineEmits<{
 
 const listContainer = ref<HTMLElement | null>(null)
 const chapterRefs = ref<Record<number, HTMLElement | null>>({})
+const chapterSearch = ref('')
 
 const totalChapters = computed(() => {
   return props.project?.blueprint?.chapter_outline?.length || 0
+})
+
+const filteredOutline = computed(() => {
+  const outline = props.project?.blueprint?.chapter_outline ?? []
+  const query = chapterSearch.value.trim().toLocaleLowerCase()
+  if (!query) return outline
+  return outline.filter((chapter) =>
+    chapter.title.toLocaleLowerCase().includes(query)
+    || String(chapter.chapter_number).includes(query)
+    || `第${chapter.chapter_number}章`.includes(query),
+  )
+})
+
+const exactChapterNumber = computed(() => {
+  const match = chapterSearch.value.trim().match(/^第?(\d+)章?$/)
+  if (!match) return null
+  const chapterNumber = Number(match[1])
+  return props.project?.blueprint?.chapter_outline?.some(
+    (chapter) => chapter.chapter_number === chapterNumber,
+  )
+    ? chapterNumber
+    : null
 })
 
 // 章节号到章节数据的索引，避免模板渲染时多次线性查找。
@@ -304,6 +354,12 @@ const scrollToNearestIncompleteChapter = async () => {
     props.project?.chapters ?? [],
   )
   await scrollToChapterNumber(targetChapterNumber)
+}
+
+const jumpToExactChapter = async () => {
+  if (exactChapterNumber.value === null) return
+  emit('selectChapter', exactChapterNumber.value)
+  await scrollToChapterNumber(exactChapterNumber.value)
 }
 
 defineExpose({
@@ -569,6 +625,33 @@ watch(
   padding: var(--md-spacing-5) var(--md-spacing-6) var(--md-spacing-3);
   background-color: var(--md-surface-container-low);
   border-bottom: 1px solid var(--md-outline-variant);
+}
+
+.writing-sidebar__search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--md-spacing-2);
+  margin-top: var(--md-spacing-3);
+}
+
+.writing-sidebar__search input {
+  min-width: 0;
+  height: 44px;
+  padding: 0 var(--md-spacing-3);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-surface);
+  color: var(--md-on-surface);
+}
+
+.writing-sidebar__search input:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
+.writing-sidebar__search .md-btn {
+  min-width: 64px;
+  padding-inline: var(--md-spacing-2);
 }
 
 .writing-sidebar__outline-header-row {
@@ -1006,7 +1089,8 @@ watch(
 
 @media (max-width: 833px) {
   .writing-sidebar-shell {
-    height: auto;
+    height: 100%;
+    overflow: hidden;
   }
 
   .writing-sidebar__chapter-row--compact-selected {

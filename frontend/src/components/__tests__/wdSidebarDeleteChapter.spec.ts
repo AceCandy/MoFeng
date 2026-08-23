@@ -60,12 +60,14 @@ const mountSidebar = async (project: NovelProject = baseProject) => {
   const host = document.createElement('div')
   document.body.appendChild(host)
   const deletedRequests: Array<number | number[]> = []
+  const selectedRequests: number[] = []
   const app = createApp(WDSidebar, {
     project,
     selectedChapterNumber: 3,
     workflowPhase: 'idle',
     isGeneratingOutline: false,
     onDeleteChapter: (chapterNumbers: number | number[]) => deletedRequests.push(chapterNumbers),
+    onSelectChapter: (chapterNumber: number) => selectedRequests.push(chapterNumber),
   })
 
   app.mount(host)
@@ -74,6 +76,7 @@ const mountSidebar = async (project: NovelProject = baseProject) => {
   return {
     host,
     deletedRequests,
+    selectedRequests,
     unmount: () => {
       app.unmount()
       host.remove()
@@ -125,5 +128,33 @@ describe('WDSidebar chapter deletion affordance', () => {
     expect(apiSource).toContain('confirmation_text')
     expect(source).toContain('删除章节及产物')
     expect(source).toContain('删除章节大纲')
+  })
+
+  it('filters by title and jumps to an exact chapter number', async () => {
+    Element.prototype.scrollIntoView = vi.fn()
+    const rendered = await mountSidebar()
+
+    try {
+      const search = rendered.host.querySelector('#writing-sidebar-search') as HTMLInputElement
+      search.value = '最近'
+      search.dispatchEvent(new Event('input', { bubbles: true }))
+      await nextTick()
+
+      const chapterRows = rendered.host.querySelectorAll('.writing-sidebar__chapter-row')
+      expect(chapterRows).toHaveLength(1)
+      expect(chapterRows[0].getAttribute('aria-label')).toContain('第2章')
+
+      search.value = '4'
+      search.dispatchEvent(new Event('input', { bubbles: true }))
+      await nextTick()
+      rendered.host.querySelector('.writing-sidebar__search')?.dispatchEvent(
+        new Event('submit', { bubbles: true, cancelable: true }),
+      )
+      await nextTick()
+
+      expect(rendered.selectedRequests).toEqual([4])
+    } finally {
+      rendered.unmount()
+    }
   })
 })

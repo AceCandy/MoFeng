@@ -17,7 +17,7 @@
         </p>
       </div>
 
-      <div v-if="hasActions" class="chapter-workflow__actions" aria-label="章节工作流操作">
+      <div v-if="hasActions" class="chapter-workflow__actions">
         <button
           v-if="phase === 'idle' || phase === 'cancelled'"
           type="button"

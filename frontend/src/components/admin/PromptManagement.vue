@@ -53,19 +53,38 @@
                   <h3>模板编辑台</h3>
                   <p>左侧选择模板，右侧维护标题、标签和正文。</p>
                 </div>
-                <n-tag size="small" type="info" :bordered="false">{{ prompts.length }} 条</n-tag>
+                <n-tag size="small" type="default" :bordered="false">{{ prompts.length }} 条</n-tag>
               </header>
-              <div class="admin-table-shell prompt-layout" :class="{ mobile: isMobile }">
+              <div
+                class="admin-table-shell prompt-layout"
+                :class="{
+                  mobile: isMobile,
+                  'show-editor': isMobile && mobileView === 'editor',
+                }"
+              >
                 <div class="prompt-sidebar">
                   <div class="sidebar-header">
                     <span class="sidebar-title">Prompt 列表</span>
-                    <n-tag size="small" type="info" round>{{ prompts.length }}</n-tag>
+                    <n-tag size="small" type="default" round>{{ filteredPrompts.length }}</n-tag>
                   </div>
+                  <label for="prompt-search" class="sr-only">搜索 Prompt</label>
+                  <input
+                    id="prompt-search"
+                    v-model="promptSearch"
+                    class="prompt-search"
+                    type="search"
+                    autocomplete="off"
+                    placeholder="搜索名称、标题或标签"
+                  />
                   <n-scrollbar class="prompt-scroll">
                     <n-empty v-if="!prompts.length && !loading" description="暂无提示词" />
+                    <n-empty
+                      v-else-if="!filteredPrompts.length"
+                      description="没有匹配的 Prompt"
+                    />
                     <div v-else class="prompt-list">
                       <button
-                        v-for="prompt in prompts"
+                        v-for="prompt in filteredPrompts"
                         :key="prompt.id"
                         type="button"
                         :class="['prompt-list-item', { active: selectedPrompt?.id === prompt.id }]"
@@ -90,6 +109,14 @@
                 </div>
 
                 <div class="prompt-editor">
+                  <button
+                    v-if="isMobile"
+                    type="button"
+                    class="md-btn md-btn-outlined prompt-editor__back"
+                    @click="mobileView = 'list'"
+                  >
+                    返回 Prompt 列表
+                  </button>
                   <div v-if="!selectedPrompt" class="empty-editor">
                     <n-empty description="请选择一个提示词以编辑" />
                   </div>
@@ -109,7 +136,20 @@
                           v-model:value="editForm.tags"
                           size="small"
                           placeholder="输入标签后回车"
-                        />
+                          :input-props="{ inputProps: { 'aria-label': 'Prompt 标签名称' } }"
+                        >
+                          <template #trigger="{ activate, disabled }">
+                            <n-button
+                              quaternary
+                              size="tiny"
+                              :disabled="disabled"
+                              aria-label="添加 Prompt 标签"
+                              @click="activate"
+                            >
+                              添加标签
+                            </n-button>
+                          </template>
+                        </n-dynamic-tags>
                       </n-form-item>
                       <n-form-item label="提示词内容">
                         <n-input
@@ -202,8 +242,21 @@
           :value="createForm.tags ?? []"
           size="small"
           placeholder="输入标签后回车"
+          :input-props="{ inputProps: { 'aria-label': '新 Prompt 标签名称' } }"
           @update:value="createForm.tags = $event"
-        />
+        >
+          <template #trigger="{ activate, disabled }">
+            <n-button
+              quaternary
+              size="tiny"
+              :disabled="disabled"
+              aria-label="为新 Prompt 添加标签"
+              @click="activate"
+            >
+              添加标签
+            </n-button>
+          </template>
+        </n-dynamic-tags>
       </n-form-item>
       <n-form-item label="内容">
         <n-input
@@ -257,6 +310,16 @@ const updatePromptMutation = useUpdateAdminPromptMutation()
 const deletePromptMutation = useDeleteAdminPromptMutation()
 const prompts = computed<PromptItem[]>(() => promptsQuery.data.value ?? [])
 const selectedPrompt = ref<PromptItem | null>(null)
+const promptSearch = ref('')
+const mobileView = ref<'list' | 'editor'>('list')
+const filteredPrompts = computed(() => {
+  const query = promptSearch.value.trim().toLocaleLowerCase()
+  if (!query) return prompts.value
+  return prompts.value.filter((prompt) =>
+    [prompt.name, prompt.title ?? '', ...(prompt.tags ?? [])]
+      .some((value) => value.toLocaleLowerCase().includes(query)),
+  )
+})
 const taggedPrompts = computed(() => prompts.value.filter((prompt) => (prompt.tags?.length ?? 0) > 0))
 const untaggedPrompts = computed(() => prompts.value.filter((prompt) => !(prompt.tags?.length)))
 const loading = computed(() => promptsQuery.isLoading.value || promptsQuery.isFetching.value)
@@ -422,9 +485,13 @@ async function confirmDiscardChanges() {
 }
 
 async function selectPrompt(prompt: PromptItem) {
-  if (prompt.id === selectedPrompt.value?.id) return
+  if (prompt.id === selectedPrompt.value?.id) {
+    if (isMobile.value) mobileView.value = 'editor'
+    return
+  }
   if (!(await confirmDiscardChanges())) return
   syncPrompt(prompt)
+  if (isMobile.value) mobileView.value = 'editor'
 }
 
 const savePrompt = async () => {
@@ -463,6 +530,7 @@ const deletePrompt = async () => {
     await deletePromptMutation.mutateAsync(selectedPrompt.value.id)
     showAlert('删除成功', 'success')
     resetSelection()
+    mobileView.value = 'list'
   } catch (err) {
     showAlert(err instanceof Error ? err.message : '删除失败', 'error')
   }
@@ -513,6 +581,7 @@ const createPrompt = async () => {
     })
     prompts.value.unshift(created)
     syncPrompt(created)
+    if (isMobile.value) mobileView.value = 'editor'
     showAlert('创建成功', 'success')
     closeCreateModal()
   } catch (err) {
@@ -554,6 +623,22 @@ defineExpose({ isDirty, confirmDiscardChanges })
   justify-content: space-between;
   margin-bottom: 12px;
   padding: 0 2px;
+}
+
+.prompt-search {
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 12px;
+  padding: 0 12px;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-surface);
+  color: var(--md-on-surface);
+}
+
+.prompt-search:focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
 }
 
 .sidebar-title {
@@ -660,6 +745,11 @@ defineExpose({ isDirty, confirmDiscardChanges })
   min-width: 0;
 }
 
+.prompt-editor__back {
+  width: 100%;
+  margin-bottom: var(--md-spacing-3);
+}
+
 .empty-editor {
   height: 100%;
   display: flex;
@@ -706,6 +796,15 @@ defineExpose({ isDirty, confirmDiscardChanges })
   .prompt-sidebar {
     width: 260px;
   }
+}
+
+.prompt-layout.mobile:not(.show-editor) .prompt-editor,
+.prompt-layout.mobile.show-editor .prompt-sidebar {
+  display: none;
+}
+
+.prompt-layout.mobile.show-editor .prompt-editor {
+  width: 100%;
 }
 
 </style>

@@ -42,7 +42,7 @@
             type="button"
             class="model-routing__text-action"
             :aria-expanded="editingModelId === chip.id"
-            :aria-controls="`model-pricing-${chip.id}`"
+            :aria-controls="editingModelId === chip.id ? `model-pricing-${chip.id}` : undefined"
             @click="togglePricing(chip)"
           >
             {{ editingModelId === chip.id ? '收起' : '定价' }}

@@ -46,17 +46,17 @@
   box-shadow: none !important;
 }
 
-/* Filled Button (焦墨主按钮，重力链：静无影 → hover 浮起纸影 → 按压清零) */
+/* Filled Button（共享主动作统一为朱砂落印，避免浅色纸面出现大块焦黑） */
 .md-btn-filled {
-  background-color: var(--md-primary);
-  color: var(--md-on-primary);
-  border: 1px solid var(--md-outline);
+  background-color: var(--md-btn-seal-bg);
+  color: var(--md-btn-seal-text);
+  border: 1px solid transparent;
   box-shadow: none;
 }
 
 .md-btn-filled:hover:not(:disabled) {
-  background-color: var(--md-primary-dark);
-  border-color: var(--md-primary);
+  background-color: var(--md-btn-seal-bg-hover);
+  border-color: transparent;
   box-shadow: var(--md-elevation-paper-1);
 }
 

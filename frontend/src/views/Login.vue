@@ -21,7 +21,7 @@
 
         <form class="login-form" :aria-busy="isLoading" @submit.prevent="handleLogin">
           <div class="md-text-field">
-            <label for="username" class="md-text-field-label">笔名</label>
+            <label for="username" class="md-text-field-label">用户名（笔名）</label>
             <div class="md-text-field-wrapper">
               <input
                 id="username"
@@ -32,7 +32,7 @@
                 :aria-invalid="Boolean(error)"
                 :aria-describedby="error ? 'login-error' : undefined"
                 class="md-text-field-input"
-                placeholder="请输入笔名"
+                placeholder="请输入用户名"
                 autocomplete="username"
                 maxlength="64"
                 spellcheck="false"
@@ -52,7 +52,7 @@
           </div>
 
           <div class="md-text-field">
-            <label for="password" class="md-text-field-label">口令</label>
+            <label for="password" class="md-text-field-label">密码（口令）</label>
             <div class="md-text-field-wrapper">
               <input
                 id="password"
@@ -63,7 +63,7 @@
                 :aria-invalid="Boolean(error)"
                 :aria-describedby="error ? 'login-error' : undefined"
                 class="md-text-field-input"
-                placeholder="请输入口令"
+                placeholder="请输入密码"
                 autocomplete="current-password"
                 maxlength="256"
               />
@@ -182,7 +182,7 @@ const handleLogin = async () => {
     } else if (err instanceof Error && err.message === 'Failed to initialize user session') {
       error.value = '登录成功，但获取用户信息失败，请检查后端并重试。'
     } else {
-      error.value = '登录失败，请检查您的用户名和密码。'
+      error.value = '登录失败，请检查用户名和密码；如仍无法登录，请联系部署管理员。'
     }
   }
 }

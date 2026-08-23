@@ -93,7 +93,10 @@
             </button>
             <button
               type="button"
-              class="md-btn md-btn-primary md-ripple workspace-panel__action"
+              :class="[
+                'md-btn md-ripple workspace-panel__action',
+                continueProject ? 'md-btn-outlined' : 'md-btn-primary',
+              ]"
               @click="goToInspiration"
             >
               新建灵感项目
@@ -153,7 +156,7 @@
         </div>
       </div>
 
-      <div class="workspace-hero__snapshot" aria-label="创作快照">
+      <div class="workspace-hero__snapshot">
         <template v-if="projectsLoading">
           <span class="workspace-hero__loading-line workspace-hero__loading-line--snapshot"></span>
           <span
@@ -1115,10 +1118,10 @@ onUnmounted(() => {
     padding: var(--md-spacing-4);
   }
 
-  /* 390px：破带成立但签条改竖排三行，破带预留加深 */
+  /* 小屏保留项目、动作和进度；次要课签与快照让位给项目库。 */
   .workspace-hero {
-    padding-bottom: calc(var(--md-spacing-4) + 56px);
-    margin-bottom: 56px;
+    padding-bottom: var(--md-spacing-4);
+    margin-bottom: 0;
   }
 
   .workspace-grid {
@@ -1127,12 +1130,7 @@ onUnmounted(() => {
   }
 
   .workspace-hero__snapshot {
-    left: var(--md-spacing-4);
-    right: var(--md-spacing-4);
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--md-spacing-2);
-    padding: 10px var(--md-spacing-3);
+    display: none;
   }
 
   .workspace-hero__snapshot [aria-hidden="true"] {
@@ -1154,7 +1152,7 @@ onUnmounted(() => {
   }
 
   .workspace-hero__panel {
-    padding: var(--md-spacing-4);
+    display: none;
   }
 }
 

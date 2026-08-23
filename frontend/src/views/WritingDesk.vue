@@ -641,7 +641,10 @@ const deleteSelectedBrokenChapter = async () => {
   .writing-desk-assistant-shell.is-drawer {
     position: absolute;
     top: 0;
-    bottom: 0;
+    bottom: auto;
+    height: calc(var(--app-viewport-unit) - var(--app-topbar-height) - 88px);
+    max-height: 680px;
+    overflow: hidden;
     width: min(320px, calc(100vw - 56px));
     z-index: 40;
     pointer-events: none;

@@ -146,6 +146,16 @@ describe('ConversationInput harden', () => {
   })
 
   it('控件类型真正切换时会重置草稿并聚焦新输入框', async () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+      matches: query === '(min-width: 834px)',
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }))
     const { app, host, state } = mountConversationInput({
       type: 'single_choice',
       options: [
@@ -177,6 +187,36 @@ describe('ConversationInput harden', () => {
       expect(refreshedTextarea.value).toBe('')
       expect(refreshedTextarea.disabled).toBe(false)
       expect(document.activeElement).toBe(refreshedTextarea)
+    } finally {
+      app.unmount()
+      host.remove()
+    }
+  })
+
+  it('移动端控件切换时不强制聚焦', async () => {
+    vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }))
+    const { app, host, state } = mountConversationInput({
+      type: 'single_choice',
+      options: [{ id: 'opt-1', label: '选项一' }],
+    })
+
+    try {
+      document.body.appendChild(host)
+      await nextTick()
+      state.uiControl = { type: 'text_input', placeholder: '请输入新的内容' }
+      await nextTick()
+      await nextTick()
+
+      expect(document.activeElement).not.toBe(getTextarea(host))
     } finally {
       app.unmount()
       host.remove()

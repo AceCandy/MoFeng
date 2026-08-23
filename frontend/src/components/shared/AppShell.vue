@@ -359,7 +359,7 @@ onUnmounted(() => {
               type="button"
               class="app-shell__project-trigger"
               :aria-expanded="isDropdownOpen"
-              aria-controls="app-shell-project-menu"
+              :aria-controls="isDropdownOpen ? 'app-shell-project-menu' : undefined"
               @click="toggleDropdown"
             >
               <span class="app-shell__project-icon">

@@ -106,6 +106,8 @@ Rule: for transient user feedback, use `useAlert()` (the project convention); re
 - Keep list semantics (`ol`/`ul` with `li`) separate from interaction semantics. Put a native `button type="button"` inside each interactive item; use `disabled` for unavailable items and `aria-current="step"` for the active pipeline step.
 - Browser accessibility tests must wait for page and drawer opacity transitions to reach their stable state before running axe. Scope axe to the component or surface owned by the task so unrelated historical debt does not hide regressions in the changed area.
 
+> **Naive DynamicTags gotcha**: `NDynamicTags.inputProps` is passed to the inner `NInput`, not directly to its native `<input>`. Native attributes therefore stay nested: `:input-props="{ inputProps: { 'aria-label': '标签名称' } }"`. Verify the rendered input DOM before flattening this object; the direct form does not label the actual text field.
+
 ## Durable workflow status rendering
 
 - A parent Job `running` state must not make every semantic child node look active. Only the currently running remote activity gets motion; a system persistence node stays in a static waiting state while its preceding activity is running, and wait/interrupt nodes always use a static waiting state.

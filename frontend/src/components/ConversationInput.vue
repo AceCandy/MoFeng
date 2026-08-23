@@ -170,6 +170,11 @@ const getControlIdentity = (control: UIControl | null) => {
   return control.type
 }
 
+const shouldAutofocus = () =>
+  typeof window !== 'undefined'
+  && typeof window.matchMedia === 'function'
+  && window.matchMedia('(min-width: 834px)').matches
+
 // 只有输入控件身份真正变化时，才重置草稿并在需要时聚焦。
 watch(
   () => getControlIdentity(props.uiControl),
@@ -180,7 +185,7 @@ watch(
     await nextTick()
     adjustTextareaHeight()
 
-    if (props.uiControl?.type === 'text_input') {
+    if (props.uiControl?.type === 'text_input' && shouldAutofocus()) {
       textInputRef.value?.focus()
     }
   },
