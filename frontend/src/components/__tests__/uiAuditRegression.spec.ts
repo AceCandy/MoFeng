@@ -230,6 +230,56 @@ describe('UI audit regressions', () => {
     expect(dropdownActionBlock).toContain('min-height: 44px')
   })
 
+  it('keeps the account menu keyboard accessible', () => {
+    const source = readSource('src/components/shared/AppShell.vue')
+
+    expect(source).toContain('ref="userTagTriggerRef"')
+    expect(source).toContain(':aria-expanded="isUserDropdownOpen"')
+    expect(source).toContain('aria-controls="app-shell-user-menu"')
+    expect(source).toContain('@keydown.esc.stop.prevent="closeUserDropdown(true)"')
+    expect(source).toContain('id="app-shell-user-menu"')
+    expect(source).not.toContain('href="javascript:void(0)"')
+    expect(source).not.toContain('role="button"')
+  })
+
+  it('keeps primary routes and inspiration stages semantically identified', () => {
+    const routerSource = readSource('src/router/index.ts')
+    const workspaceSource = readSource('src/views/NovelWorkspace.vue')
+    const inspirationSource = readSource('src/views/InspirationMode.vue')
+    const confirmationSource = readSource('src/components/BlueprintConfirmation.vue')
+    const settingsSource = readSource('src/views/SettingsView.vue')
+    const writingChapterMetaSource = readSource(
+      'src/components/writing-desk/workspace/ChapterMeta.vue',
+    )
+
+    expect(workspaceSource).toContain('<h1>{{ continueProject')
+    expect(inspirationSource).toContain('<h1 class="md-label-large inspiration-chat__title">')
+    expect(confirmationSource).toContain('<h1 class="blueprint-confirm__title">')
+    expect(settingsSource).toContain('<h1>模型、供应商与创作阶段路由</h1>')
+    expect(writingChapterMetaSource).toContain(
+      '<h1 class="md-title-large font-semibold writing-workspace__chapter-no">',
+    )
+    expect(routerSource).toContain("meta: { layout: 'auth', label: '登录' }")
+    expect(routerSource).toContain("meta: { layout: 'auth', label: '注册' }")
+    expect(routerSource).toContain('router.afterEach((to) => {')
+    expect(routerSource).toContain("document.title = to.meta.label ? `${to.meta.label} · 墨风` : '墨风'")
+  })
+
+  it('keeps retired seal language out of audited surfaces', () => {
+    const loginSource = readSource('src/views/Login.vue')
+    const workspaceSource = readSource('src/views/NovelWorkspace.vue')
+    const sidebarSource = readSource('src/components/writing-desk/WDSidebar.vue')
+    const overviewSource = readSource('src/components/novel-detail/OverviewSection.vue')
+
+    expect(loginSource).not.toContain('<span aria-hidden="true">印</span>')
+    expect(workspaceSource).toContain('<span>项目进度</span>')
+    expect(workspaceSource).not.toContain('workspace-hero__progress-seal')
+    expect(sidebarSource).not.toContain('writing-sidebar__status-seal')
+    expect(sidebarSource).not.toContain('ChapterSealState')
+    expect(overviewSource).toContain("toneText: props.data?.one_sentence_summary ? '完成' : '待补'")
+    expect(overviewSource).not.toMatch(/toneText: .*\? '成' : '待'/)
+  })
+
   it('keeps app shell navigation branding and copy concise', () => {
     const source = readSource('src/components/shared/AppShell.vue')
 

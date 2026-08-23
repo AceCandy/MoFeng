@@ -65,7 +65,7 @@
         </template>
         <template v-else>
           <div class="workspace-hero__title-row">
-            <h2>{{ continueProject ? continueProject.title : '开始一段新的长篇创作' }}</h2>
+            <h1>{{ continueProject ? continueProject.title : '开始一段新的长篇创作' }}</h1>
             <!-- 空状态引首章：米字格衬底 + 描红「著」字，只作卷首留白装饰 -->
             <span v-if="!continueProject" class="workspace-hero__empty-seal" aria-hidden="true">著</span>
           </div>
@@ -124,10 +124,9 @@
         </p>
       </div>
 
-      <!-- 墨进度：通栏发线轨道，焦墨填充，条头缀朱砂方印点 -->
       <div class="workspace-hero__progress workspace-continue__progress">
         <div class="workspace-hero__progress-label">
-          <span>墨进度</span>
+          <span>项目进度</span>
           <strong v-if="projectsLoading">
             <span class="workspace-hero__loading-line workspace-hero__loading-line--progress"></span>
           </strong>
@@ -148,11 +147,6 @@
           :style="{ '--md-progress-scale': continueProgressScale }"
         >
           <div class="md-progress-linear-bar"></div>
-          <span
-            v-if="continueProgressScale > 0"
-            class="workspace-hero__progress-seal"
-            aria-hidden="true"
-          ></span>
         </div>
       </div>
 
@@ -580,7 +574,7 @@ onUnmounted(() => {
 }
 
 /* 书名破顶展示级：clamp(44px, 6.5vw, 88px)，焦墨题字，追踪微收 */
-.workspace-hero h2 {
+.workspace-hero h1 {
   margin: var(--md-spacing-2) 0 0;
   min-width: 0;
   color: var(--md-on-surface);
@@ -847,13 +841,11 @@ onUnmounted(() => {
   color: var(--md-on-surface-variant);
 }
 
-/* 通栏墨晕发线轨道，焦墨填充，条头带朱砂印点 */
+/* 通栏发线轨道与进度填充 */
 .workspace-hero .md-progress-linear {
   height: 3px;
   background-color: var(--md-outline-variant);
   border-radius: 0; /* 发线轨道不收圆 */
-  overflow: visible; /* 让条头朱砂印点得以压线而立 */
-  position: relative;
 }
 
 .workspace-hero .md-progress-linear-bar {
@@ -873,34 +865,6 @@ onUnmounted(() => {
   }
   to {
     transform: scaleX(var(--md-progress-scale, 0));
-  }
-}
-
-/* 条头朱砂方印点：12px 微直角，缀一枚静态微光，随铺墨同步到位 */
-.workspace-hero__progress-seal {
-  position: absolute;
-  top: 50%;
-  left: calc(var(--md-progress-scale, 0) * 100%);
-  width: 12px;
-  height: 12px;
-  margin: -6px 0 0 -6px; /* 以条头为中心钤下 */
-  border-radius: var(--md-radius-xs);
-  background-color: var(--md-miaohong); /* 描红印点 */
-  box-shadow:
-    0 0 0 3px var(--md-miaohong-wash), /* 印周薄晕 */
-    0 0 8px color-mix(in srgb, var(--md-miaohong) 45%, transparent); /* 灯下微光，≤8px 弥散 */
-}
-
-.workspace-hero:not(.workspace-hero--loading) .workspace-hero__progress-seal {
-  animation: workspace-hero-ink-seal 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@keyframes workspace-hero-ink-seal {
-  from {
-    left: 0;
-  }
-  to {
-    left: calc(var(--md-progress-scale, 0) * 100%);
   }
 }
 
@@ -1168,9 +1132,8 @@ onUnmounted(() => {
   .workspace-skeleton__lines span,
   .workspace-skeleton__bar,
   .workspace-skeleton__chips,
-  .workspace-hero .md-progress-linear-bar,
-  .workspace-hero__progress-seal {
-    animation: none; /* 铺墨与钤印直落终态 */
+  .workspace-hero .md-progress-linear-bar {
+    animation: none;
     background-position: 0 0;
   }
 }

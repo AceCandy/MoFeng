@@ -349,7 +349,7 @@ html body .workspace-page .workspace-hero__panel-head strong {
   color: #fff !important;
 }
 
-html body .workspace-page .workspace-hero__title-row h2 {
+html body .workspace-page .workspace-hero__title-row h1 {
   color: #fff !important;
   font-size: clamp(46px, 5.6vw, 82px) !important;
   line-height: 0.98 !important;
@@ -810,7 +810,7 @@ html body .settings-page .settings-hero {
   box-shadow: none !important;
 }
 
-html body .settings-page .settings-hero h2 {
+html body .settings-page .settings-hero h1 {
   max-width: none;
   color: #fff !important;
   font-family: var(--md-font-display) !important;

@@ -195,6 +195,12 @@ const triggerImport = () => {
 
 const isUserDropdownOpen = ref(false)
 const userTagRef = ref<HTMLElement | null>(null)
+const userTagTriggerRef = ref<HTMLButtonElement | null>(null)
+
+const closeUserDropdown = (restoreFocus = false) => {
+  isUserDropdownOpen.value = false
+  if (restoreFocus) userTagTriggerRef.value?.focus()
+}
 
 const handleFileChange = async (event: Event) => {
   const input = event.target as HTMLInputElement
@@ -538,87 +544,97 @@ onUnmounted(() => {
             ></span>
           </button>
 
-          <!-- 阁主身份名牌 (金石印章折叠中枢) -->
-          <div 
+          <!-- 阁主身份菜单 -->
+          <div
             ref="userTagRef"
-            class="app-shell__user-tag is-trigger"
-            :class="{ 'is-active': isUserDropdownOpen }"
-            @click="isUserDropdownOpen = !isUserDropdownOpen"
-            role="button"
-            aria-haspopup="true"
-            :aria-expanded="isUserDropdownOpen"
-            title="查看阁主菜单"
+            class="app-shell__user-menu"
+            @keydown.esc.stop.prevent="closeUserDropdown(true)"
           >
-            <span class="app-shell__user-role-dot" :class="{ 'is-admin-dot': authStore.user?.is_admin }"></span>
-            <span class="app-shell__user-name">{{ authStore.user?.username || '阁主' }}</span>
-            <span class="app-shell__user-arrow" :class="{ 'is-open': isUserDropdownOpen }">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </span>
+            <button
+              ref="userTagTriggerRef"
+              type="button"
+              class="app-shell__user-tag is-trigger"
+              :class="{ 'is-active': isUserDropdownOpen }"
+              :aria-expanded="isUserDropdownOpen"
+              aria-controls="app-shell-user-menu"
+              title="查看阁主菜单"
+              @click="isUserDropdownOpen = !isUserDropdownOpen"
+            >
+              <span class="app-shell__user-role-dot" :class="{ 'is-admin-dot': authStore.user?.is_admin }"></span>
+              <span class="app-shell__user-name">{{ authStore.user?.username || '阁主' }}</span>
+              <span class="app-shell__user-arrow" :class="{ 'is-open': isUserDropdownOpen }">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </span>
+            </button>
 
-            <!-- 水墨信笺下拉菜单 -->
             <transition name="fade">
-              <div v-if="isUserDropdownOpen" class="app-shell__user-dropdown" @click.stop>
+              <div
+                v-if="isUserDropdownOpen"
+                id="app-shell-user-menu"
+                class="app-shell__user-dropdown"
+                @click.stop
+              >
                 <div class="app-shell__user-dropdown-header">账户</div>
                 <div class="app-shell__user-dropdown-list">
                   <!-- 系统管理配置 -->
-                  <a
+                  <button
                     v-if="authStore.user?.is_admin"
-                    href="javascript:void(0)"
+                    type="button"
                     class="app-shell__user-dropdown-item"
                     :class="{ 'is-active': showAdminModal }"
-                    @click.prevent="openAdminModal()"
+                    @click="openAdminModal()"
                   >
                     <span class="app-shell__action-badge is-admin">司</span>
                     <div class="item-text">
                       <span class="item-title">系统管理</span>
                       <span class="item-desc">配置全局与用户权限</span>
                     </div>
-                  </a>
+                  </button>
 
                   <!-- 提示词阶段关系 -->
-                  <a
+                  <button
                     v-if="authStore.user?.is_admin"
-                    href="javascript:void(0)"
+                    type="button"
                     class="app-shell__user-dropdown-item"
                     :class="{ 'is-active': showPromptUsageModal }"
-                    @click.prevent="openPromptUsageModal"
+                    @click="openPromptUsageModal"
                   >
                     <span class="app-shell__action-badge is-prompt">妙</span>
                     <div class="item-text">
                       <span class="item-title">提示词用量</span>
                       <span class="item-desc">查看阶段与 Prompt 关系</span>
                     </div>
-                  </a>
+                  </button>
 
                   <!-- 配置个人 AI 模型 -->
-                  <a
-                    href="javascript:void(0)"
+                  <button
+                    type="button"
                     class="app-shell__user-dropdown-item"
                     :class="{ 'is-active': showSettingsModal }"
-                    @click.prevent="showSettingsModal = true; isUserDropdownOpen = false"
+                    @click="showSettingsModal = true; isUserDropdownOpen = false"
                   >
                     <span class="app-shell__action-badge is-settings">乾</span>
                     <div class="item-text">
                       <span class="item-title">个人设置</span>
                       <span class="item-desc">配置个人 AI 模型</span>
                     </div>
-                  </a>
+                  </button>
 
                   <!-- 修改个人密码 -->
-                  <a
-                    href="javascript:void(0)"
+                  <button
+                    type="button"
                     class="app-shell__user-dropdown-item"
                     :class="{ 'is-active': showPasswordModal }"
-                    @click.prevent="showPasswordModal = true; isUserDropdownOpen = false"
+                    @click="showPasswordModal = true; isUserDropdownOpen = false"
                   >
                     <span class="app-shell__action-badge is-password">密</span>
                     <div class="item-text">
                       <span class="item-title">修改密码</span>
                       <span class="item-desc">更新登录密码</span>
                     </div>
-                  </a>
+                  </button>
 
                   <div class="app-shell__user-dropdown-divider"></div>
 
@@ -885,6 +901,15 @@ onUnmounted(() => {
 }
 
 /* 品牌链接与胶囊触发器样式（自模板内联样式收编） */
+.app-shell__user-menu {
+  position: relative;
+}
+
+.app-shell__user-dropdown-item {
+  font: inherit;
+  text-align: left;
+}
+
 .app-shell__brand-top {
   text-decoration: none;
 }
@@ -919,103 +944,4 @@ onUnmounted(() => {
   height: 15px;
 }
 
-/* ==========================================================================
-   项目上下文（写作台/项目详情/admin详情）顶栏使用更明确的纸色层级；
-   规则只挂 .app-shell--project-context 模式类，普通页面顶栏保持原样，下拉弹层仍为熟宣纸面。
-   scoped data-v 提权 + !important：phase5-navigation/topbar/user-tag 的全局
-   规则均带 !important，这里靠更高优先级取胜
-   ========================================================================== */
-.app-shell--project-context .app-shell__topbar {
-  background: var(--md-background);
-  border-bottom-color: var(--md-outline-variant);
-}
-
-.app-shell--project-context .app-shell__topbar::after {
-  background-color: var(--md-outline-variant);
-}
-
-.app-shell--project-context .app-shell__brand-title {
-  color: var(--md-on-surface) !important;
-}
-
-/* 书卷胶囊：竹纸浮层 + 发线边，撤销噪点底纹与硬偏置印章影 */
-.app-shell--project-context .app-shell__topbar .app-shell__project-capsule {
-  background-color: var(--md-surface-container-low) !important;
-  background-image: none !important;
-  border-color: var(--md-outline-variant) !important;
-  color: var(--md-on-surface) !important;
-  box-shadow: none !important;
-}
-
-.app-shell--project-context .app-shell__topbar .app-shell__project-capsule.is-select:hover,
-.app-shell--project-context .app-shell__topbar .app-shell__project-capsule.is-select.is-active {
-  background-color: var(--md-surface-container) !important;
-  border-color: var(--md-outline) !important;
-  box-shadow: none !important;
-}
-
-.app-shell--project-context .app-shell__topbar .app-shell__project-icon {
-  color: var(--md-miaohong) !important;
-}
-
-.app-shell--project-context .app-shell__topbar .app-shell__project-arrow {
-  color: var(--md-on-surface-variant) !important;
-}
-
-/* 状态胶囊（N/M 章）：焦墨薄层底 + 描红虚线框 */
-.app-shell--project-context .app-shell__topbar .app-shell__project-capsule.is-status {
-  background-color: color-mix(in srgb, var(--md-on-surface) 5%, transparent) !important;
-  border-color: color-mix(in srgb, var(--md-miaohong) 35%, transparent) !important;
-  color: var(--md-on-surface) !important;
-  box-shadow: none !important;
-}
-
-.app-shell--project-context .app-shell__topbar .app-shell__project-tag-info {
-  color: var(--md-on-surface-variant) !important;
-  border-color: var(--md-outline-variant) !important;
-  background-color: color-mix(in srgb, var(--md-on-surface) 5%, transparent) !important;
-}
-
-.app-shell--project-context .app-shell__topbar .app-shell__project-divider {
-  color: var(--md-outline) !important;
-}
-
-.app-shell--project-context .app-shell__topbar .app-shell__project-progress-info,
-.app-shell--project-context .app-shell__topbar .app-shell__project-chapter-info {
-  color: var(--md-on-surface-variant) !important;
-}
-
-.app-shell--project-context .app-shell__topbar .app-shell__number {
-  color: var(--md-miaohong) !important;
-}
-
-/* 阁主名签：焦墨薄层底 + 发线边，撤销内凹纸纹影 */
-.app-shell--project-context .app-shell__topbar .app-shell__user-tag {
-  background-color: color-mix(in srgb, var(--md-on-surface) 5%, transparent) !important;
-  border-color: var(--md-outline-variant) !important;
-  box-shadow: none !important;
-}
-
-.app-shell--project-context .app-shell__topbar .app-shell__user-tag.is-trigger:hover,
-.app-shell--project-context .app-shell__topbar .app-shell__user-tag.is-trigger.is-active {
-  background-color: var(--md-state-layer-hover) !important;
-  border-color: var(--md-outline) !important;
-}
-
-.app-shell--project-context .app-shell__topbar .app-shell__user-name {
-  color: var(--md-on-surface) !important;
-}
-
-.app-shell--project-context .app-shell__topbar .app-shell__user-arrow {
-  color: var(--md-on-surface-variant) !important;
-}
-
-/* 全局写作进度条：墨晕轨道 + 描红进度条 */
-.app-shell--project-context .app-shell__topbar .app-shell__global-progress {
-  background-color: color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
-}
-
-.app-shell--project-context .app-shell__topbar .app-shell__global-progress span {
-  background: var(--md-miaohong) !important;
-}
 </style>

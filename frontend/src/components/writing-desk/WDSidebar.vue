@@ -88,11 +88,6 @@
                           :class="['writing-sidebar__status-dot', chapterStatusDotClass(chapter.chapter_number)]"
                         ></span>
                       </Tooltip>
-                      <span
-                        class="writing-sidebar__status-seal"
-                        :class="chapterStatusSealClass(chapter.chapter_number)"
-                        aria-hidden="true"
-                      >{{ chapterStatusSealText(chapter.chapter_number) }}</span>
                       <Tooltip :text="getChapterTag(chapter.chapter_number)">
                         <span class="writing-sidebar__chapter-no">
                           第{{ chapter.chapter_number }}章
@@ -507,55 +502,6 @@ const chapterStatusDotClass = (chapterNumber: number) => {
   }
   if (isChapterFailed(chapterNumber)) return 'is-failed'
   return 'is-idle'
-}
-
-// 状态印三态（spec §5）：已钤印（朱砂实底）/ 描红中（淡朱描边）/ 已落墨（焦墨描边）
-type ChapterSealState = 'sealed' | 'tracing' | 'inked'
-
-const chapterStatusSealState = (chapterNumber: number): ChapterSealState => {
-  // 已完成/已保存 = 已钤印
-  if (isChapterCompleted(chapterNumber)) return 'sealed'
-  if (props.selectedChapterNumber === chapterNumber) {
-    switch (props.workflowPhase) {
-      case 'succeeded':
-        return 'sealed'
-      case 'booting':
-      case 'submitting':
-      case 'running':
-      case 'waitingForSelection':
-      case 'finalizing':
-      case 'projectionPending':
-      case 'superseded':
-        // 生成中或已有候选待选 = 描红中
-        return 'tracing'
-      default:
-        break
-    }
-  }
-  if (
-    isChapterGeneratingLike(chapterNumber) ||
-    isChapterEvaluating(chapterNumber) ||
-    isChapterSelecting(chapterNumber) ||
-    hasChapterInProgress(chapterNumber)
-  ) {
-    return 'tracing'
-  }
-  // 其余 = 已落墨
-  return 'inked'
-}
-
-const chapterStatusSealClass = (chapterNumber: number) =>
-  `writing-sidebar__status-seal--${chapterStatusSealState(chapterNumber)}`
-
-const chapterStatusSealText = (chapterNumber: number): string => {
-  switch (chapterStatusSealState(chapterNumber)) {
-    case 'sealed':
-      return '钤'
-    case 'tracing':
-      return '描'
-    default:
-      return '墨'
-  }
 }
 
 // 为屏幕阅读器补充章节状态，避免仅依赖颜色或悬浮提示传达关键信息。
@@ -978,41 +924,6 @@ watch(
   align-items: center;
   gap: 8px;
   padding-top: 0;
-}
-
-/* 状态印（spec §5）：章节状态三态方印，单字宋体 */
-.writing-sidebar__status-seal {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  border-radius: 2px;
-  font-family: var(--md-font-serif);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1;
-  user-select: none;
-}
-
-/* 已钤印：描红实底方印（已完成/已保存） */
-.writing-sidebar__status-seal--sealed {
-  background-color: var(--md-miaohong);
-  color: var(--md-btn-seal-text);
-}
-
-/* 描红中：描红系描边方印（生成中或已有候选待选） */
-.writing-sidebar__status-seal--tracing {
-  border: 1px solid var(--md-miaohong);
-  background-color: color-mix(in srgb, var(--md-miaohong) 10%, transparent);
-  color: var(--md-miaohong);
-}
-
-/* 已落墨：墨晕描边与松烟文字组成中性方印 */
-.writing-sidebar__status-seal--inked {
-  border: 1px solid var(--md-outline);
-  color: var(--md-on-surface-variant);
 }
 
 /* 极致国风脑洞：小圆点改造为微型“金石印章方印”，融入古典中式传统色 */

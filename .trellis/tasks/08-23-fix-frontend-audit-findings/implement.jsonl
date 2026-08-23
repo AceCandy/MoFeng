@@ -1,0 +1,4 @@
+{"file":".trellis/spec/frontend/index.md","reason":"前端包入口、单一浅色主题与质量合同"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"原生交互、弹出层焦点、scoped CSS 与入口样式预算规范"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"路由 meta、测试与构建预算规范"}
+{"file":".impeccable/critique/2026-08-23T14-39-01Z__frontend-src.md","reason":"本任务确认缺陷、证据与排除项"}

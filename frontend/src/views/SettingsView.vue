@@ -4,7 +4,7 @@
     <section v-if="!props.isModal" class="settings-hero" aria-label="AI 能力中心总览">
       <div class="settings-hero__copy">
         <p class="settings-eyebrow">AI 能力中心</p>
-        <h2>模型、供应商与创作阶段路由</h2>
+        <h1>模型、供应商与创作阶段路由</h1>
         <p>
           统一维护你的文本生成、记忆检索和阶段路由策略，让每个创作环节都调用到合适的 AI
           能力。
@@ -406,7 +406,7 @@ const handleLLMConfigSaved = async () => {
   letter-spacing: 0.04em;
 }
 
-.settings-hero h2 {
+.settings-hero h1 {
   margin: 10px 0 0;
   color: var(--md-on-surface);
   font-size: clamp(1.4rem, 2vw, 1.95rem);

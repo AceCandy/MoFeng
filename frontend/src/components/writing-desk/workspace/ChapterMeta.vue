@@ -2,9 +2,9 @@
 <template>
   <div class="writing-workspace__chapter-meta">
     <div class="writing-workspace__chapter-title-line">
-      <h2 class="md-title-large font-semibold writing-workspace__chapter-no">
+      <h1 class="md-title-large font-semibold writing-workspace__chapter-no">
         第{{ chapterNumber }}章
-      </h2>
+      </h1>
       <Tooltip :text="titleTooltipText" :show-delay="150">
         <button
           type="button"

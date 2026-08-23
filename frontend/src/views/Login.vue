@@ -14,7 +14,6 @@
         <div class="login-card__header">
           <h2 id="login-title">
             归来续笔
-            <span aria-hidden="true">印</span>
           </h2>
           <p>登录以继续你的创作之旅</p>
         </div>
@@ -268,22 +267,6 @@ const handleLogin = async () => {
   font-weight: 600;
   line-height: 1.2;
   letter-spacing: 0.08em;
-}
-
-/* 题字旁落印：朱砂实底钤章，印章无影 */
-.login-card__header h2 span {
-  width: clamp(18px, 1.4vw, 22px);
-  height: clamp(18px, 1.4vw, 22px);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--md-secondary-dark);
-  border-radius: var(--md-radius-xs);
-  background-color: var(--md-secondary);
-  color: var(--md-on-secondary);
-  font-size: 12px;
-  letter-spacing: 0;
-  transform: rotate(-4deg);
 }
 
 .login-card__header p {

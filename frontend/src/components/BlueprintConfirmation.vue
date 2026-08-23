@@ -1,7 +1,7 @@
 <!-- AIMETA P=蓝图确认_蓝图确认对话框|R=确认操作|NR=不含编辑功能|E=component:BlueprintConfirmation|X=internal|A=确认对话框|D=vue|S=dom|RD=./README.ai -->
 <template>
   <div class="blueprint-confirm fade-in" data-provenance="ai">
-    <h2 class="blueprint-confirm__title">信息收集完成！</h2>
+    <h1 class="blueprint-confirm__title">信息收集完成！</h1>
 
     <div class="blueprint-confirm__body">
       <!-- 极富设计感的卡片式大纲卡片流，使内容按照块逻辑严谨区分 -->

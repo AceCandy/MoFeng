@@ -1,0 +1,4 @@
+{"file":".trellis/spec/frontend/index.md","reason":"前端包总体验收合同"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"键盘、焦点、响应式抽屉与 scoped 样式检查"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"类型、测试、lint 与构建预算质量门"}
+{"file":".impeccable/critique/2026-08-23T14-39-01Z__frontend-src.md","reason":"逐项复核原始 P1/P2 证据和误判排除"}

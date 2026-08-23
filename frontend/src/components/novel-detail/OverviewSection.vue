@@ -224,7 +224,7 @@ const readinessItems = computed(() => [
       ? '故事方向已有一句话抓手，适合继续拆解角色和章节。'
       : '补充一句话定位后，后续分区会更容易保持同一叙事方向。',
     tone: props.data?.one_sentence_summary ? 'ready' : 'pending',
-    toneText: props.data?.one_sentence_summary ? '成' : '待',
+    toneText: props.data?.one_sentence_summary ? '完成' : '待补',
     toneLabel: props.data?.one_sentence_summary ? '已完成' : '待补充',
   },
   {
@@ -232,7 +232,7 @@ const readinessItems = computed(() => [
     label: metadataCompletenessPercent.value >= 75 ? '基础资料完整' : '基础资料待齐',
     description: `当前元信息完整度 ${metadataCompletenessPercent.value}%，题材、风格和基调越清晰，生成结果越稳定。`,
     tone: metadataCompletenessPercent.value >= 75 ? 'ready' : 'pending',
-    toneText: metadataCompletenessPercent.value >= 75 ? '成' : '待',
+    toneText: metadataCompletenessPercent.value >= 75 ? '完成' : '待补',
     toneLabel: metadataCompletenessPercent.value >= 75 ? '已完成' : '待补充',
   },
   {
@@ -242,7 +242,7 @@ const readinessItems = computed(() => [
       ? '完整梗概已进入档案，可作为章节推进和回收伏笔的主线依据。'
       : '补齐完整梗概后，章节大纲和写作台会有更可靠的主线参照。',
     tone: props.data?.full_synopsis ? 'ready' : 'pending',
-    toneText: props.data?.full_synopsis ? '成' : '待',
+    toneText: props.data?.full_synopsis ? '完成' : '待补',
     toneLabel: props.data?.full_synopsis ? '已完成' : '待补充',
   },
 ])

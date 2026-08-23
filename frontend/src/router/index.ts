@@ -70,13 +70,13 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: () => import('../views/Login.vue'),
-      meta: { layout: 'auth' },
+      meta: { layout: 'auth', label: '登录' },
     },
     {
       path: '/register',
       name: 'register',
       component: () => import('../views/Register.vue'),
-      meta: { layout: 'auth' },
+      meta: { layout: 'auth', label: '注册' },
     },
     {
       path: '/admin',
@@ -152,6 +152,10 @@ router.beforeEach(async (to) => {
   if (isAuthenticated && mustChangePassword && (to.name !== 'admin' || to.query.tab !== 'password')) {
     return { name: 'admin', query: { tab: 'password' } }
   }
+})
+
+router.afterEach((to) => {
+  document.title = to.meta.label ? `${to.meta.label} · 墨风` : '墨风'
 })
 
 export default router

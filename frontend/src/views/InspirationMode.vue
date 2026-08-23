@@ -20,7 +20,7 @@
                     aria-hidden="true"
                   ></span>
                   <div>
-                    <span class="md-label-large inspiration-chat__title">与“文思”对话中</span>
+                    <h1 class="md-label-large inspiration-chat__title">与“文思”对话中</h1>
                     <span v-if="currentProject" class="inspiration-chat__context">
                       《{{ currentProject.title }}》 · {{ conversationStageLabel }}
                     </span>
