@@ -1,4 +1,4 @@
-/* AIMETA P=用户标签_阁主案头用户标签水墨信笺下拉|R=user-tag 用户标签+水墨信笺下拉折叠+user-dropdown+dark覆写|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* AIMETA P=用户标签_阁主案头用户标签水墨信笺下拉|R=user-tag 用户标签+水墨信笺下拉折叠+user-dropdown|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
 /* ==========================================================================
    Phase 9: 阁主案头用户标签与水墨信笺下拉折叠交互重塑样式
    ========================================================================== */
@@ -168,32 +168,6 @@
 .app-shell__user-dropdown-item:hover .app-shell__action-badge {
   transform: translateY(1px) scale(0.97) !important;
   box-shadow: 0.5px 0.5px 0px color-mix(in srgb, var(--md-on-surface) 10%, transparent) !important;
-}
-
-/* 6. 暗色模式 (深夜书房) 超精细化适配 */
-:root[data-theme='dark'] .app-shell__user-dropdown {
-  background-color: var(--md-surface-bright) !important;
-  /* 黛青宣纸噪点 */
-  background-image: radial-gradient(rgba(229, 222, 201, 0.015) 1px, transparent 0) !important;
-  border-color: var(--md-secondary) !important; /* 朱泥色围框 */
-  outline-color: rgba(229, 222, 201, 0.08) !important;
-}
-
-:root[data-theme='dark'] .app-shell__user-dropdown-header {
-  color: var(--md-on-surface) !important;
-  border-bottom-color: rgba(229, 222, 201, 0.12) !important;
-}
-
-:root[data-theme='dark'] .app-shell__user-dropdown-item:hover {
-  background-color: color-mix(in srgb, var(--md-secondary) 8%, transparent) !important; /* 暗色朱砂墨晕 */
-}
-
-:root[data-theme='dark'] .app-shell__user-dropdown-item.is-logout-action:hover {
-  background-color: rgba(229, 222, 201, 0.04) !important;
-}
-
-:root[data-theme='dark'] .app-shell__user-dropdown-divider {
-  background-image: linear-gradient(to right, transparent, rgba(229, 222, 201, 0.15) 20%, rgba(229, 222, 201, 0.15) 80%, transparent) !important;
 }
 
 /* 移动端窄屏下，右上角动作区只需展示用户标签，如果开启下拉自适应适配 */

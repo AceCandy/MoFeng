@@ -36,8 +36,7 @@ body .chapter-paper {
     color var(--md-duration-medium) var(--md-easing-standard);
 }
 
-/* 暗场无需覆写：行线/朱丝栏由 --md-miaohong-line(-strong) 以 color-mix 自引用
-   --md-miaohong 生成，暗色 token 切换后自动暗化，保持可见且柔和 */
+/* 行线/朱丝栏由 --md-miaohong-line(-strong) 以 color-mix 自引用 --md-miaohong */
 
 /* 章节正文古宋体碑拓骨力展现（字号交由组件/类控制，全局不再锁死） */
 body .chapter-prose {
@@ -86,4 +85,4 @@ body .md-textarea:focus {
   box-shadow: var(--md-elevation-paper-1); /* 聚焦时稿纸微浮，替代拓片硬投影 */
 }
 
-/* 暗场无需覆写：写字格行线同样自引用 --md-miaohong，暗色下自动调柔 */
+/* 写字格行线同样自引用 --md-miaohong，保持描红基准一致 */

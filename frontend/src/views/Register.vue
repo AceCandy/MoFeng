@@ -1,7 +1,7 @@
 <!-- AIMETA P=注册页_用户注册|R=注册表单|NR=不含登录功能|E=route:/register#component:Register|X=ui|A=注册表单|D=vue|S=dom,net|RD=./README.ai -->
 <template>
   <main class="register-page">
-    <!-- 墨碑排印层：出血大字衬于夜色底与品牌簇/纸卡之间（纯装饰，样式在 auth-night.css） -->
+    <!-- 墨碑排印层：出血大字衬于暖纸底与品牌簇/纸卡之间（纯装饰） -->
     <div class="auth-monument" aria-hidden="true">
       <span class="auth-monument__char auth-monument__char--mo">墨</span>
       <span class="auth-monument__char auth-monument__char--feng">风</span>
@@ -388,10 +388,10 @@ onUnmounted(() => {
     max(44px, env(safe-area-inset-right))
     max(30px, env(safe-area-inset-bottom))
     max(44px, env(safe-area-inset-left));
-  /* 夜色墨韵：固定深夜书房底（不随明暗主题切换），边缘径向压暗至夜深处，一次绘成 */
-  background-color: var(--md-night-bg);
-  background-image: radial-gradient(118% 92% at 50% 38%, transparent 52%, var(--md-night-bg-deep) 100%);
-  color: var(--md-night-on);
+  /* 暖纸门面：素骨大底向老宣边缘轻压，一次绘成 */
+  background-color: var(--md-background);
+  background-image: radial-gradient(118% 92% at 50% 38%, transparent 52%, var(--md-surface-dim) 100%);
+  color: var(--md-on-surface);
 }
 
 .register-scroll {
@@ -402,7 +402,7 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(360px, 470px);
   gap: clamp(20px, 3vw, 48px);
-  color: var(--md-night-on);
+  color: var(--md-on-surface);
 }
 
 .register-panel {
@@ -413,14 +413,13 @@ onUnmounted(() => {
   justify-content: center;
   align-self: center;
   padding: clamp(28px, 3vw, 44px) clamp(24px, 3vw, 48px);
-  /* 夜案纸卡：熟宣定值浮于夜色，无边框（影边不叠），深影承担浮起；
-     卡内变量钉版见 auth-night.css（color-scheme: light，暗主题不混暗色控件） */
+  /* 浮起稿纸：熟宣表单面无边框，Paper 2 柔影承担层级 */
   border: 0;
   border-radius: var(--md-radius-xs);
   background:
     repeating-linear-gradient(90deg, transparent 0 39px, var(--md-miaohong-line) 39px 40px),
-    linear-gradient(var(--md-night-paper), var(--md-night-paper));
-  box-shadow: var(--md-night-elevation-2); /* 纸卡浮于夜案之上 */
+    linear-gradient(var(--md-surface), var(--md-surface));
+  box-shadow: var(--md-elevation-paper-2); /* 纸卡浮于页面之上 */
   color: var(--md-on-surface);
 }
 

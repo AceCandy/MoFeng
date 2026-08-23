@@ -1,7 +1,7 @@
 <!-- AIMETA P=登录页_用户登录|R=登录表单_认证|NR=不含注册功能|E=route:/login#component:Login|X=ui|A=登录表单|D=vue|S=dom,net,storage|RD=./README.ai -->
 <template>
   <main class="login-page">
-    <!-- 墨碑排印层：出血大字衬于夜色底与品牌簇/纸卡之间（纯装饰，样式在 auth-night.css） -->
+    <!-- 墨碑排印层：出血大字衬于暖纸底与品牌簇/纸卡之间（纯装饰） -->
     <div class="auth-monument" aria-hidden="true">
       <span class="auth-monument__char auth-monument__char--mo">墨</span>
       <span class="auth-monument__char auth-monument__char--feng">风</span>
@@ -198,10 +198,10 @@ const handleLogin = async () => {
   overflow: hidden;
   padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
     max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
-  /* 夜色墨韵：固定深夜书房底（不随明暗主题切换），边缘径向压暗至夜深处，一次绘成 */
-  background-color: var(--md-night-bg);
-  background-image: radial-gradient(118% 92% at 50% 38%, transparent 52%, var(--md-night-bg-deep) 100%);
-  color: var(--md-night-on);
+  /* 暖纸门面：素骨大底向老宣边缘轻压，一次绘成 */
+  background-color: var(--md-background);
+  background-image: radial-gradient(118% 92% at 50% 38%, transparent 52%, var(--md-surface-dim) 100%);
+  color: var(--md-on-surface);
 }
 
 .login-scroll {
@@ -217,7 +217,7 @@ const handleLogin = async () => {
   padding: clamp(14px, 2vw, 32px);
   overflow: hidden;
   border-radius: var(--md-radius-sm);
-  color: var(--md-night-on);
+  color: var(--md-on-surface);
 }
 
 .login-panel {
@@ -227,14 +227,13 @@ const handleLogin = async () => {
   width: 100%;
   box-sizing: border-box;
   padding: clamp(20px, 2.2vw, 32px);
-  /* 夜案纸卡：熟宣定值浮于夜色，无边框（影边不叠），深影承担浮起；
-     卡内变量钉版见 auth-night.css（color-scheme: light，暗主题不混暗色控件） */
+  /* 浮起稿纸：熟宣表单面无边框，Paper 2 柔影承担层级 */
   border: 0;
   border-radius: var(--md-radius-xs);
   background:
     repeating-linear-gradient(90deg, transparent 0 39px, var(--md-miaohong-line) 39px 40px),
-    linear-gradient(var(--md-night-paper), var(--md-night-paper));
-  box-shadow: var(--md-night-elevation-2); /* 纸卡浮于夜案之上 */
+    linear-gradient(var(--md-surface), var(--md-surface));
+  box-shadow: var(--md-elevation-paper-2); /* 纸卡浮于页面之上 */
   color: var(--md-on-surface);
 }
 
@@ -538,7 +537,7 @@ const handleLogin = async () => {
   .login-panel {
     align-self: stretch;
     padding: 22px 18px 24px;
-    box-shadow: var(--md-night-elevation-2); /* 纸卡浮于夜案之上 */
+    box-shadow: var(--md-elevation-paper-2); /* 纸卡浮于页面之上 */
   }
 
   .login-card__header {

@@ -365,7 +365,7 @@ const EMOTION_COLOR_TOKEN_MAP: Record<string, string> = {
   calm: '--md-on-surface-variant',
 }
 
-// SVG 与内联样式可直接消费 var(--md-*) 字符串，主题切换时随 token 自动更新
+// SVG 与内联样式直接消费 var(--md-*) 字符串，避免重复硬编码设计色值
 const getEmotionColorByKey = (emotionKey: string) => {
   const tokenName = EMOTION_COLOR_TOKEN_MAP[emotionKey] || '--md-on-surface-variant'
   return `var(${tokenName})`

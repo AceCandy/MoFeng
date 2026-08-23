@@ -105,7 +105,7 @@ Tailwind v4, CSS-first. `src/assets/main.css` is the entry: it pulls in Tailwind
 @plugin "@tailwindcss/typography";
 ```
 
-- Theme tokens are CSS custom properties under `--md-*` (design system) and `--ink-*` (ink style), with light/dark keyed on `:root[data-theme]`, defined in `src/assets/styles/tokens.css`. `src/main.ts` resolves theme preference from `localStorage['mofeng-theme-preference']` and sets `document.documentElement.dataset.theme`.
+- Theme tokens are CSS custom properties under `--md-*` (design system) and `--ink-*` (ink style), defined in `src/assets/styles/tokens.css`. `index.html` fixes `data-theme="light"` before the app boots; do not add runtime theme preference, system-color listeners, or dark-theme branches.
 - Use `<style scoped>` per component; `:deep(...)` for Naive UI overrides (reference: `src/components/shared/MofengTable.vue`).
 - Do not add a `tailwind.config.js`; v4 is config-less.
 

@@ -123,14 +123,6 @@ useDialogA11y({
   animation: scrollFoldOpen 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-/* 深色模式（深夜书房）适配 */
-:global([data-theme='dark']) .m3-ink-modal-box,
-:global(.dark) .m3-ink-modal-box {
-  background-color: var(--md-surface);
-  border-color: var(--md-jiege);
-  box-shadow: var(--md-elevation-paper-2);
-}
-
 /* 四角古黄铜包角扣 */
 .m3-ink-modal-corner {
   position: absolute;
@@ -174,11 +166,6 @@ useDialogA11y({
   border-bottom-right-radius: var(--md-radius-md, 6px);
 }
 
-:global([data-theme='dark']) .m3-ink-modal-corner,
-:global(.dark) .m3-ink-modal-corner {
-  border-color: var(--md-warning); /* 深色下古铜色略微低调些 */
-}
-
 /* 头部样式 */
 .m3-ink-modal-header {
   display: flex;
@@ -189,32 +176,6 @@ useDialogA11y({
   background-color: color-mix(in srgb, var(--md-surface-container-low) 54%, transparent);
   border-top-left-radius: var(--md-radius-md);
   border-top-right-radius: var(--md-radius-md);
-}
-
-:global([data-theme='dark']) .m3-ink-modal-header,
-:global(.dark) .m3-ink-modal-header {
-  border-bottom-color: var(--md-outline-variant) !important;
-  background-color: var(--md-surface-dim) !important;
-}
-
-:global([data-theme='dark']) .m3-ink-modal-header__title {
-  color: var(--md-on-surface) !important;
-}
-
-:global([data-theme='dark']) .m3-ink-modal-close-btn {
-  border-color: var(--md-outline) !important;
-  color: var(--md-on-surface-variant) !important;
-}
-
-:global([data-theme='dark']) .m3-ink-modal-close-btn:hover {
-  background-color: var(--md-state-layer-hover) !important;
-  color: var(--md-on-surface) !important;
-}
-
-:global([data-theme='dark']) .m3-ink-modal-close-badge {
-  background-color: color-mix(in srgb, var(--md-secondary) 16%, transparent) !important;
-  border-color: color-mix(in srgb, var(--md-secondary) 50%, transparent) !important;
-  color: var(--md-secondary-light) !important;
 }
 
 .m3-ink-modal-header__brand {
@@ -335,16 +296,6 @@ useDialogA11y({
 
 .m3-ink-modal-body::-webkit-scrollbar-thumb:hover {
   background-color: color-mix(in srgb, var(--md-primary) 35%, transparent);
-}
-
-:global([data-theme='dark']) .m3-ink-modal-body::-webkit-scrollbar-thumb,
-:global(.dark) .m3-ink-modal-body::-webkit-scrollbar-thumb {
-  background-color: color-mix(in srgb, var(--md-on-surface) 12%, transparent);
-}
-
-:global([data-theme='dark']) .m3-ink-modal-body::-webkit-scrollbar-thumb:hover,
-:global(.dark) .m3-ink-modal-body::-webkit-scrollbar-thumb:hover {
-  background-color: color-mix(in srgb, var(--md-on-surface) 25%, transparent);
 }
 
 /* 动效：水墨淡入与卷轴缓缓弹开 */

@@ -36,7 +36,7 @@
       :aria-busy="projectsLoading"
       aria-label="今日创作总览"
     >
-      <!-- 墨碑底纹：夜色里的巨型低透明排印（当前书名首字，无项目落「墨」），右下出血裁切，纯装饰 -->
+      <!-- 墨碑底纹：纸面上的巨型低透明排印（当前书名首字，无项目落「墨」），右下出血裁切，纯装饰 -->
       <div class="workspace-hero__backdrop" aria-hidden="true">
         <span class="workspace-hero__monolith">{{ heroMonolithChar }}</span>
       </div>
@@ -66,7 +66,7 @@
         <template v-else>
           <div class="workspace-hero__title-row">
             <h2>{{ continueProject ? continueProject.title : '开始一段新的长篇创作' }}</h2>
-            <!-- 空状态引首章：灯下米字格衬底 + 夜色钤印「著」字，只作卷首留白装饰 -->
+            <!-- 空状态引首章：米字格衬底 + 描红「著」字，只作卷首留白装饰 -->
             <span v-if="!continueProject" class="workspace-hero__empty-seal" aria-hidden="true">著</span>
           </div>
           <p class="workspace-hero__summary">
@@ -121,7 +121,7 @@
         </p>
       </div>
 
-      <!-- 墨进度：通栏夜色发线轨道，灯下走墨填充，条头缀朱砂方印点 -->
+      <!-- 墨进度：通栏发线轨道，焦墨填充，条头缀朱砂方印点 -->
       <div class="workspace-hero__progress workspace-continue__progress">
         <div class="workspace-hero__progress-label">
           <span>墨进度</span>
@@ -504,23 +504,23 @@ onUnmounted(() => {
   gap: clamp(var(--md-spacing-6), 4vw, var(--md-spacing-10));
 }
 
-/* 夜色长卷：夜案深底 + 书名区后方暖灯光晕 + 四缘向夜深处压暗，多层 background 一次绘成；行线不长在夜色里。
+/* 暖纸长卷：素骨底 + 书名区暖色轻晕 + 四缘老宣层次，多层 background 一次绘成。
    构图：底缘下方预留落款签骑缝位（padding-bottom 加破带量，margin-bottom 预留签条下半身的落纸空间） */
 .workspace-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
   gap: var(--md-spacing-5) var(--md-spacing-8);
   padding: clamp(var(--md-spacing-6), 3vw, var(--md-spacing-8)) clamp(var(--md-spacing-8), 5vw, var(--md-spacing-10)); /* 左右 ≥32px，案头内缩留白 */
-  padding-bottom: calc(clamp(var(--md-spacing-6), 3vw, var(--md-spacing-8)) + 40px); /* 夜色带底缘内让出骑缝签条上半身 */
+  padding-bottom: calc(clamp(var(--md-spacing-6), 3vw, var(--md-spacing-8)) + 40px); /* 底缘内让出骑缝签条上半身 */
   margin-bottom: 32px; /* 签条破带下半身落纸的预留空位，防压档案区 */
   border-radius: var(--md-radius-xs) !important; /* 微直角方章 */
   background:
     /* 书名区后方一团暖灯晕（暖纸色径向光，大面积低透明） */
-    radial-gradient(58% 82% at 24% 30%, var(--md-night-glow-warm), transparent 70%),
+    radial-gradient(58% 82% at 24% 30%, var(--md-tint-warm), transparent 70%),
     /* 四周边缘向夜深处压暗 */
-    radial-gradient(125% 155% at 50% 42%, var(--md-night-bg) 52%, var(--md-night-bg-deep) 100%);
-  background-color: var(--md-night-bg);
-  box-shadow: var(--md-night-elevation-1); /* 夜案纯黑深影，长卷浮于案上（影边二选一，取影） */
+    radial-gradient(125% 155% at 50% 42%, var(--md-background) 52%, var(--md-surface-dim) 100%);
+  background-color: var(--md-background);
+  box-shadow: var(--md-elevation-paper-1); /* Paper 1 柔影让长卷浮于页面之上 */
   position: relative;
 }
 
@@ -534,12 +534,12 @@ onUnmounted(() => {
   user-select: none;
 }
 
-/* 墨碑：真实字符排印，夜色暖纸白 6% 透明度，右下出血裁切，压在最底不抢字 */
+/* 墨碑：真实字符排印，焦墨 6% 透明度，右下出血裁切，压在最底不抢字 */
 .workspace-hero__monolith {
   position: absolute;
   right: -0.16em;
   bottom: -0.3em;
-  color: color-mix(in srgb, var(--md-night-on) 6%, transparent);
+  color: color-mix(in srgb, var(--md-on-surface) 6%, transparent);
   font-family: var(--md-font-display);
   font-size: clamp(160px, 22vw, 300px);
   font-weight: 600;
@@ -556,7 +556,7 @@ onUnmounted(() => {
   min-height: 160px; /* 课签骨架小于旧面板，按新体量稳定占位 */
 }
 
-/* 题签：宋体小签，不用 eyebrow 式 uppercase 小字眉（夜色里压为暖纸辅文色） */
+/* 题签：宋体小签，不用 eyebrow 式 uppercase 小字眉 */
 .workspace-eyebrow {
   margin: 0;
   color: var(--md-on-surface-variant);
@@ -566,7 +566,7 @@ onUnmounted(() => {
 }
 
 .workspace-hero .workspace-eyebrow {
-  color: var(--md-night-on-variant);
+  color: var(--md-on-surface-variant);
 }
 
 .workspace-hero__title-row {
@@ -576,34 +576,34 @@ onUnmounted(() => {
   gap: var(--md-spacing-4);
 }
 
-/* 书名破顶展示级：clamp(44px, 6.5vw, 88px)，夜色暖纸白，追踪微收，灯下碑拓骨力 */
+/* 书名破顶展示级：clamp(44px, 6.5vw, 88px)，焦墨题字，追踪微收 */
 .workspace-hero h2 {
   margin: var(--md-spacing-2) 0 0;
   min-width: 0;
-  color: var(--md-night-on);
+  color: var(--md-on-surface);
   font-size: clamp(44px, 6.5vw, 88px);
   font-weight: 600;
   line-height: 1.18;
   letter-spacing: -0.02em;
 }
 
-/* 空状态引首章：放大一格成为空态主角——灯下米字格 + 夜色钤印「著」字，只作卷首留白装饰 */
+/* 空状态引首章：放大一格成为空态主角——米字格 + 描红「著」字，只作卷首留白装饰 */
 .workspace-hero__empty-seal {
   flex: none;
   display: grid;
   place-items: center;
   width: clamp(104px, 12vw, 148px);
   aspect-ratio: 1;
-  border: 1px solid var(--md-night-outline);
+  border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-radius-xs); /* 微直角方章 */
   background-image:
-    linear-gradient(to right, transparent calc(50% - 0.5px), var(--md-night-outline) calc(50% - 0.5px), var(--md-night-outline) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
-    linear-gradient(to bottom, transparent calc(50% - 0.5px), var(--md-night-outline) calc(50% - 0.5px), var(--md-night-outline) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
-    linear-gradient(to top right, transparent calc(50% - 0.5px), var(--md-night-outline) calc(50% - 0.5px), var(--md-night-outline) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
-    linear-gradient(to top left, transparent calc(50% - 0.5px), var(--md-night-outline) calc(50% - 0.5px), var(--md-night-outline) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    linear-gradient(to right, transparent calc(50% - 0.5px), var(--md-outline-variant) calc(50% - 0.5px), var(--md-outline-variant) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    linear-gradient(to bottom, transparent calc(50% - 0.5px), var(--md-outline-variant) calc(50% - 0.5px), var(--md-outline-variant) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    linear-gradient(to top right, transparent calc(50% - 0.5px), var(--md-outline-variant) calc(50% - 0.5px), var(--md-outline-variant) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    linear-gradient(to top left, transparent calc(50% - 0.5px), var(--md-outline-variant) calc(50% - 0.5px), var(--md-outline-variant) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
     /* 字后一团朱砂微光，灯下印色不闷 */
-    radial-gradient(circle at 50% 50%, var(--md-night-glow-seal), transparent 72%);
-  color: var(--md-night-seal); /* 夜色钤印，待作家落墨覆写 */
+    radial-gradient(circle at 50% 50%, var(--md-miaohong-wash), transparent 72%);
+  color: var(--md-miaohong); /* 描红题字，待作家落墨覆写 */
   font-family: var(--md-font-kai); /* 楷体只给描红 */
   font-size: clamp(48px, 5.6vw, 68px);
   line-height: 1;
@@ -613,7 +613,7 @@ onUnmounted(() => {
 
 .workspace-hero__summary {
   margin: var(--md-spacing-3) 0 0;
-  color: var(--md-night-on-variant);
+  color: var(--md-on-surface-variant);
   line-height: 1.7;
   max-width: 64ch;
 }
@@ -638,11 +638,11 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-/* 夜色里的元信息签：夜色浮层底 + 夜色发线边 */
+/* 元信息签：竹纸浮层底 + 墨晕发线边 */
 .workspace-hero .workspace-chip {
-  border-color: var(--md-night-outline);
-  background-color: var(--md-night-surface);
-  color: var(--md-night-on-variant);
+  border-color: var(--md-outline-variant);
+  background-color: var(--md-surface-container-low);
+  color: var(--md-on-surface-variant);
 }
 
 .workspace-hero__actions {
@@ -675,12 +675,12 @@ onUnmounted(() => {
   margin-top: var(--md-spacing-5);
 }
 
-/* 夜色骨架签：夜色上浮层，不带边线（须后于 chip 夜色覆写出场） */
+/* 骨架签：纸色上浮层，不带边线（须后于 chip 覆写出场） */
 .workspace-hero .workspace-hero__loading-chip {
   width: 92px;
   min-width: 92px;
   border-color: transparent;
-  background-color: var(--md-night-surface-high);
+  background-color: var(--md-surface-container);
 }
 
 .workspace-hero .workspace-hero__loading-chip:last-child {
@@ -691,7 +691,7 @@ onUnmounted(() => {
 .workspace-hero__loading-line {
   display: block;
   border-radius: var(--md-radius-xs) !important; /* 纸条微直角 */
-  background: var(--md-night-surface-high) !important; /* 夜色上浮层，暗骨架呼吸 */
+  background: var(--md-surface-container) !important; /* 纸色上浮层，骨架呼吸 */
   animation: ink-skeleton-breath 2.2s cubic-bezier(0.22, 1, 0.36, 1) infinite !important;
 }
 
@@ -760,21 +760,21 @@ onUnmounted(() => {
 }
 
 .workspace-panel__action:focus-visible {
-  outline: 2px solid var(--md-night-on);
+  outline: 2px solid var(--md-on-surface);
   outline-offset: 2px;
 }
 
-/* 课签：夜色浮层 + dashed 夜色强发线边，压案不浮；微斜半度并右探贴住夜色带右缘，如随手别上的手作签 */
+/* 课签：竹纸浮层 + dashed 发线边，压案不浮；微斜半度并右探贴住长卷右缘，如随手别上的手作签 */
 .workspace-hero__panel {
   grid-column: 2;
   grid-row: 1;
   align-self: start;
   position: relative; /* 压过墨碑衬底 */
-  margin-right: -10px; /* 右探咬住夜色带右缘（右 padding ≥32px 吸收，不出血） */
+  margin-right: -10px; /* 右探咬住长卷右缘（右 padding ≥32px 吸收，不出血） */
   transform: rotate(-0.8deg); /* 手作微斜，静定不晃 */
-  border: 1px dashed var(--md-night-outline-strong);
+  border: 1px dashed var(--md-outline);
   border-radius: var(--md-radius-xs) !important; /* 微直角方章 */
-  background-color: var(--md-night-surface); /* 夜色浮层 */
+  background-color: var(--md-surface-container-low); /* 竹纸浮层 */
   padding: var(--md-spacing-5);
   display: flex;
   flex-direction: column;
@@ -788,31 +788,31 @@ onUnmounted(() => {
   gap: var(--md-spacing-2);
 }
 
-/* 「今日目标」夜色小签：朱砂微光 wash 底 + 夜色钤印字，12px/600、字距 0.3em */
+/* 「今日目标」小签：描红 wash 底 + 焦墨字，12px/600、字距 0.3em */
 .workspace-hero__goal-tag {
   margin: 0;
   align-self: flex-start;
   padding: 4px 10px;
   border-radius: var(--md-radius-xs);
-  background-color: var(--md-night-glow-seal);
-  color: var(--md-night-on);
+  background-color: var(--md-miaohong-wash);
+  color: var(--md-on-surface);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.3em;
 }
 
 .workspace-hero__panel-head strong {
-  color: var(--md-night-on);
+  color: var(--md-on-surface);
   font-size: var(--md-title-large);
 }
 
 .workspace-hero__goal-desc {
   margin: 0;
-  color: var(--md-night-on-variant);
+  color: var(--md-on-surface-variant);
   line-height: 1.6;
 }
 
-/* 墨进度：通栏灯下行墨，横贯夜色带底部；压过墨碑衬底 */
+/* 墨进度：通栏焦墨填充，横贯长卷底部；压过墨碑衬底 */
 .workspace-hero__progress {
   grid-column: 1 / -1;
   position: relative;
@@ -824,13 +824,13 @@ onUnmounted(() => {
   align-items: baseline;
   justify-content: space-between;
   gap: var(--md-spacing-3);
-  color: var(--md-night-on-variant);
+  color: var(--md-on-surface-variant);
   font-size: var(--md-label-medium);
 }
 
 /* 百分比升展示级字级落在夜端，章数保持辅文 */
 .workspace-hero__progress-label strong {
-  color: var(--md-night-on);
+  color: var(--md-on-surface);
   font-size: clamp(24px, 2.6vw, 34px);
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -841,22 +841,22 @@ onUnmounted(() => {
   margin-left: var(--md-spacing-2);
   font-size: var(--md-label-medium);
   font-weight: 400;
-  color: var(--md-night-on-variant);
+  color: var(--md-on-surface-variant);
 }
 
-/* 通栏夜色发线轨道，灯下行墨填充，条头带暖光 */
+/* 通栏墨晕发线轨道，焦墨填充，条头带朱砂印点 */
 .workspace-hero .md-progress-linear {
   height: 3px;
-  background-color: var(--md-night-outline);
+  background-color: var(--md-outline-variant);
   border-radius: 0; /* 发线轨道不收圆 */
   overflow: visible; /* 让条头朱砂印点得以压线而立 */
   position: relative;
 }
 
 .workspace-hero .md-progress-linear-bar {
-  background-color: var(--md-night-on); /* 灯下走墨，不借石青 */
+  background-color: var(--md-on-surface); /* 灯下走墨，不借石青 */
   border-radius: 0;
-  box-shadow: 0 0 8px color-mix(in srgb, var(--md-night-on) 22%, transparent); /* 灯下微光，静定 */
+  box-shadow: 0 0 8px color-mix(in srgb, var(--md-on-surface) 22%, transparent); /* 灯下微光，静定 */
 }
 
 /* 数据就绪后只出场一次：填充条自左铺墨 1.2s */
@@ -882,10 +882,10 @@ onUnmounted(() => {
   height: 12px;
   margin: -6px 0 0 -6px; /* 以条头为中心钤下 */
   border-radius: var(--md-radius-xs);
-  background-color: var(--md-night-seal); /* 夜色钤印 */
+  background-color: var(--md-miaohong); /* 描红印点 */
   box-shadow:
-    0 0 0 3px var(--md-night-glow-seal), /* 印周薄晕 */
-    0 0 8px color-mix(in srgb, var(--md-night-seal) 45%, transparent); /* 灯下微光，≤8px 弥散 */
+    0 0 0 3px var(--md-miaohong-wash), /* 印周薄晕 */
+    0 0 8px color-mix(in srgb, var(--md-miaohong) 45%, transparent); /* 灯下微光，≤8px 弥散 */
 }
 
 .workspace-hero:not(.workspace-hero--loading) .workspace-hero__progress-seal {
@@ -901,14 +901,13 @@ onUnmounted(() => {
   }
 }
 
-/* 创作快照 = 破带者：一枚纸色落款签条骑跨夜色带底缘，上半身压夜色、下半身落纸，
-   缝合夜色长卷与下方纸色档案区；签面纸色世界，文字回落墨/辅文色 */
+/* 创作快照：一枚熟宣落款签条骑跨长卷底缘，缝合长卷与下方档案区 */
 .workspace-hero__snapshot {
   position: absolute;
   left: clamp(var(--md-spacing-8), 5vw, var(--md-spacing-10)); /* 与 hero 横 padding 对齐 */
   right: clamp(var(--md-spacing-8), 5vw, var(--md-spacing-10));
   bottom: 0;
-  transform: translateY(50%); /* 骑缝：一半压夜色带，一半破出落纸 */
+  transform: translateY(50%); /* 骑缝：一半压住长卷，一半落入档案区 */
   z-index: 1;
   display: flex;
   flex-wrap: wrap;

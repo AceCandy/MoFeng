@@ -1,0 +1,4 @@
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend package conventions and applicable guideline routing."}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"Vue SFC styling, token use, and accessibility contracts for affected components."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Global CSS ownership, testing requirements, and theme contract being updated."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Reuse existing paper tokens and update every copy of the cross-cutting theme contract."}

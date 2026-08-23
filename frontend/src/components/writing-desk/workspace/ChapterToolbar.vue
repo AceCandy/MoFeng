@@ -291,35 +291,35 @@ watch(
   display: none;
 }
 
-/* 夜色带安静款：透明底 + 夜色发线边 + 暖纸白字 */
+/* 安静款：透明底 + 墨晕发线边 + 焦墨字 */
 .writing-workspace__tool-btn--ghost {
-  border-color: var(--md-night-outline);
-  color: var(--md-night-on);
+  border-color: var(--md-outline-variant);
+  color: var(--md-on-surface);
   background-color: transparent;
   box-shadow: none;
 }
 
 .writing-workspace__tool-btn--ghost:hover:not(:disabled) {
-  color: var(--md-night-on);
-  border-color: var(--md-night-outline-strong);
-  background-color: rgba(236, 228, 207, 0.08); /* --md-state-layer-hover 的夜底等效层 */
+  color: var(--md-on-surface);
+  border-color: var(--md-outline);
+  background-color: var(--md-state-layer-hover);
   box-shadow: none;
 }
 
 .writing-workspace__tool-btn--ghost:active:not(:disabled) {
-  box-shadow: 0px 0px 0px var(--md-night-outline-strong) !important;
+  box-shadow: 0px 0px 0px var(--md-outline) !important;
 }
 
-/* 夜色带内禁用态：压住全局 md-btn:disabled 的纸色填充，保持夜色安静款 */
+/* 禁用态压住全局 md-btn:disabled 的填充，保持安静款 */
 .writing-workspace__tool-btn--ghost:disabled {
-  background-color: rgba(236, 228, 207, 0.05) !important;
-  color: var(--md-night-on-variant) !important;
-  border-color: var(--md-night-outline) !important;
+  background-color: var(--md-state-layer-hover) !important;
+  color: var(--md-on-surface-variant) !important;
+  border-color: var(--md-outline-variant) !important;
 }
 
-/* 全局焦墨焦点框在夜底不可见，夜色带内改暖纸白 */
+/* 焦点框沿用焦墨，确保暖纸底可见 */
 .writing-workspace__tool-btn:focus-visible {
-  outline-color: var(--md-night-on);
+  outline-color: var(--md-on-surface);
 }
 
 .writing-workspace__tool-btn--secondary {

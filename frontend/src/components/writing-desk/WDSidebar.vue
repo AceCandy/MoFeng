@@ -530,8 +530,7 @@ watch(
   height: 100%;
 }
 
-/* 暗室明纸：章节大纲栏沉入固定夜色（不随明暗主题翻转），夜色铬件无影，
-   与页底夜色之间只靠 1px night-outline 发线分界；稿纸区保持纸色世界不动 */
+/* 章节大纲栏使用竹纸结构面，以 1px 墨晕发线和稿纸阅读面分界 */
 .writing-sidebar {
   position: relative;
   z-index: auto;
@@ -539,9 +538,9 @@ watch(
   min-height: 0;
   height: 100%;
   overflow: hidden;
-  background-color: var(--md-night-surface);
-  color: var(--md-night-on);
-  border: 1px solid var(--md-night-outline) !important;
+  background-color: var(--md-surface-container-low);
+  color: var(--md-on-surface);
+  border: 1px solid var(--md-outline-variant) !important;
   border-radius: 0 !important;
   box-shadow: none;
 }
@@ -568,8 +567,8 @@ watch(
   top: 0;
   z-index: 24;
   padding: var(--md-spacing-5) var(--md-spacing-6) var(--md-spacing-3);
-  background-color: var(--md-night-surface);
-  border-bottom: 1px solid var(--md-night-outline);
+  background-color: var(--md-surface-container-low);
+  border-bottom: 1px solid var(--md-outline-variant);
 }
 
 .writing-sidebar__outline-header-row {
@@ -589,7 +588,7 @@ watch(
 
 .writing-sidebar__outline-heading h3 {
   font-family: var(--md-font-serif);
-  color: var(--md-night-on-variant);
+  color: var(--md-on-surface-variant);
 }
 
 .writing-sidebar__outline-toolbar {
@@ -600,21 +599,21 @@ watch(
 }
 
 .writing-sidebar__outline-count {
-  color: var(--md-night-on-variant);
+  color: var(--md-on-surface-variant);
   font-size: var(--md-label-medium);
   font-weight: 600;
   font-family: var(--md-font-serif);
 }
 
-/* 夜色安静款图标钮：透明底 + night-outline 边 + night-on-variant 字，hover 转夜色钤印红 */
+/* 安静款图标钮：透明底 + 墨晕边 + 松烟字，hover 转描红 */
 .writing-sidebar__outline-action {
   width: 36px;
   height: 36px;
   min-width: 36px;
   min-height: 36px;
   border-radius: 0 !important;
-  border: 1.5px solid var(--md-night-outline);
-  color: var(--md-night-on-variant);
+  border: 1.5px solid var(--md-outline-variant);
+  color: var(--md-on-surface-variant);
   background-color: transparent;
   transition:
     background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
@@ -627,9 +626,9 @@ watch(
 }
 
 .writing-sidebar__outline-action:hover:not(:disabled) {
-  border-color: var(--md-night-seal);
-  color: var(--md-night-seal);
-  background-color: color-mix(in srgb, var(--md-night-seal) 8%, transparent);
+  border-color: var(--md-miaohong);
+  color: var(--md-miaohong);
+  background-color: color-mix(in srgb, var(--md-miaohong) 8%, transparent);
 }
 
 .writing-sidebar__outline-action:active:not(:disabled) {
@@ -654,7 +653,7 @@ watch(
 
 /* 目录穿线（2px 朱砂线装书 motif）已由全局 chapter-binding.css 收口，此处不再重复定义 */
 
-/* 极致国风脑洞：木刻竹简签条样式章节行（夜色发线边框） */
+/* 木刻竹简签条样式章节行，使用墨晕发线边框 */
 .writing-sidebar__chapter-row {
   display: block;
   width: 100%;
@@ -663,8 +662,8 @@ watch(
   -webkit-appearance: none;
   padding: 8px;
   border-radius: 0 !important;
-  border: 1px solid var(--md-night-outline);
-  background-color: color-mix(in srgb, var(--md-night-on) 3%, transparent);
+  border: 1px solid var(--md-outline-variant);
+  background-color: color-mix(in srgb, var(--md-on-surface) 3%, transparent);
   color: inherit;
   font: inherit;
   outline: none;
@@ -677,19 +676,19 @@ watch(
     transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Hover 脑洞：竹简抽出金石回弹微颤抖（夜色悬停 = 暖纸白 6% 薄光） */
+/* Hover：竹简抽出并以焦墨状态层强调 */
 .writing-sidebar__chapter-row--compact-idle:hover,
 .writing-sidebar__chapter-row:focus-visible {
-  border-color: var(--md-night-outline-strong);
-  background-color: rgba(236, 228, 207, 0.06);
+  border-color: var(--md-outline);
+  background-color: var(--md-state-layer-hover);
   transform: translateX(4px);
   animation: stone-tremble 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* 选中章节签条：night-on 8% 浮光底 + 左缘 2px 夜色钤印印线（夜色里的「当前」权责） */
+/* 选中章节签条：焦墨 8% 状态层 + 左缘 2px 描红印线 */
 .writing-sidebar__chapter-row--compact-selected {
-  border: 1px solid var(--md-night-outline-strong) !important;
-  background-color: color-mix(in srgb, var(--md-night-on) 8%, transparent) !important;
+  border: 1px solid var(--md-outline) !important;
+  background-color: color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
   margin-left: -10px !important; /* 向左平移 10px，使其恰好压在竖红线上 */
   width: calc(100% + 14px) !important; /* 显式拓宽卡片（向左超出 10px，向右超出 4px），使其绝对宽于普通卡片 */
   padding-left: 18px !important; /* 增加左侧内边距，精确对齐文字内容与状态点 */
@@ -704,96 +703,95 @@ watch(
   top: 0;
   bottom: 0;
   width: 2px;
-  background-color: var(--md-night-seal);
+  background-color: var(--md-miaohong);
   pointer-events: none;
 }
 
 .writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-title {
   font-family: var(--md-font-serif);
-  color: var(--md-night-seal) !important;
+  color: var(--md-miaohong) !important;
   font-weight: bold;
   letter-spacing: 0.03em;
 }
 
 .writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-no {
-  color: var(--md-night-seal) !important;
+  color: var(--md-miaohong) !important;
 }
 
-/* 行尾「著」字闲章与目录穿线在夜色里改用 night-seal 系（覆写全局 chapter-binding.css 纸色定值） */
+/* 行尾「著」字闲章与目录穿线沿用描红系，覆写全局 chapter-binding.css 基础值 */
 .writing-sidebar__chapter-row--compact-selected::after {
-  background-color: var(--md-night-seal) !important;
-  color: var(--md-night-seal-on) !important;
-  border-color: var(--md-night-seal) !important;
+  background-color: var(--md-miaohong) !important;
+  color: var(--md-btn-seal-text) !important;
+  border-color: var(--md-miaohong) !important;
 }
 
 .writing-sidebar__tree-item::before {
-  background-color: color-mix(in srgb, var(--md-night-seal) 26%, transparent);
-  border-left-color: color-mix(in srgb, var(--md-night-seal) 14%, transparent);
+  background-color: color-mix(in srgb, var(--md-miaohong) 26%, transparent);
+  border-left-color: color-mix(in srgb, var(--md-miaohong) 14%, transparent);
   box-shadow: none;
 }
 
 .writing-sidebar__tree-item::after {
-  background-color: color-mix(in srgb, var(--md-night-seal) 20%, transparent);
+  background-color: color-mix(in srgb, var(--md-miaohong) 20%, transparent);
 }
 
 /* 选中行尾朱砂方印「著」已由全局 chapter-binding.css 收口，此处不再重复定义 */
 
-/* 已完成/待写/未解锁签条在夜色里统一为中性夜色：状态权责交给状态印与状态点，
-   纸色世界的石绿/藤黄彩边在夜底发闷且对比不达标，不带入暗室 */
+/* 已完成/待写/未解锁签条统一使用中性纸色，状态权责交给状态印与状态点 */
 .writing-sidebar__chapter-row--completed {
-  border-color: var(--md-night-outline) !important;
-  background-color: color-mix(in srgb, var(--md-night-on) 5%, transparent) !important;
+  border-color: var(--md-outline-variant) !important;
+  background-color: color-mix(in srgb, var(--md-on-surface) 5%, transparent) !important;
 }
 .writing-sidebar__chapter-row--completed:hover {
-  border-color: var(--md-night-outline-strong) !important;
-  background-color: rgba(236, 228, 207, 0.06) !important;
+  border-color: var(--md-outline) !important;
+  background-color: var(--md-state-layer-hover) !important;
 }
 
 .writing-sidebar__chapter-row--pending {
-  border-color: var(--md-night-outline) !important;
-  background-color: color-mix(in srgb, var(--md-night-on) 3%, transparent) !important;
+  border-color: var(--md-outline-variant) !important;
+  background-color: color-mix(in srgb, var(--md-on-surface) 3%, transparent) !important;
 }
 .writing-sidebar__chapter-row--pending:hover {
-  border-color: var(--md-night-outline-strong) !important;
-  background-color: rgba(236, 228, 207, 0.06) !important;
+  border-color: var(--md-outline) !important;
+  background-color: var(--md-state-layer-hover) !important;
 }
 
-/* 未解锁状态的签条样式 (夜色压暗) */
+/* 未解锁状态的签条样式 */
 .writing-sidebar__chapter-row--locked {
   opacity: 0.65;
-  border-color: color-mix(in srgb, var(--md-night-outline) 60%, transparent) !important;
+  border-color: color-mix(in srgb, var(--md-outline-variant) 60%, transparent) !important;
   background-color: transparent !important;
 }
 .writing-sidebar__chapter-row--locked:hover {
-  border-color: var(--md-night-outline) !important;
-  background-color: rgba(236, 228, 207, 0.06) !important;
+  border-color: var(--md-outline-variant) !important;
+  background-color: var(--md-state-layer-hover) !important;
   opacity: 0.85;
 }
 
-/* 「当前」权责统一：三态章被选中时与基准选中态一致（night-on 8% 底 + 2px 印线 + 夜印红题名） */
+/* 「当前」权责统一：三态章被选中时与基准选中态一致（焦墨 8% 底 + 2px 印线 + 描红题名） */
 .writing-sidebar__chapter-row--completed.writing-sidebar__chapter-row--compact-selected,
 .writing-sidebar__chapter-row--pending.writing-sidebar__chapter-row--compact-selected,
 .writing-sidebar__chapter-row--locked.writing-sidebar__chapter-row--compact-selected {
-  border: 1px solid var(--md-night-outline-strong) !important;
-  background-color: color-mix(in srgb, var(--md-night-on) 8%, transparent) !important;
+  border: 1px solid var(--md-outline) !important;
+  background-color: color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
   box-shadow: none !important;
 }
 .writing-sidebar__chapter-row--completed.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-title,
 .writing-sidebar__chapter-row--completed.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-no,
 .writing-sidebar__chapter-row--pending.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-title,
 .writing-sidebar__chapter-row--pending.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-no {
-  color: var(--md-night-seal) !important;
+  color: var(--md-miaohong) !important;
 }
 .writing-sidebar__chapter-row--locked.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-title,
 .writing-sidebar__chapter-row--locked.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-no {
-  color: var(--md-night-on-variant) !important;
+  color: var(--md-on-surface-variant) !important;
 }
 .writing-sidebar__chapter-row--completed.writing-sidebar__chapter-row--compact-selected::after,
 .writing-sidebar__chapter-row--pending.writing-sidebar__chapter-row--compact-selected::after,
 .writing-sidebar__chapter-row--locked.writing-sidebar__chapter-row--compact-selected::after {
-  color: var(--md-night-seal-on) !important;
-  border-color: var(--md-night-seal) !important;
-  background-color: var(--md-night-seal) !important;
+  color: var(--md-btn-seal-text) !important;
+  border-color: var(--md-miaohong) !important;
+  background-color: var(--md-miaohong) !important;
 }
 
 /* 锁定章节的锁图标样式 (右侧) */
@@ -803,7 +801,7 @@ watch(
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--md-night-on-variant);
+  color: var(--md-on-surface-variant);
   width: 20px;
   height: 20px;
   transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -818,8 +816,8 @@ watch(
   font-weight: 600;
   padding: 2px 6px;
   border-radius: var(--md-radius-sm);
-  background: color-mix(in srgb, var(--md-night-on) 8%, transparent);
-  color: var(--md-night-on-variant) !important;
+  background: color-mix(in srgb, var(--md-on-surface) 8%, transparent);
+  color: var(--md-on-surface-variant) !important;
   transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -835,10 +833,10 @@ watch(
   height: 28px;
   min-width: 28px;
   min-height: 28px;
-  border: 1px solid var(--md-night-outline);
+  border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-radius-sm) !important;
-  background-color: color-mix(in srgb, var(--md-night-on) 6%, transparent);
-  color: var(--md-night-on-variant);
+  background-color: color-mix(in srgb, var(--md-on-surface) 6%, transparent);
+  color: var(--md-on-surface-variant);
   opacity: 0.4; /* 常态半透可见，触屏可达；hover/focus 时全显 */
   transform: translateY(-50%) translateX(10px);
   transition:
@@ -864,9 +862,9 @@ watch(
 
 .writing-sidebar__chapter-delete:hover,
 .writing-sidebar__chapter-delete:focus-visible {
-  border-color: var(--md-night-seal);
-  background-color: color-mix(in srgb, var(--md-night-seal) 12%, transparent);
-  color: var(--md-night-seal);
+  border-color: var(--md-miaohong);
+  background-color: color-mix(in srgb, var(--md-miaohong) 12%, transparent);
+  color: var(--md-miaohong);
 }
 
 /* 当有删除按钮的章节被 hover，或删除按钮获得焦点时，隐藏章节行的各种状态和印章，以进行无缝替换 */
@@ -915,23 +913,23 @@ watch(
   user-select: none;
 }
 
-/* 已钤印：夜色钤印实底方印（已完成/已保存）——夜底用更饱和的 night-seal，白昼朱砂在夜底发闷 */
+/* 已钤印：描红实底方印（已完成/已保存） */
 .writing-sidebar__status-seal--sealed {
-  background-color: var(--md-night-seal);
-  color: var(--md-night-seal-on);
+  background-color: var(--md-miaohong);
+  color: var(--md-btn-seal-text);
 }
 
-/* 描红中：夜色描红系描边方印（生成中或已有候选待选） */
+/* 描红中：描红系描边方印（生成中或已有候选待选） */
 .writing-sidebar__status-seal--tracing {
-  border: 1px solid var(--md-night-seal);
-  background-color: color-mix(in srgb, var(--md-night-seal) 10%, transparent);
-  color: var(--md-night-seal);
+  border: 1px solid var(--md-miaohong);
+  background-color: color-mix(in srgb, var(--md-miaohong) 10%, transparent);
+  color: var(--md-miaohong);
 }
 
-/* 已落墨：夜色中性描边方印（其余）——焦墨在夜底不可读，转为 night-outline + night-on-variant */
+/* 已落墨：墨晕描边与松烟文字组成中性方印 */
 .writing-sidebar__status-seal--inked {
-  border: 1px solid var(--md-night-outline-strong);
-  color: var(--md-night-on-variant);
+  border: 1px solid var(--md-outline);
+  color: var(--md-on-surface-variant);
 }
 
 /* 极致国风脑洞：小圆点改造为微型“金石印章方印”，融入古典中式传统色 */
@@ -939,37 +937,37 @@ watch(
   width: 8px;
   height: 8px;
   border-radius: 0 !important; /* 方直印章 */
-  background-color: var(--md-night-on-variant);
+  background-color: var(--md-on-surface-variant);
   display: inline-block;
   border: 1px solid transparent;
 }
 
-/* 已完成沿用“石绿”中式绿（图形语义色，夜底 ≥3:1） */
+/* 已完成沿用“石绿”中式绿（图形语义色） */
 .writing-sidebar__status-dot.is-completed {
   background-color: var(--md-success) !important; /* 石绿 */
-  border-color: color-mix(in srgb, var(--md-success) 70%, var(--md-night-on));
+  border-color: color-mix(in srgb, var(--md-success) 70%, var(--md-on-surface));
 }
 
-/* 进行中使用夜色钤印红 */
+/* 进行中使用描红强调 */
 .writing-sidebar__status-dot.is-progress {
-  background-color: var(--md-night-seal) !important;
-  border-color: color-mix(in srgb, var(--md-night-seal) 70%, var(--md-night-on));
+  background-color: var(--md-miaohong) !important;
+  border-color: color-mix(in srgb, var(--md-miaohong) 70%, var(--md-on-surface));
 }
 
 /* 失败沿用“丹砂”错误语义色 */
 .writing-sidebar__status-dot.is-failed {
   background-color: var(--md-error) !important;
-  border-color: color-mix(in srgb, var(--md-error) 70%, var(--md-night-on));
+  border-color: color-mix(in srgb, var(--md-error) 70%, var(--md-on-surface));
 }
 
-/* 夜色辅文灰兜底 */
+/* 松烟辅文兜底 */
 .writing-sidebar__status-dot.is-idle {
-  background-color: var(--md-night-on-variant) !important;
-  border-color: color-mix(in srgb, var(--md-night-on-variant) 75%, var(--md-night-on));
+  background-color: var(--md-on-surface-variant) !important;
+  border-color: color-mix(in srgb, var(--md-on-surface-variant) 75%, var(--md-on-surface));
 }
 
 .writing-sidebar__chapter-no {
-  color: var(--md-night-on);
+  color: var(--md-on-surface);
   font-size: var(--md-label-medium);
   font-weight: 600;
 }
@@ -992,14 +990,14 @@ watch(
   flex-shrink: 0;
   min-width: 56px;
   text-align: right;
-  color: var(--md-night-on-variant);
+  color: var(--md-on-surface-variant);
   font-size: var(--md-body-small);
   transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* 空态「暂无章节大纲」：全局工具类在夜色容器内改读夜色辅文 */
+/* 空态「暂无章节大纲」沿用松烟辅文 */
 .writing-sidebar .md-on-surface-variant {
-  color: var(--md-night-on-variant);
+  color: var(--md-on-surface-variant);
 }
 
 .m3-stagger {

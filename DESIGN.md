@@ -171,7 +171,7 @@ components:
 - **描红** (`#B8402F`): AI 产出、待作家审定文字的正文色。熟宣上对比度 4.7:1（AA 达标）。亦是"提交/选定/保存成稿"类落印主按钮的底色。描红容器语义标注 `data-provenance="ai"`。
 - **描红深** (`#9C3323`): 描红 hover/强调态。
 - **双钩淡朱** (`#CE5A47`): 仅用于 ≥24px 大字标题、装饰与界格等非正文场景，不得用于正文小字（对比度不足）。
-- **描红 wash / 行线 / 界栏** (`color-mix` 5% / 22% / 38%): 描红块底色、稿纸横向行线、描红段落左缘 1px 界栏与朱丝栏竖线。以 `color-mix` 自引用 `--md-miaohong`，暗场随基准自动换算。
+- **描红 wash / 行线 / 界栏** (`color-mix` 5% / 22% / 38%): 描红块底色、稿纸横向行线、描红段落左缘 1px 界栏与朱丝栏竖线。以 `color-mix` 自引用 `--md-miaohong`，保持同一朱色基准。
 
 ### Secondary
 - **朱砂** (`#B83C32`): 落印钤章专用。章节标题旁「定」字落印、"已钤印"状态实底方印、笺片 tab 激活态描边。与描红色相相邻但权责不同：描红是"待审的稿"，朱砂是"盖下的章"。
@@ -198,7 +198,7 @@ components:
 
 **The Settled-Ink-Never-Red Rule (落墨不见红法则).** 朱砂 `#B83C32` 只出现在落印钤章（「定」字印、状态实底方印）与激活指示上。已定稿的正文、已落墨的段落、首字引首章一律焦墨——正文中出现红色，只有一种合法身份：待审的描红。
 
-**The Shiqing-Is-Reading Rule (石青朗读法则).** 石青 `#2E5C8A`（暗场 `#33517a`）是朗读与 AI 辅助协作的专属色（高亮、播放中小签、AI 入口辅钮），不得挪用于成功态、选定态、进度轨道或任何"钤印"语义，以免与朱砂的权责混淆。线性进度条轨道用墨晕（`--md-outline-variant`）、进度条本体用焦墨，不借石青。
+**The Shiqing-Is-Reading Rule (石青朗读法则).** 石青 `#2E5C8A` 是朗读与 AI 辅助协作的专属色（高亮、播放中小签、AI 入口辅钮），不得挪用于成功态、选定态、进度轨道或任何"钤印"语义，以免与朱砂的权责混淆。线性进度条轨道用墨晕（`--md-outline-variant`）、进度条本体用焦墨，不借石青。
 
 ---
 
@@ -255,21 +255,15 @@ components:
 
 ---
 
-## 夜色墨韵 (Night Ink Realm)
+## 单一暖纸主题 (Single Paper Theme)
 
-门面与案头的固定深夜场景（登录/注册、工作台首页 hero、写作台案头带），**不随明暗主题切换**——夜色是场景而非主题。token 一族为 `--md-night-*`（tokens.css 加法式追加，定值不翻转）。
+全站只使用一套暖纸浅色视觉。`index.html` 在应用启动前固定 `data-theme="light"` 与 `color-scheme: light`；不读取浏览器主题偏好，不跟随系统深浅色，也不保留暗色或固定夜色分支。
 
-- **落地范围**：夜色只落在门面页与案头容器；正文稿纸、批阅面、弹层、档案区永远保持纸色世界。夜色容器与纸色内容之间是干净硬边，不做渐变过渡带。
-- **夜色分层**：底 `--md-night-bg`，边缘以 radial-gradient 压向 `--md-night-bg-deep`；暖光只用 `--md-night-glow-warm` / `--md-night-glow-seal` 两团大面积低透明度光晕，静态，不加呼吸动画。
-- **灯下现格**：夜色里不铺界格/行线。唯一例外是书名号正后方以 `mask-image` 径向渐隐显现的一小块稿格（AuthIntro `::after`），格线用 `--md-night-outline`。
-- **夜案纸卡**：夜色里的表单卡是"夜案上的一张熟宣"——用 `--md-night-paper` 定值组，并在卡容器局部复写 `--md-surface` 系变量 + `color-scheme: light`（注意 root 处已解析的引用型 token 如 `--md-btn-seal-bg` 必须直接复写其本身）。浮起用 `--md-night-elevation-2`，**影边不叠**（去 1px 边框）。
-- **夜色字色**：正文 `--md-night-on`、辅文 `--md-night-on-variant`，不得灰字压夜底；钤印在夜色用更饱和的 `--md-night-seal`（白昼朱砂在夜底发闷）。
-- **展示级字级**：门面书名号/书名用 `clamp()` 升至 `--md-display-hero`(72px) 档，上限 6rem 纪律不破，追踪 -0.02em（碑拓骨力的宽字距规则在夜色展示级让位）。
-- **案头夜色**（写作台）：暗色铬件+亮色画布构图——标题/工具带沉为 `--md-night-surface` 夜色带并以 `--md-night-elevation-1` 轻压稿纸；tab 笺片行以下归纸世界。安静款工具钮 = 透明底 + `--md-night-outline` 边 + `--md-night-on` 字；AI 权责钮的石青不动。
-- **暗室明纸**（写作台铬件）：左栏章节大纲、右栏助手面、项目上下文顶栏（仅 `.app-shell--project-context` 模式，普通页面顶栏永保纸色）一并沉夜；夜色铬件只有 `--md-night-outline` 发线分界，不带投影；当前章高亮 = `color-mix(night-on 8%)` 底 + 左缘 2px `--md-night-seal` 印线；稿纸容器在夜色页底上改用 `--md-night-elevation-1` 纯黑深影，让纸成为暗室里唯一发光的物体。
-- **墨碑排印层**：门面与 hero 允许一层巨型低透明度真实字符底纹（clamp 可达 300px+，`color-mix` 自 `--md-night-on` 派生 4-8% 透明度，viewport 出血裁切，`aria-hidden` + `pointer-events:none`）——它受夜色墨韵节制，不受 6rem 展示级纪律约束；阅读级标题仍各自合规。墨碑必须是纯色填充的真实字符，禁渐变填充、禁 SVG 描字。
-- **破带缝合**：hero 夜色带与下方纸色区之间，允许一个独立签条（如创作快照）以 `translateY(50%)` 骑跨底缘——上半身压夜色、下半身落纸并回到纸世界 token；一词跨两色的文字拼接禁止。
-- **reduced-motion**：夜色不做动效特权，既有入场动画只动 opacity/transform，reduce 下直落终态。
+- **纸色分层**：页面大底用 `--md-background` / `--md-surface-dim`，侧栏与工具带用 `--md-surface-container-low` / `--md-surface-container`，阅读与表单面用 `--md-surface`。层级靠纸色、发线与 Paper 1/2 柔影区分，不使用大块近黑容器。
+- **文字与发线**：正文统一使用 `--md-on-surface`，辅文使用 `--md-on-surface-variant`；结构边界使用 `--md-outline*` / `--md-jiege`。朱砂、描红和石青继续遵守既有权责规则。
+- **门面与案头**：登录/注册、工作台 hero、项目顶栏、章节侧栏、工具带与助手面板均处于纸色世界。认证表单仍可作为浮起稿纸，写作台稿纸仍是最亮阅读面，但周边铬件不得沉为暗场。
+- **墨碑与骑缝签**：巨型真实字符可作为低透明度纸上底纹，保持 `aria-hidden` 与 `pointer-events:none`；创作快照可继续骑跨 hero 底缘，但两侧均使用纸色 token。
+- **reduced-motion**：既有入场动画只动 opacity/transform，reduce 下直落终态。
 
 ---
 
@@ -286,9 +280,9 @@ components:
 
 ### Buttons
 - **Shape**: 微直角 2px（`--md-radius-xs`），方章骨相。
-- **落印主按钮 (Seal Primary)**: 所有"提交/生成/选定/保存成稿/新建与继续创作"类承诺动作 = 朱砂印纽：描红底、熟宣字，hover 转描红深，active `translateY(1px)` 压下且影清零（钤印重力反馈）。全局实现为 `.md-btn-primary`（buttons.css），配色走专用 token `--md-btn-seal-bg` / `--md-btn-seal-bg-hover` / `--md-btn-seal-text`（亮场 = miaohong 系 `#B8402F`/`#9C3323` + `#FAF6ED`；暗场 = `#C04532`/`#AB3729` + `#FBF3E4`，双向对比度 ≥4.5:1）。**一次创作承诺一次落印：每个视图的主承诺动作必须用它，全站不得再出现第三套红。**
+- **落印主按钮 (Seal Primary)**: 所有"提交/生成/选定/保存成稿/新建与继续创作"类承诺动作 = 朱砂印纽：描红底、熟宣字，hover 转描红深，active `translateY(1px)` 压下且影清零（钤印重力反馈）。全局实现为 `.md-btn-primary`（buttons.css），配色走专用 token `--md-btn-seal-bg` / `--md-btn-seal-bg-hover` / `--md-btn-seal-text`（miaohong 系 `#B8402F`/`#9C3323` + `#FAF6ED`，对比度 ≥4.5:1）。**一次创作承诺一次落印：每个视图的主承诺动作必须用它，全站不得再出现第三套红。**
 - **Filled (焦墨次钮)**: `md-btn-filled` 焦墨底熟宣字，是次要/中性动作（重试、取消类）的默认钮，不再是"主按钮"。
-- **Tonal (石青辅钮)**: 石青底熟宣字（暗场 `#33517a`），朗读与 AI 辅助协作入口专用（如「AI优化」），不得挪作通用主按钮。
+- **Tonal (石青辅钮)**: 石青底熟宣字，朗读与 AI 辅助协作入口专用（如「AI优化」），不得挪作通用主按钮。
 - **Outlined**: 透明底 1px 框线，focus 时 1px 焦墨 outline；全局 `:focus-visible` 描边为焦墨（`--md-on-surface`），确保红底按钮上焦点可见。
 
 ### 方格稿纸 (Signature Container)
@@ -327,7 +321,7 @@ components:
 - **Do** 用 1px 青灰界格发线（`--md-jiege`）划分侧栏与面板结构，用横向行线 + 朱丝栏构建稿纸。
 - **Do** 让状态印三态（描红中/已落墨/已钤印）以方印呈现，印不浮起。
 - **Do** 把石青 `#2E5C8A` 留给朗读，把朱砂 `#B83C32` 留给落印。
-- **Do** 为明暗双主题同时覆盖 token（暗场描红 `#E8836F`、暗场落墨 `#E5DEC9`，wash/line 由 color-mix 自动换算）。
+- **Do** 让所有页面复用同一暖纸 token 层级，不新增运行时主题分支或固定暗场容器。
 
 ### Don't:
 - **Don't** 让已定稿正文出现任何红色——落墨不见红；描红之外的红色只有朱砂钤印一种合法身份。

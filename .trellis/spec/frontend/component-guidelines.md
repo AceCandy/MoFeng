@@ -89,7 +89,7 @@ Most-used primitives (by frequency): `n-button`, `n-form-item`, `n-tag`, `n-inpu
 ## Styling
 
 - Tailwind v4 (`@import 'tailwindcss';` in `src/assets/main.css`; typography via `@plugin "@tailwindcss/typography"`). No `tailwind.config.js`.
-- Theme tokens are CSS custom properties in `src/assets/main.css` under `:root` / `:root[data-theme='light']` and `[data-theme='dark']`, namespaced `--md-*` (design system) and `--ink-*` (ink style). Prefer these tokens over hard-coded colors.
+- Theme tokens are CSS custom properties in `src/assets/styles/tokens.css` under `:root` / `:root[data-theme='light']`, namespaced `--md-*` (design system) and `--ink-*` (ink style). The product uses one warm-paper light theme; prefer these tokens over hard-coded colors.
 - Per-component `<style scoped>` is the norm (55 of 64 files). Use `:deep(...)` to override Naive UI internals — reference: `src/components/shared/MofengTable.vue` (`:deep(.n-data-table-th)`, `:deep(.n-data-table-td)`).
 
 ---

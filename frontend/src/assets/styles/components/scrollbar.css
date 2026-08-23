@@ -1,4 +1,4 @@
-/* AIMETA P=水墨滚动条_中国风极简滚动条|R=scrollbar 统一中国风水墨滚动条+dark覆写|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* AIMETA P=水墨滚动条_中国风极简滚动条|R=scrollbar 统一中国风水墨滚动条|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
 /* ============================================
    统一中国风极简水墨滚动条样式 (滚动时显示，平时不显示)
    ============================================ */
@@ -8,11 +8,6 @@
 :root[data-theme='light'] {
   --scrollbar-thumb-color: rgba(58, 70, 72, 0.25); /* 松烟灰半透明，淡墨感 */
   --scrollbar-thumb-hover-color: color-mix(in srgb, var(--md-on-surface) 60%, transparent); /* 焦墨半透明，浓墨感 */
-}
-
-:root[data-theme='dark'] {
-  --scrollbar-thumb-color: rgba(229, 222, 201, 0.2); /* 素骨黄半透明 */
-  --scrollbar-thumb-hover-color: rgba(245, 238, 217, 0.55); /* 浅素骨黄半透明 */
 }
 
 /* 2. Webkit 浏览器 (Chrome, Safari, Edge) 全局滚动条 */

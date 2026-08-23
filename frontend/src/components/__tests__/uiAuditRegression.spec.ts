@@ -11,15 +11,6 @@ const readSource = (relativePath: string) =>
 const readJson = <T>(relativePath: string): T =>
   JSON.parse(readSource(relativePath)) as T
 
-const readCssCustomProperty = (source: string, selector: string, property: string) => {
-  const block = source.match(new RegExp(`${selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([\\s\\S]*?)\\}`))
-  const value = block?.[1].match(new RegExp(`${property}\\s*:\\s*([^;]+);`))?.[1]?.trim()
-  if (!value) {
-    throw new Error(`Missing ${property} in ${selector}`)
-  }
-  return value
-}
-
 const readLightThemeCustomProperty = (source: string, property: string) => {
   const block = source.match(/:root,\s*:root\[data-theme='light'\]\s*\{([\s\S]*?)\}/)
   const value = block?.[1].match(new RegExp(`${property}\\s*:\\s*([^;]+);`))?.[1]?.trim()
@@ -178,6 +169,19 @@ describe('UI audit regressions', () => {
     expect(modalSource).not.toMatch(/#[0-9a-fA-F]{3,8}\b/)
     expect(modalSource).not.toMatch(/rgba?\(/)
     expect(globalCss).not.toMatch(/\[data-theme='dark'\]\s+\.m3-ink-modal/)
+  })
+
+  it('locks the app to the single warm-paper theme', () => {
+    const indexSource = readSource('index.html')
+    const runtimeSource = `${readSource('src/main.ts')}\n${readSource('src/components/shared/AppShell.vue')}`
+    const globalCss = readGlobalCss()
+
+    expect(indexSource).toMatch(/<html[^>]*data-theme="light"/)
+    expect(runtimeSource).not.toMatch(/mofeng-theme-preference|prefers-color-scheme|theme-changed|matchMedia\(|dataset\.theme/)
+    expect(globalCss).toContain('color-scheme: light')
+    expect(globalCss).not.toContain('--md-night-')
+    expect(globalCss).not.toMatch(/\[data-theme\s*=\s*['"]dark['"]\]/)
+    expect(globalCss).not.toMatch(/\.dark(?:\s|[),>{:.#\[])/)
   })
 
   it('keeps high-frequency loading motion off blur filters', () => {
@@ -430,8 +434,8 @@ describe('UI audit regressions', () => {
 
     expect(readCssBlock(inspirationSource, '.ledger-item')).not.toContain('opacity: 0.38')
     expect(readCssBlock(inspirationSource, '.ledger-footer')).toContain('color: var(--md-on-surface-variant)')
-    expect(readCssBlock(workspaceSource, '.workspace-hero__goal-tag')).toContain('color: var(--md-night-on)')
-    expect(readCssBlock(assistantSource, '.wd-ai__section:nth-child(5) .wd-ai__head p')).toContain('color: var(--md-night-on)')
+    expect(readCssBlock(workspaceSource, '.workspace-hero__goal-tag')).toContain('color: var(--md-on-surface)')
+    expect(readCssBlock(assistantSource, '.wd-ai__section:nth-child(5) .wd-ai__head p')).toContain('color: var(--md-on-surface)')
     expect(statisticsSource).toContain("statisticsPending ? '—'")
     expect(statisticsSource).toContain("novelsPending ? '—'")
   })
@@ -444,23 +448,23 @@ describe('UI audit regressions', () => {
     expect(source).not.toContain('max-height 0.3s ease')
   })
 
-  it('keeps dark primary text token contrast at WCAG AA level', () => {
+  it('keeps paper-theme primary text token contrast at WCAG AA level', () => {
     const source = readGlobalCss()
-    const darkPrimaryText = readCssCustomProperty(source, ":root[data-theme='dark']", '--md-primary')
-    const darkBackground = readCssCustomProperty(source, ":root[data-theme='dark']", '--md-background')
+    const primaryText = readLightThemeCustomProperty(source, '--md-primary')
+    const background = readLightThemeCustomProperty(source, '--md-background')
 
-    expect(contrastRatio(darkPrimaryText, darkBackground)).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(primaryText, background)).toBeGreaterThanOrEqual(4.5)
   })
 
-  it('keeps dark vermilion text token contrast at WCAG AA level', () => {
+  it('keeps paper-theme vermilion text token contrast at WCAG AA level', () => {
     const source = readGlobalCss()
-    const darkSecondaryText = readCssCustomProperty(source, ":root[data-theme='dark']", '--md-secondary-readable')
-    const darkSurface = readCssCustomProperty(source, ":root[data-theme='dark']", '--md-surface')
-    const darkBackground = readCssCustomProperty(source, ":root[data-theme='dark']", '--md-background')
+    const secondaryText = readLightThemeCustomProperty(source, '--md-secondary-readable')
+    const surface = readLightThemeCustomProperty(source, '--md-surface')
+    const background = readLightThemeCustomProperty(source, '--md-background')
     const loginSource = readSource('src/views/Login.vue')
 
-    expect(contrastRatio(darkSecondaryText, darkSurface)).toBeGreaterThanOrEqual(4.5)
-    expect(contrastRatio(darkSecondaryText, darkBackground)).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(secondaryText, surface)).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(secondaryText, background)).toBeGreaterThanOrEqual(4.5)
     expect(loginSource).toContain('color: var(--md-secondary-readable)')
   })
 

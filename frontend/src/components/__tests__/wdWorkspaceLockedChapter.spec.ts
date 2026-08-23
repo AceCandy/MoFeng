@@ -852,10 +852,10 @@ describe('WDWorkspace locked chapter state', () => {
     expect(workspaceSource).not.toContain("emit('fetchChapterStatus')")
   })
 
-  it('keeps the locked chapter light skin on a warm paper palette', () => {
+  it('keeps the locked chapter on a warm paper palette', () => {
     const source = readSource('src/components/writing-desk/workspace/ChapterEmpty.vue')
 
-    expect(source).toContain(":root[data-theme='light'] .chapter-locked")
+    expect(source).toContain('.chapter-locked {')
     expect(source).toContain('--chapter-locked-accent: #c8a875;')
     expect(source).toContain('--chapter-locked-text: #9e8662;')
     expect(source).toContain('--chapter-locked-muted: #667172;')

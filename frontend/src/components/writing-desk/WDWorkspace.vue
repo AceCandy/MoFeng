@@ -610,21 +610,19 @@ onUnmounted(clearLuomoSignature)
   /* 极致国风脑洞：工作区熟宣纹理 */
   background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--md-on-surface) 0.6%, transparent) 0px, color-mix(in srgb, var(--md-on-surface) 0.6%, transparent) 1px, transparent 1px, transparent 36px);
   border: 3px double var(--md-outline) !important;
-  /* 暗室明纸题眼：稿纸是夜色里唯一被照亮的纸，night-elevation-1 纯黑深影让纸页浮起发光 */
-  box-shadow: var(--md-night-elevation-1);
+  /* 稿纸用 Paper 1 柔影从素骨工作区中浮起 */
+  box-shadow: var(--md-elevation-paper-1);
 }
 
-/* 案头夜色带：固定深夜案头（不随明暗主题翻转），night-bg → night-surface
-   微妙纵向渐变一次绘成；底缘 night-outline 发线与稿纸区干净硬边相接，
-   night-elevation-1 让夜色带轻轻压在稿纸上方（z-index 1 防投影被 content 纸底盖住） */
+/* 章节案头带：竹纸到老宣的轻微纵向层次一次绘成，底缘发线与稿纸区干净相接 */
 .writing-workspace__header {
   flex-shrink: 0;
   position: relative;
   z-index: 1;
   padding: var(--md-spacing-4) var(--md-spacing-5);
-  border-bottom: 1px solid var(--md-night-outline);
-  background: linear-gradient(180deg, var(--md-night-bg) 0%, var(--md-night-surface) 100%);
-  box-shadow: var(--md-night-elevation-1);
+  border-bottom: 1px solid var(--md-outline-variant);
+  background: linear-gradient(180deg, var(--md-background) 0%, var(--md-surface-container-low) 100%);
+  box-shadow: var(--md-elevation-paper-1);
 }
 
 .writing-workspace__header-row {
@@ -635,29 +633,29 @@ onUnmounted(clearLuomoSignature)
 }
 
 /* ==========================================================================
-   案头夜色带文字系统：ChapterMeta 为子组件，覆写一律走 :deep()；
-   夜色容器内文字一律 night-on 系，不得灰字压夜底（固定夜色，不随主题翻转）
+   案头带文字系统：ChapterMeta 为子组件，覆写一律走 :deep()；
+   正文用焦墨，元信息用松烟，状态继续遵守描红/落墨权责
    ========================================================================== */
 .writing-workspace__header :deep(.writing-workspace__chapter-no) {
-  color: var(--md-night-on);
+  color: var(--md-on-surface);
 }
 
-/* 章名升至 headline-large 档：深墨夜色带上浮暖纸白书名 */
+/* 章名升至 headline-large 档，以焦墨形成案头题眼 */
 .writing-workspace__header :deep(.writing-workspace__title-copy) {
-  color: var(--md-night-on);
+  color: var(--md-on-surface);
   font-size: var(--md-headline-large);
   line-height: 1.3;
 }
 
 .writing-workspace__header :deep(.writing-workspace__title-copy:hover) {
-  color: var(--md-night-seal);
+  color: var(--md-miaohong);
 }
 
 .writing-workspace__header :deep(.writing-workspace__title-copy:focus-visible) {
-  outline-color: var(--md-night-seal);
+  outline-color: var(--md-miaohong);
 }
 
-/* 状态签夜色重绘：描红系（progress/pending）用夜色钤印红边+字，其余中性夜色描边；
+/* 状态签：描红系（progress/pending）用描红边+字，其余使用中性墨晕描边；
    字号顺带从 11px 抬上 12px 纪律线 */
 .writing-workspace__header :deep(.writing-workspace__status-tag) {
   font-size: var(--md-label-medium);
@@ -665,27 +663,27 @@ onUnmounted(clearLuomoSignature)
 
 .writing-workspace__header :deep(.writing-workspace__status-tag--progress),
 .writing-workspace__header :deep(.writing-workspace__status-tag--pending) {
-  color: var(--md-night-seal);
-  background-color: color-mix(in srgb, var(--md-night-seal) 10%, transparent);
-  border-color: var(--md-night-seal);
+  color: var(--md-miaohong);
+  background-color: color-mix(in srgb, var(--md-miaohong) 10%, transparent);
+  border-color: var(--md-miaohong);
 }
 
 .writing-workspace__header :deep(.writing-workspace__status-tag--success),
 .writing-workspace__header :deep(.writing-workspace__status-tag--error),
 .writing-workspace__header :deep(.writing-workspace__status-tag--idle) {
-  color: var(--md-night-on-variant);
+  color: var(--md-on-surface-variant);
   background-color: transparent;
-  border-color: var(--md-night-outline);
+  border-color: var(--md-outline-variant);
 }
 
-/* 元信息（字数/最后编辑）与章节描述：夜色辅文 */
+/* 元信息（字数/最后编辑）与章节描述使用松烟辅文 */
 .writing-workspace__header :deep(.writing-workspace__chapter-inline-meta) {
-  color: var(--md-night-on-variant);
+  color: var(--md-on-surface-variant);
   font-size: var(--md-label-medium);
 }
 
 .writing-workspace__header :deep(.writing-workspace__summary) {
-  color: var(--md-night-on-variant);
+  color: var(--md-on-surface-variant);
 }
 
 /* 落印签名：候选描红稿被选定落墨的一瞬，标题旁钤「定」字朱砂印，钤下即走 */
@@ -698,8 +696,8 @@ onUnmounted(clearLuomoSignature)
   height: 34px;
   margin-right: auto; /* 吸收剩余空间：印贴标题侧，工具栏保持居右 */
   border-radius: var(--md-radius-xs);
-  background: var(--md-night-seal); /* 夜底钤印用夜色印章红，比白昼朱砂饱和半度不闷 */
-  color: var(--md-night-seal-on);
+  background: var(--md-miaohong); /* 描红状态点 */
+  color: var(--md-btn-seal-text);
   font-family: var(--md-font-serif);
   font-size: 18px;
   font-weight: 700;

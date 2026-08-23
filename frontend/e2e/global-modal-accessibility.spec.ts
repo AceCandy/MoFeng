@@ -28,12 +28,11 @@ const expectAxeClean = async (page: Page, include?: string) => {
   expect((await builder.analyze()).violations).toEqual([])
 }
 
-const openAuthenticatedPage = async (page: Page, theme: 'light' | 'dark' = 'light') => {
-  await page.addInitScript(() => localStorage.setItem('token', 'e2e-token'))
-  await page.goto('/login')
-  await page.evaluate((selectedTheme) => {
-    localStorage.setItem('mofeng-theme-preference', selectedTheme)
-  }, theme)
+const openAuthenticatedPage = async (page: Page) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('token', 'e2e-token')
+    localStorage.setItem('mofeng-theme-preference', 'dark')
+  })
   await page.goto(writingDeskPath)
   await expect(page.getByRole('main')).toBeVisible()
 }
@@ -69,25 +68,24 @@ test('任务日志 dialog 陷住焦点并在关闭后恢复', async ({ page }) =
   await expect(trigger).toBeFocused()
 })
 
-test('写作台浅色和深色主题通过 axe、触控与溢出验收', async ({ page }) => {
-  for (const theme of ['light', 'dark'] as const) {
-    await resetScenario(page, 'external-retry')
-    await openAuthenticatedPage(page, theme)
-    await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
-    const assistant = page.getByRole('button', { name: /右侧辅助面板/ })
-    await expect(assistant).toBeVisible()
-    await expectTouchTarget(assistant)
-    await expect(page.locator('.writing-desk-page')).toHaveCSS('opacity', '1')
-    await expect(page.locator('.writing-desk-assistant-shell')).toHaveCSS('opacity', '1')
-    await expectNoHorizontalOverflow(page)
-    await expectAxeClean(page, '.wd-ai__panel')
-    await expectAxeClean(page, '.chapter-console__pipeline-card')
+test('写作台暖纸主题通过 axe、触控与溢出验收', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await resetScenario(page, 'external-retry')
+  await openAuthenticatedPage(page)
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
+  const assistant = page.getByRole('button', { name: /右侧辅助面板/ })
+  await expect(assistant).toBeVisible()
+  await expectTouchTarget(assistant)
+  await expect(page.locator('.writing-desk-page')).toHaveCSS('opacity', '1')
+  await expect(page.locator('.writing-desk-assistant-shell')).toHaveCSS('opacity', '1')
+  await expectNoHorizontalOverflow(page)
+  await expectAxeClean(page, '.wd-ai__panel')
+  await expectAxeClean(page, '.chapter-console__pipeline-card')
 
-    const contextStep = page.getByRole('button', {
-      name: '整理前文重点剧情、角色状态和本章任务。',
-    })
-    await contextStep.focus()
-    await page.keyboard.press('Enter')
-    await expect(page.getByRole('heading', { name: '整理前文', exact: true })).toBeVisible()
-  }
+  const contextStep = page.getByRole('button', {
+    name: /冻结基础上下文失败/,
+  })
+  await contextStep.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('heading', { name: '冻结基础上下文', exact: true })).toBeVisible()
 })

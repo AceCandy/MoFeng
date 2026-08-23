@@ -1,18 +1,13 @@
-/* AIMETA P=弹窗金石_全局弹窗起居菜单金石效果|R=modal-decor 全局弹窗起居菜单金石追加+dark覆写|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* AIMETA P=弹窗金石_全局弹窗起居菜单金石效果|R=modal-decor 全局弹窗起居菜单金石追加|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
 /* ============================================
    墨风全局弹窗与起居菜单金石效果追加
    ============================================ */
 
-/* 1. 更替密契（修改密码）昼夜黛绿印 */
+/* 1. 更替密契（修改密码）黛绿印 */
 .app-shell__action-badge.is-password {
   background-color: var(--md-success) !important;
   color: var(--md-on-success) !important;
   border: 1px solid color-mix(in srgb, var(--md-success) 60%, black) !important;
   box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-success) 25%, transparent) !important;
   transform: rotate(1.5deg) !important;
-}
-:root[data-theme='dark'] .app-shell__action-badge.is-password {
-  background-color: color-mix(in srgb, var(--md-success) 70%, black) !important;
-  border-color: color-mix(in srgb, var(--md-success) 45%, black) !important;
-  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-success) 40%, transparent) !important;
 }

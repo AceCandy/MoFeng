@@ -1,4 +1,4 @@
-/* AIMETA P=Select美化_全局下拉选择框金石小箭头|R=select-styling Select金石小箭头美化+dark覆写|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* AIMETA P=Select美化_全局下拉选择框金石小箭头|R=select-styling Select金石小箭头美化|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
 /* ============================================
    墨风全局下拉选择框 (Select) 金石小箭头美化
    ============================================ */
@@ -20,9 +20,3 @@ select.md-text-field-input {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-/* 暗色模式下更换为浅色小箭头 */
-[data-theme='dark'] select.md-text-field-input {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e5dec9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>") !important;
-}
-

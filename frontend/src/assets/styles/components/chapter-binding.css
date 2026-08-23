@@ -1,9 +1,9 @@
-/* AIMETA P=目录穿线_朱丝线装穿线墨拓印章|R=chapter-binding 章节大纲目录穿线+墨拓印章+dark覆写|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* AIMETA P=目录穿线_朱丝线装穿线墨拓印章|R=chapter-binding 章节大纲目录穿线+墨拓印章|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
 /* ============================================
    2. 章节大纲目录“朱丝线装穿线”与“激活墨拓印章”
    ============================================ */
 
-/* 章节目录穿线：2px 朱砂丝线装装订线（线装书 motif，唯一真相源，明暗主题随 token 自适应） */
+/* 章节目录穿线：2px 朱砂丝线装装订线（线装书 motif，唯一真相源） */
 .writing-sidebar__tree-item::before {
   content: '';
   position: absolute;
@@ -41,14 +41,6 @@
   box-shadow: var(--md-elevation-paper-1) !important; /* 选中行浮起纸影 */
   position: relative !important;
   transform: translateX(2px) !important;
-}
-
-/* 暗色模式下选中项自适应 */
-:root[data-theme='dark'] .writing-sidebar__chapter-row--compact-selected {
-  border: 1px solid color-mix(in srgb, var(--md-secondary) 45%, transparent) !important;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--md-on-surface) 7%, transparent) 0%, color-mix(in srgb, var(--md-on-surface) 1%, transparent) 100%),
-    var(--md-surface) !important;
 }
 
 /* 行尾浮现朱红闲章「著」（方形朱砂印鉴，唯一真相源） */

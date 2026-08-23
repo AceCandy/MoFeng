@@ -1,4 +1,4 @@
-/* AIMETA P=动效品牌_水墨气旋动画与金石篆印LOGO|R=motion-brand 交互气旋动画+Header墨風金石篆印LOGO+dark覆写|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* AIMETA P=动效品牌_水墨气旋动画与金石篆印LOGO|R=motion-brand 交互气旋动画+Header墨風金石篆印LOGO|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
 /* ============================================
    6. 交互过渡与特色水墨气旋动画 (Blowing Ink & Tai-chi)
    ============================================ */
@@ -28,12 +28,6 @@
   transform: scale(3.5) !important;
   opacity: 1 !important;
   transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s ease-out !important;
-}
-
-/* 暗色模式墨晕适配 */
-:root[data-theme='dark'] .md-btn::after,
-:root[data-theme='dark'] .writing-sidebar__chapter-row::after {
-  background: radial-gradient(circle, rgba(229, 222, 201, 0.15) 0%, transparent 70%) !important;
 }
 
 /* 加载态“墨风太极”气流飞旋环绕覆写 */
@@ -67,11 +61,4 @@ body .md-spinner {
   margin-right: 14px !important;
   transform: rotate(-3deg) !important; /* 钤印微倾斜手作感 */
   flex-shrink: 0 !important;
-}
-
-/* 暗色模式 LOGO 印章自适应变暗 */
-:root[data-theme='dark'] .writing-header__project::before {
-  background-color: var(--md-secondary) !important;
-  border-color: var(--md-secondary) !important;
-  color: var(--md-on-secondary) !important;
 }

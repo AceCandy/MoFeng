@@ -682,23 +682,6 @@ onUnmounted(() => {
   box-shadow: none; /* 按下影清零，印落纸面 */
 }
 
-/* ============================================
-   深夜案头自适应（暗色模式）
-   说明：描红洗色与界栏均为明暗自适应 token，
-   此处只保留暗色下刻意加深卡面的设计决策。
-   ============================================ */
-:root[data-theme='dark'] .blueprint-confirm__card {
-  background-color: var(--md-surface-dim);
-}
-
-:root[data-theme='dark'] .blueprint-confirm__card--intro {
-  background: linear-gradient(
-    135deg,
-    var(--md-surface-dim) 70%,
-    var(--md-miaohong-line) 100%
-  );
-}
-
 /* 传统太极流转动画与飞旋气流 */
 @keyframes tai-chi-spin {
   to { transform: rotate(360deg); }

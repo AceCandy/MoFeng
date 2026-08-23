@@ -1,4 +1,4 @@
-/* AIMETA P=三折折页_稿纸物理折页水印纸镇|R=paper-fold 三折物理折页+墨底风徽水印+紫檀纸镇+dark覆写|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* AIMETA P=三折折页_稿纸物理折页水印纸镇|R=paper-fold 三折物理折页+墨底风徽水印+紫檀纸镇|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
 /* ============================================
    3. 稿纸三折物理折页、“墨底风徽”水印与“紫檀纸镇”
    ============================================ */
@@ -23,17 +23,6 @@ body .chapter-paper {
     /* 宣纸底色 */
     linear-gradient(var(--md-surface), var(--md-surface)) left top / 100% 100% no-repeat local !important;
   padding-top: calc(var(--md-spacing-8) + 12px) !important; /* 留出木镇高度与呼吸空档 */
-}
-
-:root[data-theme='dark'] body .chapter-paper {
-  background:
-    linear-gradient(180deg, #1b1612 0px, #1b1612 8px, transparent 8px) left top / 100% 100% no-repeat local,
-    linear-gradient(90deg, transparent 33%, rgba(13, 16, 17, 0.18) 33.3%, rgba(255, 255, 255, 0.02) 33.5%, transparent 35%, transparent 65%, rgba(13, 16, 17, 0.18) 65.3%, rgba(255, 255, 255, 0.02) 65.5%, transparent 67%) left top / 100% 100% no-repeat local,
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' opacity='0.005'><path d='M5,50 C40,30 60,70 95,50 C60,55 30,45 5,70 Z' fill='%23e5dec9'/></svg>") center / 100% 100% no-repeat local,
-    linear-gradient(to bottom, var(--md-miaohong-line-strong), var(--md-miaohong-line-strong)) left top / 1px 100% no-repeat local,
-    linear-gradient(to bottom, var(--md-miaohong-line-strong), var(--md-miaohong-line-strong)) right top / 1px 100% no-repeat local,
-    repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--paper-line) - 1px), var(--md-miaohong-line) calc(var(--paper-line) - 1px), var(--md-miaohong-line) var(--paper-line)) left top / 100% 100% local,
-    linear-gradient(var(--md-surface), var(--md-surface)) left top / 100% 100% no-repeat local !important;
 }
 
 /* 稿纸起笔：强制首段首行缩进为0，完美缝合下沉首字闲章间隙 */
@@ -79,23 +68,4 @@ body .chapter-paper[data-provenance='ai'] .chapter-prose .first-stamp-char {
     color-mix(in srgb, var(--md-miaohong) 5%, transparent) !important;
   border-color: color-mix(in srgb, var(--md-miaohong) 45%, transparent) !important;
   box-shadow: 0 1px 2px color-mix(in srgb, var(--md-miaohong) 22%, transparent), 0 2px 8px color-mix(in srgb, var(--md-miaohong) 14%, transparent) !important;
-}
-
-/* 暗色模式首字钤印适配（同法则二分） */
-:root[data-theme='dark'] body .chapter-prose .first-stamp-char {
-  color: var(--md-luomo, var(--md-on-surface)) !important;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--md-on-surface) 22%, transparent) 0%, color-mix(in srgb, var(--md-on-surface) 12%, transparent) 100%),
-    color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
-  border-color: color-mix(in srgb, var(--md-on-surface) 50%, transparent) !important;
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--md-on-surface) 26%, transparent), 0 2px 8px color-mix(in srgb, var(--md-on-surface) 16%, transparent) !important;
-}
-
-:root[data-theme='dark'] body .chapter-paper[data-provenance='ai'] .chapter-prose .first-stamp-char {
-  color: var(--md-miaohong) !important;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--md-miaohong) 26%, transparent) 0%, color-mix(in srgb, var(--md-miaohong) 14%, transparent) 100%),
-    color-mix(in srgb, var(--md-miaohong) 9%, transparent) !important;
-  border-color: color-mix(in srgb, var(--md-miaohong) 55%, transparent) !important;
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--md-miaohong) 30%, transparent), 0 2px 8px color-mix(in srgb, var(--md-miaohong) 18%, transparent) !important;
 }

@@ -131,7 +131,7 @@ const layoutComponent = computed(() => route.meta.layout === 'auth' ? AuthLayout
   font-weight: 500;
   box-shadow: var(--md-elevation-paper-2); /* 弹层纸影 */
   border: 1.5px solid transparent;
-  /* 极致国风：宣纸帘纹背景（恒为宣纸便签，不随暗场变色——纸永远是纸） */
+  /* 极致国风：宣纸帘纹背景，提示始终是一张熟宣便签 */
   background-image:
     linear-gradient(to right, rgba(247, 245, 240, 0.95), rgba(247, 245, 240, 0.95)),
     repeating-linear-gradient(90deg, rgba(28, 32, 34, 0.005) 0px, rgba(28, 32, 34, 0.005) 1px, transparent 1px, transparent 12px);

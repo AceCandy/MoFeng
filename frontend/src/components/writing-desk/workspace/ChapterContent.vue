@@ -1003,19 +1003,13 @@ defineExpose({
   margin-bottom: 0;
 }
 
-/* 朗读当前段：石青变色 + 波浪线高亮（石青 primary-container，明暗主题自适应） */
+/* 朗读当前段：石青变色 + 波浪线高亮。 */
 .chapter-prose p.chapter-prose__p--active {
   font-weight: 700;
   color: var(--md-primary-container);
   text-decoration: underline wavy var(--md-primary-container);
   text-decoration-thickness: 2px;
   text-underline-offset: 0.16em;
-}
-
-/* 暗色下石青容器色过深，混入素骨黄提亮保持可读 */
-:root[data-theme='dark'] .chapter-prose p.chapter-prose__p--active {
-  color: color-mix(in srgb, var(--md-on-surface) 65%, var(--md-info));
-  text-decoration-color: color-mix(in srgb, var(--md-on-surface) 65%, var(--md-info));
 }
 
 @keyframes optimizer-pop-in {

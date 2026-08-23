@@ -1,4 +1,4 @@
-/* AIMETA P=助手面板_砚台批注屏风隔条|R=assistant-shell AI评审助手面板+砚台批注+屏风隔条+黄铜角扣+dark覆写|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* AIMETA P=助手面板_砚台批注屏风隔条|R=assistant-shell AI评审助手面板+砚台批注+屏风隔条+黄铜角扣|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
 /* ============================================
    4. AI 评审助手面板“砚台批注册”与“古典双行朱批”
    ============================================ */
@@ -22,12 +22,6 @@
   border-right: 1.5px dashed color-mix(in srgb, var(--md-secondary) 20%, transparent) !important;
 }
 
-/* 暗色模式助手面板朱线适配 */
-:root[data-theme='dark'] .writing-desk-assistant-shell .chat-bubble-ai {
-  border-left-color: color-mix(in srgb, var(--md-secondary-dark) 30%, transparent) !important;
-  border-right-color: color-mix(in srgb, var(--md-secondary-dark) 30%, transparent) !important;
-}
-
 /* 评审红字夹注楷书化 */
 .writing-desk-assistant-shell .chat-bubble-ai,
 .writing-desk-assistant-shell .chat-bubble-ai p {
@@ -36,11 +30,6 @@
   font-size: var(--md-body-medium) !important;
   line-height: 1.75 !important;
   letter-spacing: 0.04em !important;
-}
-
-:root[data-theme='dark'] .writing-desk-assistant-shell .chat-bubble-ai,
-:root[data-theme='dark'] .writing-desk-assistant-shell .chat-bubble-ai p {
-  color: var(--md-secondary-light) !important; /* 柔和暗红 */
 }
 
 /* ============================================

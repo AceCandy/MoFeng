@@ -141,8 +141,4 @@ defineEmits(['toggle'])
   }
 }
 
-/* 暗色主题：相乘混合会令朱砂章体沉入深色纸底，退回普通混合以保印色 */
-[data-theme='dark'] .writing-desk-seal-stamp {
-  mix-blend-mode: normal;
-}
 </style>

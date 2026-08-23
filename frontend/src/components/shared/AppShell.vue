@@ -30,25 +30,6 @@ const showPasswordModal = ref(false)
 const showTaskLogModal = ref(false)
 const adminInitialTab = ref('statistics')
 
-// 昼夜主题中式切换逻辑
-const isDarkTheme = ref(false)
-
-const syncThemeState = () => {
-  const currentTheme = document.documentElement.dataset.theme
-  isDarkTheme.value = currentTheme === 'dark'
-}
-
-const toggleTheme = () => {
-  const nextTheme = isDarkTheme.value ? 'light' : 'dark'
-  document.documentElement.dataset.theme = nextTheme
-  window.localStorage.setItem('mofeng-theme-preference', nextTheme)
-  isDarkTheme.value = nextTheme === 'dark'
-
-  // 向外抛出全局事件，方便其他组件同步
-  window.dispatchEvent(new Event('theme-changed'))
-}
-
-
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
@@ -346,34 +327,12 @@ const triggerPasswordSave = () => {
   passwordManagementRef.value?.submit()
 }
 
-let themeMedia: MediaQueryList | null = null
-
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
-  syncThemeState()
-
-  // 监听系统的偏好改变
-  themeMedia = window.matchMedia('(prefers-color-scheme: dark)')
-  const preference = window.localStorage.getItem('mofeng-theme-preference')
-  if (preference === 'system' || !preference) {
-    if (typeof themeMedia.addEventListener === 'function') {
-      themeMedia.addEventListener('change', syncThemeState)
-    } else {
-      themeMedia.addListener(syncThemeState)
-    }
-  }
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
-  if (themeMedia) {
-    if (typeof themeMedia.removeEventListener === 'function') {
-      themeMedia.removeEventListener('change', syncThemeState)
-    } else {
-      themeMedia.removeListener(syncThemeState)
-    }
-    themeMedia = null
-  }
 })
 </script>
 
@@ -579,20 +538,6 @@ onUnmounted(() => {
             ></span>
           </button>
 
-          <!-- 昼夜切换中式印章 -->
-          <button
-            type="button"
-            class="app-shell__action-btn theme-toggle-btn"
-            :title="isDarkTheme ? '换至：昼模式 (熟宣暖白)' : '换至：夜模式 (深夜书房)'"
-            @click="toggleTheme"
-          >
-            <span class="app-shell__action-badge" :class="isDarkTheme ? 'is-theme-light' : 'is-theme-dark'">
-              {{ isDarkTheme ? '昼' : '夜' }}
-            </span>
-          </button>
-
-
-
           <!-- 阁主身份名牌 (金石印章折叠中枢) -->
           <div 
             ref="userTagRef"
@@ -794,11 +739,6 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* 昼夜切换中式印章专属样式 */
-.theme-toggle-btn {
-  margin-right: 4px;
-}
-
 .app-shell__task-button {
   position: relative;
   display: inline-flex;
@@ -868,29 +808,6 @@ onUnmounted(() => {
   background: var(--md-success);
 }
 
-/* 昼模式印章：翠玉竹青色，彰显清新白昼 */
-.app-shell__action-badge.is-theme-light {
-  background-color: var(--md-success) !important;
-  color: var(--md-on-success) !important;
-  border: 1px solid var(--md-outline) !important;
-  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-success) 25%, transparent) !important;
-  transform: rotate(2deg) !important;
-}
-
-/* 夜模式印章：深沉朱砂红，代表静谧深夜 */
-.app-shell__action-badge.is-theme-dark {
-  background-color: var(--md-secondary) !important;
-  color: var(--md-on-secondary) !important;
-  border: 1px solid var(--md-outline) !important;
-  /* 印章无影：落印徽章自重落款 */
-  transform: rotate(-1.5deg) !important;
-}
-
-/* 悬浮微升，产生毛笔书写的弹跳动感 */
-.theme-toggle-btn:hover .app-shell__action-badge {
-  transform: scale(1.08) rotate(5deg) !important;
-}
-
 /* 顶栏继续创作方正金石按钮样式 */
 .app-shell__top-action-wrap {
   display: flex;
@@ -908,7 +825,7 @@ onUnmounted(() => {
   white-space: nowrap; /* 治「蓝图概览」等四字竖断折行 */
   border-radius: var(--md-radius-xs) !important;
   border: 1px solid var(--md-outline) !important;
-  /* 导航钮保持安静：透明底焦墨字，不抢朱砂承诺钮的权责；暗场不再随 --md-primary 反转成亮块 */
+  /* 导航钮保持安静：透明底焦墨字，不抢朱砂承诺钮的权责 */
   background-color: transparent !important;
   color: var(--md-on-surface) !important;
   font-family: var(--md-font-serif);
@@ -929,28 +846,28 @@ onUnmounted(() => {
   box-shadow: var(--md-elevation-paper-1) !important;
 }
 
-/* 暗室明纸：项目上下文顶栏的金石导航钮沉入夜色（夜色只挂模式类，普通页面不动） */
+/* 项目上下文顶栏的金石导航钮沿用纸色层级 */
 .app-shell--project-context .app-shell__top-action-btn {
-  border-color: var(--md-night-outline) !important;
-  color: var(--md-night-on) !important;
+  border-color: var(--md-outline-variant) !important;
+  color: var(--md-on-surface) !important;
 }
 
 .app-shell--project-context .app-shell__top-action-btn:hover {
-  background-color: rgba(236, 228, 207, 0.06) !important;
-  border-color: var(--md-night-outline-strong) !important;
+  background-color: var(--md-state-layer-hover) !important;
+  border-color: var(--md-outline) !important;
   box-shadow: none !important;
 }
 
 .app-shell--project-context .app-shell__task-button {
-  color: var(--md-night-on-variant);
+  color: var(--md-on-surface-variant);
 }
 
 .app-shell--project-context .app-shell__task-button:hover {
-  color: var(--md-night-on);
+  color: var(--md-on-surface);
 }
 
 .app-shell--project-context .app-shell__task-button:focus-visible {
-  outline-color: var(--md-night-seal);
+  outline-color: var(--md-miaohong);
 }
 
 .app-shell__top-action-btn svg {
@@ -1003,103 +920,102 @@ onUnmounted(() => {
 }
 
 /* ==========================================================================
-   暗室明纸：项目上下文（写作台/项目详情/admin详情）顶栏沉入固定夜色
-   夜色只挂 .app-shell--project-context 模式类，普通页面顶栏保持纸色一行不动；
-   夜色为固定定值，不随明暗主题翻转；下拉弹层保持纸色世界不动。
+   项目上下文（写作台/项目详情/admin详情）顶栏使用更明确的纸色层级；
+   规则只挂 .app-shell--project-context 模式类，普通页面顶栏保持原样，下拉弹层仍为熟宣纸面。
    scoped data-v 提权 + !important：phase5-navigation/topbar/user-tag 的全局
-   规则与暗色覆写均带 !important，这里靠更高优先级取胜
+   规则均带 !important，这里靠更高优先级取胜
    ========================================================================== */
 .app-shell--project-context .app-shell__topbar {
-  background: var(--md-night-bg);
-  border-bottom-color: var(--md-night-outline);
+  background: var(--md-background);
+  border-bottom-color: var(--md-outline-variant);
 }
 
 .app-shell--project-context .app-shell__topbar::after {
-  background-color: var(--md-night-outline);
+  background-color: var(--md-outline-variant);
 }
 
 .app-shell--project-context .app-shell__brand-title {
-  color: var(--md-night-on) !important;
+  color: var(--md-on-surface) !important;
 }
 
-/* 书卷胶囊：夜色浮层 + 发线边，撤销纸色噪点底纹与硬偏置印章影 */
+/* 书卷胶囊：竹纸浮层 + 发线边，撤销噪点底纹与硬偏置印章影 */
 .app-shell--project-context .app-shell__topbar .app-shell__project-capsule {
-  background-color: var(--md-night-surface) !important;
+  background-color: var(--md-surface-container-low) !important;
   background-image: none !important;
-  border-color: var(--md-night-outline) !important;
-  color: var(--md-night-on) !important;
+  border-color: var(--md-outline-variant) !important;
+  color: var(--md-on-surface) !important;
   box-shadow: none !important;
 }
 
 .app-shell--project-context .app-shell__topbar .app-shell__project-capsule.is-select:hover,
 .app-shell--project-context .app-shell__topbar .app-shell__project-capsule.is-select.is-active {
-  background-color: var(--md-night-surface-high) !important;
-  border-color: var(--md-night-outline-strong) !important;
+  background-color: var(--md-surface-container) !important;
+  border-color: var(--md-outline) !important;
   box-shadow: none !important;
 }
 
 .app-shell--project-context .app-shell__topbar .app-shell__project-icon {
-  color: var(--md-night-seal) !important;
+  color: var(--md-miaohong) !important;
 }
 
 .app-shell--project-context .app-shell__topbar .app-shell__project-arrow {
-  color: var(--md-night-on-variant) !important;
+  color: var(--md-on-surface-variant) !important;
 }
 
-/* 状态胶囊（N/M 章）：夜色薄光底 + 夜色描红虚线框 */
+/* 状态胶囊（N/M 章）：焦墨薄层底 + 描红虚线框 */
 .app-shell--project-context .app-shell__topbar .app-shell__project-capsule.is-status {
-  background-color: color-mix(in srgb, var(--md-night-on) 5%, transparent) !important;
-  border-color: color-mix(in srgb, var(--md-night-seal) 35%, transparent) !important;
-  color: var(--md-night-on) !important;
+  background-color: color-mix(in srgb, var(--md-on-surface) 5%, transparent) !important;
+  border-color: color-mix(in srgb, var(--md-miaohong) 35%, transparent) !important;
+  color: var(--md-on-surface) !important;
   box-shadow: none !important;
 }
 
 .app-shell--project-context .app-shell__topbar .app-shell__project-tag-info {
-  color: var(--md-night-on-variant) !important;
-  border-color: var(--md-night-outline) !important;
-  background-color: color-mix(in srgb, var(--md-night-on) 5%, transparent) !important;
+  color: var(--md-on-surface-variant) !important;
+  border-color: var(--md-outline-variant) !important;
+  background-color: color-mix(in srgb, var(--md-on-surface) 5%, transparent) !important;
 }
 
 .app-shell--project-context .app-shell__topbar .app-shell__project-divider {
-  color: var(--md-night-outline-strong) !important;
+  color: var(--md-outline) !important;
 }
 
 .app-shell--project-context .app-shell__topbar .app-shell__project-progress-info,
 .app-shell--project-context .app-shell__topbar .app-shell__project-chapter-info {
-  color: var(--md-night-on-variant) !important;
+  color: var(--md-on-surface-variant) !important;
 }
 
 .app-shell--project-context .app-shell__topbar .app-shell__number {
-  color: var(--md-night-seal) !important;
+  color: var(--md-miaohong) !important;
 }
 
-/* 阁主名签：夜色薄光底 + 发线边，撤销内凹纸纹影 */
+/* 阁主名签：焦墨薄层底 + 发线边，撤销内凹纸纹影 */
 .app-shell--project-context .app-shell__topbar .app-shell__user-tag {
-  background-color: color-mix(in srgb, var(--md-night-on) 5%, transparent) !important;
-  border-color: var(--md-night-outline) !important;
+  background-color: color-mix(in srgb, var(--md-on-surface) 5%, transparent) !important;
+  border-color: var(--md-outline-variant) !important;
   box-shadow: none !important;
 }
 
 .app-shell--project-context .app-shell__topbar .app-shell__user-tag.is-trigger:hover,
 .app-shell--project-context .app-shell__topbar .app-shell__user-tag.is-trigger.is-active {
-  background-color: rgba(236, 228, 207, 0.06) !important;
-  border-color: var(--md-night-outline-strong) !important;
+  background-color: var(--md-state-layer-hover) !important;
+  border-color: var(--md-outline) !important;
 }
 
 .app-shell--project-context .app-shell__topbar .app-shell__user-name {
-  color: var(--md-night-on) !important;
+  color: var(--md-on-surface) !important;
 }
 
 .app-shell--project-context .app-shell__topbar .app-shell__user-arrow {
-  color: var(--md-night-on-variant) !important;
+  color: var(--md-on-surface-variant) !important;
 }
 
-/* 全局写作进度条：夜色轨道 + 夜色钤印红条 */
+/* 全局写作进度条：墨晕轨道 + 描红进度条 */
 .app-shell--project-context .app-shell__topbar .app-shell__global-progress {
-  background-color: color-mix(in srgb, var(--md-night-on) 8%, transparent) !important;
+  background-color: color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
 }
 
 .app-shell--project-context .app-shell__topbar .app-shell__global-progress span {
-  background: var(--md-night-seal) !important;
+  background: var(--md-miaohong) !important;
 }
 </style>

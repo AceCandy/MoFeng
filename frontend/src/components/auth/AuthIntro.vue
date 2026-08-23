@@ -29,9 +29,9 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   min-width: 0;
   position: relative;
   overflow: hidden;
-  /* 夜色墨韵：引子透明立于夜案，底由页面夜色层承担（固定夜色，不随主题切换） */
+  /* 引子透明立于暖纸门面，底色由认证页面承担 */
   border-radius: var(--md-radius-xs);
-  color: var(--md-night-on);
+  color: var(--md-on-surface);
 }
 
 /* 灯下暖晕：品牌簇后方一团纸光，名章附近叠极淡朱光（大面积低透明度，渐隐到无） */
@@ -41,8 +41,8 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   inset: -6%;
   z-index: 0;
   background:
-    radial-gradient(48% 42% at 47% 36%, var(--md-night-glow-warm) 0%, transparent 72%),
-    radial-gradient(18% 15% at 58% 34%, var(--md-night-glow-seal) 0%, transparent 70%);
+    radial-gradient(48% 42% at 47% 36%, var(--md-tint-warm) 0%, transparent 72%),
+    radial-gradient(18% 15% at 58% 34%, var(--md-miaohong-wash) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -57,8 +57,8 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   width: min(70%, 440px);
   height: 62%;
   background-image:
-    repeating-linear-gradient(0deg, var(--md-night-outline) 0 1px, transparent 1px 72px),
-    repeating-linear-gradient(90deg, var(--md-night-outline) 0 1px, transparent 1px 72px);
+    repeating-linear-gradient(0deg, var(--md-outline-variant) 0 1px, transparent 1px 72px),
+    repeating-linear-gradient(90deg, var(--md-outline-variant) 0 1px, transparent 1px 72px);
   -webkit-mask-image: radial-gradient(closest-side, #000 30%, transparent 78%);
   mask-image: radial-gradient(closest-side, #000 30%, transparent 78%);
   pointer-events: none;
@@ -69,7 +69,7 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   top: clamp(40px, 12%, 72px);
   left: clamp(24px, 11%, 56px);
   z-index: 1;
-  color: var(--md-night-on-variant);
+  color: var(--md-on-surface-variant);
   font-family: var(--md-font-kai);
   font-size: clamp(13px, 1.1vw, 15px);
   letter-spacing: 0.18em;
@@ -91,7 +91,7 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
 
 .auth-intro__brand h1 {
   margin: 0;
-  color: var(--md-night-on);
+  color: var(--md-on-surface);
   font-family: var(--md-font-serif);
   font-size: clamp(56px, 8vw, 88px); /* 展示级书名号（≤6rem 纪律） */
   font-weight: 600;
@@ -100,7 +100,7 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   writing-mode: vertical-rl;
 }
 
-/* 名章落印：夜色钤印实底 + 深朱 1px 边，印章无影 */
+/* 名章落印：描红实底 + 深朱 1px 边，印章无影 */
 .auth-intro__seal {
   align-self: center;
   width: 30px;
@@ -109,10 +109,10 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--md-night-seal-deep);
+  border: 1px solid var(--md-miaohong-strong);
   border-radius: var(--md-radius-xs);
-  background-color: var(--md-night-seal);
-  color: var(--md-night-seal-on);
+  background-color: var(--md-miaohong);
+  color: var(--md-btn-seal-text);
   font-family: var(--md-font-serif);
   font-size: 18px;
   font-weight: 600;
@@ -128,7 +128,7 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   gap: clamp(12px, 1.5vw, 22px);
 }
 
-/* 引子文案：kind 作 AI 之声（真楷夜色描红），slogan 作作家许诺（夜色辅文） */
+/* 引子文案：kind 作 AI 之声（真楷描红），slogan 作作家许诺（松烟辅文） */
 .auth-intro__kind,
 .auth-intro__slogan {
   margin: 0;
@@ -137,7 +137,7 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
 }
 
 .auth-intro__kind {
-  color: var(--md-night-seal);
+  color: var(--md-miaohong);
   font-size: clamp(14px, 1.25vw, 17px);
   font-weight: 600;
   line-height: 1.7;
@@ -146,7 +146,7 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
 
 .auth-intro__slogan {
   margin-top: clamp(28px, 3.5vw, 48px);
-  color: var(--md-night-on-variant);
+  color: var(--md-on-surface-variant);
   font-size: clamp(16px, 1.45vw, 22px);
   font-weight: 600;
   line-height: 1.82;
@@ -162,13 +162,13 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   align-items: center;
   gap: clamp(8px, 1vw, 14px);
   margin: 0;
-  color: var(--md-night-on-variant);
+  color: var(--md-on-surface-variant);
   font-family: var(--md-font-serif);
   font-size: clamp(12px, 1vw, 14px);
   letter-spacing: 0.08em;
 }
 
-/* 脚印小章：夜色钤印实底，印章无影 */
+/* 脚印小章：描红实底，印章无影 */
 .auth-intro__stamp {
   width: clamp(30px, 2.6vw, 38px);
   height: clamp(30px, 2.6vw, 38px);
@@ -176,10 +176,10 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--md-night-seal-deep);
+  border: 1px solid var(--md-miaohong-strong);
   border-radius: var(--md-radius-xs);
-  background-color: var(--md-night-seal);
-  color: var(--md-night-seal-on);
+  background-color: var(--md-miaohong);
+  color: var(--md-btn-seal-text);
   font-size: clamp(15px, 1.35vw, 21px);
   font-weight: 600;
   line-height: 1;
@@ -234,9 +234,9 @@ withDefaults(defineProps<{ variant?: 'login' | 'register' }>(), { variant: 'regi
     bottom: 14px;
     gap: 8px;
     padding: 5px 8px;
-    border: 1px solid var(--md-night-outline);
+    border: 1px solid var(--md-outline-variant);
     border-radius: var(--md-radius-xs);
-    background: var(--md-night-surface);
+    background: var(--md-surface-container-low);
     font-size: 12px;
     letter-spacing: 0.04em;
   }

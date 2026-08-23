@@ -1,4 +1,4 @@
-/* AIMETA P=Phase5导航_案头横展金石落印导航重构|R=phase5-navigation 无侧边栏导航+顶部金石落印+project-capsule+dark覆写|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* AIMETA P=Phase5导航_案头横展金石落印导航重构|R=phase5-navigation 无侧边栏导航+顶部金石落印+project-capsule|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
 /* ==========================================================================
    Phase 5 「案头横展，金石落印」无侧边栏及顶部金石落印导航重构样式
    ========================================================================== */
@@ -127,7 +127,7 @@ body .app-shell__topbar {
   transform: rotate(180deg) !important;
 }
 
-/* 胶囊二：作品状态与成就多维胶囊（与 topbar.css 重复定义合并于此，明暗自适应） */
+/* 胶囊二：作品状态与成就多维胶囊（与 topbar.css 重复定义合并于此） */
 .app-shell__project-capsule.is-status {
   cursor: default !important;
   background-color: var(--md-state-layer-hover) !important; /* 熟宣微黄半透 */
@@ -341,44 +341,6 @@ body .app-shell__topbar {
   letter-spacing: 0.04em !important;
 }
 
-/* 暗色模式适配 */
-:root[data-theme='dark'] .app-shell__project-capsule {
-  border-color: var(--md-outline) !important;
-  box-shadow: 1.5px 1.5px 0px var(--md-outline-variant) !important;
-  background-image: radial-gradient(rgba(225, 222, 201, 0.03) 1px, transparent 0) !important;
-}
-
-:root[data-theme='dark'] .app-shell__project-capsule.is-select:hover,
-:root[data-theme='dark'] .app-shell__project-capsule.is-select.is-active {
-  border-color: var(--md-secondary) !important;
-  box-shadow: 2px 2.5px 0px rgba(156, 51, 43, 0.3) !important;
-}
-
-:root[data-theme='dark'] .app-shell__project-capsule.is-status {
-  background-color: rgba(229, 222, 201, 0.02) !important;
-  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.4) !important;
-}
-
-:root[data-theme='dark'] .app-shell__project-dropdown {
-  border-color: var(--md-outline) !important;
-  box-shadow:
-    1px 1px 0px rgba(0, 0, 0, 0.35),
-    3px 3px 0px var(--md-outline-variant) !important;
-  background-image: radial-gradient(rgba(225, 222, 201, 0.02) 1px, transparent 0) !important;
-}
-
-:root[data-theme='dark'] .app-shell__dropdown-item:hover {
-  background-color: rgba(156, 51, 43, 0.05) !important;
-}
-
-:root[data-theme='dark'] .app-shell__dropdown-item.is-active {
-  background-color: rgba(156, 51, 43, 0.08) !important;
-}
-
-:root[data-theme='dark'] .app-shell__project-welcome-message {
-  color: var(--md-on-surface) !important;
-}
-
 /* 过渡动画 */
 .fade-enter-active,
 .fade-leave-active {
@@ -524,34 +486,4 @@ body .app-shell__topbar {
 
 .app-shell__action-btn:hover .app-shell__action-text {
   color: var(--md-on-surface) !important;
-}
-
-/* 暗色模式下金石方印的微调 */
-:root[data-theme='dark'] .app-shell__user-tag {
-  background-color: rgba(229, 222, 201, 0.03) !important;
-}
-
-:root[data-theme='dark'] .app-shell__action-badge.is-settings {
-  background-color: var(--md-secondary) !important;
-  border-color: var(--md-secondary-dark) !important;
-  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-secondary) 40%, transparent) !important;
-}
-
-:root[data-theme='dark'] .app-shell__action-badge.is-admin {
-  background-color: var(--md-primary-container) !important; /* 澄泥暗石绿 */
-  border-color: var(--md-success-container) !important;
-  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-primary-container) 40%, transparent) !important;
-}
-
-:root[data-theme='dark'] .app-shell__action-badge.is-prompt {
-  background-color: var(--md-warning) !important;
-  border-color: color-mix(in srgb, var(--md-warning) 55%, black) !important;
-  color: var(--md-on-surface) !important;
-  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-warning) 40%, transparent) !important;
-}
-
-:root[data-theme='dark'] .app-shell__action-badge.is-logout {
-  background-color: var(--md-surface-container-highest) !important;
-  border-color: var(--md-surface-container-low) !important;
-  box-shadow: 1.5px 1.5px 0px color-mix(in srgb, var(--md-surface-container-lowest) 50%, transparent) !important;
 }

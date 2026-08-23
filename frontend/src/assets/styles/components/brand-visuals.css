@@ -1,4 +1,4 @@
-/* AIMETA P=纸面基底_熟宣底与项目纸卡|R=熟宣大背景+project-card 平净纸卡+dark覆写|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
+/* AIMETA P=纸面基底_熟宣底与项目纸卡|R=熟宣大背景+project-card 平净纸卡|NR=不含其他组件域|E=-|X=internal|A=组件域|D=tailwindcss|S=dom|RD=./README.ai */
 /* ==========================================================================
    描红界格时代全局基底：熟宣三段渐变底色 + 大厅项目平净纸卡
    （第四阶段「墨落惊风雨」的狂草水印、石青书脊、装订孔、闲章、窗棂扫墨等装饰已焚稿退场；
@@ -11,15 +11,6 @@ body,
   background-image: linear-gradient(
     var(--md-surface) 0%,
     var(--md-background) 60%,
-    var(--md-surface-dim) 100%
-  );
-}
-
-:root[data-theme='dark'] body,
-:root[data-theme='dark'] .writing-desk-page {
-  background-image: linear-gradient(
-    var(--md-surface) 0%,
-    var(--md-background) 65%,
     var(--md-surface-dim) 100%
   );
 }
@@ -42,17 +33,6 @@ body .project-card {
 body .project-card:hover {
   transform: translateY(-2px) translateZ(0) !important;
   border-color: color-mix(in srgb, var(--md-outline) 55%, var(--md-on-surface)) !important;
-  box-shadow: var(--md-elevation-paper-2) !important;
-}
-
-/* 暗场适配：只收敛边框与纸影 */
-:root[data-theme='dark'] body .project-card {
-  border-color: var(--md-outline-variant) !important;
-  box-shadow: var(--md-elevation-paper-1) !important;
-}
-
-:root[data-theme='dark'] body .project-card:hover {
-  border-color: var(--md-outline) !important;
   box-shadow: var(--md-elevation-paper-2) !important;
 }
 
