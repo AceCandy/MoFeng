@@ -1,12 +1,17 @@
 <!-- AIMETA P=后台任务日志面板_查看当前任务日志|R=任务列表_日志详情_进度|NR=不含任务提交|E=component:TaskLogPanel|X=ui|A=task_logs|D=vue|S=dom|RD=./README.ai -->
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import type { RouteLocationRaw } from 'vue-router'
 
 import type { BackgroundTask } from '@/api/tasks'
 
 const props = defineProps<{
   tasks: BackgroundTask[]
   loading?: boolean
+}>()
+
+const emit = defineEmits<{
+  navigate: [target: RouteLocationRaw]
 }>()
 
 const activeStatuses = new Set(['queued', 'running'])
@@ -34,6 +39,41 @@ const statusText = (status: string) => {
 }
 
 const statusClass = (status: string) => `is-${status}`
+
+const writingTaskTypes = new Set([
+  'chapter_workflow',
+  'chapter_finalize',
+  'chapter_edit_postprocess',
+])
+const archiveTaskTypes = new Set([
+  'chapter_outline',
+  'chapter_projection_memory',
+  'chapter_projection_rag',
+  'chapter_projection_foreshadowing',
+  'chapter_projection_trace',
+])
+
+const selectedTaskTarget = computed<RouteLocationRaw | null>(() => {
+  const task = selectedTask.value
+  if (!task?.project_id) return null
+  if (writingTaskTypes.has(task.task_type)) {
+    return {
+      name: 'project-write',
+      params: { id: task.project_id },
+      query: task.chapter_number ? { chapter_number: String(task.chapter_number) } : undefined,
+    }
+  }
+  if (archiveTaskTypes.has(task.task_type)) {
+    return { name: 'project-detail', params: { id: task.project_id } }
+  }
+  return null
+})
+
+const selectedTaskActionLabel = computed(() => {
+  if (selectedTask.value?.status === 'failed') return '回去处理'
+  if (selectedTask.value?.status === 'succeeded') return '查看结果'
+  return '返回创作'
+})
 
 const formatTime = (value?: string | null) => {
   if (!value) return ''
@@ -71,6 +111,7 @@ watch(
         type="button"
         class="task-log-panel__task"
         :class="{ 'is-selected': selectedTask?.id === task.id }"
+        :aria-current="selectedTask?.id === task.id ? 'true' : undefined"
         @click="selectedTaskId = task.id"
       >
         <span class="task-log-panel__task-title">{{ task.title }}</span>
@@ -101,6 +142,16 @@ watch(
           <span :style="{ transform: `scaleX(${selectedTask.progress / 100})` }"></span>
         </div>
         <p class="task-log-panel__progress-copy">当前进度 {{ selectedTask.progress }}%</p>
+        <p class="task-log-panel__continuity">任务会在后台继续执行，离开当前页面不会中断。</p>
+
+        <button
+          v-if="selectedTaskTarget"
+          type="button"
+          class="md-btn md-btn-outlined md-ripple task-log-panel__navigate"
+          @click="emit('navigate', selectedTaskTarget)"
+        >
+          {{ selectedTaskActionLabel }}
+        </button>
 
         <ol class="task-log-panel__logs">
           <li
@@ -177,20 +228,26 @@ watch(
 }
 
 .task-log-panel__task-title {
+  min-width: 0;
+  overflow: hidden;
   font-size: 14px;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .task-log-panel__task-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 10px;
   color: var(--md-on-surface-variant);
   font-size: 12px;
 }
 
 .task-log-panel__detail {
+  min-width: 0;
   padding: 22px 24px;
   overflow-y: auto;
 }
@@ -200,6 +257,10 @@ watch(
   align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
+}
+
+.task-log-panel__header > div {
+  min-width: 0;
 }
 
 .task-log-panel__eyebrow {
@@ -215,6 +276,7 @@ watch(
   font-family: var(--md-font-serif);
   font-size: 19px;
   letter-spacing: 0.03em;
+  overflow-wrap: anywhere;
 }
 
 .task-log-panel__status {
@@ -270,6 +332,18 @@ watch(
   font-size: 12px;
 }
 
+.task-log-panel__continuity {
+  margin: 12px 0 0;
+  color: var(--md-on-surface-variant);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.task-log-panel__navigate {
+  min-height: 44px;
+  margin-top: 14px;
+}
+
 .task-log-panel__logs {
   display: grid;
   gap: 10px;
@@ -293,10 +367,12 @@ watch(
 }
 
 .task-log-panel__log p {
+  min-width: 0;
   margin: 0;
   color: var(--md-on-surface);
   font-size: 13px;
   line-height: 1.7;
+  overflow-wrap: anywhere;
 }
 
 .task-log-panel__error,
@@ -310,6 +386,7 @@ watch(
 .task-log-panel__error {
   margin: 18px 0 0;
   color: var(--md-error);
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 720px) {
@@ -321,6 +398,16 @@ watch(
     max-height: 220px;
     border-right: 0;
     border-bottom: 1px solid var(--md-outline-variant);
+  }
+
+  .task-log-panel__detail {
+    padding: 18px 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-log-panel__progress span {
+    transition: none !important;
   }
 }
 </style>

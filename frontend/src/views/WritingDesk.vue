@@ -27,7 +27,10 @@
 
         <div
           class="writing-desk-layout"
-          :class="{ 'writing-desk-layout--assistant-hidden': !useAssistantDrawer && !isAssistantPanelVisible }"
+          :class="{
+            'writing-desk-layout--assistant-hidden':
+              !useAssistantDrawer && !isAssistantPanelVisible,
+          }"
         >
           <div
             id="writing-desk-chapter-drawer"
@@ -67,6 +70,7 @@
               :workflow-error="workflowError"
               :workflow-retry-activity-key="workflowRetryActivityKey"
               :workflow-candidates="workflowCandidates"
+              :active-section="activeDeskSection"
               @workflow-start="startChapterWorkflow"
               @workflow-select-version="selectWorkflowVersion"
               @workflow-retry="retryChapterWorkflow"
@@ -80,6 +84,7 @@
               @show-version-detail="showVersionDetail"
               @show-evaluation-detail="openEvaluationDetailModal"
               @edit-chapter="editChapterContent"
+              @update:active-section="handleDeskSectionChange"
             />
 
             <WDSealStamp
@@ -158,12 +163,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineAsyncComponent } from 'vue'
-import type {
-  Chapter,
-  ChapterOutline,
-  ChapterVersion,
-} from '@/api/novel'
+import { ref, computed, defineAsyncComponent, watch } from 'vue'
+import type { Chapter, ChapterOutline, ChapterVersion } from '@/api/novel'
+import type { WritingDeskSection } from '@/api/creationContexts'
 import {
   useNovelChapterQuery,
   useNovelMutationRefresh,
@@ -179,15 +181,21 @@ import { useWritingDeskNavigation } from '@/composables/useWritingDeskNavigation
 import { useWritingDeskOptimize } from '@/composables/useWritingDeskOptimize'
 import { useWritingDeskProject } from '@/composables/useWritingDeskProject'
 import { useWritingDeskVersionDetail } from '@/composables/useWritingDeskVersionDetail'
+import {
+  useCreationContextsQuery,
+  usePatchCreationContextMutation,
+} from '@/queries/creationContexts'
 import WDProjectStatus from '@/components/writing-desk/WDProjectStatus.vue'
 import WDSealStamp from '@/components/writing-desk/WDSealStamp.vue'
 import WDSidebar from '@/components/writing-desk/WDSidebar.vue'
 import WDWorkspace from '@/components/writing-desk/WDWorkspace.vue'
 
 const loadWDVersionDetailModal = () => import('@/components/writing-desk/WDVersionDetailModal.vue')
-const loadWDEvaluationDetailModal = () => import('@/components/writing-desk/WDEvaluationDetailModal.vue')
+const loadWDEvaluationDetailModal = () =>
+  import('@/components/writing-desk/WDEvaluationDetailModal.vue')
 const loadWDEditChapterModal = () => import('@/components/writing-desk/WDEditChapterModal.vue')
-const loadWDGenerateOutlineModal = () => import('@/components/writing-desk/WDGenerateOutlineModal.vue')
+const loadWDGenerateOutlineModal = () =>
+  import('@/components/writing-desk/WDGenerateOutlineModal.vue')
 const loadWDAssistantPanel = () => import('@/components/writing-desk/WDAssistantPanel.vue')
 const loadWDRecommendedOptimizeResultModal = () =>
   import('@/components/writing-desk/WDRecommendedOptimizeResultModal.vue')
@@ -205,6 +213,12 @@ interface Props {
 
 const props = defineProps<Props>()
 const projectQuery = useNovelProjectQuery(() => props.id)
+const contextsQuery = useCreationContextsQuery()
+const patchContextMutation = usePatchCreationContextMutation()
+const activeDeskSection = ref<WritingDeskSection>('content')
+const projectContext = computed(
+  () => contextsQuery.data.value?.find((context) => context.project_id === props.id) ?? null,
+)
 
 // 状态管理
 const selectedChapterNumber = ref<number | null>(null)
@@ -242,7 +256,7 @@ const shouldRenderAssistantShell = computed(() => !!project.value)
 const {
   loadProject,
   refetchChapterIntoProject,
-  selectChapter,
+  selectChapter: selectChapterLocally,
 } = useWritingDeskProject({
   projectId: () => props.id,
   project,
@@ -254,6 +268,16 @@ const {
   upsertChapterInProjectCache,
   refreshProjectQueries,
 })
+
+const selectChapter = (chapterNumber: number) => {
+  selectChapterLocally(chapterNumber)
+  void patchContextMutation
+    .mutateAsync({
+      projectId: props.id,
+      patch: { surface: 'writing', chapter_number: chapterNumber },
+    })
+    .catch(() => undefined)
+}
 
 const {
   showEvaluationDetailModal,
@@ -280,13 +304,48 @@ useWritingDeskNavigation({
   selectedChapterNumber,
   selectedVersionIndex,
   selectChapter,
+  contextReady: () => !contextsQuery.isPending.value,
+  preferredChapterNumber: () => projectContext.value?.chapter_number ?? null,
 })
 
-const {
-  selectedChapter,
-  selectedChapterOutline,
-  latestCompletedChapterNumber,
-} = useWritingDeskChapterState({
+const handleDeskSectionChange = (section: WritingDeskSection) => {
+  activeDeskSection.value = section
+  void patchContextMutation
+    .mutateAsync({
+      projectId: props.id,
+      patch: { surface: 'writing', desk_section: section },
+    })
+    .catch(() => undefined)
+}
+
+let restoredDeskSectionProjectId: string | null = null
+watch(
+  () => [project.value, selectedChapterNumber.value, contextsQuery.isPending.value] as const,
+  ([currentProject, chapterNumber, contextsPending]) => {
+    if (!currentProject || chapterNumber === null || contextsPending) return
+    const chapter = currentProject.chapters?.find((item) => item.chapter_number === chapterNumber)
+    const isProjectEntry = restoredDeskSectionProjectId !== currentProject.id
+    const requestedSection = isProjectEntry
+      ? (projectContext.value?.desk_section ?? 'content')
+      : activeDeskSection.value
+    const hasReadableContent = Boolean(chapter?.content?.trim() || chapter?.versions?.length)
+    const canRestoreSection =
+      requestedSection === 'content' ||
+      (hasReadableContent &&
+        (requestedSection === 'versions' || Boolean(chapter?.evaluation?.trim())))
+    const nextSection = canRestoreSection ? requestedSection : 'content'
+    if (nextSection !== requestedSection) {
+      handleDeskSectionChange(nextSection)
+    } else {
+      activeDeskSection.value = nextSection
+    }
+    restoredDeskSectionProjectId = currentProject.id
+  },
+  { immediate: true, flush: 'post' },
+)
+
+const { selectedChapter, selectedChapterOutline, latestCompletedChapterNumber } =
+  useWritingDeskChapterState({
   project,
   selectedChapterNumber,
   chapterQuery,
@@ -330,12 +389,8 @@ const chapterWorkflow = useChapterWorkflowActor(
   selectedChapterNumber,
   workflowPorts,
 )
-const {
-  deleteChapter,
-  resetChapter,
-  deleteBrokenChapter,
-  recoveryPending,
-} = useWritingDeskChapterOps({
+const { deleteChapter, resetChapter, deleteBrokenChapter, recoveryPending } =
+  useWritingDeskChapterOps({
   projectId: () => props.id,
   selectedChapterNumber,
   latestCompletedChapterNumber,
@@ -349,13 +404,15 @@ const workflowAllowedCommands = computed(
   () => chapterWorkflow.snapshot.value.context.allowedCommands,
 )
 const workflowPending = computed(
-  () => chapterWorkflow.snapshot.value.context.pendingCommandId !== null
-    || chapterWorkflow.resyncing.value
-    || recoveryPending.value,
+  () =>
+    chapterWorkflow.snapshot.value.context.pendingCommandId !== null ||
+    chapterWorkflow.resyncing.value ||
+    recoveryPending.value,
 )
 const workflowError = computed(
-  () => chapterWorkflow.snapshot.value.context.lastContractError
-    ?? chapterWorkflow.snapshot.value.context.lastCommandError,
+  () =>
+    chapterWorkflow.snapshot.value.context.lastContractError ??
+    chapterWorkflow.snapshot.value.context.lastCommandError,
 )
 const workflowRetryActivityKey = computed(
   () => chapterWorkflow.snapshot.value.context.retryActivityKey,
@@ -425,7 +482,6 @@ const deleteSelectedBrokenChapter = async () => {
   }
   await deleteBrokenChapter(chapterNumber, deleteNumbers)
 }
-
 </script>
 
 <style scoped>

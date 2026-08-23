@@ -1,6 +1,7 @@
 // AIMETA P=认证状态_用户登录状态管理|R=token_user_login_logout|NR=不含API调用|E=store:auth|X=internal|A=useAuthStore|D=pinia|S=storage|RD=./README.ai
 import { defineStore } from 'pinia'
 import type { AuthUser } from '@/api/auth'
+import { clearInspirationDraftBackupsForUser } from '@/utils/creationDraft'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -21,6 +22,10 @@ export const useAuthStore = defineStore('auth', {
       }
     },
     setUser(user: AuthUser | null) {
+      const previousUserId = this.user?.id
+      if (previousUserId != null && previousUserId !== user?.id) {
+        clearInspirationDraftBackupsForUser(previousUserId)
+      }
       this.user = user
     },
     setSession(token: string, user: AuthUser) {

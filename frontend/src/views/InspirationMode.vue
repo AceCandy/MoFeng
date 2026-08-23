@@ -15,10 +15,7 @@
             <header class="inspiration-chat__header">
               <div class="flex justify-between items-center">
                 <div class="inspiration-chat__heading">
-                  <span
-                    class="inspiration-chat__status-dot"
-                    aria-hidden="true"
-                  ></span>
+                  <span class="inspiration-chat__status-dot" aria-hidden="true"></span>
                   <div>
                     <h1 class="md-label-large inspiration-chat__title">与“文思”对话中</h1>
                     <span v-if="currentProject" class="inspiration-chat__context">
@@ -27,10 +24,7 @@
                   </div>
                 </div>
                 <div class="flex items-center gap-4">
-                  <span
-                    v-if="currentTurn > 0"
-                    class="inspiration-chat__turn-badge"
-                  >
+                  <span v-if="currentTurn > 0" class="inspiration-chat__turn-badge">
                     第 {{ currentTurn }} 轮
                   </span>
                   <button
@@ -70,6 +64,7 @@
             <!-- 输入区域 -->
             <div class="inspiration-chat__input">
               <ConversationInput
+                v-model="inspirationDraft"
                 :ui-control="currentUIControl"
                 :loading="
                   inspirationRequestPending ||
@@ -78,12 +73,20 @@
                   !conversationStarted
                 "
                 @submit="handleUserInput"
+                @blur="flushDraft"
               />
+              <p v-if="draftSyncMessage" class="inspiration-chat__draft-status" aria-live="polite">
+                {{ draftSyncMessage }}
+              </p>
             </div>
           </div>
 
           <!-- 中间古雅挂轴式对话进度轴 -->
-          <div class="inspiration-chat__timeline" aria-label="对话进度轴" v-if="userSpeechNodes.length > 0">
+          <nav
+            class="inspiration-chat__timeline"
+            aria-label="对话进度轴"
+            v-if="userSpeechNodes.length > 0"
+          >
             <div class="timeline-line"></div>
             <div class="timeline-nodes">
               <button
@@ -98,7 +101,7 @@
                 <div class="timeline-node-tooltip">{{ node.tooltipText }}</div>
               </button>
             </div>
-          </div>
+          </nav>
 
           <!-- 右侧：文思灵感要素词笺画轴 -->
           <details class="inspiration-chat__ledger" aria-label="排演脉络" open>
@@ -115,7 +118,11 @@
                   <div class="ledger-item__body">
                     <h4 class="ledger-item__title">核心意象</h4>
                     <p class="ledger-item__desc">
-                      {{ currentTurn >= 1 ? (extractedCoreIdea || '落笔有声，灵感之火正在凝聚成形...') : '阁主未曾落笔，灵感初蒙...' }}
+                      {{
+                        currentTurn >= 1
+                          ? extractedCoreIdea || '落笔有声，灵感之火正在凝聚成形...'
+                          : '阁主未曾落笔，灵感初蒙...'
+                      }}
                     </p>
                   </div>
                 </li>
@@ -126,7 +133,11 @@
                   <div class="ledger-item__body">
                     <h4 class="ledger-item__title">时空背景</h4>
                     <p class="ledger-item__desc">
-                      {{ currentTurn >= 2 ? '时空骨架初现，文思正勾勒江山画卷...' : '待阁主勾勒故事舞台...' }}
+                      {{
+                        currentTurn >= 2
+                          ? '时空骨架初现，文思正勾勒江山画卷...'
+                          : '待阁主勾勒故事舞台...'
+                      }}
                     </p>
                   </div>
                 </li>
@@ -137,7 +148,11 @@
                   <div class="ledger-item__body">
                     <h4 class="ledger-item__title">主要冲突</h4>
                     <p class="ledger-item__desc">
-                      {{ currentTurn >= 3 ? '矛盾暗影交锋，大纲隐显刀刻之锋芒...' : '待戏剧冲突破土萌发...' }}
+                      {{
+                        currentTurn >= 3
+                          ? '矛盾暗影交锋，大纲隐显刀刻之锋芒...'
+                          : '待戏剧冲突破土萌发...'
+                      }}
                     </p>
                   </div>
                 </li>
@@ -148,7 +163,11 @@
                   <div class="ledger-item__body">
                     <h4 class="ledger-item__title">章节大纲</h4>
                     <p class="ledger-item__desc">
-                      {{ currentTurn >= 4 ? '万川归海，大纲即将落款成卷，请落座...' : '待文思集腋成裘，凝成章节蓝图...' }}
+                      {{
+                        currentTurn >= 4
+                          ? '万川归海，大纲即将落款成卷，请落座...'
+                          : '待文思集腋成裘，凝成章节蓝图...'
+                      }}
                     </p>
                   </div>
                 </li>
@@ -187,9 +206,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, nextTick, onMounted, onUnmounted } from 'vue'
+import { computed, ref, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import type { UIControl, Blueprint, NovelProject } from '@/api/novel'
+import type { CreationContext } from '@/api/creationContexts'
 import { HttpRequestError } from '@/utils/errors'
 import {
   useConverseConceptStreamMutation,
@@ -199,7 +219,12 @@ import {
   useNovelProjectQuery,
   useSaveBlueprintMutation,
 } from '@/queries/novel'
+import {
+  useCreationContextsQuery,
+  usePatchCreationContextMutation,
+} from '@/queries/creationContexts'
 import { useLLMConfigBundleQuery } from '@/queries/llm'
+import { useAuthStore } from '@/stores/auth'
 import ChatBubble from '@/components/ChatBubble.vue'
 import ConversationInput from '@/components/ConversationInput.vue'
 import BlueprintConfirmation from '@/components/BlueprintConfirmation.vue'
@@ -207,6 +232,11 @@ import BlueprintDisplay from '@/components/BlueprintDisplay.vue'
 import InspirationLoading from '@/components/InspirationLoading.vue'
 import { globalAlert } from '@/composables/useAlert'
 import { decodeConversationHistory } from '@/utils/novelContract'
+import {
+  loadInspirationDraftBackup,
+  removeInspirationDraftBackup,
+  saveInspirationDraftBackup,
+} from '@/utils/creationDraft'
 
 interface ChatMessage {
   content: string
@@ -224,6 +254,7 @@ const INSPIRATION_INITIAL_UI_CONTROL: UIControl = {
 
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
 
 const conversationStarted = ref(false)
 const isInitialLoading = ref(true)
@@ -232,6 +263,7 @@ const showBlueprint = ref(false)
 const chatMessages = ref<ChatMessage[]>([])
 const currentUIControl = ref<UIControl | null>(null)
 const currentTurn = ref(0)
+const inspirationDraft = ref('')
 const completedBlueprint = ref<Blueprint | null>(null)
 const confirmationMessage = ref('')
 const blueprintMessage = ref('')
@@ -255,7 +287,23 @@ interface UserSpeechNode {
 
 // 动态计算以阁主发言为骨架的进度轴节点
 const userSpeechNodes = computed<UserSpeechNode[]>(() => {
-  const chineseNumbers = ['壹', '贰', '叁', '肆', '伍', '陆', '柒', '捌', '玖', '拾', '拾壹', '拾贰', '拾叁', '拾肆', '拾伍']
+  const chineseNumbers = [
+    '壹',
+    '贰',
+    '叁',
+    '肆',
+    '伍',
+    '陆',
+    '柒',
+    '捌',
+    '玖',
+    '拾',
+    '拾壹',
+    '拾贰',
+    '拾叁',
+    '拾肆',
+    '拾伍',
+  ]
   return chatMessages.value
     .map((msg, index) => ({ msg, index }))
     .filter(({ msg }) => msg.type === 'user')
@@ -267,7 +315,7 @@ const userSpeechNodes = computed<UserSpeechNode[]>(() => {
         chatIndex: index,
         numLabel,
         previewText: preview,
-        tooltipText: `【第${numLabel}步】 ${preview}`
+        tooltipText: `【第${numLabel}步】 ${preview}`,
       }
     })
 })
@@ -279,7 +327,7 @@ const scrollToUserMessage = (chatIndex: number, nodeIdx: number) => {
   if (el) {
     el.scrollIntoView({
       behavior: 'smooth',
-      block: 'center'
+      block: 'center',
     })
   }
 }
@@ -297,6 +345,8 @@ const conversationStageLabel = computed(() => {
 const currentConversationState = ref<Record<string, unknown>>({})
 
 const projectQuery = useNovelProjectQuery(activeProjectId)
+const contextsQuery = useCreationContextsQuery()
+const patchContextMutation = usePatchCreationContextMutation()
 const createNovelMutation = useCreateNovelMutation()
 const deleteNovelsMutation = useDeleteNovelsMutation()
 const converseConceptStreamMutation = useConverseConceptStreamMutation(
@@ -305,6 +355,10 @@ const converseConceptStreamMutation = useConverseConceptStreamMutation(
 const generateBlueprintMutation = useGenerateBlueprintMutation(() => currentProject.value?.id)
 const saveBlueprintMutation = useSaveBlueprintMutation(() => currentProject.value?.id)
 const llmConfigBundleQuery = useLLMConfigBundleQuery()
+const activeCreationContext = computed(() => {
+  const projectId = currentProject.value?.id ?? activeProjectId.value
+  return contextsQuery.data.value?.find((context) => context.project_id === projectId) ?? null
+})
 
 const inspirationRequestPending = computed(
   () =>
@@ -314,6 +368,226 @@ const inspirationRequestPending = computed(
     converseConceptStreamMutation.isPending.value ||
     generateBlueprintMutation.isPending.value ||
     saveBlueprintMutation.isPending.value,
+)
+
+const DRAFT_SYNC_DELAY_MS = 500
+type DraftSyncState = 'idle' | 'pending' | 'syncing' | 'local'
+
+interface DraftSyncRequest {
+  userId: number
+  projectId: string
+  turn: number
+  value: string
+  revision: number
+}
+
+const draftSyncState = ref<DraftSyncState>('idle')
+const draftSyncMessage = computed(() => {
+  if (draftSyncState.value === 'local') return '已保存在本机，联网后同步'
+  if (draftSyncState.value === 'pending' || draftSyncState.value === 'syncing') {
+    return '正在同步草稿…'
+  }
+  return ''
+})
+
+let draftSyncTimer: ReturnType<typeof setTimeout> | null = null
+let draftSyncPromise: Promise<void> | null = null
+let queuedDraftSync: DraftSyncRequest | null = null
+let draftRevision = 0
+let localDraftDirty = false
+let applyingDraft = false
+
+const clearDraftSyncTimer = () => {
+  if (draftSyncTimer !== null) {
+    clearTimeout(draftSyncTimer)
+    draftSyncTimer = null
+  }
+}
+
+const setDraftWithoutSync = (value: string) => {
+  applyingDraft = true
+  inspirationDraft.value = value
+  applyingDraft = false
+}
+
+const getDraftScope = () => {
+  const userId = authStore.user?.id
+  const projectId = currentProject.value?.id ?? activeProjectId.value
+  if (userId == null || !projectId) return null
+  return { userId, projectId, turn: currentTurn.value }
+}
+
+const isCurrentDraftRequest = (request: DraftSyncRequest) => {
+  const scope = getDraftScope()
+  return (
+    scope?.userId === request.userId &&
+    scope.projectId === request.projectId &&
+    scope.turn === request.turn
+  )
+}
+
+const removeDraftBackupBeforeTurn = (
+  userId: number,
+  projectId: string,
+  authoritativeTurn: number,
+) => {
+  const backup = loadInspirationDraftBackup(userId, projectId)
+  if (backup && backup.inspirationTurn < authoritativeTurn) {
+    removeInspirationDraftBackup(userId, projectId)
+  }
+}
+
+const stageDraftSync = (value: string): DraftSyncRequest | null => {
+  const scope = getDraftScope()
+  if (!scope) return null
+  draftRevision += 1
+  const request = { ...scope, value, revision: draftRevision }
+  queuedDraftSync = request
+  localDraftDirty = true
+  saveInspirationDraftBackup({
+    userId: request.userId,
+    projectId: request.projectId,
+    inspirationTurn: request.turn,
+    value: request.value,
+    savedAt: Date.now(),
+  })
+  return request
+}
+
+const isOnline = () => typeof navigator === 'undefined' || navigator.onLine
+
+const runDraftSync = (): Promise<void> => {
+  if (draftSyncPromise) return draftSyncPromise
+  draftSyncPromise = (async () => {
+    while (queuedDraftSync) {
+      const request = queuedDraftSync
+      queuedDraftSync = null
+      if (isCurrentDraftRequest(request)) draftSyncState.value = 'syncing'
+      try {
+        const context = await patchContextMutation.mutateAsync({
+          projectId: request.projectId,
+          patch: {
+            surface: 'inspiration',
+            inspiration_draft: request.value || null,
+            inspiration_turn: request.turn,
+          },
+        })
+        const authoritativeTurn = context.inspiration_turn
+        if (authoritativeTurn != null && authoritativeTurn > request.turn) {
+          removeDraftBackupBeforeTurn(request.userId, request.projectId, authoritativeTurn)
+          const nextRequest = queuedDraftSync as DraftSyncRequest | null
+          if (
+            nextRequest?.projectId === request.projectId &&
+            nextRequest.turn < authoritativeTurn
+          ) {
+            queuedDraftSync = null
+          }
+          if (isCurrentDraftRequest(request)) {
+            localDraftDirty = false
+            setDraftWithoutSync('')
+            draftSyncState.value = 'idle'
+          }
+          continue
+        }
+        if (
+          !queuedDraftSync &&
+          isCurrentDraftRequest(request) &&
+          draftRevision === request.revision
+        ) {
+          removeInspirationDraftBackup(request.userId, request.projectId)
+          localDraftDirty = false
+          draftSyncState.value = 'idle'
+        }
+      } catch {
+        if (isCurrentDraftRequest(request)) draftSyncState.value = 'local'
+        const nextRequest = queuedDraftSync as DraftSyncRequest | null
+        if (
+          nextRequest &&
+          (nextRequest.projectId !== request.projectId || nextRequest.turn !== request.turn)
+        ) {
+          continue
+        }
+        break
+      }
+    }
+  })().finally(() => {
+    draftSyncPromise = null
+  })
+  return draftSyncPromise
+}
+
+const queueDraftSync = (value: string, immediate = false) => {
+  if (!stageDraftSync(value)) return
+  clearDraftSyncTimer()
+  if (!isOnline()) {
+    draftSyncState.value = 'local'
+    return
+  }
+  draftSyncState.value = 'pending'
+  if (immediate) {
+    void runDraftSync()
+    return
+  }
+  draftSyncTimer = setTimeout(() => {
+    draftSyncTimer = null
+    void runDraftSync()
+  }, DRAFT_SYNC_DELAY_MS)
+}
+
+const flushDraft = async () => {
+  clearDraftSyncTimer()
+  if (!queuedDraftSync && !draftSyncPromise && localDraftDirty) {
+    stageDraftSync(inspirationDraft.value)
+  }
+  if (!isOnline()) {
+    if (localDraftDirty) draftSyncState.value = 'local'
+    return
+  }
+  await runDraftSync()
+}
+
+const resetDraftSyncState = () => {
+  clearDraftSyncTimer()
+  queuedDraftSync = null
+  draftRevision += 1
+  localDraftDirty = false
+  draftSyncState.value = 'idle'
+  setDraftWithoutSync('')
+}
+
+const markInspirationSurface = async (projectId: string) => {
+  try {
+    return await patchContextMutation.mutateAsync({
+      projectId,
+      patch: { surface: 'inspiration' },
+    })
+  } catch {
+    return null
+  }
+}
+
+const restoreDraft = (projectId: string, context: CreationContext | null) => {
+  const userId = authStore.user?.id
+  if (userId == null) return
+  const backup = loadInspirationDraftBackup(userId, projectId)
+  if (backup && backup.inspirationTurn !== currentTurn.value) {
+    removeInspirationDraftBackup(userId, projectId)
+  }
+  const validBackup = backup?.inspirationTurn === currentTurn.value ? backup : null
+  const remoteDraft =
+    context?.inspiration_turn === currentTurn.value ? (context.inspiration_draft ?? '') : ''
+  setDraftWithoutSync(validBackup?.value ?? remoteDraft)
+  localDraftDirty = Boolean(validBackup)
+  draftSyncState.value = validBackup ? 'local' : 'idle'
+  if (validBackup) queueDraftSync(validBackup.value, true)
+}
+
+watch(
+  inspirationDraft,
+  (value) => {
+    if (!applyingDraft) queueDraftSync(value)
+  },
+  { flush: 'sync' },
 )
 
 const hasRequiredModelConfig = async () => {
@@ -399,6 +673,7 @@ const readUnfinishedInspirationProjectId = (error: unknown): string | null => {
 
 // 清空所有状态，开始新的灵感对话
 const resetInspirationMode = () => {
+  resetDraftSyncState()
   conversationStarted.value = false
   isInitialLoading.value = false
   showBlueprintConfirmation.value = false
@@ -418,12 +693,13 @@ const resetInspirationMode = () => {
 
 const exitConversation = async () => {
   const confirmed = await globalAlert.showConfirm(
-    '已发送的对话会保留在当前项目中；输入框里尚未发送的内容不会保存。确定退出吗？',
+    '已发送的对话会保留；未发送草稿会优先同步，网络不可用时在本机保护 24 小时。确定退出吗？',
     '退出确认',
   )
   if (confirmed) {
+    await flushDraft()
     resetInspirationMode()
-    router.push('/workspace')
+    await router.push('/workspace')
   }
 }
 
@@ -437,6 +713,8 @@ const handleRestart = async () => {
     if (projectId) {
       try {
         await deleteNovelsMutation.mutateAsync([projectId])
+        const userId = authStore.user?.id
+        if (userId != null) removeInspirationDraftBackup(userId, projectId)
       } catch (error) {
         globalAlert.showError(
           `无法重新开始: ${error instanceof Error ? error.message : '删除旧灵感失败'}`,
@@ -486,6 +764,11 @@ const startConversation = async () => {
     currentProject.value = project
     activeProjectId.value = project.id
     currentConversationState.value = {}
+    await router.replace({
+      name: 'inspiration-mode',
+      query: { ...route.query, project_id: project.id },
+    })
+    await markInspirationSurface(project.id)
 
     // 首句是固定引导语，项目创建完成后立即展示；真正的 AI 生成从用户首答开始。
     await showLocalOpeningMessage()
@@ -521,13 +804,17 @@ const restoreConversation = async (projectId: string) => {
   try {
     activeProjectId.value = projectId
     await nextTick()
-    const result = await projectQuery.refetch()
+    const [result, contextsResult] = await Promise.all([
+      projectQuery.refetch(),
+      contextsQuery.refetch(),
+    ])
     const project = result.data ?? projectQuery.data.value ?? null
     currentProject.value = project
     currentConversationState.value = {}
     if (project) {
       const conversationHistory = decodeConversationHistory(project.conversation_history)
       conversationStarted.value = true
+      currentTurn.value = conversationHistory.filter((m) => m.role === 'assistant').length
       chatMessages.value = conversationHistory
         .map((item): ChatMessage | null => {
           if (item.role === 'user') {
@@ -564,11 +851,14 @@ const restoreConversation = async (projectId: string) => {
           currentUIControl.value = lastAssistantMsg.ui_control
         }
       }
-      // 计算当前轮次
-      currentTurn.value = conversationHistory.filter((m) => m.role === 'assistant').length
       if (currentTurn.value === 0 && chatMessages.value.length === 0) {
         await showLocalOpeningMessage()
       }
+      const listedContext =
+        contextsResult.data?.find((context) => context.project_id === projectId) ??
+        activeCreationContext.value
+      const markedContext = await markInspirationSurface(projectId)
+      restoreDraft(projectId, markedContext ?? listedContext ?? null)
       await scrollToBottom()
     }
   } catch (error) {
@@ -583,9 +873,44 @@ const restoreConversation = async (projectId: string) => {
   }
 }
 
+let restoringRemoteProjectId: string | null = null
+watch(
+  () => [activeCreationContext.value, converseConceptStreamMutation.isPending.value] as const,
+  ([context, conversationPending]) => {
+    const projectId = currentProject.value?.id ?? activeProjectId.value
+    if (!context || !projectId || !conversationStarted.value || conversationPending) return
+    const remoteTurn = context.inspiration_turn
+    if (remoteTurn == null) return
+    if (remoteTurn > currentTurn.value) {
+      const userId = authStore.user?.id
+      if (userId != null) removeDraftBackupBeforeTurn(userId, projectId, remoteTurn)
+      if (queuedDraftSync?.projectId === projectId && queuedDraftSync.turn < remoteTurn) {
+        queuedDraftSync = null
+      }
+      localDraftDirty = false
+      draftSyncState.value = 'idle'
+      setDraftWithoutSync('')
+      if (restoringRemoteProjectId !== projectId) {
+        restoringRemoteProjectId = projectId
+        void restoreConversation(projectId).finally(() => {
+          if (restoringRemoteProjectId === projectId) restoringRemoteProjectId = null
+        })
+      }
+      return
+    }
+    if (remoteTurn === currentTurn.value && !localDraftDirty) {
+      setDraftWithoutSync(context.inspiration_draft ?? '')
+    }
+  },
+  { flush: 'post' },
+)
+
 // 【强类型守卫】：定义明确的输入交互契约类型，支持空值安全以契合子组件声明，取代 any
-const handleUserInput = async (userInput: { id?: string; value: string; [key: string]: unknown } | null) => {
-  const isFirstAssistantTurn = currentTurn.value === 0 && chatMessages.value.length === 0
+const handleUserInput = async (
+  userInput: { id?: string; value: string; [key: string]: unknown } | null,
+) => {
+  const messageCountBeforeRequest = chatMessages.value.length
+  let conversationSaved = false
   try {
     // 如果有用户输入，添加到聊天记录
     if (userInput && userInput.value) {
@@ -627,6 +952,7 @@ const handleUserInput = async (userInput: { id?: string; value: string; [key: st
         void appendAssistantDelta(delta)
       },
     })
+    conversationSaved = true
     currentConversationState.value = response.conversation_state
 
     // 首次加载完成后，关闭加载动画
@@ -644,6 +970,8 @@ const handleUserInput = async (userInput: { id?: string; value: string; [key: st
       chatMessages.value[assistantMessageIndex].content = response.ai_message
     }
     currentTurn.value++
+    setDraftWithoutSync('')
+    queueDraftSync('', true)
 
     await scrollToBottom()
 
@@ -660,6 +988,7 @@ const handleUserInput = async (userInput: { id?: string; value: string; [key: st
     }
   } catch (error) {
     console.error('对话失败:', error)
+    if (!conversationSaved) chatMessages.value.splice(messageCountBeforeRequest)
     // 确保在出错时也停止初始加载状态
     if (isInitialLoading.value) {
       isInitialLoading.value = false
@@ -668,10 +997,6 @@ const handleUserInput = async (userInput: { id?: string; value: string; [key: st
       `抱歉，与AI连接时遇到问题: ${error instanceof Error ? error.message : '未知错误'}`,
       '通信失败',
     )
-    if (isFirstAssistantTurn) {
-      resetInspirationMode()
-      router.push('/workspace')
-    }
   } finally {
     isAssistantResponding.value = false
   }
@@ -735,16 +1060,21 @@ const scrollToBottom = async () => {
     if (chatArea.value) {
       chatArea.value.scrollTo({
         top: chatArea.value.scrollHeight,
-        behavior: 'smooth'
+        behavior: 'smooth',
       })
     }
     scrollFrameId = null
   })
 }
 
+const handleOnline = () => {
+  void flushDraft()
+}
+
 onMounted(async () => {
   // 注入专属标识，极致限制外层 app-shell 溢出以击杀大滚动条，并去掉 app-shell__content 的 padding 实现无缝贴合
   document.body.classList.add('is-in-inspiration')
+  window.addEventListener('online', handleOnline)
   
   const projectId = route.query.project_id as string
   if (projectId) {
@@ -760,6 +1090,8 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  window.removeEventListener('online', handleOnline)
+  void flushDraft()
   // 组件卸载时，毫秒级无害恢复全局布局样式
   document.body.classList.remove('is-in-inspiration')
 })
@@ -891,6 +1223,13 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
+.inspiration-chat__draft-status {
+  margin: var(--md-spacing-2) 0 0;
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-small);
+  overflow-wrap: anywhere;
+}
+
 /* 右侧：文思灵感词笺画轴 */
 .inspiration-chat__ledger {
   flex: 0 0 320px !important; /* 固定宽 320px 挂载，其余给左侧主聊天区自适应 */
@@ -1009,7 +1348,11 @@ onUnmounted(() => {
 }
 
 .ledger-item.is-active .ledger-item__seal {
-  background-color: color-mix(in srgb, var(--md-secondary) 8%, transparent) !important; /* 红泥朱砂半透 */
+  background-color: color-mix(
+    in srgb,
+    var(--md-secondary) 8%,
+    transparent
+  ) !important; /* 红泥朱砂半透 */
   color: var(--md-secondary) !important;
   border-color: var(--md-secondary) !important;
   box-shadow: none !important; /* 印面压纸不浮起 */
@@ -1052,8 +1395,6 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-
-
 @media (max-width: 1199px) {
   .inspiration-chat {
     flex-direction: column !important;
@@ -1071,8 +1412,7 @@ onUnmounted(() => {
 
 @media (max-width: 833px) {
   .inspiration-page {
-    padding:
-      max(var(--md-spacing-2), env(safe-area-inset-top))
+    padding: max(var(--md-spacing-2), env(safe-area-inset-top))
       max(var(--md-spacing-2), env(safe-area-inset-right))
       max(var(--md-spacing-2), env(safe-area-inset-bottom))
       max(var(--md-spacing-2), env(safe-area-inset-left)) !important;
@@ -1255,7 +1595,11 @@ onUnmounted(() => {
 /* 激活或悬浮状态：方形朱砂描边小印（激活指示），无影不浮起 */
 .timeline-node-btn:hover,
 .timeline-node-btn.is-active {
-  background-color: color-mix(in srgb, var(--md-secondary) 8%, transparent) !important; /* 朱砂淡染 */
+  background-color: color-mix(
+    in srgb,
+    var(--md-secondary) 8%,
+    transparent
+  ) !important; /* 朱砂淡染 */
   border-color: var(--md-secondary) !important; /* 朱砂描边 */
   color: var(--md-secondary) !important;
   transform: scale(1.15);

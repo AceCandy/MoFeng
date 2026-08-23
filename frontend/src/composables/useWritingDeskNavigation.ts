@@ -11,6 +11,8 @@ interface UseWritingDeskNavigationOptions {
   selectedChapterNumber: Ref<number | null>
   selectedVersionIndex: Ref<number>
   selectChapter: (chapterNumber: number) => void
+  contextReady?: () => boolean
+  preferredChapterNumber?: () => number | null
 }
 
 /**
@@ -26,6 +28,8 @@ export const useWritingDeskNavigation = ({
   selectedChapterNumber,
   selectedVersionIndex,
   selectChapter,
+  contextReady,
+  preferredChapterNumber,
 }: UseWritingDeskNavigationOptions) => {
   const route = useRoute()
   const resolvedProjectEntryId = ref<string | null>(null)
@@ -40,13 +44,17 @@ export const useWritingDeskNavigation = ({
 
   // 写作台会在不同项目间复用组件，进入新项目时必须按当前项目重新定位章节。
   watch(
-    () => project.value,
-    (newProject) => {
+    () => [project.value, contextReady?.() ?? true] as const,
+    ([newProject, isContextReady]) => {
       if (!newProject) {
         selectedChapterNumber.value = null
         resolvedProjectEntryId.value = null
         return
       }
+      if (!isContextReady) return
+
+      const preferredChapter = getQueryChapterNumber() ?? preferredChapterNumber?.() ?? null
+      const isProjectEntry = resolvedProjectEntryId.value !== newProject.id
 
       const resolvedChapterNumber = resolveChapterNumberForProjectEntry({
         projectId: newProject.id,
@@ -54,11 +62,15 @@ export const useWritingDeskNavigation = ({
         currentChapterNumber: selectedChapterNumber.value,
         outlines: newProject.blueprint?.chapter_outline ?? [],
         chapters: newProject.chapters ?? [],
-        preferredChapterNumber: getQueryChapterNumber(),
+        preferredChapterNumber: preferredChapter,
       })
 
+      if (resolvedChapterNumber !== null && isProjectEntry) {
+        selectChapter(resolvedChapterNumber)
+      } else {
       selectedChapterNumber.value = resolvedChapterNumber
       selectedVersionIndex.value = 0
+      }
       resolvedProjectEntryId.value = newProject.id
     },
     { immediate: true },
@@ -79,7 +91,7 @@ export const useWritingDeskNavigation = ({
         chapters: project.value.chapters ?? [],
         preferredChapterNumber: chapterNumber,
       })
-      if (resolvedChapterNumber !== null) {
+      if (resolvedChapterNumber !== null && resolvedChapterNumber !== selectedChapterNumber.value) {
         selectChapter(resolvedChapterNumber)
       }
     },

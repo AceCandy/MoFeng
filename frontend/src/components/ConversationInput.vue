@@ -42,6 +42,7 @@
           rows="2"
           ref="textInputRef"
           @input="handleTextareaInput"
+          @blur="emit('blur')"
         ></textarea>
         <button
           type="submit"
@@ -78,6 +79,7 @@
         ref="textInputRef"
         rows="2"
         @input="handleTextareaInput"
+        @blur="emit('blur')"
       ></textarea>
       <button
         type="submit"
@@ -109,18 +111,23 @@ import type { UIControl } from '@/api/novel'
 interface Props {
   uiControl: UIControl | null
   loading: boolean
+  modelValue?: string
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  modelValue: '',
+})
 const emit = defineEmits<{
   submit: [userInput: { id: string; value: string } | null]
+  'update:modelValue': [value: string]
+  blur: []
 }>()
 
 const controlIdPrefix = `conv-input-${Math.random().toString(36).slice(2, 10)}`
 const manualTextareaId = `${controlIdPrefix}-manual-textarea`
 const textInputTextareaId = `${controlIdPrefix}-text-textarea`
 
-const textInput = ref('')
+const textInput = ref(props.modelValue)
 const textInputRef = ref<HTMLTextAreaElement>()
 const isManualInput = ref(false)
 
@@ -147,6 +154,7 @@ const adjustTextareaHeight = () => {
 
 const handleTextareaInput = () => {
   adjustTextareaHeight()
+  emit('update:modelValue', textInput.value)
 }
 
 const handleOptionSelect = (id: string, label: string) => {
@@ -156,8 +164,6 @@ const handleOptionSelect = (id: string, label: string) => {
 const handleTextSubmit = () => {
   if (textInput.value.trim()) {
     emit('submit', { id: 'text_input', value: textInput.value.trim() })
-    textInput.value = ''
-    nextTick(() => adjustTextareaHeight())
   }
 }
 
@@ -175,12 +181,11 @@ const shouldAutofocus = () =>
   && typeof window.matchMedia === 'function'
   && window.matchMedia('(min-width: 834px)').matches
 
-// 只有输入控件身份真正变化时，才重置草稿并在需要时聚焦。
+// 输入控件身份变化时重置交互方式；草稿内容由父层 v-model 决定。
 watch(
   () => getControlIdentity(props.uiControl),
   async () => {
     isManualInput.value = false
-    textInput.value = ''
 
     await nextTick()
     adjustTextareaHeight()
@@ -188,6 +193,16 @@ watch(
     if (props.uiControl?.type === 'text_input' && shouldAutofocus()) {
       textInputRef.value?.focus()
     }
+  },
+)
+
+watch(
+  () => props.modelValue,
+  async (value) => {
+    if (value === textInput.value) return
+    textInput.value = value
+    await nextTick()
+    adjustTextareaHeight()
   },
 )
 

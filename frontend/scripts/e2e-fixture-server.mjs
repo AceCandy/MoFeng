@@ -1,4 +1,4 @@
-// AIMETA P=章节工作流E2E确定性API与SSE服务|R=认证_项目_工作流场景与控制面|NR=不模拟生产持久化或业务执行器|E=fixture:e2e-server|X=internal|A=e2e-fixture-server|D=node:http|S=net,memory|RD=../README.ai
+// AIMETA P=创作连续性与章节工作流E2E确定性服务|R=认证_项目_创作上下文_工作流场景与控制面|NR=不模拟生产持久化或业务执行器|E=fixture:e2e-server|X=internal|A=e2e-fixture-server|D=node:http|S=net,memory|RD=../README.ai
 import { createServer } from 'node:http'
 
 const port = Number(process.env.E2E_FIXTURE_PORT || '6181')
@@ -105,6 +105,8 @@ const scenarioSnapshot = (scenario) => {
 const initialState = (scenario = 'current-null-start') => ({
   scenario,
   authMode: 'user',
+  authoritativeInspirationTurn: scenario === 'creation-continuity' ? 1 : 0,
+  creationContexts: {},
   snapshot: scenarioSnapshot(scenario),
   candidates: [],
   prompts: [
@@ -119,6 +121,7 @@ const initialState = (scenario = 'current-null-start') => ({
     workflowConnections: 0,
     lastEventIds: [],
     commands: [],
+    contextPatches: [],
     unknownRequests: [],
   },
 })
@@ -152,17 +155,42 @@ const connection = (snapshot) => ({
   events_url: `/api/tasks/events?stream_type=workflow&stream_id=${snapshot.run_id}`,
 })
 
+const conversationHistory = () => Array.from(
+  { length: state.authoritativeInspirationTurn },
+  (_, index) => [
+    {
+      role: 'user',
+      content: JSON.stringify({ id: 'text_input', value: `第 ${index + 1} 轮回答` }),
+    },
+    {
+      role: 'assistant',
+      content: JSON.stringify({
+        ai_message: `第 ${index + 1} 轮问题`,
+        is_complete: false,
+        ready_for_blueprint: false,
+        ui_control: { type: 'text_input', placeholder: '继续补充这个故事' },
+      }),
+    },
+  ],
+).flat()
+
 const projectChapter = () => ({
   chapter_number: 1,
   title: '归档室的回声',
   summary: '记录员在归档室发现了一份被覆盖的旧版本。',
   goals: '确认事实来源并完成本章。',
-  content: null,
+  content: state.scenario === 'creation-continuity' ? '记录员展开旧纸，核对每一处覆盖痕迹。' : null,
   real_summary: null,
-  versions: null,
+  versions: state.scenario === 'creation-continuity'
+    ? ['记录员展开旧纸，核对每一处覆盖痕迹。']
+    : null,
   version_selections: state.candidates,
-  evaluation: null,
-  generation_status: state.candidates.length > 0 ? 'selecting' : 'not_generated',
+  evaluation: state.scenario === 'creation-continuity'
+    ? JSON.stringify({ summary: '证据链完整，节奏可继续收紧。' })
+    : null,
+  generation_status: state.scenario === 'creation-continuity'
+    ? 'successful'
+    : state.candidates.length > 0 ? 'selecting' : 'not_generated',
   generation_progress: null,
   generation_step: null,
   generation_step_index: null,
@@ -199,7 +227,7 @@ const project = () => ({
   user_id: 1,
   title: '回声档案',
   initial_prompt: '一名记录员追查被覆盖的事实。',
-  conversation_history: [],
+  conversation_history: conversationHistory(),
   blueprint: {
     title: '回声档案',
     genre: '悬疑',
@@ -315,6 +343,15 @@ const emitWorkflowTask = (cursor) => {
 }
 
 const handleControlEvent = (action) => {
+  if (action === 'advance-inspiration') {
+    state.authoritativeInspirationTurn += 1
+    for (const context of Object.values(state.creationContexts)) {
+      context.inspiration_turn = state.authoritativeInspirationTurn
+      context.inspiration_draft = null
+      context.updated_at = new Date().toISOString()
+    }
+    return
+  }
   if (action === 'waiting-ready') {
     state.candidates = [{
       id: 701,
@@ -520,6 +557,52 @@ const server = createServer(async (request, response) => {
         }],
         stage_routes: [],
       })
+      return
+    }
+    if (request.method === 'GET' && path === '/api/creation-contexts') {
+      const contexts = Object.values(state.creationContexts).sort((left, right) => {
+        const updatedDifference = Date.parse(right.updated_at) - Date.parse(left.updated_at)
+        return updatedDifference || left.project_id.localeCompare(right.project_id)
+      })
+      json(response, 200, contexts)
+      return
+    }
+    if (request.method === 'PATCH' && path === `/api/creation-contexts/${projectId}`) {
+      const body = await readJson(request)
+      state.stats.contextPatches.push(body)
+      const current = state.creationContexts[projectId] ?? {
+        user_id: 1,
+        project_id: projectId,
+        surface: 'archive',
+        chapter_number: null,
+        desk_section: null,
+        inspiration_draft: null,
+        inspiration_turn: state.authoritativeInspirationTurn,
+        updated_at: new Date(0).toISOString(),
+      }
+      for (const field of ['surface', 'chapter_number', 'desk_section']) {
+        if (Object.prototype.hasOwnProperty.call(body, field)) current[field] = body[field]
+      }
+      if (
+        Object.prototype.hasOwnProperty.call(body, 'inspiration_draft')
+        || Object.prototype.hasOwnProperty.call(body, 'inspiration_turn')
+      ) {
+        const requestedTurn = body.inspiration_turn
+        if (!Number.isInteger(requestedTurn) || requestedTurn > state.authoritativeInspirationTurn) {
+          json(response, 400, { detail: '灵感轮次无效' })
+          return
+        }
+        if (requestedTurn < state.authoritativeInspirationTurn) {
+          current.inspiration_turn = state.authoritativeInspirationTurn
+          current.inspiration_draft = null
+        } else {
+          current.inspiration_turn = requestedTurn
+          current.inspiration_draft = body.inspiration_draft ?? null
+        }
+      }
+      current.updated_at = new Date().toISOString()
+      state.creationContexts[projectId] = current
+      json(response, 200, current)
       return
     }
     if (request.method === 'GET' && path === '/api/novels') {

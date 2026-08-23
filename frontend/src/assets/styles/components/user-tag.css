@@ -78,6 +78,12 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .app-shell__user-dropdown {
+    animation: none !important;
+  }
+}
+
 /* 4. 下拉菜单标题 */
 .app-shell__user-dropdown-header {
   padding: 2px 16px 8px 16px !important;

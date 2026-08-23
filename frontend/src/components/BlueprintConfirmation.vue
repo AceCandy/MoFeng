@@ -109,6 +109,14 @@
     <!-- 操作按钮 -->
     <div v-else class="blueprint-confirm__actions">
       <button
+        type="button"
+        class="md-btn md-btn-outlined md-ripple blueprint-confirm__back-btn"
+        @click="emit('back')"
+      >
+        返回继续补充
+      </button>
+      <button
+        type="button"
         @click="generateBlueprint"
         :disabled="isGenerating"
         class="md-btn md-btn-filled md-ripple blueprint-confirm__generate-btn"
@@ -659,7 +667,14 @@ onUnmounted(() => {
 }
 
 .blueprint-confirm__actions {
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  gap: var(--md-spacing-3);
+}
+
+.blueprint-confirm__back-btn,
+.blueprint-confirm__generate-btn {
+  min-height: 44px;
 }
 
 .blueprint-confirm__generate-btn {
@@ -713,6 +728,10 @@ onUnmounted(() => {
 
   .blueprint-confirm__cards-container {
     padding: var(--md-spacing-1) var(--md-spacing-2);
+  }
+
+  .blueprint-confirm__actions {
+    flex-direction: column-reverse;
   }
 
   .blueprint-confirm__card {

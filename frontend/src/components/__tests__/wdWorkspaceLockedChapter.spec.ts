@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
-import { createApp, nextTick } from 'vue'
+import { createApp, h, nextTick, ref } from 'vue'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import WDWorkspace from '@/components/writing-desk/WDWorkspace.vue'
 import type { ChapterVersionSelection, NovelProject } from '@/api/novel'
 import type { ChapterWorkflowCommand, ChapterWorkflowNodeKey } from '@/api/chapterWorkflow'
+import type { WritingDeskSection } from '@/api/creationContexts'
 import type { ChapterWorkflowActorPhase } from '@/composables/useChapterWorkflowActor'
 
 const readSource = (relativePath: string) =>
@@ -36,38 +37,46 @@ const mountWorkspace = async (
   const shownVersionDetails: number[] = []
   let workflowRetryCount = 0
   let evaluationDetailCount = 0
+  const activeSection = ref<WritingDeskSection>('content')
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
       mutations: { retry: false },
     },
   })
-  const app = createApp(WDWorkspace, {
-    project,
-    selectedChapter:
-      project.chapters.find((chapter) => chapter.chapter_number === selectedChapterNumber) ?? null,
-    selectedChapterNumber,
-    selectedVersionIndex: overrides.selectedVersionIndex ?? 0,
-    availableVersions: overrides.availableVersions ?? [],
-    workflowPhase: overrides.workflowPhase ?? 'idle',
-    workflowRunId: overrides.workflowRunId ?? null,
-    workflowNodeKey: overrides.workflowNodeKey ?? null,
-    workflowProgress: overrides.workflowProgress ?? null,
-    workflowTransport: 'disconnected',
-    workflowAllowedCommands: overrides.workflowAllowedCommands ?? [],
-    workflowPending: overrides.workflowPending ?? false,
-    workflowError: overrides.workflowError ?? null,
-    workflowRetryActivityKey: overrides.workflowRetryActivityKey ?? null,
-    workflowCandidates: overrides.workflowCandidates ?? [],
-    onSelectChapter: (chapterNumber: number) => selectedChapters.push(chapterNumber),
-    onWorkflowSelectVersion: (versionId: number) => selectedWorkflowVersions.push(versionId),
-    onShowVersionDetail: (versionIndex: number) => shownVersionDetails.push(versionIndex),
-    onShowEvaluationDetail: () => {
-      evaluationDetailCount += 1
-    },
-    onWorkflowRetry: () => {
-      workflowRetryCount += 1
-    },
+  const app = createApp({
+    setup: () => () =>
+      h(WDWorkspace, {
+        project,
+        selectedChapter:
+          project.chapters.find((chapter) => chapter.chapter_number === selectedChapterNumber) ?? null,
+        selectedChapterNumber,
+        selectedVersionIndex: overrides.selectedVersionIndex ?? 0,
+        availableVersions: overrides.availableVersions ?? [],
+        activeSection: activeSection.value,
+        workflowPhase: overrides.workflowPhase ?? 'idle',
+        workflowRunId: overrides.workflowRunId ?? null,
+        workflowNodeKey: overrides.workflowNodeKey ?? null,
+        workflowProgress: overrides.workflowProgress ?? null,
+        workflowTransport: 'disconnected',
+        workflowAllowedCommands: overrides.workflowAllowedCommands ?? [],
+        workflowPending: overrides.workflowPending ?? false,
+        workflowError: overrides.workflowError ?? null,
+        workflowRetryActivityKey: overrides.workflowRetryActivityKey ?? null,
+        workflowCandidates: overrides.workflowCandidates ?? [],
+        'onUpdate:activeSection': (section: WritingDeskSection) => {
+          activeSection.value = section
+        },
+        onSelectChapter: (chapterNumber: number) => selectedChapters.push(chapterNumber),
+        onWorkflowSelectVersion: (versionId: number) => selectedWorkflowVersions.push(versionId),
+        onShowVersionDetail: (versionIndex: number) => shownVersionDetails.push(versionIndex),
+        onShowEvaluationDetail: () => {
+          evaluationDetailCount += 1
+        },
+        onWorkflowRetry: () => {
+          workflowRetryCount += 1
+        },
+      }),
   })
 
   app.use(VueQueryPlugin, { queryClient })

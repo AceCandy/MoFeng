@@ -96,6 +96,10 @@ import { useShellOverview } from '@/composables/useShellOverview'
 import { useShellSectionContent } from '@/composables/useShellSectionContent'
 import { resolveChapterNumberForEntry } from '@/utils/chapter'
 import { globalAlert } from '@/composables/useAlert'
+import {
+  useCreationContextsQuery,
+  usePatchCreationContextMutation,
+} from '@/queries/creationContexts'
 import BlueprintEditModal from '@/components/BlueprintEditModal.vue'
 import AddChapterDialog from '@/components/novel-detail/AddChapterDialog.vue'
 import ShellDrawerNav from '@/components/novel-detail/ShellDrawerNav.vue'
@@ -120,6 +124,11 @@ const projectQuery = useNovelProjectQuery(() => (!props.isAdmin ? projectId : nu
 const adminProjectQuery = useAdminNovelDetailQuery(() => (props.isAdmin ? projectId : null))
 const updateBlueprintMutation = useUpdateBlueprintMutation(() => projectId)
 const foreshadowingQuery = useForeshadowingQuery(() => (!props.isAdmin ? projectId : null))
+const contextsQuery = useCreationContextsQuery()
+const patchContextMutation = usePatchCreationContextMutation()
+const projectContext = computed(
+  () => contextsQuery.data.value?.find((context) => context.project_id === projectId) ?? null,
+)
 const viewport = useResponsiveViewport()
 const isDesktopViewport = computed(() => viewport.width.value >= desktopMin)
 const isSidebarOpen = ref(isDesktopViewport.value)
@@ -147,7 +156,15 @@ const handleSidebarKeydown = (event: KeyboardEvent) => {
   closeSidebar(true)
 }
 
-onMounted(() => window.addEventListener('keydown', handleSidebarKeydown))
+onMounted(() => {
+  window.addEventListener('keydown', handleSidebarKeydown)
+  if (!props.isAdmin) {
+    void patchContextMutation.mutateAsync({
+      projectId,
+      patch: { surface: 'archive' },
+    }).catch(() => undefined)
+  }
+})
 onBeforeUnmount(() => window.removeEventListener('keydown', handleSidebarKeydown))
 
 const navigation = useShellSectionNavigation({
@@ -248,6 +265,7 @@ const goToWritingDesk = async () => {
   const chapterNumber = resolveChapterNumberForEntry({
     outlines: project.blueprint?.chapter_outline ?? [],
     chapters: project.chapters ?? [],
+    preferredChapterNumber: projectContext.value?.chapter_number,
   })
   router.push({
     name: 'project-write',

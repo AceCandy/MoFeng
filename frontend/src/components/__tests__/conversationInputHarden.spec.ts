@@ -8,8 +8,13 @@ const mountConversationInput = (initialControl: UIControl | null) => {
   const state = reactive({
     uiControl: initialControl as UIControl | null,
     loading: false,
+    modelValue: '',
   })
   const submit = vi.fn()
+  const updateModelValue = vi.fn((value: string) => {
+    state.modelValue = value
+  })
+  const blur = vi.fn()
   const host = document.createElement('div')
 
   const app = createApp(
@@ -19,7 +24,10 @@ const mountConversationInput = (initialControl: UIControl | null) => {
           h(ConversationInput, {
             uiControl: state.uiControl,
             loading: state.loading,
+            modelValue: state.modelValue,
             onSubmit: submit,
+            'onUpdate:modelValue': updateModelValue,
+            onBlur: blur,
           })
       },
     }),
@@ -32,6 +40,8 @@ const mountConversationInput = (initialControl: UIControl | null) => {
     host,
     state,
     submit,
+    updateModelValue,
+    blur,
   }
 }
 
@@ -109,7 +119,7 @@ describe('ConversationInput harden', () => {
     }
   })
 
-  it('single_choice 选项身份变化时重置旧草稿', async () => {
+  it('single_choice 选项身份变化时由父层决定是否清空旧草稿', async () => {
     const { app, host, state } = mountConversationInput({
       type: 'single_choice',
       options: [
@@ -137,15 +147,19 @@ describe('ConversationInput harden', () => {
       await nextTick()
 
       const nextTextarea = getTextarea(host)
-      expect(nextTextarea.value).toBe('')
+      expect(nextTextarea.value).toBe('上一轮问题的草稿')
       expect(nextTextarea.disabled).toBe(true)
+
+      state.modelValue = ''
+      await nextTick()
+      expect(getTextarea(host).value).toBe('')
     } finally {
       app.unmount()
       host.remove()
     }
   })
 
-  it('控件类型真正切换时会重置草稿并聚焦新输入框', async () => {
+  it('控件类型真正切换时保留父层草稿并聚焦新输入框', async () => {
     vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
       matches: query === '(min-width: 834px)',
       media: query,
@@ -184,7 +198,7 @@ describe('ConversationInput harden', () => {
       await nextTick()
 
       const refreshedTextarea = getTextarea(host)
-      expect(refreshedTextarea.value).toBe('')
+      expect(refreshedTextarea.value).toBe('待保留草稿')
       expect(refreshedTextarea.disabled).toBe(false)
       expect(document.activeElement).toBe(refreshedTextarea)
     } finally {
@@ -217,6 +231,33 @@ describe('ConversationInput harden', () => {
       await nextTick()
 
       expect(document.activeElement).not.toBe(getTextarea(host))
+    } finally {
+      app.unmount()
+      host.remove()
+    }
+  })
+
+  it('通过 v-model 上报草稿，blur 和发送失败前都不自行清空', async () => {
+    const { app, host, state, submit, updateModelValue, blur } = mountConversationInput({
+      type: 'text_input',
+      placeholder: '继续补充',
+    })
+
+    try {
+      document.body.appendChild(host)
+      await nextTick()
+      const textarea = getTextarea(host)
+      setDraftText(textarea, '  尚未发送的草稿  ')
+      textarea.dispatchEvent(new FocusEvent('blur', { bubbles: true }))
+      const form = host.querySelector('form')
+      form?.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }))
+      await nextTick()
+
+      expect(updateModelValue).toHaveBeenLastCalledWith('  尚未发送的草稿  ')
+      expect(state.modelValue).toBe('  尚未发送的草稿  ')
+      expect(blur).toHaveBeenCalledOnce()
+      expect(submit).toHaveBeenCalledWith({ id: 'text_input', value: '尚未发送的草稿' })
+      expect(getTextarea(host).value).toBe('  尚未发送的草稿  ')
     } finally {
       app.unmount()
       host.remove()

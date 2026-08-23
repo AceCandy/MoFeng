@@ -46,8 +46,7 @@
   display: none !important;
 }
 
-/* 5. ≤1199px 顶栏空间告急（1440px 已折行）：整个状态胶囊隐藏，
-   上探 phase5-responsive.css 的 960px 隐藏点至 1199px */
+/* 5. ≤1199px 顶栏空间告急：隐藏完整状态胶囊；短阶段签样式由 AppShell 持有。 */
 @media (max-width: 1199px) {
   .app-shell__project-capsule.is-status {
     display: none !important;

@@ -2,6 +2,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, defineAsyncComponent, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import type { RouteLocationRaw } from 'vue-router'
 import { useQueryClient } from '@tanstack/vue-query'
 
 import { clearAuthQueryCache } from '@/queries/auth'
@@ -134,6 +135,12 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 const capsuleRef = ref<HTMLElement | null>(null)
 
 const currentProjectId = computed(() => {
+  if (route.name === 'inspiration-mode') {
+    const projectId = Array.isArray(route.query.project_id)
+      ? route.query.project_id[0]
+      : route.query.project_id
+    return typeof projectId === 'string' && projectId ? projectId : null
+  }
   return (route.params.id as string) || null
 })
 
@@ -175,6 +182,21 @@ const projectTags = computed(() => {
   }
   
   return genreText
+})
+
+const currentStageLabel = computed(() => {
+  if (route.name === 'inspiration-mode') return '灵感采集'
+  if (route.name === 'project-detail' || route.name === 'admin-project-detail') return '项目档案'
+  if (route.name === 'project-write') {
+    const rawChapterNumber = Array.isArray(route.query.chapter_number)
+      ? route.query.chapter_number[0]
+      : route.query.chapter_number
+    const chapterNumber = Number(rawChapterNumber)
+    return Number.isInteger(chapterNumber) && chapterNumber > 0
+      ? `第 ${chapterNumber} 章写作`
+      : '章节写作'
+  }
+  return ''
 })
 
 const projectStats = computed(() => {
@@ -252,8 +274,15 @@ const selectInspiration = () => {
 }
 
 const isProjectContext = computed(() =>
-  ['project-detail', 'project-write', 'admin-project-detail'].includes(String(route.name || '')),
+  ['inspiration-mode', 'project-detail', 'project-write', 'admin-project-detail'].includes(
+    String(route.name || ''),
+  ),
 )
+
+const handleTaskNavigate = (target: RouteLocationRaw) => {
+  showTaskLogModal.value = false
+  void router.push(target)
+}
 
 const logout = () => {
   authStore.logout()
@@ -376,6 +405,9 @@ onUnmounted(() => {
               <span class="app-shell__project-title">
                 {{ currentProject ? (currentProject.title || '未命名书卷') : '选择书卷' }}
               </span>
+              <span v-if="currentStageLabel" class="app-shell__project-mobile-stage">
+                {{ currentStageLabel }}
+              </span>
               <span class="app-shell__project-arrow" :class="{ 'is-open': isDropdownOpen }">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
@@ -393,16 +425,17 @@ onUnmounted(() => {
               >
                  <div class="app-shell__dropdown-header">阁主已存书卷</div>
                  <div class="app-shell__dropdown-list">
-                   <div 
+                   <button
                      v-for="proj in projects" 
                      :key="proj.id" 
+                     type="button"
                      class="app-shell__dropdown-item"
                      :class="{ 'is-active': proj.id === currentProjectId }"
                      @click="selectProject(proj)"
                    >
                      <span class="item-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg></span>
                      <span class="item-title">{{ proj.title || '未命名书卷' }}</span>
-                   </div>
+                   </button>
                    <div v-if="projects.length === 0" class="app-shell__dropdown-empty">
                      案头尚无书卷，请点击下方开启创作
                    </div>
@@ -436,6 +469,11 @@ onUnmounted(() => {
             class="app-shell__project-capsule is-status"
             :class="{ 'is-writing-mode': route.name === 'project-write' }"
           >
+            <Transition name="stage-sign" mode="out-in">
+              <span v-if="currentStageLabel" :key="currentStageLabel" class="app-shell__stage-sign">
+                {{ currentStageLabel }}
+              </span>
+            </Transition>
             <span class="app-shell__project-tag-info">{{ projectTags }}</span>
             <span class="app-shell__project-divider">•</span>
             <span class="app-shell__project-progress-info">
@@ -647,7 +685,7 @@ onUnmounted(() => {
                     <span class="app-shell__action-badge is-logout">离</span>
                     <div class="item-text">
                       <span class="item-title">退出登录</span>
-                      <span class="item-desc">保存草稿并安全退出</span>
+                      <span class="item-desc">清除本机未同步草稿并退出</span>
                     </div>
                   </button>
                 </div>
@@ -684,7 +722,11 @@ onUnmounted(() => {
         width="min(94vw, 960px)"
         @close="showTaskLogModal = false"
       >
-        <TaskLogPanel :tasks="backgroundTasks" :loading="isTaskSyncing" />
+        <TaskLogPanel
+          :tasks="backgroundTasks"
+          :loading="isTaskSyncing"
+          @navigate="handleTaskNavigate"
+        />
       </GlobalModalContainer>
 
       <GlobalModalContainer
@@ -755,6 +797,60 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.app-shell__stage-sign {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 var(--md-spacing-2);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-xs);
+  background: var(--md-surface-container-low);
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-small);
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.stage-sign-enter-active {
+  transition:
+    opacity 180ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stage-sign-enter-from {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+
+.app-shell__project-mobile-stage {
+  display: none;
+}
+
+@media (max-width: 1199px) {
+  .app-shell__project-mobile-stage {
+    display: inline-flex;
+    flex-shrink: 0;
+    color: var(--md-on-primary);
+    font-size: var(--md-label-small);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-sign-enter-active {
+    transition: none !important;
+  }
+
+  .app-shell__task-button {
+    transition: none !important;
+  }
+
+  .app-shell__task-button:hover {
+    transform: none;
+  }
+}
+
 .app-shell__task-button {
   position: relative;
   display: inline-flex;

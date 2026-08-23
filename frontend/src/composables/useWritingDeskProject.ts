@@ -1,9 +1,13 @@
 // AIMETA P=写作台项目与章节查询协调|R=项目加载_章节刷新_章节选择|NR=不订阅章节生命周期SSE_不持有工作流状态|E=composable:writing-desk-project|X=internal|A=useWritingDeskProject|D=vue-router,@tanstack/vue-query|S=state,cache|RD=./README.ai
 import { nextTick } from 'vue'
 import type { ComputedRef, Ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import type { NovelProject } from '@/api/novel'
-import { useNovelChapterQuery, useNovelMutationRefresh, useNovelProjectQuery } from '@/queries/novel'
+import {
+  useNovelChapterQuery,
+  useNovelMutationRefresh,
+  useNovelProjectQuery,
+} from '@/queries/novel'
 
 interface UseWritingDeskProjectOptions {
   projectId: () => string
@@ -13,7 +17,9 @@ interface UseWritingDeskProjectOptions {
   selectedChapterNumber: Ref<number | null>
   selectedVersionIndex: Ref<number>
   closeAllDrawers: () => void
-  upsertChapterInProjectCache: ReturnType<typeof useNovelMutationRefresh>['upsertChapterInProjectCache']
+  upsertChapterInProjectCache: ReturnType<
+    typeof useNovelMutationRefresh
+  >['upsertChapterInProjectCache']
   refreshProjectQueries: ReturnType<typeof useNovelMutationRefresh>['refreshProjectQueries']
 }
 
@@ -35,6 +41,7 @@ export const useWritingDeskProject = ({
   refreshProjectQueries,
 }: UseWritingDeskProjectOptions) => {
   const router = useRouter()
+  const route = useRoute()
 
   const goBack = () => {
     router.push('/workspace')
@@ -76,6 +83,14 @@ export const useWritingDeskProject = ({
     selectedChapterNumber.value = chapterNumber
     selectedVersionIndex.value = 0
     closeAllDrawers()
+    const currentChapterNumber = Array.isArray(route.query.chapter_number)
+      ? route.query.chapter_number[0]
+      : route.query.chapter_number
+    if (currentChapterNumber !== String(chapterNumber)) {
+      void router.replace({
+        query: { ...route.query, chapter_number: String(chapterNumber) },
+      })
+    }
   }
 
   return {

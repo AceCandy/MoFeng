@@ -14,7 +14,9 @@
             @copy-title="copySelectedChapterTitle"
             @reset-title-tooltip="resetChapterTitleTooltip"
           />
-          <span v-if="luomoSealVisible" class="writing-workspace__luomo-seal" aria-hidden="true">定</span>
+          <span v-if="luomoSealVisible" class="writing-workspace__luomo-seal" aria-hidden="true"
+            >定</span
+          >
           <ChapterToolbar
             v-if="shouldShowChapterToolbar"
             :chapter-number="selectedChapterNumber"
@@ -30,19 +32,16 @@
       </div>
 
       <div v-if="hasSelectedChapterContent" class="writing-workspace__tabs-row">
-        <ChapterTabs
-          v-model:active-tab="activeTab"
-          :versions-count="availableVersions.length"
-        />
+        <ChapterTabs v-model:active-tab="activeTab" :versions-count="availableVersions.length" />
       </div>
 
       <div class="writing-workspace__content">
         <ChapterReaderBar
           v-if="
-            hasFinalizedChapterContent
-              && isChapterContentView
-              && (workflowPhase === 'succeeded'
-                || (workflowPhase === 'idle' && selectedChapter?.generation_status === 'successful'))
+            hasFinalizedChapterContent &&
+            isChapterContentView &&
+            (workflowPhase === 'succeeded' ||
+              (workflowPhase === 'idle' && selectedChapter?.generation_status === 'successful'))
           "
           :status="readerStatus"
           :isBrowserFallback="readerIsBrowserFallback"
@@ -116,7 +115,11 @@
             />
 
             <ChapterContent
-              v-if="activeTab === 'content' && chapterContentChapter && (hasSelectedChapterContent || hasMiaohongPreview || hasLuomoSnapshot)"
+              v-if="
+                activeTab === 'content' &&
+                chapterContentChapter &&
+                (hasSelectedChapterContent || hasMiaohongPreview || hasLuomoSnapshot)
+              "
               ref="bodyComponentRef"
               :selected-chapter="chapterContentChapter"
               :project-id="project?.id"
@@ -162,12 +165,8 @@ import { useChapterReaderBar } from '@/composables/useChapterReaderBar'
 import { useVersionResolver } from '@/composables/useVersionResolver'
 import { useChapterClipboard } from '@/composables/useChapterClipboard'
 import { useChapterInlineMeta } from '@/composables/useChapterInlineMeta'
-import type {
-  Chapter,
-  ChapterVersion,
-  ChapterVersionSelection,
-  NovelProject,
-} from '@/api/novel'
+import type { Chapter, ChapterVersion, ChapterVersionSelection, NovelProject } from '@/api/novel'
+import type { WritingDeskSection } from '@/api/creationContexts'
 import type { ChapterWorkflowCommand, ChapterWorkflowNodeKey } from '@/api/chapterWorkflow'
 import type { ChapterWorkflowActorPhase } from '@/composables/useChapterWorkflowActor'
 import type { ChapterWorkflowTransportPhase } from '@/composables/chapterWorkflowMachine'
@@ -201,6 +200,7 @@ interface Props {
   workflowError: string | null
   workflowRetryActivityKey: string | null
   workflowCandidates: ChapterVersionSelection[]
+  activeSection: WritingDeskSection
 }
 
 const props = defineProps<Props>()
@@ -219,6 +219,7 @@ const emit = defineEmits<{
   (event: 'showVersionDetail', versionIndex: number): void
   (event: 'showEvaluationDetail'): void
   (event: 'editChapter', payload: { chapterNumber: number; content: string }): void
+  (event: 'update:activeSection', section: WritingDeskSection): void
 }>()
 
 interface ChapterContentExpose {
@@ -242,11 +243,8 @@ const selectedChapterOutline = computed(() => {
   )
 })
 
-const {
-  selectedChapterResolvedContent,
-  selectedChapterForDisplay,
-  hasSelectedChapterContent,
-} = useVersionResolver({
+const { selectedChapterResolvedContent, selectedChapterForDisplay, hasSelectedChapterContent } =
+  useVersionResolver({
   selectedChapter,
   availableVersions: computed(() => props.availableVersions),
   selectedVersionIndex: computed(() => props.selectedVersionIndex),
@@ -319,21 +317,25 @@ const lockedPrerequisiteChapterTitle = computed(() => {
   if (num === null || !props.project?.blueprint?.chapter_outline) {
     return null
   }
-  const outline = props.project.blueprint.chapter_outline.find(
-    (ch) => ch.chapter_number === num,
-  )
+  const outline = props.project.blueprint.chapter_outline.find((ch) => ch.chapter_number === num)
   return outline?.title || null
 })
 
-const isSelectedChapterLocked = computed(() =>
-  lockedPrerequisiteChapterNumber.value !== null
-  && !hasSelectedChapterContent.value
-  && props.workflowPhase === 'idle',
+const isSelectedChapterLocked = computed(
+  () =>
+    lockedPrerequisiteChapterNumber.value !== null &&
+    !hasSelectedChapterContent.value &&
+    props.workflowPhase === 'idle',
 )
 
-const activeTab = ref<'content' | 'versions' | 'evaluation'>('content')
+const activeTab = computed<WritingDeskSection>({
+  get: () => props.activeSection,
+  set: (section) => emit('update:activeSection', section),
+})
 const shouldShowChapterToolbar = computed(() => hasSelectedChapterContent.value)
-const isChapterContentView = computed(() => activeTab.value === 'content' && hasSelectedChapterContent.value)
+const isChapterContentView = computed(
+  () => activeTab.value === 'content' && hasSelectedChapterContent.value,
+)
 const isAiMenuDisabled = computed(() => props.workflowPending)
 
 const workflowStatus = computed(() => {
@@ -426,8 +428,9 @@ watch(
       clearLuomoSignature()
       return
     }
-    const isLuomoMoment = prevPhase === 'waitingForSelection'
-      && (phase === 'submitting' || phase === 'finalizing' || phase === 'succeeded')
+    const isLuomoMoment =
+      prevPhase === 'waitingForSelection' &&
+      (phase === 'submitting' || phase === 'finalizing' || phase === 'succeeded')
     if (!isLuomoMoment) return
     if (miaohongPreviewContent.value?.trim()) {
       luomoSnapshotContent.value = miaohongPreviewContent.value
@@ -454,7 +457,11 @@ const chapterContentChapter = computed<Chapter | null>(() => {
       ? { ...selectedChapterForDisplay.value, content: '' }
       : selectedChapterForDisplay.value
   }
-  if ((!hasMiaohongPreview.value && !hasLuomoSnapshot.value) || props.selectedChapterNumber === null) return null
+  if (
+    (!hasMiaohongPreview.value && !hasLuomoSnapshot.value) ||
+    props.selectedChapterNumber === null
+  )
+    return null
   return {
     chapter_number: props.selectedChapterNumber,
     generation_status: 'generating',
@@ -478,57 +485,60 @@ const workflowGenerationTraces = computed(() => {
 })
 
 const shouldShowTraceReplay = computed(() => {
-  const activePhase = props.workflowPhase === 'submitting'
-    || props.workflowPhase === 'running'
-    || props.workflowPhase === 'waitingForSelection'
-    || props.workflowPhase === 'finalizing'
-    || props.workflowPhase === 'projectionPending'
-    || props.workflowPhase === 'failed'
-  return activePhase
-    && (props.workflowPhase === 'submitting'
-      || (props.workflowPhase === 'waitingForSelection' && props.workflowCandidates.length === 1)
-      || props.workflowNodeKey !== null
-      || workflowGenerationTraces.value.length > 0)
+  const activePhase =
+    props.workflowPhase === 'submitting' ||
+    props.workflowPhase === 'running' ||
+    props.workflowPhase === 'waitingForSelection' ||
+    props.workflowPhase === 'finalizing' ||
+    props.workflowPhase === 'projectionPending' ||
+    props.workflowPhase === 'failed'
+  return (
+    activePhase &&
+    (props.workflowPhase === 'submitting' ||
+      (props.workflowPhase === 'waitingForSelection' && props.workflowCandidates.length === 1) ||
+      props.workflowNodeKey !== null ||
+      workflowGenerationTraces.value.length > 0)
+  )
 })
 
-const hasInlineExternalRetry = computed(() =>
-  props.workflowPhase === 'failed'
-  && shouldShowTraceReplay.value
-  && props.workflowAllowedCommands.includes('retry_external')
-  && props.workflowRetryActivityKey !== null,
+const hasInlineExternalRetry = computed(
+  () =>
+    props.workflowPhase === 'failed' &&
+    shouldShowTraceReplay.value &&
+    props.workflowAllowedCommands.includes('retry_external') &&
+    props.workflowRetryActivityKey !== null,
 )
 
 const workflowPanelAllowedCommands = computed(() =>
-  props.workflowAllowedCommands.filter((command) =>
-    (!shouldShowTraceReplay.value || command !== 'cancel')
-    && (!hasInlineExternalRetry.value || command !== 'retry_external'),
+  props.workflowAllowedCommands.filter(
+    (command) =>
+      (!shouldShowTraceReplay.value || command !== 'cancel') &&
+      (!hasInlineExternalRetry.value || command !== 'retry_external'),
   ),
 )
 
-const canResetWorkflow = computed(() =>
-  props.workflowPhase === 'fatal'
-  || (
-    props.workflowRunId !== null
-    && props.workflowPhase !== 'succeeded'
-    && props.workflowPhase !== 'superseded'
-  ),
+const canResetWorkflow = computed(
+  () =>
+    props.workflowPhase === 'fatal' ||
+    (props.workflowRunId !== null &&
+      props.workflowPhase !== 'succeeded' &&
+      props.workflowPhase !== 'superseded'),
 )
 
-const shouldRenderWorkflowPanel = computed(() =>
-  props.workflowPhase !== 'booting'
-  && props.workflowPhase !== 'succeeded'
-  && !(props.workflowPhase === 'idle' && hasFinalizedChapterContent.value)
-  && !(
-    props.workflowPhase === 'waitingForSelection'
-    && props.workflowCandidates.length === 1
-    && shouldShowTraceReplay.value
-    && activeTab.value === 'content'
-  )
-  && (
-    !hasInlineExternalRetry.value
-    || workflowPanelAllowedCommands.value.length > 0
-    || canResetWorkflow.value
-  ),
+const shouldRenderWorkflowPanel = computed(
+  () =>
+    props.workflowPhase !== 'booting' &&
+    props.workflowPhase !== 'succeeded' &&
+    !(props.workflowPhase === 'idle' && hasFinalizedChapterContent.value) &&
+    !(
+      props.workflowPhase === 'waitingForSelection' &&
+      props.workflowCandidates.length === 1 &&
+      shouldShowTraceReplay.value &&
+      activeTab.value === 'content'
+    ) &&
+    (!hasInlineExternalRetry.value ||
+      workflowPanelAllowedCommands.value.length > 0 ||
+      canResetWorkflow.value),
 )
 
 const workflowGenerationStatus = computed<Chapter['generation_status'] | null>(() => {
@@ -557,25 +567,25 @@ const traceReplayProps = computed(() => ({
     : selectedChapterResolvedContent.value,
   status: workflowGenerationStatus.value,
   generationProgress: !hasCurrentWorkflow.value
-    ? selectedChapter.value?.generation_progress ?? null
+    ? (selectedChapter.value?.generation_progress ?? null)
     : props.workflowProgress,
   generationStep: !hasCurrentWorkflow.value
-    ? selectedChapter.value?.generation_step ?? null
+    ? (selectedChapter.value?.generation_step ?? null)
     : props.workflowNodeKey,
   generationStepIndex: !hasCurrentWorkflow.value
-    ? selectedChapter.value?.generation_step_index ?? null
+    ? (selectedChapter.value?.generation_step_index ?? null)
     : null,
   generationStepTotal: !hasCurrentWorkflow.value
-    ? selectedChapter.value?.generation_step_total ?? null
+    ? (selectedChapter.value?.generation_step_total ?? null)
     : null,
   generationStartedAt: selectedChapter.value?.generation_started_at ?? null,
   statusUpdatedAt: selectedChapter.value?.status_updated_at ?? null,
   generationTraces: workflowGenerationTraces.value,
   manualConfirmCandidateId:
-    props.workflowPhase === 'waitingForSelection'
-    && props.workflowAllowedCommands.includes('select')
-    && props.workflowCandidates.length === 1
-      ? props.workflowCandidates[0]?.id ?? null
+    props.workflowPhase === 'waitingForSelection' &&
+    props.workflowAllowedCommands.includes('select') &&
+    props.workflowCandidates.length === 1
+      ? (props.workflowCandidates[0]?.id ?? null)
       : null,
   readOnly: true,
 }))
@@ -583,7 +593,6 @@ const traceReplayProps = computed(() => ({
 watch(
   () => props.selectedChapterNumber,
   () => {
-    activeTab.value = 'content'
     // 切换章节时清空上一章的描红预览与落印签名残留
     miaohongPreviewContent.value = null
     clearLuomoSignature()
@@ -608,7 +617,13 @@ onUnmounted(clearLuomoSignature)
   border-radius: 0 !important; /* 方直古籍 */
   background: var(--md-surface);
   /* 极致国风脑洞：工作区熟宣纹理 */
-  background-image: repeating-linear-gradient(90deg, color-mix(in srgb, var(--md-on-surface) 0.6%, transparent) 0px, color-mix(in srgb, var(--md-on-surface) 0.6%, transparent) 1px, transparent 1px, transparent 36px);
+  background-image: repeating-linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--md-on-surface) 0.6%, transparent) 0px,
+    color-mix(in srgb, var(--md-on-surface) 0.6%, transparent) 1px,
+    transparent 1px,
+    transparent 36px
+  );
   border: 3px double var(--md-outline) !important;
   /* 稿纸用 Paper 1 柔影从素骨工作区中浮起 */
   box-shadow: var(--md-elevation-paper-1);
@@ -621,7 +636,11 @@ onUnmounted(clearLuomoSignature)
   z-index: 1;
   padding: var(--md-spacing-4) var(--md-spacing-5);
   border-bottom: 1px solid var(--md-outline-variant);
-  background: linear-gradient(180deg, var(--md-background) 0%, var(--md-surface-container-low) 100%);
+  background: linear-gradient(
+    180deg,
+    var(--md-background) 0%,
+    var(--md-surface-container-low) 100%
+  );
   box-shadow: var(--md-elevation-paper-1);
 }
 
@@ -803,5 +822,4 @@ onUnmounted(clearLuomoSignature)
   border-bottom: 1.5px solid var(--md-jiege);
   padding-bottom: 1px;
 }
-
 </style>

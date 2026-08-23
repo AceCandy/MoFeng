@@ -472,8 +472,12 @@ describe('UI audit regressions', () => {
     expect(usersSource).toContain("'aria-label': `${row.username} 账号状态")
     expect(inspirationSource).toContain('await deleteNovelsMutation.mutateAsync([projectId])')
     expect(inspirationSource).toContain("const projectId = currentProject.value?.id ?? activeProjectId.value")
-    expect(workspaceSource).toContain('isInspirationProject(project) ? \'继续灵感对话\' : \'继续写作\'')
-    expect(workspaceSource).toContain('if (isInspirationProject(project))')
+    expect(workspaceSource).toContain(
+      "if (isInspirationProject(project) || context?.surface === 'inspiration') return '继续灵感对话'",
+    )
+    expect(workspaceSource).toContain(
+      "if (isInspirationProject(project) || context?.surface === 'inspiration') {",
+    )
   })
 
   it('keeps auth footer links touch-safe', () => {

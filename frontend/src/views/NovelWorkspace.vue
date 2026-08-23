@@ -326,14 +326,17 @@ import { computed, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import ProjectCard from '@/components/ProjectCard.vue'
 import type { NovelProjectSummary } from '@/api/novel'
+import type { CreationContext } from '@/api/creationContexts'
 import {
   useDeleteNovelsMutation,
   useNovelProjectsQuery,
 } from '@/queries/novel'
 import { useDialogA11y } from '@/composables/useDialogA11y'
+import { useCreationContextsQuery } from '@/queries/creationContexts'
 
 const router = useRouter()
 const projectsQuery = useNovelProjectsQuery()
+const contextsQuery = useCreationContextsQuery()
 const deleteNovelsMutation = useDeleteNovelsMutation()
 
 const showDeleteDialog = ref(false)
@@ -361,14 +364,27 @@ const projectsError = computed(() => {
 })
 const isDeleting = computed(() => deleteNovelsMutation.isPending.value)
 
-// 最近编辑的项目作为工作台第一优先级，帮助作者快速恢复写作上下文。
+// 项目内容更新时间继续负责档案排序；“继续创作”优先使用服务端语义上下文。
 const sortedProjects = computed(() => {
   return [...projects.value].sort((left, right) => {
     return new Date(right.last_edited).getTime() - new Date(left.last_edited).getTime()
   })
 })
 
-const continueProject = computed(() => sortedProjects.value[0] ?? null)
+const contexts = computed(() => contextsQuery.data.value ?? [])
+const contextByProject = computed(
+  () => new Map(contexts.value.map((context) => [context.project_id, context])),
+)
+const continueContext = computed(
+  () => contexts.value.find((context) => projects.value.some((project) => project.id === context.project_id)) ?? null,
+)
+const continueProject = computed(() => {
+  if (continueContext.value) {
+    const project = projects.value.find((item) => item.id === continueContext.value?.project_id)
+    if (project) return project
+  }
+  return sortedProjects.value[0] ?? null
+})
 
 // 墨碑底纹取当前书名首字，无项目时落「墨」字，纯装饰不参与数据流。
 const heroMonolithChar = computed(() => {
@@ -432,19 +448,40 @@ const goToInspiration = () => {
 }
 
 const viewProjectDetail = (projectId: string) => {
-  router.push(`/projects/${projectId}/write`)
+  router.push(`/projects/${projectId}`)
 }
 
 const isInspirationProject = (project: NovelProjectSummary) => project.title === '未命名灵感'
-const projectEntryLabel = (project: NovelProjectSummary) =>
-  isInspirationProject(project) ? '继续灵感对话' : '继续写作'
+const projectContext = (project: NovelProjectSummary): CreationContext | null =>
+  contextByProject.value.get(project.id) ?? null
+
+const projectEntryLabel = (project: NovelProjectSummary) => {
+  const context = projectContext(project)
+  if (isInspirationProject(project) || context?.surface === 'inspiration') return '继续灵感对话'
+  if (context?.surface === 'archive') return '查看项目档案'
+  if (context?.surface === 'writing' && context.chapter_number) {
+    return `继续第 ${context.chapter_number} 章`
+  }
+  return '继续写作'
+}
 
 const enterProject = (project: NovelProjectSummary) => {
-  if (isInspirationProject(project)) {
+  const context = projectContext(project)
+  if (isInspirationProject(project) || context?.surface === 'inspiration') {
     router.push(`/inspiration?project_id=${project.id}`)
-  } else {
-    router.push(`/projects/${project.id}/write`)
+    return
   }
+  if (context?.surface === 'archive') {
+    router.push(`/projects/${project.id}`)
+    return
+  }
+  router.push({
+    name: 'project-write',
+    params: { id: project.id },
+    query: context?.chapter_number
+      ? { chapter_number: String(context.chapter_number) }
+      : undefined,
+  })
 }
 
 const loadProjects = async () => {
