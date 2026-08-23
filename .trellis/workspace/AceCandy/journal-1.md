@@ -1799,3 +1799,24 @@ Migrated deprecated Pydantic validators and class-based schema configs to v2 API
 ### Status
 
 [OK] **Completed**
+
+
+## Session 65: Unify frontend warm-paper theme
+
+**Date**: 2026-08-23
+**Task**: Unify frontend warm-paper theme
+**Branch**: `main`
+
+### Summary
+
+Unified the frontend on one warm-paper light theme, removed dark-theme runtime and styling branches, updated visual contracts, and verified unit, lint, type, browser, accessibility, and responsive checks.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `fa0ac40` | (see git log) |
+
+### Status
+
+[OK] **Completed**
