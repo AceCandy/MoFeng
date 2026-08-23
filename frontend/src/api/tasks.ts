@@ -55,6 +55,8 @@ const isInteger = (value: unknown): value is number =>
   typeof value === 'number' && Number.isInteger(value)
 const isNullableString = (value: unknown) => value === undefined || value === null || isString(value)
 const isNullableRecord = (value: unknown) => value === undefined || value === null || isRecord(value)
+const isNullablePositiveInteger = (value: unknown) =>
+  value === undefined || value === null || (isInteger(value) && value > 0)
 
 const matchesStreamScope = (
   value: Record<string, unknown>,
@@ -88,6 +90,7 @@ const isBackgroundTask = (value: unknown): value is BackgroundTask => {
     && isNullableString(value.project_id)
     && isNullableString(value.stream_type)
     && isNullableString(value.stream_id)
+    && isNullablePositiveInteger(value.chapter_number)
     && isNullableRecord(value.payload)
     && isNullableRecord(value.result)
     && isNullableString(value.error)

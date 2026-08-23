@@ -25,6 +25,7 @@ from ..models import (
     NovelConversation,
     NovelProject,
 )
+from ..repositories.creation_context_repository import CreationContextRepository
 from ..repositories.novel_repository import NovelRepository
 from ..schemas.admin import AdminNovelSummary
 from ..schemas.novel import (
@@ -366,6 +367,10 @@ class NovelService:
     async def append_conversation(
         self, project_id: str, role: str, content: str, metadata: Optional[Dict] = None
     ) -> None:
+        context_repo = CreationContextRepository(self.session)
+        project_user_id = await context_repo.lock_project(project_id)
+        if project_user_id is None:
+            raise ValueError("项目不存在")
         # 原子 INSERT SELECT MAX(seq)+1，避免读改写并发竞态产生重复 seq
         next_seq = (
             select(func.coalesce(func.max(NovelConversation.seq), 0) + 1)
@@ -378,9 +383,16 @@ class NovelService:
                 seq=next_seq,
                 role=role,
                 content=content,
-                metadata=metadata,
+                metadata_=metadata,
             )
         )
+        if role == "assistant":
+            turn = await context_repo.get_authoritative_inspiration_turn(project_id)
+            await context_repo.advance_inspiration_turn(
+                user_id=project_user_id,
+                project_id=project_id,
+                turn=turn,
+            )
         await self.session.commit()
         await self._touch_project(project_id)
 

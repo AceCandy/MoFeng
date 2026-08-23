@@ -32,6 +32,7 @@ class BackgroundTaskResponse(BaseModel):
     stream_type: Optional[str] = None
     stream_id: Optional[str] = None
     task_type: str
+    chapter_number: Optional[int] = Field(default=None, ge=1)
     title: str
     status: PublicTaskStatus
     progress: int

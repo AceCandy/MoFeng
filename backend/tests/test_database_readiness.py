@@ -432,7 +432,7 @@ async def test_concurrent_postgres_migrations_are_serialized_by_advisory_lock(
 
         assert backend_pids["first"] != backend_pids["second"]
         assert blocked_by_first is True
-        assert revisions == ["c8e5f2a1d4b6"]
+        assert revisions == ["d9f1a2b3c4e5"]
         assert {
             "chapter_revisions",
             "chapter_outbox_events",
@@ -583,7 +583,7 @@ async def test_projection_migration_rejects_destructive_downgrade(_pg_engine) ->
         finally:
             await engine.dispose()
 
-        assert revision == "c8e5f2a1d4b6"
+        assert revision == "d9f1a2b3c4e5"
         assert {
             "chapter_revisions",
             "chapter_outbox_events",

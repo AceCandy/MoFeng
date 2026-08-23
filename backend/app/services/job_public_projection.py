@@ -16,6 +16,11 @@ _SECRET_ASSIGNMENT_PATTERN = re.compile(
 )
 _BEARER_CREDENTIAL_PATTERN = re.compile(r"(?i)\bbearer(\s+)([^,\s;]+)")
 _PUBLIC_LOG_LEVELS = {"debug", "info", "warning", "error", "critical"}
+_CHAPTER_NAVIGATION_TASK_TYPES = {
+    "chapter_edit_postprocess",
+    "chapter_finalize",
+    "chapter_workflow",
+}
 
 
 def sanitize_public_text(value: str, *, max_length: int = 300) -> str:
@@ -58,6 +63,15 @@ def _public_log_entries(value: object) -> list[dict[str, str]]:
     return projected
 
 
+def _public_chapter_number(job: BackgroundTask) -> Optional[int]:
+    if job.task_type not in _CHAPTER_NAVIGATION_TASK_TYPES or not isinstance(job.payload, dict):
+        return None
+    chapter_number = job.payload.get("chapter_number")
+    if isinstance(chapter_number, bool) or not isinstance(chapter_number, int):
+        return None
+    return chapter_number if chapter_number > 0 else None
+
+
 def public_job_snapshot(job: BackgroundTask) -> dict[str, Any]:
     """构造可进入 task list、snapshot 与 SSE event log 的白名单任务快照。"""
 
@@ -68,6 +82,7 @@ def public_job_snapshot(job: BackgroundTask) -> dict[str, Any]:
         "stream_type": job.stream_type,
         "stream_id": job.stream_id,
         "task_type": job.task_type,
+        "chapter_number": _public_chapter_number(job),
         "title": job.title,
         "status": BackgroundTaskResponse.public_status(job.status),
         "progress": job.progress,

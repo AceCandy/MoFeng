@@ -151,6 +151,23 @@ describe('reduceTaskEvent', () => {
     })).toEqual({ kind: 'malformed', reason: 'schema_version' })
   })
 
+  it('只接受可空正整数章节号', () => {
+    const value = task('job-1', '2026-07-28T00:00:00Z')
+    const withChapter = { ...value, chapter_number: 3 }
+
+    expect(decodeBackgroundTaskStreamMessage('task', event(11, withChapter))).toEqual({
+      kind: 'ok',
+      event: 'task',
+      value: event(11, withChapter),
+    })
+    for (const chapterNumber of [0, -1, 1.5, true, '3']) {
+      expect(decodeBackgroundTaskStreamMessage('task', event(11, {
+        ...value,
+        chapter_number: chapterNumber,
+      } as BackgroundTask))).toEqual({ kind: 'malformed', reason: 'task' })
+    }
+  })
+
   it('task 事件严格复核 expected scope，并保留全局流兼容性', () => {
     const expectedScope = { stream_type: 'workflow' as const, stream_id: 'run-1' }
     const matching = event(11, scopedTask('job-1', expectedScope))

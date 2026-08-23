@@ -129,6 +129,42 @@ def test_public_job_snapshot_redacts_legacy_error_and_allowlists_logs() -> None:
     assert "prompt body" not in str(snapshot)
 
 
+@pytest.mark.parametrize(
+    ("task_type", "chapter_number", "expected"),
+    [
+        ("chapter_workflow", 3, 3),
+        ("chapter_finalize", 4, 4),
+        ("chapter_edit_postprocess", 5, 5),
+        ("chapter_outline", 6, None),
+        ("chapter_workflow", True, None),
+        ("chapter_workflow", 0, None),
+        ("chapter_workflow", "7", None),
+    ],
+)
+def test_public_job_snapshot_only_projects_allowlisted_chapter_number(
+    task_type: str,
+    chapter_number: object,
+    expected: int | None,
+) -> None:
+    now = datetime.now(timezone.utc)
+    job = BackgroundTask(
+        id=f"public-navigation-{task_type}",
+        user_id=1,
+        task_type=task_type,
+        title="Public navigation",
+        status="succeeded",
+        progress=100,
+        payload={"chapter_number": chapter_number, "prompt": "private"},
+        created_at=now,
+        updated_at=now,
+    )
+
+    snapshot = public_job_snapshot(job)
+
+    assert snapshot["chapter_number"] == expected
+    assert "payload" not in snapshot
+
+
 @pytest.mark.asyncio(loop_scope="session")
 async def test_duplicate_idempotency_key_returns_one_job_and_one_queued_event(db_session_factory):
     async with db_session_factory() as session:

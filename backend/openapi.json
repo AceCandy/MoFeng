@@ -223,6 +223,18 @@
       },
       "BackgroundTaskResponse": {
         "properties": {
+          "chapter_number": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chapter Number"
+          },
           "completed_at": {
             "anyOf": [
               {
@@ -2205,6 +2217,172 @@
           "conversation_state"
         ],
         "title": "ConverseResponse",
+        "type": "object"
+      },
+      "CreationContextPatch": {
+        "additionalProperties": false,
+        "description": "只更新显式出现的语义位置字段。",
+        "properties": {
+          "chapter_number": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chapter Number"
+          },
+          "desk_section": {
+            "anyOf": [
+              {
+                "enum": [
+                  "content",
+                  "versions",
+                  "evaluation"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Desk Section"
+          },
+          "inspiration_draft": {
+            "anyOf": [
+              {
+                "maxLength": 100000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inspiration Draft"
+          },
+          "inspiration_turn": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inspiration Turn"
+          },
+          "surface": {
+            "anyOf": [
+              {
+                "enum": [
+                  "inspiration",
+                  "archive",
+                  "writing"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surface"
+          }
+        },
+        "title": "CreationContextPatch",
+        "type": "object"
+      },
+      "CreationContextRead": {
+        "description": "当前用户单个项目的跨设备创作上下文。",
+        "properties": {
+          "chapter_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chapter Number"
+          },
+          "desk_section": {
+            "anyOf": [
+              {
+                "enum": [
+                  "content",
+                  "versions",
+                  "evaluation"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Desk Section"
+          },
+          "inspiration_draft": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inspiration Draft"
+          },
+          "inspiration_turn": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inspiration Turn"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "surface": {
+            "anyOf": [
+              {
+                "enum": [
+                  "inspiration",
+                  "archive",
+                  "writing"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surface"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "user_id",
+          "project_id",
+          "updated_at"
+        ],
+        "title": "CreationContextRead",
         "type": "object"
       },
       "DeleteChapterRequest": {
@@ -7245,6 +7423,93 @@
         "summary": "Read Current User",
         "tags": [
           "Authentication"
+        ]
+      }
+    },
+    "/api/creation-contexts": {
+      "get": {
+        "operationId": "list_creation_contexts_api_creation_contexts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CreationContextRead"
+                  },
+                  "title": "Response List Creation Contexts Api Creation Contexts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "List Creation Contexts",
+        "tags": [
+          "Creation Contexts"
+        ]
+      }
+    },
+    "/api/creation-contexts/{project_id}": {
+      "patch": {
+        "operationId": "patch_creation_context_api_creation_contexts__project_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreationContextPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreationContextRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Patch Creation Context",
+        "tags": [
+          "Creation Contexts"
         ]
       }
     },

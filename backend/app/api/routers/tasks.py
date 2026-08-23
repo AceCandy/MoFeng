@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.dependencies import get_current_user
 from ...db.session import AsyncSessionLocal, get_session
+from ...models.background_task import BackgroundTask
 from ...models.job import JobEvent
 from ...schemas.task import (
     BackgroundTaskCursorResetResponse,
@@ -20,6 +21,7 @@ from ...schemas.task import (
 from ...schemas.user import UserInDB
 from ...services.background_task_service import BackgroundTaskService
 from ...services.event_bus import subscribe_background_task
+from ...services.job_public_projection import public_job_snapshot
 from ...services.job_service import (
     EventCursorExpiredError,
     JobService,
@@ -103,11 +105,16 @@ def _public_task_response(
     *,
     include_result: bool = False,
 ) -> BackgroundTaskResponse:
-    response = BackgroundTaskResponse.model_validate(task)
+    if isinstance(task, BackgroundTask):
+        response = BackgroundTaskResponse.model_validate(public_job_snapshot(task))
+        result = task.result if include_result else None
+    else:
+        response = BackgroundTaskResponse.model_validate(task)
+        result = response.result if include_result else None
     return response.model_copy(
         update={
             "payload": None,
-            "result": response.result if include_result else None,
+            "result": result,
         }
     )
 

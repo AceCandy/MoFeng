@@ -554,6 +554,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/creation-contexts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Creation Contexts */
+        get: operations["list_creation_contexts_api_creation_contexts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/creation-contexts/{project_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Patch Creation Context */
+        patch: operations["patch_creation_context_api_creation_contexts__project_id__patch"];
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -1738,6 +1772,8 @@ export interface components {
         };
         /** BackgroundTaskResponse */
         BackgroundTaskResponse: {
+            /** Chapter Number */
+            chapter_number?: number | null;
             /** Completed At */
             completed_at?: string | null;
             /**
@@ -2434,6 +2470,47 @@ export interface components {
             /** Ready For Blueprint */
             ready_for_blueprint?: boolean | null;
             ui_control: components["schemas"]["UIControl"];
+        };
+        /**
+         * CreationContextPatch
+         * @description 只更新显式出现的语义位置字段。
+         */
+        CreationContextPatch: {
+            /** Chapter Number */
+            chapter_number?: number | null;
+            /** Desk Section */
+            desk_section?: ("content" | "versions" | "evaluation") | null;
+            /** Inspiration Draft */
+            inspiration_draft?: string | null;
+            /** Inspiration Turn */
+            inspiration_turn?: number | null;
+            /** Surface */
+            surface?: ("inspiration" | "archive" | "writing") | null;
+        };
+        /**
+         * CreationContextRead
+         * @description 当前用户单个项目的跨设备创作上下文。
+         */
+        CreationContextRead: {
+            /** Chapter Number */
+            chapter_number?: number | null;
+            /** Desk Section */
+            desk_section?: ("content" | "versions" | "evaluation") | null;
+            /** Inspiration Draft */
+            inspiration_draft?: string | null;
+            /** Inspiration Turn */
+            inspiration_turn?: number | null;
+            /** Project Id */
+            project_id: string;
+            /** Surface */
+            surface?: ("inspiration" | "archive" | "writing") | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** User Id */
+            user_id: number;
         };
         /** DeleteChapterRequest */
         DeleteChapterRequest: {
@@ -4849,6 +4926,61 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["User"];
+                };
+            };
+        };
+    };
+    list_creation_contexts_api_creation_contexts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreationContextRead"][];
+                };
+            };
+        };
+    };
+    patch_creation_context_api_creation_contexts__project_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreationContextPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreationContextRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

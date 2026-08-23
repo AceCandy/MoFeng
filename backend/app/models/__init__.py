@@ -29,6 +29,7 @@ from .chapter_projection import (
 )
 from .chapter_workflow import ChapterWorkflowCommand, ChapterWorkflowRun
 from .constitution import NovelConstitution
+from .creation_context import UserCreationContext
 from .database_bootstrap import DatabaseBootstrapVersion, LegacyDatabaseAdoption
 
 # 新增：势力/宪法/Writer人格模型
@@ -112,6 +113,7 @@ __all__ = [
     "ChapterRevision",
     "ChapterWorkflowCommand",
     "ChapterWorkflowRun",
+    "UserCreationContext",
     "UserModelProvider",
     "UserAIModel",
     "UserAIStageRoute",

@@ -77,6 +77,7 @@ def test_event_serialization_keeps_only_public_task_fields():
                 "stream_type": "workflow",
                 "stream_id": "run-1",
                 "task_type": "test",
+                "chapter_number": 8,
                 "title": "测试任务",
                 "status": "succeeded",
                 "progress": 100,
@@ -95,6 +96,7 @@ def test_event_serialization_keeps_only_public_task_fields():
     assert serialized["task"]["id"] == "job-1"
     assert serialized["task"]["stream_type"] == "workflow"
     assert serialized["task"]["stream_id"] == "run-1"
+    assert serialized["task"]["chapter_number"] == 8
     assert "payload" not in serialized["task"]
     assert "result" not in serialized["task"]
 

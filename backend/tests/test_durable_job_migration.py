@@ -146,7 +146,7 @@ async def test_durable_job_migration_backfills_legacy_rows_without_private_paylo
                     .one()
                 )
 
-            assert revision == "c8e5f2a1d4b6"
+            assert revision == "d9f1a2b3c4e5"
             assert [(task["id"], task["status"]) for task in tasks] == [
                 ("legacy-queued", "queued"),
                 ("legacy-running", "needs_attention"),
@@ -346,7 +346,7 @@ async def test_schema_convergence_migration_adds_pricing_usage_and_retention(
 
                 schema = await connection.run_sync(inspect_schema)
 
-            assert revision == "c8e5f2a1d4b6"
+            assert revision == "d9f1a2b3c4e5"
             assert set(pricing.values()) == {None}
             assert {
                 "ai_usage_records",
@@ -710,7 +710,7 @@ async def test_projection_migration_backfills_legacy_rollout_and_enforces_checks
                     .one()
                 )
 
-            assert revision == "c8e5f2a1d4b6"
+            assert revision == "d9f1a2b3c4e5"
             source_hash = hashlib.sha256("旧章节正文".encode()).hexdigest()
             assert chapter == {
                 "current_revision": 1,

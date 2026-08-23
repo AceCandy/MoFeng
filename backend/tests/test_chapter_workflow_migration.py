@@ -515,7 +515,7 @@ async def _terminate_worker_process(process) -> None:
 
 
 @pytest.mark.asyncio(loop_scope="session")
-async def test_workflow_migration_adopts_matching_precreated_trace_checkpoint_table() -> None:
+async def test_workflow_migration_adopts_matching_precreated_tables() -> None:
     source_engine = create_async_engine(settings.sqlalchemy_database_uri)
     try:
         async with _temporary_database(source_engine) as database_url:
@@ -534,6 +534,28 @@ async def test_workflow_migration_adopts_matching_precreated_trace_checkpoint_ta
                         sa.insert(ChapterGenerationTraceProjectionCheckpoint).values(
                             projector_name="chapter_generation_trace_v1",
                             last_event_cursor=17,
+                        )
+                    )
+                    await connection.execute(
+                        sa.text(
+                            "INSERT INTO users "
+                            "(id, username, hashed_password, is_admin, is_active) "
+                            "VALUES (7011, 'creation-context-adoption-user', 'secret', false, true)"
+                        )
+                    )
+                    await connection.execute(
+                        sa.text(
+                            "INSERT INTO novel_projects (id, user_id, title, status) "
+                            "VALUES ('creation-context-adoption-project', 7011, "
+                            "'创作上下文接管项目', 'draft')"
+                        )
+                    )
+                    await connection.execute(
+                        sa.text(
+                            "INSERT INTO user_creation_contexts "
+                            "(user_id, project_id, surface, inspiration_draft, inspiration_turn) "
+                            "VALUES (7011, 'creation-context-adoption-project', "
+                            "'inspiration', '预建草稿', 0)"
                         )
                     )
 
@@ -557,11 +579,19 @@ async def test_workflow_migration_adopts_matching_precreated_trace_checkpoint_ta
                             "WHERE projector_name = 'chapter_generation_trace_v1'"
                         )
                     )
+                    draft = await connection.scalar(
+                        sa.text(
+                            "SELECT inspiration_draft FROM user_creation_contexts "
+                            "WHERE user_id = 7011 AND "
+                            "project_id = 'creation-context-adoption-project'"
+                        )
+                    )
             finally:
                 await engine.dispose()
 
-            assert state.database_revisions == ("c8e5f2a1d4b6",)
+            assert state.database_revisions == ("d9f1a2b3c4e5",)
             assert cursor == 17
+            assert draft == "预建草稿"
     finally:
         await source_engine.dispose()
 
@@ -615,6 +645,44 @@ async def test_workflow_migration_rejects_incompatible_precreated_trace_checkpoi
         await source_engine.dispose()
 
 
+@pytest.mark.asyncio(loop_scope="session")
+async def test_creation_context_migration_rejects_incompatible_precreated_table() -> None:
+    source_engine = create_async_engine(settings.sqlalchemy_database_uri)
+    try:
+        async with _temporary_database(source_engine) as database_url:
+            engine = create_async_engine(database_url)
+            try:
+                async with engine.begin() as connection:
+
+                    def upgrade_to_c8(sync_connection) -> None:
+                        config = build_alembic_config(database_url)
+                        config.attributes["connection"] = sync_connection
+                        command.upgrade(config, "c8e5f2a1d4b6")
+
+                    await connection.run_sync(upgrade_to_c8)
+                    await connection.run_sync(Base.metadata.create_all)
+                    await connection.execute(
+                        sa.text("ALTER TABLE user_creation_contexts ADD COLUMN unexpected INTEGER")
+                    )
+
+                with pytest.raises(
+                    RuntimeError,
+                    match="incompatible_preexisting_user_creation_context_schema",
+                ):
+                    await run_migrations(database_url)
+
+                async with engine.connect() as connection:
+                    revision = await connection.scalar(
+                        sa.text("SELECT version_num FROM alembic_version")
+                    )
+            finally:
+                await engine.dispose()
+
+            assert revision == "c8e5f2a1d4b6"
+    finally:
+        await source_engine.dispose()
+
+
 def test_workflow_migration_rejects_offline_sql_generation() -> None:
     config = build_alembic_config(settings.sqlalchemy_database_uri)
     output = StringIO()
@@ -631,6 +699,19 @@ def test_workflow_migration_rejects_offline_sql_generation() -> None:
     assert "ALTER TABLE" not in generated_sql
     assert "CREATE TABLE" not in generated_sql
     assert "INSERT INTO" not in generated_sql
+
+    creation_config = build_alembic_config(settings.sqlalchemy_database_uri)
+    creation_output = StringIO()
+    creation_config.output_buffer = creation_output
+
+    with pytest.raises(RuntimeError, match="creation context reconciliation requires an online"):
+        command.upgrade(
+            creation_config,
+            "c8e5f2a1d4b6:d9f1a2b3c4e5",
+            sql=True,
+        )
+
+    assert "CREATE TABLE" not in creation_output.getvalue().upper()
 
 
 @pytest.mark.asyncio(loop_scope="session")
@@ -651,7 +732,7 @@ async def test_workflow_migration_installs_pinned_checkpoint_schema() -> None:
                     await connection.run_sync(check_schema)
 
                 state = await inspect_database_state(engine)
-                assert state.database_revisions == ("c8e5f2a1d4b6",)
+                assert state.database_revisions == ("d9f1a2b3c4e5",)
                 assert state.checkpoint_tables == CHECKPOINT_TABLES
                 assert state.checkpoint_migration_versions == CHECKPOINT_MIGRATION_VERSIONS
 
