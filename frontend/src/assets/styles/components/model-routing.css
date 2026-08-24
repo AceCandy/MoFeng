@@ -2,7 +2,7 @@
 /* ============================================
    模型路由（llm-settings）跨组件共享样式
    从 PersonalModelRouting / ProviderFormPanel / PrimaryModelPanel /
-   ModelPickerDialog / RoutingStagesPanel 的 scoped 拷贝中抽取，组件内不再重复定义
+   ModelPickerPanel / RoutingStagesPanel 的 scoped 拷贝中抽取，组件内不再重复定义
    ============================================ */
 
 /* 通用面板（新增供应商、主模型选择） */

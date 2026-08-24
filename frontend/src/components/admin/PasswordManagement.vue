@@ -1,9 +1,9 @@
-<!-- AIMETA P=密码管理_管理员密码修改|R=密码修改表单|NR=不含用户管理|E=component:PasswordManagement|X=ui|A=密码组件|D=vue|S=dom,net|RD=./README.ai -->
+<!-- AIMETA P=账户安全_登录密码修改|R=密码修改表单|NR=不含用户管理|E=component:PasswordManagement|X=ui|A=密码组件|D=vue|S=dom,net|RD=./README.ai -->
 <template>
   <section class="admin-panel password-container">
     <div class="admin-panel__body">
       <n-alert v-if="mustReset" type="warning" class="mb-4">
-        为保障安全，请先更新默认密码后再继续使用管理后台。
+        为保障账户安全，请先更新默认密码。
       </n-alert>
 
       <n-alert v-if="error" type="error" closable @close="error = null" class="mb-4">
@@ -18,7 +18,7 @@
                 v-model:value="form.oldPassword"
                 type="password"
                 show-password-on="click"
-                placeholder="请输入当前管理员密码"
+                placeholder="请输入当前密码"
                 autocomplete="current-password"
               />
             </n-form-item>
@@ -43,18 +43,12 @@
               />
             </n-form-item>
 
-            <n-space v-if="!isModal" justify="end">
+            <n-space justify="end">
               <n-button type="primary" :loading="submitting" @click="handleSubmit">
                 保存新密码
               </n-button>
             </n-space>
           </n-form>
-
-          <div class="password-sidebar-note">
-            <div class="note-seal">密</div>
-            <span class="note-main">更替密契 · 慎防外泄</span>
-            <span class="note-sub">司天监起居注</span>
-          </div>
         </div>
       </n-spin>
     </div>
@@ -64,17 +58,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 
-interface Props {
-  isModal?: boolean
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  isModal: false
-})
-
-const emit = defineEmits<{
-  (e: 'saved'): void
-}>()
 import { useQueryClient } from '@tanstack/vue-query'
 import { NAlert } from 'naive-ui/es/alert'
 import { NButton } from 'naive-ui/es/button'
@@ -152,17 +135,12 @@ const handleSubmit = async () => {
     const user = await queryClient.fetchQuery(currentUserQueryOptions(authStore.token))
     authStore.setUser(user)
     resetForm()
-    emit('saved')
     await showAlert('密码已更新，请使用新密码继续操作', 'success')
   } catch (err) {
     formError.value = err instanceof Error ? err.message : '密码更新失败'
   }
 }
 
-defineExpose({
-  submit: handleSubmit,
-  submitting,
-})
 </script>
 
 <style scoped>
@@ -173,14 +151,12 @@ defineExpose({
 }
 
 .password-layout {
-  display: flex;
-  gap: 24px;
-  align-items: stretch;
+  display: block;
 }
 
 .password-form {
-  flex: 1;
-  max-width: 350px;
+  max-width: 420px;
+  margin: 0 auto;
 }
 
 .mb-4 {
@@ -241,62 +217,4 @@ defineExpose({
   cursor: not-allowed !important;
 }
 
-/* 右侧古典起居栏侧栏竖排美化 */
-.password-sidebar-note {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  padding: 16px 12px;
-  user-select: none;
-  min-width: 90px;
-  text-align: left;
-  border-left: 1px dashed var(--md-outline) !important;
-}
-
-/* 朱印阳刻金石微方章（印章一律无影） */
-.password-sidebar-note .note-seal {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  background-color: var(--md-secondary) !important;
-  color: var(--md-on-secondary) !important;
-  font-family: var(--md-font-serif) !important;
-  font-size: 11px !important;
-  font-weight: 900 !important;
-  border: 1px solid var(--md-outline) !important;
-  transform: rotate(-4deg);
-  margin-bottom: 12px;
-  margin-left: 4px;
-}
-
-.password-sidebar-note .note-main {
-  display: inline;
-  font-family: var(--md-font-serif) !important;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--md-on-surface-variant);
-  letter-spacing: 0.18em;
-}
-
-.password-sidebar-note .note-sub {
-  display: block; /* 另起一列，实现完美的双列竖排 */
-  font-family: var(--md-font-serif) !important;
-  font-size: 11px;
-  color: var(--md-outline);
-  letter-spacing: 0.12em;
-  margin-top: 14px; /* 竖向排版换列之后的顶部缩进，产生落款错落感 */
-  margin-right: 8px; /* 列与列的间隔 */
-  opacity: 0.85;
-}
-
-/* 移动端/窄视口下自适应响应式，优雅隐去侧栏并拉满表单 */
-@media (max-width: 480px) {
-  .password-sidebar-note {
-    display: none !important;
-  }
-  .password-form {
-    max-width: 100% !important;
-  }
-}
 </style>

@@ -104,3 +104,24 @@ data: {
 ## Model-list fetch returns empty on failure — never a hardcoded fallback
 
 `get_available_models` and every per-provider helper (`_get_anthropic_models`, `_get_google_models`, …) return `[]` on any fetch failure or empty result. Do not add a hardcoded "preset models" fallback that masks the failure — an earlier `_get_anthropic_models` returned a baked-in claude list on failure, which made a misconfigured provider (e.g. an OpenAI-compatible service whose type was set to `anthropic`) look like it had "fetched claude models." Empty + the picker's "没有可选模型" state is honest; if fetch health needs to surface, propagate the error explicitly rather than substituting fake data.
+
+---
+
+## Pending picker state belongs to the page dirty contract
+
+Text and TTS model pickers keep selections locally until the user saves them. Their dirty state must
+therefore be part of the `PersonalModelRouting.isDirty` value exposed to `SettingsView`; checking it
+only inside the panel-close handler still allows tab changes, browser history, and route leave to
+discard a pending selection.
+
+```ts
+const isDirty = computed(
+  () => isStageRoutesDirty.value || isChatPickerDirty.value || isTTSPickerDirty.value,
+)
+
+defineExpose({ isDirty })
+```
+
+Closing the panel and leaving the page are separate boundaries and both must use the same pending
+state. Regression coverage must assert chat and TTS dirty values are included in the exposed page
+contract; embedding selection is excluded because it saves immediately.

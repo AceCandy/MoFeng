@@ -1,6 +1,6 @@
 <!-- AIMETA P=管理后台_管理员控制台|R=管理面板_子组件切换|NR=不含普通用户功能|E=route:/admin#component:AdminView|X=ui|A=管理面板|D=vue|S=dom,net|RD=./README.ai -->
 <template>
-  <div class="app-page admin-console" :class="{ 'is-in-modal': props.isModal }">
+  <div class="app-page admin-console">
     <h1 class="sr-only">管理后台</h1>
     <section class="admin-console__tabs">
       <nav class="admin-console__nav" aria-label="管理模块切换" role="tablist">
@@ -15,6 +15,7 @@
             'nav-item-statistics': section.key === 'statistics',
             'nav-item-users': section.key === 'users',
             'nav-item-prompts': section.key === 'prompts',
+            'nav-item-prompt-usage': section.key === 'prompt-usage',
             'nav-item-novels': section.key === 'novels',
             'nav-item-logs': section.key === 'logs',
             'nav-item-settings': section.key === 'settings'
@@ -41,7 +42,11 @@
       >
         <n-message-provider>
           <keep-alive>
-            <component :is="activeComponent" ref="activeComponentRef" />
+            <component
+              :is="activeComponent"
+              ref="activeComponentRef"
+              @open-prompt-editor="selectSection('prompts')"
+            />
           </keep-alive>
         </n-message-provider>
       </section>
@@ -63,18 +68,14 @@ import {
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router'
 import { NMessageProvider } from 'naive-ui/es/message'
 
-const props = withDefaults(
-  defineProps<{
-    isModal?: boolean
-    initialTab?: string
-  }>(),
-  {
-    isModal: false,
-    initialTab: 'statistics',
-  }
-)
-
-type MenuKey = 'statistics' | 'users' | 'prompts' | 'novels' | 'logs' | 'settings'
+type MenuKey =
+  | 'statistics'
+  | 'users'
+  | 'prompts'
+  | 'prompt-usage'
+  | 'novels'
+  | 'logs'
+  | 'settings'
 
 interface AdminSection {
   key: MenuKey
@@ -106,6 +107,7 @@ const components: Record<MenuKey, ReturnType<typeof defineAsyncComponent>> = {
   statistics: createAsyncSection(() => import('../components/admin/Statistics.vue')),
   users: createAsyncSection(() => import('../components/admin/UserManagement.vue')),
   prompts: createAsyncSection(() => import('../components/admin/PromptManagement.vue')),
+  'prompt-usage': createAsyncSection(() => import('../components/admin/PromptUsageMap.vue')),
   novels: createAsyncSection(() => import('../components/admin/NovelManagement.vue')),
   logs: createAsyncSection(() => import('../components/admin/UpdateLogManagement.vue')),
   settings: createAsyncSection(() => import('../components/admin/SettingsManagement.vue')),
@@ -115,6 +117,7 @@ const adminSections: AdminSection[] = [
   { key: 'statistics', label: '数据总览', description: '平台规模与请求概况' },
   { key: 'users', label: '用户管理', description: '账号、权限和状态' },
   { key: 'prompts', label: '提示词管理', description: '系统 Prompt 模板' },
+  { key: 'prompt-usage', label: '提示词用量', description: '阶段与 Prompt 关系' },
   { key: 'novels', label: '小说项目', description: '项目进度与内容巡检' },
   { key: 'logs', label: '更新日志', description: '公告发布与置顶' },
   { key: 'settings', label: '系统配置', description: '托管配置与键值项' },
@@ -143,18 +146,15 @@ const adminTabRefs = ref<Record<MenuKey, HTMLButtonElement | null>>({
   statistics: null,
   users: null,
   prompts: null,
+  'prompt-usage': null,
   novels: null,
   logs: null,
   settings: null,
 })
 
-watch(
-  [() => route.query.tab, () => props.initialTab],
-  ([tab, initialTab]) => {
-    activeKey.value = props.isModal ? resolveMenuKey(initialTab) : resolveMenuKey(tab)
-  },
-  { immediate: true },
-)
+watch(() => route.query.tab, (tab) => {
+  activeKey.value = resolveMenuKey(tab)
+}, { immediate: true })
 
 const activeSection = computed(() => {
   return adminSections.find((section) => section.key === activeKey.value) ?? adminSections[0]
@@ -173,9 +173,7 @@ const selectSection = async (key: MenuKey) => {
   if (key === activeKey.value) return true
   if (!(await confirmDiscardChanges())) return false
   activeKey.value = key
-  if (!props.isModal) {
-    await router.replace({ name: 'admin', query: { tab: key } })
-  }
+  await router.replace({ name: 'admin', query: { tab: key } })
   return true
 }
 
@@ -246,28 +244,6 @@ onBeforeRouteLeave(() => confirmDiscardChanges())
   background-color: var(--md-background) !important;
   color: var(--md-on-surface);
   font-family: var(--md-font-family);
-}
-
-/* 弹窗模式下将导航栏固定在顶部，只让下方内容独立滚动 */
-.admin-console.is-in-modal {
-  height: 100%;
-  min-height: 0;
-  gap: var(--md-spacing-4);
-}
-
-.admin-console.is-in-modal .admin-console__tabs {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.admin-console.is-in-modal .admin-console__content {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-  padding-right: 4px;
 }
 
 .admin-console__tabs {
@@ -380,6 +356,9 @@ onBeforeRouteLeave(() => confirmDiscardChanges())
 }
 .admin-console__nav-item.nav-item-prompts::after {
   content: '令' !important;
+}
+.admin-console__nav-item.nav-item-prompt-usage::after {
+  content: '览' !important;
 }
 .admin-console__nav-item.nav-item-novels::after {
   content: '卷' !important;

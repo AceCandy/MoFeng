@@ -118,6 +118,17 @@ const router = createRouter({
         description: '配置个人 LLM、向量模型和 AI 阶段路由。',
       },
     },
+    {
+      path: '/account/security',
+      name: 'account-security',
+      component: () => import('../views/AccountSecurityView.vue'),
+      meta: {
+        requiresAuth: true,
+        layout: 'app',
+        label: '账户与安全',
+        description: '更新登录密码并维护账户安全。',
+      },
+    },
   ],
 })
 
@@ -149,8 +160,8 @@ router.beforeEach(async (to) => {
   if (requiresAdmin && !isAdmin) {
     return '/workspace' // Redirect to a non-admin page if not an admin
   }
-  if (isAuthenticated && mustChangePassword && (to.name !== 'admin' || to.query.tab !== 'password')) {
-    return { name: 'admin', query: { tab: 'password' } }
+  if (isAuthenticated && mustChangePassword && to.name !== 'account-security') {
+    return { name: 'account-security' }
   }
 })
 

@@ -232,7 +232,7 @@ const modelsForCapability = (capability: Capability) =>
 
 const fallbackModelLabel = (capability: Capability) => {
   const model = capability === 'embedding' ? props.defaultEmbeddingModel : props.primaryChatModel
-  const prefix = capability === 'embedding' ? '当前检索模型' : '主模型'
+  const prefix = capability === 'embedding' ? '继承当前检索模型' : '继承主模型'
   return model
     ? `${prefix}：${model.display_name} · ${props.providerName(model.provider_id)}`
     : `${prefix}：未配置`

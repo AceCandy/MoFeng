@@ -165,7 +165,7 @@ const handleLogin = async () => {
       password: password.value,
     })
     if (result.user.is_admin && result.mustChangePassword) {
-      await router.push({ name: 'admin', query: { tab: 'password' } })
+      await router.push({ name: 'account-security' })
     } else {
       await router.push('/workspace')
     }

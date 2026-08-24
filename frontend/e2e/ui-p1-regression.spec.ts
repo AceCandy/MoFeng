@@ -118,3 +118,44 @@ test('详情、灵感和写作长内容都能滚动到末尾', async ({ page }, 
   await expectContentReachesEnd(page, '.writing-workspace__body')
   await expectNoHorizontalOverflow(page)
 })
+
+test('账户菜单通过路由进入设置、安全与管理页', async ({ page }) => {
+  await setAuthMode(page, 'user')
+  await page.goto('/workspace')
+  await page.getByTitle('查看阁主菜单').click()
+  await expect(page.getByRole('link', { name: /AI 设置/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: /账户与安全/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: /管理后台/ })).toHaveCount(0)
+  await expect(page.getByText('提示词用量', { exact: true })).toHaveCount(0)
+
+  await page.getByRole('link', { name: /AI 设置/ }).click()
+  await expect(page).toHaveURL(/\/settings\?tab=llm$/)
+  await expect(page.getByRole('dialog', { name: '个人设置' })).toHaveCount(0)
+
+  await page.getByTitle('查看阁主菜单').click()
+  await page.getByRole('link', { name: /账户与安全/ }).click()
+  await expect(page).toHaveURL(/\/account\/security$/)
+  await expect(page.getByRole('heading', { name: '账户与安全' })).toBeVisible()
+
+  await setAuthMode(page, 'admin')
+  await page.goto('/workspace')
+  await page.getByTitle('查看阁主菜单').click()
+  await page.getByRole('link', { name: /管理后台/ }).click()
+  await expect(page).toHaveURL(/\/admin$/)
+})
+
+test('设置分区支持深链接与浏览器前进后退', async ({ page }) => {
+  await setAuthMode(page, 'user')
+  await page.goto('/settings?tab=llm')
+  await page.getByRole('tab', { name: /记忆检索/ }).click()
+  await expect(page).toHaveURL(/\/settings\?tab=embedding$/)
+  await expect(page.getByRole('tab', { name: /记忆检索/ })).toHaveAttribute('aria-selected', 'true')
+
+  await page.goBack()
+  await expect(page).toHaveURL(/\/settings\?tab=llm$/)
+  await expect(page.getByRole('tab', { name: /文本生成/ })).toHaveAttribute('aria-selected', 'true')
+
+  await page.goForward()
+  await expect(page).toHaveURL(/\/settings\?tab=embedding$/)
+  await expectNoHorizontalOverflow(page)
+})

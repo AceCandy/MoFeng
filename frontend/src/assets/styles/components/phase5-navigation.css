@@ -328,7 +328,6 @@ body .app-shell__topbar {
   font-family: var(--md-font-label) !important;
   font-size: 0.92rem !important;
   font-weight: 600 !important;
-  animation: fadeIn 1.2s ease-out !important;
 }
 
 .welcome-spark {

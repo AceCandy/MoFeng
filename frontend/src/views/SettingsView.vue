@@ -1,13 +1,11 @@
 <!-- AIMETA P=设置页_用户设置|R=用户设置表单|NR=不含管理员设置|E=route:/settings#component:SettingsView|X=ui|A=设置表单|D=vue|S=dom,net|RD=./README.ai -->
 <template>
-  <div :class="{ 'app-page': !props.isModal, 'settings-page': true, 'is-in-modal': props.isModal }">
-    <section v-if="!props.isModal" class="settings-hero" aria-label="AI 能力中心总览">
+  <div class="app-page settings-page">
+    <section class="settings-hero" aria-label="AI 设置总览">
       <div class="settings-hero__copy">
-        <p class="settings-eyebrow">AI 能力中心</p>
-        <h1>模型、供应商与创作阶段路由</h1>
+        <h1>AI 设置</h1>
         <p>
-          统一维护你的文本生成、记忆检索和阶段路由策略，让每个创作环节都调用到合适的 AI
-          能力。
+          先完成文本生成与记忆检索，再按需调整语音朗读和阶段路由。
         </p>
       </div>
       <div class="settings-hero__status">
@@ -16,7 +14,7 @@
       </div>
     </section>
 
-    <section v-if="!props.isModal" class="settings-summary" aria-label="能力摘要">
+    <section class="settings-summary" aria-label="能力摘要">
       <article class="settings-summary__card">
         <p>主文本模型</p>
         <strong>{{ primaryChatModelLabel }}</strong>
@@ -29,7 +27,7 @@
       </article>
     </section>
 
-    <details v-if="!props.isModal" class="settings-metrics">
+    <details class="settings-metrics">
       <summary>
         <span>查看运行指标</span>
         <em>{{ enabledProviders }}/{{ providerCount }} 供应商已启用</em>
@@ -48,7 +46,7 @@
       </div>
     </details>
 
-    <section v-if="showInspirationConfigNotice && !props.isModal" class="md-card settings-notice">
+    <section v-if="showInspirationConfigNotice" class="md-card settings-notice">
       <p class="md-title-small">灵感模式需要先完成模型配置</p>
       <p class="md-body-small mt-1">
         请先在 <strong>文本生成</strong> 中启用模型并指定主模型，保存后会自动跳回灵感模式。
@@ -57,33 +55,36 @@
 
     <section class="settings-center" aria-label="能力配置面板">
       <nav class="settings-center__nav" aria-label="设置分区" role="tablist">
-        <button
-          v-for="section in settingsSections"
-          :key="section.id"
-          :ref="(el) => setSettingsTabRef(section.id, el)"
-          type="button"
-          class="settings-center__nav-item"
-          :class="{ 
-            'is-active': activeSettingsSection === section.id,
-            'nav-item-llm': section.id === 'llm',
-            'nav-item-embedding': section.id === 'embedding',
-            'nav-item-tts': section.id === 'tts',
-            'nav-item-routes': section.id === 'routes'
-          }"
-          :id="`settings-tab-${section.id}`"
-          role="tab"
-          :aria-selected="activeSettingsSection === section.id"
-          :tabindex="activeSettingsSection === section.id ? 0 : -1"
-          aria-controls="settings-panel"
-          :title="section.description"
-          @click="selectSettingsSection(section.id)"
-          @keydown="onSettingsTabKeydown(section.id, $event)"
-        >
-          <div>
-            <span class="settings-center__nav-item-label">{{ section.label }}</span>
-            <small>{{ section.description }}</small>
-          </div>
-        </button>
+        <div v-for="group in settingsGroups" :key="group.label" class="settings-center__nav-group" role="presentation">
+          <p class="settings-center__nav-group-label" aria-hidden="true">{{ group.label }}</p>
+          <button
+            v-for="section in group.sections"
+            :key="section.id"
+            :ref="(el) => setSettingsTabRef(section.id, el)"
+            type="button"
+            class="settings-center__nav-item"
+            :class="{
+              'is-active': activeSettingsSection === section.id,
+              'nav-item-llm': section.id === 'llm',
+              'nav-item-embedding': section.id === 'embedding',
+              'nav-item-tts': section.id === 'tts',
+              'nav-item-routes': section.id === 'routes'
+            }"
+            :id="`settings-tab-${section.id}`"
+            role="tab"
+            :aria-selected="activeSettingsSection === section.id"
+            :tabindex="activeSettingsSection === section.id ? 0 : -1"
+            aria-controls="settings-panel"
+            :title="section.description"
+            @click="selectSettingsSection(section.id)"
+            @keydown="onSettingsTabKeydown(section.id, $event)"
+          >
+            <div>
+              <span class="settings-center__nav-item-label">{{ section.label }}</span>
+              <small>{{ section.description }}</small>
+            </div>
+          </button>
+        </div>
       </nav>
 
       <section
@@ -96,7 +97,6 @@
           v-if="activeSettingsSection === 'llm'"
           ref="personalRoutingXRef"
           active-section="llm"
-          :is-modal="props.isModal"
           @saved="handleLLMConfigSaved"
           @navigate="selectSettingsSection"
         />
@@ -104,7 +104,6 @@
           v-else-if="activeSettingsSection === 'embedding'"
           ref="personalRoutingXRef"
           active-section="embedding"
-          :is-modal="props.isModal"
           @saved="handleLLMConfigSaved"
           @navigate="selectSettingsSection"
         />
@@ -112,7 +111,6 @@
           v-else-if="activeSettingsSection === 'tts'"
           ref="personalRoutingXRef"
           active-section="tts"
-          :is-modal="props.isModal"
           @saved="handleLLMConfigSaved"
           @navigate="selectSettingsSection"
         />
@@ -120,7 +118,6 @@
           v-else
           ref="personalRoutingXRef"
           active-section="routes"
-          :is-modal="props.isModal"
           @saved="handleLLMConfigSaved"
           @navigate="selectSettingsSection"
         />
@@ -136,19 +133,6 @@ import PersonalModelRouting from '@/components/llm-settings/PersonalModelRouting
 import { globalAlert } from '@/composables/useAlert'
 import { useLLMConfigBundleQuery } from '@/queries/llm'
 
-const props = withDefaults(
-  defineProps<{
-    isModal?: boolean
-  }>(),
-  {
-    isModal: false,
-  }
-)
-
-const emit = defineEmits<{
-  (e: 'saved'): void
-}>()
-
 type SettingsSectionId = 'llm' | 'embedding' | 'tts' | 'routes'
 
 interface SettingsSection {
@@ -161,21 +145,30 @@ const route = useRoute()
 const router = useRouter()
 const bundleQuery = useLLMConfigBundleQuery()
 
-const settingsSections: SettingsSection[] = [
-  { id: 'llm', label: '文本生成', description: '供应商、模型拉取与主模型' },
-  { id: 'embedding', label: '记忆检索', description: '向量供应商与唯一检索模型' },
-  { id: 'tts', label: '语音朗读', description: '朗读模型、音色与语速' },
-  { id: 'routes', label: '阶段路由', description: '按创作阶段覆盖主模型' },
+const settingsGroups: Array<{ label: string; sections: SettingsSection[] }> = [
+  {
+    label: '基础能力',
+    sections: [
+      { id: 'llm', label: '文本生成', description: '供应商、模型拉取与主模型' },
+      { id: 'embedding', label: '记忆检索', description: '向量供应商与唯一检索模型' },
+    ],
+  },
+  {
+    label: '高级能力',
+    sections: [
+      { id: 'tts', label: '语音朗读', description: '默认朗读模型' },
+      { id: 'routes', label: '阶段路由', description: '按创作阶段覆盖主模型' },
+    ],
+  },
 ]
+const settingsSections = settingsGroups.flatMap((group) => group.sections)
 
 const resolveSettingsSection = (value: unknown): SettingsSectionId =>
   typeof value === 'string' && settingsSections.some((section) => section.id === value)
     ? value as SettingsSectionId
     : 'llm'
 
-const activeSettingsSection = ref<SettingsSectionId>(
-  props.isModal ? 'llm' : resolveSettingsSection(route.query.tab),
-)
+const activeSettingsSection = ref<SettingsSectionId>(resolveSettingsSection(route.query.tab))
 const personalRoutingXRef = ref<InstanceType<typeof PersonalModelRouting> | null>(null)
 const isDirty = computed(() => personalRoutingXRef.value?.isDirty ?? false)
 const settingsTabRefs = ref<Record<SettingsSectionId, HTMLButtonElement | null>>({
@@ -196,16 +189,14 @@ const selectSettingsSection = async (sectionId: SettingsSectionId) => {
   if (sectionId === activeSettingsSection.value) return true
   if (!(await confirmDiscardChanges())) return false
   activeSettingsSection.value = sectionId
-  if (!props.isModal) {
-    await router.replace({ name: 'settings', query: { ...route.query, tab: sectionId } })
-  }
+  await router.push({ name: 'settings', query: { ...route.query, tab: sectionId } })
   return true
 }
 
 watch(
   () => route.query.tab,
   (tab) => {
-    if (!props.isModal) activeSettingsSection.value = resolveSettingsSection(tab)
+    activeSettingsSection.value = resolveSettingsSection(tab)
   },
 )
 
@@ -324,30 +315,21 @@ const centerStatus = computed(() => {
     }
   }
 
-  if (stageRouteCount.value === 0) {
+  if (enabledEmbeddingModels.value === 0) {
     return {
-      label: '基础可用',
-      description: '你已可以创作，建议补充阶段路由以提升不同任务的模型匹配度。',
-      tone: 'focus' as const,
+      label: '基础待完善',
+      description: '文本生成已可用，配置记忆检索模型后可完成基础设置。',
+      tone: 'warning' as const,
     }
   }
 
   return {
-    label: '能力就绪',
-    description: '主模型、检索模型和阶段路由已配置，可直接进入高强度创作。',
+    label: '基础就绪',
+    description: stageRouteCount.value === 0
+      ? '文本生成和记忆检索已可用，高级能力可按需配置。'
+      : '文本生成、记忆检索和阶段路由已就绪。',
     tone: 'success' as const,
   }
-})
-
-const save = async () => {
-  if (personalRoutingXRef.value && typeof personalRoutingXRef.value.save === 'function') {
-    await personalRoutingXRef.value.save()
-  }
-}
-
-defineExpose({
-  save,
-  isDirty,
 })
 
 const onBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -360,19 +342,16 @@ onMounted(() => window.addEventListener('beforeunload', onBeforeUnload))
 onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload))
 onBeforeRouteUpdate((to) => {
   const nextSection = resolveSettingsSection(to.query.tab)
-  if (props.isModal || nextSection === activeSettingsSection.value) return true
+  if (nextSection === activeSettingsSection.value) return true
   return confirmDiscardChanges()
 })
 onBeforeRouteLeave(() => confirmDiscardChanges())
 
 const handleLLMConfigSaved = async () => {
-  emit('saved')
   if (!showInspirationConfigNotice.value) {
     return
   }
-  if (!props.isModal) {
-    await router.push('/inspiration')
-  }
+  await router.push('/inspiration')
 }
 </script>
 
@@ -398,16 +377,8 @@ const handleLLMConfigSaved = async () => {
   box-shadow: var(--md-elevation-paper-1) !important;
 }
 
-.settings-eyebrow {
-  margin: 0;
-  color: var(--md-on-surface-variant);
-  font-size: 12px; /* 宋体题签：小字重签条 */
-  font-weight: 600;
-  letter-spacing: 0.04em;
-}
-
 .settings-hero h1 {
-  margin: 10px 0 0;
+  margin: 0;
   color: var(--md-on-surface);
   font-size: clamp(1.4rem, 2vw, 1.95rem);
   font-family: var(--md-font-serif) !important;
@@ -610,6 +581,25 @@ const handleLLMConfigSaved = async () => {
   gap: var(--md-spacing-2);
 }
 
+.settings-center__nav-group {
+  display: grid;
+  gap: var(--md-spacing-2);
+}
+
+.settings-center__nav-group + .settings-center__nav-group {
+  margin-top: var(--md-spacing-2);
+  padding-top: var(--md-spacing-3);
+  border-top: 1px solid var(--md-outline-variant);
+}
+
+.settings-center__nav-group-label {
+  margin: 0;
+  padding: 0 var(--md-spacing-3);
+  color: var(--md-on-surface-variant);
+  font-size: var(--md-label-small);
+  font-weight: 700;
+}
+
 .settings-center__nav-item {
   display: flex;
   flex-direction: row;
@@ -744,7 +734,15 @@ const handleLLMConfigSaved = async () => {
 
   .settings-center__nav {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .settings-center__nav-group + .settings-center__nav-group {
+    margin-top: 0;
+    padding-top: 0;
+    padding-left: var(--md-spacing-2);
+    border-top: 0;
+    border-left: 1px solid var(--md-outline-variant);
   }
 }
 
@@ -770,10 +768,6 @@ const handleLLMConfigSaved = async () => {
 
   .settings-metrics__grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .settings-center__nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .settings-center__nav-item {
@@ -804,6 +798,14 @@ const handleLLMConfigSaved = async () => {
 @media (max-width: 680px) {
   .settings-center__nav {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings-center__nav-group + .settings-center__nav-group {
+    margin-top: var(--md-spacing-2);
+    padding-top: var(--md-spacing-3);
+    padding-left: 0;
+    border-top: 1px solid var(--md-outline-variant);
+    border-left: 0;
   }
 }
 

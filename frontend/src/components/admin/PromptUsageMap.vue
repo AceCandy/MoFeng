@@ -16,7 +16,7 @@
       </div>
     </header>
 
-    <div class="prompt-usage__summary" aria-label="提示词关系统计">
+    <div class="prompt-usage__summary" role="group" aria-label="提示词关系统计">
       <div class="prompt-usage__stat">
         <span>调用点</span>
         <strong>{{ PROMPT_USAGE_ITEMS.length }}</strong>
@@ -251,6 +251,7 @@ const groupedUsageItems = computed(() => {
 const refetchPrompts = () => {
   void promptsQuery.refetch()
 }
+
 </script>
 
 <style scoped>

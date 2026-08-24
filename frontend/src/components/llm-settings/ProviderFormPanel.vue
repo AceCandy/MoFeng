@@ -63,16 +63,7 @@
         />
       </label>
 
-      <!-- 启用开关 + 保存：edit 包在 inline-form-footer（flex 两端对齐），create 平铺为 .form 的 grid 项 -->
-      <div v-if="!isCreate" class="model-routing__inline-form-footer">
-        <label class="model-routing__check">
-          <input
-            :checked="providerForm.is_enabled"
-            type="checkbox"
-            @change="onCheck('is_enabled', $event)"
-          />
-          <span>启用供应商</span>
-        </label>
+      <div class="model-routing__form-actions">
         <button
           type="button"
           class="md-btn md-btn-filled md-ripple"
@@ -82,24 +73,6 @@
           {{ isSavingProvider ? '保存中...' : '保存供应商' }}
         </button>
       </div>
-      <template v-else>
-        <label class="model-routing__check">
-          <input
-            :checked="providerForm.is_enabled"
-            type="checkbox"
-            @change="onCheck('is_enabled', $event)"
-          />
-          <span>启用供应商</span>
-        </label>
-        <button
-          type="button"
-          class="md-btn md-btn-filled md-ripple"
-          :disabled="isSavingProvider"
-          @click="emit('save')"
-        >
-          {{ isSavingProvider ? '保存中...' : '保存供应商' }}
-        </button>
-      </template>
     </div>
   </section>
 </template>
@@ -128,9 +101,6 @@ const onTextInput = (field: keyof ProviderForm, event: Event) => {
   emit('update-field', field, (event.target as HTMLInputElement).value)
 }
 
-const onCheck = (field: keyof ProviderForm, event: Event) => {
-  emit('update-field', field, (event.target as HTMLInputElement).checked)
-}
 </script>
 
 <style scoped>
@@ -156,22 +126,6 @@ const onCheck = (field: keyof ProviderForm, event: Event) => {
 .model-routing__form-head h3 {
   margin: 0;
   color: var(--md-on-surface);
-}
-
-.model-routing__check {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--md-spacing-2);
-  color: var(--md-on-surface);
-  font-size: var(--md-body-medium);
-  min-height: 44px;
-  cursor: pointer;
-}
-
-.model-routing__check input {
-  width: 20px;
-  height: 20px;
-  flex: 0 0 auto;
 }
 
 /* edit 行内表单 */
@@ -212,10 +166,10 @@ const onCheck = (field: keyof ProviderForm, event: Event) => {
   position: relative;
 }
 
-.model-routing__inline-form-footer {
+.model-routing__form-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   margin-top: var(--md-spacing-2);
   gap: var(--md-spacing-3);
   flex-wrap: wrap;
@@ -234,7 +188,7 @@ const onCheck = (field: keyof ProviderForm, event: Event) => {
 
   .model-routing__inline-form > .md-text-field:nth-child(3), /* API URL */
   .model-routing__inline-form > .md-text-field:nth-child(4), /* API Key */
-  .model-routing__inline-form-footer {
+  .model-routing__form-actions {
     grid-column: 1 / -1 !important;
   }
 }

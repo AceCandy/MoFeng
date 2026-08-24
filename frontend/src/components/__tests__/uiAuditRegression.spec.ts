@@ -66,8 +66,7 @@ describe('UI audit regressions', () => {
   it('gives model routing controls unique accessible names', () => {
     // 阶段路由分区（含 stage.label aria-label）已抽离到 RoutingStagesPanel.vue（Slice 9）
     const stagesPanel = readSource('src/components/llm-settings/RoutingStagesPanel.vue')
-    // 模型拉取弹窗（含各能力 aria-label）已抽离到 ModelPickerDialog.vue（Slice 12）
-    const modelPicker = readSource('src/components/llm-settings/ModelPickerDialog.vue')
+    const modelPicker = readSource('src/components/llm-settings/ModelPickerPanel.vue')
 
     expect(stagesPanel).toContain(':aria-label="`${stage.label} 模型路由`"')
     expect(stagesPanel).toContain(':aria-label="`${node.label} 模型路由`"')
@@ -238,6 +237,12 @@ describe('UI audit regressions', () => {
     expect(source).toContain('aria-controls="app-shell-user-menu"')
     expect(source).toContain('@keydown.esc.stop.prevent="closeUserDropdown(true)"')
     expect(source).toContain('id="app-shell-user-menu"')
+    expect(source).toContain('<span class="item-title">AI 设置</span>')
+    expect(source).toContain('<span class="item-title">账户与安全</span>')
+    expect(source).toContain('<span class="item-title">管理后台</span>')
+    expect(source).not.toContain('<span class="item-title">提示词用量</span>')
+    expect(source).not.toContain('showSettingsModal')
+    expect(source).not.toContain('<SettingsView')
     expect(source).not.toContain('href="javascript:void(0)"')
     expect(source).not.toContain('role="button"')
   })
@@ -255,7 +260,7 @@ describe('UI audit regressions', () => {
     expect(workspaceSource).toContain('<h1>{{ continueProject')
     expect(inspirationSource).toContain('<h1 class="md-label-large inspiration-chat__title">')
     expect(confirmationSource).toContain('<h1 class="blueprint-confirm__title">')
-    expect(settingsSource).toContain('<h1>模型、供应商与创作阶段路由</h1>')
+    expect(settingsSource).toContain('<h1>AI 设置</h1>')
     expect(writingChapterMetaSource).toContain(
       '<h1 class="md-title-large font-semibold writing-workspace__chapter-no">',
     )
@@ -449,7 +454,7 @@ describe('UI audit regressions', () => {
 
     expect(settingsSource).toContain('confirmDiscardChanges')
     expect(settingsSource).toContain('resolveSettingsSection(route.query.tab)')
-    expect(settingsSource).toContain("router.replace({ name: 'settings'")
+    expect(settingsSource).toContain("router.push({ name: 'settings'")
     expect(settingsSource).toContain('onBeforeRouteLeave')
     expect(settingsSource).toContain("window.addEventListener('beforeunload', onBeforeUnload)")
     expect(promptSource).toContain('const isDirty = computed')
@@ -461,6 +466,24 @@ describe('UI audit regressions', () => {
     expect(promptSource).toContain('aria-label="添加 Prompt 标签"')
     expect(adminSource).toContain('onBeforeRouteUpdate')
     expect(adminSource).toContain('onBeforeRouteLeave')
+  })
+
+  it('routes settings, account security, and prompt usage without business modals', () => {
+    const routerSource = readSource('src/router/index.ts')
+    const loginSource = readSource('src/views/Login.vue')
+    const adminSource = readSource('src/views/AdminView.vue')
+    const pickerSource = readSource('src/components/llm-settings/ModelPickerPanel.vue')
+
+    expect(routerSource).toContain("path: '/account/security'")
+    expect(routerSource).toContain("name: 'account-security'")
+    expect(routerSource).toContain("to.name !== 'account-security'")
+    expect(routerSource).toContain("return { name: 'account-security' }")
+    expect(loginSource).toContain("router.push({ name: 'account-security' })")
+    expect(adminSource).toContain("'prompt-usage': createAsyncSection")
+    expect(adminSource).toContain("{ key: 'prompt-usage', label: '提示词用量'")
+    expect(pickerSource).not.toContain('<Teleport')
+    expect(pickerSource).not.toContain('role="dialog"')
+    expect(pickerSource).toContain('class="model-routing__model-picker"')
   })
 
   it('confirms destructive account and inspiration actions before mutation', () => {

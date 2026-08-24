@@ -8,7 +8,6 @@
       </div>
       <div class="model-routing__topbar-actions">
         <button
-          v-if="!props.isModal"
           type="button"
           class="md-btn md-btn-outlined md-ripple"
           :disabled="isLoading"
@@ -17,7 +16,7 @@
           {{ isLoading ? '刷新中...' : '刷新' }}
         </button>
         <button
-          v-if="activeSection === 'routes' && !props.isModal"
+          v-if="activeSection === 'routes'"
           type="button"
           class="md-btn md-btn-tonal md-ripple"
           :disabled="isSavingRoutes"
@@ -26,7 +25,7 @@
           {{ isSavingRoutes ? '保存中...' : '保存阶段路由' }}
         </button>
         <button
-          v-else-if="activeSection !== 'routes'"
+          v-else-if="activeProviders.length > 0"
           type="button"
           class="md-btn md-btn-filled md-ripple"
           @click="beginCreateProvider"
@@ -93,29 +92,26 @@
             @open-picker="(event) => openProviderModelPicker(provider, event)"
             @delete-model="(modelName) => deleteModelForActiveSection(provider, modelName)"
           />
-          <ModelPickerDialog
+          <ModelPickerPanel
             v-if="isModelPickerOpen(provider.id) && !(providerFormMode === 'edit' && editingProviderId === provider.id)"
             :provider="provider"
             :active-section="activeSection"
-            :model-picker-style="modelPickerStyle"
             :is-saving-picker="isSavingPicker"
             :is-chat-picker-dirty="isChatPickerDirty"
             :model-picker-query="modelPickerQuery"
             :pending-chat-model-names="pendingChatModelNames"
-            :pending-tts-model-name="pendingTTSModelName"
             :filtered-model-names-for-provider="filteredModelNamesForProvider"
             :is-model-selected-for-active-section="isModelSelectedForActiveSection"
             :active-model-state-label="activeModelStateLabel"
             :saved-model-for-active-section="savedModelForActiveSection"
             :provider-fetch-state="providerFetchState"
-            :set-model-picker-dialog-ref="setModelPickerDialogRef"
             :set-model-picker-search-input-ref="setModelPickerSearchInputRef"
             @update-query="modelPickerQuery = $event"
             @toggle-chat="(modelName, event) => togglePendingChatModel(provider, modelName, event)"
             @select-embedding="(modelName) => selectEmbeddingModel(provider, modelName)"
             @select-tts="(modelName) => selectPendingTTSModel(provider, modelName)"
             @save="() => savePickerSelections(provider)"
-            @close="closeModelPicker"
+            @close="requestCloseModelPicker"
           />
         </template>
       </div>
@@ -155,7 +151,7 @@ import ReadinessPanel from './ReadinessPanel.vue'
 import RoutingStagesPanel from './RoutingStagesPanel.vue'
 import ProviderFormPanel from './ProviderFormPanel.vue'
 import PrimaryModelPanel from './PrimaryModelPanel.vue'
-import ModelPickerDialog from './ModelPickerDialog.vue'
+import ModelPickerPanel from './ModelPickerPanel.vue'
 import SelectedModelChips from './SelectedModelChips.vue'
 import ProviderCard from './ProviderCard.vue'
 import type {
@@ -168,16 +164,9 @@ const emit = defineEmits<{
   (event: 'navigate', section: RoutingSection): void
 }>()
 
-const props = withDefaults(
-  defineProps<{
-    activeSection?: RoutingSection
-    isModal?: boolean
-  }>(),
-  {
-    activeSection: 'llm',
-    isModal: false,
-  }
-)
+const props = withDefaults(defineProps<{ activeSection?: RoutingSection }>(), {
+  activeSection: 'llm',
+})
 
 const activeSection = computed<RoutingSection>(() => props.activeSection || 'llm')
 
@@ -234,7 +223,7 @@ const {
   allStageKeys,
   syncRouteSelectionsFromBundle,
   saveRoutes,
-  isDirty,
+  isDirty: isStageRoutesDirty,
 } = useStageRoutes({
   bundleQuery,
   saveStageRoutesMutation,
@@ -272,12 +261,12 @@ const {
   pendingTTSModelName,
   isSavingPicker,
   isModelPickerOpen,
-  modelPickerStyle,
   isChatPickerDirty,
-  setModelPickerDialogRef,
+  isTTSPickerDirty,
   setModelPickerSearchInputRef,
   openProviderModelPicker,
   closeModelPicker,
+  requestCloseModelPicker,
 } = useModelPicker({
   models,
   activeSection,
@@ -286,6 +275,10 @@ const {
   ttsModelsByProvider,
   activeProviders,
 })
+
+const isDirty = computed(
+  () => isStageRoutesDirty.value || isChatPickerDirty.value || isTTSPickerDirty.value,
+)
 
 const {
   modelNamesForProvider,

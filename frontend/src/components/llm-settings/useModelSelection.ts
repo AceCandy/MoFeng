@@ -141,6 +141,9 @@ export const useModelSelection = (options: UseModelSelectionOptions) => {
     if (activeSection.value === 'llm' && activeModelPickerProviderId.value === providerId) {
       return pendingChatModelNames.value.has(modelName)
     }
+    if (activeSection.value === 'tts' && activeModelPickerProviderId.value === providerId) {
+      return pendingTTSModelName.value === modelName
+    }
     return Boolean(savedModelForActiveSection(providerId, modelName)?.is_enabled)
   }
 

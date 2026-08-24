@@ -16,20 +16,9 @@ import {
 import { useTasksQuery, useTaskStream } from '@/queries/tasks'
 import { useNovelStore } from '@/stores/novel'
 import GlobalModalContainer from '@/components/shared/GlobalModalContainer.vue'
-import { globalAlert } from '@/composables/useAlert'
-
-const SettingsView = defineAsyncComponent(() => import('@/views/SettingsView.vue'))
-const AdminView = defineAsyncComponent(() => import('@/views/AdminView.vue'))
-const PromptUsageMap = defineAsyncComponent(() => import('@/components/admin/PromptUsageMap.vue'))
-const PasswordManagement = defineAsyncComponent(() => import('@/components/admin/PasswordManagement.vue'))
 const TaskLogPanel = defineAsyncComponent(() => import('@/components/shared/TaskLogPanel.vue'))
 
-const showSettingsModal = ref(false)
-const showAdminModal = ref(false)
-const showPromptUsageModal = ref(false)
-const showPasswordModal = ref(false)
 const showTaskLogModal = ref(false)
-const adminInitialTab = ref('statistics')
 
 const route = useRoute()
 const router = useRouter()
@@ -299,69 +288,6 @@ const handleClickOutside = (event: MouseEvent) => {
   }
 }
 
-const settingsViewRef = ref<any>(null)
-const isSavingSettings = ref(false)
-// 仅「存」按钮触发的保存才关闭弹窗；删除模型、改定价等行内自动保存也会冒泡 saved，不得关窗
-const closeSettingsOnSaved = ref(false)
-
-const triggerSettingsSave = async () => {
-  if (settingsViewRef.value) {
-    isSavingSettings.value = true
-    closeSettingsOnSaved.value = true
-    try {
-      await settingsViewRef.value.save()
-    } catch (err) {
-      console.error('配置保存失败:', err)
-    } finally {
-      isSavingSettings.value = false
-      closeSettingsOnSaved.value = false
-    }
-  }
-}
-
-const handleSettingsSaved = () => {
-  if (closeSettingsOnSaved.value) {
-    showSettingsModal.value = false
-  }
-}
-
-const handleCloseSettingsModal = async () => {
-  const isDirty = settingsViewRef.value?.isDirty
-  if (isDirty) {
-    const confirmed = await globalAlert.showConfirm(
-      '案头仍有未保存的配置底墨，此时离席将丢弃修改，是否确定关闭？',
-      '未保存确认'
-    )
-    if (!confirmed) {
-      return
-    }
-  }
-  showSettingsModal.value = false
-}
-
-const openAdminModal = (tab: string = 'statistics') => {
-  adminInitialTab.value = tab
-  showAdminModal.value = true
-  showPromptUsageModal.value = false
-  isUserDropdownOpen.value = false
-}
-
-const openPromptUsageModal = () => {
-  showPromptUsageModal.value = true
-  showAdminModal.value = false
-  isUserDropdownOpen.value = false
-}
-
-const openPromptEditor = () => {
-  openAdminModal('prompts')
-}
-
-const passwordManagementRef = ref<any>(null)
-const isSavingPassword = computed(() => passwordManagementRef.value?.submitting ?? false)
-const triggerPasswordSave = () => {
-  passwordManagementRef.value?.submit()
-}
-
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
 })
@@ -616,63 +542,45 @@ onUnmounted(() => {
               >
                 <div class="app-shell__user-dropdown-header">账户</div>
                 <div class="app-shell__user-dropdown-list">
-                  <!-- 系统管理配置 -->
-                  <button
-                    v-if="authStore.user?.is_admin"
-                    type="button"
+                  <RouterLink
+                    :to="{ name: 'settings', query: { tab: 'llm' } }"
                     class="app-shell__user-dropdown-item"
-                    :class="{ 'is-active': showAdminModal }"
-                    @click="openAdminModal()"
-                  >
-                    <span class="app-shell__action-badge is-admin">司</span>
-                    <div class="item-text">
-                      <span class="item-title">系统管理</span>
-                      <span class="item-desc">配置全局与用户权限</span>
-                    </div>
-                  </button>
-
-                  <!-- 提示词阶段关系 -->
-                  <button
-                    v-if="authStore.user?.is_admin"
-                    type="button"
-                    class="app-shell__user-dropdown-item"
-                    :class="{ 'is-active': showPromptUsageModal }"
-                    @click="openPromptUsageModal"
-                  >
-                    <span class="app-shell__action-badge is-prompt">妙</span>
-                    <div class="item-text">
-                      <span class="item-title">提示词用量</span>
-                      <span class="item-desc">查看阶段与 Prompt 关系</span>
-                    </div>
-                  </button>
-
-                  <!-- 配置个人 AI 模型 -->
-                  <button
-                    type="button"
-                    class="app-shell__user-dropdown-item"
-                    :class="{ 'is-active': showSettingsModal }"
-                    @click="showSettingsModal = true; isUserDropdownOpen = false"
+                    :class="{ 'is-active': route.name === 'settings' }"
+                    @click="closeUserDropdown()"
                   >
                     <span class="app-shell__action-badge is-settings">乾</span>
                     <div class="item-text">
-                      <span class="item-title">个人设置</span>
+                      <span class="item-title">AI 设置</span>
                       <span class="item-desc">配置个人 AI 模型</span>
                     </div>
-                  </button>
+                  </RouterLink>
 
-                  <!-- 修改个人密码 -->
-                  <button
-                    type="button"
+                  <RouterLink
+                    :to="{ name: 'account-security' }"
                     class="app-shell__user-dropdown-item"
-                    :class="{ 'is-active': showPasswordModal }"
-                    @click="showPasswordModal = true; isUserDropdownOpen = false"
+                    :class="{ 'is-active': route.name === 'account-security' }"
+                    @click="closeUserDropdown()"
                   >
                     <span class="app-shell__action-badge is-password">密</span>
                     <div class="item-text">
-                      <span class="item-title">修改密码</span>
+                      <span class="item-title">账户与安全</span>
                       <span class="item-desc">更新登录密码</span>
                     </div>
-                  </button>
+                  </RouterLink>
+
+                  <RouterLink
+                    v-if="authStore.user?.is_admin"
+                    :to="{ name: 'admin' }"
+                    class="app-shell__user-dropdown-item"
+                    :class="{ 'is-active': route.name === 'admin' }"
+                    @click="closeUserDropdown()"
+                  >
+                    <span class="app-shell__action-badge is-admin">司</span>
+                    <div class="item-text">
+                      <span class="item-title">管理后台</span>
+                      <span class="item-desc">管理系统与用户权限</span>
+                    </div>
+                  </RouterLink>
 
                   <div class="app-shell__user-dropdown-divider"></div>
 
@@ -713,7 +621,7 @@ onUnmounted(() => {
       </main>
     </div>
 
-    <!-- 全局模型设置与系统管理大弹窗 (案头折纸折子戏) -->
+    <!-- 任务日志是短时反馈，保留全局弹窗宿主。 -->
     <Teleport to="body">
       <GlobalModalContainer
         v-if="showTaskLogModal"
@@ -729,67 +637,6 @@ onUnmounted(() => {
         />
       </GlobalModalContainer>
 
-      <GlobalModalContainer
-        v-if="showSettingsModal"
-        title="个人设置"
-        badge-text="乾"
-        @close="handleCloseSettingsModal"
-      >
-        <template #header-actions>
-          <!-- 极具金石质感的「存」字朱红方章保存按钮 -->
-          <button
-            type="button"
-            class="m3-ink-modal-save-badge-btn"
-            :title="isSavingSettings ? '正在保存中...' : '保存当前案头配置'"
-            :disabled="isSavingSettings"
-            @click="triggerSettingsSave"
-          >
-            存
-          </button>
-        </template>
-        <SettingsView ref="settingsViewRef" :is-modal="true" @saved="handleSettingsSaved" />
-      </GlobalModalContainer>
-
-      <GlobalModalContainer
-        v-if="showAdminModal"
-        title="系统管理"
-        badge-text="司"
-        @close="showAdminModal = false"
-      >
-        <AdminView :is-modal="true" :initial-tab="adminInitialTab" />
-      </GlobalModalContainer>
-
-      <GlobalModalContainer
-        v-if="showPromptUsageModal"
-        title="提示词用量"
-        badge-text="妙"
-        width="min(94vw, 1180px)"
-        @close="showPromptUsageModal = false"
-      >
-        <PromptUsageMap @open-prompt-editor="openPromptEditor" />
-      </GlobalModalContainer>
-
-      <GlobalModalContainer
-        v-if="showPasswordModal"
-        title="修改密码"
-        badge-text="密"
-        width="min(90vw, 540px)"
-        @close="showPasswordModal = false"
-      >
-        <template #header-actions>
-          <!-- 极具金石质感的「契」字朱红方章保存按钮 -->
-          <button
-            type="button"
-            class="m3-ink-modal-save-badge-btn"
-            title="确认更替密契"
-            :disabled="isSavingPassword"
-            @click="triggerPasswordSave"
-          >
-            契
-          </button>
-        </template>
-        <PasswordManagement ref="passwordManagementRef" :is-modal="true" @saved="showPasswordModal = false" />
-      </GlobalModalContainer>
     </Teleport>
 
 
