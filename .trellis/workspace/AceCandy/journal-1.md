@@ -1928,3 +1928,24 @@ Unified the frontend on one warm-paper light theme, removed dark-theme runtime a
 ### Status
 
 [OK] **Completed**
+
+
+## Session 71: 收口全局设置导航与页面配置
+
+**Date**: 2026-08-24
+**Task**: 收口全局设置导航与页面配置
+**Branch**: `main`
+
+### Summary
+
+将账户菜单改为稳定路由入口，页面化 AI 设置、账户安全与管理后台；内联模型选择并统一未保存保护，完成桌面与移动端回归、可访问性、单测和构建预算验证。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0cc9f33` | (see git log) |
+
+### Status
+
+[OK] **Completed**
