@@ -150,33 +150,14 @@
         </div>
       </div>
 
-      <div class="workspace-hero__snapshot">
-        <template v-if="projectsLoading">
-          <span class="workspace-hero__loading-line workspace-hero__loading-line--snapshot"></span>
-          <span
-            class="workspace-hero__loading-line workspace-hero__loading-line--snapshot is-short"
-          ></span>
-          <span
-            class="workspace-hero__loading-line workspace-hero__loading-line--snapshot is-shorter"
-          ></span>
-        </template>
-        <template v-else>
-          <span>创作中 <strong>{{ sortedProjects.length }}</strong> 个项目</span>
-          <span aria-hidden="true">·</span>
-          <span>待推进 <strong>{{ pendingChapters }}</strong> 章</span>
-          <span aria-hidden="true">·</span>
-          <span>最近编辑 <strong>{{ recentEditedProjects.length }}</strong> 个项目</span>
-        </template>
-      </div>
     </section>
-
 
 
     <section class="workspace-archive" aria-label="项目档案库">
       <div class="workspace-archive__head">
         <div>
           <p class="workspace-eyebrow">项目档案</p>
-          <h3>小说项目库</h3>
+          <h2>小说项目库</h2>
         </div>
         <span class="workspace-chip">{{ sortedProjects.length }} 个项目</span>
       </div>
@@ -400,15 +381,6 @@ const continueProgress = computed(() => {
 })
 const continueProgressScale = computed(() => Math.max(0, Math.min(100, continueProgress.value)) / 100)
 
-const recentEditedProjects = computed(() => sortedProjects.value.slice(0, 5))
-
-const pendingChapters = computed(() => {
-  return sortedProjects.value.reduce((sum, project) => {
-    const remaining = Math.max(project.total_chapters - project.completed_chapters, 0)
-    return sum + remaining
-  }, 0)
-})
-
 const todayGoal = computed(() => {
   if (!continueProject.value) {
     return {
@@ -538,15 +510,12 @@ onUnmounted(() => {
   gap: clamp(var(--md-spacing-6), 4vw, var(--md-spacing-10));
 }
 
-/* 暖纸长卷：素骨底 + 书名区暖色轻晕 + 四缘老宣层次，多层 background 一次绘成。
-   构图：底缘下方预留落款签骑缝位（padding-bottom 加破带量，margin-bottom 预留签条下半身的落纸空间） */
+/* 暖纸长卷：素骨底 + 书名区暖色轻晕 + 四缘老宣层次，多层 background 一次绘成。 */
 .workspace-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
   gap: var(--md-spacing-5) var(--md-spacing-8);
   padding: clamp(var(--md-spacing-6), 3vw, var(--md-spacing-8)) clamp(var(--md-spacing-8), 5vw, var(--md-spacing-10)); /* 左右 ≥32px，案头内缩留白 */
-  padding-bottom: calc(clamp(var(--md-spacing-6), 3vw, var(--md-spacing-8)) + 40px); /* 底缘内让出骑缝签条上半身 */
-  margin-bottom: 32px; /* 签条破带下半身落纸的预留空位，防压档案区 */
   border-radius: var(--md-radius-xs) !important; /* 微直角方章 */
   background:
     /* 书名区后方一团暖灯晕（暖纸色径向光，大面积低透明） */
@@ -771,19 +740,6 @@ onUnmounted(() => {
   height: 1rem;
 }
 
-.workspace-hero__loading-line--snapshot {
-  width: min(18rem, 100%);
-  height: 2rem;
-}
-
-.workspace-hero__loading-line--snapshot.is-short {
-  width: min(14rem, 86%);
-}
-
-.workspace-hero__loading-line--snapshot.is-shorter {
-  width: min(11rem, 72%);
-}
-
 @keyframes ink-skeleton-breath {
   0%, 100% {
     opacity: 0.38;
@@ -905,39 +861,6 @@ onUnmounted(() => {
   }
 }
 
-/* 创作快照：一枚熟宣落款签条骑跨长卷底缘，缝合长卷与下方档案区 */
-.workspace-hero__snapshot {
-  position: absolute;
-  left: clamp(var(--md-spacing-8), 5vw, var(--md-spacing-10)); /* 与 hero 横 padding 对齐 */
-  right: clamp(var(--md-spacing-8), 5vw, var(--md-spacing-10));
-  bottom: 0;
-  transform: translateY(50%); /* 骑缝：一半压住长卷，一半落入档案区 */
-  z-index: 1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--md-spacing-2);
-  padding: 10px var(--md-spacing-4);
-  border: 1px solid var(--md-jiege); /* 界格发线 */
-  border-radius: var(--md-radius-xs);
-  background-color: var(--md-surface); /* 熟宣签面 */
-  box-shadow: var(--md-elevation-paper-1); /* 熟宣柔影 */
-  color: var(--md-on-surface-variant);
-  font-size: var(--md-label-medium);
-  line-height: 1.5;
-}
-
-/* 骑缝签上的数字用落墨色：破带处在纸底上必须可读 */
-.workspace-hero__snapshot strong {
-  color: var(--md-luomo);
-  font-size: var(--md-title-small);
-}
-
-/* 破带签落在纸世界，内部骨架条跟随纸面灰 */
-.workspace-hero .workspace-hero__snapshot .workspace-hero__loading-line {
-  background: var(--md-surface-container-high) !important;
-}
-
 .workspace-archive {
   border: 1px solid var(--md-jiege); /* 界格发线 */
   border-radius: var(--md-radius-xs) !important; /* 微直角方章 */
@@ -954,7 +877,7 @@ onUnmounted(() => {
   gap: var(--md-spacing-3);
 }
 
-.workspace-archive__head h3,
+.workspace-archive__head h2,
 .workspace-state h3 {
   margin: 8px 0 0;
   color: var(--md-on-surface);
@@ -1096,17 +1019,6 @@ onUnmounted(() => {
     padding: var(--md-spacing-5);
     border-radius: var(--md-radius-xs) !important; /* 微直角方章 */
   }
-
-  /* 破带预留随内缩 padding 重落 */
-  .workspace-hero {
-    padding-bottom: calc(var(--md-spacing-5) + 40px);
-  }
-
-  .workspace-hero__snapshot {
-    left: var(--md-spacing-5);
-    right: var(--md-spacing-5);
-    font-size: var(--md-label-small);
-  }
 }
 
 @media (max-width: 600px) {
@@ -1119,41 +1031,9 @@ onUnmounted(() => {
     padding: var(--md-spacing-4);
   }
 
-  /* 小屏保留项目、动作和进度；次要课签与快照让位给项目库。 */
-  .workspace-hero {
-    padding-bottom: var(--md-spacing-4);
-    margin-bottom: 0;
-  }
-
   .workspace-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--md-spacing-4);
-  }
-
-  .workspace-hero__snapshot {
-    display: none;
-  }
-
-  .workspace-hero__snapshot [aria-hidden="true"] {
-    display: none;
-  }
-
-  .workspace-hero__snapshot span:not([aria-hidden="true"]) {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    justify-content: space-between;
-    padding-bottom: var(--md-spacing-2);
-    border-bottom: 1px dashed var(--md-jiege); /* 纸签各行以界格发线相隔 */
-  }
-
-  .workspace-hero__snapshot span:not([aria-hidden="true"]):last-child {
-    border-bottom: none;
-    padding-bottom: 0;
-  }
-
-  .workspace-hero__panel {
-    display: none;
   }
 }
 

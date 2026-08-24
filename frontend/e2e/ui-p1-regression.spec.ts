@@ -28,6 +28,22 @@ const expectSansChrome = async (page: Page, selector: string) => {
   expect(fontFamily.toLowerCase().replaceAll('sans-serif', '')).not.toMatch(/kai|serif/)
 }
 
+const getRenderedLineLengths = (page: Page, selector: string) =>
+  page.locator(selector).evaluate((element) => {
+    const textNode = element.firstChild
+    if (!(textNode instanceof Text)) return []
+
+    const lines = new Map<number, number>()
+    for (let index = 0; index < textNode.length; index += 1) {
+      const range = document.createRange()
+      range.setStart(textNode, index)
+      range.setEnd(textNode, index + 1)
+      const top = Math.round(range.getBoundingClientRect().top)
+      lines.set(top, (lines.get(top) ?? 0) + 1)
+    }
+    return [...lines.values()]
+  })
+
 const expectContentReachesEnd = async (page: Page, selector: string) => {
   const result = await page.locator(selector).first().evaluate(async (target) => {
     const probe = document.createElement('div')
@@ -99,6 +115,58 @@ test('九个主页面保持最终视觉且无横向溢出', async ({ page }) => 
     await expectNoHorizontalOverflow(page)
   }
   await expectFlatSurface(page, '.detail-shell__content-surface')
+})
+
+test('小说项目库保留冲击力并收敛长标题与操作噪声', async ({ page }, testInfo) => {
+  await page.route('**/api/novels', async (route) => {
+    const response = await route.fetch()
+    const projects = (await response.json()) as Array<Record<string, unknown>>
+    projects[0] = {
+      ...projects[0],
+      title: '我被武林高手一招打废后',
+      total_chapters: 0,
+      completed_chapters: 0,
+    }
+    await route.fulfill({ response, json: projects })
+  })
+  await setAuthMode(page, 'user')
+  await page.goto('/workspace')
+
+  const title = page.locator('.workspace-hero__title-row h1')
+  const deleteButton = page.getByTitle('删除项目')
+  await expect(title).toHaveText('我被武林高手一招打废后')
+  await expect(page.locator('.workspace-hero__snapshot')).toHaveCount(0)
+  await expect(page.locator('.workspace-hero__panel')).toBeVisible()
+  await expect(page.getByText('蓝图已完成 · 正文未开始')).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+
+  let lineLengths = await getRenderedLineLengths(page, '.workspace-hero__title-row h1')
+  expect(lineLengths.at(-1)).toBeGreaterThan(1)
+
+  const deleteBox = await deleteButton.boundingBox()
+  expect(deleteBox?.width).toBeGreaterThanOrEqual(44)
+  expect(deleteBox?.height).toBeGreaterThanOrEqual(44)
+  const defaultDeleteStyle = await deleteButton.evaluate((element) => {
+    const style = getComputedStyle(element)
+    return `${style.color}|${style.backgroundColor}`
+  })
+  await deleteButton.focus()
+  await expect.poll(() => deleteButton.evaluate((element) => {
+    const style = getComputedStyle(element)
+    return `${style.color}|${style.backgroundColor}`
+  })).not.toBe(defaultDeleteStyle)
+
+  if (testInfo.project.name === 'desktop-chromium') {
+    await page.setViewportSize({ width: 833, height: 900 })
+    lineLengths = await getRenderedLineLengths(page, '.workspace-hero__title-row h1')
+    expect(lineLengths.at(-1)).toBeGreaterThan(1)
+  }
+
+  expect(await page.locator('.workspace-hero').evaluate(
+    (element) => ['0px', 'auto'].includes(getComputedStyle(element).minHeight),
+  )).toBe(true)
+  await expect(page.locator('.workspace-hero__panel')).toBeVisible()
+  await expectNoHorizontalOverflow(page)
 })
 
 test('详情、灵感和写作长内容都能滚动到末尾', async ({ page }, testInfo) => {

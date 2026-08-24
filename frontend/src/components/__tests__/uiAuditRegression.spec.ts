@@ -661,6 +661,45 @@ describe('UI audit regressions', () => {
     expect(titleButtonBlock).toContain('padding:')
   })
 
+  it('keeps workspace impact while reducing competing visual noise', () => {
+    const workspaceSource = readSource('src/views/NovelWorkspace.vue')
+    const projectCardSource = readSource('src/components/ProjectCard.vue')
+    const css = readGlobalCss()
+    const titleBlock = readCssBlock(
+      css,
+      'html body .workspace-page .workspace-hero__title-row h1',
+    )
+    const goalBlock = readCssBlock(css, 'html body .workspace-page .workspace-hero__panel')
+    const archiveChipBlock = readCssBlock(
+      css,
+      'html body .workspace-page .workspace-archive__head > .workspace-chip',
+    )
+    const deleteBlock = readCssBlock(projectCardSource, '.project-card__delete')
+
+    expect(titleBlock).toContain('font-size: clamp(44px, 5.2vw, 76px)')
+    expect(titleBlock).toContain('text-wrap: balance')
+    expect(titleBlock).toContain('overflow-wrap: anywhere')
+    expect(workspaceSource).not.toContain('workspace-hero__snapshot')
+    expect(workspaceSource).not.toContain('recentEditedProjects')
+    expect(workspaceSource).not.toContain('pendingChapters')
+    expect(workspaceSource).toContain('<h2>小说项目库</h2>')
+    expect(goalBlock).toContain('border-top: 1px solid')
+    expect(goalBlock).toContain('background: transparent')
+    expect(archiveChipBlock).toContain('color: var(--md-stage)')
+    expect(workspaceSource).not.toMatch(
+      /@media \(max-width: 600px\)[\s\S]*?\.workspace-hero__panel\s*\{\s*display:\s*none/,
+    )
+    expect(projectCardSource).toContain(
+      'class="md-btn md-btn-outlined md-ripple project-card__action"',
+    )
+    expect(projectCardSource).toContain("return '蓝图已完成 · 正文未开始'")
+    expect(deleteBlock).toContain('color: var(--md-on-surface-variant)')
+    expect(projectCardSource).toContain('.project-card__delete:focus-visible')
+    expect(css).toContain(
+      'html body .app-shell__content .workspace-page > .workspace-hero {\n    min-height: auto;',
+    )
+  })
+
   it('keeps workflow candidate cards as one accessible radio group', () => {
     const source = readSource('src/components/writing-desk/ChapterWorkflowPanel.vue')
 

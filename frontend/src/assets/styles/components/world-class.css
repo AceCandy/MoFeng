@@ -324,7 +324,7 @@ html body .app-shell__content .workspace-page > .workspace-hero {
   display: flex !important;
   flex-direction: column;
   justify-content: center;
-  gap: clamp(22px, 3vw, 42px) !important;
+  gap: clamp(18px, 2.4vw, 32px) !important;
   margin: 0 !important;
   padding: clamp(40px, 6vw, 88px) clamp(30px, 5vw, 72px) !important;
   border: 0 !important;
@@ -351,12 +351,14 @@ html body .workspace-page .workspace-hero__panel-head strong {
 
 html body .workspace-page .workspace-hero__title-row h1 {
   color: #fff !important;
-  font-size: clamp(46px, 5.6vw, 82px) !important;
+  font-size: clamp(44px, 5.2vw, 76px) !important;
   line-height: 0.98 !important;
   letter-spacing: -0.04em !important;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
-html body .workspace-page :where(.workspace-hero__summary, .workspace-hero__progress-label, .workspace-hero__snapshot) {
+html body .workspace-page :where(.workspace-hero__summary, .workspace-hero__progress-label) {
   color: color-mix(in srgb, #fff 72%, transparent) !important;
 }
 
@@ -377,9 +379,13 @@ html body .workspace-page .workspace-panel__action:not(.md-btn-primary) {
 }
 
 html body .workspace-page .workspace-hero__panel {
-  border: 1px solid color-mix(in srgb, #fff 28%, transparent) !important;
-  border-radius: var(--md-radius-md) !important;
-  background: color-mix(in srgb, #fff 8%, transparent) !important;
+  margin-right: 0;
+  padding: 16px 0 0;
+  transform: none;
+  border: 0 !important;
+  border-top: 1px solid color-mix(in srgb, #fff 28%, transparent) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
   color: #fff !important;
   box-shadow: none !important;
 }
@@ -389,7 +395,19 @@ html body .workspace-page :where(.workspace-hero__goal-tag, .workspace-hero__goa
 }
 
 html body .workspace-page .workspace-hero__goal-tag {
+  padding: 0;
+  background: transparent !important;
   color: #fff !important;
+  letter-spacing: 0.16em;
+}
+
+html body .workspace-page .workspace-hero__panel-head strong {
+  font-size: 18px !important;
+  line-height: 1.35;
+}
+
+html body .workspace-page .workspace-hero__goal-desc {
+  font-size: 14px;
 }
 
 html body .workspace-page .workspace-hero__progress-label strong {
@@ -415,26 +433,11 @@ html body .app-shell__content .workspace-page > .workspace-archive {
   min-width: 0;
   min-height: calc(var(--app-viewport-unit) - 68px);
   margin: 0 !important;
-  padding: clamp(34px, 5vw, 72px) clamp(26px, 5vw, 68px) !important;
+  padding: clamp(28px, 4vw, 56px) clamp(24px, 4vw, 56px) !important;
   border: 0 !important;
   border-radius: 0 !important;
   background: var(--md-surface) !important;
   box-shadow: none !important;
-}
-
-html body .workspace-page .workspace-hero__snapshot {
-  width: 100% !important;
-  margin: 0 !important;
-  padding: 18px 0 0 !important;
-  border: 0 !important;
-  border-top: 1px solid color-mix(in srgb, #fff 24%, transparent) !important;
-  border-radius: 0 !important;
-  background: var(--md-stage) !important;
-  box-shadow: none !important;
-}
-
-html body .workspace-page .workspace-hero__snapshot strong {
-  color: #fff !important;
 }
 
 html body .workspace-page :where(.workspace-hero__progress-chapters, .workspace-hero__progress-seal) {
@@ -443,12 +446,17 @@ html body .workspace-page :where(.workspace-hero__progress-chapters, .workspace-
 
 html body .workspace-page .workspace-archive__head {
   align-items: end;
-  padding-bottom: 24px;
+  padding-bottom: 18px;
   border-bottom: 2px solid var(--md-stage);
 }
 
-html body .workspace-page .workspace-archive__head h3 {
-  font-size: clamp(30px, 3vw, 46px) !important;
+html body .workspace-page .workspace-archive__head h2 {
+  font-size: clamp(28px, 2.8vw, 42px) !important;
+}
+
+html body .workspace-page .workspace-archive__head > .workspace-chip {
+  border-color: var(--md-outline) !important;
+  color: var(--md-stage) !important;
 }
 
 html body .workspace-page .workspace-grid {
@@ -461,8 +469,8 @@ html body .workspace-page .project-card {
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) minmax(150px, 210px);
   align-items: center;
-  gap: 24px !important;
-  padding: 24px 0 !important;
+  gap: 20px !important;
+  padding: 20px 0 !important;
   border: 0 !important;
   border-bottom: 1px solid var(--md-outline-variant) !important;
   border-radius: 0 !important;
@@ -1069,8 +1077,8 @@ html body :where(.workspace-page, .writing-desk-page) button {
     grid-row: auto !important;
   }
 
-  html body .workspace-page .workspace-hero {
-    min-height: 560px;
+  html body .app-shell__content .workspace-page > .workspace-hero {
+    min-height: auto;
   }
 
   html body .workspace-page .workspace-archive {
@@ -1110,12 +1118,11 @@ html body :where(.workspace-page, .writing-desk-page) button {
   }
 
   html body .workspace-page .workspace-hero {
-    min-height: 500px;
     padding: 42px 24px !important;
   }
 
   html body .workspace-page .workspace-archive {
-    padding: 34px 20px !important;
+    padding: 30px 20px !important;
   }
 
   html body .workspace-page .project-card {

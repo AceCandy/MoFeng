@@ -41,7 +41,7 @@
       <button
         type="button"
         @click.stop="$emit('continue', project)"
-        class="md-btn md-btn-filled md-ripple project-card__action"
+        class="md-btn md-btn-outlined md-ripple project-card__action"
       >
         <svg
           viewBox="0 0 24 24"
@@ -116,7 +116,7 @@ const getStatusText = computed(() => {
   } else if (total_chapters > 0) {
     return '准备创作'
   } else {
-    return '蓝图完成'
+    return '蓝图已完成 · 正文未开始'
   }
 })
 
@@ -261,7 +261,7 @@ const handleDelete = () => {
 }
 
 .project-card__delete {
-  color: var(--md-error);
+  color: var(--md-on-surface-variant);
   transition:
     background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
     border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
@@ -271,7 +271,8 @@ const handleDelete = () => {
     transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
-.project-card__delete:hover {
+.project-card__delete:hover,
+.project-card__delete:focus-visible {
   color: var(--md-error-strong) !important;
   background-color: var(--md-error-container) !important;
 }
