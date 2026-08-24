@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 71
+- **Total Sessions**: 72
 - **Last Active**: 2026-08-24
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1951 | Active |
+| `journal-1.md` | ~1973 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 72 | 2026-08-24 | 收敛小说项目库视觉层级 | `709c3f3`, `66079d4` | `main` |
 | 71 | 2026-08-24 | 收口全局设置导航与页面配置 | `0cc9f33` | `main` |
 | 70 | 2026-08-24 | 统一全站 P1 UI 与交互 | `3f478a0` | `main` |
 | 69 | 2026-08-24 | 完善跨设备连续创作体验 | `2b5040d`, `9d1f61d`, `8d83bf9` | `main` |
