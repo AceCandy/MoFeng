@@ -1907,3 +1907,24 @@ Unified the frontend on one warm-paper light theme, removed dark-theme runtime a
 ### Status
 
 [OK] **Completed**
+
+
+## Session 70: 统一全站 P1 UI 与交互
+
+**Date**: 2026-08-24
+**Task**: 统一全站 P1 UI 与交互
+**Branch**: `main`
+
+### Summary
+
+复核九个主页面未发现可复现用户侧 P1；清理认证页被最终主题覆盖的暖纸、墨碑与印章遗留样式，新增桌面/移动端 P1 回归，并通过 E2E、axe、类型检查、单测、lint、构建和 bundle budget。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `3f478a0` | (see git log) |
+
+### Status
+
+[OK] **Completed**
