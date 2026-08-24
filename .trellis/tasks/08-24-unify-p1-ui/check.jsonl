@@ -1,0 +1,4 @@
+{"file":".trellis/spec/frontend/index.md","reason":"复核前端包与设计系统边界"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"复核响应式、无障碍和共享视觉合同"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"执行浏览器、类型、测试、lint 与 bundle 质量门"}
+{"file":".trellis/tasks/08-24-unify-p1-ui/research/css-cascade-boundary.md","reason":"复核删除项是否具备完整等价覆盖证据"}

@@ -1,12 +1,6 @@
 <!-- AIMETA P=登录页_用户登录|R=登录表单_认证|NR=不含注册功能|E=route:/login#component:Login|X=ui|A=登录表单|D=vue|S=dom,net,storage|RD=./README.ai -->
 <template>
   <main class="login-page">
-    <!-- 墨碑排印层：出血大字衬于暖纸底与品牌簇/纸卡之间（纯装饰） -->
-    <div class="auth-monument" aria-hidden="true">
-      <span class="auth-monument__char auth-monument__char--mo">墨</span>
-      <span class="auth-monument__char auth-monument__char--feng">风</span>
-    </div>
-
     <section class="login-scroll" aria-labelledby="login-title">
       <AuthIntro variant="login" />
 
@@ -197,10 +191,6 @@ const handleLogin = async () => {
   overflow: hidden;
   padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
     max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
-  /* 暖纸门面：素骨大底向老宣边缘轻压，一次绘成 */
-  background-color: var(--md-background);
-  background-image: radial-gradient(118% 92% at 50% 38%, transparent 52%, var(--md-surface-dim) 100%);
-  color: var(--md-on-surface);
 }
 
 .login-scroll {
@@ -226,14 +216,6 @@ const handleLogin = async () => {
   width: 100%;
   box-sizing: border-box;
   padding: clamp(20px, 2.2vw, 32px);
-  /* 浮起稿纸：熟宣表单面无边框，Paper 2 柔影承担层级 */
-  border: 0;
-  border-radius: var(--md-radius-xs);
-  background:
-    repeating-linear-gradient(90deg, transparent 0 39px, var(--md-miaohong-line) 39px 40px),
-    linear-gradient(var(--md-surface), var(--md-surface));
-  box-shadow: var(--md-elevation-paper-2); /* 纸卡浮于页面之上 */
-  color: var(--md-on-surface);
 }
 
 .login-card__header,
@@ -520,7 +502,6 @@ const handleLogin = async () => {
   .login-panel {
     align-self: stretch;
     padding: 22px 18px 24px;
-    box-shadow: var(--md-elevation-paper-2); /* 纸卡浮于页面之上 */
   }
 
   .login-card__header {

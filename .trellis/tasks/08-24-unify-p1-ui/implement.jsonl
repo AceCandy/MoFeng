@@ -1,0 +1,4 @@
+{"file":".trellis/spec/frontend/index.md","reason":"前端包入口、设计系统与实现约束"}
+{"file":".trellis/spec/frontend/component-guidelines.md","reason":"SFC 样式、最终覆盖层、响应式与无障碍合同"}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"CSS 删除前浏览器验证、测试与 bundle 门禁"}
+{"file":".trellis/tasks/08-24-unify-p1-ui/research/css-cascade-boundary.md","reason":"遗留 CSS 安全删除边界与现有验证资产"}

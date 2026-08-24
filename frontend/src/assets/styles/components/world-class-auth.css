@@ -22,19 +22,10 @@ html body :where(.login-scroll, .register-scroll) {
   padding: clamp(28px, 5vw, 72px) clamp(24px, 5vw, 80px) !important;
 }
 
-html body :where(.auth-monument, .auth-intro__spine, .auth-intro__seal, .auth-intro__stamp) {
-  display: none !important;
-}
-
 html body .auth-layout .auth-intro {
   min-height: 440px;
   overflow: visible;
   color: #fff !important;
-}
-
-html body .auth-layout .auth-intro::before,
-html body .auth-layout .auth-intro::after {
-  display: none !important;
 }
 
 html body .auth-layout .auth-intro__brand {
@@ -44,10 +35,6 @@ html body .auth-layout .auth-intro__brand {
   grid-template-columns: minmax(0, 1fr) !important;
   gap: 28px !important;
   padding-top: 44px;
-}
-
-html body .auth-layout .auth-intro__brand::before {
-  display: none !important;
 }
 
 html body .auth-layout .auth-intro__brand h1 {
@@ -144,10 +131,6 @@ html body :where(.login-card__header, .register-card__header) h2 {
   font-family: var(--md-font-display) !important;
   font-size: clamp(32px, 3vw, 48px) !important;
   letter-spacing: -0.04em !important;
-}
-
-html body :where(.login-card__header, .register-card__header) h2 span {
-  display: none !important;
 }
 
 html body :where(.login-panel, .register-panel) :where(label, p, span, a, button, input) {
@@ -256,11 +239,9 @@ html body .auth-feature-rail small {
 
 @media (prefers-reduced-motion: no-preference) {
   html body .auth-layout :where(
-    .auth-intro__spine,
     .auth-intro__kind,
     .auth-intro__slogan,
     .auth-intro__footmark,
-    .auth-intro__seal,
     .login-panel,
     .register-panel
   ) {

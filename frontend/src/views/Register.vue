@@ -1,12 +1,6 @@
 <!-- AIMETA P=注册页_用户注册|R=注册表单|NR=不含登录功能|E=route:/register#component:Register|X=ui|A=注册表单|D=vue|S=dom,net|RD=./README.ai -->
 <template>
   <main class="register-page">
-    <!-- 墨碑排印层：出血大字衬于暖纸底与品牌簇/纸卡之间（纯装饰） -->
-    <div class="auth-monument" aria-hidden="true">
-      <span class="auth-monument__char auth-monument__char--mo">墨</span>
-      <span class="auth-monument__char auth-monument__char--feng">风</span>
-    </div>
-
     <section class="register-scroll" aria-labelledby="register-title">
       <AuthIntro variant="register" />
 
@@ -15,7 +9,6 @@
           <div class="register-card__header">
             <h2 id="register-title">
               开新卷
-              <span aria-hidden="true">启</span>
             </h2>
             <p>开启你的创作新篇章</p>
           </div>
@@ -422,7 +415,7 @@ onUnmounted(() => {
 <style scoped>
 .register-page {
   min-height: var(--app-viewport-unit);
-  position: relative; /* 墨碑排印层的定位上下文 */
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -434,10 +427,6 @@ onUnmounted(() => {
     max(44px, env(safe-area-inset-right))
     max(30px, env(safe-area-inset-bottom))
     max(44px, env(safe-area-inset-left));
-  /* 暖纸门面：素骨大底向老宣边缘轻压，一次绘成 */
-  background-color: var(--md-background);
-  background-image: radial-gradient(118% 92% at 50% 38%, transparent 52%, var(--md-surface-dim) 100%);
-  color: var(--md-on-surface);
 }
 
 .register-scroll {
@@ -459,14 +448,6 @@ onUnmounted(() => {
   justify-content: center;
   align-self: center;
   padding: clamp(28px, 3vw, 44px) clamp(24px, 3vw, 48px);
-  /* 浮起稿纸：熟宣表单面无边框，Paper 2 柔影承担层级 */
-  border: 0;
-  border-radius: var(--md-radius-xs);
-  background:
-    repeating-linear-gradient(90deg, transparent 0 39px, var(--md-miaohong-line) 39px 40px),
-    linear-gradient(var(--md-surface), var(--md-surface));
-  box-shadow: var(--md-elevation-paper-2); /* 纸卡浮于页面之上 */
-  color: var(--md-on-surface);
 }
 
 .register-panel__content,
@@ -498,22 +479,6 @@ onUnmounted(() => {
   font-weight: 600;
   line-height: 1.2;
   letter-spacing: 0.08em;
-}
-
-/* 题字旁落印：朱砂实底钤章，印章无影 */
-.register-card__header h2 span {
-  width: 22px;
-  height: 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--md-secondary-dark);
-  border-radius: var(--md-radius-xs);
-  background-color: var(--md-secondary);
-  color: var(--md-on-secondary);
-  font-size: 12px;
-  letter-spacing: 0;
-  transform: rotate(-4deg);
 }
 
 .register-card__header p,
