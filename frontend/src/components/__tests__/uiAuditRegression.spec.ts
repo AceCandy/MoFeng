@@ -241,6 +241,8 @@ describe('UI audit regressions', () => {
     expect(source).toContain('<span class="item-title">账户与安全</span>')
     expect(source).toContain('<span class="item-title">管理后台</span>')
     expect(source).not.toContain('<span class="item-title">提示词用量</span>')
+    expect(source.indexOf('app-shell__user-dropdown-divider')).toBeLessThan(source.indexOf('账户与安全'))
+    expect(source.indexOf('账户与安全')).toBeLessThan(source.indexOf('退出登录'))
     expect(source).not.toContain('showSettingsModal')
     expect(source).not.toContain('<SettingsView')
     expect(source).not.toContain('href="javascript:void(0)"')

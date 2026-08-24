@@ -556,19 +556,6 @@ onUnmounted(() => {
                   </RouterLink>
 
                   <RouterLink
-                    :to="{ name: 'account-security' }"
-                    class="app-shell__user-dropdown-item"
-                    :class="{ 'is-active': route.name === 'account-security' }"
-                    @click="closeUserDropdown()"
-                  >
-                    <span class="app-shell__action-badge is-password">密</span>
-                    <div class="item-text">
-                      <span class="item-title">账户与安全</span>
-                      <span class="item-desc">更新登录密码</span>
-                    </div>
-                  </RouterLink>
-
-                  <RouterLink
                     v-if="authStore.user?.is_admin"
                     :to="{ name: 'admin' }"
                     class="app-shell__user-dropdown-item"
@@ -583,6 +570,19 @@ onUnmounted(() => {
                   </RouterLink>
 
                   <div class="app-shell__user-dropdown-divider"></div>
+
+                  <RouterLink
+                    :to="{ name: 'account-security' }"
+                    class="app-shell__user-dropdown-item"
+                    :class="{ 'is-active': route.name === 'account-security' }"
+                    @click="closeUserDropdown()"
+                  >
+                    <span class="app-shell__action-badge is-password">密</span>
+                    <div class="item-text">
+                      <span class="item-title">账户与安全</span>
+                      <span class="item-desc">更新登录密码</span>
+                    </div>
+                  </RouterLink>
 
                   <!-- 离席退出系统 -->
                   <button
