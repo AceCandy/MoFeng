@@ -216,7 +216,9 @@ const currentStageLabel = computed(() => {
 const projectStats = computed(() => {
   if (!currentProject.value) return null
   const total = currentProject.value.chapters?.length || 0
-  const completed = currentProject.value.chapters?.filter(c => c.content && c.content.length > 0).length || 0
+  const completed = currentProject.value.chapters?.filter(
+    (chapter) => chapter.generation_status === 'successful',
+  ).length || 0
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0
   return {
     completed,

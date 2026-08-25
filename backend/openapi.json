@@ -8329,6 +8329,18 @@
               "title": "Project Id",
               "type": "string"
             }
+          },
+          {
+            "description": "是否返回章节正文、版本、评审和生成轨迹",
+            "in": "query",
+            "name": "include_chapter_content",
+            "required": false,
+            "schema": {
+              "default": true,
+              "description": "是否返回章节正文、版本、评审和生成轨迹",
+              "title": "Include Chapter Content",
+              "type": "boolean"
+            }
           }
         ],
         "responses": {

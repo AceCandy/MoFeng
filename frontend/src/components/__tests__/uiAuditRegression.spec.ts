@@ -63,6 +63,12 @@ const contrastRatio = (foreground: string, background: string) => {
 }
 
 describe('UI audit regressions', () => {
+  it('keeps the app shell free of a viewport-spanning guide line', () => {
+    const worldClass = readSource('src/assets/styles/components/world-class.css')
+
+    expect(worldClass).not.toContain('body::before')
+  })
+
   it('gives model routing controls unique accessible names', () => {
     // 阶段路由分区（含 stage.label aria-label）已抽离到 RoutingStagesPanel.vue（Slice 9）
     const stagesPanel = readSource('src/components/llm-settings/RoutingStagesPanel.vue')
@@ -428,6 +434,9 @@ describe('UI audit regressions', () => {
 
   it('keeps writing desk drawers out of the accessibility tree when closed', () => {
     const source = readSource('src/views/WritingDesk.vue')
+    const toolbarSource = readSource(
+      'src/components/writing-desk/workspace/ChapterToolbar.vue',
+    )
 
     expect(source).toContain(":aria-hidden=\"useSidebarDrawer && !isSidebarDrawerOpen ? 'true' : undefined\"")
     expect(source).toContain(':inert="useSidebarDrawer && !isSidebarDrawerOpen"')
@@ -435,7 +444,7 @@ describe('UI audit regressions', () => {
     expect(source).toContain('aria-controls="writing-desk-chapter-drawer"')
     expect(source).toContain(":aria-hidden=\"useAssistantDrawer && !isAssistantDrawerOpen ? 'true' : undefined\"")
     expect(source).toContain(':inert="useAssistantDrawer && !isAssistantDrawerOpen"')
-    expect(source).toContain('aria-controls="writing-desk-assistant-panel"')
+    expect(toolbarSource).toContain('aria-controls="writing-desk-assistant-panel"')
     expect(source).toContain('overflow-x: clip')
     expect(source).toContain('height: calc(var(--app-viewport-unit) - var(--app-topbar-height) - 88px)')
   })

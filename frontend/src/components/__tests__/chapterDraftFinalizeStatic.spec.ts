@@ -62,15 +62,16 @@ describe('chapter draft finalization contracts', () => {
     expect(versionsPanel).not.toContain('版本 {{ availableVersions.length - index }}')
   })
 
-  it('only keeps copy and export actions after finalization', () => {
+  it('keeps finalized chapter actions compact and out of the workflow controls', () => {
     // toolbar 操作随 template 抽至 ChapterToolbar（Slice D 第 4b 块），契约随之迁移
     const toolbar = readSource('src/components/writing-desk/workspace/ChapterToolbar.vue')
 
     expect(toolbar).toContain('v-if="isFinalizedSuccessful"')
-    expect(toolbar).toContain("@click=\"$emit('copyContent')\"")
-    expect(toolbar).toContain('@click="exportContentAsTxt"')
+    expect(toolbar).toContain('<details ref="moreMenuRef"')
+    expect(toolbar).toContain('@click="copyContent"')
+    expect(toolbar).toContain('@click="exportContent"')
     expect(toolbar).toContain('AI优化')
-    expect(toolbar).toContain("$emit('openEditModal')")
+    expect(toolbar).toContain("emit('openEditModal')")
     expect(toolbar).not.toContain('confirmVersionSelection')
     expect(toolbar).not.toContain('确认定稿')
   })

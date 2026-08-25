@@ -28,6 +28,22 @@ describe('NovelAPI', () => {
     vi.unstubAllGlobals()
   })
 
+  it('项目轻量读取显式排除章节正文', async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(JSON.stringify({ id: 'project-1', chapters: [] }), {
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await NovelAPI.getNovel('project-1', false)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/novels/project-1?include_chapter_content=false',
+      expect.any(Object),
+    )
+  })
+
   it('解析 SSE event id 供 durable cursor 续传', async () => {
     const messages: Array<{ id: string | null; event: string; data: unknown }> = []
     const response = new Response(

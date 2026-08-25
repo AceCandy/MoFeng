@@ -14,16 +14,6 @@ body {
   font-weight: 400 !important;
 }
 
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0 auto 0 clamp(18px, 3vw, 48px);
-  z-index: 1000;
-  width: 1px;
-  background: color-mix(in srgb, var(--md-stage) 14%, transparent);
-  pointer-events: none;
-}
-
 ::selection {
   background: var(--md-note);
   color: var(--md-ink);
@@ -1086,10 +1076,6 @@ html body :where(.workspace-page, .writing-desk-page) button {
 }
 
 @media (max-width: 833px) {
-  body::before {
-    left: 12px;
-  }
-
   html body .app-shell .app-shell__topbar {
     min-height: 62px !important;
     padding: max(8px, env(safe-area-inset-top)) 12px 8px !important;

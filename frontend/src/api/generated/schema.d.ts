@@ -5517,7 +5517,10 @@ export interface operations {
     };
     get_novel_api_novels__project_id__get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description 是否返回章节正文、版本、评审和生成轨迹 */
+                include_chapter_content?: boolean;
+            };
             header?: never;
             path: {
                 project_id: string;

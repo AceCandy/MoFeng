@@ -278,12 +278,20 @@ async def list_novels(
 @router.get("/{project_id}", response_model=NovelProjectSchema)
 async def get_novel(
     project_id: str,
+    include_chapter_content: bool = Query(
+        default=True,
+        description="是否返回章节正文、版本、评审和生成轨迹",
+    ),
     session: AsyncSession = Depends(get_session),
     current_user: UserInDB = Depends(get_current_user),
 ) -> NovelProjectSchema:
     novel_service = NovelService(session)
     logger.info("用户 %s 查询项目 %s", current_user.id, project_id)
-    return await novel_service.get_project_schema(project_id, current_user.id)
+    return await novel_service.get_project_schema(
+        project_id,
+        current_user.id,
+        include_chapter_content=include_chapter_content,
+    )
 
 
 @router.get("/{project_id}/sections/{section}", response_model=NovelSectionResponse)

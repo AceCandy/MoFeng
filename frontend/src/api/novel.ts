@@ -398,8 +398,12 @@ export class NovelAPI {
     })
   }
 
-  static async getNovel(projectId: string): Promise<NovelProject> {
-    return request(`${NOVELS_BASE}/${projectId}`)
+  static async getNovel(
+    projectId: string,
+    includeChapterContent = true,
+  ): Promise<NovelProject> {
+    const query = includeChapterContent ? '' : '?include_chapter_content=false'
+    return request(`${NOVELS_BASE}/${projectId}${query}`)
   }
 
   static async getChapter(projectId: string, chapterNumber: number): Promise<Chapter> {

@@ -222,8 +222,17 @@ class NovelService:
         result = await self.session.execute(stmt)
         return result.scalars().first()
 
-    async def ensure_project_owner(self, project_id: str, user_id: int) -> NovelProject:
-        project = await self.repo.get_by_id(project_id)
+    async def ensure_project_owner(
+        self,
+        project_id: str,
+        user_id: int,
+        *,
+        include_chapter_details: bool = True,
+    ) -> NovelProject:
+        project = await self.repo.get_by_id(
+            project_id,
+            include_chapter_details=include_chapter_details,
+        )
         if not project:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="项目不存在")
         if project.user_id != user_id:
@@ -231,9 +240,22 @@ class NovelService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="项目不存在")
         return project
 
-    async def get_project_schema(self, project_id: str, user_id: int) -> NovelProjectSchema:
-        project = await self.ensure_project_owner(project_id, user_id)
-        return await self._serialize_project(project)
+    async def get_project_schema(
+        self,
+        project_id: str,
+        user_id: int,
+        *,
+        include_chapter_content: bool = True,
+    ) -> NovelProjectSchema:
+        project = await self.ensure_project_owner(
+            project_id,
+            user_id,
+            include_chapter_details=include_chapter_content,
+        )
+        return await self._serialize_project(
+            project,
+            include_chapter_content=include_chapter_content,
+        )
 
     async def get_section_data(
         self,
@@ -1024,7 +1046,12 @@ class NovelService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="项目不存在")
         return self._build_chapter_schema(project, chapter_number)
 
-    async def _serialize_project(self, project: NovelProject) -> NovelProjectSchema:
+    async def _serialize_project(
+        self,
+        project: NovelProject,
+        *,
+        include_chapter_content: bool = True,
+    ) -> NovelProjectSchema:
         await self._auto_fail_stale_in_progress_chapters(project.id, list(project.chapters))
 
         conversations = [
@@ -1043,6 +1070,7 @@ class NovelService:
                 number,
                 outlines_map=outlines_map,
                 chapters_map=chapters_map,
+                include_content=include_chapter_content,
             )
             for number in chapter_numbers
         ]
@@ -1290,7 +1318,11 @@ class NovelService:
             loaded_versions = chapter.__dict__.get("versions") or []
             loaded_evaluations = chapter.__dict__.get("evaluations") or []
             loaded_selected_version = chapter.__dict__.get("selected_version")
-            if "generation_traces" in chapter.__dict__ and chapter.generation_traces:
+            if (
+                include_content
+                and "generation_traces" in chapter.__dict__
+                and chapter.generation_traces
+            ):
                 generation_traces = [
                     ChapterGenerationTraceSchema(
                         id=trace.id,

@@ -103,7 +103,7 @@ export function useNovelProjectsQuery() {
 export function useNovelProjectQuery(projectId: ProjectIdSource) {
   return useQuery<NovelProject>({
     queryKey: computed(() => novelQueryKeys.detail(toValue(projectId) || '__missing__')),
-    queryFn: () => NovelAPI.getNovel(requireProjectId(projectId)),
+    queryFn: () => NovelAPI.getNovel(requireProjectId(projectId), false),
     enabled: computed(() => Boolean(toValue(projectId))),
   })
 }

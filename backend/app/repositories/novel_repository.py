@@ -12,23 +12,37 @@ from .base import BaseRepository
 class NovelRepository(BaseRepository[NovelProject]):
     model = NovelProject
 
-    async def get_by_id(self, project_id: str) -> Optional[NovelProject]:
+    async def get_by_id(
+        self,
+        project_id: str,
+        *,
+        include_chapter_details: bool = True,
+    ) -> Optional[NovelProject]:
+        options = [
+            selectinload(NovelProject.blueprint),
+            selectinload(NovelProject.characters),
+            selectinload(NovelProject.relationships_),
+            selectinload(NovelProject.outlines),
+            selectinload(NovelProject.conversations),
+        ]
+        if include_chapter_details:
+            options.extend(
+                [
+                    selectinload(NovelProject.chapters).selectinload(Chapter.versions),
+                    selectinload(NovelProject.chapters).selectinload(Chapter.evaluations),
+                    selectinload(NovelProject.chapters).selectinload(Chapter.selected_version),
+                    selectinload(NovelProject.chapters).selectinload(Chapter.generation_traces),
+                ]
+            )
+        else:
+            options.append(selectinload(NovelProject.chapters))
+
         stmt = (
             select(NovelProject)
             .where(NovelProject.id == project_id)
             # 强制从数据库刷新同一 Session 中已存在的实体，避免返回旧快照。
             .execution_options(populate_existing=True)
-            .options(
-                selectinload(NovelProject.blueprint),
-                selectinload(NovelProject.characters),
-                selectinload(NovelProject.relationships_),
-                selectinload(NovelProject.outlines),
-                selectinload(NovelProject.conversations),
-                selectinload(NovelProject.chapters).selectinload(Chapter.versions),
-                selectinload(NovelProject.chapters).selectinload(Chapter.evaluations),
-                selectinload(NovelProject.chapters).selectinload(Chapter.selected_version),
-                selectinload(NovelProject.chapters).selectinload(Chapter.generation_traces),
-            )
+            .options(*options)
         )
         result = await self.session.execute(stmt)
         return result.scalars().first()

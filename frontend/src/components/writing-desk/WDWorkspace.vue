@@ -2,9 +2,10 @@
 <template>
   <section class="writing-workspace">
     <div class="md-card md-card-outlined writing-workspace__panel">
-      <div v-if="selectedChapterNumber !== null" class="writing-workspace__header">
+      <div class="writing-workspace__header">
         <div class="writing-workspace__header-row">
           <ChapterMeta
+            v-if="selectedChapterNumber !== null"
             :chapter-number="selectedChapterNumber"
             :chapter-outline="selectedChapterOutline"
             :status-label="chapterStatusLabel"
@@ -17,17 +18,32 @@
           <span v-if="luomoSealVisible" class="writing-workspace__luomo-seal" aria-hidden="true"
             >定</span
           >
-          <ChapterToolbar
-            v-if="shouldShowChapterToolbar"
-            :chapter-number="selectedChapterNumber"
-            :is-finalized-successful="isFinalizedSuccessful"
-            :has-selected-chapter-content="hasSelectedChapterContent"
-            :is-chapter-content-view="isChapterContentView"
-            :is-ai-menu-disabled="isAiMenuDisabled ?? false"
-            :body-component-ref="bodyComponentRef"
-            @copy-content="copySelectedChapterContent"
-            @open-edit-modal="editModalRef?.openEditModal()"
-          />
+          <div class="writing-workspace__header-actions">
+            <ChapterToolbar
+              v-if="shouldShowChapterToolbar"
+              :chapter-number="selectedChapterNumber"
+              :is-finalized-successful="isFinalizedSuccessful"
+              :has-selected-chapter-content="hasSelectedChapterContent"
+              :is-chapter-content-view="isChapterContentView"
+              :is-ai-menu-disabled="isAiMenuDisabled ?? false"
+              :body-component-ref="bodyComponentRef"
+              :assistant-open="assistantOpen ?? false"
+              @copy-content="copySelectedChapterContent"
+              @open-edit-modal="editModalRef?.openEditModal()"
+              @toggle-assistant="emit('toggleAssistant')"
+            />
+            <button
+              v-else
+              type="button"
+              class="md-btn md-btn-outlined md-ripple writing-workspace__assistant-toggle"
+              :aria-label="assistantOpen ? '收起右侧辅助面板' : '展开右侧辅助面板'"
+              :aria-expanded="assistantOpen ? 'true' : 'false'"
+              aria-controls="writing-desk-assistant-panel"
+              @click="emit('toggleAssistant')"
+            >
+              辅助信息
+            </button>
+          </div>
         </div>
       </div>
 
@@ -201,6 +217,7 @@ interface Props {
   workflowRetryActivityKey: string | null
   workflowCandidates: ChapterVersionSelection[]
   activeSection: WritingDeskSection
+  assistantOpen?: boolean
 }
 
 const props = defineProps<Props>()
@@ -220,6 +237,7 @@ const emit = defineEmits<{
   (event: 'showEvaluationDetail'): void
   (event: 'editChapter', payload: { chapterNumber: number; content: string }): void
   (event: 'update:activeSection', section: WritingDeskSection): void
+  (event: 'toggleAssistant'): void
 }>()
 
 interface ChapterContentExpose {
@@ -614,34 +632,21 @@ onUnmounted(clearLuomoSignature)
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  border-radius: 0 !important; /* 方直古籍 */
+  border-radius: 0 !important;
   background: var(--md-surface);
-  /* 极致国风脑洞：工作区熟宣纹理 */
-  background-image: repeating-linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--md-on-surface) 0.6%, transparent) 0px,
-    color-mix(in srgb, var(--md-on-surface) 0.6%, transparent) 1px,
-    transparent 1px,
-    transparent 36px
-  );
-  border: 3px double var(--md-outline) !important;
-  /* 稿纸用 Paper 1 柔影从素骨工作区中浮起 */
-  box-shadow: var(--md-elevation-paper-1);
+  border: 1px solid var(--md-outline-variant) !important;
+  box-shadow: none;
 }
 
-/* 章节案头带：竹纸到老宣的轻微纵向层次一次绘成，底缘发线与稿纸区干净相接 */
+/* 章节案头带以低层表面和发线与正文分区。 */
 .writing-workspace__header {
   flex-shrink: 0;
   position: relative;
   z-index: 1;
-  padding: var(--md-spacing-4) var(--md-spacing-5);
+  padding: var(--md-spacing-3) var(--md-spacing-4);
   border-bottom: 1px solid var(--md-outline-variant);
-  background: linear-gradient(
-    180deg,
-    var(--md-background) 0%,
-    var(--md-surface-container-low) 100%
-  );
-  box-shadow: var(--md-elevation-paper-1);
+  background: var(--md-surface-container-low);
+  box-shadow: none;
 }
 
 .writing-workspace__header-row {
@@ -649,6 +654,19 @@ onUnmounted(clearLuomoSignature)
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--md-spacing-4);
+}
+
+.writing-workspace__header-actions {
+  display: flex;
+  flex-shrink: 0;
+  margin-left: auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--md-spacing-2);
+}
+
+.writing-workspace__assistant-toggle {
+  min-height: 44px;
 }
 
 /* ==========================================================================
@@ -659,10 +677,10 @@ onUnmounted(clearLuomoSignature)
   color: var(--md-on-surface);
 }
 
-/* 章名升至 headline-large 档，以焦墨形成案头题眼 */
+/* 章名保持紧凑层级，避免压过正文。 */
 .writing-workspace__header :deep(.writing-workspace__title-copy) {
   color: var(--md-on-surface);
-  font-size: var(--md-headline-large);
+  font-size: var(--md-headline-medium);
   line-height: 1.3;
 }
 
@@ -761,7 +779,7 @@ onUnmounted(clearLuomoSignature)
   padding: 0 !important; /* 彻底去除灰色间距，使内部稿纸能够完美顶边铺满 */
   display: flex;
   flex-direction: column;
-  gap: var(--md-spacing-4);
+  gap: 0;
   background-color: var(--md-surface);
 }
 
@@ -779,6 +797,11 @@ onUnmounted(clearLuomoSignature)
   .writing-workspace__header-row {
     flex-direction: column;
     gap: var(--md-spacing-3);
+  }
+
+  .writing-workspace__header-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 

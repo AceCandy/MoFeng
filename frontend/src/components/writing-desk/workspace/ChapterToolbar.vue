@@ -1,125 +1,133 @@
-<!-- AIMETA P=章节正文工具栏_复制导出与AI优化|R=已提交正文的非工作流操作|NR=不提交选版定稿或生命周期命令|E=component:ChapterToolbar|X=internal|A=章节操作工具栏|D=vue|S=dom|RD=./README.ai -->
+<!-- AIMETA P=章节正文工具栏_编辑AI优化与更多操作|R=已提交正文的非工作流操作|NR=不提交选版定稿或生命周期命令|E=component:ChapterToolbar|X=internal|A=章节操作工具栏|D=vue|S=dom|RD=./README.ai -->
 <template>
   <aside
+    v-if="isFinalizedSuccessful"
     class="writing-workspace__toolbar"
     role="toolbar"
     aria-label="章节操作"
   >
-    <div v-if="isFinalizedSuccessful" class="writing-workspace__toolbar-row writing-workspace__toolbar-row--utility">
-      <div class="writing-workspace__toolbar-group writing-workspace__toolbar-group--utility">
+    <button
+      type="button"
+      class="md-btn md-btn-text md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--edit"
+      :disabled="!hasSelectedChapterContent"
+      @click="emit('openEditModal')"
+    >
+      编辑
+    </button>
+
+    <div ref="aiMenuRef" class="writing-workspace__ai-menu">
+      <button
+        ref="aiMenuTriggerRef"
+        type="button"
+        class="md-btn md-btn-tonal md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--hero"
+        :disabled="isAiMenuDisabled"
+        :aria-expanded="showAiMenu ? 'true' : 'false'"
+        aria-haspopup="menu"
+        :aria-controls="aiMenuId"
+        @click="toggleAiMenu"
+      >
+        <span class="writing-workspace__label-full">AI优化</span>
+        <span class="writing-workspace__label-short">AI</span>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      <div
+        v-if="showAiMenu"
+        :id="aiMenuId"
+        ref="aiMenuPanelRef"
+        class="writing-workspace__menu-panel"
+        role="menu"
+        tabindex="-1"
+        @keydown="handleAiMenuKeydown"
+      >
+        <button
+          :ref="(el) => registerAiMenuItemRef(el, 0)"
+          type="button"
+          role="menuitem"
+          class="writing-workspace__menu-item"
+          :disabled="!hasSelectedChapterContent"
+          @click="handleLayeredOptimize"
+        >
+          分层优化
+        </button>
+        <button
+          :ref="(el) => registerAiMenuItemRef(el, 1)"
+          type="button"
+          role="menuitem"
+          class="writing-workspace__menu-item"
+          :disabled="!hasSelectedChapterContent"
+          @click="handlePolishContent"
+        >
+          润色正文
+        </button>
+        <button
+          :ref="(el) => registerAiMenuItemRef(el, 2)"
+          type="button"
+          role="menuitem"
+          class="writing-workspace__menu-item"
+          :disabled="!hasSelectedChapterContent"
+          @click="handleAdjustRhythm"
+        >
+          调整节奏
+        </button>
+        <button
+          :ref="(el) => registerAiMenuItemRef(el, 3)"
+          type="button"
+          role="menuitem"
+          class="writing-workspace__menu-item"
+          :disabled="!hasSelectedChapterContent"
+          @click="handleRewriteStyle"
+        >
+          改写风格
+        </button>
+      </div>
+    </div>
+
+    <details ref="moreMenuRef" class="writing-workspace__more-menu">
+      <summary class="md-ripple writing-workspace__tool-btn writing-workspace__more-trigger">
+        更多
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+        </svg>
+      </summary>
+      <div class="writing-workspace__menu-panel writing-workspace__more-panel" aria-label="更多章节操作">
         <button
           type="button"
-          @click="$emit('copyContent')"
+          class="writing-workspace__menu-item"
           :disabled="!hasSelectedChapterContent"
-          class="md-btn md-btn-text md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--ghost disabled:opacity-50 disabled:cursor-not-allowed"
+          @click="copyContent"
         >
-          复制
+          复制正文
         </button>
         <button
           type="button"
-          @click="exportContentAsTxt"
+          class="writing-workspace__menu-item"
           :disabled="!isChapterContentView"
-          class="md-btn md-btn-text md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--ghost disabled:opacity-50 disabled:cursor-not-allowed"
+          @click="exportContent"
         >
-          导出
+          导出文本
         </button>
         <button
           type="button"
-          @click="$emit('openEditModal')"
-          :disabled="!hasSelectedChapterContent"
-          class="md-btn md-btn-text md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--ghost disabled:opacity-50 disabled:cursor-not-allowed"
+          class="writing-workspace__menu-item"
+          :aria-label="assistantOpen ? '收起右侧辅助面板' : '展开右侧辅助面板'"
+          :aria-expanded="assistantOpen ? 'true' : 'false'"
+          aria-controls="writing-desk-assistant-panel"
+          @click="toggleAssistant"
         >
-          编辑
+          {{ assistantOpen ? '收起辅助信息' : '打开辅助信息' }}
         </button>
       </div>
-    </div>
-
-    <div v-if="isFinalizedSuccessful" class="writing-workspace__toolbar-row writing-workspace__toolbar-row--primary">
-      <div class="writing-workspace__toolbar-group writing-workspace__toolbar-group--emphasis">
-        <div ref="aiMenuRef" class="writing-workspace__ai-menu">
-          <button
-            ref="aiMenuTriggerRef"
-            type="button"
-            @click="toggleAiMenu"
-            :disabled="isAiMenuDisabled"
-            class="md-btn md-btn-tonal md-ripple writing-workspace__tool-btn writing-workspace__tool-btn--hero disabled:opacity-50 disabled:cursor-not-allowed"
-            :aria-expanded="showAiMenu ? 'true' : 'false'"
-            aria-haspopup="menu"
-            :aria-controls="aiMenuId"
-          >
-            <span class="writing-workspace__label-full">AI优化</span>
-            <span class="writing-workspace__label-short">AI</span>
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 9l-7 7-7-7"
-              ></path>
-            </svg>
-          </button>
-
-          <div
-            v-if="showAiMenu"
-            :id="aiMenuId"
-            ref="aiMenuPanelRef"
-            class="writing-workspace__ai-menu-panel"
-            role="menu"
-            tabindex="-1"
-            @keydown="handleAiMenuKeydown"
-          >
-            <button
-              :ref="(el) => registerAiMenuItemRef(el, 0)"
-              type="button"
-              role="menuitem"
-              @click="handleLayeredOptimize"
-              :disabled="!hasSelectedChapterContent"
-              class="writing-workspace__ai-menu-item disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              分层优化
-            </button>
-            <button
-              :ref="(el) => registerAiMenuItemRef(el, 1)"
-              type="button"
-              role="menuitem"
-              @click="handlePolishContent"
-              :disabled="!hasSelectedChapterContent"
-              class="writing-workspace__ai-menu-item disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              润色正文
-            </button>
-            <button
-              :ref="(el) => registerAiMenuItemRef(el, 2)"
-              type="button"
-              role="menuitem"
-              @click="handleAdjustRhythm"
-              :disabled="!hasSelectedChapterContent"
-              class="writing-workspace__ai-menu-item disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              调整节奏
-            </button>
-            <button
-              :ref="(el) => registerAiMenuItemRef(el, 3)"
-              type="button"
-              role="menuitem"
-              @click="handleRewriteStyle"
-              :disabled="!hasSelectedChapterContent"
-              class="writing-workspace__ai-menu-item disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              改写风格
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    </details>
   </aside>
 </template>
 
 <script setup lang="ts">
-import { computed, toRef, watch } from 'vue'
+import { computed, ref, toRef, watch } from 'vue'
 import { useAiMenu } from '@/composables/useAiMenu'
 
-/** 章节正文组件对外暴露的优化器/导出方法（与 useAiMenu 内 BodyComponentExpose 同构） */
 type BodyComponentExpose = {
   openOptimizerPanel?: () => void
   openOptimizerPanelWithPreset?: (preset?: { dimension?: string; notes?: string }) => void
@@ -127,24 +135,27 @@ type BodyComponentExpose = {
 }
 
 interface Props {
-  /** 当前章节号，切换章节时用于收起 AI 菜单 */
   chapterNumber: number | null
   isFinalizedSuccessful: boolean
   hasSelectedChapterContent: boolean
   isChapterContentView: boolean
   isAiMenuDisabled: boolean
-  /** 章节正文动态组件实例引用（触发优化器面板/导出），由父组件传入共享 */
   bodyComponentRef: BodyComponentExpose | null
+  assistantOpen: boolean
 }
 
 const props = defineProps<Props>()
-defineEmits(['copyContent', 'openEditModal'])
+const emit = defineEmits<{
+  copyContent: []
+  openEditModal: []
+  toggleAssistant: []
+}>()
+const moreMenuRef = ref<HTMLDetailsElement | null>(null)
 
 const {
   aiMenuRef,
   aiMenuPanelRef,
   aiMenuTriggerRef,
-  aiMenuItemRefs,
   aiMenuId,
   showAiMenu,
   registerAiMenuItemRef,
@@ -162,269 +173,160 @@ const {
   bodyComponentRef: toRef(props, 'bodyComponentRef'),
 })
 
-// 切换章节时收起 AI 菜单（从 WDWorkspace watch selectedChapterNumber 拆出，closeAiMenu 随 useAiMenu 迁入）
+const closeMoreMenu = () => {
+  if (moreMenuRef.value) moreMenuRef.value.open = false
+}
+
+const copyContent = () => {
+  emit('copyContent')
+  closeMoreMenu()
+}
+
+const exportContent = () => {
+  exportContentAsTxt()
+  closeMoreMenu()
+}
+
+const toggleAssistant = () => {
+  emit('toggleAssistant')
+  closeMoreMenu()
+}
+
 watch(
   () => props.chapterNumber,
   () => {
     closeAiMenu()
+    closeMoreMenu()
   },
 )
 </script>
 
 <style scoped>
-/* ==========================================================================
-   章节工具栏（随 template 从 WDWorkspace 迁入）
-   ========================================================================== */
-/* AI 菜单锚点：绝对定位面板的包含块，缺了它菜单会脱锚到遥远祖先 */
-.writing-workspace__ai-menu {
-  position: relative;
-  display: inline-block;
-}
-
 .writing-workspace__toolbar {
-  margin-left: auto;
-  flex-shrink: 0;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  justify-content: flex-start;
-  gap: 8px;
-  padding-top: 4px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-left: auto;
   white-space: nowrap;
 }
 
-.writing-workspace__toolbar-row {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  width: 100%;
+.writing-workspace__ai-menu,
+.writing-workspace__more-menu {
+  position: relative;
 }
 
-.writing-workspace__toolbar-row--utility {
-  opacity: 0.96;
-}
-
-.writing-workspace__toolbar-row--primary {
-  justify-content: flex-end;
-}
-
-.writing-workspace__toolbar-group {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
-}
-
-.writing-workspace__toolbar-group--utility {
-  gap: 6px;
-}
-
-.writing-workspace__toolbar-group--emphasis {
-  gap: 8px;
-}
-
-.writing-workspace__toolbar-divider {
-  width: 1px;
-  height: 20px;
-  background-color: var(--md-outline);
-}
-
-/* 极致国风脑洞：工具栏按钮的直角古朴金石风骨 */
 .writing-workspace__tool-btn {
-  min-height: 32px;
-  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 44px;
+  height: 44px;
   padding-inline: 12px;
-  border-radius: 0 !important; /* 去除圆角 */
-  font-size: var(--md-label-medium);
-  letter-spacing: 0.05em;
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-radius-sm);
+  background-color: transparent;
+  color: var(--md-on-surface);
   font-family: var(--md-font-serif);
-  font-weight: 600;
-  border: 1px solid var(--md-outline);
-  box-shadow: none;
+  font-size: var(--md-label-medium);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
   transition:
-    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    background-color 0.2s var(--md-easing-standard),
+    border-color 0.2s var(--md-easing-standard),
+    color 0.2s var(--md-easing-standard);
 }
 
-/* Hover 状态 */
 .writing-workspace__tool-btn:hover:not(:disabled) {
-  transform: translate(-0.5px, -0.5px);
-  box-shadow: var(--md-elevation-paper-1);
-  background-color: var(--md-surface-container-low);
+  border-color: var(--md-outline);
+  background-color: var(--md-state-layer-hover);
 }
 
-/* 脑洞：Active 点击时产生用力向下一压的钤印重力反馈 */
-.writing-workspace__tool-btn:active:not(:disabled) {
-  transform: translate(1.5px, 1.5px) !important;
-  box-shadow: 0px 0px 0px var(--md-outline) !important;
+.writing-workspace__tool-btn:focus-visible,
+.writing-workspace__menu-item:focus-visible {
+  outline: 2px solid var(--md-on-surface);
+  outline-offset: 2px;
+}
+
+.writing-workspace__tool-btn:disabled,
+.writing-workspace__menu-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .writing-workspace__tool-btn--hero {
-  height: 38px;
-  min-height: 38px;
-  padding-inline: 16px;
-  font-size: var(--md-title-small);
-  font-weight: bold;
-  border: 1.5px solid var(--md-outline) !important;
-  box-shadow: var(--md-elevation-paper-1);
-}
-
-.writing-workspace__tool-btn--hero:hover:not(:disabled) {
-  transform: translate(-1px, -1px);
-  box-shadow: var(--md-elevation-paper-2);
-}
-
-.writing-workspace__tool-btn--hero:active:not(:disabled) {
-  transform: translate(1.5px, 1.5px) !important;
-  box-shadow: 0.5px 0.5px 0px var(--md-outline) !important;
-}
-
-.writing-workspace__label-full {
-  display: inline;
+  border-color: var(--md-outline);
 }
 
 .writing-workspace__label-short {
   display: none;
 }
 
-/* 安静款：透明底 + 墨晕发线边 + 焦墨字 */
-.writing-workspace__tool-btn--ghost {
-  border-color: var(--md-outline-variant);
-  color: var(--md-on-surface);
-  background-color: transparent;
-  box-shadow: none;
+.writing-workspace__more-trigger {
+  list-style: none;
+  user-select: none;
 }
 
-.writing-workspace__tool-btn--ghost:hover:not(:disabled) {
-  color: var(--md-on-surface);
+.writing-workspace__more-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.writing-workspace__more-menu[open] .writing-workspace__more-trigger {
   border-color: var(--md-outline);
-  background-color: var(--md-state-layer-hover);
-  box-shadow: none;
+  background-color: var(--md-state-layer-pressed);
 }
 
-.writing-workspace__tool-btn--ghost:active:not(:disabled) {
-  box-shadow: 0px 0px 0px var(--md-outline) !important;
-}
-
-/* 禁用态压住全局 md-btn:disabled 的填充，保持安静款 */
-.writing-workspace__tool-btn--ghost:disabled {
-  background-color: var(--md-state-layer-hover) !important;
-  color: var(--md-on-surface-variant) !important;
-  border-color: var(--md-outline-variant) !important;
-}
-
-/* 焦点框沿用焦墨，确保暖纸底可见 */
-.writing-workspace__tool-btn:focus-visible {
-  outline-color: var(--md-on-surface);
-}
-
-.writing-workspace__tool-btn--secondary {
-  border-color: var(--md-outline) !important;
-  background-color: var(--md-surface);
-  color: var(--md-on-surface);
-}
-
-/* 极致国风脑洞：下拉菜单重塑为方直“折页折扇”宣纸面板 */
-.writing-workspace__ai-menu-panel {
+.writing-workspace__menu-panel {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
   z-index: 48;
-  min-width: 156px;
+  min-width: 180px;
   padding: 4px;
-  border-radius: 0 !important; /* 强制直角 */
-  border: 2px solid var(--md-outline) !important;
+  border: 1px solid var(--md-outline);
+  border-radius: var(--md-radius-sm);
   background: var(--md-surface);
   box-shadow: var(--md-elevation-paper-2);
-  animation: ink-menu-slide 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: ink-menu-slide 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.writing-workspace__ai-menu-panel {
-  min-width: 180px;
-}
-
-/* 极致国风脑洞：菜单项 Hover 水墨吸水徐徐晕开淡染 */
-.writing-workspace__ai-menu-item {
+.writing-workspace__menu-item {
   display: block;
   width: 100%;
-  min-height: 38px;
+  min-height: 44px;
   padding: 8px 12px;
   border: 0;
-  border-radius: 0 !important;
+  border-radius: var(--md-radius-xs);
   background: transparent;
-  text-align: left;
-  font-size: var(--md-label-medium);
-  font-family: var(--md-font-serif);
-  font-weight: 600;
   color: var(--md-on-surface);
+  text-align: left;
+  font-family: var(--md-font-serif);
+  font-size: var(--md-label-medium);
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.writing-workspace__ai-menu-item:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--md-secondary) 8%, transparent) !important; /* 朱砂慢晕淡染 */
-  color: var(--md-secondary);
+.writing-workspace__menu-item:hover:not(:disabled) {
+  background-color: var(--md-state-layer-hover);
 }
 
-.writing-workspace__ai-menu-item:focus-visible {
-  outline: 1.5px solid var(--md-secondary);
-  background-color: color-mix(in srgb, var(--md-secondary) 4%, transparent);
-}
-
-.writing-workspace__ai-menu-item--danger {
-  color: var(--md-secondary);
-}
-
-.writing-workspace__ai-menu-item--danger:hover:not(:disabled) {
-  background-color: color-mix(in srgb, var(--md-secondary) 12%, transparent) !important;
-}
-
-/* 极致国风脑洞：折页折扇徐徐挂下、模糊渐变清晰的宣纸舒展 */
 @keyframes ink-menu-slide {
   from {
     opacity: 0;
-    transform: scaleY(0.8) translateY(-8px);
-    transform-origin: top right;
+    transform: translateY(-6px);
   }
   to {
     opacity: 1;
-    transform: scaleY(1) translateY(0);
-    transform-origin: top right;
-  }
-}
-
-@media (max-width: 1160px) {
-  .writing-workspace__toolbar-divider {
-    display: none;
-  }
-}
-
-@media (max-width: 940px) {
-  .writing-workspace__toolbar {
-    width: 100%;
-    align-items: stretch;
-    margin-left: 0;
-  }
-
-  .writing-workspace__toolbar-row {
-    justify-content: flex-end;
+    transform: translateY(0);
   }
 }
 
 @media (max-width: 640px) {
   .writing-workspace__tool-btn {
-    min-width: 70px;
-    padding-inline: 8px;
-  }
-
-  .writing-workspace__tool-btn--hero {
-    height: 44px;
-    min-height: 44px;
-    padding-inline: 12px;
+    padding-inline: 10px;
   }
 
   .writing-workspace__label-full {
@@ -433,11 +335,6 @@ watch(
 
   .writing-workspace__label-short {
     display: inline;
-  }
-
-  .writing-workspace__ai-menu-panel {
-    right: 0;
-    left: auto;
   }
 }
 </style>

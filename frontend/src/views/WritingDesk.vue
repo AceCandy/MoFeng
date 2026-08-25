@@ -71,6 +71,7 @@
               :workflow-retry-activity-key="workflowRetryActivityKey"
               :workflow-candidates="workflowCandidates"
               :active-section="activeDeskSection"
+              :assistant-open="assistantToggleActive"
               @workflow-start="startChapterWorkflow"
               @workflow-select-version="selectWorkflowVersion"
               @workflow-retry="retryChapterWorkflow"
@@ -85,13 +86,7 @@
               @show-evaluation-detail="openEvaluationDetailModal"
               @edit-chapter="editChapterContent"
               @update:active-section="handleDeskSectionChange"
-            />
-
-            <WDSealStamp
-              :is-active="assistantToggleActive"
-              :aria-expanded="useAssistantDrawer ? isAssistantDrawerOpen : isAssistantPanelVisible"
-              aria-controls="writing-desk-assistant-panel"
-              @toggle="toggleAssistantVisibility"
+              @toggle-assistant="toggleAssistantVisibility"
             />
           </div>
 
@@ -186,7 +181,6 @@ import {
   usePatchCreationContextMutation,
 } from '@/queries/creationContexts'
 import WDProjectStatus from '@/components/writing-desk/WDProjectStatus.vue'
-import WDSealStamp from '@/components/writing-desk/WDSealStamp.vue'
 import WDSidebar from '@/components/writing-desk/WDSidebar.vue'
 import WDWorkspace from '@/components/writing-desk/WDWorkspace.vue'
 
@@ -322,10 +316,19 @@ const handleDeskSectionChange = (section: WritingDeskSection) => {
 
 let restoredDeskSectionProjectId: string | null = null
 watch(
-  () => [project.value, selectedChapterNumber.value, contextsQuery.isPending.value] as const,
-  ([currentProject, chapterNumber, contextsPending]) => {
-    if (!currentProject || chapterNumber === null || contextsPending) return
-    const chapter = currentProject.chapters?.find((item) => item.chapter_number === chapterNumber)
+  () => [
+    project.value,
+    selectedChapterNumber.value,
+    contextsQuery.isPending.value,
+    chapterQuery.isPending.value,
+    chapterQuery.data.value,
+  ] as const,
+  ([currentProject, chapterNumber, contextsPending, chapterPending, chapterDetail]) => {
+    if (!currentProject || chapterNumber === null || contextsPending || chapterPending) return
+    const chapter =
+      chapterDetail?.chapter_number === chapterNumber
+        ? chapterDetail
+        : currentProject.chapters?.find((item) => item.chapter_number === chapterNumber)
     const isProjectEntry = restoredDeskSectionProjectId !== currentProject.id
     const requestedSection = isProjectEntry
       ? (projectContext.value?.desk_section ?? 'content')
@@ -741,13 +744,6 @@ const deleteSelectedBrokenChapter = async () => {
   .writing-desk-assistant-shell.is-drawer.is-open {
     box-shadow: var(--md-elevation-paper-2); /* 抽屉弹层纸影 */
   }
-}
-
-/* ==========================================================================
-   写作台辅助控制悬浮按钮 (案头宣纸盖印·引首闲章)
-   ========================================================================== */
-.writing-desk-workspace-shell {
-  position: relative; /* 确保闲章相对于工作区容器定位 */
 }
 
 @keyframes m3-fade {

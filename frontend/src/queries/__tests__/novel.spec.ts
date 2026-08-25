@@ -13,6 +13,7 @@ import {
   novelQueryKeys,
   useConverseConceptStreamMutation,
   useNovelChapterQuery,
+  useNovelProjectQuery,
   useResetChapterMutation,
 } from '@/queries/novel'
 
@@ -53,8 +54,41 @@ const mountConverseMutation = () => {
   return { app, mutation, queryClient }
 }
 
+const mountProjectQuery = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  let query!: ReturnType<typeof useNovelProjectQuery>
+  const app = createApp(defineComponent({
+    setup() {
+      query = useNovelProjectQuery(PROJECT_ID)
+      return () => null
+    },
+  }))
+  app.use(VueQueryPlugin, { queryClient })
+  app.mount(document.createElement('div'))
+  return { app, query }
+}
+
 describe('novel queries', () => {
   afterEach(() => vi.restoreAllMocks())
+
+  it('项目页面默认使用轻量详情载荷', async () => {
+    const project = {
+      id: PROJECT_ID,
+      title: '轻量项目',
+      initial_prompt: '',
+      conversation_history: [],
+      chapters: [],
+    } as NovelProject
+    const getNovel = vi.spyOn(NovelAPI, 'getNovel').mockResolvedValue(project)
+    const mounted = mountProjectQuery()
+
+    await vi.waitFor(() => expect(mounted.query.data.value).toEqual(project))
+
+    expect(getNovel).toHaveBeenCalledWith(PROJECT_ID, false)
+    mounted.app.unmount()
+  })
 
   it('重置章节后立即用响应替换旧 Chapter 缓存', async () => {
     const resetChapter = {
