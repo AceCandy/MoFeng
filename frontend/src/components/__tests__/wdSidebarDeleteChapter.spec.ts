@@ -130,7 +130,7 @@ describe('WDSidebar chapter deletion affordance', () => {
     expect(source).toContain('删除章节大纲')
   })
 
-  it('filters by title and jumps to an exact chapter number', async () => {
+  it('filters chapters for direct selection', async () => {
     Element.prototype.scrollIntoView = vi.fn()
     const rendered = await mountSidebar()
 
@@ -147,9 +147,10 @@ describe('WDSidebar chapter deletion affordance', () => {
       search.value = '4'
       search.dispatchEvent(new Event('input', { bubbles: true }))
       await nextTick()
-      rendered.host.querySelector('.writing-sidebar__search')?.dispatchEvent(
-        new Event('submit', { bubbles: true, cancelable: true }),
-      )
+      const filteredRow = rendered.host.querySelector(
+        '.writing-sidebar__chapter-row',
+      ) as HTMLButtonElement
+      filteredRow.click()
       await nextTick()
 
       expect(rendered.selectedRequests).toEqual([4])

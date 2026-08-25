@@ -30,7 +30,7 @@
               </button>
             </div>
           </div>
-          <form class="writing-sidebar__search" @submit.prevent="jumpToExactChapter">
+          <div class="writing-sidebar__search">
             <label for="writing-sidebar-search" class="sr-only">搜索章节标题或章号</label>
             <input
               id="writing-sidebar-search"
@@ -40,14 +40,7 @@
               autocomplete="off"
               placeholder="搜索标题或章号"
             />
-            <button
-              type="submit"
-              class="md-btn md-btn-outlined"
-              :disabled="exactChapterNumber === null"
-            >
-              跳转
-            </button>
-          </form>
+          </div>
         </div>
 
         <!-- 章节列表 -->
@@ -137,7 +130,7 @@
                 <button
                   v-if="canDeleteChapter(chapter.chapter_number)"
                   type="button"
-                  class="writing-sidebar__chapter-delete md-ripple"
+                  class="writing-sidebar__chapter-delete"
                   :aria-label="getDeleteChapterA11yLabel(chapter.chapter_number)"
                   :title="getDeleteChapterA11yLabel(chapter.chapter_number)"
                   @click.stop="emit('deleteChapter', getDeleteChapterNumbers(chapter.chapter_number))"
@@ -253,17 +246,6 @@ const filteredOutline = computed(() => {
   )
 })
 
-const exactChapterNumber = computed(() => {
-  const match = chapterSearch.value.trim().match(/^第?(\d+)章?$/)
-  if (!match) return null
-  const chapterNumber = Number(match[1])
-  return props.project?.blueprint?.chapter_outline?.some(
-    (chapter) => chapter.chapter_number === chapterNumber,
-  )
-    ? chapterNumber
-    : null
-})
-
 // 章节号到章节数据的索引，避免模板渲染时多次线性查找。
 const chapterByNumber = computed(() => {
   const map = new Map<number, NovelProject['chapters'][number]>()
@@ -351,12 +333,6 @@ const scrollToNearestIncompleteChapter = async () => {
     props.project?.chapters ?? [],
   )
   await scrollToChapterNumber(targetChapterNumber)
-}
-
-const jumpToExactChapter = async () => {
-  if (exactChapterNumber.value === null) return
-  emit('selectChapter', exactChapterNumber.value)
-  await scrollToChapterNumber(exactChapterNumber.value)
 }
 
 defineExpose({
@@ -572,16 +548,14 @@ watch(
 }
 
 .writing-sidebar__search {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--md-spacing-2);
+  max-width: 220px;
   margin-top: var(--md-spacing-2);
 }
 
 .writing-sidebar__search input {
-  min-width: 0;
-  height: 44px;
-  padding: 0 var(--md-spacing-3);
+  width: 100%;
+  height: 36px;
+  padding: 0 var(--md-spacing-2);
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-radius-sm);
   background-color: var(--md-surface);
@@ -592,11 +566,6 @@ watch(
   border-color: var(--md-stage);
   outline: 3px solid var(--md-note);
   outline-offset: 2px;
-}
-
-.writing-sidebar__search .md-btn {
-  min-width: 64px;
-  padding-inline: var(--md-spacing-2);
 }
 
 .writing-sidebar__outline-header-row {
@@ -800,16 +769,13 @@ watch(
   height: 32px;
   min-width: 32px;
   min-height: 32px;
-  border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-sm) !important;
-  background-color: color-mix(in srgb, var(--md-on-surface) 6%, transparent);
+  border: 0;
+  background-color: transparent;
   color: var(--md-on-surface-variant);
   opacity: 0;
   transform: translateY(-50%) translateX(10px);
   transition:
     opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
     color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
     transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -827,11 +793,14 @@ watch(
   transform: translateY(-50%) translateX(0);
 }
 
-.writing-sidebar__chapter-delete:hover,
-.writing-sidebar__chapter-delete:focus-visible {
-  border-color: var(--md-cue);
-  background-color: color-mix(in srgb, var(--md-cue) 12%, transparent);
+.writing-sidebar__chapter-delete:hover {
   color: var(--md-cue);
+}
+
+.writing-sidebar__chapter-delete:focus-visible {
+  color: var(--md-cue);
+  outline: 3px solid var(--md-note);
+  outline-offset: 2px;
 }
 
 /* 删除入口出现时让出行尾空间，避免与字数或状态标签重叠。 */
@@ -854,11 +823,10 @@ watch(
 .writing-sidebar__chapter-main {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--md-spacing-2);
 }
 
 .writing-sidebar__chapter-index {
-  min-width: 88px;
   display: flex;
   align-items: center;
   gap: 8px;
