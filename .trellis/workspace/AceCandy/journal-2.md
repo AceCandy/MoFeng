@@ -26,3 +26,24 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 75: 优化写作台章节导航
+
+**Date**: 2026-08-25
+**Task**: 优化写作台章节导航
+**Branch**: `main`
+
+### Summary
+
+重构章节导航层级与状态样式，固定底部生成操作，完善桌面和窄屏删除入口；类型检查、Lint、55项测试及浏览器验收通过。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5ef97f3` | (see git log) |
+
+### Status
+
+[OK] **Completed**
