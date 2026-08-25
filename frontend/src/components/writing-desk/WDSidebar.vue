@@ -7,57 +7,55 @@
       id="writing-desk-chapter-sidebar"
     >
       <div class="h-full flex flex-col">
-
+        <div class="writing-sidebar__outline-header">
+          <div class="writing-sidebar__outline-header-row">
+            <div class="writing-sidebar__outline-heading">
+              <h3 class="md-title-medium font-semibold">章节大纲</h3>
+              <span class="writing-sidebar__outline-count">{{ totalChapters }} 章</span>
+            </div>
+            <div class="writing-sidebar__outline-toolbar">
+              <button
+                type="button"
+                class="md-icon-btn md-ripple writing-sidebar__outline-action"
+                @click="scrollToNearestIncompleteChapter"
+                :disabled="!hasIncompleteChapter"
+                aria-label="定位最近未完成章节"
+                title="定位最近未完成章节"
+              >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="7.5" stroke="currentColor" />
+                  <circle cx="12" cy="12" r="2.2" fill="currentColor" />
+                  <path d="M12 2.8v2.2M12 19v2.2M2.8 12H5M19 12h2.2" stroke="currentColor" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <form class="writing-sidebar__search" @submit.prevent="jumpToExactChapter">
+            <label for="writing-sidebar-search" class="sr-only">搜索章节标题或章号</label>
+            <input
+              id="writing-sidebar-search"
+              v-model="chapterSearch"
+              type="search"
+              inputmode="search"
+              autocomplete="off"
+              placeholder="搜索标题或章号"
+            />
+            <button
+              type="submit"
+              class="md-btn md-btn-outlined"
+              :disabled="exactChapterNumber === null"
+            >
+              跳转
+            </button>
+          </form>
+        </div>
 
         <!-- 章节列表 -->
-        <div ref="listContainer" class="flex-1 overflow-y-auto">
-          <div class="writing-sidebar__outline-header">
-            <div class="writing-sidebar__outline-header-row">
-              <div class="writing-sidebar__outline-heading">
-                <h3 class="md-title-medium font-semibold">章节大纲</h3>
-                <span class="writing-sidebar__outline-count">{{ totalChapters }} 章</span>
-              </div>
-              <div class="writing-sidebar__outline-toolbar">
-                <button
-                  type="button"
-                  class="md-icon-btn md-ripple writing-sidebar__outline-action"
-                  @click="scrollToNearestIncompleteChapter"
-                  :disabled="!hasIncompleteChapter"
-                  aria-label="定位最近未完成章节"
-                  title="定位最近未完成章节"
-                >
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="7.5" stroke="currentColor" />
-                    <circle cx="12" cy="12" r="2.2" fill="currentColor" />
-                  <path d="M12 2.8v2.2M12 19v2.2M2.8 12H5M19 12h2.2" stroke="currentColor" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            <form class="writing-sidebar__search" @submit.prevent="jumpToExactChapter">
-              <label for="writing-sidebar-search" class="sr-only">搜索章节标题或章号</label>
-              <input
-                id="writing-sidebar-search"
-                v-model="chapterSearch"
-                type="search"
-                inputmode="search"
-                autocomplete="off"
-                placeholder="搜索标题或章号"
-              />
-              <button
-                type="submit"
-                class="md-btn md-btn-outlined"
-                :disabled="exactChapterNumber === null"
-              >
-                跳转
-              </button>
-            </form>
-          </div>
-
-          <div class="pl-1 pr-2 pb-6 pt-3">
+        <div ref="listContainer" class="writing-sidebar__outline-list flex-1 overflow-y-auto">
+          <div class="writing-sidebar__outline-body">
             <div v-if="filteredOutline.length" class="writing-sidebar__tree">
               <div
-                v-for="(chapter, index) in filteredOutline"
+                v-for="chapter in filteredOutline"
                 :key="chapter.chapter_number"
                 class="writing-sidebar__tree-item"
                 :class="{ 'has-delete-btn': canDeleteChapter(chapter.chapter_number) }"
@@ -69,7 +67,7 @@
                   :aria-current="selectedChapterNumber === chapter.chapter_number ? 'true' : undefined"
                   :aria-label="getChapterA11yLabel(chapter.chapter_number, chapter.title)"
                   :class="[
-                    'cursor-pointer writing-sidebar__chapter-row m3-stagger',
+                    'cursor-pointer writing-sidebar__chapter-row',
                     selectedChapterNumber === chapter.chapter_number
                       ? 'writing-sidebar__chapter-row--compact-selected'
                       : 'writing-sidebar__chapter-row--compact-idle',
@@ -79,13 +77,13 @@
                       ? 'writing-sidebar__chapter-row--locked'
                       : 'writing-sidebar__chapter-row--pending',
                   ]"
-                  :style="{ animationDelay: `${Math.min(index * 8, 80)}ms` }"
                 >
                   <div class="writing-sidebar__chapter-main">
                     <div class="writing-sidebar__chapter-index">
                       <Tooltip :text="getChapterTag(chapter.chapter_number)">
                         <span
                           :class="['writing-sidebar__status-dot', chapterStatusDotClass(chapter.chapter_number)]"
+                          aria-hidden="true"
                         ></span>
                       </Tooltip>
                       <Tooltip :text="getChapterTag(chapter.chapter_number)">
@@ -121,6 +119,7 @@
                           fill="none"
                           stroke="currentColor"
                           stroke-width="2.5"
+                          aria-hidden="true"
                         >
                           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                           <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
@@ -167,6 +166,7 @@
                 class="w-12 h-12 mx-auto mb-3 opacity-50"
                 fill="currentColor"
                 viewBox="0 0 20 20"
+                aria-hidden="true"
               >
                 <path
                   d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9z"
@@ -174,34 +174,36 @@
               </svg>
               <p>暂无章节大纲</p>
             </div>
-            <div class="mt-4">
-              <button
-                type="button"
-                @click="$emit('generateOutline')"
-                :disabled="props.isGeneratingOutline"
-                class="md-btn md-btn-tonal md-ripple w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed writing-sidebar__outline-gen-btn"
-              >
-                <svg
-                  v-if="props.isGeneratingOutline"
-                  class="w-5 h-5 animate-spin"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                    clip-rule="evenodd"
-                  ></path>
-                </svg>
-                <svg v-else class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
-                  ></path>
-                </svg>
-                <span>{{ props.isGeneratingOutline ? '生成中...' : '生成后续大纲' }}</span>
-              </button>
-            </div>
           </div>
+        </div>
+
+        <div class="writing-sidebar__outline-footer">
+          <button
+            type="button"
+            @click="$emit('generateOutline')"
+            :disabled="props.isGeneratingOutline"
+            class="md-btn md-ripple w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed writing-sidebar__outline-gen-btn"
+          >
+            <svg
+              v-if="props.isGeneratingOutline"
+              class="w-5 h-5 animate-spin"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+              aria-hidden="true"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                clip-rule="evenodd"
+              ></path>
+            </svg>
+            <svg v-else class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+              <path
+                d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"
+              ></path>
+            </svg>
+            <span>{{ props.isGeneratingOutline ? '生成中…' : '生成后续大纲' }}</span>
+          </button>
         </div>
       </div>
     </div>
@@ -532,7 +534,7 @@ watch(
   height: 100%;
 }
 
-/* 章节大纲栏使用竹纸结构面，以 1px 墨晕发线和稿纸阅读面分界 */
+/* 章节大纲栏保持连续工作面，层级由色面和 1px 对位线承担。 */
 .writing-sidebar {
   position: relative;
   z-index: auto;
@@ -540,7 +542,7 @@ watch(
   min-height: 0;
   height: 100%;
   overflow: hidden;
-  background-color: var(--md-surface-container-low);
+  background-color: var(--md-surface);
   color: var(--md-on-surface);
   border: 1px solid var(--md-outline-variant) !important;
   border-radius: 0 !important;
@@ -562,14 +564,10 @@ watch(
   outline-offset: 2px;
 }
 
-
-
 .writing-sidebar__outline-header {
-  position: sticky;
-  top: 0;
-  z-index: 24;
-  padding: var(--md-spacing-5) var(--md-spacing-6) var(--md-spacing-3);
-  background-color: var(--md-surface-container-low);
+  flex-shrink: 0;
+  padding: var(--md-spacing-3) var(--md-spacing-4);
+  background-color: var(--md-surface);
   border-bottom: 1px solid var(--md-outline-variant);
 }
 
@@ -577,7 +575,7 @@ watch(
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--md-spacing-2);
-  margin-top: var(--md-spacing-3);
+  margin-top: var(--md-spacing-2);
 }
 
 .writing-sidebar__search input {
@@ -585,13 +583,14 @@ watch(
   height: 44px;
   padding: 0 var(--md-spacing-3);
   border: 1px solid var(--md-outline-variant);
-  border-radius: var(--md-radius-xs);
+  border-radius: var(--md-radius-sm);
   background-color: var(--md-surface);
   color: var(--md-on-surface);
 }
 
 .writing-sidebar__search input:focus-visible {
-  outline: 2px solid var(--md-primary);
+  border-color: var(--md-stage);
+  outline: 3px solid var(--md-note);
   outline-offset: 2px;
 }
 
@@ -616,8 +615,8 @@ watch(
 }
 
 .writing-sidebar__outline-heading h3 {
-  font-family: var(--md-font-serif);
-  color: var(--md-on-surface-variant);
+  color: var(--md-ink);
+  font-family: var(--md-font-family);
 }
 
 .writing-sidebar__outline-toolbar {
@@ -630,18 +629,18 @@ watch(
 .writing-sidebar__outline-count {
   color: var(--md-on-surface-variant);
   font-size: var(--md-label-medium);
-  font-weight: 600;
-  font-family: var(--md-font-serif);
+  font-weight: 700;
+  font-family: var(--md-font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
-/* 安静款图标钮：透明底 + 墨晕边 + 松烟字，hover 转描红 */
 .writing-sidebar__outline-action {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  min-height: 36px;
-  border-radius: 0 !important;
-  border: 1.5px solid var(--md-outline-variant);
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--md-radius-sm) !important;
+  border: 1px solid var(--md-outline);
   color: var(--md-on-surface-variant);
   background-color: transparent;
   transition:
@@ -655,13 +654,18 @@ watch(
 }
 
 .writing-sidebar__outline-action:hover:not(:disabled) {
-  border-color: var(--md-miaohong);
-  color: var(--md-miaohong);
-  background-color: color-mix(in srgb, var(--md-miaohong) 8%, transparent);
+  border-color: var(--md-stage);
+  color: var(--md-stage-deep);
+  background-color: var(--md-stage-soft);
 }
 
 .writing-sidebar__outline-action:active:not(:disabled) {
-  transform: translate(1px, 1px);
+  background-color: color-mix(in srgb, var(--md-stage-soft) 76%, var(--md-stage));
+}
+
+.writing-sidebar__outline-action:focus-visible {
+  outline: 3px solid var(--md-note);
+  outline-offset: 2px;
 }
 
 .writing-sidebar__outline-action:disabled {
@@ -669,158 +673,92 @@ watch(
   cursor: not-allowed;
 }
 
+.writing-sidebar__outline-list {
+  min-height: 0;
+  background-color: var(--md-surface-container-low);
+}
+
+.writing-sidebar__outline-body {
+  padding: var(--md-spacing-3) var(--md-spacing-4) var(--md-spacing-4);
+}
+
+.writing-sidebar__outline-footer {
+  flex-shrink: 0;
+  padding: var(--md-spacing-3) var(--md-spacing-4);
+  border-top: 1px solid var(--md-outline-variant);
+  background-color: var(--md-surface);
+}
+
 .writing-sidebar__tree {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  border-top: 1px solid var(--md-outline-variant);
 }
 
 .writing-sidebar__tree-item {
   position: relative;
-  padding-left: 10px;
 }
 
-/* 目录穿线（2px 朱砂线装书 motif）已由全局 chapter-binding.css 收口，此处不再重复定义 */
-
-/* 木刻竹简签条样式章节行，使用墨晕发线边框 */
 .writing-sidebar__chapter-row {
   display: block;
   width: 100%;
+  min-height: 54px;
   text-align: left;
   appearance: none;
   -webkit-appearance: none;
-  padding: 8px;
+  padding: 10px 12px;
   border-radius: 0 !important;
-  border: 1px solid var(--md-outline-variant);
-  background-color: color-mix(in srgb, var(--md-on-surface) 3%, transparent);
+  border: 1px solid transparent;
+  border-bottom-color: var(--md-outline-variant);
+  background-color: var(--md-surface);
   color: inherit;
   font: inherit;
-  outline: none;
   cursor: pointer;
   position: relative;
   transition:
-    background-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.25s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    background-color var(--md-duration-short) var(--md-easing-standard),
+    border-color var(--md-duration-short) var(--md-easing-standard),
+    box-shadow var(--md-duration-short) var(--md-easing-standard);
 }
 
-/* Hover：竹简抽出并以焦墨状态层强调 */
-.writing-sidebar__chapter-row--compact-idle:hover,
+.writing-sidebar__chapter-row--compact-idle:hover {
+  border-bottom-color: var(--md-stage);
+  background-color: var(--md-surface-container-low);
+}
+
 .writing-sidebar__chapter-row:focus-visible {
-  border-color: var(--md-outline);
-  background-color: var(--md-state-layer-hover);
-  transform: translateX(4px);
-  animation: stone-tremble 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+  z-index: 1;
+  outline: 3px solid var(--md-note);
+  outline-offset: -3px;
 }
 
-/* 选中章节签条：焦墨 8% 状态层 + 左缘 2px 描红印线 */
 .writing-sidebar__chapter-row--compact-selected {
-  border: 1px solid var(--md-outline) !important;
-  background-color: color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
-  margin-left: -10px !important; /* 向左平移 10px，使其恰好压在竖红线上 */
-  width: calc(100% + 14px) !important; /* 显式拓宽卡片（向左超出 10px，向右超出 4px），使其绝对宽于普通卡片 */
-  padding-left: 18px !important; /* 增加左侧内边距，精确对齐文字内容与状态点 */
-  box-shadow: none !important;
-  z-index: 10; /* 确保选中章节盖在连线上，显得更有层次 */
-}
-
-.writing-sidebar__chapter-row--compact-selected::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background-color: var(--md-miaohong);
-  pointer-events: none;
+  border-color: var(--md-stage) !important;
+  background-color: var(--md-stage-soft) !important;
+  box-shadow: inset 3px 0 0 var(--md-cue) !important;
 }
 
 .writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-title {
-  font-family: var(--md-font-serif);
-  color: var(--md-miaohong) !important;
-  font-weight: bold;
-  letter-spacing: 0.03em;
+  color: var(--md-ink) !important;
+  font-family: var(--md-font-family);
+  font-weight: 700;
 }
 
 .writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-no {
-  color: var(--md-miaohong) !important;
+  color: var(--md-stage-deep) !important;
 }
 
-/* 行尾「著」字闲章与目录穿线沿用描红系，覆写全局 chapter-binding.css 基础值 */
-.writing-sidebar__chapter-row--compact-selected::after {
-  background-color: var(--md-miaohong) !important;
-  color: var(--md-btn-seal-text) !important;
-  border-color: var(--md-miaohong) !important;
-}
-
-.writing-sidebar__tree-item::before {
-  background-color: color-mix(in srgb, var(--md-miaohong) 26%, transparent);
-  border-left-color: color-mix(in srgb, var(--md-miaohong) 14%, transparent);
-  box-shadow: none;
-}
-
-.writing-sidebar__tree-item::after {
-  background-color: color-mix(in srgb, var(--md-miaohong) 20%, transparent);
-}
-
-/* 选中行尾朱砂方印「著」已由全局 chapter-binding.css 收口，此处不再重复定义 */
-
-/* 已完成/待写/未解锁签条统一使用中性纸色，状态权责交给状态印与状态点 */
-.writing-sidebar__chapter-row--completed {
-  border-color: var(--md-outline-variant) !important;
-  background-color: color-mix(in srgb, var(--md-on-surface) 5%, transparent) !important;
-}
-.writing-sidebar__chapter-row--completed:hover {
-  border-color: var(--md-outline) !important;
-  background-color: var(--md-state-layer-hover) !important;
-}
-
-.writing-sidebar__chapter-row--pending {
-  border-color: var(--md-outline-variant) !important;
-  background-color: color-mix(in srgb, var(--md-on-surface) 3%, transparent) !important;
-}
-.writing-sidebar__chapter-row--pending:hover {
-  border-color: var(--md-outline) !important;
-  background-color: var(--md-state-layer-hover) !important;
-}
-
-/* 未解锁状态的签条样式 */
 .writing-sidebar__chapter-row--locked {
   opacity: 0.65;
-  border-color: color-mix(in srgb, var(--md-outline-variant) 60%, transparent) !important;
-  background-color: transparent !important;
 }
+
 .writing-sidebar__chapter-row--locked:hover {
-  border-color: var(--md-outline-variant) !important;
-  background-color: var(--md-state-layer-hover) !important;
+  background-color: var(--md-surface-container-low) !important;
   opacity: 0.85;
 }
 
-/* 「当前」权责统一：三态章被选中时与基准选中态一致（焦墨 8% 底 + 2px 印线 + 描红题名） */
-.writing-sidebar__chapter-row--completed.writing-sidebar__chapter-row--compact-selected,
-.writing-sidebar__chapter-row--pending.writing-sidebar__chapter-row--compact-selected,
 .writing-sidebar__chapter-row--locked.writing-sidebar__chapter-row--compact-selected {
-  border: 1px solid var(--md-outline) !important;
-  background-color: color-mix(in srgb, var(--md-on-surface) 8%, transparent) !important;
-  box-shadow: none !important;
-}
-.writing-sidebar__chapter-row--completed.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-title,
-.writing-sidebar__chapter-row--completed.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-no,
-.writing-sidebar__chapter-row--pending.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-title,
-.writing-sidebar__chapter-row--pending.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-no {
-  color: var(--md-miaohong) !important;
-}
-.writing-sidebar__chapter-row--locked.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-title,
-.writing-sidebar__chapter-row--locked.writing-sidebar__chapter-row--compact-selected .writing-sidebar__chapter-no {
-  color: var(--md-on-surface-variant) !important;
-}
-.writing-sidebar__chapter-row--completed.writing-sidebar__chapter-row--compact-selected::after,
-.writing-sidebar__chapter-row--pending.writing-sidebar__chapter-row--compact-selected::after,
-.writing-sidebar__chapter-row--locked.writing-sidebar__chapter-row--compact-selected::after {
-  color: var(--md-btn-seal-text) !important;
-  border-color: var(--md-miaohong) !important;
-  background-color: var(--md-miaohong) !important;
+  opacity: 1;
 }
 
 /* 锁定章节的锁图标样式 (右侧) */
@@ -858,15 +796,15 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  min-height: 28px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
   border: 1px solid var(--md-outline-variant);
   border-radius: var(--md-radius-sm) !important;
   background-color: color-mix(in srgb, var(--md-on-surface) 6%, transparent);
   color: var(--md-on-surface-variant);
-  opacity: 0.4; /* 常态半透可见，触屏可达；hover/focus 时全显 */
+  opacity: 0;
   transform: translateY(-50%) translateX(10px);
   transition:
     opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
@@ -891,24 +829,25 @@ watch(
 
 .writing-sidebar__chapter-delete:hover,
 .writing-sidebar__chapter-delete:focus-visible {
-  border-color: var(--md-miaohong);
-  background-color: color-mix(in srgb, var(--md-miaohong) 12%, transparent);
-  color: var(--md-miaohong);
+  border-color: var(--md-cue);
+  background-color: color-mix(in srgb, var(--md-cue) 12%, transparent);
+  color: var(--md-cue);
 }
 
-/* 当有删除按钮的章节被 hover，或删除按钮获得焦点时，隐藏章节行的各种状态和印章，以进行无缝替换 */
+/* 删除入口出现时让出行尾空间，避免与字数或状态标签重叠。 */
 .writing-sidebar__tree-item.has-delete-btn:hover .writing-sidebar__chapter-word-count,
 .writing-sidebar__tree-item.has-delete-btn:hover .writing-sidebar__chapter-lock-icon,
-.writing-sidebar__tree-item.has-delete-btn:hover .writing-sidebar__chapter-badge-pending,
-.writing-sidebar__tree-item.has-delete-btn:hover .writing-sidebar__chapter-row--compact-selected::after {
+.writing-sidebar__tree-item.has-delete-btn:hover .writing-sidebar__chapter-badge-pending {
   opacity: 0 !important;
   pointer-events: none;
 }
 
-.writing-sidebar__tree-item.has-delete-btn:has(.writing-sidebar__chapter-delete:focus-visible) .writing-sidebar__chapter-word-count,
-.writing-sidebar__tree-item.has-delete-btn:has(.writing-sidebar__chapter-delete:focus-visible) .writing-sidebar__chapter-lock-icon,
-.writing-sidebar__tree-item.has-delete-btn:has(.writing-sidebar__chapter-delete:focus-visible) .writing-sidebar__chapter-badge-pending,
-.writing-sidebar__tree-item.has-delete-btn:has(.writing-sidebar__chapter-delete:focus-visible) .writing-sidebar__chapter-row--compact-selected::after {
+.writing-sidebar__tree-item.has-delete-btn:has(.writing-sidebar__chapter-delete:focus-visible)
+  .writing-sidebar__chapter-word-count,
+.writing-sidebar__tree-item.has-delete-btn:has(.writing-sidebar__chapter-delete:focus-visible)
+  .writing-sidebar__chapter-lock-icon,
+.writing-sidebar__tree-item.has-delete-btn:has(.writing-sidebar__chapter-delete:focus-visible)
+  .writing-sidebar__chapter-badge-pending {
   opacity: 0 !important;
   pointer-events: none;
 }
@@ -919,45 +858,70 @@ watch(
 }
 
 .writing-sidebar__chapter-index {
-  min-width: 96px;
+  min-width: 88px;
   display: flex;
   align-items: center;
   gap: 8px;
   padding-top: 0;
 }
 
-/* 极致国风脑洞：小圆点改造为微型“金石印章方印”，融入古典中式传统色 */
 .writing-sidebar__status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 0 !important; /* 方直印章 */
-  background-color: var(--md-on-surface-variant);
+  position: relative;
   display: inline-block;
-  border: 1px solid transparent;
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid var(--md-outline);
+  border-radius: var(--md-radius-xs);
+  background-color: var(--md-surface);
 }
 
-/* 已完成沿用“石绿”中式绿（图形语义色） */
 .writing-sidebar__status-dot.is-completed {
-  background-color: var(--md-success) !important; /* 石绿 */
-  border-color: color-mix(in srgb, var(--md-success) 70%, var(--md-on-surface));
+  border-color: var(--md-success);
+  background-color: var(--md-success);
 }
 
-/* 进行中使用描红强调 */
+.writing-sidebar__status-dot.is-completed::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 1px;
+  width: 4px;
+  height: 7px;
+  border: solid var(--md-on-primary);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
 .writing-sidebar__status-dot.is-progress {
-  background-color: var(--md-miaohong) !important;
-  border-color: color-mix(in srgb, var(--md-miaohong) 70%, var(--md-on-surface));
+  border-color: var(--md-cue);
+  border-radius: 50%;
+  background-color: var(--md-cue);
 }
 
-/* 失败沿用“丹砂”错误语义色 */
 .writing-sidebar__status-dot.is-failed {
-  background-color: var(--md-error) !important;
-  border-color: color-mix(in srgb, var(--md-error) 70%, var(--md-on-surface));
+  border-color: var(--md-error);
+  background-color: var(--md-surface);
+  color: var(--md-error);
 }
 
-/* 松烟辅文兜底 */
-.writing-sidebar__status-dot.is-idle {
-  background-color: var(--md-on-surface-variant) !important;
-  border-color: color-mix(in srgb, var(--md-on-surface-variant) 75%, var(--md-on-surface));
+.writing-sidebar__status-dot.is-failed::before,
+.writing-sidebar__status-dot.is-failed::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 4px;
+  width: 6px;
+  height: 1.5px;
+  background-color: currentColor;
+}
+
+.writing-sidebar__status-dot.is-failed::before {
+  transform: rotate(45deg);
+}
+
+.writing-sidebar__status-dot.is-failed::after {
+  transform: rotate(-45deg);
 }
 
 .writing-sidebar__chapter-no {
@@ -985,17 +949,54 @@ watch(
   min-width: 56px;
   text-align: right;
   color: var(--md-on-surface-variant);
-  font-size: var(--md-body-small);
+  font-family: var(--md-font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
   transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* 空态「暂无章节大纲」沿用松烟辅文 */
 .writing-sidebar .md-on-surface-variant {
   color: var(--md-on-surface-variant);
 }
 
-.m3-stagger {
-  animation: m3-rise 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+/* 触屏无法悬停：删除操作占用独立栏位，避免覆盖锁定与状态信息。 */
+@media (hover: none), (max-width: 833px) {
+  .writing-sidebar__tree-item.has-delete-btn {
+    display: flex;
+  }
+
+  .writing-sidebar__tree-item.has-delete-btn .writing-sidebar__chapter-row {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+  }
+
+  .writing-sidebar__chapter-delete {
+    position: static;
+    flex: 0 0 44px;
+    width: 44px;
+    height: auto;
+    min-width: 44px;
+    min-height: 54px;
+    opacity: 0.55;
+    transform: none;
+  }
+
+  .writing-sidebar__chapter-delete::before {
+    inset: 0;
+  }
+
+  .writing-sidebar__tree-item.has-delete-btn .writing-sidebar__chapter-word-count,
+  .writing-sidebar__tree-item.has-delete-btn .writing-sidebar__chapter-lock-icon,
+  .writing-sidebar__tree-item.has-delete-btn .writing-sidebar__chapter-badge-pending {
+    display: none;
+  }
+
+  .writing-sidebar__tree-item:hover .writing-sidebar__chapter-delete,
+  .writing-sidebar__tree-item:focus-within .writing-sidebar__chapter-delete,
+  .writing-sidebar__chapter-delete:focus-visible {
+    transform: none;
+  }
 }
 
 @media (max-width: 833px) {
@@ -1003,61 +1004,36 @@ watch(
     height: 100%;
     overflow: hidden;
   }
-
-  .writing-sidebar__chapter-row--compact-selected {
-    margin-left: 0 !important;
-    width: 100% !important;
-    padding-left: 8px !important;
-  }
-}
-
-/* 动效关键帧 */
-@keyframes m3-rise {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* 脑洞：Hover 竹简抽出金石阻尼微颤抖 */
-@keyframes stone-tremble {
-  0% { transform: translateX(0); }
-  30% { transform: translateX(5px) rotate(0.4deg); }
-  60% { transform: translateX(3px) rotate(-0.3deg); }
-  80% { transform: translateX(4.5px) rotate(0.1deg); }
-  100% { transform: translateX(4px) rotate(0); }
-}
-
-/* 脑洞：朱砂 [閱] 印章空中扣下、落纸微回弹 */
-@keyframes seal-stamp {
-  0% {
-    opacity: 0;
-    transform: translateY(-50%) scale(1.45) rotate(-18deg);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(-50%) scale(1) rotate(-6deg);
-  }
-}
-
-/* dot-ink-pulse 已移除：进行中状态以朱砂静态色点指示，避免常驻动画 */
-
-@media (prefers-reduced-motion: reduce) {
-  .m3-stagger,
-  .writing-sidebar__chapter-row--compact-idle:hover,
-  .writing-sidebar__status-dot.is-progress {
-    animation: none !important;
-    transform: none !important;
-  }
 }
 
 .writing-sidebar__outline-gen-btn {
-  min-width: 156px;
+  min-width: 0;
   flex-shrink: 0;
+  border-color: var(--md-stage);
+  border-radius: var(--md-radius-sm);
+  background-color: var(--md-stage);
+  color: var(--md-on-primary);
+  font-weight: 700;
 }
 
+.writing-sidebar__outline-gen-btn:hover:not(:disabled) {
+  border-color: var(--md-stage-strong);
+  background-color: var(--md-stage-strong);
+}
+
+.writing-sidebar__outline-gen-btn:active:not(:disabled) {
+  border-color: var(--md-stage-deep);
+  background-color: var(--md-stage-deep);
+}
+
+.writing-sidebar__outline-gen-btn:focus-visible {
+  outline: 3px solid var(--md-note);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .writing-sidebar__outline-gen-btn .animate-spin {
+    animation: none !important;
+  }
+}
 </style>
