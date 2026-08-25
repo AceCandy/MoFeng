@@ -68,3 +68,24 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 77: 精简写作台章节侧栏
+
+**Date**: 2026-08-26
+**Task**: 精简写作台章节侧栏
+**Branch**: `main`
+
+### Summary
+
+收紧章节号与标题间距，缩小搜索框并移除跳转按钮，删除入口改为纯图标；定向测试、ESLint、类型检查与界面审计通过。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5810032` | (see git log) |
+
+### Status
+
+[OK] **Completed**
