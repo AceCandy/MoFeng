@@ -506,6 +506,10 @@ watch(
 
 /* 描红小字签：楷体淡朱 */
 .chapter-workflow__candidate-label {
+  display: inline-block;
+  padding: 1px 6px;
+  border: 1px solid transparent;
+  border-radius: 2px;
   font-family: var(--md-font-kai);
   font-weight: 700;
   color: var(--md-miaohong);
@@ -513,10 +517,7 @@ watch(
 
 /* 选定笺上的小字签收成一方淡朱描边印 */
 .chapter-workflow__candidate.is-selected .chapter-workflow__candidate-label {
-  display: inline-block;
-  padding: 1px 6px;
-  border: 1px solid var(--md-miaohong);
-  border-radius: 2px;
+  border-color: var(--md-miaohong);
   background: var(--md-surface);
 }
 

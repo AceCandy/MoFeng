@@ -222,10 +222,12 @@ describe('UI audit regressions', () => {
     expect(source).toContain('type="button"')
     expect(source).toContain(':aria-expanded="isDropdownOpen"')
     expect(source).toContain(":aria-controls=\"isDropdownOpen ? 'app-shell-project-menu' : undefined\"")
+    expect(source).toContain(":aria-current=\"proj.id === currentProjectId ? 'true' : undefined\"")
     expect(source).not.toContain('class="app-shell__dropdown-action" @click')
     expect(source).not.toContain('@click="isDropdownOpen = !isDropdownOpen"')
     expect(capsuleBlock).toContain('min-height: 44px')
     expect(dropdownItemBlock).toContain('min-height: 44px')
+    expect(dropdownItemBlock).toContain('border: 1px solid transparent')
     expect(dropdownActionBlock).toContain('min-height: 44px')
   })
 
@@ -543,6 +545,13 @@ describe('UI audit regressions', () => {
     expect(statisticsSource).toContain("novelsPending ? '—'")
   })
 
+  it('keeps inspiration progress states geometrically stable', () => {
+    const source = readSource('src/views/InspirationMode.vue')
+
+    expect(readCssBlock(source, '.ledger-item')).not.toContain('transform:')
+    expect(readCssBlock(source, '.ledger-item.is-active')).not.toContain('transform:')
+  })
+
   it('avoids layout-property animation in character dna panels', () => {
     const source = readSource('src/components/CharactersEditorEnhanced.vue')
 
@@ -674,6 +683,7 @@ describe('UI audit regressions', () => {
       css,
       'html body .workspace-page .workspace-archive__head > .workspace-chip',
     )
+    const projectRowBlock = readCssBlock(css, 'html body .workspace-page .project-card')
     const deleteBlock = readCssBlock(projectCardSource, '.project-card__delete')
 
     expect(titleBlock).toContain('font-size: clamp(44px, 5.2vw, 76px)')
@@ -693,6 +703,9 @@ describe('UI audit regressions', () => {
       'class="md-btn md-btn-outlined md-ripple project-card__action"',
     )
     expect(projectCardSource).toContain("return '蓝图已完成 · 正文未开始'")
+    expect(projectCardSource).not.toContain('.project-card:focus-within')
+    expect(projectRowBlock).toContain('padding: 20px 0 20px 16px')
+    expect(css).not.toContain('.workspace-page .project-card:focus-within')
     expect(deleteBlock).toContain('color: var(--md-on-surface-variant)')
     expect(projectCardSource).toContain('.project-card__delete:focus-visible')
     expect(css).toContain(
@@ -702,11 +715,21 @@ describe('UI audit regressions', () => {
 
   it('keeps workflow candidate cards as one accessible radio group', () => {
     const source = readSource('src/components/writing-desk/ChapterWorkflowPanel.vue')
+    const labelBlock = readCssBlock(source, '.chapter-workflow__candidate-label')
+    const selectedLabelBlock = readCssBlock(
+      source,
+      '.chapter-workflow__candidate.is-selected .chapter-workflow__candidate-label',
+    )
 
     expect(source).toContain('role="radiogroup"')
     expect(source).toContain('role="radio"')
     expect(source).toContain(':aria-checked="selectedCandidateId === candidate.id"')
     expect(source).toContain('@click="selectedCandidateId = candidate.id"')
+    expect(labelBlock).toContain('display: inline-block')
+    expect(labelBlock).toContain('padding: 1px 6px')
+    expect(labelBlock).toContain('border: 1px solid transparent')
+    expect(selectedLabelBlock).toContain('border-color: var(--md-miaohong)')
+    expect(selectedLabelBlock).not.toContain('padding:')
   })
 
   it('announces workflow status and failures with live region semantics', () => {

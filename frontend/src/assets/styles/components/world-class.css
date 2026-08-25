@@ -470,7 +470,7 @@ html body .workspace-page .project-card {
   grid-template-columns: minmax(0, 1fr) minmax(150px, 210px);
   align-items: center;
   gap: 20px !important;
-  padding: 20px 0 !important;
+  padding: 20px 0 20px 16px !important;
   border: 0 !important;
   border-bottom: 1px solid var(--md-outline-variant) !important;
   border-radius: 0 !important;
@@ -478,8 +478,7 @@ html body .workspace-page .project-card {
   box-shadow: none !important;
 }
 
-html body .workspace-page .project-card:hover,
-html body .workspace-page .project-card:focus-within {
+html body .workspace-page .project-card:hover {
   border-color: var(--md-stage) !important;
   background: var(--md-surface-container-low) !important;
   box-shadow: inset 4px 0 0 var(--md-stage) !important;

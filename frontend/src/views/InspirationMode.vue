@@ -1311,9 +1311,7 @@ onUnmounted(() => {
   transition:
     background-color var(--md-duration-medium) var(--md-easing-standard),
     border-color var(--md-duration-medium) var(--md-easing-standard),
-    box-shadow var(--md-duration-medium) var(--md-easing-standard),
-    transform var(--md-duration-medium) var(--md-easing-standard);
-  transform: scale(0.97);
+    box-shadow var(--md-duration-medium) var(--md-easing-standard);
 }
 
 /* 激活态：红泥落地，字迹化实 */
@@ -1321,7 +1319,6 @@ onUnmounted(() => {
   background-color: var(--md-surface) !important; /* 变熟宣白 */
   border: 1px solid var(--md-jiege) !important; /* 界格发线 */
   box-shadow: var(--md-elevation-paper-1) !important; /* 熟宣柔影 */
-  transform: scale(1);
 }
 
 /* 金石单字阳刻小方印 */

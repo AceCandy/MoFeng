@@ -145,8 +145,7 @@ const handleDelete = () => {
     background-color var(--md-duration-short) var(--md-easing-standard);
 }
 
-.project-card:hover,
-.project-card:focus-within {
+.project-card:hover {
   border-color: color-mix(in srgb, var(--md-outline) 55%, var(--md-on-surface)) !important; /* 界格发线加深 */
   /* 纸页柔影微浮 */
   box-shadow: var(--md-elevation-paper-2) !important;

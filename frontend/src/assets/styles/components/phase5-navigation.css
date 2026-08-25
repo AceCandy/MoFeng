@@ -228,7 +228,7 @@ body .app-shell__topbar {
   margin-bottom: 2px !important;
   gap: var(--md-spacing-2) !important;
   width: 100% !important;
-  border: 0;
+  border: 1px solid transparent;
   background: transparent;
   text-align: left;
   cursor: pointer;

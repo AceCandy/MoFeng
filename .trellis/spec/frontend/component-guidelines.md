@@ -101,6 +101,28 @@ Naive's `NMessageProvider` / `NDialogProvider` are **not** mounted globally. The
 
 Rule: for transient user feedback, use `useAlert()` (the project convention); reach for Naive `useMessage()`/`useDialog()` only inside a component that already mounts the corresponding provider.
 
+## Interaction state stability
+
+Content-bearing controls and list items must keep the same box geometry across default, hover,
+focus, active, and selected states. Reserve borders and label padding in the base rule; state rules
+change only color, background, outline, or shadow. This prevents text and neighboring content from
+jumping when a state appears.
+
+Keep keyboard focus local with `:focus-visible`. Do not reuse a whole-row selected treatment through
+`:focus-within` unless the row itself represents a real current/selected value and exposes the matching
+ARIA state.
+
+```css
+/* Wrong: selection changes geometry. */
+.item { border: 0; }
+.item.is-active { border: 1px solid var(--md-primary); padding-left: 12px; }
+
+/* Correct: geometry is reserved before the state changes. */
+.item { border: 1px solid transparent; padding-left: 12px; }
+.item.is-active { border-color: var(--md-primary); }
+.item:focus-visible { outline: 2px solid var(--md-primary); }
+```
+
 ## Accessibility contracts
 
 - Shared modal containers put `role="dialog"`, `aria-modal="true"`, and the accessible name on the modal box rather than its overlay. Reuse `useDialogA11y` for initial focus, Tab trapping, Escape, focus restoration, reference-counted body scroll lock, and background `inert`. Nested dialogs increment the same background element's retain count; closing or unmounting restores its original `inert` value only after the final dialog releases it.
