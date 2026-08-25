@@ -270,7 +270,9 @@ const {
 })
 
 const selectChapter = (chapterNumber: number) => {
+  const context = projectContext.value
   selectChapterLocally(chapterNumber)
+  if (context?.surface === 'writing' && context.chapter_number === chapterNumber) return
   void patchContextMutation
     .mutateAsync({
       projectId: props.id,

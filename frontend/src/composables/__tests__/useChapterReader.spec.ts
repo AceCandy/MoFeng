@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createApp, defineComponent, nextTick } from 'vue'
 
 import { pickChineseVoice, useChapterReader } from '@/composables/useChapterReader'
 
@@ -559,6 +560,28 @@ describe('useChapterReader', () => {
     await unconfigured.refreshTTSConfig()
     expect(unconfigured.hasModelTTS.value).toBe(false)
     expect(unconfigured.modelVoiceLabel.value).toBe('默认')
+  })
+
+  it('挂载阅读器时不预取 TTS 配置，首次朗读时再加载', async () => {
+    const loadConfig = vi.fn(async () => bundle(false))
+    let reader!: ReturnType<typeof useChapterReader>
+    const app = createApp(defineComponent({
+      setup() {
+        reader = useChapterReader({
+          loadConfig,
+          synthesize: vi.fn(),
+          notify: vi.fn(),
+        })
+        return () => null
+      },
+    }))
+    app.mount(document.createElement('div'))
+    await nextTick()
+
+    expect(loadConfig).not.toHaveBeenCalled()
+    await reader.start('标题', '正文。')
+    expect(loadConfig).toHaveBeenCalledOnce()
+    app.unmount()
   })
 
   it('previewVoice synthesizes a sample with the model voice when configured', async () => {

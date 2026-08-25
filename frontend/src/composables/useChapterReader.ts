@@ -384,7 +384,7 @@ export const useChapterReader = (
     if (typeof localStorage !== 'undefined') localStorage.setItem(FORCE_BROWSER_STORAGE_KEY, next ? '1' : '0')
   }
 
-  /** 拉取配置，更新模型音色相关状态；挂载与每次朗读前调用 */
+  /** 拉取配置，更新模型音色相关状态；每次朗读前调用 */
   const refreshTTSConfig = async () => {
     try {
       const config = await loadConfig()
@@ -770,7 +770,6 @@ export const useChapterReader = (
 
   if (getCurrentInstance()) {
     onBeforeUnmount(stop)
-    void refreshTTSConfig()
   }
 
   return {

@@ -28,9 +28,15 @@ const isDropdownOpen = ref(false)
 const toggleDropdown = () => {
   isDropdownOpen.value = !isDropdownOpen.value
 }
-const { data: rawBackgroundTasks, isFetching: isFetchingTasks } = useTasksQuery()
-const { sseBackgroundTasks, isTaskStreamActive } = useTaskStream(() => authStore.user?.id)
+const { sseBackgroundTasks, isTaskStreamActive, isTaskStreamConnected } = useTaskStream(
+  () => authStore.user?.id,
+)
+const { data: rawBackgroundTasks, isFetching: isFetchingTasks } = useTasksQuery(
+  isTaskStreamConnected,
+)
 const completedOutlineTaskIds = new Set<string>()
+let hasQueriedTaskSnapshot = false
+let hasStreamedTaskSnapshot = false
 const taskReadStoragePrefix = 'mofeng-task-read:'
 const viewedCompletedTaskIds = ref<Set<string>>(new Set())
 
@@ -137,7 +143,10 @@ const { data: currentProject } = useNovelProjectQuery(currentProjectId)
 const { data: rawProjects } = useNovelProjectsQuery()
 const projects = computed(() => rawProjects.value || [])
 
-watch(backgroundTasks, (tasks) => {
+const recordCompletedOutlineTasks = (
+  tasks: NonNullable<typeof rawBackgroundTasks.value>,
+  shouldInvalidate: boolean,
+) => {
   for (const task of tasks) {
     if (
       task.task_type === 'chapter_outline' &&
@@ -146,11 +155,27 @@ watch(backgroundTasks, (tasks) => {
       !completedOutlineTaskIds.has(task.id)
     ) {
       completedOutlineTaskIds.add(task.id)
+      if (!shouldInvalidate) continue
       void queryClient.invalidateQueries({ queryKey: novelQueryKeys.projects() })
-      void queryClient.invalidateQueries({ queryKey: novelQueryKeys.detail(task.project_id) })
+      void queryClient.invalidateQueries({
+        queryKey: novelQueryKeys.detail(task.project_id),
+        exact: true,
+      })
     }
   }
-})
+}
+
+watch(rawBackgroundTasks, (tasks) => {
+  if (!tasks) return
+  recordCompletedOutlineTasks(tasks, hasQueriedTaskSnapshot)
+  hasQueriedTaskSnapshot = true
+}, { immediate: true })
+
+watch(sseBackgroundTasks, (tasks) => {
+  if (!tasks) return
+  recordCompletedOutlineTasks(tasks, hasStreamedTaskSnapshot)
+  hasStreamedTaskSnapshot = true
+}, { immediate: true })
 
 const projectTags = computed(() => {
   if (!currentProject.value) return ''

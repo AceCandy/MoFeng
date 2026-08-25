@@ -21,6 +21,7 @@ import {
 
 type TaskIdSource = MaybeRefOrGetter<string | null | undefined>
 type TaskStreamScopeSource = MaybeRefOrGetter<BackgroundTaskStreamScope | null | undefined>
+type TaskStreamConnectedSource = MaybeRefOrGetter<boolean | null | undefined>
 
 export const tasksQueryKeys = {
   all: ['tasks'] as const,
@@ -28,12 +29,12 @@ export const tasksQueryKeys = {
   detail: (taskId: string) => [...tasksQueryKeys.all, 'detail', taskId] as const,
 }
 
-export function useTasksQuery() {
+export function useTasksQuery(streamConnected?: TaskStreamConnectedSource) {
   return useQuery<BackgroundTask[]>({
     queryKey: tasksQueryKeys.list(),
     queryFn: () => TaskAPI.getTasks(),
     // SSE 是主同步通道；轮询用于连接异常时兜底刷新任务日志。
-    refetchInterval: 15_000,
+    refetchInterval: computed(() => toValue(streamConnected) ? false : 15_000),
   })
 }
 
@@ -73,6 +74,7 @@ export function useTaskStream(
 ) {
   const sseBackgroundTasks = ref<BackgroundTask[] | null>(null)
   const isTaskStreamActive = ref(false)
+  const isTaskStreamConnected = ref(false)
   const resumeCursor = ref<number | null>(null)
   const controller = ref<AbortController | null>(null)
   const reconnectTimer = ref<number | null>(null)
@@ -93,6 +95,7 @@ export function useTaskStream(
     controller.value?.abort()
     controller.value = null
     isTaskStreamActive.value = false
+    isTaskStreamConnected.value = false
     contractRecoveryAttempted = false
   }
 
@@ -102,6 +105,7 @@ export function useTaskStream(
     sseBackgroundTasks.value = null
     resumeCursor.value = null
     isTaskStreamActive.value = false
+    isTaskStreamConnected.value = false
     console.error('任务日志数据校验失败，已回退到轮询同步')
   }
 
@@ -114,6 +118,7 @@ export function useTaskStream(
     controller.value?.abort()
     const ac = new AbortController()
     controller.value = ac
+    isTaskStreamConnected.value = false
     isTaskStreamActive.value = true
     const scope = streamScope ? toValue(streamScope) ?? undefined : undefined
     const isCurrentConnection = () => controller.value === ac && !ac.signal.aborted
@@ -124,6 +129,10 @@ export function useTaskStream(
           signal: ac.signal,
           cursor: resumeCursor.value,
           scope,
+          onOpen: () => {
+            if (!isCurrentConnection()) return
+            isTaskStreamConnected.value = true
+          },
           onSnapshot: (snapshot) => {
             if (!isCurrentConnection()) return
             contractRecoveryAttempted = false
@@ -144,11 +153,14 @@ export function useTaskStream(
           onReset: () => {
             if (!isCurrentConnection()) return
             contractRecoveryAttempted = false
+            isTaskStreamConnected.value = false
             isTaskStreamActive.value = true
           },
           onError: (error) => {
             if (!isCurrentConnection()) return
             console.error('任务日志 SSE 同步失败:', error)
+            sseBackgroundTasks.value = null
+            isTaskStreamConnected.value = false
             isTaskStreamActive.value = false
           },
         })
@@ -168,6 +180,8 @@ export function useTaskStream(
         connectTaskStream()
       } catch (error) {
         if (!isCurrentConnection()) return
+        sseBackgroundTasks.value = null
+        isTaskStreamConnected.value = false
         if (error instanceof TaskContractError) {
           if (contractRecoveryAttempted) {
             fallBackToPolling(ac)
@@ -236,6 +250,7 @@ export function useTaskStream(
   return {
     sseBackgroundTasks,
     isTaskStreamActive,
+    isTaskStreamConnected,
     resumeCursor,
     startTaskStream,
     stopTaskStream,

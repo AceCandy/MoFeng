@@ -243,6 +243,7 @@ export function useChapterWorkflowActor(
     workflowRevisionIncreased: boolean,
   ) => {
     if (!businessSnapshotAccepted) return
+    const isInitialSnapshot = highestChapterRevision === null
     const revisionIncreased = highestChapterRevision !== null
       && value.current_chapter_revision > highestChapterRevision
     highestChapterRevision = highestChapterRevision === null
@@ -253,6 +254,7 @@ export function useChapterWorkflowActor(
     const boundaryKey = boundary ? `${value.run_id}:${boundary}` : null
     const enteredBoundary = boundaryKey !== null && !invalidatedBoundaries.has(boundaryKey)
     if (boundaryKey) invalidatedBoundaries.add(boundaryKey)
+    if (isInitialSnapshot) return
     if (!revisionIncreased && !enteredBoundary && !workflowRevisionIncreased) return
 
     void Promise.resolve(ports.invalidateChapterAndProject({

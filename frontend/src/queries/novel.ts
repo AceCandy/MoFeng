@@ -287,7 +287,10 @@ export function useNovelMutationRefresh(projectId?: ProjectIdSource) {
     }
 
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: novelQueryKeys.detail(resolvedProjectId) }),
+      queryClient.invalidateQueries({
+        queryKey: novelQueryKeys.detail(resolvedProjectId),
+        exact: true,
+      }),
       refreshProjects(),
     ])
   }

@@ -6,7 +6,7 @@
 
 ## Playback routes by the configured default TTS model; voice/speed are runtime prefs chosen on the bar
 
-`refreshTTSConfig()` (runs on mount, inside `getCurrentInstance()`, and before every `start()`) finds the first model with `is_enabled && is_default_tts && capabilities.tts`, exposes `hasModelTTS` + the model's `tts_protocol` (`modelProtocol`), and primes the global model-voice pref (`modelVoice`, localStorage `mofeng:reader-model-voice`): if the stored voice isn't in the new protocol's preset candidates, it resets to the first candidate. `start()` plays model segments when `hasModelTTS` is true; otherwise it falls back to browser `speechSynthesis`.
+`refreshTTSConfig()` runs before every `start()` and is deliberately not prefetched when the reader mounts, so TTS configuration never blocks the chapter's initial content request. It finds the first model with `is_enabled && is_default_tts && capabilities.tts`, exposes `hasModelTTS` and the model's `tts_protocol` (`modelProtocol`), and primes the global model-voice preference (`modelVoice`, localStorage `mofeng:reader-model-voice`): if the stored voice is not in the new protocol's preset candidates, it resets to the first candidate. `start()` plays model segments when `hasModelTTS` is true; otherwise it falls back to browser `speechSynthesis`.
 
 ## Model-segment playback uses `<audio>` (pitch-preserving) first, with Web Audio as fallback
 

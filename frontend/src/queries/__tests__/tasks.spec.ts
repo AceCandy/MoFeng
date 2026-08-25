@@ -1,4 +1,5 @@
-import { createApp, defineComponent, nextTick, ref } from 'vue'
+import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
+import { createApp, defineComponent, nextTick, ref, type Ref } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -11,7 +12,7 @@ import {
   type BackgroundTaskSnapshot,
   type BackgroundTaskStreamScope,
 } from '@/api/tasks'
-import { reduceTaskEvent, useTaskStream } from '@/queries/tasks'
+import { reduceTaskEvent, tasksQueryKeys, useTasksQuery, useTaskStream } from '@/queries/tasks'
 
 
 const task = (id: string, createdAt: string, progress = 0): BackgroundTask => ({
@@ -70,6 +71,23 @@ const mountTaskStream = (
   return { app, stream }
 }
 
+const mountTasksQuery = (streamConnected: Ref<boolean>) => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  const app = createApp(
+    defineComponent({
+      setup() {
+        useTasksQuery(streamConnected)
+        return () => null
+      },
+    }),
+  )
+  app.use(VueQueryPlugin, { queryClient })
+  app.mount(document.createElement('div'))
+  return { app, queryClient }
+}
+
 describe('reduceTaskEvent', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
@@ -102,6 +120,58 @@ describe('reduceTaskEvent', () => {
 
     expect(applied.tasks).toEqual([newer])
     expect(applied.cursor).toBe(12)
+  })
+
+  it('SSE 连接时关闭任务轮询，断开后恢复兜底间隔', async () => {
+    vi.spyOn(TaskAPI, 'getTasks').mockResolvedValue([])
+    const streamConnected = ref(false)
+    const mounted = mountTasksQuery(streamConnected)
+    const query = () => mounted.queryClient.getQueryCache().find({
+      queryKey: tasksQueryKeys.list(),
+    })
+
+    await vi.waitFor(() => expect(query()?.options.refetchInterval).toBe(15_000))
+    streamConnected.value = true
+    await nextTick()
+    expect(query()?.options.refetchInterval).toBe(false)
+
+    streamConnected.value = false
+    await nextTick()
+    expect(query()?.options.refetchInterval).toBe(15_000)
+    mounted.app.unmount()
+  })
+
+  it('任务流只在 SSE 建连期间报告已连接', async () => {
+    vi.spyOn(TaskAPI, 'subscribeTasks').mockImplementation(async (handlers) => {
+      handlers.onOpen?.()
+      await new Promise<void>((resolve) => {
+        handlers.signal?.addEventListener('abort', () => resolve(), { once: true })
+      })
+      return 'reset'
+    })
+    const { app, stream } = mountTaskStream(ref(1), undefined)
+
+    await vi.waitFor(() => expect(stream.isTaskStreamConnected.value).toBe(true))
+    stream.stopTaskStream()
+    expect(stream.isTaskStreamConnected.value).toBe(false)
+    app.unmount()
+  })
+
+  it('SSE 断线后清空旧快照，让轮询结果接管', async () => {
+    const streamError = new Error('stream disconnected')
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const subscribe = vi.spyOn(TaskAPI, 'subscribeTasks').mockImplementation(async (handlers) => {
+      handlers.onOpen?.()
+      handlers.onSnapshot(snapshot([task('stale', '2026-07-28T00:00:00Z')], 10))
+      handlers.onError?.(streamError)
+      throw streamError
+    })
+    const { app, stream } = mountTaskStream(ref(1), undefined)
+
+    await vi.waitFor(() => expect(subscribe).toHaveBeenCalledOnce())
+    await vi.waitFor(() => expect(stream.isTaskStreamConnected.value).toBe(false))
+    expect(stream.sseBackgroundTasks.value).toBeNull()
+    app.unmount()
   })
 
   it('解码合法 snapshot、task、reset 并忽略未知外层事件', () => {

@@ -11,6 +11,7 @@ const authState = reactive({
   logout: vi.fn(),
 })
 const push = vi.fn()
+const invalidateQueries = vi.fn()
 
 vi.mock('vue-router', () => ({
   RouterLink: defineComponent({ template: '<a><slot /></a>' }),
@@ -19,7 +20,7 @@ vi.mock('vue-router', () => ({
 }))
 
 vi.mock('@tanstack/vue-query', () => ({
-  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+  useQueryClient: () => ({ invalidateQueries }),
 }))
 
 vi.mock('@/stores/auth', () => ({
@@ -36,6 +37,7 @@ vi.mock('@/queries/tasks', () => ({
   useTaskStream: () => ({
     sseBackgroundTasks: streamedTasks,
     isTaskStreamActive: ref(false),
+    isTaskStreamConnected: ref(false),
     startTaskStream: vi.fn(),
   }),
 }))
@@ -98,6 +100,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   localStorage.clear()
+  invalidateQueries.mockClear()
   tasks.value = []
   streamedTasks.value = null
   authState.user = { id: 1, username: 'tester', is_admin: false }
@@ -108,6 +111,34 @@ afterEach(() => {
 })
 
 describe('AppShell task reminder', () => {
+  it('首次任务快照只建立大纲完成基线', async () => {
+    const completedOutline = {
+      ...task('outline-1', 'succeeded'),
+      task_type: 'chapter_outline',
+      project_id: 'project-1',
+    }
+    tasks.value = [completedOutline]
+    await mountShell()
+
+    expect(invalidateQueries).not.toHaveBeenCalled()
+
+    tasks.value = [
+      completedOutline,
+      {
+        ...task('outline-2', 'succeeded'),
+        task_type: 'chapter_outline',
+        project_id: 'project-1',
+      },
+    ]
+    await nextTick()
+
+    expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['novels'] })
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['novels', 'project-1'],
+      exact: true,
+    })
+  })
+
   it('ignores queued tasks and keeps the running count after opening the log', async () => {
     tasks.value = [task('queued', 'queued'), ...Array.from({ length: 10 }, (_, i) => task(`run-${i}`, 'running'))]
     const root = await mountShell()

@@ -570,6 +570,31 @@ describe('useChapterWorkflowActor', () => {
     })
   })
 
+  it('首次业务快照只建立刷新基线', async () => {
+    const lookup = vi
+      .fn()
+      .mockResolvedValueOnce(connection({
+        status: 'waiting_for_selection',
+        root_job_status: 'waiting',
+        node_key: 'wait_for_selection',
+      }))
+      .mockResolvedValueOnce(connection({
+        status: 'waiting_for_selection',
+        root_job_status: 'waiting',
+        node_key: 'wait_for_selection',
+        row_revision: 2,
+        resume_cursor: 6,
+      }))
+    const invalidateChapterAndProject = vi.fn(async () => undefined)
+    const { ports, stream } = createPorts({ lookup, invalidateChapterAndProject })
+    mountActor(ports)
+    await vi.waitFor(() => expect(stream.subscriptions).toHaveLength(1))
+
+    expect(invalidateChapterAndProject).not.toHaveBeenCalled()
+    stream.subscriptions[0].onTask(taskEvent(6))
+    await vi.waitFor(() => expect(invalidateChapterAndProject).toHaveBeenCalledOnce())
+  })
+
   it('superseded 首次进入后自动 lookup successor', async () => {
     const lookup = vi
       .fn()

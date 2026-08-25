@@ -90,6 +90,8 @@ Asserting only that `invalidateQueries` was called does not verify user-visible 
 
 When SSE is the primary sync channel, keep a long `refetchInterval` as a fallback for connection drops (see `useTasksQuery` above). Do not remove polling just because SSE exists.
 
+When the stream exposes an explicit connected state, make `refetchInterval` return `false` while connected and restore the fallback interval after disconnect. Clear the stale SSE snapshot on a real disconnect so the refreshed query data can take over. Do not reuse a loading/synchronizing flag for this decision: it may turn false after the first snapshot even though the SSE connection remains healthy.
+
 For cursor-based task SSE:
 
 - Keep the last applied durable cursor and ignore events whose cursor is not greater.

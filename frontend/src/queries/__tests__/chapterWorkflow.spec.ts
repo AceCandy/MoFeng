@@ -390,6 +390,7 @@ describe('chapter workflow queries', () => {
     expect(TaskAPI.subscribeTasks).toHaveBeenCalledWith(subscription)
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: novelQueryKeys.detail(PROJECT_ID),
+      exact: true,
     })
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: novelQueryKeys.chapter(PROJECT_ID, CHAPTER_NUMBER),
