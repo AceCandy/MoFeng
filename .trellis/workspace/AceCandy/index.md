@@ -7,8 +7,8 @@
 ## Current Status
 
 <!-- @@@auto:current-status -->
-- **Active File**: `journal-1.md`
-- **Total Sessions**: 73
+- **Active File**: `journal-2.md`
+- **Total Sessions**: 74
 - **Last Active**: 2026-08-25
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,8 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1994 | Active |
+| `journal-2.md` | ~28 | Active |
+| `journal-1.md` | ~1994 | Archived |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 74 | 2026-08-25 | 减少章节页重复请求 | `782c5e4` | `main` |
 | 73 | 2026-08-25 | 修复全局状态间距与稳定性 | `8bd3153` | `main` |
 | 72 | 2026-08-24 | 收敛小说项目库视觉层级 | `709c3f3`, `66079d4` | `main` |
 | 71 | 2026-08-24 | 收口全局设置导航与页面配置 | `0cc9f33` | `main` |
