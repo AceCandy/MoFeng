@@ -47,3 +47,24 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 76: 优化写作台加载与紧凑操作
+
+**Date**: 2026-08-26
+**Task**: 优化写作台加载与紧凑操作
+**Branch**: `main`
+
+### Summary
+
+为项目详情增加轻量章节载荷并按章补取正文，收敛写作台工具栏与朗读控件，保留未定稿状态的辅助面板入口；前端契约、类型、Lint、392 项单测、构建预算及双视口 E2E 验证通过。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `03f11b3` | (see git log) |
+
+### Status
+
+[OK] **Completed**
