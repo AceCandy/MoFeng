@@ -1971,3 +1971,24 @@ Unified the frontend on one warm-paper light theme, removed dark-theme runtime a
 ### Status
 
 [OK] **Completed**
+
+
+## Session 73: 修复全局状态间距与稳定性
+
+**Date**: 2026-08-25
+**Task**: 修复全局状态间距与稳定性
+**Branch**: `main`
+
+### Summary
+
+修复项目卡状态线贴字与焦点伪选中，稳定候选标签、灵感条目和项目下拉的状态几何，补充可访问语义、回归测试及前端规范。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8bd3153` | (see git log) |
+
+### Status
+
+[OK] **Completed**
