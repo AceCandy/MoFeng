@@ -89,3 +89,24 @@
 ### Status
 
 [OK] **Completed**
+
+
+## Session 78: 优化登录页视觉层次
+
+**Date**: 2026-08-27
+**Task**: 优化登录页视觉层次
+**Branch**: `main`
+
+### Summary
+
+调整登录页群青分舞台、品牌文字层级与流程栏收口，并完成桌面、移动端、无障碍及前端质量验证。
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `198d41f` | (see git log) |
+
+### Status
+
+[OK] **Completed**

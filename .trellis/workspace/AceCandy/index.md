@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 77
-- **Last Active**: 2026-08-26
+- **Total Sessions**: 78
+- **Last Active**: 2026-08-27
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~91 | Active |
+| `journal-2.md` | ~112 | Active |
 | `journal-1.md` | ~1994 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 78 | 2026-08-27 | 优化登录页视觉层次 | `198d41f` | `main` |
 | 77 | 2026-08-26 | 精简写作台章节侧栏 | `5810032` | `main` |
 | 76 | 2026-08-26 | 优化写作台加载与紧凑操作 | `03f11b3` | `main` |
 | 75 | 2026-08-25 | 优化写作台章节导航 | `5ef97f3` | `main` |
