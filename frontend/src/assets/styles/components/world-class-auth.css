@@ -11,6 +11,20 @@ html body :where(.login-page, .register-page) {
   color: #fff;
 }
 
+html body .login-page {
+  isolation: isolate;
+}
+
+html body .login-page::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 0;
+  width: 42%;
+  background: var(--md-stage-strong);
+  pointer-events: none;
+}
+
 html body :where(.login-scroll, .register-scroll) {
   width: min(100%, 1480px) !important;
   min-height: calc(var(--app-viewport-unit) - 112px) !important;
@@ -64,6 +78,15 @@ html body .auth-layout :where(.auth-intro__kind, .auth-intro__slogan) {
   writing-mode: horizontal-tb !important;
 }
 
+html body .login-page .auth-intro__kind {
+  color: var(--md-on-primary) !important;
+  font-weight: 700;
+}
+
+html body .login-page .auth-intro__slogan {
+  color: color-mix(in srgb, var(--md-on-primary) 76%, transparent) !important;
+}
+
 html body .auth-layout .auth-intro__kind br,
 html body .auth-layout .auth-intro__slogan br {
   display: none;
@@ -75,6 +98,10 @@ html body .auth-layout .auth-intro__footmark {
   margin-top: 56px !important;
   color: color-mix(in srgb, #fff 76%, transparent) !important;
   font-family: var(--md-font-mono) !important;
+}
+
+html body .login-page .auth-intro__footmark {
+  color: color-mix(in srgb, var(--md-on-primary) 64%, transparent) !important;
 }
 
 html body :where(.login-panel, .register-panel) {
@@ -133,6 +160,15 @@ html body :where(.login-card__header, .register-card__header) h2 {
   letter-spacing: -0.04em !important;
 }
 
+html body .login-card__header::before {
+  content: '';
+  display: block;
+  width: 44px;
+  height: 3px;
+  margin-bottom: 18px;
+  background: var(--md-cue);
+}
+
 html body :where(.login-panel, .register-panel) :where(label, p, span, a, button, input) {
   font-family: var(--md-font-family);
 }
@@ -160,6 +196,19 @@ html body .login-scroll > .auth-feature-rail {
   grid-column: 1 / -1;
 }
 
+html body .login-page .auth-feature-rail::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  z-index: -1;
+  width: 100vw;
+  height: 100vh;
+  background: var(--md-stage);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
 html body .register-page > .auth-feature-rail {
   width: min(calc(100% - 48px), 1320px);
   margin: 0 auto;
@@ -168,6 +217,10 @@ html body .register-page > .auth-feature-rail {
 
 html body .auth-feature-rail__icon {
   color: var(--md-note) !important;
+}
+
+html body .login-page .auth-feature-rail__icon {
+  color: var(--md-stage-soft) !important;
 }
 
 html body .auth-feature-rail strong {
@@ -180,6 +233,10 @@ html body .auth-feature-rail small {
 }
 
 @media (min-width: 834px) {
+  html body .login-page .login-scroll {
+    overflow: visible !important;
+  }
+
   html body .register-scroll > .auth-intro {
     grid-column: 2;
     grid-row: 1;
@@ -192,6 +249,12 @@ html body .auth-feature-rail small {
 }
 
 @media (max-width: 833px) {
+  html body .login-page::before {
+    width: 100%;
+    height: 258px;
+    bottom: auto;
+  }
+
   html body :where(.login-scroll, .register-scroll) {
     min-height: 0 !important;
     grid-template-columns: 1fr !important;
